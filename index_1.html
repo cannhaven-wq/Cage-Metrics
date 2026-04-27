@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CageMetrics — UFC Stats for Bettors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b;
+    --bg-2: #131316;
+    --bg-3: #1c1c21;
+    --line: #26262d;
+    --text: #f5f5f7;
+    --text-dim: #8a8a93;
+    --accent: #e4002b;
+    --accent-dim: #b30022;
+    --gold: #d4a64a;
+    --green: #2bb673;
+    --red: #e4002b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(228,0,43,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(212,166,74,0.04), transparent 50%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  .display { font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  /* Header */
+  header {
+    border-bottom: 1px solid var(--line);
+    background: rgba(10,10,11,0.85);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .nav {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 18px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+  .logo-mark {
+    width: 38px; height: 38px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dim));
+    display: grid; place-items: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900; font-size: 22px;
+    color: white;
+    clip-path: polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%);
+  }
+  .logo-text { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.04em; color: white; }
+  .logo-text span { color: var(--accent); }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--text); }
+  .nav-cta {
+    background: var(--accent);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 4px;
+    font-weight: 700;
+    font-size: 13px;
+    text-decoration: none;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    transition: background 0.2s;
+  }
+  .nav-cta:hover { background: var(--accent-dim); }
+
+  /* Hero */
+  .hero {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 64px 24px 48px;
+    position: relative;
+  }
+  .hero-tag {
+    display: inline-block;
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    margin-bottom: 16px;
+  }
+  .hero-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 900;
+    font-size: clamp(48px, 7vw, 88px);
+    line-height: 0.95;
+    letter-spacing: -0.01em;
+    text-transform: uppercase;
+    margin-bottom: 24px;
+  }
+  .hero-title span { color: var(--accent); }
+  .hero-sub {
+    color: var(--text-dim);
+    font-size: 18px;
+    max-width: 620px;
+    line-height: 1.6;
+    margin-bottom: 32px;
+  }
+
+  /* Search */
+  .search-wrap {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px 24px;
+  }
+  .search-box {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    outline: none;
+    color: var(--text);
+    font-size: 16px;
+    font-family: inherit;
+  }
+  .search-box svg { width: 20px; height: 20px; color: var(--text-dim); }
+
+  /* Filters */
+  .filters {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px 24px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .filter {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--text-dim);
+    padding: 8px 16px;
+    border-radius: 100px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .filter:hover { color: var(--text); border-color: var(--text-dim); }
+  .filter.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* Section heading */
+  .section-head {
+    max-width: 1280px;
+    margin: 32px auto 16px;
+    padding: 0 24px;
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+  .section-head h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+  }
+  .section-head .count {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--text-dim);
+    letter-spacing: 0.1em;
+  }
+
+  /* Fighter grid */
+  .grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 24px 64px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+  }
+  .card {
+    background: var(--bg-2);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card:hover::before { opacity: 1; }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
+  .fighter-name { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; text-transform: uppercase; line-height: 1; }
+  .fighter-nick { color: var(--gold); font-size: 13px; font-style: italic; margin-top: 4px; }
+  .division-tag {
+    background: var(--bg-3);
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    padding: 4px 8px;
+    border-radius: 3px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    white-space: nowrap;
+  }
+  .division-tag.champ { background: var(--gold); color: #000; font-weight: 700; }
+
+  .record {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 900;
+    margin: 12px 0;
+    letter-spacing: 0.02em;
+  }
+  .record .w { color: var(--green); }
+  .record .l { color: var(--red); }
+  .record .sep { color: var(--text-dim); margin: 0 4px; }
+
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin: 16px 0; }
+  .stat { }
+  .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; margin-top: 2px; }
+
+  .win-bar {
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 16px;
+  }
+  .win-bar-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; background: var(--bg-3); }
+  .bar-ko { background: var(--accent); }
+  .bar-sub { background: var(--gold); }
+  .bar-dec { background: #5a5a63; }
+  .bar-legend { display: flex; gap: 14px; margin-top: 8px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 5px; }
+
+  /* Footer */
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 32px 24px;
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 13px;
+  }
+  footer span { color: var(--accent); }
+
+  /* Empty state */
+  .empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 24px;
+    color: var(--text-dim);
+  }
+
+  @media (max-width: 640px) {
+    .nav-links { display: none; }
+    .hero { padding: 40px 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <a href="#" class="logo">
+      <div class="logo-mark">C</div>
+      <div class="logo-text">CAGE<span>METRICS</span></div>
+    </a>
+    <nav class="nav-links">
+      <a href="#" class="active">Fighters</a>
+      <a href="#">Events</a>
+      <a href="#">Matchups</a>
+      <a href="#">Parlay Tool</a>
+    </nav>
+    <a href="#" class="nav-cta">Sportsbooks</a>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-tag">// Data-Driven UFC Analytics</div>
+  <h1 class="display hero-title">Stats Built<br>for <span>Bettors.</span></h1>
+  <p class="hero-sub">Real fight data, matchup analytics, and parlay-ready insights. None of the noise. Just the numbers that move lines.</p>
+</section>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search" type="text" placeholder="Search fighter by name or nickname...">
+  </div>
+</div>
+
+<div class="filters" id="filters">
+  <button class="filter active" data-div="all">All Divisions</button>
+  <button class="filter" data-div="HW">Heavyweight</button>
+  <button class="filter" data-div="LHW">Light Heavy</button>
+  <button class="filter" data-div="MW">Middleweight</button>
+  <button class="filter" data-div="WW">Welterweight</button>
+  <button class="filter" data-div="LW">Lightweight</button>
+  <button class="filter" data-div="FW">Featherweight</button>
+  <button class="filter" data-div="BW">Bantamweight</button>
+  <button class="filter" data-div="FLY">Flyweight</button>
+</div>
+
+<div class="section-head">
+  <h2 class="display">Fighter Database</h2>
+  <span class="count" id="count">// Loading...</span>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<footer>
+  <p>CAGE<span>METRICS</span> — UFC stats for bettors. Not affiliated with UFC or Zuffa LLC.</p>
+</footer>
+
+<script>
+const fighters = [
+  { name: "Alex Pereira", nick: "Poatan", div: "LHW", divName: "Light Heavyweight", champ: true, record: "13-3-0", slpm: 5.42, slacc: 60, tdd: 92, finish: 92, ko: 9, sub: 0, dec: 4 },
+  { name: "Islam Makhachev", nick: "", div: "LW", divName: "Lightweight", champ: false, record: "27-1-0", slpm: 3.18, slacc: 56, tdd: 84, finish: 67, ko: 5, sub: 12, dec: 10 },
+  { name: "Jon Jones", nick: "Bones", div: "HW", divName: "Heavyweight", champ: true, record: "28-1-0", slpm: 4.30, slacc: 58, tdd: 95, finish: 75, ko: 11, sub: 7, dec: 10 },
+  { name: "Ilia Topuria", nick: "El Matador", div: "LW", divName: "Lightweight", champ: true, record: "16-0-0", slpm: 5.68, slacc: 51, tdd: 86, finish: 81, ko: 8, sub: 5, dec: 3 },
+  { name: "Dricus du Plessis", nick: "Stillknocks", div: "MW", divName: "Middleweight", champ: true, record: "23-2-0", slpm: 6.14, slacc: 51, tdd: 73, finish: 87, ko: 12, sub: 8, dec: 3 },
+  { name: "Belal Muhammad", nick: "Remember the Name", div: "WW", divName: "Welterweight", champ: true, record: "24-3-0", slpm: 4.39, slacc: 46, tdd: 75, finish: 38, ko: 4, sub: 5, dec: 15 },
+  { name: "Merab Dvalishvili", nick: "The Machine", div: "BW", divName: "Bantamweight", champ: true, record: "18-4-0", slpm: 4.85, slacc: 46, tdd: 49, finish: 28, ko: 2, sub: 3, dec: 13 },
+  { name: "Alexandre Pantoja", nick: "The Cannibal", div: "FLY", divName: "Flyweight", champ: true, record: "29-5-0", slpm: 4.21, slacc: 48, tdd: 56, finish: 69, ko: 7, sub: 13, dec: 9 },
+  { name: "Tom Aspinall", nick: "", div: "HW", divName: "Heavyweight", champ: false, record: "15-3-0", slpm: 7.38, slacc: 65, tdd: 71, finish: 100, ko: 9, sub: 6, dec: 0 },
+  { name: "Khamzat Chimaev", nick: "Borz", div: "MW", divName: "Middleweight", champ: false, record: "14-0-0", slpm: 6.72, slacc: 67, tdd: 74, finish: 93, ko: 6, sub: 7, dec: 1 },
+  { name: "Sean O'Malley", nick: "Sugar", div: "BW", divName: "Bantamweight", champ: false, record: "18-2-0", slpm: 5.80, slacc: 60, tdd: 66, finish: 67, ko: 11, sub: 1, dec: 6 },
+  { name: "Charles Oliveira", nick: "Do Bronx", div: "LW", divName: "Lightweight", champ: false, record: "35-10-0", slpm: 3.48, slacc: 50, tdd: 65, finish: 89, ko: 10, sub: 21, dec: 4 },
+  { name: "Max Holloway", nick: "Blessed", div: "FW", divName: "Featherweight", champ: false, record: "26-8-0", slpm: 6.69, slacc: 48, tdd: 71, finish: 50, ko: 12, sub: 2, dec: 12 },
+  { name: "Kamaru Usman", nick: "The Nigerian Nightmare", div: "WW", divName: "Welterweight", champ: false, record: "20-4-0", slpm: 4.11, slacc: 50, tdd: 88, finish: 50, ko: 9, sub: 1, dec: 10 },
+  { name: "Israel Adesanya", nick: "The Last Stylebender", div: "MW", divName: "Middleweight", champ: false, record: "24-4-0", slpm: 3.94, slacc: 49, tdd: 78, finish: 58, ko: 13, sub: 1, dec: 10 },
+];
+
+const grid = document.getElementById('grid');
+const search = document.getElementById('search');
+const filters = document.getElementById('filters');
+const countEl = document.getElementById('count');
+let currentDiv = 'all';
+
+function renderCard(f) {
+  const total = f.ko + f.sub + f.dec;
+  const koPct = (f.ko / total) * 100;
+  const subPct = (f.sub / total) * 100;
+  const decPct = (f.dec / total) * 100;
+  const [w, l, d] = f.record.split('-');
+  return `
+    <div class="card">
+      <div class="card-head">
+        <div>
+          <div class="fighter-name">${f.name}</div>
+          ${f.nick ? `<div class="fighter-nick">"${f.nick}"</div>` : ''}
+        </div>
+        <span class="division-tag ${f.champ ? 'champ' : ''}">${f.champ ? '★ ' : ''}${f.div}</span>
+      </div>
+      <div class="record"><span class="w">${w}</span><span class="sep">-</span><span class="l">${l}</span><span class="sep">-</span><span style="color:var(--text-dim)">${d}</span></div>
+      <div class="stats">
+        <div class="stat"><div class="stat-label">Strikes / Min</div><div class="stat-value">${f.slpm.toFixed(2)}</div></div>
+        <div class="stat"><div class="stat-label">Strike Acc</div><div class="stat-value">${f.slacc}%</div></div>
+        <div class="stat"><div class="stat-label">TD Defense</div><div class="stat-value">${f.tdd}%</div></div>
+        <div class="stat"><div class="stat-label">Finish Rate</div><div class="stat-value">${f.finish}%</div></div>
+      </div>
+      <div class="win-bar">
+        <div class="win-bar-label">Win Method Breakdown</div>
+        <div class="bar">
+          <div class="bar-ko" style="width:${koPct}%"></div>
+          <div class="bar-sub" style="width:${subPct}%"></div>
+          <div class="bar-dec" style="width:${decPct}%"></div>
+        </div>
+        <div class="bar-legend">
+          <span><span class="legend-dot" style="background:var(--accent)"></span>KO ${f.ko}</span>
+          <span><span class="legend-dot" style="background:var(--gold)"></span>SUB ${f.sub}</span>
+          <span><span class="legend-dot" style="background:#5a5a63"></span>DEC ${f.dec}</span>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function render() {
+  const q = search.value.toLowerCase().trim();
+  const list = fighters.filter(f => {
+    const divOk = currentDiv === 'all' || f.div === currentDiv;
+    const qOk = !q || f.name.toLowerCase().includes(q) || f.nick.toLowerCase().includes(q);
+    return divOk && qOk;
+  });
+  countEl.textContent = `// ${String(list.length).padStart(2,'0')} FIGHTERS`;
+  grid.innerHTML = list.length
+    ? list.map(renderCard).join('')
+    : '<div class="empty">No fighters match your search.</div>';
+}
+
+filters.addEventListener('click', e => {
+  const btn = e.target.closest('.filter');
+  if (!btn) return;
+  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentDiv = btn.dataset.div;
+  render();
+});
+search.addEventListener('input', render);
+render();
+</script>
+</body>
+</html>
