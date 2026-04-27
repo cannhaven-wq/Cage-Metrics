@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CageMetrics — UFC Stats for Bettors</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0b; --bg-2: #131316; --bg-3: #1c1c21; --line: #26262d;
+    --text: #f5f5f7; --text-dim: #8a8a93;
+    --accent: #e4002b; --accent-dim: #b30022;
+    --gold: #d4a64a; --green: #2bb673; --red: #e4002b;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
+  body {
+    background:
+      radial-gradient(ellipse at top, rgba(228,0,43,0.08), transparent 50%),
+      radial-gradient(ellipse at bottom right, rgba(212,166,74,0.04), transparent 50%),
+      var(--bg);
+    min-height: 100vh;
+  }
+  .display { font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.02em; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+
+  header { border-bottom: 1px solid var(--line); background: rgba(10,10,11,0.85); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 50; }
+  .nav { max-width: 1280px; margin: 0 auto; padding: 18px 24px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .logo { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+  .logo-mark { width: 38px; height: 38px; background: linear-gradient(135deg, var(--accent), var(--accent-dim)); display: grid; place-items: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: 22px; color: white; clip-path: polygon(20% 0%, 100% 0%, 80% 100%, 0% 100%); }
+  .logo-text { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; letter-spacing: 0.04em; color: white; }
+  .logo-text span { color: var(--accent); }
+  .nav-cta { background: var(--accent); color: white; padding: 10px 18px; border-radius: 4px; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.08em; border: none; cursor: pointer; }
+  .nav-cta:hover { background: var(--accent-dim); }
+
+  .hero { max-width: 1280px; margin: 0 auto; padding: 56px 24px 32px; }
+  .hero-tag { display: inline-block; color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; margin-bottom: 16px; }
+  .hero-title { font-family: 'Barlow Condensed', sans-serif; font-weight: 900; font-size: clamp(40px, 6vw, 72px); line-height: 0.95; text-transform: uppercase; margin-bottom: 20px; }
+  .hero-title span { color: var(--accent); }
+  .hero-sub { color: var(--text-dim); font-size: 17px; max-width: 620px; line-height: 1.6; }
+
+  .search-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 16px; }
+  .search-box { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
+  .search-box:focus-within { border-color: var(--accent); }
+  .search-box input { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font-size: 16px; font-family: inherit; }
+  .search-box svg { width: 20px; height: 20px; color: var(--text-dim); }
+
+  .filters { max-width: 1280px; margin: 0 auto; padding: 0 24px 16px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .filter { background: transparent; border: 1px solid var(--line); color: var(--text-dim); padding: 8px 16px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+  .filter:hover { color: var(--text); border-color: var(--text-dim); }
+  .filter.active { background: var(--accent); border-color: var(--accent); color: white; }
+  .compare-toggle { margin-left: auto; }
+
+  .section-head { max-width: 1280px; margin: 24px auto 16px; padding: 0 24px; display: flex; align-items: baseline; justify-content: space-between; }
+  .section-head h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; text-transform: uppercase; }
+  .section-head .count { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--text-dim); letter-spacing: 0.1em; }
+
+  .grid { max-width: 1280px; margin: 0 auto; padding: 0 24px 80px; display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+  .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 22px; position: relative; overflow: hidden; transition: all 0.15s; cursor: pointer; }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, var(--accent), transparent); opacity: 0; transition: opacity 0.2s; }
+  .card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .card:hover::before { opacity: 1; }
+  .card.selected { border-color: var(--accent); background: rgba(228,0,43,0.06); }
+  .card.selected::before { opacity: 1; }
+
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; gap: 12px; }
+  .fighter-name { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 800; text-transform: uppercase; line-height: 1.05; }
+  .fighter-nick { color: var(--gold); font-size: 12px; font-style: italic; margin-top: 4px; }
+  .stance-tag { background: var(--bg-3); color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 4px 8px; border-radius: 3px; text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap; }
+  .record { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 900; margin: 8px 0 14px; }
+  .record .w { color: var(--green); }
+  .record .l { color: var(--red); }
+  .record .sep { color: var(--text-dim); margin: 0 3px; }
+  .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .stat-value { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 700; margin-top: 2px; }
+  .meta { display: flex; gap: 16px; padding-top: 12px; border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); }
+  .meta span { display: flex; flex-direction: column; }
+  .meta b { color: var(--text); font-weight: 600; margin-top: 2px; font-size: 12px; }
+
+  .compare-bar { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--bg-2); border: 1px solid var(--accent); border-radius: 100px; padding: 10px 16px 10px 20px; display: none; align-items: center; gap: 12px; z-index: 100; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
+  .compare-bar.show { display: flex; }
+  .compare-bar .chip { background: var(--bg-3); padding: 6px 14px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 13px; }
+  .compare-bar .empty-chip { color: var(--text-dim); border: 1px dashed var(--line); }
+  .compare-bar button { background: var(--accent); color: white; border: none; padding: 8px 18px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; cursor: pointer; font-size: 13px; letter-spacing: 0.06em; }
+  .compare-bar button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .compare-bar button:not(:disabled):hover { background: var(--accent-dim); }
+  .compare-bar .clear { background: transparent; color: var(--text-dim); padding: 8px 4px; }
+
+  .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 200; padding: 24px; }
+  .modal-bg.show { display: flex; }
+  .modal { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; max-width: 1100px; width: 100%; max-height: 90vh; overflow-y: auto; }
+  .modal-head { padding: 18px 24px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--bg); z-index: 1; }
+  .modal-head h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 800; text-transform: uppercase; }
+  .close-btn { background: transparent; border: 1px solid var(--line); color: var(--text); width: 36px; height: 36px; border-radius: 50%; cursor: pointer; font-size: 18px; }
+  .close-btn:hover { border-color: var(--accent); }
+  .modal-body { padding: 24px; }
+
+  .compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+  .compare-side { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 18px; }
+  .compare-side h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 22px; text-transform: uppercase; }
+  .compare-side .nick { color: var(--gold); font-style: italic; font-size: 12px; margin-top: 4px; }
+  .compare-side .record-line { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; margin-top: 8px; }
+  .compare-table { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+  .compare-row { display: grid; grid-template-columns: 1fr 140px 1fr; padding: 14px 24px; align-items: center; border-bottom: 1px solid var(--line); }
+  .compare-row:last-child { border-bottom: none; }
+  .compare-row .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.12em; text-align: center; }
+  .compare-row .v { font-family: 'Barlow Condensed', sans-serif; font-size: 24px; font-weight: 700; }
+  .compare-row .v.left { text-align: right; }
+  .compare-row .v.right { text-align: left; }
+  .compare-row .v.winner { color: var(--green); }
+  .compare-row .v.loser { color: var(--text-dim); }
+  .compare-row .v.tie { color: var(--gold); }
+
+  .detail-grid { display: grid; grid-template-columns: 280px 1fr; gap: 20px; }
+  .detail-side { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 22px; }
+  .detail-side h3 { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; text-transform: uppercase; }
+  .detail-side .nick { color: var(--gold); font-style: italic; margin-top: 4px; }
+  .detail-side .record-big { font-family: 'Barlow Condensed', sans-serif; font-size: 40px; font-weight: 900; margin: 14px 0; }
+  .detail-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; padding-top: 14px; border-top: 1px solid var(--line); font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-dim); }
+  .detail-meta span { display: flex; flex-direction: column; }
+  .detail-meta b { color: var(--text); margin-top: 2px; font-size: 14px; font-weight: 600; }
+  .detail-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .detail-stat { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 16px; }
+  .detail-stat .label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; }
+  .detail-stat .value { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 700; margin-top: 4px; }
+
+  .empty, .loading { grid-column: 1 / -1; text-align: center; padding: 60px 24px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 13px; letter-spacing: 0.1em; }
+  .loading::after { content: '...'; animation: dots 1.4s steps(4) infinite; }
+  @keyframes dots { 0% { content: '.'; } 33% { content: '..'; } 66% { content: '...'; } }
+
+  footer { border-top: 1px solid var(--line); padding: 28px 24px; text-align: center; color: var(--text-dim); font-size: 13px; }
+  footer span { color: var(--accent); }
+
+  @media (max-width: 720px) {
+    .compare-grid { grid-template-columns: 1fr; }
+    .compare-row { grid-template-columns: 1fr 120px 1fr; padding: 12px 14px; }
+    .compare-row .v { font-size: 18px; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .hero { padding: 32px 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="nav">
+    <div class="logo" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+      <div class="logo-mark">C</div>
+      <div class="logo-text">CAGE<span>METRICS</span></div>
+    </div>
+    <button class="nav-cta" onclick="alert('Sportsbook integrations coming soon')">Sportsbooks</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-tag">// Data-Driven UFC Analytics</div>
+  <h1 class="display hero-title">Stats Built<br>for <span>Bettors.</span></h1>
+  <p class="hero-sub">Every UFC fighter, real stats, and head-to-head matchup analytics. Click any fighter to see details. Click two to compare.</p>
+</section>
+
+<div class="search-wrap">
+  <div class="search-box">
+    <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input id="search" type="text" placeholder="Search fighter by name or nickname...">
+  </div>
+</div>
+
+<div class="filters" id="filters">
+  <button class="filter active" data-stance="all">All Stances</button>
+  <button class="filter" data-stance="Orthodox">Orthodox</button>
+  <button class="filter" data-stance="Southpaw">Southpaw</button>
+  <button class="filter" data-stance="Switch">Switch</button>
+</div>
+
+<div class="section-head">
+  <h2 class="display">Fighter Database</h2>
+  <span class="count" id="count">// Loading</span>
+</div>
+
+<div class="grid" id="grid">
+  <div class="loading">Loading fighters from database</div>
+</div>
+
+<div class="compare-bar" id="compareBar">
+  <span class="chip" id="chip1">Pick fighter 1</span>
+  <span style="color:var(--accent);font-weight:700">VS</span>
+  <span class="chip empty-chip" id="chip2">Pick fighter 2</span>
+  <button id="compareBtn" disabled>Compare</button>
+  <button class="clear" onclick="clearSelection()">Clear</button>
+</div>
+
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-head">
+      <h2 id="modalTitle">Fighter Detail</h2>
+      <button class="close-btn" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+
+<footer>
+  <p>CAGE<span>METRICS</span> — UFC stats for bettors. Data from ufcstats.com. Not affiliated with UFC or Zuffa LLC.</p>
+</footer>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+// ===== CONFIG =====
+const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
+// =================
+
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let allFighters = [];
+let currentStance = 'all';
+let selected = []; // up to 2 fighters
+
+// --- Load data ---
+async function loadFighters() {
+  let from = 0;
+  const pageSize = 1000;
+  let all = [];
+  while (true) {
+    const { data, error } = await supabase
+      .from('fighters')
+      .select('*')
+      .order('wins', { ascending: false })
+      .range(from, from + pageSize - 1);
+    if (error) {
+      document.getElementById('grid').innerHTML = `<div class="empty">Error loading fighters: ${error.message}</div>`;
+      return;
+    }
+    if (!data || data.length === 0) break;
+    all = all.concat(data);
+    if (data.length < pageSize) break;
+    from += pageSize;
+  }
+  allFighters = all;
+  render();
+}
+
+// --- Render ---
+function render() {
+  const q = document.getElementById('search').value.toLowerCase().trim();
+  const list = allFighters.filter(f => {
+    const stanceOk = currentStance === 'all' || f.stance === currentStance;
+    const qOk = !q || (f.name && f.name.toLowerCase().includes(q)) || (f.nickname && f.nickname.toLowerCase().includes(q));
+    return stanceOk && qOk;
+  });
+  document.getElementById('count').textContent = `// ${list.length.toLocaleString()} FIGHTERS`;
+  const grid = document.getElementById('grid');
+  if (list.length === 0) {
+    grid.innerHTML = '<div class="empty">No fighters match your search.</div>';
+    return;
+  }
+  // Render at most 200 at a time for perf
+  grid.innerHTML = list.slice(0, 200).map(renderCard).join('');
+  // Attach click handlers
+  grid.querySelectorAll('.card').forEach(el => {
+    el.onclick = () => onCardClick(parseInt(el.dataset.id));
+  });
+}
+
+function renderCard(f) {
+  const isSelected = selected.find(s => s.id === f.id);
+  return `
+    <div class="card ${isSelected ? 'selected' : ''}" data-id="${f.id}">
+      <div class="card-head">
+        <div>
+          <div class="fighter-name">${escapeHtml(f.name || 'Unknown')}</div>
+          ${f.nickname ? `<div class="fighter-nick">"${escapeHtml(f.nickname)}"</div>` : ''}
+        </div>
+        ${f.stance ? `<span class="stance-tag">${escapeHtml(f.stance)}</span>` : ''}
+      </div>
+      <div class="record"><span class="w">${f.wins||0}</span><span class="sep">-</span><span class="l">${f.losses||0}</span>${f.draws ? `<span class="sep">-</span><span style="color:var(--text-dim)">${f.draws}</span>` : ''}</div>
+      <div class="stats">
+        <div><div class="stat-label">Strikes / Min</div><div class="stat-value">${fmt(f.slpm, 2)}</div></div>
+        <div><div class="stat-label">Strike Acc</div><div class="stat-value">${pct(f.str_acc)}</div></div>
+        <div><div class="stat-label">TD Defense</div><div class="stat-value">${pct(f.td_def)}</div></div>
+        <div><div class="stat-label">Strike Def</div><div class="stat-value">${pct(f.str_def)}</div></div>
+      </div>
+      <div class="meta">
+        <span>HEIGHT<b>${heightStr(f.height_in)}</b></span>
+        <span>REACH<b>${f.reach_in ? f.reach_in + '"' : '—'}</b></span>
+      </div>
+    </div>
+  `;
+}
+
+function fmt(v, d) { return v == null ? '—' : Number(v).toFixed(d); }
+function pct(v) { return v == null ? '—' : v + '%'; }
+function heightStr(inches) {
+  if (!inches) return '—';
+  const ft = Math.floor(inches / 12);
+  const inch = inches % 12;
+  return `${ft}'${inch}"`;
+}
+function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// --- Selection / Compare ---
+function onCardClick(id) {
+  const fighter = allFighters.find(f => f.id === id);
+  if (!fighter) return;
+  const idx = selected.findIndex(s => s.id === id);
+  if (idx >= 0) {
+    selected.splice(idx, 1);
+  } else {
+    if (selected.length >= 2) {
+      // If 2 already, open detail instead
+      openDetail(fighter);
+      return;
+    }
+    selected.push(fighter);
+  }
+  updateCompareBar();
+  render();
+}
+
+function updateCompareBar() {
+  const bar = document.getElementById('compareBar');
+  const chip1 = document.getElementById('chip1');
+  const chip2 = document.getElementById('chip2');
+  const btn = document.getElementById('compareBtn');
+  if (selected.length === 0) {
+    bar.classList.remove('show');
+    return;
+  }
+  bar.classList.add('show');
+  if (selected[0]) { chip1.textContent = selected[0].name; chip1.classList.remove('empty-chip'); } else { chip1.textContent = 'Pick fighter 1'; chip1.classList.add('empty-chip'); }
+  if (selected[1]) { chip2.textContent = selected[1].name; chip2.classList.remove('empty-chip'); } else { chip2.textContent = 'Pick fighter 2'; chip2.classList.add('empty-chip'); }
+  btn.disabled = selected.length < 2;
+}
+
+window.clearSelection = function() {
+  selected = [];
+  updateCompareBar();
+  render();
+};
+
+// --- Modals ---
+function openDetail(f) {
+  document.getElementById('modalTitle').textContent = f.name;
+  document.getElementById('modalBody').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-side">
+        <h3>${escapeHtml(f.name)}</h3>
+        ${f.nickname ? `<div class="nick">"${escapeHtml(f.nickname)}"</div>` : ''}
+        <div class="record-big"><span style="color:var(--green)">${f.wins||0}</span>-<span style="color:var(--red)">${f.losses||0}</span>${f.draws ? '-' + f.draws : ''}</div>
+        <div class="detail-meta">
+          <span>STANCE<b>${escapeHtml(f.stance || '—')}</b></span>
+          <span>HEIGHT<b>${heightStr(f.height_in)}</b></span>
+          <span>REACH<b>${f.reach_in ? f.reach_in + '"' : '—'}</b></span>
+          <span>WINS<b>${(f.wins||0)}</b></span>
+        </div>
+      </div>
+      <div class="detail-stats">
+        <div class="detail-stat"><div class="label">Strikes Landed / Min</div><div class="value">${fmt(f.slpm, 2)}</div></div>
+        <div class="detail-stat"><div class="label">Strike Accuracy</div><div class="value">${pct(f.str_acc)}</div></div>
+        <div class="detail-stat"><div class="label">Strikes Absorbed / Min</div><div class="value">${fmt(f.sapm, 2)}</div></div>
+        <div class="detail-stat"><div class="label">Strike Defense</div><div class="value">${pct(f.str_def)}</div></div>
+        <div class="detail-stat"><div class="label">Takedowns / 15 min</div><div class="value">${fmt(f.td_avg, 2)}</div></div>
+        <div class="detail-stat"><div class="label">Takedown Accuracy</div><div class="value">${pct(f.td_acc)}</div></div>
+        <div class="detail-stat"><div class="label">Takedown Defense</div><div class="value">${pct(f.td_def)}</div></div>
+        <div class="detail-stat"><div class="label">Submissions / 15 min</div><div class="value">${fmt(f.sub_avg, 2)}</div></div>
+      </div>
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+function openCompare() {
+  if (selected.length < 2) return;
+  const [a, b] = selected;
+  document.getElementById('modalTitle').textContent = `${a.name} vs ${b.name}`;
+
+  // Helper for comparison rows. higherIsBetter = does a higher value win?
+  function row(label, av, bv, higherIsBetter = true, format = v => v == null ? '—' : v) {
+    let aClass = '', bClass = '';
+    if (av != null && bv != null) {
+      if (av === bv) { aClass = bClass = 'tie'; }
+      else if ((av > bv) === higherIsBetter) { aClass = 'winner'; bClass = 'loser'; }
+      else { aClass = 'loser'; bClass = 'winner'; }
+    }
+    return `
+      <div class="compare-row">
+        <div class="v left ${aClass}">${format(av)}</div>
+        <div class="label">${label}</div>
+        <div class="v right ${bClass}">${format(bv)}</div>
+      </div>
+    `;
+  }
+
+  document.getElementById('modalBody').innerHTML = `
+    <div class="compare-grid">
+      <div class="compare-side">
+        <h3>${escapeHtml(a.name)}</h3>
+        ${a.nickname ? `<div class="nick">"${escapeHtml(a.nickname)}"</div>` : ''}
+        <div class="record-line"><span style="color:var(--green)">${a.wins||0}</span>-<span style="color:var(--red)">${a.losses||0}</span></div>
+      </div>
+      <div class="compare-side">
+        <h3>${escapeHtml(b.name)}</h3>
+        ${b.nickname ? `<div class="nick">"${escapeHtml(b.nickname)}"</div>` : ''}
+        <div class="record-line"><span style="color:var(--green)">${b.wins||0}</span>-<span style="color:var(--red)">${b.losses||0}</span></div>
+      </div>
+    </div>
+    <div class="compare-table">
+      ${row('Wins', a.wins, b.wins, true)}
+      ${row('Losses', a.losses, b.losses, false)}
+      ${row('Height', a.height_in, b.height_in, true, heightStr)}
+      ${row('Reach', a.reach_in, b.reach_in, true, v => v ? v + '"' : '—')}
+      ${row('Stance', a.stance, b.stance, true, v => v || '—')}
+      ${row('Strikes / Min', a.slpm, b.slpm, true, v => fmt(v, 2))}
+      ${row('Strike Acc', a.str_acc, b.str_acc, true, pct)}
+      ${row('Strikes Absorbed', a.sapm, b.sapm, false, v => fmt(v, 2))}
+      ${row('Strike Defense', a.str_def, b.str_def, true, pct)}
+      ${row('TD / 15 min', a.td_avg, b.td_avg, true, v => fmt(v, 2))}
+      ${row('TD Accuracy', a.td_acc, b.td_acc, true, pct)}
+      ${row('TD Defense', a.td_def, b.td_def, true, pct)}
+      ${row('Subs / 15 min', a.sub_avg, b.sub_avg, true, v => fmt(v, 2))}
+    </div>
+  `;
+  document.getElementById('modal').classList.add('show');
+}
+
+window.closeModal = function() {
+  document.getElementById('modal').classList.remove('show');
+};
+
+// --- Wire up ---
+document.getElementById('search').addEventListener('input', render);
+document.getElementById('filters').addEventListener('click', e => {
+  const btn = e.target.closest('.filter');
+  if (!btn) return;
+  document.querySelectorAll('.filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentStance = btn.dataset.stance;
+  render();
+});
+document.getElementById('compareBtn').addEventListener('click', openCompare);
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeModal();
+});
+
+loadFighters();
+</script>
+</body>
+</html>
