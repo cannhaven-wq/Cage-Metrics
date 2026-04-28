@@ -12,7 +12,7 @@
     --bg: #0a0a0b; --bg-2: #131316; --bg-3: #1c1c21; --line: #26262d;
     --text: #f5f5f7; --text-dim: #8a8a93;
     --accent: #e4002b; --accent-dim: #b30022;
-    --gold: #d4a64a; --green: #2bb673; --red: #e4002b;
+    --gold: #d4a64a; --green: #2bb673; --red: #e4002b; --liability: #ff5757;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: var(--bg); color: var(--text); font-family: 'Inter', system-ui, sans-serif; }
@@ -41,20 +41,29 @@
   .hero-title span { color: var(--accent); }
   .hero-sub { color: var(--text-dim); font-size: 17px; max-width: 620px; line-height: 1.6; }
 
-  /* ===== UPCOMING CARD SECTION ===== */
   .upcoming-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 32px; }
   .upcoming-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
   .upcoming-head .left .tag { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
   .upcoming-head .left .title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; text-transform: uppercase; line-height: 1.05; margin-top: 4px; }
   .upcoming-head .left .meta { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
-  .upcoming-head .right { display: flex; align-items: center; gap: 12px; }
+  .upcoming-head .right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
   .countdown { color: var(--gold); font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 12px; border: 1px solid var(--gold); border-radius: 4px; letter-spacing: 0.1em; }
   .event-select { background: var(--bg-2); border: 1px solid var(--line); color: var(--text); padding: 8px 14px; border-radius: 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; outline: none; }
   .event-select:focus, .event-select:hover { border-color: var(--accent); }
 
+  .sort-controls { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
+  .sort-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.12em; text-transform: uppercase; margin-right: 4px; }
+  .sort-btn { background: transparent; border: 1px solid var(--line); color: var(--text-dim); padding: 6px 12px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
+  .sort-btn:hover { color: var(--text); border-color: var(--text-dim); }
+  .sort-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
   .matchup-list { display: flex; flex-direction: column; gap: 8px; }
-  .matchup { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; transition: border-color 0.15s; }
+  .matchup { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; transition: border-color 0.15s; position: relative; }
   .matchup.open { border-color: var(--accent); }
+  .matchup.sharp::after { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 3px; background: var(--gold); pointer-events: none; }
+
+  .sharp-flag { position: absolute; top: 10px; right: 12px; background: rgba(212,166,74,0.15); color: var(--gold); border: 1px solid var(--gold); padding: 2px 8px; border-radius: 100px; font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.1em; font-weight: 700; z-index: 2; }
+
   .matchup-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 14px 18px; gap: 12px; cursor: pointer; }
   .matchup-head:hover { background: rgba(228,0,43,0.04); }
   .matchup-head .fname { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; line-height: 1.1; }
@@ -62,14 +71,35 @@
   .matchup-head .left { text-align: right; }
   .vs-badge { background: var(--accent); color: white; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 3px; letter-spacing: 0.08em; }
 
-  .matchup-foot { background: var(--bg-3); padding: 6px 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); }
+  .insight-row { padding: 8px 18px 12px; border-top: 1px solid var(--line); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12px; font-family: 'JetBrains Mono', monospace; }
+  .insight-pill { padding: 3px 10px; border-radius: 100px; font-weight: 700; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 6px; }
+  .insight-pill.edge-a, .insight-pill.edge-b { background: rgba(43,182,115,0.12); color: var(--green); border: 1px solid rgba(43,182,115,0.4); }
+  .insight-pill.balanced { background: rgba(138,138,147,0.12); color: var(--text-dim); border: 1px solid var(--line); }
+  .insight-pill.lia { background: rgba(255,87,87,0.1); color: var(--liability); border: 1px solid rgba(255,87,87,0.4); }
+  .insight-pill .arrow { font-size: 10px; opacity: 0.7; }
+
+  .matchup-foot { background: var(--bg-3); padding: 6px 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); cursor: pointer; }
   .matchup-foot .wc { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
   .matchup-foot .arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.2s, color 0.2s; }
   .matchup.open .matchup-foot .arrow { color: var(--accent); transform: rotate(180deg); }
 
-  .matchup-deltas { background: var(--bg-3); padding: 14px 18px; border-top: 1px solid var(--line); display: none; }
-  .matchup.open .matchup-deltas { display: block; }
-  .matchup-deltas .deltas-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.15em; text-align: center; margin-bottom: 12px; }
+  .matchup-body { background: var(--bg-3); padding: 16px 18px; border-top: 1px solid var(--line); display: none; }
+  .matchup.open .matchup-body { display: block; }
+
+  .edge-summary { background: rgba(228,0,43,0.06); border: 1px solid rgba(228,0,43,0.3); border-radius: 6px; padding: 12px 14px; margin-bottom: 14px; }
+  .edge-summary .es-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .edge-summary .es-head .dot { width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .edge-summary .es-head .es-title { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--accent); letter-spacing: 0.18em; text-transform: uppercase; font-weight: 700; }
+  .edge-summary ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .edge-summary li { display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 1.4; }
+  .edge-summary li .ico { width: 14px; flex-shrink: 0; font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 13px; }
+  .edge-summary li.edge-a .ico, .edge-summary li.edge-b .ico { color: var(--green); }
+  .edge-summary li.lia .ico { color: var(--liability); }
+  .edge-summary li.tie .ico { color: var(--gold); }
+  .edge-summary li b { font-weight: 600; color: var(--text); }
+  .edge-summary li .who { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-left: auto; flex-shrink: 0; }
+
+  .deltas-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.15em; text-align: center; margin-bottom: 12px; }
   .delta-grid { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 4px; row-gap: 10px; align-items: center; font-family: 'Barlow Condensed', sans-serif; }
   .delta-grid .stat-label { text-align: center; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; }
   .delta-grid .v { font-size: 17px; font-weight: 700; }
@@ -78,6 +108,7 @@
   .delta-grid .v.win { color: var(--green); }
   .delta-grid .v.lose { color: var(--text); }
   .delta-grid .v.tie { color: var(--gold); }
+  .delta-grid .v.lia { color: var(--liability); }
   .delta-grid .delta { color: var(--gold); font-size: 11px; font-family: 'JetBrains Mono', monospace; margin-left: 4px; }
   .delta-grid .v.left .delta { margin-left: 0; margin-right: 4px; }
 
@@ -86,8 +117,6 @@
   .matchup-actions button:hover { background: var(--accent-dim); }
   .matchup-actions button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text-dim); }
   .matchup-actions button.secondary:hover { border-color: var(--text); color: var(--text); background: transparent; }
-
-  /* ===== END UPCOMING CARD ===== */
 
   .search-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 16px; }
   .search-box { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
@@ -99,7 +128,6 @@
   .filter { background: transparent; border: 1px solid var(--line); color: var(--text-dim); padding: 8px 16px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.08em; cursor: pointer; }
   .filter:hover { color: var(--text); border-color: var(--text-dim); }
   .filter.active { background: var(--accent); border-color: var(--accent); color: white; }
-  .compare-toggle { margin-left: auto; }
 
   .section-head { max-width: 1280px; margin: 24px auto 16px; padding: 0 24px; display: flex; align-items: baseline; justify-content: space-between; }
   .section-head h2 { font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; text-transform: uppercase; }
@@ -195,6 +223,9 @@
     .delta-grid .v { font-size: 14px; }
     .delta-grid .delta { font-size: 9px; }
     .upcoming-head .left .title { font-size: 20px; }
+    .insight-row { padding: 8px 12px 10px; gap: 6px; font-size: 11px; }
+    .insight-pill { padding: 2px 8px; }
+    .edge-summary li .who { display: none; }
   }
 </style>
 </head>
@@ -212,11 +243,10 @@
 
 <section class="hero">
   <div class="hero-tag">// Data-Driven UFC Analytics</div>
-  <h1 class="display hero-title">Stats Built<br>for <span>Bettors.</span></h1>
-  <p class="hero-sub">Every UFC fighter, real stats, and head-to-head matchup analytics. Click any fighter to see details. Click two to compare.</p>
+  <h1 class="display hero-title">Find The<br><span>Edge.</span></h1>
+  <p class="hero-sub">Open any fight. See the edge. Real stats, real deltas, no noise. Click a matchup to expand the analytical breakdown.</p>
 </section>
 
-<!-- ===== UPCOMING CARD SECTION ===== -->
 <section class="upcoming-wrap" id="upcomingWrap">
   <div class="upcoming-head">
     <div class="left">
@@ -229,11 +259,16 @@
       <select class="event-select" id="eventSelect" style="display:none"></select>
     </div>
   </div>
+  <div class="sort-controls">
+    <span class="sort-label">// Sort</span>
+    <button class="sort-btn active" data-sort="card">Card Order</button>
+    <button class="sort-btn" data-sort="mismatch">Biggest Edge</button>
+    <button class="sort-btn" data-sort="sharp">Sharp Flags</button>
+  </div>
   <div class="matchup-list" id="matchupList">
     <div class="loading">Loading fight card</div>
   </div>
 </section>
-<!-- ===== END UPCOMING CARD ===== -->
 
 <div class="search-wrap">
   <div class="search-box">
@@ -283,31 +318,117 @@
 <script type="module">
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// ===== CONFIG =====
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
-// =================
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let allFighters = [];
 let fighterById = {};
 let currentStance = 'all';
-let selected = []; // up to 2 fighters
+let selected = [];
 let upcomingEvents = [];
 let currentEventId = null;
 let currentMatchups = [];
 let openMatchupId = null;
+let currentSort = 'card';
 
-// --- Load data ---
+// ==== EDGE ENGINE ====
+const EDGE_THRESHOLDS = {
+  reach_in:   { gap: 2,    higherBetter: true,  label: 'Reach',    weight: 1 },
+  age:        { gap: 4,    higherBetter: false, label: 'Age',      weight: 0.5 },
+  slpm:       { gap: 1.0,  higherBetter: true,  label: 'SLPM',     weight: 2 },
+  str_acc:    { gap: 5,    higherBetter: true,  label: 'Str Acc',  weight: 1 },
+  str_def:    { gap: 5,    higherBetter: true,  label: 'Str Def',  weight: 1 },
+  td_avg:     { gap: 1.0,  higherBetter: true,  label: 'TD Avg',   weight: 1 },
+  td_def:     { gap: 10,   higherBetter: true,  label: 'TD Def',   weight: 2 },
+};
+const EXTREME_MULT = 2;
+
+function mismatchScore(a, b) {
+  if (!a || !b) return 0;
+  let score = 0;
+  if (a.reach_in != null && b.reach_in != null) score += Math.abs(a.reach_in - b.reach_in) * 1;
+  if (a.age != null && b.age != null)           score += Math.abs(a.age - b.age) * 0.5;
+  if (a.slpm != null && b.slpm != null)         score += Math.abs(a.slpm - b.slpm) * 2;
+  if (a.td_def != null && b.td_def != null)     score += Math.abs(a.td_def - b.td_def) * 2;
+  return score;
+}
+
+function computeAdvantages(a, b) {
+  if (!a || !b) return [];
+  const advs = [];
+  for (const [stat, cfg] of Object.entries(EDGE_THRESHOLDS)) {
+    const av = a[stat], bv = b[stat];
+    if (av == null || bv == null) continue;
+    const diff = av - bv;
+    if (Math.abs(diff) < cfg.gap) continue;
+    const aHasIt = (diff > 0) === cfg.higherBetter;
+    advs.push({
+      stat, label: cfg.label,
+      advantage: aHasIt ? 'a' : 'b',
+      diff: Math.abs(diff),
+      extreme: Math.abs(diff) >= cfg.gap * EXTREME_MULT,
+      weight: cfg.weight,
+    });
+  }
+  return advs.sort((x, y) => (y.diff * y.weight) - (x.diff * x.weight));
+}
+
+function computeLiabilities(a, b) {
+  if (!a || !b) return [];
+  const out = [];
+  if (a.td_def != null && a.td_def < 50 && b.td_avg != null && b.td_avg > 2.0) {
+    out.push({ side: 'a', stat: 'td_def', label: `Grappling vulnerability — ${a.td_def}% TD def vs ${b.td_avg.toFixed(1)} TD/15` });
+  }
+  if (a.str_def != null && a.str_def < 50 && b.slpm != null && b.slpm > 4.0) {
+    out.push({ side: 'a', stat: 'str_def', label: `Striking holes — ${a.str_def}% str def vs ${b.slpm.toFixed(2)} SLPM` });
+  }
+  if (a.sapm != null && a.sapm > 5.0) {
+    out.push({ side: 'a', stat: 'sapm', label: `Absorbs heavy volume — ${a.sapm.toFixed(2)} SAPM` });
+  }
+  if (b.td_def != null && b.td_def < 50 && a.td_avg != null && a.td_avg > 2.0) {
+    out.push({ side: 'b', stat: 'td_def', label: `Grappling vulnerability — ${b.td_def}% TD def vs ${a.td_avg.toFixed(1)} TD/15` });
+  }
+  if (b.str_def != null && b.str_def < 50 && a.slpm != null && a.slpm > 4.0) {
+    out.push({ side: 'b', stat: 'str_def', label: `Striking holes — ${b.str_def}% str def vs ${a.slpm.toFixed(2)} SLPM` });
+  }
+  if (b.sapm != null && b.sapm > 5.0) {
+    out.push({ side: 'b', stat: 'sapm', label: `Absorbs heavy volume — ${b.sapm.toFixed(2)} SAPM` });
+  }
+  return out;
+}
+
+function isSharpFight(advs) {
+  if (advs.some(x => x.extreme)) return true;
+  const aAdvs = advs.filter(x => x.advantage === 'a').length;
+  const bAdvs = advs.filter(x => x.advantage === 'b').length;
+  return aAdvs >= 3 || bAdvs >= 3;
+}
+
+function topInsight(advs, aName, bName) {
+  if (!advs.length) return null;
+  const top = advs[0];
+  const who = top.advantage === 'a' ? aName : bName;
+  let valStr;
+  if (top.stat === 'age')           valStr = `${Math.round(top.diff)}Y younger`;
+  else if (top.stat === 'reach_in') valStr = `+${Math.round(top.diff)}" reach`;
+  else if (top.stat === 'slpm')     valStr = `+${top.diff.toFixed(2)} SLPM`;
+  else if (top.stat === 'td_avg')   valStr = `+${top.diff.toFixed(2)} TD/15`;
+  else if (top.stat === 'str_acc' || top.stat === 'str_def' || top.stat === 'td_def')
+                                     valStr = `+${Math.round(top.diff)}pp ${top.label}`;
+  else                              valStr = `+${top.diff.toFixed(2)} ${top.label}`;
+  return { who, text: valStr, side: top.advantage };
+}
+
+// ==== DATA LOAD ====
 async function loadFighters() {
   let from = 0;
   const pageSize = 1000;
   let all = [];
   while (true) {
     const { data, error } = await supabase
-      .from('fighters')
-      .select('*')
+      .from('fighters').select('*')
       .order('wins', { ascending: false })
       .range(from, from + pageSize - 1);
     if (error) {
@@ -323,7 +444,6 @@ async function loadFighters() {
   fighterById = {};
   for (const f of all) fighterById[f.id] = f;
   render();
-  // Once fighters are loaded we can hydrate the upcoming card with full stats
   if (currentMatchups.length) renderMatchups();
 }
 
@@ -344,14 +464,12 @@ async function loadUpcomingEvents() {
     document.getElementById('upcomingWrap').style.display = 'none';
     return;
   }
-  // Populate selector
   const sel = document.getElementById('eventSelect');
   sel.innerHTML = upcomingEvents.map(e =>
     `<option value="${e.id}">${escapeHtml(shortenEventName(e.name))} — ${formatDate(e.event_date)}</option>`
   ).join('');
   sel.style.display = 'inline-block';
   sel.onchange = () => loadMatchupsForEvent(parseInt(sel.value));
-  // Load the soonest one
   await loadMatchupsForEvent(upcomingEvents[0].id);
 }
 
@@ -366,17 +484,14 @@ async function loadMatchupsForEvent(eventId) {
     document.getElementById('countdown').textContent = countdownText(event.event_date);
     document.getElementById('eventSelect').value = eventId;
   }
-
   document.getElementById('matchupList').innerHTML = '<div class="loading">Loading fight card</div>';
 
   const { data, error } = await supabase
-    .from('fights')
-    .select('*')
+    .from('fights').select('*')
     .eq('event_id', eventId)
     .order('is_main_event', { ascending: false })
     .order('is_title_fight', { ascending: false })
     .order('id', { ascending: true });
-
   if (error) {
     document.getElementById('matchupList').innerHTML = `<div class="empty">Could not load fights: ${error.message}</div>`;
     return;
@@ -386,14 +501,32 @@ async function loadMatchupsForEvent(eventId) {
   renderMatchups();
 }
 
+// ==== RENDER MATCHUPS ====
 function renderMatchups() {
   const list = document.getElementById('matchupList');
   if (!currentMatchups.length) {
     list.innerHTML = '<div class="empty">No fights listed for this event yet.</div>';
     return;
   }
-  list.innerHTML = currentMatchups.map(renderMatchup).join('');
-  // Wire up clicks
+  const enriched = currentMatchups.map(m => {
+    const a = fighterById[m.fighter_a_id] || null;
+    const b = fighterById[m.fighter_b_id] || null;
+    const advs = computeAdvantages(a, b);
+    const lias = computeLiabilities(a, b);
+    const score = mismatchScore(a, b);
+    const sharp = isSharpFight(advs);
+    return { m, a, b, advs, lias, score, sharp };
+  });
+  let sorted = enriched;
+  if (currentSort === 'mismatch') {
+    sorted = [...enriched].sort((x, y) => y.score - x.score);
+  } else if (currentSort === 'sharp') {
+    sorted = [...enriched].sort((x, y) => {
+      if (x.sharp !== y.sharp) return y.sharp - x.sharp;
+      return y.score - x.score;
+    });
+  }
+  list.innerHTML = sorted.map(renderMatchup).join('');
   list.querySelectorAll('.matchup').forEach(el => {
     const id = parseInt(el.dataset.id);
     el.querySelector('.matchup-head').onclick = () => toggleMatchup(id);
@@ -407,9 +540,8 @@ function renderMatchups() {
   });
 }
 
-function renderMatchup(m) {
-  const a = fighterById[m.fighter_a_id] || null;
-  const b = fighterById[m.fighter_b_id] || null;
+function renderMatchup(item) {
+  const { m, a, b, advs, lias, sharp } = item;
   const aName = a?.name || m.fighter_a_name || 'TBD';
   const bName = b?.name || m.fighter_b_name || 'TBD';
   const aRecord = a ? `${a.wins||0}-${a.losses||0}${a.draws ? '-'+a.draws : ''}` : '—';
@@ -419,8 +551,27 @@ function renderMatchup(m) {
   const isOpen = openMatchupId === m.id;
   const wcLabel = [m.weight_class, m.is_main_event ? 'MAIN EVENT' : (m.is_title_fight ? 'TITLE FIGHT' : null)].filter(Boolean).join(' · ');
 
+  const insight = topInsight(advs, aName, bName);
+  let insightHtml = '';
+  if (a && b) {
+    if (insight) {
+      const arrow = insight.side === 'a' ? '◀' : '▶';
+      const lastName = insight.who.split(' ').slice(-1)[0].toUpperCase();
+      insightHtml = `
+        <div class="insight-row">
+          <span class="insight-pill edge-${insight.side}"><span class="arrow">${arrow}</span>${escapeHtml(lastName)} · ${escapeHtml(insight.text)}</span>
+          ${lias.length ? `<span class="insight-pill lia">⚠ ${lias.length} liability${lias.length>1?'s':''}</span>` : ''}
+          ${advs.length > 1 ? `<span class="insight-pill balanced">+${advs.length - 1} more edge${advs.length-1>1?'s':''}</span>` : ''}
+        </div>
+      `;
+    } else {
+      insightHtml = `<div class="insight-row"><span class="insight-pill balanced">EVENLY MATCHED</span></div>`;
+    }
+  }
+
   return `
-    <div class="matchup ${isOpen ? 'open' : ''}" data-id="${m.id}">
+    <div class="matchup ${isOpen ? 'open' : ''} ${sharp ? 'sharp' : ''}" data-id="${m.id}">
+      ${sharp ? '<span class="sharp-flag">🔥 HIGH EDGE</span>' : ''}
       <div class="matchup-head">
         <div class="left">
           <div class="fname">${escapeHtml(aName)}</div>
@@ -432,8 +583,10 @@ function renderMatchup(m) {
           <div class="fmeta">${escapeHtml(bRecord)} · ${escapeHtml(bStance)}</div>
         </div>
       </div>
-      <div class="matchup-deltas">
-        ${a && b ? renderDeltas(a, b) : '<div class="empty" style="padding:20px">Fighter stats not yet loaded for this matchup.</div>'}
+      ${insightHtml}
+      <div class="matchup-body">
+        ${a && b ? renderEdgeSummary(advs, lias, aName, bName) : ''}
+        ${a && b ? renderDeltas(a, b, lias) : '<div class="empty" style="padding:20px">Fighter stats not yet loaded for this matchup.</div>'}
         <div class="matchup-actions">
           ${a ? `<button class="secondary" data-action="detail-a" data-fid="${a.id}">${escapeHtml(aName)} Detail</button>` : ''}
           ${a && b ? `<button data-action="compare">Full H2H Compare</button>` : ''}
@@ -448,27 +601,66 @@ function renderMatchup(m) {
   `;
 }
 
-function renderDeltas(a, b) {
-  // Each row: label, aVal, bVal, higherIsBetter, formatter, deltaUnit
-  const rows = [
-    ['AGE', a.age, b.age, false, v => v == null ? '—' : v, 'Y'],
-    ['HEIGHT', a.height_in, b.height_in, true, heightStr, '"'],
-    ['REACH', a.reach_in, b.reach_in, true, v => v == null ? '—' : v + '"', '"'],
-    ['SLPM', a.slpm, b.slpm, true, v => fmt(v, 2), ''],
-    ['STR ACC', a.str_acc, b.str_acc, true, pct, '%'],
-    ['STR DEF', a.str_def, b.str_def, true, pct, '%'],
-    ['TD AVG', a.td_avg, b.td_avg, true, v => fmt(v, 2), ''],
-    ['TD DEF', a.td_def, b.td_def, true, pct, '%'],
-  ];
+function renderEdgeSummary(advs, lias, aName, bName) {
+  const items = [];
+  for (const adv of advs.slice(0, 3)) {
+    const who = adv.advantage === 'a' ? aName : bName;
+    const sideClass = `edge-${adv.advantage}`;
+    let text;
+    if (adv.stat === 'age')           text = `<b>${Math.round(adv.diff)}Y younger</b>`;
+    else if (adv.stat === 'reach_in') text = `<b>+${Math.round(adv.diff)}" reach</b>`;
+    else if (adv.stat === 'slpm')     text = `<b>+${adv.diff.toFixed(2)} SLPM</b> volume edge`;
+    else if (adv.stat === 'td_avg')   text = `<b>+${adv.diff.toFixed(2)} TD/15</b> grappling pressure`;
+    else if (adv.stat === 'str_acc' || adv.stat === 'str_def' || adv.stat === 'td_def')
+                                       text = `<b>+${Math.round(adv.diff)}pp ${adv.label}</b>`;
+    else                              text = `<b>+${adv.diff.toFixed(2)} ${adv.label}</b>`;
+    if (adv.extreme) text = text + ' <span style="color:var(--gold);font-size:10px;font-family:JetBrains Mono,monospace">EXTREME</span>';
+    const lastName = who.split(' ').slice(-1)[0].toUpperCase();
+    items.push(`<li class="${sideClass}"><span class="ico">▲</span><span>${text}</span><span class="who">${escapeHtml(lastName)}</span></li>`);
+  }
+  for (const lia of lias.slice(0, 2)) {
+    const who = lia.side === 'a' ? aName : bName;
+    const lastName = who.split(' ').slice(-1)[0].toUpperCase();
+    items.push(`<li class="lia"><span class="ico">▼</span><span>${escapeHtml(lia.label)}</span><span class="who">${escapeHtml(lastName)}</span></li>`);
+  }
+  if (!items.length) {
+    items.push(`<li class="tie"><span class="ico">≈</span><span>Evenly matched on measured stats — likely a stylistic / momentum read.</span></li>`);
+  }
   return `
-    <div class="deltas-label">// MATCHUP DELTAS</div>
-    <div class="delta-grid">
-      ${rows.map(([label, av, bv, higherBetter, fmt2, unit]) => deltaRow(label, av, bv, higherBetter, fmt2, unit)).join('')}
+    <div class="edge-summary">
+      <div class="es-head">
+        <span class="dot"></span>
+        <span class="es-title">Edge Summary</span>
+      </div>
+      <ul>${items.join('')}</ul>
     </div>
   `;
 }
 
-function deltaRow(label, av, bv, higherBetter, fmt2, unit) {
+function renderDeltas(a, b, lias) {
+  const liaSidesByStat = {};
+  for (const lia of lias) {
+    liaSidesByStat[`${lia.stat}_${lia.side}`] = true;
+  }
+  const rows = [
+    ['AGE', 'age', a.age, b.age, false, v => v == null ? '—' : v],
+    ['HEIGHT', 'height_in', a.height_in, b.height_in, true, heightStr],
+    ['REACH', 'reach_in', a.reach_in, b.reach_in, true, v => v == null ? '—' : v + '"'],
+    ['SLPM', 'slpm', a.slpm, b.slpm, true, v => fmt(v, 2)],
+    ['STR ACC', 'str_acc', a.str_acc, b.str_acc, true, pct],
+    ['STR DEF', 'str_def', a.str_def, b.str_def, true, pct],
+    ['TD AVG', 'td_avg', a.td_avg, b.td_avg, true, v => fmt(v, 2)],
+    ['TD DEF', 'td_def', a.td_def, b.td_def, true, pct],
+  ];
+  return `
+    <div class="deltas-label">// FULL DELTA TABLE</div>
+    <div class="delta-grid">
+      ${rows.map(([label, statKey, av, bv, higherBetter, fmt2]) => deltaRow(label, statKey, av, bv, higherBetter, fmt2, liaSidesByStat)).join('')}
+    </div>
+  `;
+}
+
+function deltaRow(label, statKey, av, bv, higherBetter, fmt2, liaSidesByStat) {
   let aClass = 'lose', bClass = 'lose';
   let aDelta = '', bDelta = '';
   if (av != null && bv != null && av !== bv) {
@@ -476,15 +668,17 @@ function deltaRow(label, av, bv, higherBetter, fmt2, unit) {
     if (aBetter) {
       aClass = 'win';
       const diff = Math.abs(av - bv);
-      aDelta = `<span class="delta">+${formatDelta(diff, unit, label)}</span>`;
+      aDelta = `<span class="delta">+${formatDelta(diff, label)}</span>`;
     } else {
       bClass = 'win';
       const diff = Math.abs(av - bv);
-      bDelta = `<span class="delta">+${formatDelta(diff, unit, label)}</span>`;
+      bDelta = `<span class="delta">+${formatDelta(diff, label)}</span>`;
     }
   } else if (av != null && av === bv) {
     aClass = bClass = 'tie';
   }
+  if (liaSidesByStat[`${statKey}_a`]) aClass = 'lia';
+  if (liaSidesByStat[`${statKey}_b`]) bClass = 'lia';
   return `
     <div class="v left ${aClass}">${aDelta}${fmt2(av)}</div>
     <div class="stat-label">${label}</div>
@@ -492,17 +686,12 @@ function deltaRow(label, av, bv, higherBetter, fmt2, unit) {
   `;
 }
 
-function formatDelta(diff, unit, label) {
-  if (label === 'HEIGHT') {
-    // diff is inches — show like "2"
-    return `${Math.round(diff)}${unit}`;
-  }
-  if (label === 'AGE') {
-    return `${Math.round(diff)}Y younger`;
-  }
-  // For decimals, 2 places; for ints/pct, no decimals
-  if (Number.isInteger(diff)) return `${diff}${unit}`;
-  return `${diff.toFixed(2)}${unit}`;
+function formatDelta(diff, label) {
+  if (label === 'HEIGHT' || label === 'REACH') return `${Math.round(diff)}"`;
+  if (label === 'AGE') return `${Math.round(diff)}Y`;
+  if (label === 'STR ACC' || label === 'STR DEF' || label === 'TD DEF') return `${Math.round(diff)}pp`;
+  if (Number.isInteger(diff)) return `${diff}`;
+  return `${diff.toFixed(2)}`;
 }
 
 function toggleMatchup(id) {
@@ -526,7 +715,6 @@ function openDetailById(id) {
   if (f) openDetail(f);
 }
 
-// --- Helpers for events ---
 function shortenEventName(name) {
   if (!name) return '';
   return name.replace(/^UFC Fight Night: /, 'UFC FN: ').replace(/^UFC /, 'UFC ');
@@ -551,7 +739,7 @@ function countdownText(d) {
   return `${days} DAYS`;
 }
 
-// --- Render fighter grid (existing) ---
+// ==== FIGHTER GRID (unchanged) ====
 function render() {
   const q = document.getElementById('search').value.toLowerCase().trim();
   const list = allFighters.filter(f => {
@@ -607,7 +795,6 @@ function heightStr(inches) {
 }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// --- Selection / Compare (existing) ---
 function onCardClick(id) {
   const fighter = allFighters.find(f => f.id === id);
   if (!fighter) return;
@@ -646,7 +833,6 @@ window.clearSelection = function() {
   render();
 };
 
-// --- Modals (existing) ---
 function openDetail(f) {
   document.getElementById('modalTitle').textContent = f.name;
   document.getElementById('modalBody').innerHTML = `
@@ -681,7 +867,6 @@ function openCompare() {
   if (selected.length < 2) return;
   const [a, b] = selected;
   document.getElementById('modalTitle').textContent = `${a.name} vs ${b.name}`;
-
   function row(label, av, bv, higherIsBetter = true, format = v => v == null ? '—' : v) {
     let aClass = '', bClass = '';
     if (av != null && bv != null) {
@@ -689,15 +874,8 @@ function openCompare() {
       else if ((av > bv) === higherIsBetter) { aClass = 'winner'; bClass = 'loser'; }
       else { aClass = 'loser'; bClass = 'winner'; }
     }
-    return `
-      <div class="compare-row">
-        <div class="v left ${aClass}">${format(av)}</div>
-        <div class="label">${label}</div>
-        <div class="v right ${bClass}">${format(bv)}</div>
-      </div>
-    `;
+    return `<div class="compare-row"><div class="v left ${aClass}">${format(av)}</div><div class="label">${label}</div><div class="v right ${bClass}">${format(bv)}</div></div>`;
   }
-
   document.getElementById('modalBody').innerHTML = `
     <div class="compare-grid">
       <div class="compare-side">
@@ -735,7 +913,6 @@ window.closeModal = function() {
   document.getElementById('modal').classList.remove('show');
 };
 
-// --- Wire up ---
 document.getElementById('search').addEventListener('input', render);
 document.getElementById('filters').addEventListener('click', e => {
   const btn = e.target.closest('.filter');
@@ -745,12 +922,17 @@ document.getElementById('filters').addEventListener('click', e => {
   currentStance = btn.dataset.stance;
   render();
 });
-document.getElementById('compareBtn').addEventListener('click', openCompare);
-document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal();
+document.querySelector('.sort-controls').addEventListener('click', e => {
+  const btn = e.target.closest('.sort-btn');
+  if (!btn) return;
+  document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  currentSort = btn.dataset.sort;
+  renderMatchups();
 });
+document.getElementById('compareBtn').addEventListener('click', openCompare);
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
 
-// Kick off both loads in parallel
 loadFighters();
 loadUpcomingEvents();
 </script>
