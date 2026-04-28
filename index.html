@@ -41,6 +41,54 @@
   .hero-title span { color: var(--accent); }
   .hero-sub { color: var(--text-dim); font-size: 17px; max-width: 620px; line-height: 1.6; }
 
+  /* ===== UPCOMING CARD SECTION ===== */
+  .upcoming-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 32px; }
+  .upcoming-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .upcoming-head .left .tag { color: var(--accent); font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; }
+  .upcoming-head .left .title { font-family: 'Barlow Condensed', sans-serif; font-size: 26px; font-weight: 800; text-transform: uppercase; line-height: 1.05; margin-top: 4px; }
+  .upcoming-head .left .meta { color: var(--text-dim); font-size: 13px; margin-top: 4px; }
+  .upcoming-head .right { display: flex; align-items: center; gap: 12px; }
+  .countdown { color: var(--gold); font-family: 'JetBrains Mono', monospace; font-size: 12px; padding: 6px 12px; border: 1px solid var(--gold); border-radius: 4px; letter-spacing: 0.1em; }
+  .event-select { background: var(--bg-2); border: 1px solid var(--line); color: var(--text); padding: 8px 14px; border-radius: 4px; font-family: 'Barlow Condensed', sans-serif; font-weight: 600; font-size: 14px; text-transform: uppercase; letter-spacing: 0.06em; cursor: pointer; outline: none; }
+  .event-select:focus, .event-select:hover { border-color: var(--accent); }
+
+  .matchup-list { display: flex; flex-direction: column; gap: 8px; }
+  .matchup { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; transition: border-color 0.15s; }
+  .matchup.open { border-color: var(--accent); }
+  .matchup-head { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; padding: 14px 18px; gap: 12px; cursor: pointer; }
+  .matchup-head:hover { background: rgba(228,0,43,0.04); }
+  .matchup-head .fname { font-family: 'Barlow Condensed', sans-serif; font-size: 18px; font-weight: 800; text-transform: uppercase; line-height: 1.1; }
+  .matchup-head .fmeta { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; margin-top: 3px; }
+  .matchup-head .left { text-align: right; }
+  .vs-badge { background: var(--accent); color: white; font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 13px; padding: 4px 10px; border-radius: 3px; letter-spacing: 0.08em; }
+
+  .matchup-foot { background: var(--bg-3); padding: 6px 18px; display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--line); }
+  .matchup-foot .wc { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-dim); letter-spacing: 0.1em; text-transform: uppercase; }
+  .matchup-foot .arrow { color: var(--text-dim); font-size: 12px; transition: transform 0.2s, color 0.2s; }
+  .matchup.open .matchup-foot .arrow { color: var(--accent); transform: rotate(180deg); }
+
+  .matchup-deltas { background: var(--bg-3); padding: 14px 18px; border-top: 1px solid var(--line); display: none; }
+  .matchup.open .matchup-deltas { display: block; }
+  .matchup-deltas .deltas-label { font-family: 'JetBrains Mono', monospace; font-size: 9px; color: var(--text-dim); letter-spacing: 0.15em; text-align: center; margin-bottom: 12px; }
+  .delta-grid { display: grid; grid-template-columns: 1fr 110px 1fr; gap: 4px; row-gap: 10px; align-items: center; font-family: 'Barlow Condensed', sans-serif; }
+  .delta-grid .stat-label { text-align: center; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 0.12em; }
+  .delta-grid .v { font-size: 17px; font-weight: 700; }
+  .delta-grid .v.left { text-align: right; }
+  .delta-grid .v.right { text-align: left; }
+  .delta-grid .v.win { color: var(--green); }
+  .delta-grid .v.lose { color: var(--text); }
+  .delta-grid .v.tie { color: var(--gold); }
+  .delta-grid .delta { color: var(--gold); font-size: 11px; font-family: 'JetBrains Mono', monospace; margin-left: 4px; }
+  .delta-grid .v.left .delta { margin-left: 0; margin-right: 4px; }
+
+  .matchup-actions { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+  .matchup-actions button { background: var(--accent); color: white; border: none; padding: 8px 18px; border-radius: 100px; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; text-transform: uppercase; font-size: 12px; letter-spacing: 0.06em; cursor: pointer; }
+  .matchup-actions button:hover { background: var(--accent-dim); }
+  .matchup-actions button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text-dim); }
+  .matchup-actions button.secondary:hover { border-color: var(--text); color: var(--text); background: transparent; }
+
+  /* ===== END UPCOMING CARD ===== */
+
   .search-wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px 16px; }
   .search-box { background: var(--bg-2); border: 1px solid var(--line); border-radius: 6px; padding: 16px 20px; display: flex; align-items: center; gap: 12px; }
   .search-box:focus-within { border-color: var(--accent); }
@@ -140,6 +188,13 @@
     .compare-row .v { font-size: 18px; }
     .detail-grid { grid-template-columns: 1fr; }
     .hero { padding: 32px 24px 24px; }
+    .matchup-head { padding: 12px 14px; gap: 8px; }
+    .matchup-head .fname { font-size: 15px; }
+    .matchup-head .fmeta { font-size: 10px; }
+    .delta-grid { grid-template-columns: 1fr 80px 1fr; }
+    .delta-grid .v { font-size: 14px; }
+    .delta-grid .delta { font-size: 9px; }
+    .upcoming-head .left .title { font-size: 20px; }
   }
 </style>
 </head>
@@ -160,6 +215,25 @@
   <h1 class="display hero-title">Stats Built<br>for <span>Bettors.</span></h1>
   <p class="hero-sub">Every UFC fighter, real stats, and head-to-head matchup analytics. Click any fighter to see details. Click two to compare.</p>
 </section>
+
+<!-- ===== UPCOMING CARD SECTION ===== -->
+<section class="upcoming-wrap" id="upcomingWrap">
+  <div class="upcoming-head">
+    <div class="left">
+      <div class="tag">// Next Event</div>
+      <div class="title" id="eventTitle">Loading event…</div>
+      <div class="meta" id="eventMeta"></div>
+    </div>
+    <div class="right">
+      <span class="countdown" id="countdown"></span>
+      <select class="event-select" id="eventSelect" style="display:none"></select>
+    </div>
+  </div>
+  <div class="matchup-list" id="matchupList">
+    <div class="loading">Loading fight card</div>
+  </div>
+</section>
+<!-- ===== END UPCOMING CARD ===== -->
 
 <div class="search-wrap">
   <div class="search-box">
@@ -217,8 +291,13 @@ const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
 const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
 
 let allFighters = [];
+let fighterById = {};
 let currentStance = 'all';
 let selected = []; // up to 2 fighters
+let upcomingEvents = [];
+let currentEventId = null;
+let currentMatchups = [];
+let openMatchupId = null;
 
 // --- Load data ---
 async function loadFighters() {
@@ -241,10 +320,238 @@ async function loadFighters() {
     from += pageSize;
   }
   allFighters = all;
+  fighterById = {};
+  for (const f of all) fighterById[f.id] = f;
   render();
+  // Once fighters are loaded we can hydrate the upcoming card with full stats
+  if (currentMatchups.length) renderMatchups();
 }
 
-// --- Render ---
+async function loadUpcomingEvents() {
+  const today = new Date().toISOString().slice(0, 10);
+  const { data, error } = await supabase
+    .from('events')
+    .select('id, name, event_date, location, is_upcoming')
+    .gte('event_date', today)
+    .order('event_date', { ascending: true })
+    .limit(20);
+  if (error) {
+    document.getElementById('matchupList').innerHTML = `<div class="empty">Could not load events: ${error.message}</div>`;
+    return;
+  }
+  upcomingEvents = data || [];
+  if (upcomingEvents.length === 0) {
+    document.getElementById('upcomingWrap').style.display = 'none';
+    return;
+  }
+  // Populate selector
+  const sel = document.getElementById('eventSelect');
+  sel.innerHTML = upcomingEvents.map(e =>
+    `<option value="${e.id}">${escapeHtml(shortenEventName(e.name))} — ${formatDate(e.event_date)}</option>`
+  ).join('');
+  sel.style.display = 'inline-block';
+  sel.onchange = () => loadMatchupsForEvent(parseInt(sel.value));
+  // Load the soonest one
+  await loadMatchupsForEvent(upcomingEvents[0].id);
+}
+
+async function loadMatchupsForEvent(eventId) {
+  currentEventId = eventId;
+  const event = upcomingEvents.find(e => e.id === eventId);
+  if (event) {
+    document.getElementById('eventTitle').textContent = event.name;
+    const dateStr = formatLongDate(event.event_date);
+    const loc = event.location ? ` · ${event.location}` : '';
+    document.getElementById('eventMeta').textContent = `${dateStr}${loc}`;
+    document.getElementById('countdown').textContent = countdownText(event.event_date);
+    document.getElementById('eventSelect').value = eventId;
+  }
+
+  document.getElementById('matchupList').innerHTML = '<div class="loading">Loading fight card</div>';
+
+  const { data, error } = await supabase
+    .from('fights')
+    .select('*')
+    .eq('event_id', eventId)
+    .order('is_main_event', { ascending: false })
+    .order('is_title_fight', { ascending: false })
+    .order('id', { ascending: true });
+
+  if (error) {
+    document.getElementById('matchupList').innerHTML = `<div class="empty">Could not load fights: ${error.message}</div>`;
+    return;
+  }
+  currentMatchups = data || [];
+  openMatchupId = null;
+  renderMatchups();
+}
+
+function renderMatchups() {
+  const list = document.getElementById('matchupList');
+  if (!currentMatchups.length) {
+    list.innerHTML = '<div class="empty">No fights listed for this event yet.</div>';
+    return;
+  }
+  list.innerHTML = currentMatchups.map(renderMatchup).join('');
+  // Wire up clicks
+  list.querySelectorAll('.matchup').forEach(el => {
+    const id = parseInt(el.dataset.id);
+    el.querySelector('.matchup-head').onclick = () => toggleMatchup(id);
+    el.querySelector('.matchup-foot').onclick = () => toggleMatchup(id);
+    const compareBtn = el.querySelector('[data-action="compare"]');
+    if (compareBtn) compareBtn.onclick = (e) => { e.stopPropagation(); openCompareForMatchup(id); };
+    const detailA = el.querySelector('[data-action="detail-a"]');
+    if (detailA) detailA.onclick = (e) => { e.stopPropagation(); openDetailById(parseInt(detailA.dataset.fid)); };
+    const detailB = el.querySelector('[data-action="detail-b"]');
+    if (detailB) detailB.onclick = (e) => { e.stopPropagation(); openDetailById(parseInt(detailB.dataset.fid)); };
+  });
+}
+
+function renderMatchup(m) {
+  const a = fighterById[m.fighter_a_id] || null;
+  const b = fighterById[m.fighter_b_id] || null;
+  const aName = a?.name || m.fighter_a_name || 'TBD';
+  const bName = b?.name || m.fighter_b_name || 'TBD';
+  const aRecord = a ? `${a.wins||0}-${a.losses||0}${a.draws ? '-'+a.draws : ''}` : '—';
+  const bRecord = b ? `${b.wins||0}-${b.losses||0}${b.draws ? '-'+b.draws : ''}` : '—';
+  const aStance = a?.stance ? a.stance.toUpperCase() : '—';
+  const bStance = b?.stance ? b.stance.toUpperCase() : '—';
+  const isOpen = openMatchupId === m.id;
+  const wcLabel = [m.weight_class, m.is_main_event ? 'MAIN EVENT' : (m.is_title_fight ? 'TITLE FIGHT' : null)].filter(Boolean).join(' · ');
+
+  return `
+    <div class="matchup ${isOpen ? 'open' : ''}" data-id="${m.id}">
+      <div class="matchup-head">
+        <div class="left">
+          <div class="fname">${escapeHtml(aName)}</div>
+          <div class="fmeta">${escapeHtml(aRecord)} · ${escapeHtml(aStance)}</div>
+        </div>
+        <div class="vs-badge">VS</div>
+        <div>
+          <div class="fname">${escapeHtml(bName)}</div>
+          <div class="fmeta">${escapeHtml(bRecord)} · ${escapeHtml(bStance)}</div>
+        </div>
+      </div>
+      <div class="matchup-deltas">
+        ${a && b ? renderDeltas(a, b) : '<div class="empty" style="padding:20px">Fighter stats not yet loaded for this matchup.</div>'}
+        <div class="matchup-actions">
+          ${a ? `<button class="secondary" data-action="detail-a" data-fid="${a.id}">${escapeHtml(aName)} Detail</button>` : ''}
+          ${a && b ? `<button data-action="compare">Full H2H Compare</button>` : ''}
+          ${b ? `<button class="secondary" data-action="detail-b" data-fid="${b.id}">${escapeHtml(bName)} Detail</button>` : ''}
+        </div>
+      </div>
+      <div class="matchup-foot">
+        <span class="wc">${escapeHtml(wcLabel || '—')}</span>
+        <span class="arrow">▼</span>
+      </div>
+    </div>
+  `;
+}
+
+function renderDeltas(a, b) {
+  // Each row: label, aVal, bVal, higherIsBetter, formatter, deltaUnit
+  const rows = [
+    ['AGE', a.age, b.age, false, v => v == null ? '—' : v, 'Y'],
+    ['HEIGHT', a.height_in, b.height_in, true, heightStr, '"'],
+    ['REACH', a.reach_in, b.reach_in, true, v => v == null ? '—' : v + '"', '"'],
+    ['SLPM', a.slpm, b.slpm, true, v => fmt(v, 2), ''],
+    ['STR ACC', a.str_acc, b.str_acc, true, pct, '%'],
+    ['STR DEF', a.str_def, b.str_def, true, pct, '%'],
+    ['TD AVG', a.td_avg, b.td_avg, true, v => fmt(v, 2), ''],
+    ['TD DEF', a.td_def, b.td_def, true, pct, '%'],
+  ];
+  return `
+    <div class="deltas-label">// MATCHUP DELTAS</div>
+    <div class="delta-grid">
+      ${rows.map(([label, av, bv, higherBetter, fmt2, unit]) => deltaRow(label, av, bv, higherBetter, fmt2, unit)).join('')}
+    </div>
+  `;
+}
+
+function deltaRow(label, av, bv, higherBetter, fmt2, unit) {
+  let aClass = 'lose', bClass = 'lose';
+  let aDelta = '', bDelta = '';
+  if (av != null && bv != null && av !== bv) {
+    const aBetter = (av > bv) === higherBetter;
+    if (aBetter) {
+      aClass = 'win';
+      const diff = Math.abs(av - bv);
+      aDelta = `<span class="delta">+${formatDelta(diff, unit, label)}</span>`;
+    } else {
+      bClass = 'win';
+      const diff = Math.abs(av - bv);
+      bDelta = `<span class="delta">+${formatDelta(diff, unit, label)}</span>`;
+    }
+  } else if (av != null && av === bv) {
+    aClass = bClass = 'tie';
+  }
+  return `
+    <div class="v left ${aClass}">${aDelta}${fmt2(av)}</div>
+    <div class="stat-label">${label}</div>
+    <div class="v right ${bClass}">${fmt2(bv)}${bDelta}</div>
+  `;
+}
+
+function formatDelta(diff, unit, label) {
+  if (label === 'HEIGHT') {
+    // diff is inches — show like "2"
+    return `${Math.round(diff)}${unit}`;
+  }
+  if (label === 'AGE') {
+    return `${Math.round(diff)}Y younger`;
+  }
+  // For decimals, 2 places; for ints/pct, no decimals
+  if (Number.isInteger(diff)) return `${diff}${unit}`;
+  return `${diff.toFixed(2)}${unit}`;
+}
+
+function toggleMatchup(id) {
+  openMatchupId = (openMatchupId === id) ? null : id;
+  renderMatchups();
+}
+
+function openCompareForMatchup(matchupId) {
+  const m = currentMatchups.find(x => x.id === matchupId);
+  if (!m) return;
+  const a = fighterById[m.fighter_a_id];
+  const b = fighterById[m.fighter_b_id];
+  if (!a || !b) return;
+  selected = [a, b];
+  updateCompareBar();
+  openCompare();
+}
+
+function openDetailById(id) {
+  const f = fighterById[id];
+  if (f) openDetail(f);
+}
+
+// --- Helpers for events ---
+function shortenEventName(name) {
+  if (!name) return '';
+  return name.replace(/^UFC Fight Night: /, 'UFC FN: ').replace(/^UFC /, 'UFC ');
+}
+function formatDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+function formatLongDate(d) {
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+function countdownText(d) {
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  const dt = new Date(d + 'T12:00:00');
+  dt.setHours(0,0,0,0);
+  const days = Math.round((dt - today) / 86400000);
+  if (days < 0) return '';
+  if (days === 0) return 'TONIGHT';
+  if (days === 1) return 'TOMORROW';
+  return `${days} DAYS`;
+}
+
+// --- Render fighter grid (existing) ---
 function render() {
   const q = document.getElementById('search').value.toLowerCase().trim();
   const list = allFighters.filter(f => {
@@ -258,9 +565,7 @@ function render() {
     grid.innerHTML = '<div class="empty">No fighters match your search.</div>';
     return;
   }
-  // Render at most 200 at a time for perf
   grid.innerHTML = list.slice(0, 200).map(renderCard).join('');
-  // Attach click handlers
   grid.querySelectorAll('.card').forEach(el => {
     el.onclick = () => onCardClick(parseInt(el.dataset.id));
   });
@@ -302,7 +607,7 @@ function heightStr(inches) {
 }
 function escapeHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-// --- Selection / Compare ---
+// --- Selection / Compare (existing) ---
 function onCardClick(id) {
   const fighter = allFighters.find(f => f.id === id);
   if (!fighter) return;
@@ -311,7 +616,6 @@ function onCardClick(id) {
     selected.splice(idx, 1);
   } else {
     if (selected.length >= 2) {
-      // If 2 already, open detail instead
       openDetail(fighter);
       return;
     }
@@ -342,7 +646,7 @@ window.clearSelection = function() {
   render();
 };
 
-// --- Modals ---
+// --- Modals (existing) ---
 function openDetail(f) {
   document.getElementById('modalTitle').textContent = f.name;
   document.getElementById('modalBody').innerHTML = `
@@ -353,9 +657,9 @@ function openDetail(f) {
         <div class="record-big"><span style="color:var(--green)">${f.wins||0}</span>-<span style="color:var(--red)">${f.losses||0}</span>${f.draws ? '-' + f.draws : ''}</div>
         <div class="detail-meta">
           <span>STANCE<b>${escapeHtml(f.stance || '—')}</b></span>
+          <span>AGE<b>${f.age || '—'}</b></span>
           <span>HEIGHT<b>${heightStr(f.height_in)}</b></span>
           <span>REACH<b>${f.reach_in ? f.reach_in + '"' : '—'}</b></span>
-          <span>WINS<b>${(f.wins||0)}</b></span>
         </div>
       </div>
       <div class="detail-stats">
@@ -378,7 +682,6 @@ function openCompare() {
   const [a, b] = selected;
   document.getElementById('modalTitle').textContent = `${a.name} vs ${b.name}`;
 
-  // Helper for comparison rows. higherIsBetter = does a higher value win?
   function row(label, av, bv, higherIsBetter = true, format = v => v == null ? '—' : v) {
     let aClass = '', bClass = '';
     if (av != null && bv != null) {
@@ -411,6 +714,7 @@ function openCompare() {
     <div class="compare-table">
       ${row('Wins', a.wins, b.wins, true)}
       ${row('Losses', a.losses, b.losses, false)}
+      ${row('Age', a.age, b.age, false)}
       ${row('Height', a.height_in, b.height_in, true, heightStr)}
       ${row('Reach', a.reach_in, b.reach_in, true, v => v ? v + '"' : '—')}
       ${row('Stance', a.stance, b.stance, true, v => v || '—')}
@@ -446,7 +750,9 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') closeModal();
 });
 
+// Kick off both loads in parallel
 loadFighters();
+loadUpcomingEvents();
 </script>
 </body>
 </html>
