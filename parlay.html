@@ -19,6 +19,95 @@
     .parlay-layout { grid-template-columns: 1fr; }
   }
 
+  /* ===== Mobile sticky slip ===== */
+  /* On mobile the slip becomes a fixed bottom panel that slides up when expanded.
+     The header is always visible so users see leg count + payout at a glance. */
+  @media (max-width: 1024px) {
+    .slip {
+      position: fixed !important;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: auto !important;
+      max-height: 80vh;
+      border-radius: 14px 14px 0 0;
+      border-bottom: none;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.6);
+      z-index: 200;
+      padding: 0;
+      transform: translateY(calc(100% - 64px));  /* hide all but the 64px header */
+      transition: transform 0.25s ease;
+      overflow: hidden;
+    }
+    .slip.expanded {
+      transform: translateY(0);
+    }
+    .slip-mobile-handle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-3);
+    }
+    .slip-mobile-handle .left-block { display: flex; align-items: center; gap: 10px; }
+    .slip-mobile-handle .chevron {
+      font-family: 'Barlow Condensed', sans-serif;
+      color: var(--text-3);
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+    .slip.expanded .chevron { transform: rotate(180deg); }
+    .slip-mobile-handle .leg-count {
+      background: var(--red);
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 999px;
+      min-width: 24px;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .slip-mobile-handle .label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .slip-mobile-handle .preview-payout {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      color: var(--green);
+      font-weight: 800;
+    }
+    .slip-mobile-handle .preview-payout.empty { color: var(--text-3); }
+    .slip h3 { display: none; }   /* desktop title hidden on mobile, replaced by handle */
+    .slip-body-wrap {
+      padding: 16px 18px 24px;
+      overflow-y: auto;
+      max-height: calc(80vh - 64px);
+    }
+    /* Add bottom padding to body so the floating slip never covers content */
+    body { padding-bottom: 72px; }
+    /* Pulse animation when a leg is added */
+    .slip.pulse { animation: slipPulse 0.5s ease; }
+    @keyframes slipPulse {
+      0% { box-shadow: 0 -8px 32px rgba(0,0,0,0.6); }
+      50% { box-shadow: 0 -8px 40px rgba(230, 57, 70, 0.4); }
+      100% { box-shadow: 0 -8px 32px rgba(0,0,0,0.6); }
+    }
+  }
+  /* On desktop the handle is hidden, slip works as it always has */
+  @media (min-width: 1025px) {
+    .slip-mobile-handle { display: none; }
+    .slip-body-wrap { padding: 0; }
+  }
+
   .build-area h2 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 22px;
@@ -214,10 +303,22 @@
       </div>
     </div>
 
-    <div class="slip">
-      <h3>Your parlay</h3>
-      <div id="slipBody">
-        <div class="slip-empty">No legs yet. Click a fighter on the left to add them.</div>
+    <div class="slip" id="slip">
+      <div class="slip-mobile-handle" id="slipHandle">
+        <div class="left-block">
+          <div class="leg-count" id="slipLegCount">0</div>
+          <div class="label">Your parlay</div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 10px;">
+          <div class="preview-payout empty" id="slipPreview">$0</div>
+          <div class="chevron">▲</div>
+        </div>
+      </div>
+      <div class="slip-body-wrap">
+        <h3>Your parlay</h3>
+        <div id="slipBody">
+          <div class="slip-empty">No legs yet. Click a fighter on the left to add them.</div>
+        </div>
       </div>
     </div>
   </div>
@@ -340,10 +441,11 @@ document.addEventListener('click', e => {
     const fighterId = parseInt(pf.dataset.fighter, 10);
     if (!fighterId) return;
 
+    const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
     // Toggle: if already selected, remove; if other side selected, replace
-    const existingIndex = legs.findIndex(l => l.fightId === fightId);
-    if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
-      legs.splice(existingIndex, 1);
+    const existingIndex2 = legs.findIndex(l => l.fightId === fightId);
+    if (existingIndex2 >= 0 && legs[existingIndex2].fighterId === fighterId) {
+      legs.splice(existingIndex2, 1);
     } else {
       const newLeg = {
         fightId,
@@ -352,14 +454,40 @@ document.addEventListener('click', e => {
         opponentName: pf.dataset.opp,
         odds: ''
       };
-      if (existingIndex >= 0) {
-        legs[existingIndex] = newLeg;
+      if (existingIndex2 >= 0) {
+        legs[existingIndex2] = newLeg;
       } else {
         legs.push(newLeg);
       }
     }
     render();
     renderSlip();
+    if (wasAdded) pulseSlip();
+  }
+});
+
+// Pulse the slip header on mobile so user notices the leg was added.
+// Also opens the slip on first add to surface the value.
+function pulseSlip() {
+  const slip = document.getElementById('slip');
+  if (!slip) return;
+  if (window.innerWidth <= 1024) {
+    slip.classList.remove('pulse');
+    void slip.offsetWidth; // force reflow so animation re-triggers
+    slip.classList.add('pulse');
+    // First add: auto-expand briefly so user sees the slip exists
+    if (legs.length === 1) {
+      slip.classList.add('expanded');
+      setTimeout(() => slip.classList.remove('expanded'), 1800);
+    }
+  }
+}
+
+// Toggle slip expand on mobile when handle is tapped
+document.addEventListener('click', e => {
+  const handle = e.target.closest('#slipHandle');
+  if (handle && window.innerWidth <= 1024) {
+    document.getElementById('slip').classList.toggle('expanded');
   }
 });
 
@@ -367,6 +495,7 @@ function renderSlip() {
   const slipBody = document.getElementById('slipBody');
   if (legs.length === 0) {
     slipBody.innerHTML = '<div class="slip-empty">No legs yet. Click a fighter on the left to add them.</div>';
+    updateSlipHandle();
     return;
   }
 
@@ -429,6 +558,30 @@ function renderSlip() {
       Implied probability shows what the sportsbook is pricing in. Combined % is the chance all your picks hit.
     </div>
   `;
+  updateSlipHandle();
+}
+
+// Sync the mobile sticky handle's leg count + payout preview
+function updateSlipHandle() {
+  const lc = document.getElementById('slipLegCount');
+  const pv = document.getElementById('slipPreview');
+  if (!lc || !pv) return;
+  lc.textContent = legs.length;
+  if (legs.length === 0) {
+    pv.textContent = '$0';
+    pv.classList.add('empty');
+    return;
+  }
+  const allValid = legs.every(l => l.odds && !isNaN(americanToDecimal(l.odds)));
+  if (allValid) {
+    let dec = 1;
+    for (const l of legs) dec *= americanToDecimal(l.odds);
+    pv.textContent = '$' + (stake * dec).toFixed(2);
+    pv.classList.remove('empty');
+  } else {
+    pv.textContent = `${legs.length} leg${legs.length === 1 ? '' : 's'}`;
+    pv.classList.add('empty');
+  }
 }
 
 document.addEventListener('input', e => {
@@ -477,6 +630,7 @@ function updateSlipMath() {
   if (elImplied) elImplied.textContent = allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—';
   if (elPayout) elPayout.textContent = payout != null ? '$' + payout.toFixed(2) : '—';
   if (elProfit) elProfit.textContent = profit != null ? '+$' + profit.toFixed(2) : '—';
+  updateSlipHandle();
 }
 
 document.addEventListener('click', e => {
