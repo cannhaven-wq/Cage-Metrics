@@ -61,14 +61,15 @@
     display: grid;
     grid-template-columns: 1fr 1fr 1fr;
     gap: 12px;
-    margin-bottom: 28px;
+    margin-top: 4px;
+    margin-bottom: 36px;
   }
   .stat-of-day {
     background: var(--bg-2);
     border: 1px solid var(--border);
     border-left: 3px solid var(--red);
     border-radius: 10px;
-    padding: 16px 18px;
+    padding: 18px 20px;
   }
   .stat-of-day .lbl {
     font-size: 11px;
@@ -76,15 +77,21 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .stat-of-day .big {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 30px;
+    font-size: 28px;
     font-weight: 800;
     color: #fff;
-    line-height: 1.05;
+    line-height: 1.1;
     margin-bottom: 4px;
+  }
+  .stat-of-day .big .sec {
+    font-size: 16px;
+    color: var(--text-3);
+    font-weight: 600;
+    margin-left: 8px;
   }
   .stat-of-day .sub { font-size: 12px; color: var(--text-2); }
 
@@ -583,7 +590,7 @@ async function loadStatOfDay(event) {
     if (cardFights) {
       const titles = cardFights.filter(f => f.is_title_fight).length;
       document.getElementById('cardBreakdown').innerHTML =
-        `${cardFights.length} fights<span style="color:var(--text-3); font-size:18px"> · ${titles} title</span>`;
+        `${cardFights.length} fights<span class="sec">${titles} title</span>`;
     }
   }, 100);
 

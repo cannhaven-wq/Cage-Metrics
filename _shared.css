@@ -82,6 +82,8 @@ nav.cfl-nav {
   height: 2px;
   background: var(--red);
 }
+.cfl-nav-links a .full { display: inline; }
+.cfl-nav-links a .short { display: none; }
 .cfl-nav-tag {
   background: var(--red);
   color: #fff;
@@ -342,12 +344,34 @@ footer.cfl-footer {
 
 /* ============== Mobile ============== */
 @media (max-width: 768px) {
-  nav.cfl-nav { padding: 0 16px; }
+  nav.cfl-nav {
+    padding: 0 12px;
+    height: 52px;
+  }
   .cfl-logo .full { display: none; }
   .cfl-logo .short { display: inline; }
-  .cfl-nav-links { gap: 14px; }
-  .cfl-nav-links a { font-size: 12px; }
-  .cfl-nav-links a:nth-child(n+5) { display: none; } /* hide overflow on phones */
+  .cfl-logo { font-size: 20px; }
+  .cfl-nav-links {
+    gap: 14px;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    scrollbar-width: none;  /* firefox */
+    -ms-overflow-style: none;  /* IE */
+  }
+  .cfl-nav-links::-webkit-scrollbar { display: none; }
+  .cfl-nav-links a {
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .cfl-nav-links a .full { display: none; }
+  .cfl-nav-links a .short { display: inline; }
+  .cfl-nav-links a.active::after { bottom: -16px; }
+  .cfl-nav-tag {
+    flex-shrink: 0;
+    font-size: 9px;
+    padding: 2px 6px;
+  }
   .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .stats-grid-3 { grid-template-columns: repeat(2, 1fr); }
   .page-hero { padding: 24px 16px; }

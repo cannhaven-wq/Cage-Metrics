@@ -93,11 +93,19 @@
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links">
-        <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>Next event</a>
+        <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
+          <span class="full">Next event</span><span class="short">Event</span>
+        </a>
         <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
-        <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-head</a>
-        <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay builder</a>
-        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stat finder</a>
+        <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>
+          <span class="full">Head-to-head</span><span class="short">H2H</span>
+        </a>
+        <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>
+          <span class="full">Parlay builder</span><span class="short">Parlay</span>
+        </a>
+        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
+          <span class="full">Stat finder</span><span class="short">Stats</span>
+        </a>
         <span class="cfl-nav-tag">Beta</span>
       </div>
     `;
