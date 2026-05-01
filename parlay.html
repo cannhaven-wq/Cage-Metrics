@@ -38,6 +38,11 @@
       transform: translateY(calc(100% - 64px));  /* hide all but the 64px header */
       transition: transform 0.25s ease;
       overflow: hidden;
+      pointer-events: none;          /* whole slip is click-through by default */
+    }
+    .slip-mobile-handle,
+    .slip.expanded {
+      pointer-events: auto;          /* handle is always clickable; expanded body too */
     }
     .slip.expanded {
       transform: translateY(0);
@@ -441,11 +446,11 @@ document.addEventListener('click', e => {
     const fighterId = parseInt(pf.dataset.fighter, 10);
     if (!fighterId) return;
 
-    const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
     // Toggle: if already selected, remove; if other side selected, replace
-    const existingIndex2 = legs.findIndex(l => l.fightId === fightId);
-    if (existingIndex2 >= 0 && legs[existingIndex2].fighterId === fighterId) {
-      legs.splice(existingIndex2, 1);
+    const existingIndex = legs.findIndex(l => l.fightId === fightId);
+    const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
+    if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
+      legs.splice(existingIndex, 1);
     } else {
       const newLeg = {
         fightId,
@@ -454,8 +459,8 @@ document.addEventListener('click', e => {
         opponentName: pf.dataset.opp,
         odds: ''
       };
-      if (existingIndex2 >= 0) {
-        legs[existingIndex2] = newLeg;
+      if (existingIndex >= 0) {
+        legs[existingIndex] = newLeg;
       } else {
         legs.push(newLeg);
       }
