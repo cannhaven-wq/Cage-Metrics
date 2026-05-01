@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .event-hero {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 32px;
+    text-align: center;
+  }
+  .event-hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .event-hero .meta {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-bottom: 14px;
+  }
+  .event-hero .pill {
+    display: inline-block;
+    background: var(--bg-3);
+    color: var(--text-2);
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .event-hero .pill.upcoming { background: var(--red); color: #fff; }
+
+  .fight-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .fight-card.main { border-color: var(--red); }
+  .fight-card.title { border-color: #d4af37; }
+  .fight-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .fight-card-header .badge {
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--red);
+    color: #fff;
+  }
+  .fight-card-header .badge.title { background: #d4af37; color: #1a1a1a; }
+  .fight-card-header .weight { color: var(--text-2); }
+  .fight-card-header .result-pill {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+  }
+
+  .fight-body {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 20px;
+  }
+  .fight-fighter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .fight-fighter:hover { opacity: 0.85; }
+  .fight-fighter.right { flex-direction: row-reverse; text-align: right; }
+  .fight-fighter.winner .name { color: var(--green); }
+  .fight-fighter.loser .name { color: var(--text-3); }
+  .fight-fighter .meta-block { flex: 1; min-width: 0; }
+  .fight-fighter .name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fight-fighter .nick { font-size: 12px; color: var(--text-2); font-style: italic; margin-top: 2px; }
+  .fight-fighter .record { font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'Barlow Condensed', sans-serif; }
+  .fight-vs {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--red);
+    text-align: center;
+  }
+  .fight-vs .compare {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .fight-vs .compare:hover { color: var(--red); }
+
+  .fight-result-detail {
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    padding: 10px 20px;
+    font-size: 12px;
+    color: var(--text-3);
+    text-align: center;
+  }
+
+  @media (max-width: 768px) {
+    .event-hero { padding: 24px 16px; }
+    .event-hero h1 { font-size: 26px; }
+    .fight-body { gap: 8px; padding: 14px 12px; }
+    .fight-fighter .name { font-size: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div id="content">
+  <div class="loading-state" style="padding: 80px;">
+    <div class="loading-spinner"></div>
+    <div>Loading event…</div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('home');
+cfl.renderFooter();
+
+const eventId = parseInt(cfl.getQueryParam('id'), 10);
+
+async function load() {
+  if (!eventId) {
+    document.getElementById('content').innerHTML = cfl.errorHtml('No event id provided.');
+    return;
+  }
+
+  const sb = window.cflSupabase;
+
+  const { data: event, error } = await sb.from('events').select('*').eq('id', eventId).single();
+  if (error || !event) {
+    document.getElementById('content').innerHTML = cfl.errorHtml('Event not found.');
+    return;
+  }
+
+  document.title = `${event.name} — Cannon Fight Lab`;
+
+  const { data: fights } = await sb
+    .from('fights')
+    .select('*')
+    .eq('event_id', event.id)
+    .order('is_main_event', { ascending: false })
+    .order('id', { ascending: true });
+
+  const fighterIds = [...new Set((fights || []).flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
+  let fighterMap = {};
+  if (fighterIds.length > 0) {
+    const { data: fighters } = await sb
+      .from('fighters')
+      .select('id, name, nickname, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws')
+      .in('id', fighterIds);
+    (fighters || []).forEach(f => { fighterMap[f.id] = f; });
+  }
+
+  document.getElementById('content').innerHTML = `
+    <div class="event-hero">
+      <h1>${cfl.escapeHtml(event.name)}</h1>
+      <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
+      <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
+    </div>
+    <div class="page">
+      <div id="fightsList">
+        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming)).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function renderFight(fight, fmap, isUpcoming) {
+  const a = fmap[fight.fighter_a_id];
+  const b = fmap[fight.fighter_b_id];
+  if (!a || !b) return '';
+
+  const aWon = !isUpcoming && fight.winner_id === a.id;
+  const bWon = !isUpcoming && fight.winner_id === b.id;
+  const draw = !isUpcoming && fight.winner_id == null && (fight.method || '').startsWith('Decision');
+
+  const tags = [];
+  let cardClass = 'fight-card';
+  if (fight.is_title_fight) { tags.push('<span class="badge title">Title</span>'); cardClass += ' title'; }
+  if (fight.is_main_event) {
+    tags.push('<span class="badge">Main event</span>');
+    if (!fight.is_title_fight) cardClass += ' main';
+  }
+
+  const resultPill = !isUpcoming && fight.method
+    ? `<span class="result-pill" style="color:${fight.method.startsWith('KO') || fight.method.startsWith('TKO') ? 'var(--red)' : fight.method === 'Submission' ? 'var(--blue)' : 'var(--text-2)'}">${cfl.escapeHtml(fight.method)}</span>`
+    : '';
+
+  const finishLine = !isUpcoming && fight.end_round
+    ? `Round ${fight.end_round} · ${cfl.escapeHtml(fight.end_time || '—')}`
+    : '';
+
+  return `
+    <div class="${cardClass}">
+      <div class="fight-card-header">
+        ${tags.join(' ')}
+        ${fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : ''}
+        ${resultPill}
+      </div>
+      <div class="fight-body">
+        ${renderFighterSide(a, 'left', aWon, bWon)}
+        <div class="fight-vs">
+          ${draw ? 'DRAW' : 'VS'}
+          <a class="compare" href="${cfl.h2hUrl(a.id, b.id)}">Compare →</a>
+        </div>
+        ${renderFighterSide(b, 'right', bWon, aWon)}
+      </div>
+      ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderFighterSide(f, side, won, opponentWon) {
+  let cls = 'fight-fighter ' + side;
+  if (won) cls += ' winner';
+  else if (opponentWon) cls += ' loser';
+  const recordStr = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0) > 0
+    ? `${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''} UFC`
+    : `${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''} career`;
+  return `
+    <a class="${cls}" href="${cfl.fighterUrl(f.id)}">
+      <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(f.name))}</div>
+      <div class="meta-block">
+        <div class="name">${cfl.escapeHtml(f.name)}</div>
+        ${f.nickname ? `<div class="nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
+        <div class="record">${recordStr}</div>
+      </div>
+    </a>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

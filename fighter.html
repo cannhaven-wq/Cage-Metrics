@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fighter — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .fighter-hero {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 32px;
+  }
+  .fighter-hero-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .fh-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+  .fh-nick {
+    font-size: 16px;
+    color: var(--text-2);
+    font-style: italic;
+    margin-top: 4px;
+  }
+  .fh-division {
+    display: inline-block;
+    background: var(--red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 10px;
+  }
+  .fh-records {
+    margin-left: auto;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .record-block { text-align: right; }
+  .record-block .big-record {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+  }
+  .record-block.career .big-record { color: var(--text-2); font-size: 26px; }
+  .record-block .record-label {
+    font-size: 10px;
+    color: var(--text-3);
+    margin-top: 6px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .page { padding-top: 24px; padding-bottom: 40px; }
+
+  /* Fight history table */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 4px;
+  }
+  .history-table th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table td {
+    padding: 12px;
+    font-size: 13px;
+    color: var(--text);
+    border-bottom: 1px solid var(--border);
+  }
+  .history-table tr:hover td { background: var(--bg-3); }
+  .result-pill {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+  }
+  .result-pill.W { background: rgba(76, 175, 80, 0.15); color: var(--green); }
+  .result-pill.L { background: rgba(230, 57, 70, 0.15); color: var(--red); }
+  .result-pill.D { background: var(--bg-4); color: var(--text-2); }
+  .result-pill.NC { background: var(--bg-4); color: var(--text-3); }
+  .opp-link { color: #fff; font-weight: 500; }
+  .opp-link:hover { color: var(--red); }
+
+  .stat-section { margin-bottom: 28px; }
+  .stat-section h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .pa-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+  }
+  .pa-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+  .pa-val { font-size: 18px; font-weight: 600; color: #fff; }
+  .pa-lbl { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  @media (max-width: 768px) {
+    .fighter-hero { padding: 24px 16px; }
+    .fh-name { font-size: 32px; }
+    .fh-records { margin-left: 0; gap: 16px; margin-top: 12px; }
+    .pa-grid { grid-template-columns: repeat(2, 1fr); }
+    .history-table th:nth-child(4), .history-table td:nth-child(4) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div id="content">
+  <div class="loading-state" style="padding: 80px;">
+    <div class="loading-spinner"></div>
+    <div>Loading fighter…</div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('fighters');
+cfl.renderFooter();
+
+const fighterId = parseInt(cfl.getQueryParam('id'), 10);
+
+async function load() {
+  if (!fighterId) {
+    document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    return;
+  }
+
+  const sb = window.cflSupabase;
+
+  const { data: f, error } = await sb
+    .from('fighters')
+    .select('*')
+    .eq('id', fighterId)
+    .single();
+
+  if (error || !f) {
+    document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    return;
+  }
+
+  document.title = `${f.name} — Cannon Fight Lab`;
+
+  const ufcRec = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0);
+  const hasUfc = ufcRec > 0;
+
+  document.getElementById('content').innerHTML = `
+    <div class="fighter-hero">
+      <div class="fighter-hero-inner">
+        <div class="cfl-avatar xl">${cfl.escapeHtml(cfl.initials(f.name))}</div>
+        <div>
+          <div class="fh-name">${cfl.escapeHtml(f.name)}</div>
+          ${f.nickname ? `<div class="fh-nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
+          ${f.division ? `<div class="fh-division">${cfl.escapeHtml(f.division)}</div>` : ''}
+        </div>
+        <div class="fh-records">
+          ${hasUfc ? `
+            <div class="record-block">
+              <div class="big-record">${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''}</div>
+              <div class="record-label">UFC record</div>
+            </div>
+          ` : ''}
+          <div class="record-block career">
+            <div class="big-record">${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''}</div>
+            <div class="record-label">Career</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="stat-section">
+        <h2>Performance stats</h2>
+        <div class="stats-grid-4">
+          <div class="stat-box"><div class="stat-val accent">${f.slpm != null ? Number(f.slpm).toFixed(1) : '—'}</div><div class="stat-lbl">Sig. strikes per min</div></div>
+          <div class="stat-box"><div class="stat-val">${f.sapm != null ? Number(f.sapm).toFixed(1) : '—'}</div><div class="stat-lbl">Absorbed per min</div></div>
+          <div class="stat-box"><div class="stat-val accent">${f.td_avg != null ? Number(f.td_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Takedowns per 15 min</div></div>
+          <div class="stat-box"><div class="stat-val">${f.td_def != null ? f.td_def + '%' : '—'}</div><div class="stat-lbl">Takedown defense</div></div>
+          <div class="stat-box"><div class="stat-val">${f.str_acc != null ? f.str_acc + '%' : '—'}</div><div class="stat-lbl">Strike accuracy</div></div>
+          <div class="stat-box"><div class="stat-val">${f.str_def != null ? f.str_def + '%' : '—'}</div><div class="stat-lbl">Strike defense</div></div>
+          <div class="stat-box"><div class="stat-val">${f.sub_avg != null ? Number(f.sub_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Sub attempts per 15</div></div>
+          <div class="stat-box"><div class="stat-val">${f.last_5 || '—'}</div><div class="stat-lbl">Last 5 fights</div></div>
+        </div>
+      </div>
+
+      <div class="stat-section">
+        <h2>Physical attributes</h2>
+        <div class="pa-grid">
+          <div class="pa-box"><div class="pa-val">${cfl.formatHeight(f.height_in)}</div><div class="pa-lbl">Height</div></div>
+          <div class="pa-box"><div class="pa-val">${cfl.formatReach(f.reach_in)}</div><div class="pa-lbl">Reach</div></div>
+          <div class="pa-box"><div class="pa-val">${cfl.escapeHtml(f.stance || '—')}</div><div class="pa-lbl">Stance</div></div>
+          <div class="pa-box"><div class="pa-val">${f.age ?? '—'}</div><div class="pa-lbl">Age</div></div>
+          <div class="pa-box"><div class="pa-val">${ufcRec || '—'}</div><div class="pa-lbl">UFC fights</div></div>
+          <div class="pa-box"><div class="pa-val">${(f.wins ?? 0) + (f.losses ?? 0) + (f.draws ?? 0)}</div><div class="pa-lbl">Career total</div></div>
+        </div>
+      </div>
+
+      <div class="stat-section">
+        <h2>Fight history</h2>
+        <div id="historyContainer">
+          <div class="loading-state" style="padding: 30px;">
+            <div class="loading-spinner"></div>
+            <div>Loading fight history…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  await loadHistory();
+}
+
+async function loadHistory() {
+  const sb = window.cflSupabase;
+  const container = document.getElementById('historyContainer');
+
+  // Fetch all fights involving this fighter
+  const { data: fights, error } = await sb
+    .from('fights')
+    .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_title_fight, event_id')
+    .or(`fighter_a_id.eq.${fighterId},fighter_b_id.eq.${fighterId}`);
+
+  if (error) {
+    container.innerHTML = cfl.errorHtml('Failed to load fight history: ' + error.message);
+    return;
+  }
+
+  if (!fights || fights.length === 0) {
+    container.innerHTML = '<div class="no-results">No UFC fights found for this fighter.</div>';
+    return;
+  }
+
+  // Get event dates so we can sort
+  const eventIds = [...new Set(fights.map(f => f.event_id))];
+  const { data: events } = await sb
+    .from('events')
+    .select('id, name, event_date, is_upcoming')
+    .in('id', eventIds);
+  const eventMap = {};
+  (events || []).forEach(e => { eventMap[e.id] = e; });
+
+  // Annotate and sort, most recent first
+  fights.forEach(f => {
+    f._event = eventMap[f.event_id];
+    f._date = f._event ? f._event.event_date : '';
+  });
+  fights.sort((a, b) => (b._date || '').localeCompare(a._date || ''));
+
+  // Render
+  const rows = fights.map(f => {
+    const isA = f.fighter_a_id === fighterId;
+    const oppId = isA ? f.fighter_b_id : f.fighter_a_id;
+    const oppName = isA ? f.fighter_b_name : f.fighter_a_name;
+    let result = 'NC';
+    if (f._event && f._event.is_upcoming) {
+      result = '—';
+    } else if (f.winner_id == null) {
+      result = (f.method || '').toLowerCase().startsWith('decision') ? 'D' : 'NC';
+    } else if (f.winner_id === fighterId) {
+      result = 'W';
+    } else {
+      result = 'L';
+    }
+    const finish = f.end_round && f.end_time
+      ? `R${f.end_round} ${f.end_time}`
+      : '—';
+    const oppLink = oppId
+      ? `<a class="opp-link" href="${cfl.fighterUrl(oppId)}">${cfl.escapeHtml(oppName || '—')}</a>`
+      : cfl.escapeHtml(oppName || '—');
+    return `
+      <tr>
+        <td><span class="result-pill ${result}">${result}</span></td>
+        <td>${oppLink}</td>
+        <td>${cfl.escapeHtml(f.method || '—')}</td>
+        <td style="color:var(--text-2)">${finish}</td>
+        <td style="color:var(--text-3); font-size: 12px;">${f._event ? cfl.formatDate(f._event.event_date) : '—'}</td>
+      </tr>
+    `;
+  }).join('');
+
+  // Compute summary stats from the data
+  const completed = fights.filter(f => f._event && !f._event.is_upcoming);
+  const wins = completed.filter(f => f.winner_id === fighterId).length;
+  const losses = completed.filter(f => f.winner_id != null && f.winner_id !== fighterId).length;
+
+  container.innerHTML = `
+    <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-3);">
+      <strong style="color:var(--green)">${wins}W</strong> · <strong style="color:var(--red)">${losses}L</strong> in ${completed.length} UFC fight${completed.length === 1 ? '' : 's'}
+    </div>
+    <div class="card padded" style="padding: 0; overflow: hidden;">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Result</th>
+            <th>Opponent</th>
+            <th>Method</th>
+            <th>Finish</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

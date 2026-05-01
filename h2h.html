@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Head-to-head — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .h2h-pickers {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 18px;
+    align-items: stretch;
+    margin-bottom: 28px;
+  }
+  .picker {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    position: relative;
+  }
+  .picker-label {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .picker.selected { border-color: var(--red); }
+  .picker .selected-fighter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .picker .selected-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+  }
+  .picker .selected-meta {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+  }
+  .picker-search { position: relative; }
+  .picker-search input { width: 100%; padding: 10px 14px; }
+  .picker-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    margin-top: 4px;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    max-height: 320px;
+    overflow-y: auto;
+    z-index: 20;
+    display: none;
+  }
+  .picker-results.open { display: block; }
+  .picker-result {
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+  .picker-result:hover { background: var(--bg-3); }
+  .picker-result .nm { color: #fff; font-weight: 500; }
+  .picker-result .meta { color: var(--text-3); font-size: 11px; margin-top: 2px; }
+  .picker-clear {
+    background: transparent;
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+    margin-left: auto;
+  }
+  .picker-clear:hover { color: #fff; border-color: var(--text-2); }
+
+  .vs-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--red);
+  }
+
+  /* Comparison rows */
+  .compare-section { margin-bottom: 28px; }
+  .compare-section h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+  .compare-row {
+    display: grid;
+    grid-template-columns: 1fr 200px 1fr;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 18px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 6px;
+  }
+  .cmp-side {
+    text-align: right;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-3);
+    transition: color 0.15s;
+  }
+  .cmp-side.right { text-align: left; }
+  .cmp-side.winner { color: var(--green); }
+  .cmp-side.loser { color: var(--text-3); }
+  .cmp-side.tied { color: var(--text-2); }
+  .cmp-label {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+
+  .empty-h2h {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-3);
+    font-size: 14px;
+  }
+  .empty-h2h .icon { font-size: 36px; opacity: 0.3; margin-bottom: 12px; }
+
+  @media (max-width: 768px) {
+    .h2h-pickers { grid-template-columns: 1fr; }
+    .vs-divider { padding: 6px 0; font-size: 22px; }
+    .compare-row { grid-template-columns: 1fr 100px 1fr; gap: 8px; padding: 10px 12px; }
+    .cmp-side { font-size: 18px; }
+    .cmp-label { font-size: 10px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Compare</div>
+  <h1>Head-to-head matchup</h1>
+  <p>Pick any two fighters. Greens highlight the statistical advantage on each row.</p>
+</div>
+
+<div class="page">
+  <div class="h2h-pickers">
+    <div class="picker" id="pickerA"></div>
+    <div class="vs-divider">VS</div>
+    <div class="picker" id="pickerB"></div>
+  </div>
+
+  <div id="compareArea">
+    <div class="empty-h2h">
+      <div class="icon">🥊</div>
+      <div>Select two fighters to compare.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('h2h');
+cfl.renderFooter();
+
+let allFighters = [];
+let selA = null, selB = null;
+
+async function load() {
+  const sb = window.cflSupabase;
+  try {
+    allFighters = await cfl.fetchAll(() => sb
+      .from('fighters')
+      .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, height_in, reach_in, stance, age, slpm, sapm, str_acc, str_def, td_avg, td_acc, td_def, sub_avg, last_5, last_fight_date'));
+  } catch (err) {
+    document.getElementById('compareArea').innerHTML = cfl.errorHtml('Failed to load fighters: ' + err.message);
+    return;
+  }
+
+  // Pre-select from URL params if present
+  const aId = parseInt(cfl.getQueryParam('a'), 10);
+  const bId = parseInt(cfl.getQueryParam('b'), 10);
+  if (aId) selA = allFighters.find(f => f.id === aId);
+  if (bId) selB = allFighters.find(f => f.id === bId);
+
+  renderPicker('A');
+  renderPicker('B');
+  renderCompare();
+}
+
+function renderPicker(side) {
+  const el = document.getElementById('picker' + side);
+  const sel = side === 'A' ? selA : selB;
+
+  if (sel) {
+    el.classList.add('selected');
+    el.innerHTML = `
+      <div class="picker-label">Fighter ${side}</div>
+      <div class="selected-fighter">
+        <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(sel.name))}</div>
+        <div style="flex:1">
+          <div class="selected-name">${cfl.escapeHtml(sel.name)}</div>
+          <div class="selected-meta">${cfl.escapeHtml(sel.division || 'Unknown')} · ${cfl.formatRecord(sel.ufc_wins, sel.ufc_losses, sel.ufc_draws)} UFC</div>
+        </div>
+        <button class="picker-clear" data-side="${side}">Change</button>
+      </div>
+    `;
+  } else {
+    el.classList.remove('selected');
+    el.innerHTML = `
+      <div class="picker-label">Fighter ${side}</div>
+      <div class="picker-search">
+        <input type="text" id="search${side}" placeholder="Search fighter name…" autocomplete="off" />
+        <div class="picker-results" id="results${side}"></div>
+      </div>
+    `;
+    wireSearch(side);
+  }
+}
+
+function wireSearch(side) {
+  const input = document.getElementById('search' + side);
+  const results = document.getElementById('results' + side);
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (q.length < 2) {
+      results.classList.remove('open');
+      return;
+    }
+    const matches = allFighters
+      .filter(f => f.name.toLowerCase().includes(q) || (f.nickname || '').toLowerCase().includes(q))
+      .slice(0, 12);
+
+    if (matches.length === 0) {
+      results.innerHTML = '<div class="picker-result" style="cursor:default; color:var(--text-3)">No matches</div>';
+    } else {
+      results.innerHTML = matches.map(f => `
+        <div class="picker-result" data-id="${f.id}">
+          <div class="nm">${cfl.escapeHtml(f.name)}${f.nickname ? ` <span style="color:var(--text-3)">"${cfl.escapeHtml(f.nickname)}"</span>` : ''}</div>
+          <div class="meta">${cfl.escapeHtml(f.division || 'Unknown')} · ${cfl.formatRecord(f.ufc_wins, f.ufc_losses, f.ufc_draws)} UFC</div>
+        </div>
+      `).join('');
+    }
+    results.classList.add('open');
+  });
+
+  input.addEventListener('blur', () => {
+    setTimeout(() => results.classList.remove('open'), 150);
+  });
+
+  results.addEventListener('click', e => {
+    const item = e.target.closest('.picker-result');
+    if (!item || !item.dataset.id) return;
+    const f = allFighters.find(x => x.id === parseInt(item.dataset.id, 10));
+    if (!f) return;
+    if (side === 'A') selA = f; else selB = f;
+    renderPicker(side);
+    renderCompare();
+    syncUrl();
+  });
+}
+
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.picker-clear');
+  if (!btn) return;
+  const side = btn.dataset.side;
+  if (side === 'A') selA = null; else selB = null;
+  renderPicker(side);
+  renderCompare();
+  syncUrl();
+});
+
+function syncUrl() {
+  const params = new URLSearchParams();
+  if (selA) params.set('a', selA.id);
+  if (selB) params.set('b', selB.id);
+  const qs = params.toString();
+  const url = qs ? `?${qs}` : window.location.pathname;
+  history.replaceState(null, '', url);
+}
+
+function renderCompare() {
+  const area = document.getElementById('compareArea');
+  if (!selA || !selB) {
+    area.innerHTML = `
+      <div class="empty-h2h">
+        <div class="icon">🥊</div>
+        <div>${selA || selB ? 'Pick the second fighter to compare.' : 'Select two fighters to compare.'}</div>
+      </div>
+    `;
+    return;
+  }
+
+  // Build the comparison
+  area.innerHTML = `
+    ${section('Record', [
+      row('UFC fights', selA.ufc_wins + selA.ufc_losses + selA.ufc_draws, selB.ufc_wins + selB.ufc_losses + selB.ufc_draws, v => v, true),
+      row('UFC wins', selA.ufc_wins, selB.ufc_wins, v => v, true),
+      row('UFC losses', selA.ufc_losses, selB.ufc_losses, v => v, false),
+    ])}
+    ${section('Striking', [
+      row('Strikes landed/min', selA.slpm, selB.slpm, v => Number(v).toFixed(1), true),
+      row('Strikes absorbed/min', selA.sapm, selB.sapm, v => Number(v).toFixed(1), false),
+      row('Strike accuracy', selA.str_acc, selB.str_acc, v => v + '%', true),
+      row('Strike defense', selA.str_def, selB.str_def, v => v + '%', true),
+    ])}
+    ${section('Grappling', [
+      row('Takedowns/15min', selA.td_avg, selB.td_avg, v => Number(v).toFixed(1), true),
+      row('Takedown accuracy', selA.td_acc, selB.td_acc, v => v + '%', true),
+      row('Takedown defense', selA.td_def, selB.td_def, v => v + '%', true),
+      row('Sub attempts/15min', selA.sub_avg, selB.sub_avg, v => Number(v).toFixed(1), true),
+    ])}
+    ${section('Physical', [
+      row('Height', selA.height_in, selB.height_in, v => cfl.formatHeight(v), true),
+      row('Reach', selA.reach_in, selB.reach_in, v => cfl.formatReach(v), true),
+      row('Age', selA.age, selB.age, v => v, false),
+      rowText('Stance', selA.stance || '—', selB.stance || '—'),
+    ])}
+  `;
+}
+
+function section(title, rows) {
+  return `
+    <div class="compare-section">
+      <h2>${title}</h2>
+      ${rows.join('')}
+    </div>
+  `;
+}
+
+function row(label, va, vb, fmt, higherIsBetter) {
+  let leftClass = 'cmp-side', rightClass = 'cmp-side right';
+  if (va != null && vb != null) {
+    if (va === vb) {
+      leftClass += ' tied';
+      rightClass += ' tied';
+    } else {
+      const aBetter = higherIsBetter ? va > vb : va < vb;
+      leftClass += aBetter ? ' winner' : ' loser';
+      rightClass += aBetter ? ' loser' : ' winner';
+    }
+  }
+  const fa = va != null ? fmt(va) : '—';
+  const fb = vb != null ? fmt(vb) : '—';
+  return `
+    <div class="compare-row">
+      <div class="${leftClass}">${fa}</div>
+      <div class="cmp-label">${label}</div>
+      <div class="${rightClass}">${fb}</div>
+    </div>
+  `;
+}
+
+function rowText(label, a, b) {
+  return `
+    <div class="compare-row">
+      <div class="cmp-side tied">${cfl.escapeHtml(a)}</div>
+      <div class="cmp-label">${label}</div>
+      <div class="cmp-side right tied">${cfl.escapeHtml(b)}</div>
+    </div>
+  `;
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stat finder — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .insights-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+  .insight-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px;
+    transition: border-color 0.15s;
+    position: relative;
+  }
+  .insight-card:hover { border-color: #2f2f2f; }
+  .insight-eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .insight-headline {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    color: var(--text);
+    line-height: 1.25;
+    margin-bottom: 14px;
+    font-weight: 500;
+  }
+  .insight-stat {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 56px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 8px;
+  }
+  .insight-stat.green { color: var(--green); }
+  .insight-stat.amber { color: var(--amber); }
+  .insight-sample {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+  .insight-bar {
+    height: 4px;
+    background: var(--bg-4);
+    border-radius: 2px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .insight-bar-fill {
+    height: 100%;
+    background: var(--red);
+    border-radius: 2px;
+    transition: width 0.6s ease;
+  }
+  .insight-loading {
+    color: var(--text-3);
+    font-size: 13px;
+    padding: 20px 0;
+  }
+
+  .section-h {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin: 24px 0 14px;
+    letter-spacing: 0.5px;
+  }
+
+  table.div-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .div-table th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .div-table td {
+    padding: 12px 14px;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border);
+  }
+  .div-table tr:last-child td { border-bottom: none; }
+  .div-table tr:hover td { background: var(--bg-3); }
+  .div-table .division-name {
+    color: #fff;
+    font-weight: 600;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+  }
+  .div-table .pct {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: var(--text);
+    font-size: 15px;
+  }
+  .div-table .pct.high { color: var(--green); }
+  .div-table .pct.low { color: var(--text-3); }
+
+  .disclaimer {
+    margin-top: 32px;
+    padding: 16px 20px;
+    background: var(--bg-2);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.6;
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Edges & insights</div>
+  <h1>Stat finder</h1>
+  <p>Real patterns from every UFC fight in our database. The kind of edges most bettors don't bother to compute.</p>
+</div>
+
+<div class="page">
+  <h2 class="section-h">Headline edges</h2>
+  <div class="insights-grid">
+
+    <div class="insight-card" id="i-younger">
+      <div class="insight-eyebrow">Age advantage</div>
+      <div class="insight-headline">Younger fighters win <span style="color:var(--red)" id="younger-pct-inline">—</span> of fights where there's a clear age gap.</div>
+      <div class="insight-stat" id="i-younger-stat">—</div>
+      <div class="insight-sample" id="i-younger-sample">Loading…</div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="i-younger-bar" style="width:0;"></div></div>
+    </div>
+
+    <div class="insight-card" id="i-southpaw">
+      <div class="insight-eyebrow">Stance matchups</div>
+      <div class="insight-headline">In southpaw vs orthodox bouts, <strong style="color:var(--red)">southpaws</strong> win this often.</div>
+      <div class="insight-stat" id="i-southpaw-stat">—</div>
+      <div class="insight-sample" id="i-southpaw-sample">Loading…</div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="i-southpaw-bar" style="width:0;"></div></div>
+    </div>
+
+    <div class="insight-card" id="i-reach">
+      <div class="insight-eyebrow">Reach advantage</div>
+      <div class="insight-headline">When one fighter has a 2"+ reach edge, the longer fighter wins this often.</div>
+      <div class="insight-stat" id="i-reach-stat">—</div>
+      <div class="insight-sample" id="i-reach-sample">Loading…</div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="i-reach-bar" style="width:0;"></div></div>
+    </div>
+
+    <div class="insight-card" id="i-title">
+      <div class="insight-eyebrow">Title fight finishes</div>
+      <div class="insight-headline">Title fights end inside the distance at this rate.</div>
+      <div class="insight-stat" id="i-title-stat">—</div>
+      <div class="insight-sample" id="i-title-sample">Loading…</div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="i-title-bar" style="width:0;"></div></div>
+    </div>
+
+    <div class="insight-card" id="i-main">
+      <div class="insight-eyebrow">Main events</div>
+      <div class="insight-headline">5-round main events finish at this rate vs 3-round prelims.</div>
+      <div class="insight-stat" id="i-main-stat">—</div>
+      <div class="insight-sample" id="i-main-sample">Loading…</div>
+      <div class="insight-bar"><div class="insight-bar-fill" id="i-main-bar" style="width:0;"></div></div>
+    </div>
+
+    <div class="insight-card">
+      <div class="insight-eyebrow">More coming</div>
+      <div class="insight-headline">Cardio drop-off, post-loss form, short-notice penalty, finish patterns by round.</div>
+      <div class="insight-stat" style="font-size:18px; color: var(--text-3); line-height:1.4; margin-top: 24px;">Awaiting per-fight stats backfill</div>
+      <div class="insight-sample">Returns once the next scrape completes</div>
+    </div>
+  </div>
+
+  <h2 class="section-h">Finish rate by division</h2>
+  <table class="div-table" id="divTable">
+    <thead>
+      <tr>
+        <th>Division</th>
+        <th>Fights</th>
+        <th>Finish rate</th>
+        <th>KO/TKO rate</th>
+        <th>Submission rate</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-3);">Loading…</td></tr>
+    </tbody>
+  </table>
+
+  <div class="disclaimer">
+    <strong style="color:var(--text)">A note on these numbers:</strong> Edges shown are aggregate patterns across the full UFC history. They describe tendencies — they don't predict any individual fight. A 56% pattern still means 44% of fights go the other way. Always weigh stats alongside form, matchup style, and circumstance. Stats for entertainment purposes only. 1-800-GAMBLER.
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('stats');
+cfl.renderFooter();
+
+const sb = window.cflSupabase;
+
+async function loadAll() {
+  await Promise.all([
+    loadYounger(),
+    loadSouthpaw(),
+    loadReach(),
+    loadTitle(),
+    loadMainEvent(),
+    loadDivisions(),
+  ]);
+}
+
+async function loadYounger() {
+  const { data, error } = await sb.from('v_younger_fighter_winrate').select('*').single();
+  if (error) return setInsight('younger', '—', 'Could not compute', 0);
+  if (!data || data.sample_size === 0) return setInsight('younger', '—', 'No sample', 0);
+  const pct = (data.younger_winrate * 100);
+  setInsight('younger', pct.toFixed(1) + '%', `${data.sample_size.toLocaleString()} fights with age difference`, pct);
+  document.getElementById('younger-pct-inline').textContent = pct.toFixed(1) + '%';
+}
+
+async function loadSouthpaw() {
+  const { data, error } = await sb.from('v_southpaw_vs_orthodox').select('*').single();
+  if (error) return setInsight('southpaw', '—', 'Could not compute', 0);
+  if (!data || data.sample_size === 0) return setInsight('southpaw', '—', 'No sample', 0);
+  const pct = data.southpaw_winrate * 100;
+  setInsight('southpaw', pct.toFixed(1) + '%', `${data.sample_size.toLocaleString()} stance-asymmetric fights`, pct);
+}
+
+async function loadReach() {
+  const { data, error } = await sb.from('v_reach_advantage_winrate').select('*').single();
+  if (error) return setInsight('reach', '—', 'Could not compute', 0);
+  if (!data || data.sample_size === 0) return setInsight('reach', '—', 'No sample', 0);
+  const pct = data.longer_reach_winrate * 100;
+  setInsight('reach', pct.toFixed(1) + '%', `${data.sample_size.toLocaleString()} fights, avg ${Number(data.avg_reach_gap_in).toFixed(1)}" gap`, pct);
+}
+
+async function loadTitle() {
+  const { data, error } = await sb.from('v_title_finish_rate').select('*').single();
+  if (error) return setInsight('title', '—', 'Could not compute', 0);
+  if (!data || data.title_fights === 0) return setInsight('title', '—', 'No sample', 0);
+  const pct = data.title_finish_rate * 100;
+  const cmp = ((data.title_finish_rate - data.non_title_finish_rate) * 100).toFixed(1);
+  const cmpDir = parseFloat(cmp) >= 0 ? 'higher' : 'lower';
+  setInsight('title', pct.toFixed(1) + '%', `${data.title_fights} title fights · ${Math.abs(cmp)}pp ${cmpDir} than prelims`, pct);
+}
+
+async function loadMainEvent() {
+  const { data, error } = await sb.from('v_main_event_finish_rate').select('*').single();
+  if (error) return setInsight('main', '—', 'Could not compute', 0);
+  if (!data || data.main_events === 0) return setInsight('main', '—', 'No sample', 0);
+  const pct = data.main_event_finish_rate_pct;
+  const cmp = (pct - data.non_main_finish_rate_pct).toFixed(1);
+  const cmpDir = parseFloat(cmp) >= 0 ? 'higher' : 'lower';
+  setInsight('main', pct + '%', `${data.main_events.toLocaleString()} main events · ${Math.abs(cmp)}pp ${cmpDir} than non-main`, pct);
+}
+
+function setInsight(key, big, sample, barPct) {
+  const stat = document.getElementById('i-' + key + '-stat');
+  const sam = document.getElementById('i-' + key + '-sample');
+  const bar = document.getElementById('i-' + key + '-bar');
+  if (stat) stat.textContent = big;
+  if (sam) sam.textContent = sample;
+  if (bar) {
+    setTimeout(() => { bar.style.width = Math.min(100, Math.max(0, barPct)) + '%'; }, 50);
+  }
+}
+
+async function loadDivisions() {
+  const { data, error } = await sb.from('v_finish_rate_by_division').select('*');
+  const tbody = document.querySelector('#divTable tbody');
+  if (error) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--red);">${cfl.escapeHtml(error.message)}</td></tr>`;
+    return;
+  }
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-3);">No data</td></tr>';
+    return;
+  }
+  tbody.innerHTML = data.map(d => {
+    const finishClass = d.finish_rate_pct >= 60 ? 'high' : d.finish_rate_pct < 40 ? 'low' : '';
+    return `
+      <tr>
+        <td><span class="division-name">${cfl.escapeHtml(d.division)}</span></td>
+        <td style="color: var(--text-3);">${d.fights.toLocaleString()}</td>
+        <td><span class="pct ${finishClass}">${d.finish_rate_pct}%</span></td>
+        <td><span class="pct">${d.ko_rate_pct}%</span></td>
+        <td><span class="pct">${d.sub_rate_pct}%</span></td>
+      </tr>
+    `;
+  }).join('');
+}
+
+loadAll();
+</script>
+</body>
+</html>
