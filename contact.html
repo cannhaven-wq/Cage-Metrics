@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .contact-wrap {
+    max-width: 560px;
+    margin: 0 auto;
+  }
+  .contact-intro {
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.7;
+    margin-bottom: 28px;
+    text-align: center;
+  }
+  .contact-form {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+  }
+  .form-row { margin-bottom: 16px; }
+  .form-row label {
+    display: block;
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .form-row input[type="text"],
+  .form-row input[type="email"],
+  .form-row select,
+  .form-row textarea {
+    width: 100%;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: #fff;
+    font-family: 'Inter', sans-serif;
+    transition: border-color 0.15s;
+  }
+  .form-row textarea {
+    min-height: 140px;
+    resize: vertical;
+    line-height: 1.6;
+  }
+  .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+    outline: none;
+    border-color: var(--red);
+  }
+  .submit-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+  }
+  .submit-row .helper {
+    font-size: 11px;
+    color: var(--text-3);
+  }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-left: 3px solid var(--amber);
+    color: var(--text);
+    padding: 14px 22px;
+    border-radius: 8px;
+    font-size: 13px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1000;
+    max-width: 90vw;
+  }
+  .toast.show { opacity: 1; }
+  .toast strong { color: var(--amber); display: block; margin-bottom: 4px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; letter-spacing: 0.5px; }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Get in touch</div>
+  <h1>Contact</h1>
+  <p>Found a bug, a missing fighter, a stat that looks wrong, or have a feature idea?</p>
+</div>
+
+<div class="page">
+  <div class="contact-wrap">
+    <p class="contact-intro">
+      We read every message. Be specific — if it's a bug or wrong stat, please include the fighter name or page URL so we can chase it down.
+    </p>
+
+    <form class="contact-form" id="contactForm" onsubmit="handleSubmit(event)">
+      <div class="form-row">
+        <label for="name">Your name</label>
+        <input type="text" id="name" name="name" required maxlength="100" autocomplete="name" />
+      </div>
+
+      <div class="form-row">
+        <label for="email">Email <span style="color:var(--text-3); text-transform: none; letter-spacing: 0;">(so we can reply)</span></label>
+        <input type="email" id="email" name="email" required maxlength="200" autocomplete="email" />
+      </div>
+
+      <div class="form-row">
+        <label for="topic">Topic</label>
+        <select id="topic" name="topic" required>
+          <option value="">Choose one…</option>
+          <option value="bug">Found a bug</option>
+          <option value="data">Wrong stat or missing fighter</option>
+          <option value="feature">Feature request</option>
+          <option value="partnership">Partnership / business</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <label for="message">Message</label>
+        <textarea id="message" name="message" required maxlength="2000" placeholder="What's on your mind?"></textarea>
+      </div>
+
+      <div class="submit-row">
+        <span class="helper">We typically respond within 48 hours.</span>
+        <button type="submit" class="btn">Send message</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+
+function handleSubmit(e) {
+  e.preventDefault();
+  // Form submission is not yet wired to a backend.
+  // When we add Formspree/Supabase/etc., this is the function to update.
+  showToast(
+    'Thanks — but the form isn\'t live yet',
+    'The contact form is in the final stages of setup. Please check back soon, or reach out via the social links once those are connected.'
+  );
+}
+
+function showToast(title, body) {
+  const t = document.getElementById('toast');
+  t.innerHTML = '<strong>' + cfl.escapeHtml(title) + '</strong>' + cfl.escapeHtml(body);
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 5000);
+}
+</script>
+</body>
+</html>

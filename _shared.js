@@ -111,9 +111,9 @@
       <div class="footer-logo">Cannon Fight <span class="accent">Lab</span></div>
       <div class="cfl-footer-text">Stats for entertainment purposes only. Always gamble responsibly. 1-800-GAMBLER</div>
       <div class="cfl-footer-links">
-        <a href="#">About</a>
-        <a href="#">Contact</a>
-        <a href="#">Disclaimer</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="disclaimer.html">Disclaimer</a>
       </div>
     `;
     const footEl = document.querySelector('footer.cfl-footer');

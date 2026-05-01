@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .prose {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+  .prose h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin: 36px 0 14px;
+    letter-spacing: 0.5px;
+  }
+  .prose p {
+    font-size: 15px;
+    color: var(--text-2);
+    line-height: 1.75;
+    margin-bottom: 16px;
+  }
+  .prose strong { color: var(--text); font-weight: 600; }
+  .prose .lead {
+    font-size: 17px;
+    color: var(--text);
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .prose ul {
+    margin-bottom: 16px;
+    padding-left: 22px;
+  }
+  .prose li {
+    font-size: 15px;
+    color: var(--text-2);
+    margin-bottom: 8px;
+    line-height: 1.7;
+  }
+  .stat-callout {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 24px 0;
+    font-size: 14px;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+  .stat-callout strong {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    color: #fff;
+    font-weight: 800;
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">About</div>
+  <h1>Built for bettors, not touts</h1>
+  <p>The story behind Cannon Fight Lab and why it exists.</p>
+</div>
+
+<div class="page">
+  <div class="prose">
+    <p class="lead">
+      Cannon Fight Lab is a UFC analytics platform built for one purpose: giving MMA bettors the hard data to make their own informed picks.
+    </p>
+
+    <p>
+      Every other corner of MMA betting is dominated by hot takes, picks pages, and Discord touts charging $50/month to tell you what to bet. The actual data — strike accuracy by division, age advantage, reach gap win rates, post-loss form, finish patterns — is either locked behind premium subscriptions, scattered across a dozen forums, or never surfaced at all.
+    </p>
+
+    <p>
+      This site does one thing: it consolidates that data layer into a single, fast, searchable place. Then it adds an analytics layer on top — derived insights you can use to evaluate any matchup, build any parlay, and form your own conviction.
+    </p>
+
+    <h2>What's in the database</h2>
+
+    <div class="stat-callout">
+      <strong>4,488 fighters</strong> · the substantially complete UFC historical roster<br>
+      <strong>780 events</strong> · every UFC card from UFC 1 through next week<br>
+      <strong>8,732 fights</strong> · with results, methods, and round-by-round detail in progress
+    </div>
+
+    <p>
+      All data is updated nightly from public UFC sources. The platform doesn't sell picks. It doesn't run a Discord. It doesn't tell you who to bet on. It gives you the numbers and gets out of your way.
+    </p>
+
+    <h2>The four core tools</h2>
+
+    <ul>
+      <li><strong>Next event card</strong> — the upcoming UFC card with every matchup's key stats side-by-side at a glance.</li>
+      <li><strong>Fighter database</strong> — search any UFC fighter, see their full UFC record, career averages, and complete fight history.</li>
+      <li><strong>Head-to-head compare</strong> — pick any two fighters, see every stat lined up, with the statistical edge highlighted on each row.</li>
+      <li><strong>Stat finder</strong> — derived analytics across the full database. Younger fighter win rates, stance matchups, reach advantages, finish patterns by division.</li>
+      <li><strong>Parlay builder</strong> — pull fighters from upcoming cards, enter your sportsbook odds, see combined payout and implied probability.</li>
+    </ul>
+
+    <h2>Who built this</h2>
+
+    <p>
+      Cannon Fight Lab is built and maintained by Reed Cannon. It's an independent project — no investors, no parent company, no editorial agenda beyond "show the data clearly and let bettors decide."
+    </p>
+
+    <p>
+      The site is in active development. Some features are still rolling out. Some data points (per-fight striking accuracy, control time, head-strike ratios, round-by-round cardio drop-off) are coming as additional scraping completes. If you find a bug, a fighter that's missing, or a stat that looks wrong, <a href="contact.html" style="color:var(--red); text-decoration: underline;">reach out</a>.
+    </p>
+
+    <h2>What this site is not</h2>
+
+    <p>
+      This is not a sportsbook. We don't take bets. We don't issue picks. We don't guarantee outcomes. The stats, edges, and projections shown here describe historical patterns — they don't predict any individual fight. A 56% historical edge still means 44% of the time the pattern doesn't hold.
+    </p>
+
+    <p>
+      Always gamble responsibly. If you or someone you know has a gambling problem, call <strong style="color:var(--red);">1-800-GAMBLER</strong> or visit <a href="https://www.1800gambler.net" target="_blank" rel="noopener" style="color:var(--text); text-decoration: underline;">1800gambler.net</a>.
+    </p>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+</script>
+</body>
+</html>
