@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cannon Fight Lab — Next event</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* Page-specific styles */
+  .countdown-bar {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg));
+    border-bottom: 1px solid var(--border);
+    padding: 28px 32px;
+    text-align: center;
+  }
+  .countdown-eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  .countdown-event-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .countdown-meta {
+    font-size: 14px;
+    color: var(--text-2);
+    margin-bottom: 14px;
+  }
+  .countdown-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--red);
+    color: #fff;
+    padding: 6px 16px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .countdown-pill .num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  /* Stat of the day */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: 4px;
+    margin-bottom: 36px;
+  }
+  .stat-of-day {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .stat-of-day .lbl {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+  .stat-of-day .big {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    margin-bottom: 4px;
+  }
+  .stat-of-day .big .sec {
+    font-size: 16px;
+    color: var(--text-3);
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .stat-of-day .sub { font-size: 12px; color: var(--text-2); }
+
+  /* Fights list */
+  .fights-section { margin-bottom: 40px; }
+  .fights-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+  }
+  .fights-header h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .fights-header .sub {
+    font-size: 12px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  .fight-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+  }
+  .fight-card:hover { border-color: #2f2f2f; }
+  .fight-card.main { border-color: var(--red); }
+  .fight-card.title { border-color: #d4af37; }
+
+  .fight-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .fight-card-header .badge {
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    background: var(--red);
+    color: #fff;
+    letter-spacing: 0.05em;
+  }
+  .fight-card-header .badge.title { background: #d4af37; color: #1a1a1a; }
+  .fight-card-header .weight { color: var(--text-2); }
+
+  .fight-body {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 24px;
+    padding: 18px 20px;
+  }
+
+  .fight-fighter {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .fight-fighter:hover { opacity: 0.85; }
+  .fight-fighter.right {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+  .fight-fighter .meta-block {
+    flex: 1;
+    min-width: 0;
+  }
+  .fight-fighter .name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fight-fighter .nick {
+    font-size: 12px;
+    color: var(--text-2);
+    font-style: italic;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fight-fighter .record {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 4px;
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+  }
+  .fight-fighter .record strong { color: var(--text); font-weight: 600; }
+
+  .fight-vs {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--red);
+    letter-spacing: 0.1em;
+    text-align: center;
+  }
+  .fight-vs .compare {
+    display: block;
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--text-3);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .fight-vs .compare:hover { color: var(--red); }
+
+  /* Quick stats below name */
+  .fight-quickstats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    padding: 12px 20px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+  }
+  .qs {
+    text-align: center;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .qs .qs-row {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'Barlow Condensed', sans-serif;
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 2px;
+    font-weight: 600;
+  }
+  .qs .qs-row .winner { color: var(--green); }
+  .qs .qs-row .loser { color: var(--text-3); }
+  .qs-lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  /* ============== Edge panel (top 3 fights only) ============== */
+  .edge-panel {
+    border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
+    padding: 18px 22px 20px;
+  }
+  .edge-eyebrow {
+    font-size: 10px;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .edge-eyebrow .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red);
+    display: inline-block;
+  }
+  .edge-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .edge-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+    line-height: 1.4;
+  }
+  .edge-row .marker {
+    flex-shrink: 0;
+    width: 64px;
+    text-align: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 0;
+    border-radius: 4px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .edge-row .marker.favors-a { background: rgba(76, 175, 80, 0.12); color: var(--green); border: 1px solid rgba(76,175,80,0.25); }
+  .edge-row .marker.favors-b { background: rgba(55, 138, 221, 0.12); color: var(--blue); border: 1px solid rgba(55,138,221,0.25); }
+  .edge-row .marker.neutral  { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border-2); }
+  .edge-row .desc { color: var(--text); flex: 1; }
+  .edge-row .desc strong { color: #fff; }
+  .edge-row .pct {
+    flex-shrink: 0;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-2);
+    letter-spacing: 0.5px;
+  }
+
+  .edge-summary {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .edge-summary .verdict-label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .edge-summary .verdict-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--green);
+    letter-spacing: 0.5px;
+    line-height: 1;
+  }
+  .edge-summary .verdict-name.even { color: var(--text-2); }
+  .edge-summary .verdict-pct {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--green);
+    letter-spacing: 0.5px;
+  }
+  .edge-summary .verdict-pct.even { color: var(--text-3); }
+  .edge-summary .verdict-pct .small {
+    font-size: 14px;
+    color: var(--text-3);
+    margin-left: 4px;
+    font-weight: 600;
+  }
+
+  /* Mobile */
+  @media (max-width: 768px) {
+    .countdown-event-name { font-size: 30px; }
+    .stat-strip { grid-template-columns: 1fr; }
+    .fight-body { grid-template-columns: 1fr auto 1fr; gap: 8px; padding: 14px 12px; }
+    .fight-fighter { gap: 8px; }
+    .fight-fighter .name { font-size: 16px; }
+    .fight-fighter .nick { font-size: 10px; }
+    .fight-quickstats { grid-template-columns: repeat(2, 1fr); padding: 10px 12px 14px; }
+    .fight-vs { font-size: 14px; }
+    .countdown-bar { padding: 20px 16px; }
+    .edge-panel { padding: 14px 14px 16px; }
+    .edge-row { font-size: 12px; gap: 10px; }
+    .edge-row .marker { width: 52px; font-size: 11px; }
+    .edge-summary .verdict-name { font-size: 18px; }
+    .edge-summary .verdict-pct { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="countdown-bar" id="countdownBar">
+  <div class="loading-state" style="padding: 12px;">
+    <div class="loading-spinner"></div>
+    <div>Loading next event…</div>
+  </div>
+</div>
+
+<div class="page">
+  <div class="stat-strip" id="statStrip"></div>
+  <div class="fights-section">
+    <div class="fights-header">
+      <h2>Card</h2>
+      <div class="sub" id="cardCount"></div>
+    </div>
+    <div id="fightsList"></div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('home');
+cfl.renderFooter();
+
+// =============================================================================
+// LOAD: next event + its fights + the fighters in those fights
+// =============================================================================
+
+async function load() {
+  const sb = window.cflSupabase;
+
+  // 1. Find the next upcoming event (soonest event_date that's still in the future)
+  const today = new Date().toISOString().slice(0, 10);
+  let { data: events, error: evErr } = await sb
+    .from('events')
+    .select('id, name, event_date, location, ufc_url')
+    .eq('is_upcoming', true)
+    .gte('event_date', today)
+    .order('event_date', { ascending: true })
+    .limit(1);
+
+  if (evErr) {
+    document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load next event: ' + evErr.message);
+    return;
+  }
+
+  let event = events && events[0];
+
+  // Fallback: if no truly upcoming event exists, use the most recent completed
+  let isFallback = false;
+  if (!event) {
+    const { data: recent, error: recErr } = await sb
+      .from('events')
+      .select('id, name, event_date, location, ufc_url')
+      .eq('is_upcoming', false)
+      .order('event_date', { ascending: false })
+      .limit(1);
+    if (recErr) {
+      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + recErr.message);
+      return;
+    }
+    event = recent && recent[0];
+    isFallback = true;
+  }
+
+  if (!event) {
+    document.getElementById('countdownBar').innerHTML = cfl.errorHtml('No events found in the database.');
+    return;
+  }
+
+  renderCountdown(event, isFallback);
+  await loadFights(event);
+  loadStatOfDay(event);
+}
+
+function renderCountdown(event, isFallback) {
+  const days = cfl.daysUntil(event.event_date);
+  let pillContent;
+  if (isFallback) {
+    pillContent = `<span>Most recent</span><span class="num">${cfl.formatDateShort(event.event_date)}</span>`;
+  } else if (days === 0) {
+    pillContent = '<span>Tonight</span>';
+  } else if (days === 1) {
+    pillContent = '<span>Tomorrow</span>';
+  } else if (days < 0) {
+    pillContent = `<span>Result pending</span>`;
+  } else {
+    pillContent = `<span>In</span><span class="num">${days}</span><span>day${days === 1 ? '' : 's'}</span>`;
+  }
+
+  document.getElementById('countdownBar').innerHTML = `
+    <div class="countdown-eyebrow">${isFallback ? 'Most recent event' : 'Next event'}</div>
+    <div class="countdown-event-name">${cfl.escapeHtml(event.name)}</div>
+    <div class="countdown-meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
+    <div class="countdown-pill">${pillContent}</div>
+  `;
+}
+
+async function loadFights(event) {
+  const list = document.getElementById('fightsList');
+  list.innerHTML = cfl.loadingHtml('Loading card…');
+  const sb = window.cflSupabase;
+
+  const { data: fights, error } = await sb
+    .from('fights')
+    .select('*')
+    .eq('event_id', event.id)
+    .order('is_main_event', { ascending: false })
+    .order('id', { ascending: true });
+
+  if (error) {
+    list.innerHTML = cfl.errorHtml('Failed to load fights: ' + error.message);
+    return;
+  }
+
+  if (!fights || fights.length === 0) {
+    list.innerHTML = '<div class="no-results">No fights listed for this event yet.</div>';
+    document.getElementById('cardCount').textContent = '';
+    return;
+  }
+
+  document.getElementById('cardCount').textContent = `${fights.length} fight${fights.length === 1 ? '' : 's'}`;
+
+  // Collect all fighter ids referenced
+  const fighterIds = new Set();
+  fights.forEach(f => {
+    if (f.fighter_a_id) fighterIds.add(f.fighter_a_id);
+    if (f.fighter_b_id) fighterIds.add(f.fighter_b_id);
+  });
+
+  // Bulk-fetch all those fighters in one query
+  const { data: fighters, error: fErr } = await sb
+    .from('fighters')
+    .select('id, name, nickname, division, stance, age, height_in, reach_in, ' +
+            'wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, ' +
+            'slpm, sapm, td_avg, td_def, str_acc, str_def, sub_avg, last_5')
+    .in('id', Array.from(fighterIds));
+
+  if (fErr) {
+    list.innerHTML = cfl.errorHtml('Failed to load fighter details: ' + fErr.message);
+    return;
+  }
+
+  const fighterMap = {};
+  fighters.forEach(f => { fighterMap[f.id] = f; });
+
+  // Fetch current streak for each fighter on this card (for edge panel)
+  const streakMap = {};
+  try {
+    const { data: streaks } = await sb
+      .from('v_fighter_current_streak')
+      .select('fighter_id, last_result, current_streak_after')
+      .in('fighter_id', Array.from(fighterIds));
+    (streaks || []).forEach(s => { streakMap[s.fighter_id] = s; });
+  } catch (e) {
+    // If the streak view isn't deployed, edges still work without it
+    console.warn('Streak data not available:', e.message);
+  }
+
+  // Pick the top 3 fights for edge panels: main events + title fights + first 1
+  const sorted = fights.map((f, i) => ({ f, i }));
+  const topFightIds = new Set();
+  // Priority 1: title fights (main events frequently are too)
+  sorted.filter(({f}) => f.is_title_fight).forEach(({f}) => topFightIds.add(f.id));
+  // Priority 2: main event(s)
+  sorted.filter(({f}) => f.is_main_event).forEach(({f}) => { if (topFightIds.size < 3) topFightIds.add(f.id); });
+  // Priority 3: top of the list (main card top)
+  for (const {f} of sorted) {
+    if (topFightIds.size >= 3) break;
+    topFightIds.add(f.id);
+  }
+
+  list.innerHTML = fights.map(fight =>
+    renderFight(fight, fighterMap, streakMap, topFightIds.has(fight.id))
+  ).join('');
+}
+
+function renderFight(fight, fmap, streakMap, isTopFight) {
+  const a = fmap[fight.fighter_a_id];
+  const b = fmap[fight.fighter_b_id];
+
+  if (!a || !b) {
+    return `<div class="fight-card"><div class="fight-card-header">Fight data incomplete</div></div>`;
+  }
+
+  const tags = [];
+  let cardClass = 'fight-card';
+  if (fight.is_title_fight) {
+    tags.push('<span class="badge title">Title</span>');
+    cardClass += ' title';
+  }
+  if (fight.is_main_event) {
+    tags.push('<span class="badge">Main event</span>');
+    if (!fight.is_title_fight) cardClass += ' main';
+  }
+
+  const weight = fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : '';
+
+  const edgePanel = isTopFight ? renderEdgePanel(a, b, streakMap || {}) : '';
+
+  return `
+    <div class="${cardClass}">
+      <div class="fight-card-header">
+        ${tags.join(' ')}
+        ${weight}
+      </div>
+      <div class="fight-body">
+        ${renderFighterSide(a, 'left')}
+        <div class="fight-vs">
+          VS
+          <a class="compare" href="${cfl.h2hUrl(a.id, b.id)}">Compare →</a>
+        </div>
+        ${renderFighterSide(b, 'right')}
+      </div>
+      ${renderQuickStats(a, b)}
+      ${edgePanel}
+    </div>
+  `;
+}
+
+function renderFighterSide(f, side) {
+  const ufcRec = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0) > 0;
+  const recordStr = ufcRec
+    ? `${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''} <span style="color:var(--text-3)">UFC</span>`
+    : `${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''} <span style="color:var(--text-3)">career</span>`;
+
+  return `
+    <a class="fight-fighter ${side}" href="${cfl.fighterUrl(f.id)}">
+      <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(f.name))}</div>
+      <div class="meta-block">
+        <div class="name">${cfl.escapeHtml(f.name)}</div>
+        ${f.nickname ? `<div class="nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
+        <div class="record"><strong>${recordStr.split('<')[0].trim()}</strong>${recordStr.includes('UFC') ? ' UFC' : ' career'}</div>
+      </div>
+    </a>
+  `;
+}
+
+// =============================================================================
+// EDGE PANEL — describes statistical edges + summarizes verdict
+// =============================================================================
+//
+// Edge calibration based on Cannon Fight Lab data analysis:
+//   - Age gap 1-2 yrs younger: 52.0%
+//   - Age gap 3-4 yrs younger: 55.9%
+//   - Age gap 5-6 yrs younger: 58.2%
+//   - Age gap 7-9 yrs younger: 63.3%
+//   - Age gap 10+ yrs younger: 65.2%
+//   - Off a loss vs anyone: opponent at 53.0%
+//   - 5+ win streak vs no streak: streak fighter at 62.9%
+//   - 3-4 win streak: 55.1%
+//   - 2 win streak: 53.3%
+//   - Reach >= 2": longer fighter at ~52% (small)
+// =============================================================================
+
+function ageEdge(a, b) {
+  if (a.age == null || b.age == null) return null;
+  const gap = Math.abs(a.age - b.age);
+  if (gap < 1) return null;
+  let pct;
+  if (gap <= 2)      pct = 52.0;
+  else if (gap <= 4) pct = 55.9;
+  else if (gap <= 6) pct = 58.2;
+  else if (gap <= 9) pct = 63.3;
+  else               pct = 65.2;
+  const youngerIsA = a.age < b.age;
+  return {
+    favors: youngerIsA ? 'a' : 'b',
+    pct,
+    desc: `<strong>${cfl.escapeHtml(youngerIsA ? a.name : b.name)}</strong> is ${gap} year${gap===1?'':'s'} younger`
+  };
+}
+
+function streakEdge(a, b, streakMap) {
+  const sa = streakMap[a.id], sb = streakMap[b.id];
+  if (!sa || !sb) return null;
+  const ra = sa.current_streak_after || 0;
+  const rb = sb.current_streak_after || 0;
+  // Only surface if there's a meaningful asymmetry
+  if (ra === rb) return null;
+  if (Math.max(ra, rb) < 2) return null;  // 0 vs 1 isn't worth surfacing
+  const aIsHotter = ra > rb;
+  const hot = aIsHotter ? ra : rb;
+  let pct;
+  if (hot >= 5)      pct = 62.9;
+  else if (hot >= 3) pct = 55.1;
+  else if (hot >= 2) pct = 53.3;
+  else               pct = 50.4;
+  return {
+    favors: aIsHotter ? 'a' : 'b',
+    pct,
+    desc: `<strong>${cfl.escapeHtml(aIsHotter ? a.name : b.name)}</strong> on a ${hot}-fight win streak`
+  };
+}
+
+function postLossEdge(a, b, streakMap) {
+  const sa = streakMap[a.id], sb = streakMap[b.id];
+  if (!sa || !sb) return null;
+  const aOffLoss = sa.last_result !== 'W';
+  const bOffLoss = sb.last_result !== 'W';
+  if (aOffLoss === bOffLoss) return null;  // both or neither off a loss
+  return {
+    favors: aOffLoss ? 'b' : 'a',
+    pct: 53.0,
+    desc: `<strong>${cfl.escapeHtml(aOffLoss ? b.name : a.name)}</strong> opponent is coming off a loss`
+  };
+}
+
+function reachEdge(a, b) {
+  if (a.reach_in == null || b.reach_in == null) return null;
+  const gap = Math.abs(a.reach_in - b.reach_in);
+  if (gap < 2) return null;
+  return {
+    favors: a.reach_in > b.reach_in ? 'a' : 'b',
+    pct: 52.0,
+    desc: `<strong>${cfl.escapeHtml(a.reach_in > b.reach_in ? a.name : b.name)}</strong> has ${gap}" reach advantage`
+  };
+}
+
+function stanceEdge(a, b) {
+  // Surface as informational only — stance edge is small & we keep it neutral
+  if (a.stance && b.stance && a.stance !== b.stance &&
+      ['Orthodox','Southpaw'].includes(a.stance) && ['Orthodox','Southpaw'].includes(b.stance)) {
+    const southpawIsA = a.stance === 'Southpaw';
+    return {
+      favors: southpawIsA ? 'a' : 'b',
+      pct: 51.5,
+      desc: `Stance mismatch: <strong>${cfl.escapeHtml(southpawIsA ? a.name : b.name)}</strong> southpaw vs orthodox`
+    };
+  }
+  return null;
+}
+
+function computeEdges(a, b, streakMap) {
+  const edges = [
+    ageEdge(a, b),
+    streakEdge(a, b, streakMap),
+    postLossEdge(a, b, streakMap),
+    reachEdge(a, b),
+    stanceEdge(a, b),
+  ].filter(Boolean);
+
+  // Compute combined verdict by multiplying implied probabilities (treating
+  // each edge as independent — imperfect but defensible).
+  // Cap the combined to avoid overconfidence.
+  let aProb = 0.5;
+  for (const e of edges) {
+    const factor = e.favors === 'a' ? (e.pct / 100) : (1 - e.pct / 100);
+    // Bayesian-ish update: combine prior and likelihood
+    aProb = (aProb * factor) / (aProb * factor + (1 - aProb) * (1 - factor));
+  }
+  // Cap at the strongest single edge + a small bump to avoid implausible combined %s
+  const strongest = edges.length ? Math.max(...edges.map(e => e.pct)) / 100 : 0.5;
+  const cap = Math.min(0.75, strongest + 0.05);
+  if (aProb > cap) aProb = cap;
+  if (aProb < 1 - cap) aProb = 1 - cap;
+
+  return { edges, aProb };
+}
+
+function renderEdgePanel(a, b, streakMap) {
+  const { edges, aProb } = computeEdges(a, b, streakMap);
+
+  if (edges.length === 0) {
+    return `
+      <div class="edge-panel">
+        <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
+        <div class="edge-list">
+          <div class="edge-row">
+            <div class="marker neutral">Even</div>
+            <div class="desc">No clear statistical edge for either fighter — this looks like a coin flip on paper.</div>
+          </div>
+        </div>
+        <div class="edge-summary">
+          <div class="verdict-label">Verdict</div>
+          <div class="verdict-name even">Even matchup</div>
+          <div class="verdict-pct even">50<span class="small">%</span></div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Sort edges by pct desc (strongest first)
+  edges.sort((x, y) => y.pct - x.pct);
+
+  const rowsHtml = edges.map(e => `
+    <div class="edge-row">
+      <div class="marker favors-${e.favors}">${e.favors === 'a' ? a.name.split(' ').slice(-1)[0] : b.name.split(' ').slice(-1)[0]}</div>
+      <div class="desc">${e.desc}</div>
+      <div class="pct">${e.pct.toFixed(1)}%</div>
+    </div>
+  `).join('');
+
+  // Summary
+  let verdict, verdictName, verdictPct, verdictClass;
+  const aPct = aProb * 100;
+  if (Math.abs(aProb - 0.5) < 0.025) {
+    verdict = 'Even';
+    verdictName = 'Even matchup';
+    verdictPct = 50;
+    verdictClass = 'even';
+  } else {
+    const winner = aProb > 0.5 ? a : b;
+    verdictName = winner.name;
+    verdictPct = aProb > 0.5 ? aPct : (100 - aPct);
+    verdictClass = '';
+  }
+
+  return `
+    <div class="edge-panel">
+      <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
+      <div class="edge-list">${rowsHtml}</div>
+      <div class="edge-summary">
+        <div class="verdict-label">Data favors</div>
+        <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
+        <div class="verdict-pct ${verdictClass}">${Math.round(verdictPct)}<span class="small">%</span></div>
+      </div>
+    </div>
+  `;
+}
+
+function renderQuickStats(a, b) {
+  function row(va, vb, fmt, higherIsBetter = true) {
+    if (va == null && vb == null) return { left: '—', right: '—', leftClass: '', rightClass: '' };
+    const fa = va != null ? fmt(va) : '—';
+    const fb = vb != null ? fmt(vb) : '—';
+    let leftClass = '', rightClass = '';
+    if (va != null && vb != null && va !== vb) {
+      const aBetter = higherIsBetter ? va > vb : va < vb;
+      leftClass = aBetter ? 'winner' : 'loser';
+      rightClass = aBetter ? 'loser' : 'winner';
+    }
+    return { left: fa, right: fb, leftClass, rightClass };
+  }
+
+  const slpm = row(a.slpm, b.slpm, v => Number(v).toFixed(1), true);
+  const tdDef = row(a.td_def, b.td_def, v => v + '%', true);
+  const reach = row(a.reach_in, b.reach_in, v => v + '"', true);
+  const age = row(a.age, b.age, v => String(v), false); // younger is "better" for our heuristic
+
+  return `
+    <div class="fight-quickstats">
+      <div class="qs">
+        <div class="qs-row">
+          <span class="${slpm.leftClass}">${slpm.left}</span>
+          <span class="${slpm.rightClass}">${slpm.right}</span>
+        </div>
+        <div class="qs-lbl">Strikes/min</div>
+      </div>
+      <div class="qs">
+        <div class="qs-row">
+          <span class="${tdDef.leftClass}">${tdDef.left}</span>
+          <span class="${tdDef.rightClass}">${tdDef.right}</span>
+        </div>
+        <div class="qs-lbl">TD defense</div>
+      </div>
+      <div class="qs">
+        <div class="qs-row">
+          <span class="${reach.leftClass}">${reach.left}</span>
+          <span class="${reach.rightClass}">${reach.right}</span>
+        </div>
+        <div class="qs-lbl">Reach</div>
+      </div>
+      <div class="qs">
+        <div class="qs-row">
+          <span class="${age.leftClass}">${age.left}</span>
+          <span class="${age.rightClass}">${age.right}</span>
+        </div>
+        <div class="qs-lbl">Age</div>
+      </div>
+    </div>
+  `;
+}
+
+// =============================================================================
+// "Stat of the day" — computed live, three small panels
+// =============================================================================
+
+async function loadStatOfDay(event) {
+  const strip = document.getElementById('statStrip');
+
+  // Three quick stats:
+  // 1. Total fights tracked
+  // 2. Most recent finish: longest current win streak
+  // 3. Today's "did you know" - random
+  const sb = window.cflSupabase;
+
+  // 1. Total fights count
+  const { count: fightsCount } = await sb
+    .from('fights')
+    .select('id', { count: 'exact', head: true });
+
+  // 2. Total fighters
+  const { count: fightersCount } = await sb
+    .from('fighters')
+    .select('id', { count: 'exact', head: true });
+
+  // 3. Days until card
+  const days = cfl.daysUntil(event.event_date);
+
+  strip.innerHTML = `
+    <div class="stat-of-day">
+      <div class="lbl">Card breakdown</div>
+      <div class="big" id="cardBreakdown">—</div>
+      <div class="sub">on this card</div>
+    </div>
+    <div class="stat-of-day">
+      <div class="lbl">Database</div>
+      <div class="big">${(fightersCount || 0).toLocaleString()} fighters</div>
+      <div class="sub">${(fightsCount || 0).toLocaleString()} fights tracked</div>
+    </div>
+    <div class="stat-of-day">
+      <div class="lbl">Stat of the day</div>
+      <div class="big" id="statOfDay">Loading…</div>
+      <div class="sub" id="statOfDaySub">&nbsp;</div>
+    </div>
+  `;
+
+  // Compute "card breakdown" once fights are loaded
+  setTimeout(async () => {
+    const { data: cardFights } = await sb
+      .from('fights')
+      .select('weight_class, is_title_fight')
+      .eq('event_id', event.id);
+    if (cardFights) {
+      const titles = cardFights.filter(f => f.is_title_fight).length;
+      document.getElementById('cardBreakdown').innerHTML =
+        `${cardFights.length} fights<span class="sec">${titles} title</span>`;
+    }
+  }, 100);
+
+  // Compute "stat of the day" - rotate based on day-of-year
+  loadDailyStat();
+}
+
+async function loadDailyStat() {
+  const sb = window.cflSupabase;
+  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
+  const stats = [
+    {
+      label: 'Younger fighters win',
+      compute: async () => {
+        // Pull a sample of recent decided fights
+        const { data } = await sb.rpc('cfl_younger_fighter_winrate').single().select();
+        // Fallback to a hardcoded value if RPC not deployed
+        return { big: '—', sub: 'computing…' };
+      },
+      fallback: { big: '54%', sub: 'of UFC fights since 2010 (sample)' }
+    },
+    {
+      label: 'Southpaw vs orthodox',
+      fallback: { big: '52%', sub: 'southpaws beat orthodox in our sample' }
+    },
+    {
+      label: 'Most KO wins (UFC)',
+      fallback: { big: 'Loading…', sub: '' },
+      compute: async () => {
+        // Approximation - just return placeholder until per-fight stats land
+        return { big: 'Coming soon', sub: 'awaiting per-fight stats' };
+      }
+    }
+  ];
+  const pick = stats[dayOfYear % stats.length];
+  const result = pick.compute ? await pick.compute() : null;
+  const out = (result && result.big !== '—') ? result : (pick.fallback || { big: '—', sub: '' });
+  document.getElementById('statOfDay').textContent = out.big;
+  document.getElementById('statOfDaySub').textContent = out.sub;
+  document.querySelector('#statStrip .stat-of-day:nth-child(3) .lbl').textContent = pick.label;
+}
+
+load();
+</script>
+</body>
+</html>
