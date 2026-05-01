@@ -1,3 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Parlay builder — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  .parlay-layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 24px;
+    align-items: flex-start;
+  }
+  @media (max-width: 1024px) {
+    .parlay-layout { grid-template-columns: 1fr; }
+  }
+
+  /* ===== Mobile sticky slip ===== */
+  @media (max-width: 1024px) {
+    .slip {
+      position: fixed !important;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      top: auto !important;
+      max-height: 80vh;
+      border-radius: 14px 14px 0 0;
+      border-bottom: none;
+      box-shadow: 0 -8px 32px rgba(0,0,0,0.6);
+      z-index: 200;
+      padding: 0;
+      transform: translateY(calc(100% - 64px));
+      transition: transform 0.25s ease;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .slip-mobile-handle,
+    .slip.expanded {
+      pointer-events: auto;
+    }
+    .slip.expanded {
+      transform: translateY(0);
+    }
+    .slip-mobile-handle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-3);
+    }
+    .slip-mobile-handle .left-block { display: flex; align-items: center; gap: 10px; }
+    .slip-mobile-handle .chevron {
+      font-family: 'Barlow Condensed', sans-serif;
+      color: var(--text-3);
+      font-size: 16px;
+      transition: transform 0.2s;
+    }
+    .slip.expanded .chevron { transform: rotate(180deg); }
+    .slip-mobile-handle .leg-count {
+      background: var(--red);
+      color: #fff;
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 14px;
+      font-weight: 800;
+      padding: 2px 9px;
+      border-radius: 999px;
+      min-width: 24px;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .slip-mobile-handle .label {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      color: #fff;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .slip-mobile-handle .preview-payout {
+      font-family: 'Barlow Condensed', sans-serif;
+      font-size: 18px;
+      color: var(--green);
+      font-weight: 800;
+    }
+    .slip-mobile-handle .preview-payout.empty { color: var(--text-3); }
+    .slip h3 { display: none; }
+    .slip-body-wrap {
+      padding: 16px 18px 24px;
+      overflow-y: auto;
+      max-height: calc(80vh - 64px);
+    }
+    body { padding-bottom: 72px; }
+    .slip.pulse { animation: slipPulse 0.5s ease; }
+    @keyframes slipPulse {
+      0% { box-shadow: 0 -8px 32px rgba(0,0,0,0.6); }
+      50% { box-shadow: 0 -8px 40px rgba(230, 57, 70, 0.4); }
+      100% { box-shadow: 0 -8px 32px rgba(0,0,0,0.6); }
+    }
+  }
+  @media (min-width: 1025px) {
+    .slip-mobile-handle { display: none; }
+    .slip-body-wrap { padding: 0; }
+  }
+
+  .build-area h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+
+  .event-section { margin-bottom: 32px; }
+  .event-section .event-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+  .event-section .event-date {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 14px;
+  }
+
+  .pick-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: center;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 8px;
+    transition: border-color 0.15s;
+  }
+  .pick-row:hover { border-color: #2f2f2f; }
+  .pick-fighter {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .pick-fighter:hover { background: var(--bg-3); }
+  .pick-fighter.right { flex-direction: row-reverse; text-align: right; }
+  .pick-fighter.selected {
+    border-color: var(--green);
+    background: rgba(76, 175, 80, 0.08);
+  }
+  .pick-fighter .name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .pick-fighter .meta { font-size: 11px; color: var(--text-3); }
+  .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
+
+  .slip {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    position: sticky;
+    top: 76px;
+  }
+  .slip h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 14px;
+    letter-spacing: 0.5px;
+  }
+  .slip-empty {
+    text-align: center;
+    color: var(--text-3);
+    padding: 30px 10px;
+    font-size: 13px;
+  }
+  .slip-leg {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 8px;
+  }
+  .slip-leg-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .slip-leg-name { font-size: 13px; color: #fff; font-weight: 500; }
+  .slip-leg-remove {
+    background: transparent;
+    border: none;
+    color: var(--text-3);
+    font-size: 14px;
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+  }
+  .slip-leg-remove:hover { color: var(--red); }
+  .slip-leg-bottom { display: flex; gap: 8px; align-items: center; }
+  .odds-input {
+    flex: 1;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .odds-input:focus { outline: none; border-color: var(--red); }
+  .implied {
+    font-size: 11px;
+    color: var(--text-3);
+    font-family: 'Barlow Condensed', sans-serif;
+    letter-spacing: 0.5px;
+  }
+
+  .slip-summary {
+    border-top: 1px solid var(--border);
+    margin-top: 14px;
+    padding-top: 14px;
+  }
+  .summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .summary-row .lbl { color: var(--text-2); }
+  .summary-row .val { color: #fff; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; }
+  .summary-row.payout .val { color: var(--green); font-size: 22px; }
+
+  .stake-row {
+    margin: 14px 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .stake-row label { font-size: 12px; color: var(--text-2); }
+  .stake-row .stake-input {
+    flex: 1;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    color: #fff;
+    font-size: 13px;
+  }
+
+  .help-box {
+    margin-top: 14px;
+    padding: 10px 12px;
+    background: var(--bg-3);
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--text-3);
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Build & evaluate</div>
+  <h1>Parlay builder</h1>
+  <p>Pick your fighters from the upcoming card. Enter the sportsbook odds. See your combined payout and implied probability.</p>
+</div>
+
+<div class="page">
+  <div class="parlay-layout">
+    <div class="build-area">
+      <h2>Upcoming fights</h2>
+      <div id="upcomingArea">
+        <div class="loading-state"><div class="loading-spinner"></div><div>Loading upcoming events…</div></div>
+      </div>
+    </div>
+
+    <div class="slip" id="slip">
+      <div class="slip-mobile-handle" id="slipHandle">
+        <div class="left-block">
+          <div class="leg-count" id="slipLegCount">0</div>
+          <div class="label">Your parlay</div>
+        </div>
+        <div style="display:flex; align-items:center; gap: 10px;">
+          <div class="preview-payout empty" id="slipPreview">$0</div>
+          <div class="chevron">▲</div>
+        </div>
+      </div>
+      <div class="slip-body-wrap">
+        <h3>Your parlay</h3>
+        <div id="slipBody">
+          <div class="slip-empty">No legs yet. Click a fighter on the left to add them.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('parlay');
+cfl.renderFooter();
+
+let legs = [];
+let stake = 10;
+let upcomingEvents = [];
+let fightsByEvent = {};
+let fightersById = {};
+
+async function load() {
+  const sb = window.cflSupabase;
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data: events, error: evErr } = await sb
+    .from('events')
+    .select('id, name, event_date, location')
+    .eq('is_upcoming', true)
+    .gte('event_date', today)
+    .order('event_date', { ascending: true });
+
+  if (evErr) {
+    document.getElementById('upcomingArea').innerHTML = cfl.errorHtml('Failed to load events: ' + evErr.message);
+    return;
+  }
+
+  upcomingEvents = events || [];
+
+  if (upcomingEvents.length === 0) {
+    document.getElementById('upcomingArea').innerHTML = '<div class="no-results">No upcoming events scheduled.</div>';
+    return;
+  }
+
+  const eventIds = upcomingEvents.map(e => e.id);
+  const { data: fights } = await sb
+    .from('fights')
+    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, weight_class, is_main_event, is_title_fight')
+    .in('event_id', eventIds);
+
+  (fights || []).forEach(f => {
+    if (!fightsByEvent[f.event_id]) fightsByEvent[f.event_id] = [];
+    fightsByEvent[f.event_id].push(f);
+  });
+
+  const fighterIds = [...new Set((fights || []).flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
+  if (fighterIds.length > 0) {
+    const { data: fighters } = await sb
+      .from('fighters')
+      .select('id, name, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, division')
+      .in('id', fighterIds);
+    (fighters || []).forEach(f => { fightersById[f.id] = f; });
+  }
+
+  render();
+}
+
+function render() {
+  const area = document.getElementById('upcomingArea');
+  area.innerHTML = upcomingEvents.map(ev => {
+    const evFights = (fightsByEvent[ev.id] || []).slice().sort((a, b) => {
+      if (a.is_main_event !== b.is_main_event) return b.is_main_event ? 1 : -1;
+      if (a.is_title_fight !== b.is_title_fight) return b.is_title_fight ? 1 : -1;
+      return a.id - b.id;
+    });
+
+    if (evFights.length === 0) return '';
+
+    return `
+      <div class="event-section">
+        <div class="event-title">${cfl.escapeHtml(ev.name)}</div>
+        <div class="event-date">${cfl.formatDate(ev.event_date)} · ${cfl.escapeHtml(ev.location || 'TBD')}</div>
+        ${evFights.map(f => renderPickRow(f)).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderPickRow(f) {
+  const a = fightersById[f.fighter_a_id];
+  const b = fightersById[f.fighter_b_id];
+  const aSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_a_id);
+  const bSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_b_id);
+
+  return `
+    <div class="pick-row">
+      <div class="pick-fighter ${aSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_a_id}" data-name="${cfl.escapeHtml(f.fighter_a_name)}" data-opp="${cfl.escapeHtml(f.fighter_b_name)}">
+        <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_a_name))}</div>
+        <div style="flex:1; min-width: 0;">
+          <div class="name">${cfl.escapeHtml(f.fighter_a_name)}</div>
+          <div class="meta">${a ? cfl.formatRecord(a.ufc_wins, a.ufc_losses, a.ufc_draws) + ' UFC' : '—'}</div>
+        </div>
+      </div>
+      <div class="pick-vs">VS</div>
+      <div class="pick-fighter right ${bSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_b_id}" data-name="${cfl.escapeHtml(f.fighter_b_name)}" data-opp="${cfl.escapeHtml(f.fighter_a_name)}">
+        <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_b_name))}</div>
+        <div style="flex:1; min-width: 0;">
+          <div class="name">${cfl.escapeHtml(f.fighter_b_name)}</div>
+          <div class="meta">${b ? cfl.formatRecord(b.ufc_wins, b.ufc_losses, b.ufc_draws) + ' UFC' : '—'}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 document.addEventListener('click', e => {
   const pf = e.target.closest('.pick-fighter');
   if (pf) {
@@ -5,7 +437,6 @@ document.addEventListener('click', e => {
     const fighterId = parseInt(pf.dataset.fighter, 10);
     if (!fighterId) return;
 
-    // Toggle: if already selected, remove; if other side selected, replace
     const existingIndex = legs.findIndex(l => l.fightId === fightId);
     const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
     if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
@@ -29,3 +460,189 @@ document.addEventListener('click', e => {
     if (wasAdded) pulseSlip();
   }
 });
+
+function pulseSlip() {
+  const slip = document.getElementById('slip');
+  if (!slip) return;
+  if (window.innerWidth <= 1024) {
+    slip.classList.remove('pulse');
+    void slip.offsetWidth;
+    slip.classList.add('pulse');
+    if (legs.length === 1) {
+      slip.classList.add('expanded');
+      setTimeout(() => slip.classList.remove('expanded'), 1800);
+    }
+  }
+}
+
+document.addEventListener('click', e => {
+  const handle = e.target.closest('#slipHandle');
+  if (handle && window.innerWidth <= 1024) {
+    document.getElementById('slip').classList.toggle('expanded');
+  }
+});
+
+function renderSlip() {
+  const slipBody = document.getElementById('slipBody');
+  if (legs.length === 0) {
+    slipBody.innerHTML = '<div class="slip-empty">No legs yet. Click a fighter on the left to add them.</div>';
+    updateSlipHandle();
+    return;
+  }
+
+  const legsHtml = legs.map((leg, i) => {
+    const implied = leg.odds ? americanToImplied(leg.odds) : null;
+    return `
+      <div class="slip-leg">
+        <div class="slip-leg-top">
+          <div class="slip-leg-name">${cfl.escapeHtml(leg.fighterName)}</div>
+          <button class="slip-leg-remove" data-idx="${i}" title="Remove">×</button>
+        </div>
+        <div style="font-size: 11px; color: var(--text-3); margin-bottom: 6px;">vs ${cfl.escapeHtml(leg.opponentName)}</div>
+        <div class="slip-leg-bottom">
+          <input type="text" class="odds-input" data-idx="${i}" placeholder="-150" value="${cfl.escapeHtml(leg.odds)}" />
+          <div class="implied">${implied != null ? (implied * 100).toFixed(1) + '%' : '—'}</div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const allValid = legs.every(l => l.odds && !isNaN(americanToDecimal(l.odds)));
+  let combinedDec = 1;
+  let combinedImplied = 1;
+  if (allValid) {
+    for (const l of legs) {
+      combinedDec *= americanToDecimal(l.odds);
+      combinedImplied *= americanToImplied(l.odds);
+    }
+  }
+  const payout = allValid ? (stake * combinedDec) : null;
+  const profit = allValid ? (payout - stake) : null;
+
+  slipBody.innerHTML = `
+    ${legsHtml}
+    <div class="stake-row">
+      <label>Stake $</label>
+      <input type="number" id="stakeInput" class="stake-input" value="${stake}" min="0" step="1" />
+    </div>
+    <div class="slip-summary">
+      <div class="summary-row">
+        <span class="lbl">Combined odds</span>
+        <span class="val" id="sumCombined">${allValid ? formatAmericanFromDecimal(combinedDec) : '—'}</span>
+      </div>
+      <div class="summary-row">
+        <span class="lbl">Implied probability</span>
+        <span class="val" id="sumImplied">${allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—'}</span>
+      </div>
+      <div class="summary-row payout">
+        <span class="lbl">Payout</span>
+        <span class="val" id="sumPayout">${payout != null ? '$' + payout.toFixed(2) : '—'}</span>
+      </div>
+      <div class="summary-row" style="font-size:11px; color:var(--text-3);">
+        <span>Profit</span>
+        <span class="val" id="sumProfit" style="font-family:'Barlow Condensed',sans-serif; font-size:13px;">${profit != null ? '+$' + profit.toFixed(2) : '—'}</span>
+      </div>
+    </div>
+    <div class="help-box">
+      Enter <strong>American odds</strong> like <code style="color:var(--red)">-150</code> (favorite) or <code style="color:var(--red)">+220</code> (underdog).<br>
+      Implied probability shows what the sportsbook is pricing in. Combined % is the chance all your picks hit.
+    </div>
+  `;
+  updateSlipHandle();
+}
+
+function updateSlipHandle() {
+  const lc = document.getElementById('slipLegCount');
+  const pv = document.getElementById('slipPreview');
+  if (!lc || !pv) return;
+  lc.textContent = legs.length;
+  if (legs.length === 0) {
+    pv.textContent = '$0';
+    pv.classList.add('empty');
+    return;
+  }
+  const allValid = legs.every(l => l.odds && !isNaN(americanToDecimal(l.odds)));
+  if (allValid) {
+    let dec = 1;
+    for (const l of legs) dec *= americanToDecimal(l.odds);
+    pv.textContent = '$' + (stake * dec).toFixed(2);
+    pv.classList.remove('empty');
+  } else {
+    pv.textContent = `${legs.length} leg${legs.length === 1 ? '' : 's'}`;
+    pv.classList.add('empty');
+  }
+}
+
+document.addEventListener('input', e => {
+  if (e.target.classList.contains('odds-input')) {
+    const idx = parseInt(e.target.dataset.idx, 10);
+    legs[idx].odds = e.target.value;
+    updateSlipMath();
+  } else if (e.target.id === 'stakeInput') {
+    stake = parseFloat(e.target.value) || 0;
+    updateSlipMath();
+  }
+});
+
+function updateSlipMath() {
+  document.querySelectorAll('.slip-leg').forEach((legEl, i) => {
+    const leg = legs[i];
+    if (!leg) return;
+    const impliedEl = legEl.querySelector('.implied');
+    if (impliedEl) {
+      const imp = leg.odds ? americanToImplied(leg.odds) : null;
+      impliedEl.textContent = imp != null ? (imp * 100).toFixed(1) + '%' : '—';
+    }
+  });
+
+  const allValid = legs.every(l => l.odds && !isNaN(americanToDecimal(l.odds)));
+  let combinedDec = 1;
+  let combinedImplied = 1;
+  if (allValid) {
+    for (const l of legs) {
+      combinedDec *= americanToDecimal(l.odds);
+      combinedImplied *= americanToImplied(l.odds);
+    }
+  }
+  const payout = allValid ? (stake * combinedDec) : null;
+  const profit = allValid ? (payout - stake) : null;
+
+  const elCombined = document.getElementById('sumCombined');
+  const elImplied = document.getElementById('sumImplied');
+  const elPayout = document.getElementById('sumPayout');
+  const elProfit = document.getElementById('sumProfit');
+  if (elCombined) elCombined.textContent = allValid ? formatAmericanFromDecimal(combinedDec) : '—';
+  if (elImplied) elImplied.textContent = allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—';
+  if (elPayout) elPayout.textContent = payout != null ? '$' + payout.toFixed(2) : '—';
+  if (elProfit) elProfit.textContent = profit != null ? '+$' + profit.toFixed(2) : '—';
+  updateSlipHandle();
+}
+
+document.addEventListener('click', e => {
+  const rm = e.target.closest('.slip-leg-remove');
+  if (rm) {
+    legs.splice(parseInt(rm.dataset.idx, 10), 1);
+    render();
+    renderSlip();
+  }
+});
+
+function americanToDecimal(american) {
+  const a = parseInt(String(american).replace(/[^\d-+]/g, ''), 10);
+  if (isNaN(a) || a === 0) return NaN;
+  return a > 0 ? (a / 100 + 1) : (100 / Math.abs(a) + 1);
+}
+function americanToImplied(american) {
+  const a = parseInt(String(american).replace(/[^\d-+]/g, ''), 10);
+  if (isNaN(a) || a === 0) return null;
+  return a > 0 ? 100 / (a + 100) : Math.abs(a) / (Math.abs(a) + 100);
+}
+function formatAmericanFromDecimal(dec) {
+  if (dec >= 2) return '+' + Math.round((dec - 1) * 100);
+  return '-' + Math.round(100 / (dec - 1));
+}
+
+load();
+</script>
+</body>
+</html>
