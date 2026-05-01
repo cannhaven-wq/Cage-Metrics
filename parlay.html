@@ -435,12 +435,48 @@ document.addEventListener('input', e => {
   if (e.target.classList.contains('odds-input')) {
     const idx = parseInt(e.target.dataset.idx, 10);
     legs[idx].odds = e.target.value;
-    renderSlip();
+    updateSlipMath();   // partial update, keeps focus
   } else if (e.target.id === 'stakeInput') {
     stake = parseFloat(e.target.value) || 0;
-    renderSlip();
+    updateSlipMath();
   }
 });
+
+// Partial-update version that only changes the implied probabilities
+// and the summary block — does NOT touch the inputs themselves.
+function updateSlipMath() {
+  // Update each leg's implied probability label
+  document.querySelectorAll('.slip-leg').forEach((legEl, i) => {
+    const leg = legs[i];
+    if (!leg) return;
+    const impliedEl = legEl.querySelector('.implied');
+    if (impliedEl) {
+      const imp = leg.odds ? americanToImplied(leg.odds) : null;
+      impliedEl.textContent = imp != null ? (imp * 100).toFixed(1) + '%' : '—';
+    }
+  });
+
+  // Update the summary block
+  const allValid = legs.every(l => l.odds && !isNaN(americanToDecimal(l.odds)));
+  let combinedDec = 1;
+  let combinedImplied = 1;
+  if (allValid) {
+    for (const l of legs) {
+      combinedDec *= americanToDecimal(l.odds);
+      combinedImplied *= americanToImplied(l.odds);
+    }
+  }
+  const payout = allValid ? (stake * combinedDec) : null;
+  const profit = allValid ? (payout - stake) : null;
+
+  const rows = document.querySelectorAll('.slip-summary .summary-row .val');
+  if (rows.length >= 4) {
+    rows[0].textContent = allValid ? formatAmericanFromDecimal(combinedDec) : '—';
+    rows[1].textContent = allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—';
+    rows[2].textContent = payout != null ? '$' + payout.toFixed(2) : '—';
+    rows[3].textContent = profit != null ? '+$' + profit.toFixed(2) : '—';
+  }
+}
 
 document.addEventListener('click', e => {
   const rm = e.target.closest('.slip-leg-remove');
