@@ -409,19 +409,19 @@ function renderSlip() {
     <div class="slip-summary">
       <div class="summary-row">
         <span class="lbl">Combined odds</span>
-        <span class="val">${allValid ? formatAmericanFromDecimal(combinedDec) : '—'}</span>
+        <span class="val" id="sumCombined">${allValid ? formatAmericanFromDecimal(combinedDec) : '—'}</span>
       </div>
       <div class="summary-row">
         <span class="lbl">Implied probability</span>
-        <span class="val">${allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—'}</span>
+        <span class="val" id="sumImplied">${allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—'}</span>
       </div>
       <div class="summary-row payout">
         <span class="lbl">Payout</span>
-        <span class="val">${payout != null ? '$' + payout.toFixed(2) : '—'}</span>
+        <span class="val" id="sumPayout">${payout != null ? '$' + payout.toFixed(2) : '—'}</span>
       </div>
       <div class="summary-row" style="font-size:11px; color:var(--text-3);">
         <span>Profit</span>
-        <span style="font-family:'Barlow Condensed',sans-serif;">${profit != null ? '+$' + profit.toFixed(2) : '—'}</span>
+        <span class="val" id="sumProfit" style="font-family:'Barlow Condensed',sans-serif; font-size:13px;">${profit != null ? '+$' + profit.toFixed(2) : '—'}</span>
       </div>
     </div>
     <div class="help-box">
@@ -469,13 +469,14 @@ function updateSlipMath() {
   const payout = allValid ? (stake * combinedDec) : null;
   const profit = allValid ? (payout - stake) : null;
 
-  const rows = document.querySelectorAll('.slip-summary .summary-row .val');
-  if (rows.length >= 4) {
-    rows[0].textContent = allValid ? formatAmericanFromDecimal(combinedDec) : '—';
-    rows[1].textContent = allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—';
-    rows[2].textContent = payout != null ? '$' + payout.toFixed(2) : '—';
-    rows[3].textContent = profit != null ? '+$' + profit.toFixed(2) : '—';
-  }
+  const elCombined = document.getElementById('sumCombined');
+  const elImplied = document.getElementById('sumImplied');
+  const elPayout = document.getElementById('sumPayout');
+  const elProfit = document.getElementById('sumProfit');
+  if (elCombined) elCombined.textContent = allValid ? formatAmericanFromDecimal(combinedDec) : '—';
+  if (elImplied) elImplied.textContent = allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—';
+  if (elPayout) elPayout.textContent = payout != null ? '$' + payout.toFixed(2) : '—';
+  if (elProfit) elProfit.textContent = profit != null ? '+$' + profit.toFixed(2) : '—';
 }
 
 document.addEventListener('click', e => {
