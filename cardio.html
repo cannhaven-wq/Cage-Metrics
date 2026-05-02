@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cardio Score — Cannon Fight Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ============== Hero ============== */
+  .cardio-hero {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg));
+    border-bottom: 1px solid var(--border);
+    padding: 40px 32px 32px;
+    text-align: center;
+  }
+  .cardio-hero .eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 10px;
+  }
+  .cardio-hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+  .cardio-hero .lede {
+    font-size: 15px;
+    color: var(--text-2);
+    max-width: 580px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* ============== Section blocks ============== */
+  .section {
+    margin-bottom: 48px;
+  }
+  .section-eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-eyebrow .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red);
+    display: inline-block;
+  }
+  .section h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+  .section p {
+    color: var(--text-2);
+    line-height: 1.7;
+    margin-bottom: 14px;
+    font-size: 14.5px;
+  }
+  .section p strong { color: #fff; font-weight: 600; }
+
+  /* ============== The math callout ============== */
+  .formula {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 18px 0;
+  }
+  .formula-title {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .formula-eq {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.5;
+    letter-spacing: 0.3px;
+  }
+  .formula-eq .op { color: var(--red); padding: 0 6px; }
+  .formula-note {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  /* ============== Tiers grid ============== */
+  .tiers {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 18px;
+  }
+  .tier {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px 18px;
+    position: relative;
+  }
+  .tier.high  { border-left: 3px solid var(--green); }
+  .tier.low   { border-left: 3px solid #ffa726; }
+  .tier.none  { border-left: 3px solid #555; }
+  .tier-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .tier.high  .tier-label { color: var(--green); }
+  .tier.low   .tier-label { color: #ffa726; }
+  .tier.none  .tier-label { color: #888; }
+  .tier h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin-bottom: 6px;
+    line-height: 1.1;
+  }
+  .tier p {
+    font-size: 12.5px;
+    color: var(--text-2);
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  /* ============== Step list ============== */
+  .step-list {
+    counter-reset: step;
+    margin: 18px 0;
+  }
+  .step {
+    display: flex;
+    gap: 16px;
+    padding: 16px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .step:last-child { border-bottom: none; }
+  .step::before {
+    counter-increment: step;
+    content: counter(step);
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--red);
+  }
+  .step-body { flex: 1; }
+  .step-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+  .step-body p {
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.6;
+    margin: 0;
+  }
+
+  /* ============== Leaderboard ============== */
+  .leaderboards {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  .leaderboard {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .leaderboard-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .leaderboard-title {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.3px;
+  }
+  .leaderboard.best  .leaderboard-title { color: var(--green); }
+  .leaderboard.worst .leaderboard-title { color: var(--red); }
+  .leaderboard-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-top: 4px;
+  }
+  .lb-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .lb-row {
+    display: grid;
+    grid-template-columns: 24px 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 20px;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+  .lb-row:last-child { border-bottom: none; }
+  .lb-row:hover { background: var(--bg-3); }
+  .lb-rank {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-3);
+    text-align: right;
+  }
+  .lb-info { min-width: 0; }
+  .lb-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .lb-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .lb-score {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-align: right;
+    flex-shrink: 0;
+  }
+  .leaderboard.best  .lb-score { color: var(--green); }
+  .leaderboard.worst .lb-score { color: var(--red); }
+  .lb-name a {
+    color: inherit;
+    text-decoration: none;
+  }
+  .lb-name a:hover { color: var(--red); }
+
+  /* ============== Caveats ============== */
+  .caveat {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+  .caveat-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .caveat-title::before {
+    content: '!';
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 167, 38, 0.15);
+    color: #ffa726;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .caveat p {
+    font-size: 12.5px;
+    color: var(--text-2);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .cardio-hero { padding: 28px 16px 24px; }
+    .cardio-hero h1 { font-size: 30px; }
+    .leaderboards { grid-template-columns: 1fr; }
+    .tiers { grid-template-columns: 1fr; }
+    .formula-eq { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="cardio-hero">
+  <div class="eyebrow">Methodology</div>
+  <h1>The Cardio Score</h1>
+  <p class="lede">A single number that captures how a fighter performs in the second half of fights — when output drops, accuracy fades, and decisions get made. Built from per-round strike data across every UFC fight.</p>
+</div>
+
+<div class="page">
+
+  <!-- ============== What it measures ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>What it measures</div>
+    <h2>Output sustain in deep waters</h2>
+    <p>Every UFC fighter throws strikes at some pace in round one. The question that decides most fights past round two: <strong>do they keep throwing at that pace</strong>, or does their output collapse?</p>
+    <p>The cardio score combines two things. First, the change in strike volume from round one to round three and beyond. Second, the change in accuracy over the same window. A fighter who keeps throwing AND keeps landing as the fight goes deep gets a positive score. A fighter who slows down, loses accuracy, or both gets a negative score.</p>
+  </div>
+
+  <!-- ============== The math ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>The formula</div>
+    <h2>How the number gets built</h2>
+    <div class="formula">
+      <div class="formula-title">Cardio composite</div>
+      <div class="formula-eq">
+        Output change R1 → R3+ <span class="op">+</span> Accuracy change R1 → R3+
+      </div>
+      <div class="formula-note">Both components are expressed as percentage changes from the fighter's round-one baseline. Capped at +150 / −150 to prevent low-volume fighters from scoring artificially high off tiny sample math.</div>
+    </div>
+    <div class="step-list">
+      <div class="step">
+        <div class="step-body">
+          <div class="step-title">Pull every R3+ fight in the window</div>
+          <p>For each fighter, we collect their last five fights that reached round three or later. Fights ending in R1 or R2 contain no cardio signal and are excluded.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <div class="step-title">Aggregate strike data per round</div>
+          <p>Across those fights, we sum significant strikes attempted and landed in round one (the baseline) and rounds three through five (the deep-water window).</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <div class="step-title">Compute the change for each component</div>
+          <p>Output change = (R3+ strikes per minute − R1 strikes per minute) ÷ R1 strikes per minute × 100. Accuracy change is computed the same way using landed/attempted ratios. Both expressed as percentages.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-body">
+          <div class="step-title">Sum and cap</div>
+          <p>The two components add together. Range is hard-capped at +150 (extreme positive) to −150 (extreme negative), because larger numbers mean the fighter started so quietly in R1 that the math is unreliable.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== Confidence tiers ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Confidence tiers</div>
+    <h2>How much data backs each fighter's score</h2>
+    <p>Not every fighter has the same depth of cardio data. A welterweight with eight five-round wars has a far more reliable score than a heavyweight whose last three fights ended inside two minutes. We surface that with three tiers:</p>
+    <div class="tiers">
+      <div class="tier high">
+        <div class="tier-label">High confidence</div>
+        <h3>30+ minutes</h3>
+        <p>30 or more minutes of round-three-plus data. Score is reliable, treat it as a real signal.</p>
+      </div>
+      <div class="tier low">
+        <div class="tier-label">Limited data</div>
+        <h3>15–30 minutes</h3>
+        <p>Some R3+ history but small samples. Score is directional only — flagged as <em>limited</em> on fight cards.</p>
+      </div>
+      <div class="tier none">
+        <div class="tier-label">No reading</div>
+        <h3>Under 15 min</h3>
+        <p>The fighter rarely goes deep. That itself is a signal — they tend to finish fights or get finished early.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== Weight class logic ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Weight class matters</div>
+    <h2>Same fighter, different cardio</h2>
+    <p>A fighter cutting from welterweight to lightweight is depleted on fight night. The same fighter moving up to middleweight is rehydrated and fresher than usual. Their cardio looks different at each weight — and the data confirms it.</p>
+    <p>Our cardio score is computed <strong>per weight class</strong>. When you see a fighter's cardio number on an upcoming fight card, it's specifically their cardio at that fight's weight class. If they don't have enough deep-water history at that weight, we fall back to their career cardio across all weights and flag the row as <em>limited data</em>.</p>
+    <p>Examples we've found in the data: Alex Pereira shows +128 at light heavyweight and +3 at middleweight. Charles Oliveira shows different numbers at lightweight than featherweight. Kamaru Usman's career score overstates his welterweight cardio because his lightweight days inflated it. The weight-class split surfaces signal that career averages destroy.</p>
+  </div>
+
+  <!-- ============== Live leaderboards ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Right now in the UFC</div>
+    <h2>The leaderboards</h2>
+    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific — these are the fighters whose cardio reputation is most clearly backed (or refuted) by the numbers across all the weight classes they've fought at.</p>
+    <div class="leaderboards">
+      <div class="leaderboard best">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">▲ Best cardio</div>
+          <div class="leaderboard-sub">Output and accuracy hold up late</div>
+        </div>
+        <ul class="lb-list" id="lbBest">
+          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
+        </ul>
+      </div>
+      <div class="leaderboard worst">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">▼ Worst cardio</div>
+          <div class="leaderboard-sub">Output drops, accuracy fades — fade candidates</div>
+        </div>
+        <ul class="lb-list" id="lbWorst">
+          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== Caveats ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Honest limitations</div>
+    <h2>What the score can't tell you</h2>
+    <div class="caveat">
+      <div class="caveat-title">Damage vs. fatigue look the same in the data</div>
+      <p>A fighter who stopped throwing in R3 because they're being controlled or hurt looks identical to one who stopped because they're tired. The score can't distinguish those cases — it just measures output. Read the score alongside the fight context.</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">It only counts fights that reached R3</div>
+      <p>If a fighter finishes most of their opponents in R1, they'll show up as "no reading" — and that's correct. We're measuring what happens in deep waters, not predicting whether the fight will get there.</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">Round duration is approximate</div>
+      <p>UFCStats doesn't expose per-round duration on the data we scrape, so we treat every round as a full five minutes. The final round of a finished fight is shorter, which slightly inflates per-minute stats for finishers. Effect is small and applies evenly across fighters.</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">Recent five only</div>
+      <p>The score uses a fighter's last five deep-water fights. A fighter whose cardio improved or declined recently won't have that change reflected until they've had several R3 fights at the new level. This is intentional — recent form is more predictive than career averages.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script>
+cfl.renderNav('cardio');
+cfl.renderFooter();
+
+// =============================================================================
+// LEADERBOARDS — pulled live from v_fighter_cardio
+// =============================================================================
+//
+// We use the CAREER row (weight_class = 'CAREER') so this is fighter-level
+// rather than per-weight-class. The page is a tour of the whole UFC, not
+// scoped to a single division.
+//
+// Filters: high confidence only (30+ min of R3+ data), 2+ deep-water fights.
+// Best by composite desc, worst by composite asc.
+// =============================================================================
+
+async function loadLeaderboards() {
+  const sb = window.cflSupabase;
+  try {
+    const { data, error } = await sb
+      .from('v_fighter_cardio')
+      .select('fighter_id, cardio_composite, deep_water_fights, r3plus_minutes, confidence_tier')
+      .eq('weight_class', 'CAREER')
+      .eq('confidence_tier', 'high')
+      .gte('deep_water_fights', 2)
+      .not('cardio_composite', 'is', null);
+
+    if (error) {
+      document.getElementById('lbBest').innerHTML = errorRow('Could not load leaderboard');
+      document.getElementById('lbWorst').innerHTML = errorRow('Could not load leaderboard');
+      console.error(error);
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      document.getElementById('lbBest').innerHTML = errorRow('No high-confidence cardio data yet');
+      document.getElementById('lbWorst').innerHTML = errorRow('No high-confidence cardio data yet');
+      return;
+    }
+
+    // Need fighter names for display. Bulk fetch.
+    const fighterIds = data.map(r => r.fighter_id);
+    const { data: fighters } = await sb
+      .from('fighters')
+      .select('id, name, division')
+      .in('id', fighterIds);
+    const fmap = {};
+    (fighters || []).forEach(f => { fmap[f.id] = f; });
+
+    // Sort and slice
+    const enriched = data
+      .map(r => ({ ...r, name: fmap[r.fighter_id]?.name, division: fmap[r.fighter_id]?.division }))
+      .filter(r => r.name);
+
+    const best = [...enriched].sort((a, b) => b.cardio_composite - a.cardio_composite).slice(0, 20);
+    const worst = [...enriched].sort((a, b) => a.cardio_composite - b.cardio_composite).slice(0, 20);
+
+    document.getElementById('lbBest').innerHTML = best.map((r, i) => row(i + 1, r)).join('');
+    document.getElementById('lbWorst').innerHTML = worst.map((r, i) => row(i + 1, r)).join('');
+  } catch (e) {
+    console.error('Leaderboard load failed:', e);
+    document.getElementById('lbBest').innerHTML = errorRow('Could not load leaderboard');
+    document.getElementById('lbWorst').innerHTML = errorRow('Could not load leaderboard');
+  }
+}
+
+function row(rank, r) {
+  const score = r.cardio_composite;
+  const sign = score > 0 ? '+' : '';
+  const display = sign + Math.round(score);
+  const div = r.division || '';
+  return `
+    <li class="lb-row">
+      <div class="lb-rank">${rank}</div>
+      <div class="lb-info">
+        <div class="lb-name"><a href="${cfl.fighterUrl(r.fighter_id)}">${cfl.escapeHtml(r.name)}</a></div>
+        <div class="lb-meta">${cfl.escapeHtml(div)} · ${r.deep_water_fights} fights · ${Math.round(r.r3plus_minutes)} min</div>
+      </div>
+      <div class="lb-score">${display}</div>
+    </li>
+  `;
+}
+
+function errorRow(msg) {
+  return `<li class="lb-row" style="grid-template-columns: 1fr;"><div class="lb-info" style="text-align:center;color:var(--text-3);font-size:13px;padding:12px 0">${msg}</div></li>`;
+}
+
+loadLeaderboards();
+</script>
+</body>
+</html>

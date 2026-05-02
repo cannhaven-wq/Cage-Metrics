@@ -253,6 +253,17 @@
     min-width: 92px;
     line-height: 1.2;
   }
+  .fstat-label-link {
+    color: inherit;
+    text-decoration: none;
+    border-bottom: 1px dotted var(--text-3);
+    padding-bottom: 1px;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .fstat-label-link:hover {
+    color: var(--red);
+    border-bottom-color: var(--red);
+  }
   .fstat-side {
     display: flex;
     align-items: center;
@@ -1060,6 +1071,10 @@ function statBarRow(label, va, vb, format, higherIsBetter, opts) {
   // Tier tag for cardio rows (small amber pill on low-confidence)
   const aTier = opts.aTier && opts.aTier === 'low' ? '<span class="fstat-tier-tag">limited</span>' : '';
   const bTier = opts.bTier && opts.bTier === 'low' ? '<span class="fstat-tier-tag">limited</span>' : '';
+  // Label can optionally link out (e.g. cardio score label -> cardio methodology page)
+  const labelInner = opts.labelHref
+    ? `<a href="${opts.labelHref}" class="fstat-label-link" title="How this is calculated">${label}</a>`
+    : label;
   return `
     <div class="fstat-row">
       <div class="fstat-side left">
@@ -1067,7 +1082,7 @@ function statBarRow(label, va, vb, format, higherIsBetter, opts) {
         <div class="fstat-val ${aWins ? 'winner' : ''}">${fa}</div>
         ${aTier}
       </div>
-      <div class="fstat-label">${label}</div>
+      <div class="fstat-label">${labelInner}</div>
       <div class="fstat-side right">
         <div class="fstat-bar"><div class="fstat-fill ${bWins ? 'winner' : ''}" style="width:${bPct}%"></div></div>
         <div class="fstat-val ${bWins ? 'winner' : ''}">${fb}</div>
@@ -1101,6 +1116,7 @@ function renderQuickStats(a, b, fightWeightClass) {
     {
       aTier: aLimited ? 'low' : (cardioA && cardioA.tier),
       bTier: bLimited ? 'low' : (cardioB && cardioB.tier),
+      labelHref: 'cardio.html',
     }
   ));
 
