@@ -1,0 +1,7 @@
+# Cannon Fight Lab — robots.txt
+# All crawlers allowed; nothing to hide.
+User-agent: *
+Allow: /
+
+# Sitemap location for search engines
+Sitemap: https://cannonfightlab.com/sitemap.xml

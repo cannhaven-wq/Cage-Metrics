@@ -3,11 +3,71 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cannon Fight Lab — Next event</title>
+
+<!-- ===== Primary SEO ===== -->
+<title>Cannon Fight Lab — UFC Fight Predictions, Cardio Stats & Analytics</title>
+<meta name="description" content="Calibrated UFC fight predictions backed by 8,000+ historical fights. See model verdicts, fighter cardio scores, head-to-head matchups, and a transparent prediction track record.">
+<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, fighter head to head, UFC fight model, MMA edge factors">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/">
+
+<!-- ===== Open Graph (Facebook, LinkedIn, Discord, iMessage) ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="Cannon Fight Lab — UFC Fight Predictions & Analytics">
+<meta property="og:description" content="Calibrated UFC predictions backed by 8,000+ historical fights. Transparent verdicts, fighter cardio scores, and a public track record.">
+<meta property="og:url" content="https://cannonfightlab.com/">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC fight analytics">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Cannon Fight Lab — UFC Predictions & Analytics">
+<meta name="twitter:description" content="Calibrated UFC fight predictions with a transparent track record. Fighter cardio scores, head-to-head, edge factors.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Structured data (JSON-LD) ===== -->
+<!-- Tells search engines that CFL is a sports analytics web application,
+     reachable at this URL, with a clear name. Helps Google understand the
+     site for rich-result eligibility (sitelinks, knowledge panel). -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Cannon Fight Lab",
+  "alternateName": "CFL",
+  "url": "https://cannonfightlab.com/",
+  "description": "Calibrated UFC fight predictions and fighter analytics. Verdicts backed by edge factors validated against 8,000+ historical fights.",
+  "applicationCategory": "SportsApplication",
+  "operatingSystem": "Any",
+  "creator": {
+    "@type": "Organization",
+    "name": "Cannon Fight Lab",
+    "url": "https://cannonfightlab.com/"
+  }
+}
+</script>
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Plausible analytics — privacy-friendly, no cookie banner needed. -->
+<!-- Replace 'cannonfightlab.com' with your registered Plausible domain if different. -->
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   /* Page-specific styles */
   .countdown-bar {
