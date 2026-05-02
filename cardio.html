@@ -344,7 +344,8 @@
     <div class="section-eyebrow"><span class="dot"></span>What it measures</div>
     <h2>Output sustain in deep waters</h2>
     <p>Every UFC fighter throws strikes at some pace in round one. The question that decides most fights past round two: <strong>do they keep throwing at that pace</strong>, or does their output collapse?</p>
-    <p>The cardio score combines two things. First, the change in strike volume from round one to round three and beyond. Second, the change in accuracy over the same window. A fighter who keeps throwing AND keeps landing as the fight goes deep gets a positive score. A fighter who slows down, loses accuracy, or both gets a negative score.</p>
+    <p>The cardio score measures consistency of fight output between round one and rounds three and beyond. It looks at three striking dimensions — strikes attempted per minute, strikes landed per minute, total strikes attempted per minute — plus, for true wrestlers only, takedown attempts per round. A fighter who sustains or exceeds their R1 pace in their active dimensions scores high. A fighter whose output drops in the deep waters scores low.</p>
+    <p>The score is reported as a <strong>tier word</strong> (Tireless, Steady, Tapers, Fades, Collapses) backed by a 0–150 numeric value. The tier is what bettors read; the number is the supporting evidence.</p>
   </div>
 
   <!-- ============== The math ============== -->
@@ -352,35 +353,35 @@
     <div class="section-eyebrow"><span class="dot"></span>The formula</div>
     <h2>How the number gets built</h2>
     <div class="formula">
-      <div class="formula-title">Cardio composite</div>
+      <div class="formula-title">Consistency score</div>
       <div class="formula-eq">
-        Output change R1 → R3+ <span class="op">+</span> Accuracy change R1 → R3+
+        Avg R3+ rate <span class="op">÷</span> Avg R1 rate <span class="op">×</span> 100
       </div>
-      <div class="formula-note">Both components are expressed as percentage changes from the fighter's round-one baseline. Capped at +150 / −150 to prevent low-volume fighters from scoring artificially high off tiny sample math.</div>
+      <div class="formula-note">Computed for each active output dimension, then averaged together with each dimension weighted by the fighter's R1 baseline volume. A score of 100 means R3+ output exactly matches R1. Above 100 = sustains or pushes pace late. Below 100 = fades.</div>
     </div>
     <div class="step-list">
       <div class="step">
         <div class="step-body">
-          <div class="step-title">Pull every R3+ fight in the window</div>
-          <p>For each fighter, we collect their last five fights that reached round three or later. Fights ending in R1 or R2 contain no cardio signal and are excluded.</p>
+          <div class="step-title">Identify the fighter's active dimensions</div>
+          <p>Strikes-attempted, strikes-landed, and total-strikes are counted for any fighter throwing real volume in R1. Takedowns are counted <strong>only for true wrestlers</strong> with at least 1.5 takedown attempts per round in R1. This avoids inflating a striker's score when they shoot a desperation late takedown out of exhaustion.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <div class="step-title">Aggregate strike data per round</div>
-          <p>Across those fights, we sum significant strikes attempted and landed in round one (the baseline) and rounds three through five (the deep-water window).</p>
+          <div class="step-title">Aggregate R1 and R3+ rates</div>
+          <p>Across the fighter's last five UFC fights with R3+ data, we sum every minute of R1 and every minute of R3+, separately. From these we compute average per-minute rates in each active dimension.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <div class="step-title">Compute the change for each component</div>
-          <p>Output change = (R3+ strikes per minute − R1 strikes per minute) ÷ R1 strikes per minute × 100. Accuracy change is computed the same way using landed/attempted ratios. Both expressed as percentages.</p>
+          <div class="step-title">Compute the ratio per dimension and cap by sample size</div>
+          <p>For each active dimension, the R3+ rate is divided by the R1 rate. Sample-size-aware caps prevent small-sample inflation: 1.5× ceiling for fighters with 60+ minutes of R3+ data, 1.4× for 30–60 min, 1.3× for 15–30 min, 1.15× for under 15 min. Big samples earn the right to differentiate at the top.</p>
         </div>
       </div>
       <div class="step">
         <div class="step-body">
-          <div class="step-title">Sum and cap</div>
-          <p>The two components add together. Range is hard-capped at +150 (extreme positive) to −150 (extreme negative), because larger numbers mean the fighter started so quietly in R1 that the math is unreliable.</p>
+          <div class="step-title">Volume-weighted average → tier</div>
+          <p>Each dimension's ratio is averaged together, weighted by R1 baseline volume. So a fighter who throws 8 strikes/min and 0.4 takedowns/round has striking weighted ~20× the takedown dimension — striker fades can't be hidden by an inflated grappling ratio. The result × 100 is the score, then bucketed into tiers: <strong>Tireless ≥115</strong>, <strong>Steady 90–115</strong>, <strong>Tapers 70–90</strong>, <strong>Fades 50–70</strong>, <strong>Collapses &lt;50</strong>.</p>
         </div>
       </div>
     </div>
@@ -390,22 +391,22 @@
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>Confidence tiers</div>
     <h2>How much data backs each fighter's score</h2>
-    <p>Not every fighter has the same depth of cardio data. A welterweight with eight five-round wars has a far more reliable score than a heavyweight whose last three fights ended inside two minutes. We surface that with three tiers:</p>
+    <p>Not every fighter has the same depth of cardio data. A welterweight with eight five-round wars has a far more reliable score than a heavyweight whose last three fights ended inside two minutes. We surface that with two tiers:</p>
     <div class="tiers">
       <div class="tier high">
         <div class="tier-label">High confidence</div>
-        <h3>30+ minutes</h3>
-        <p>30 or more minutes of round-three-plus data. Score is reliable, treat it as a real signal.</p>
+        <h3>15+ R3+ minutes</h3>
+        <p>At least 15 minutes of round-three-plus data across recent fights. The score reflects a real pattern, not noise. Treat the tier word as a real signal.</p>
       </div>
       <div class="tier low">
         <div class="tier-label">Limited data</div>
-        <h3>15–30 minutes</h3>
-        <p>Some R3+ history but small samples. Score is directional only — flagged as <em>limited</em> on fight cards.</p>
+        <h3>Under 15 R3+ min</h3>
+        <p>Some R3+ history but a small sample. Score is directional only — flagged as <em>limited</em> on fight cards. Treat the tier word as suggestive, not conclusive.</p>
       </div>
       <div class="tier none">
         <div class="tier-label">No reading</div>
-        <h3>Under 15 min</h3>
-        <p>The fighter rarely goes deep. That itself is a signal — they tend to finish fights or get finished early.</p>
+        <h3>No R3+ tape</h3>
+        <p>The fighter rarely makes it past round two. That itself is a signal — they tend to finish or get finished early. We don't show a cardio score in this case.</p>
       </div>
     </div>
   </div>
@@ -415,8 +416,8 @@
     <div class="section-eyebrow"><span class="dot"></span>Weight class matters</div>
     <h2>Same fighter, different cardio</h2>
     <p>A fighter cutting from welterweight to lightweight is depleted on fight night. The same fighter moving up to middleweight is rehydrated and fresher than usual. Their cardio looks different at each weight — and the data confirms it.</p>
-    <p>Our cardio score is computed <strong>per weight class</strong>. When you see a fighter's cardio number on an upcoming fight card, it's specifically their cardio at that fight's weight class. If they don't have enough deep-water history at that weight, we fall back to their career cardio across all weights and flag the row as <em>limited data</em>.</p>
-    <p>Examples we've found in the data: Alex Pereira shows +128 at light heavyweight and +3 at middleweight. Charles Oliveira shows different numbers at lightweight than featherweight. Kamaru Usman's career score overstates his welterweight cardio because his lightweight days inflated it. The weight-class split surfaces signal that career averages destroy.</p>
+    <p>The cardio score is computed <strong>per weight class</strong>. When you see a fighter's cardio tier on an upcoming fight card, it's specifically their cardio at that fight's weight class. If they don't have enough deep-water history at that weight, we fall back to their career cardio across all weights and flag the row as <em>limited data</em>.</p>
+    <p>Fighters who have moved between divisions can have very different scores at each. The weight-class split surfaces a signal that career averages destroy — a fighter's cardio at lightweight tells you almost nothing about their cardio at welterweight.</p>
   </div>
 
   <!-- ============== Live leaderboards ============== -->
@@ -428,7 +429,7 @@
       <div class="leaderboard best">
         <div class="leaderboard-header">
           <div class="leaderboard-title">▲ Best cardio</div>
-          <div class="leaderboard-sub">Output and accuracy hold up late</div>
+          <div class="leaderboard-sub">Tireless or steady — output sustains late</div>
         </div>
         <ul class="lb-list" id="lbBest">
           <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
@@ -437,7 +438,7 @@
       <div class="leaderboard worst">
         <div class="leaderboard-header">
           <div class="leaderboard-title">▼ Worst cardio</div>
-          <div class="leaderboard-sub">Output drops, accuracy fades — fade candidates</div>
+          <div class="leaderboard-sub">Fades or collapses — fade candidates in deep waters</div>
         </div>
         <ul class="lb-list" id="lbWorst">
           <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
@@ -455,8 +456,8 @@
       <p>A fighter who stopped throwing in R3 because they're being controlled or hurt looks identical to one who stopped because they're tired. The score can't distinguish those cases — it just measures output. Read the score alongside the fight context.</p>
     </div>
     <div class="caveat">
-      <div class="caveat-title">It only counts fights that reached R3</div>
-      <p>If a fighter finishes most of their opponents in R1, they'll show up as "no reading" — and that's correct. We're measuring what happens in deep waters, not predicting whether the fight will get there.</p>
+      <div class="caveat-title">Slow starters can score artificially high</div>
+      <p>A fighter who paces themselves quietly in R1 and then opens up in R3 will look like an elite cardio machine to this metric — even if their R3 pace is just average. Charles Oliveira is a clear example. The metric measures consistency between R1 and R3+, not absolute output. Read the tier alongside the per-dimension breakdown when something looks off.</p>
     </div>
     <div class="caveat">
       <div class="caveat-title">Round duration is approximate</div>
@@ -464,7 +465,7 @@
     </div>
     <div class="caveat">
       <div class="caveat-title">Recent five only</div>
-      <p>The score uses a fighter's last five deep-water fights. A fighter whose cardio improved or declined recently won't have that change reflected until they've had several R3 fights at the new level. This is intentional — recent form is more predictive than career averages.</p>
+      <p>The score uses a fighter's last five UFC fights with R3+ data. A fighter whose cardio improved or declined recently won't have that change reflected until they've had several R3+ fights at the new level. This is intentional — recent form is more predictive than career averages.</p>
     </div>
   </div>
 
@@ -478,27 +479,27 @@ cfl.renderNav('cardio');
 cfl.renderFooter();
 
 // =============================================================================
-// LEADERBOARDS — pulled live from v_fighter_cardio
+// LEADERBOARDS — pulled live from v_fighter_consistency
 // =============================================================================
 //
 // We use the CAREER row (weight_class = 'CAREER') so this is fighter-level
 // rather than per-weight-class. The page is a tour of the whole UFC, not
 // scoped to a single division.
 //
-// Filters: high confidence only (30+ min of R3+ data), 2+ deep-water fights.
-// Best by composite desc, worst by composite asc.
+// Filters: high confidence only, must have a tier_word. Best by score desc,
+// worst by score asc.
 // =============================================================================
 
 async function loadLeaderboards() {
   const sb = window.cflSupabase;
   try {
     const { data, error } = await sb
-      .from('v_fighter_cardio')
-      .select('fighter_id, cardio_composite, deep_water_fights, r3plus_minutes, confidence_tier')
+      .from('v_fighter_consistency')
+      .select('fighter_id, consistency_score, cardio_tier, confidence_tier, recent_fights, r3p_minutes, weight_class')
       .eq('weight_class', 'CAREER')
       .eq('confidence_tier', 'high')
-      .gte('deep_water_fights', 2)
-      .not('cardio_composite', 'is', null);
+      .not('cardio_tier', 'is', null)
+      .not('consistency_score', 'is', null);
 
     if (error) {
       document.getElementById('lbBest').innerHTML = errorRow('Could not load leaderboard');
@@ -522,15 +523,14 @@ async function loadLeaderboards() {
     const fmap = {};
     (fighters || []).forEach(f => { fmap[f.id] = f; });
 
-    // Sort and slice
     const enriched = data
       .map(r => ({ ...r, name: fmap[r.fighter_id]?.name, division: fmap[r.fighter_id]?.division }))
       .filter(r => r.name);
 
-    const best = [...enriched].sort((a, b) => b.cardio_composite - a.cardio_composite).slice(0, 20);
-    const worst = [...enriched].sort((a, b) => a.cardio_composite - b.cardio_composite).slice(0, 20);
+    const best  = [...enriched].sort((a, b) => b.consistency_score - a.consistency_score).slice(0, 20);
+    const worst = [...enriched].sort((a, b) => a.consistency_score - b.consistency_score).slice(0, 20);
 
-    document.getElementById('lbBest').innerHTML = best.map((r, i) => row(i + 1, r)).join('');
+    document.getElementById('lbBest').innerHTML  = best.map((r, i)  => row(i + 1, r)).join('');
     document.getElementById('lbWorst').innerHTML = worst.map((r, i) => row(i + 1, r)).join('');
   } catch (e) {
     console.error('Leaderboard load failed:', e);
@@ -540,18 +540,17 @@ async function loadLeaderboards() {
 }
 
 function row(rank, r) {
-  const score = r.cardio_composite;
-  const sign = score > 0 ? '+' : '';
-  const display = sign + Math.round(score);
+  const score = r.consistency_score;
+  const tier = r.cardio_tier ? (r.cardio_tier.charAt(0).toUpperCase() + r.cardio_tier.slice(1)) : '—';
   const div = r.division || '';
   return `
     <li class="lb-row">
       <div class="lb-rank">${rank}</div>
       <div class="lb-info">
         <div class="lb-name"><a href="${cfl.fighterUrl(r.fighter_id)}">${cfl.escapeHtml(r.name)}</a></div>
-        <div class="lb-meta">${cfl.escapeHtml(div)} · ${r.deep_water_fights} fights · ${Math.round(r.r3plus_minutes)} min</div>
+        <div class="lb-meta">${cfl.escapeHtml(div)} · ${tier} · ${r.recent_fights} fights · ${Math.round(r.r3p_minutes)} min</div>
       </div>
-      <div class="lb-score">${display}</div>
+      <div class="lb-score">${Math.round(score)}</div>
     </li>
   `;
 }

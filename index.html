@@ -315,6 +315,34 @@
   }
   .fstat-side.right .fstat-tier-tag { margin-left: 0; margin-right: 6px; }
 
+  /* ============== Cardio row — tier word + small score ============== */
+  /* Cardio rows replace the bare numeric value with a stacked layout:
+     a tier word (Tireless / Steady / etc.) on top, the numeric score
+     in muted small text underneath. Reuses .fstat-bar/.fstat-fill so
+     the visual rhythm of the stat block is preserved. */
+  .cardio-stack {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    line-height: 1.05;
+    min-width: 56px;
+  }
+  .fstat-side.right .cardio-stack { align-items: flex-start; }
+  .cardio-tier-word {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-2);
+    letter-spacing: 0.3px;
+  }
+  .cardio-tier-word.winner { color: var(--green); }
+  .cardio-score-small {
+    font-size: 11px;
+    color: var(--text-3);
+    font-weight: 500;
+    margin-top: 1px;
+  }
+
   /* ============== Edge panel (top 3 fights only) ============== */
   .edge-panel {
     border-top: 1px solid var(--border);
@@ -853,28 +881,26 @@ function tdDefEdge(a, b) {
   };
 }
 
-// Cardio edge — uses the cardio_composite from _cardioMap. Strong predictor in
-// 3-round fights, very strong in 5-round fights, but only when both fighters
-// have at least 'low' tier confidence. Skip if either is 'none'.
-//
-// fightWeightClass: weight class string from the upcoming fight. We prefer
-// per-weight-class cardio data when available, falling back to career.
+// Cardio edge — uses the consistency_score from v_fighter_consistency.
+// New scale: 100 = R3+ matches R1 baseline. >115 = tireless. <70 = fades.
+// We surface the edge when there's a meaningful gap between fighters,
+// scaled to the new range.
 function cardioEdge(a, b, fightWeightClass) {
   const ca = cardioFor(a.id, fightWeightClass);
   const cb = cardioFor(b.id, fightWeightClass);
   if (!ca || !cb) return null;
-  if (ca.tier === 'none' || cb.tier === 'none') return null;
-  const gap = Math.abs(ca.composite - cb.composite);
-  if (gap < 30) return null; // small composite differences aren't reliable
-  // Both tier='low' OR either using career fallback → tighter cap
-  const eitherLow = (ca.tier === 'low' || cb.tier === 'low');
+  if (!ca.tier_word || !cb.tier_word) return null;
+  const gap = Math.abs((ca.score || 0) - (cb.score || 0));
+  if (gap < 15) return null; // small gaps not meaningful on the 0-150 scale
+  // Confidence-aware capping. Limited or career fallback = more conservative.
+  const eitherLimited = (ca.confidence === 'limited' || cb.confidence === 'limited');
   const eitherCareerFallback = (ca.source === 'career' || cb.source === 'career');
-  const conservative = eitherLow || eitherCareerFallback;
+  const conservative = eitherLimited || eitherCareerFallback;
   let pct;
-  if (gap >= 100)      pct = conservative ? 55.0 : 58.0;
-  else if (gap >= 60)  pct = conservative ? 53.5 : 56.0;
-  else                 pct = conservative ? 52.5 : 54.0;
-  const aBetter = ca.composite > cb.composite;
+  if (gap >= 50)      pct = conservative ? 55.0 : 58.0;
+  else if (gap >= 30) pct = conservative ? 53.5 : 56.0;
+  else                pct = conservative ? 52.5 : 54.0;
+  const aBetter = (ca.score || 0) > (cb.score || 0);
   const limited = conservative ? ' (limited data)' : '';
   return {
     favors: aBetter ? 'a' : 'b',
@@ -988,11 +1014,12 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass) {
 // =============================================================================
 
 // Cardio data lookup — fighter_id -> { byWc: {wc -> entry}, career: entry }
-// Each entry has {tier, composite, dw_fights, r3plus_min}.
+// Each entry has {score, tier_word, confidence, r3p_min, fight_count,
+// sig_apm_pct, sig_lpm_pct, td_pct} from v_fighter_consistency.
 //
 // At lookup time (renderQuickStats / cardioEdge) the caller passes the fight's
 // weight_class. If we have data at that weight class, use it. Otherwise fall
-// back to the career row. This handles fighters moving up/down weight classes.
+// back to the CAREER row. This handles fighters moving up/down weight classes.
 let _cardioMap = null;
 
 async function loadCardioMap(fighterIds) {
@@ -1000,10 +1027,11 @@ async function loadCardioMap(fighterIds) {
   const sb = window.cflSupabase;
   _cardioMap = {};
   try {
-    // Pull every weight-class row for these fighters, plus the career fallback row.
+    // Read from v_fighter_consistency. Each fighter has rows for each weight
+    // class they fought at, plus a 'CAREER' row with the cross-weight aggregate.
     const { data, error } = await sb
-      .from('v_fighter_cardio')
-      .select('fighter_id, weight_class, confidence_tier, cardio_composite, deep_water_fights, r3plus_minutes')
+      .from('v_fighter_consistency')
+      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier, r3p_minutes, recent_fights, sig_apm_ratio_pct, sig_lpm_ratio_pct, td_ratio_pct')
       .in('fighter_id', Array.from(fighterIds));
     if (error) {
       console.warn('Cardio data not available:', error.message);
@@ -1012,10 +1040,14 @@ async function loadCardioMap(fighterIds) {
     (data || []).forEach(r => {
       const slot = _cardioMap[r.fighter_id] || (_cardioMap[r.fighter_id] = { byWc: {}, career: null });
       const entry = {
-        tier: r.confidence_tier,
-        composite: r.cardio_composite,
-        dw_fights: r.deep_water_fights,
-        r3plus_min: r.r3plus_minutes,
+        score: r.consistency_score,
+        tier_word: r.cardio_tier,           // 'tireless' / 'steady' / 'tapers' / 'fades' / 'collapses'
+        confidence: r.confidence_tier,       // 'high' / 'limited'
+        r3p_min: r.r3p_minutes,
+        fight_count: r.recent_fights,
+        sig_apm_pct: r.sig_apm_ratio_pct,
+        sig_lpm_pct: r.sig_lpm_ratio_pct,
+        td_pct: r.td_ratio_pct,
       };
       if (r.weight_class === 'CAREER') {
         slot.career = entry;
@@ -1029,21 +1061,19 @@ async function loadCardioMap(fighterIds) {
   return _cardioMap;
 }
 
-// Look up cardio for a fighter at a specific weight class. Returns the
-// weight-class entry if it exists with low/high tier; otherwise returns the
-// career entry; otherwise null. Always returns the most-specific high-quality
-// data available.
+// Look up cardio for a fighter at a specific weight class. Prefer weight-class
+// data when it exists with a real tier_word; fall back to CAREER otherwise.
+// Returns null when the fighter has no usable data anywhere.
 function cardioFor(fighterId, weightClass) {
   if (!_cardioMap) return null;
   const slot = _cardioMap[fighterId];
   if (!slot) return null;
-  // Prefer weight-class-specific data
-  if (weightClass && slot.byWc[weightClass]) {
-    const wcEntry = slot.byWc[weightClass];
-    if (wcEntry.tier !== 'none') return { ...wcEntry, source: 'weight_class' };
+  // Prefer weight-class-specific data when it has a tier
+  if (weightClass && slot.byWc[weightClass] && slot.byWc[weightClass].tier_word) {
+    return { ...slot.byWc[weightClass], source: 'weight_class' };
   }
   // Fall back to career
-  if (slot.career && slot.career.tier !== 'none') {
+  if (slot.career && slot.career.tier_word) {
     return { ...slot.career, source: 'career' };
   }
   return null;
@@ -1100,29 +1130,75 @@ function renderQuickStats(a, b, fightWeightClass) {
   rows.push(statBarRow('Strikes / min', a.slpm, b.slpm, v => Number(v).toFixed(1), true));
   rows.push(statBarRow('Takedown defense', a.td_def, b.td_def, v => v + '%', true));
 
-  // Cardio row — only render if at least one fighter has a recorded composite.
-  // cardioFor() returns null for 'none' tier; 'low' tier or career fallback
-  // renders muted with a "limited" tag.
-  const compA = cardioA ? cardioA.composite : null;
-  const compB = cardioB ? cardioB.composite : null;
-  // Tier displayed as "limited" if low confidence OR using career fallback
-  const aLimited = cardioA && (cardioA.tier === 'low' || cardioA.source === 'career');
-  const bLimited = cardioB && (cardioB.tier === 'low' || cardioB.source === 'career');
-  rows.push(statBarRow(
-    'Cardio score',
-    compA, compB,
-    v => (v >= 0 ? '+' : '') + Number(v).toFixed(0),
-    true,
-    {
-      aTier: aLimited ? 'low' : (cardioA && cardioA.tier),
-      bTier: bLimited ? 'low' : (cardioB && cardioB.tier),
-      labelHref: 'cardio.html',
-    }
-  ));
+  // Cardio row uses a custom renderer because the primary value is a TIER WORD
+  // (Tireless / Steady / Tapers / Fades / Collapses) with the numeric score
+  // shown muted beneath it. This is what bettors actually read.
+  if (cardioA || cardioB) {
+    rows.push(renderCardioRow(cardioA, cardioB));
+  }
 
   const populated = rows.filter(Boolean);
   if (populated.length === 0) return '';
   return `<div class="fight-stats">${populated.join('')}</div>`;
+}
+
+// Custom cardio row: shows tier word as primary, score as secondary.
+// Bar length scales with score relative to the higher of the two; winner
+// (higher score) is highlighted green. "Limited" tag appears if the
+// confidence is limited OR we fell back to career data.
+function renderCardioRow(ca, cb) {
+  const sa = ca ? (ca.score || 0) : null;
+  const sb = cb ? (cb.score || 0) : null;
+  if (sa == null && sb == null) return '';
+
+  // Tier word, capitalized
+  const cap = w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '—';
+  const wordA = ca ? cap(ca.tier_word) : '—';
+  const wordB = cb ? cap(cb.tier_word) : '—';
+  const scoreA = sa != null ? Math.round(sa) : '—';
+  const scoreB = sb != null ? Math.round(sb) : '—';
+
+  // Winner = higher score
+  let aWins = false, bWins = false;
+  if (sa != null && sb != null && sa !== sb) {
+    aWins = sa > sb;
+    bWins = !aWins;
+  }
+
+  // Bar widths proportional to the higher score
+  const maxAbs = Math.max(Math.abs(sa ?? 0), Math.abs(sb ?? 0)) || 1;
+  const aPct = sa != null ? Math.min(100, (Math.abs(sa) / maxAbs) * 100) : 0;
+  const bPct = sb != null ? Math.min(100, (Math.abs(sb) / maxAbs) * 100) : 0;
+
+  // Limited tag if confidence is limited or using career fallback
+  const aLimited = ca && (ca.confidence === 'limited' || ca.source === 'career');
+  const bLimited = cb && (cb.confidence === 'limited' || cb.source === 'career');
+  const aTag = aLimited ? '<span class="fstat-tier-tag">limited</span>' : '';
+  const bTag = bLimited ? '<span class="fstat-tier-tag">limited</span>' : '';
+
+  return `
+    <div class="fstat-row cardio-row">
+      <div class="fstat-side left">
+        <div class="fstat-bar"><div class="fstat-fill ${aWins ? 'winner' : ''}" style="width:${aPct}%"></div></div>
+        <div class="cardio-stack">
+          <div class="cardio-tier-word ${aWins ? 'winner' : ''}">${wordA}</div>
+          <div class="cardio-score-small">${scoreA}</div>
+        </div>
+        ${aTag}
+      </div>
+      <div class="fstat-label">
+        <a href="cardio.html" class="fstat-label-link" title="How this is calculated">Cardio</a>
+      </div>
+      <div class="fstat-side right">
+        <div class="fstat-bar"><div class="fstat-fill ${bWins ? 'winner' : ''}" style="width:${bPct}%"></div></div>
+        <div class="cardio-stack">
+          <div class="cardio-tier-word ${bWins ? 'winner' : ''}">${wordB}</div>
+          <div class="cardio-score-small">${scoreB}</div>
+        </div>
+        ${bTag}
+      </div>
+    </div>
+  `;
 }
 
 async function loadStatOfDay(event) {
