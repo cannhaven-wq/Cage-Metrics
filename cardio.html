@@ -420,27 +420,53 @@
     <p>Fighters who have moved between divisions can have very different scores at each. The weight-class split surfaces a signal that career averages destroy — a fighter's cardio at lightweight tells you almost nothing about their cardio at welterweight.</p>
   </div>
 
+  <!-- ============== How we use it in the verdict ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>What it predicts</div>
+    <h2>How cardio drives the verdict</h2>
+    <p>We backtested the cardio metric against 2,068 historical UFC fights where both fighters had high-confidence readings in different tiers. The honest result:</p>
+    <div class="formula">
+      <div class="formula-title">Tier gap → fighter with better cardio wins</div>
+      <div class="formula-eq" style="font-size: 16px; line-height: 1.8;">
+        1-tier gap (e.g. Steady vs Tapers): <strong>51.7%</strong> · n=1,217<br>
+        2-tier gap (e.g. Steady vs Fades): <strong>51.4%</strong> · n=556<br>
+        3-tier gap (e.g. Steady vs Collapses): <strong>55.5%</strong> · n=256<br>
+        4-tier gap (Tireless vs Collapses): <strong>66.7%</strong> · n=39
+      </div>
+      <div class="formula-note">Cardio matters most when the gap is wide. Small tier gaps don't move the needle in the historical data — the better-cardio fighter wins them only marginally more often than coin flip.</div>
+    </div>
+    <p>So our verdict panel is calibrated accordingly. Cardio fires as an edge factor only when fighters are <strong>3 or more tiers apart</strong>:</p>
+    <ul style="padding-left: 22px; margin-bottom: 16px; font-size: 15px; color: var(--text-2); line-height: 1.7;">
+      <li><strong style="color: var(--text);">3-tier gap → 55%</strong> edge to the better-cardio fighter</li>
+      <li><strong style="color: var(--text);">4-tier gap → 58%</strong> edge to the better-cardio fighter</li>
+      <li><strong style="color: var(--text);">1- or 2-tier gap → no edge fires</strong> — the data doesn't support it</li>
+    </ul>
+    <p>Most fight cards won't have a cardio edge listed because most fighters are within 1-2 tiers of each other. When you do see "Tireless cardio vs Tapers" or "Steady cardio vs Collapses" in the edge panel, that's a real, calibrated signal worth weighting in your bet.</p>
+    <p style="font-size: 13px; color: var(--text-3); margin-top: 14px; line-height: 1.6;"><strong>What this metric is better at than rating:</strong> identifying faders. The bottom of the leaderboard below names known cardio collapses — Chandler, Woodley, Sandhagen — with real differentiation. The top compresses at the cap (most elite fighters tie at 140) because the metric measures consistency, not absolute output. For betting, the actionable signal is "lean against the fader," not "lean toward the elite."</p>
+  </div>
+
   <!-- ============== Live leaderboards ============== -->
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>Right now in the UFC</div>
     <h2>The leaderboards</h2>
-    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific — these are the fighters whose cardio reputation is most clearly backed (or refuted) by the numbers across all the weight classes they've fought at.</p>
+    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific.</p>
+    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;"><strong>Read the faders list first.</strong> That's where the metric earns its keep — Michael Chandler, Tyron Woodley, Cory Sandhagen are real, named, well-known cardio collapses, and the data ranks them where you'd expect. The elite list compresses at the score cap (most "tireless" fighters tie at 140), so it's a directional list of "these are good," not a ranking. We sort ties by deepest sample so the most-confident readings rise to the top.</p>
     <div class="leaderboards">
-      <div class="leaderboard best">
-        <div class="leaderboard-header">
-          <div class="leaderboard-title">▲ Best cardio</div>
-          <div class="leaderboard-sub">Tireless or steady — output sustains late</div>
-        </div>
-        <ul class="lb-list" id="lbBest">
-          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
-        </ul>
-      </div>
       <div class="leaderboard worst">
         <div class="leaderboard-header">
           <div class="leaderboard-title">▼ Worst cardio</div>
           <div class="leaderboard-sub">Fades or collapses — fade candidates in deep waters</div>
         </div>
         <ul class="lb-list" id="lbWorst">
+          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
+        </ul>
+      </div>
+      <div class="leaderboard best">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">▲ Best cardio</div>
+          <div class="leaderboard-sub">Tireless or steady — output sustains late</div>
+        </div>
+        <ul class="lb-list" id="lbBest">
           <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
         </ul>
       </div>
@@ -527,8 +553,19 @@ async function loadLeaderboards() {
       .map(r => ({ ...r, name: fmap[r.fighter_id]?.name, division: fmap[r.fighter_id]?.division }))
       .filter(r => r.name);
 
-    const best  = [...enriched].sort((a, b) => b.consistency_score - a.consistency_score).slice(0, 20);
-    const worst = [...enriched].sort((a, b) => a.consistency_score - b.consistency_score).slice(0, 20);
+    // Tiebreaker on R3+ minutes — many elite fighters tie at the score cap,
+    // so the fighter with the deepest deep-water sample ranks higher.
+    // For the 'worst' list, weakest score wins, then most data is more
+    // damning — but we keep the tiebreaker as r3p_minutes DESC for both
+    // lists so users see the most-confident readings at the top of either.
+    const best  = [...enriched].sort((a, b) =>
+      (b.consistency_score - a.consistency_score) ||
+      (b.r3p_minutes - a.r3p_minutes)
+    ).slice(0, 20);
+    const worst = [...enriched].sort((a, b) =>
+      (a.consistency_score - b.consistency_score) ||
+      (b.r3p_minutes - a.r3p_minutes)
+    ).slice(0, 20);
 
     document.getElementById('lbBest').innerHTML  = best.map((r, i)  => row(i + 1, r)).join('');
     document.getElementById('lbWorst').innerHTML = worst.map((r, i) => row(i + 1, r)).join('');
