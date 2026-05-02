@@ -106,6 +106,7 @@
         <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
           <span class="full">Stat finder</span><span class="short">Stats</span>
         </a>
+        <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
         <span class="cfl-nav-tag">Beta</span>
       </div>
     `;
