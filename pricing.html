@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Pricing — Cannon Fight Lab</title>
+<meta name="description" content="Cannon Fight Lab pricing. Free tier with verdict and top edges. Premium tier with full edge factors, detailed analytics, and early access launching soon.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://cannonfightlab.com/pricing.html">
+
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pricing — Cannon Fight Lab">
+<meta property="og:description" content="Free and Premium plans for Cannon Fight Lab UFC analytics.">
+<meta property="og:url" content="https://cannonfightlab.com/pricing.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  /* Waitlist form on premium card */
+  .waitlist-form {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  .waitlist-form input {
+    flex: 1;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    outline: none;
+  }
+  .waitlist-form input:focus { border-color: var(--red); }
+  .waitlist-form .btn { padding: 10px 16px; font-size: 13px; }
+  .waitlist-msg {
+    margin-top: 10px;
+    font-size: 12px;
+  }
+  .waitlist-msg.success { color: var(--green); }
+  .waitlist-msg.error { color: var(--red); }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="pricing-page">
+  <h1>Built for the bettor, priced for the regular.</h1>
+  <p class="lede">
+    Free tier gives you verdicts and the strongest edges driving each fight.
+    Premium unlocks the full picture — every edge factor, detailed cardio analysis,
+    and historical performance tracking.
+  </p>
+
+  <div class="pricing-grid">
+
+    <!-- FREE TIER -->
+    <div class="pricing-tier">
+      <div class="pricing-tier-name">Free</div>
+      <div class="pricing-tier-tagline">Forever. No card required.</div>
+      <div class="pricing-tier-price">
+        <span class="currency">$</span>0
+        <span class="period">/ forever</span>
+      </div>
+      <ul class="pricing-features">
+        <li>Next event card with verdicts</li>
+        <li>Top 2 edge factors per fight</li>
+        <li>Cardio score tier (Elite / Strong / Faders)</li>
+        <li>Head-to-head comparison tool</li>
+        <li>Fighter database access</li>
+        <li>Public track record + audit history</li>
+        <li class="muted">All edge factors per fight</li>
+        <li class="muted">Detailed cardio breakdowns</li>
+        <li class="muted">Recent form analysis</li>
+        <li class="muted">Pre-card brief by email</li>
+      </ul>
+      <a href="/signup.html" class="btn ghost" id="freeCta">Create free account</a>
+    </div>
+
+    <!-- PREMIUM TIER -->
+    <div class="pricing-tier premium">
+      <div class="pricing-tier-name">Premium</div>
+      <div class="pricing-tier-tagline">For serious bettors.</div>
+      <div class="pricing-tier-price coming-soon">Launching soon</div>
+      <ul class="pricing-features">
+        <li>Everything in Free, plus:</li>
+        <li><strong>All 9 edge factors</strong> per fight</li>
+        <li><strong>Edge confidence percentages</strong></li>
+        <li><strong>Detailed cardio breakdowns</strong> (R3+ minutes, output ratios)</li>
+        <li><strong>Recent form deep-dive</strong> on every fighter</li>
+        <li><strong>Pre-card brief</strong> emailed Friday before each event</li>
+        <li><strong>Pick tracking dashboard</strong> with personal ROI</li>
+        <li><strong>Style classifier reasoning</strong></li>
+        <li><strong>No ads, ever</strong></li>
+        <li><strong>Early access</strong> to new features</li>
+      </ul>
+      <form class="waitlist-form" id="waitlistForm">
+        <input type="email" id="waitlistEmail" placeholder="Get notified when it's live" required>
+        <button type="submit" class="btn">Join waitlist</button>
+      </form>
+      <div class="waitlist-msg" id="waitlistMsg"></div>
+    </div>
+
+  </div>
+
+  <div style="max-width: 720px; margin: 60px auto 0; text-align: center;">
+    <h2 style="font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); margin: 0 0 12px">FAQ</h2>
+    <div style="text-align: left; color: var(--text-2); font-size: 14px; line-height: 1.7;">
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">When does Premium launch?</strong><br>
+      Pricing and launch date will be announced to the waitlist first. Estimated 1-3 months out, after we collect a track record across multiple events.</p>
+
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">Will the free tier ever go away?</strong><br>
+      No. The free tier is permanent. We may add features to it over time but the core data stays free.</p>
+
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">Why are you charging if there are no closing odds yet?</strong><br>
+      Premium is what funds adding closing odds, expanded coverage, and the pre-card brief. You're paying for the synthesis layer — calibrated edge factors and detailed analysis — not for predictions of unknowable future events.</p>
+
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">Can I get a refund?</strong><br>
+      Yes. We will offer a no-questions-asked refund policy in the first 7 days. Specific refund terms will be on the checkout page when payments launch.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('pricing');
+cfl.renderFooter();
+
+// If user is already signed in, change the free CTA to "go to your account"
+cflAuth.ready().then(() => {
+  if (cflAuth.isSignedIn()) {
+    const freeCta = document.getElementById('freeCta');
+    freeCta.textContent = 'View account';
+    freeCta.href = '/account.html';
+  }
+});
+
+// Waitlist form
+document.getElementById('waitlistForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const emailInput = document.getElementById('waitlistEmail');
+  const msgEl = document.getElementById('waitlistMsg');
+  const email = emailInput.value.trim();
+
+  msgEl.textContent = '';
+  msgEl.className = 'waitlist-msg';
+
+  const { error } = await cflAuth.joinWaitlist(email, 'pricing_page');
+
+  if (error) {
+    // Unique violation just means they're already on the list — friendly message
+    if (error.code === '23505' || /duplicate/i.test(error.message)) {
+      msgEl.textContent = "You're already on the waitlist. We'll be in touch.";
+      msgEl.className = 'waitlist-msg success';
+      emailInput.value = '';
+      return;
+    }
+    msgEl.textContent = error.message;
+    msgEl.className = 'waitlist-msg error';
+    return;
+  }
+
+  msgEl.textContent = "Thanks. We'll let you know when Premium launches.";
+  msgEl.className = 'waitlist-msg success';
+  emailInput.value = '';
+});
+</script>
+</body>
+</html>

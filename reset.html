@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Reset password — Cannon Fight Lab</title>
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://cannonfightlab.com/reset.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <h1>Reset password</h1>
+    <p class="auth-sub">Enter your email and we'll send you a reset link.</p>
+
+    <div id="msgArea"></div>
+
+    <form class="auth-form" id="resetForm" autocomplete="on">
+      <div class="auth-field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <button type="submit" class="btn" id="submitBtn">Send reset link</button>
+    </form>
+
+    <div class="auth-footer">
+      Remembered it? <a href="/login.html">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('reset');
+cfl.renderFooter();
+
+const msgArea = document.getElementById('msgArea');
+const form = document.getElementById('resetForm');
+const submitBtn = document.getElementById('submitBtn');
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msgArea.innerHTML = '';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Sending…';
+
+  const email = document.getElementById('email').value.trim();
+  const { error } = await cflAuth.resetPassword(email);
+
+  if (error) {
+    msgArea.innerHTML = `<div class="auth-error">${cfl.escapeHtml(error.message)}</div>`;
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Send reset link';
+    return;
+  }
+
+  form.style.display = 'none';
+  msgArea.innerHTML = `
+    <div class="auth-success">
+      Reset link sent to <strong>${cfl.escapeHtml(email)}</strong>.
+      Check your inbox and click the link to set a new password.
+    </div>
+  `;
+});
+</script>
+</body>
+</html>

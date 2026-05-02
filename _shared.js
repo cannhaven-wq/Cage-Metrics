@@ -106,12 +106,21 @@
         <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
           <span class="full">Stat finder</span><span class="short">Stats</span>
         </a>
-        <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
+        <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
         <span class="cfl-nav-tag">Beta</span>
       </div>
+      <div class="cfl-nav-slot" id="cflNavSlot"></div>
     `;
     const navEl = document.querySelector('nav.cfl-nav');
-    if (navEl) navEl.innerHTML = navHtml;
+    if (navEl) {
+      navEl.innerHTML = navHtml;
+      // Wire the auth slot once cflAuth is available. cflAuth handles its own
+      // re-rendering on auth state change so we don't need to call this again.
+      if (window.cflAuth) {
+        const slot = document.getElementById('cflNavSlot');
+        window.cflAuth.renderNavSlot(slot);
+      }
+    }
   };
 
   // --------- Footer renderer ---------

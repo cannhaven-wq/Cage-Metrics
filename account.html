@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Account — Cannon Fight Lab</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/account.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  .account-wrap { max-width: 720px; margin: 32px auto; padding: 0 20px; }
+  .account-header { margin-bottom: 24px; }
+  .account-header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 36px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.5px;
+    margin: 0 0 4px;
+  }
+  .account-header p {
+    color: var(--text-2);
+    font-size: 14px;
+    margin: 0;
+  }
+  .account-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+  }
+  .inline-form {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-top: 12px;
+  }
+  .inline-form input {
+    flex: 1;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 9px 12px;
+    font-size: 14px;
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    outline: none;
+  }
+  .inline-form input:focus { border-color: var(--red); }
+  .inline-form .btn { padding: 9px 16px; font-size: 13px; }
+  #loadingState { padding: 60px; text-align: center; color: var(--text-3); }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="account-wrap" id="accountContent" style="display:none">
+  <div class="account-header">
+    <h1>Account</h1>
+    <p>Manage your Cannon Fight Lab profile.</p>
+  </div>
+
+  <div id="msgArea"></div>
+
+  <div class="account-section">
+    <h2>Profile</h2>
+    <div class="account-row">
+      <div class="label">Email</div>
+      <div class="value" id="userEmail">—</div>
+    </div>
+    <div class="account-row">
+      <div class="label">Display name</div>
+      <div class="value" id="userDisplayName">—</div>
+    </div>
+    <div class="account-row">
+      <div class="label">Joined</div>
+      <div class="value" id="userJoined">—</div>
+    </div>
+
+    <form class="inline-form" id="displayNameForm">
+      <input type="text" id="displayNameInput" placeholder="Update display name" maxlength="60">
+      <button type="submit" class="btn ghost">Save</button>
+    </form>
+  </div>
+
+  <div class="account-section">
+    <h2>Subscription</h2>
+    <div class="account-row">
+      <div class="label">Current tier</div>
+      <div class="value" id="userTier">—</div>
+    </div>
+    <div class="account-row" id="expiryRow" style="display:none">
+      <div class="label">Premium until</div>
+      <div class="value" id="userExpiry">—</div>
+    </div>
+    <p style="color: var(--text-2); font-size: 13px; margin-top: 14px; line-height: 1.5">
+      Premium tier unlocks all edge factors, detailed cardio analysis, and historical
+      verdict tracking. Premium billing launches soon &mdash;
+      <a href="/pricing.html" style="color: var(--red); text-decoration: none">see what's included</a>.
+    </p>
+  </div>
+
+  <div class="account-section">
+    <h2>Security</h2>
+    <p style="color: var(--text-2); font-size: 13px; margin: 0 0 12px">
+      Change your password by entering a new one below.
+    </p>
+    <form class="inline-form" id="passwordForm">
+      <input type="password" id="newPasswordInput" placeholder="New password (min 8 chars)" minlength="8" autocomplete="new-password">
+      <button type="submit" class="btn ghost">Update</button>
+    </form>
+  </div>
+
+  <div class="account-section">
+    <h2>Sign out</h2>
+    <p style="color: var(--text-2); font-size: 13px; margin: 0 0 14px">
+      Sign out of this browser. You can sign back in any time.
+    </p>
+    <button class="btn ghost" id="signOutBtn">Sign out</button>
+  </div>
+</div>
+
+<div id="loadingState">Loading account…</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('account');
+cfl.renderFooter();
+
+const msgArea = document.getElementById('msgArea');
+
+function showMessage(html, type) {
+  msgArea.innerHTML = `<div class="auth-${type}">${html}</div>`;
+  // Auto-clear after 6s
+  setTimeout(() => { if (msgArea.innerHTML.includes(html)) msgArea.innerHTML = ''; }, 6000);
+}
+
+async function paint() {
+  const user = cflAuth.getUser();
+  const profile = cflAuth.getProfile();
+
+  if (!user) {
+    // Not signed in — redirect to login
+    window.location.href = '/login.html?next=' + encodeURIComponent('/account.html');
+    return;
+  }
+
+  document.getElementById('userEmail').textContent = user.email || '—';
+  document.getElementById('userDisplayName').textContent =
+    profile?.display_name || '(none set)';
+  document.getElementById('userJoined').textContent =
+    profile?.created_at ? new Date(profile.created_at).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric'
+    }) : '—';
+
+  const tier = profile?.tier || 'free';
+  const tierLabel = tier === 'premium'
+    ? '<span class="cfl-tier-badge premium">Premium</span>'
+    : '<span class="cfl-tier-badge free">Free</span>';
+  document.getElementById('userTier').innerHTML = tierLabel;
+
+  if (tier === 'premium' && profile?.tier_expires_at) {
+    document.getElementById('expiryRow').style.display = 'flex';
+    document.getElementById('userExpiry').textContent =
+      new Date(profile.tier_expires_at).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+  }
+
+  document.getElementById('loadingState').style.display = 'none';
+  document.getElementById('accountContent').style.display = 'block';
+}
+
+cflAuth.ready().then(paint);
+cflAuth.onAuthChange(paint);
+
+// Display name update
+document.getElementById('displayNameForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const name = document.getElementById('displayNameInput').value.trim();
+  if (!name) return;
+  const { error } = await cflAuth.updateProfile({ display_name: name });
+  if (error) {
+    showMessage(cfl.escapeHtml(error.message), 'error');
+  } else {
+    showMessage('Display name updated.', 'success');
+    document.getElementById('displayNameInput').value = '';
+    paint();
+  }
+});
+
+// Password update
+document.getElementById('passwordForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const pw = document.getElementById('newPasswordInput').value;
+  if (pw.length < 8) {
+    showMessage('Password must be at least 8 characters.', 'error');
+    return;
+  }
+  const { error } = await cflAuth.updatePassword(pw);
+  if (error) {
+    showMessage(cfl.escapeHtml(error.message), 'error');
+  } else {
+    showMessage('Password updated.', 'success');
+    document.getElementById('newPasswordInput').value = '';
+  }
+});
+
+// Sign out
+document.getElementById('signOutBtn').addEventListener('click', async () => {
+  await cflAuth.signOut();
+  window.location.href = '/';
+});
+</script>
+</body>
+</html>

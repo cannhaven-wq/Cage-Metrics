@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Sign up — Cannon Fight Lab</title>
+<meta name="description" content="Create a free Cannon Fight Lab account.">
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://cannonfightlab.com/signup.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <h1>Create account</h1>
+    <p class="auth-sub">Free forever. Premium tier launching soon.</p>
+
+    <div id="msgArea"></div>
+
+    <form class="auth-form" id="signupForm" autocomplete="on">
+      <div class="auth-field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" autocomplete="email" required placeholder="you@example.com">
+      </div>
+      <div class="auth-field">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" autocomplete="new-password" required minlength="8" placeholder="At least 8 characters">
+      </div>
+      <button type="submit" class="btn" id="submitBtn">Create account</button>
+    </form>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login.html">Sign in</a>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('signup');
+cfl.renderFooter();
+
+const msgArea = document.getElementById('msgArea');
+const form = document.getElementById('signupForm');
+const submitBtn = document.getElementById('submitBtn');
+
+// If already signed in, bounce home
+cflAuth.ready().then(() => {
+  if (cflAuth.isSignedIn()) {
+    window.location.href = '/';
+  }
+});
+
+form.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  msgArea.innerHTML = '';
+  submitBtn.disabled = true;
+  submitBtn.textContent = 'Creating account…';
+
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (password.length < 8) {
+    msgArea.innerHTML = '<div class="auth-error">Password must be at least 8 characters.</div>';
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create account';
+    return;
+  }
+
+  const { data, error } = await cflAuth.signUp(email, password);
+
+  if (error) {
+    msgArea.innerHTML = `<div class="auth-error">${cfl.escapeHtml(error.message)}</div>`;
+    submitBtn.disabled = false;
+    submitBtn.textContent = 'Create account';
+    return;
+  }
+
+  // Supabase by default requires email confirmation. Show a success message
+  // telling the user to check their inbox.
+  if (data.user && !data.session) {
+    form.style.display = 'none';
+    msgArea.innerHTML = `
+      <div class="auth-success">
+        <strong>Account created.</strong> We've sent a confirmation link to
+        <strong>${cfl.escapeHtml(email)}</strong>. Click it to verify your email and sign in.
+      </div>
+    `;
+    return;
+  }
+
+  // If email confirmation is disabled in Supabase settings, the user is signed in immediately
+  if (data.session) {
+    window.location.href = '/';
+  }
+});
+</script>
+</body>
+</html>

@@ -960,6 +960,7 @@
 <footer class="cfl-footer"></footer>
 
 <script src="_shared.js"></script>
+<script src="_auth.js"></script>
 <script src="edges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -1325,11 +1326,21 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
 
   // Sort all edges by strength (most predictive first). The verdict math
   // already used ALL edges (computed in computeEdges above), but for display
-  // we cap at the 4 strongest. More than 4 edges per fight overwhelms the
-  // user without changing what the model thinks. The strongest signals
-  // bubble up; weaker filler edges drop out of the visual.
+  // we cap based on user tier.
+  //
+  // FREE tier: top 2 edges visible + premium prompt if there are more
+  // PREMIUM tier: top 4 edges visible (cap stays for UI clarity, not gating)
+  //
+  // Note: edges.js logic and verdict math are intentionally NOT gated. Anyone
+  // viewing the page source can read the math. We're gating the convenience
+  // of seeing it pre-computed, not the algorithm. If/when we add real
+  // premium-only data (closing odds, custom backtests), THAT will be RLS-gated
+  // server-side. Display gating here is appropriate for the current scope.
   edges.sort((x, y) => y.pct - x.pct);
-  const displayEdges = edges.slice(0, 4);
+  const isPremium = (window.cflAuth && window.cflAuth.isPremium && window.cflAuth.isPremium());
+  const visibleCap = isPremium ? 4 : 2;
+  const displayEdges = edges.slice(0, visibleCap);
+  const hiddenCount = Math.max(0, edges.length - visibleCap);
 
   const rowsHtml = displayEdges.map(e => `
     <div class="edge-row">
@@ -1338,6 +1349,19 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
       <div class="pct">${e.pct.toFixed(1)}%</div>
     </div>
   `).join('');
+
+  // For free users: if there are more edges hidden, show an inline prompt to
+  // upgrade. Doesn't appear for premium users or when there's nothing hidden.
+  const lockedPromptHtml = (!isPremium && hiddenCount > 0) ? `
+    <div class="premium-prompt inline">
+      <div class="premium-prompt-header">
+        <div class="lock-icon">🔒</div>
+        <div class="premium-prompt-title">${hiddenCount} more edge factor${hiddenCount === 1 ? '' : 's'} hidden</div>
+      </div>
+      <div class="premium-prompt-body">Premium unlocks every edge driving this verdict — see the full math.</div>
+      <a href="/pricing.html" class="premium-prompt-cta">See Premium →</a>
+    </div>
+  ` : '';
 
   let verdictName, verdictPct, verdictClass;
   const aPct = aProb * 100;
@@ -1356,6 +1380,7 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
     <div class="edge-panel">
       <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
       <div class="edge-list">${rowsHtml}</div>
+      ${lockedPromptHtml}
       <div class="edge-summary">
         <div class="verdict-label">Data favors</div>
         <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
@@ -1700,6 +1725,34 @@ async function loadDailyStat() {
   document.getElementById('statOfDay').textContent = out.big;
   document.getElementById('statOfDaySub').textContent = out.sub;
   document.querySelector('#statStrip .stat-of-day:nth-child(3) .lbl').textContent = pick.label;
+}
+
+// =============================================================================
+// AUTH STATE — re-render fights when tier changes
+// If a user signs in/out while looking at the page, the edge display gating
+// should update without a full reload. We hold a reference to the current
+// event in __currentEvent and re-call loadFights when auth state changes.
+// =============================================================================
+let __currentEvent = null;
+let __currentTier = null;
+
+(function patchLoadFights() {
+  const _origLoadFights = loadFights;
+  loadFights = async function (event) {
+    __currentEvent = event;
+    return _origLoadFights(event);
+  };
+})();
+
+if (window.cflAuth) {
+  cflAuth.onAuthChange(() => {
+    const newTier = cflAuth.isPremium() ? 'premium' : 'free';
+    if (__currentTier !== null && __currentTier !== newTier && __currentEvent) {
+      // Tier changed mid-session — re-render fights
+      loadFights(__currentEvent);
+    }
+    __currentTier = newTier;
+  });
 }
 
 load();
