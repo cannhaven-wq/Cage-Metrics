@@ -47,6 +47,23 @@
     letter-spacing: 0.06em;
     margin-top: 10px;
   }
+  .fh-style {
+    display: inline-block;
+    background: var(--bg-3);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 10px;
+    margin-left: 6px;
+    border: 1px solid var(--border-2);
+  }
+  .fh-style.grappler { color: var(--blue, #378ADD); border-color: rgba(55,138,221,0.4); }
+  .fh-style.striker  { color: #ff8a92; border-color: rgba(230,57,70,0.4); }
+  .fh-style.hybrid   { color: var(--amber, #d4af37); border-color: rgba(212,175,55,0.4); }
   .fh-records {
     margin-left: auto;
     display: flex;
@@ -198,6 +215,7 @@ async function load() {
           <div class="fh-name">${cfl.escapeHtml(f.name)}</div>
           ${f.nickname ? `<div class="fh-nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
           ${f.division ? `<div class="fh-division">${cfl.escapeHtml(f.division)}</div>` : ''}
+          <div class="fh-style" id="fhStyle" style="display:none"></div>
         </div>
         <div class="fh-records">
           ${hasUfc ? `
@@ -253,7 +271,43 @@ async function load() {
     </div>
   `;
 
+  // Fire style and history loads in parallel — neither blocks the other
+  loadStyle(f);
   await loadHistory();
+}
+
+async function loadStyle(f) {
+  const sb = window.cflSupabase;
+  const pill = document.getElementById('fhStyle');
+  if (!pill) return;
+
+  // Try the fighter's primary division first; fall back to CAREER row.
+  // The view returns 'grappler' / 'striker' / 'hybrid'.
+  let style = null;
+  if (f.division) {
+    const { data } = await sb
+      .from('v_fighter_style')
+      .select('style, sample_fights')
+      .eq('fighter_id', f.id)
+      .eq('weight_class', f.division)
+      .maybeSingle();
+    if (data && data.style) style = data.style;
+  }
+  if (!style) {
+    const { data } = await sb
+      .from('v_fighter_style')
+      .select('style, sample_fights')
+      .eq('fighter_id', f.id)
+      .eq('weight_class', 'CAREER')
+      .maybeSingle();
+    if (data && data.style) style = data.style;
+  }
+
+  if (!style) return;  // not enough data — leave pill hidden
+
+  pill.textContent = style;
+  pill.classList.add(style);
+  pill.style.display = 'inline-block';
 }
 
 async function loadHistory() {
