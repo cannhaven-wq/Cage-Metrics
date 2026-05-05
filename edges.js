@@ -398,6 +398,29 @@
     };
   }
 
+  // Takedown accuracy gap. Only meaningful when at least one fighter actually
+  // shoots (willHaveWrestling gates this). Conservative tiers — career-average
+  // td_acc on the fighters table can be noisy, especially for fighters with
+  // low td_avg (small sample of attempts).
+  function tdAccEdge(a, b) {
+    if (a.td_acc == null || b.td_acc == null) return null;
+    if (!willHaveWrestling(a, b)) return null;
+    const gap = Math.abs(a.td_acc - b.td_acc);
+    if (gap < 15) return null;
+    let pct;
+    if (gap >= 40)      pct = 56.0;
+    else if (gap >= 25) pct = 54.0;
+    else                pct = 52.0;
+    const aBetter = a.td_acc > b.td_acc;
+    return {
+      factor: 'td_acc',
+      favors: aBetter ? 'a' : 'b',
+      pct,
+      fighterName: aBetter ? a.name : b.name,
+      desc: 'lands takedowns ' + gap + 'pp more often',
+    };
+  }
+
   function cardioEdge(a, b, cardioMap, fightWeightClass) {
     const ca = cardioFor(a.id, fightWeightClass, cardioMap);
     const cb = cardioFor(b.id, fightWeightClass, cardioMap);
@@ -446,6 +469,7 @@
       lossStreakEdge(a, b, streakMap),
       postLossEdge(a, b, streakMap, ed),
       tdDefEdge(a, b),
+      tdAccEdge(a, b),
       slpmEdge(a, b),
       stanceReachEdge(a, b),
     ].filter(Boolean);
@@ -488,6 +512,7 @@
     recordEdge,
     slpmEdge,
     tdDefEdge,
+    tdAccEdge,
     cardioEdge,
     // Main entry point
     computeEdges,

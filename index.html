@@ -1166,7 +1166,7 @@ async function loadFights(event) {
     .from('fighters')
     .select('id, name, nickname, division, stance, age, height_in, reach_in, ' +
             'wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, ' +
-            'slpm, sapm, td_avg, td_def, str_acc, str_def, sub_avg, last_5, last_fight_date')
+            'slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, sub_avg, last_5, last_fight_date')
     .in('id', Array.from(fighterIds));
 
   if (fErr) {
@@ -1660,9 +1660,13 @@ function renderQuickStats(a, b, fightWeightClass) {
 
   // ====================================================================
   // PERFORMANCE BLOCK — derived stats from fight history.
+  // Order: striking volume → grappling volume → grappling efficiency
+  // (offense) → grappling efficiency (defense) → late-fight sustain.
   // ====================================================================
   const perfRows = [
     statBarRow('Strikes / min', a.slpm, b.slpm, v => Number(v).toFixed(1), true),
+    statBarRow('Takedowns / 15', a.td_avg, b.td_avg, v => Number(v).toFixed(1), true),
+    statBarRow('Takedown accuracy', a.td_acc, b.td_acc, v => v + '%', true),
     statBarRow('Takedown defense', a.td_def, b.td_def, v => v + '%', true),
   ];
 
