@@ -283,6 +283,7 @@
   }
   .fight-fighter .style-chip.style-striker     { background: rgba(230, 57, 70, 0.15); color: var(--red); }
   .fight-fighter .style-chip.style-grappler    { background: rgba(55, 138, 221, 0.15); color: var(--blue); }
+  .fight-fighter .style-chip.style-hybrid      { background: rgba(212, 175, 55, 0.15); color: var(--amber, #d4af37); }
   .fight-fighter .style-chip.style-well_rounded{ background: var(--bg-3); color: var(--text-2); }
   .fight-fighter .style-chip.style-low_volume  { background: var(--bg-3); color: var(--text-3); }
   .fight-fighter.right .style-chip { float: right; }
@@ -1202,10 +1203,14 @@ async function loadFights(event) {
     console.warn('Recent form data not available:', e.message);
   }
 
-  // Fetch cardio data for everyone on the card. Reset cache so a new event
-  // load doesn't reuse the previous card's fighter set.
+  // Fetch cardio and style data for everyone on the card. Reset both caches
+  // so a new event load doesn't reuse the previous card's fighter set.
   _cardioMap = null;
-  await loadCardioMap(fighterIds);
+  _styleMap  = null;
+  await Promise.all([
+    loadCardioMap(fighterIds),
+    loadStyleMap(fighterIds),
+  ]);
 
   list.innerHTML = fights.map(fight =>
     renderFight(fight, fighterMap, streakMap, true, event.event_date)
@@ -1242,12 +1247,12 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate) {
         ${weight}
       </div>
       <div class="fight-body">
-        ${renderFighterSide(a, 'left')}
+        ${renderFighterSide(a, 'left', fight.weight_class)}
         <div class="fight-vs">
           VS
           <a class="compare" href="${cfl.h2hUrl(a.id, b.id)}">Compare →</a>
         </div>
-        ${renderFighterSide(b, 'right')}
+        ${renderFighterSide(b, 'right', fight.weight_class)}
       </div>
       ${renderQuickStats(a, b, fight.weight_class)}
       ${edgePanel}
@@ -1255,7 +1260,7 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate) {
   `;
 }
 
-function renderFighterSide(f, side) {
+function renderFighterSide(f, side, weightClass) {
   const w = f.wins ?? 0;
   const l = f.losses ?? 0;
   const d = f.draws ?? 0;
@@ -1263,10 +1268,13 @@ function renderFighterSide(f, side) {
     ? `${w}-${l}${d ? '-' + d : ''}`
     : '0-0';
   const recordLabel = (w + l + d) > 0 ? 'pro' : '';
-  const style = classifyStyle(f);
+  // Style: prefer v_fighter_style lookup (most accurate), fall back to JS
+  // classifier when the fighter has no row-level data (UFC debutants etc.)
+  const style = styleFor(f, weightClass);
   const styleLabel = {
     striker: 'Striker',
     grappler: 'Grappler',
+    hybrid: 'Hybrid',
     well_rounded: 'Well-rounded',
     low_volume: 'Low volume',
     unknown: ''
@@ -1412,6 +1420,7 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
 // weight_class. If we have data at that weight class, use it. Otherwise fall
 // back to the CAREER row. This handles fighters moving up/down weight classes.
 let _cardioMap = null;
+let _styleMap  = null;
 
 async function loadCardioMap(fighterIds) {
   if (_cardioMap !== null) return _cardioMap;
@@ -1468,6 +1477,61 @@ function cardioFor(fighterId, weightClass) {
     return { ...slot.career, source: 'career' };
   }
   return null;
+}
+
+// Style data lookup. v_fighter_style returns 'grappler' | 'striker' | 'hybrid'
+// per (fighter, weight_class), with a CAREER fallback row. Same lookup
+// pattern as cardio: prefer weight-class match, fall back to career.
+//
+// This view is the source of truth for fighter style on the homepage. The JS
+// classifier in cflEdges.classifyStyle is only used as a last-resort fallback
+// when the view query fails or has no data for a fighter (e.g. a UFC debutant
+// with zero round-level history).
+async function loadStyleMap(fighterIds) {
+  if (_styleMap !== null) return _styleMap;
+  const sb = window.cflSupabase;
+  _styleMap = {};
+  try {
+    const { data, error } = await sb
+      .from('v_fighter_style')
+      .select('fighter_id, weight_class, style, sample_fights, confidence')
+      .in('fighter_id', Array.from(fighterIds));
+    if (error) {
+      console.warn('Style data not available:', error.message);
+      return _styleMap;
+    }
+    (data || []).forEach(r => {
+      const slot = _styleMap[r.fighter_id] || (_styleMap[r.fighter_id] = { byWc: {}, career: null });
+      const entry = { style: r.style, sample_fights: r.sample_fights, confidence: r.confidence };
+      if (r.weight_class === 'CAREER') {
+        slot.career = entry;
+      } else {
+        slot.byWc[r.weight_class] = entry;
+      }
+    });
+  } catch (e) {
+    console.warn('Style data not available:', e.message);
+  }
+  return _styleMap;
+}
+
+// Look up style for a fighter at a specific weight class. Prefer weight-class
+// data when present, fall back to CAREER, fall back to JS classifier when the
+// fighter has no row-level data at all.
+function styleFor(fighter, weightClass) {
+  if (_styleMap) {
+    const slot = _styleMap[fighter.id];
+    if (slot) {
+      if (weightClass && slot.byWc[weightClass] && slot.byWc[weightClass].style) {
+        return slot.byWc[weightClass].style;
+      }
+      if (slot.career && slot.career.style) {
+        return slot.career.style;
+      }
+    }
+  }
+  // Last-resort fallback to the JS classifier (career averages from fighters table)
+  return cflEdges.classifyStyle(fighter);
 }
 
 // One bar row. Pass the raw values for both fighters and a label.

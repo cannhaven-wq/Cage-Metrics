@@ -42,10 +42,25 @@
   // =========================================================================
 
   const STYLE_THRESHOLDS = {
-    TD_LOW: 1.0,           // below this = doesn't shoot
-    TD_HIGH: 2.5,          // above this = active grappler
-    SLPM_LOW: 2.0,         // below this = low striking volume
-    SLPM_STRIKER: 4.0,     // above this = active striker
+    // Capability gates (used by willHaveStriking / willHaveWrestling, NOT
+    // by classifyStyle). These ask "does this fighter do this AT ALL?"
+    // Lower bar by design — they gate whether striking-only / grappling-only
+    // edge factors apply, and a fighter with even a single takedown attempt
+    // average above 1 is going to make grappling relevant.
+    TD_LOW: 1.0,
+    SLPM_LOW: 2.0,
+
+    // Dominance-ratio classifier thresholds (used by classifyStyle).
+    // These represent the "real producer" line — above this is a meaningful
+    // contributor in that phase. Calibrated to roughly match v_fighter_style's
+    // SQL thresholds (90 grapp_score / 16 strk_score per round) translated
+    // into the career-average fields available here:
+    //   td_avg is takedown ATTEMPTS per 15 minutes. ~2.5 attempts/15 means
+    //   landing ~1 per round at typical accuracy, the rough cutoff for
+    //   "real grappler" output.
+    //   slpm of ~3.2 = ~16 sig strikes landed per round = SQL striker line.
+    GRAPP_REAL: 2.5,
+    STRK_REAL:  3.2,
   };
 
   const CARDIO_TIER_RANK = {
@@ -56,21 +71,56 @@
   // Style classifier & capability gates
   // =========================================================================
 
+  // classifyStyle — JS implementation of the SQL v_fighter_style classifier.
+  // Returns 'grappler' | 'striker' | 'hybrid' | 'low_volume' | 'unknown'.
+  //
+  // ACCURACY NOTE: this works from the career-aggregate fields on the fighters
+  // table (td_avg = attempts/15min, slpm = strikes landed/min). The SQL view
+  // v_fighter_style is more accurate because it uses td_LANDED + control time
+  // from per-round data. The browser homepage prefers the SQL view via batched
+  // lookup; this function exists as a fallback (and is what the Node
+  // snapshotter uses, since that environment doesn't have the view loaded).
+  //
+  // Logic mirrors v_fighter_style v2: normalize each phase against its
+  // "real producer" threshold, then look at dominance. Avoids the trap that
+  // pushed Khabib (overwhelming grappler with modest striking) into "hybrid".
   function classifyStyle(fighter) {
     const td = fighter.td_avg;
     const slpm = fighter.slpm;
     if (td == null && slpm == null) return 'unknown';
-    if (td == null || slpm == null) return 'well_rounded';
-    if (td < STYLE_THRESHOLDS.TD_LOW && slpm >= STYLE_THRESHOLDS.SLPM_LOW) {
-      return 'striker';
+    if (td == null || slpm == null) return 'hybrid';
+
+    const grappNorm = td   / STYLE_THRESHOLDS.GRAPP_REAL;
+    const strkNorm  = slpm / STYLE_THRESHOLDS.STRK_REAL;
+
+    // Both essentially nothing on both axes → low-volume fighter
+    if (grappNorm < 0.4 && strkNorm < 0.6) return 'low_volume';
+
+    // Both clear the "real producer" bar AND neither dominates 2:1 → hybrid
+    if (grappNorm >= 1.0 && strkNorm >= 1.0
+        && grappNorm < 2 * strkNorm
+        && strkNorm  < 2 * grappNorm) {
+      return 'hybrid';
     }
-    if (td >= STYLE_THRESHOLDS.TD_HIGH && slpm < STYLE_THRESHOLDS.SLPM_STRIKER) {
+
+    // Grappling clears threshold AND dominates striking 2:1 (or strk near zero)
+    if (grappNorm >= 1.0
+        && (strkNorm < 0.001 || grappNorm >= 2 * strkNorm)) {
       return 'grappler';
     }
-    if (td < STYLE_THRESHOLDS.TD_LOW && slpm < STYLE_THRESHOLDS.SLPM_LOW) {
-      return 'low_volume';
+
+    // Striking clears threshold AND dominates grappling 2:1 (or grapp near zero)
+    if (strkNorm >= 1.0
+        && (grappNorm < 0.001 || strkNorm >= 2 * grappNorm)) {
+      return 'striker';
     }
-    return 'well_rounded';
+
+    // Below threshold on the dominant axis: classify by which has more
+    // normalized output (catches O'Malley-style: just-under-threshold striker
+    // with zero grappling — should be 'striker', not 'low_volume').
+    if (strkNorm > grappNorm) return 'striker';
+    if (grappNorm > strkNorm) return 'grappler';
+    return 'low_volume';
   }
 
   function willHaveStriking(a, b) {
