@@ -63,6 +63,8 @@ nav.cfl-nav {
   display: flex;
   gap: 28px;
   align-items: center;
+  margin-left: 32px;  /* ensure breathing room from the logo even when
+                         space-between collapses against an empty/small slot */
 }
 .cfl-nav-links a {
   font-size: 13px;
