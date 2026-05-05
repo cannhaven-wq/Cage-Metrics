@@ -48,7 +48,7 @@
       try {
         const { data, error } = await sb
           .from('profiles')
-          .select('id, email, display_name, tier, tier_expires_at, created_at')
+          .select('id, email, display_name, tier, tier_expires_at, beta_premium, created_at')
           .eq('id', userId)
           .single();
         if (error) {
@@ -114,11 +114,24 @@
 
   auth.getUser = function () { return _currentUser; };
   auth.getProfile = function () { return _currentProfile; };
+  // getTier returns the EFFECTIVE tier — what the UI should treat the user as.
+  // During beta, all account holders effectively have premium access via the
+  // beta_premium flag. The underlying paid tier is still on the profile object
+  // (use getPaidTier() if you need to distinguish a beta user from a true
+  // paying customer once payments launch).
   auth.getTier = function () {
+    if (!_currentProfile) return 'free';
+    if (_currentProfile.beta_premium) return 'premium';
+    return _currentProfile.tier || 'free';
+  };
+  auth.getPaidTier = function () {
     if (!_currentProfile) return 'free';
     return _currentProfile.tier || 'free';
   };
   auth.isPremium = function () { return auth.getTier() === 'premium'; };
+  auth.isBetaPremium = function () {
+    return !!(_currentProfile && _currentProfile.beta_premium);
+  };
   auth.isSignedIn = function () { return !!_currentUser; };
 
   auth.onAuthChange = function (cb) {

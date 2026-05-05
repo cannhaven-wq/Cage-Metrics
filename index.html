@@ -558,6 +558,60 @@
     .edge-summary .verdict-pct { font-size: 22px; }
   }
 
+  /* Beta premium banner — shown to logged-out users above the hero.
+     Dismissible (closed state persists in localStorage). Hides automatically
+     for signed-in users since they already have premium access. */
+  .beta-banner {
+    background: linear-gradient(90deg, rgba(230,57,70,0.12), rgba(212,175,55,0.10));
+    border-bottom: 1px solid var(--border);
+    padding: 10px 32px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    font-size: 13px;
+    color: var(--text);
+    text-align: center;
+    flex-wrap: wrap;
+  }
+  .beta-banner.show { display: flex; }
+  .beta-banner .tag {
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .beta-banner .msg { color: var(--text); }
+  .beta-banner .msg strong { color: #fff; font-weight: 600; }
+  .beta-banner .cta {
+    color: var(--red);
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px solid rgba(230,57,70,0.4);
+    padding-bottom: 1px;
+    transition: border-color 0.15s;
+  }
+  .beta-banner .cta:hover { border-bottom-color: var(--red); }
+  .beta-banner .dismiss {
+    background: none;
+    border: none;
+    color: var(--text-3);
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    padding: 4px 8px;
+    margin-left: 4px;
+    transition: color 0.15s;
+  }
+  .beta-banner .dismiss:hover { color: var(--text); }
+  @media (max-width: 600px) {
+    .beta-banner { padding: 10px 16px; font-size: 12px; }
+  }
+
   /* ====================================================================
      HOMEPAGE HERO + MARKETING SECTIONS — only used on index.html
      ==================================================================== */
@@ -850,6 +904,16 @@
 <body>
 
 <nav class="cfl-nav"></nav>
+
+<!-- Beta premium banner — only shown to logged-out users, dismissible.
+     Visibility is controlled by JS via .show class so we never flash
+     an incorrect state on initial load. -->
+<div class="beta-banner" id="betaBanner">
+  <span class="tag">Beta</span>
+  <span class="msg"><strong>Free premium during beta</strong> — full edge factors, no card required.</span>
+  <a class="cta" href="/signup.html">Create account →</a>
+  <button class="dismiss" id="betaBannerDismiss" aria-label="Dismiss">&times;</button>
+</div>
 
 <!-- =====================================================================
      HERO — first impression for cold visitors. Returning users scroll
@@ -1820,7 +1884,35 @@ if (window.cflAuth) {
       loadFights(__currentEvent);
     }
     __currentTier = newTier;
+    // Update beta banner visibility on auth change
+    updateBetaBanner();
   });
+}
+
+// Beta banner — show to logged-out users only; respect their previous dismissal.
+// Persists dismissal in localStorage so they don't see it again on every visit.
+const BETA_BANNER_KEY = 'cfl_beta_banner_dismissed_v1';
+function updateBetaBanner() {
+  const banner = document.getElementById('betaBanner');
+  if (!banner) return;
+  const dismissed = (() => { try { return localStorage.getItem(BETA_BANNER_KEY) === '1'; } catch (e) { return false; } })();
+  const signedIn = !!(window.cflAuth && window.cflAuth.isSignedIn && window.cflAuth.isSignedIn());
+  if (!dismissed && !signedIn) {
+    banner.classList.add('show');
+  } else {
+    banner.classList.remove('show');
+  }
+}
+document.getElementById('betaBannerDismiss')?.addEventListener('click', () => {
+  try { localStorage.setItem(BETA_BANNER_KEY, '1'); } catch (e) {}
+  document.getElementById('betaBanner')?.classList.remove('show');
+});
+// Initial paint — runs once on page load. We wait for cflAuth to settle so
+// we don't flash the banner at a user who's already signed in.
+if (window.cflAuth && window.cflAuth.ready) {
+  window.cflAuth.ready().then(updateBetaBanner);
+} else {
+  updateBetaBanner();
 }
 
 load();
