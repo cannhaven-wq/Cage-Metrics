@@ -17,11 +17,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build / run / deploy
 
-There is no build step, package manager, or test suite. This is a static site:
+The site itself is plain static HTML/CSS/JS — no bundler, no test suite. There is one Node build step (prerender) that runs in CI on a schedule; you don't need it locally.
 
 - **Local preview**: open `index.html` directly, or `python -m http.server` from the repo root.
 - **Deploy**: pushing to `main` deploys to GitHub Pages automatically. `.nojekyll` is present so Pages serves files as-is. `CNAME` pins the custom domain.
-- There is no lint, no bundler, no tests. Don't add any without asking.
+- **Prerender**: `cd build && npm install && npm run prerender` regenerates the static stubs (see "Prerendered stubs" below). You almost never need to run this locally — the GitHub Action handles it on a 6-hour cron.
+- No lint, no test suite. Don't add either without asking.
 
 ## Architecture
 
@@ -87,6 +88,26 @@ Three buckets only: **grappler / striker / hybrid**. Per-weight-class rows + a `
   - **grappler** if `grapp_norm ≥ 1.0 AND grapp_norm ≥ 2 × strk_norm`.
   - **striker** is the mirror of grappler.
 - The browser-side `classifyStyle` in `edges.js` is a less-accurate fallback that uses career-aggregate fields on the `fighters` table (`td_avg`, `slpm`). The SQL view is preferred when available.
+
+### Prerendered stubs (`/f/` and `/e/`)
+
+For SEO and social unfurls, every fighter and event has a static HTML stub:
+
+- `f/<slug>-<id>.html` — fighter stub (e.g. `f/jon-jones-123.html`)
+- `e/<slug>-<id>.html` — event stub
+
+These stubs are **not** the canonical URL — each one carries `<link rel="canonical" href="...fighter.html?id=N">` (or `event.html?id=N`) pointing back to the dynamic page. Their job is purely to give crawlers and social unfurlers (Twitter, Facebook, Discord, iMessage — none of which run JS) a fully-populated `<head>` with the fighter's/event's real name, description, OG tags, and Athlete/SportsEvent JSON-LD. Humans who land on a stub URL get JS-redirected to the canonical page after ~120ms.
+
+**Build pipeline** (`build/` folder):
+
+- `build/prerender.js` — pulls all fighters and events from Supabase via the same publishable anon key as the frontend, writes stubs to `f/` and `e/`, regenerates `sitemap.xml`. Uses `writeIfChanged` so unchanged stubs don't churn git diffs, and prunes stale stubs whose underlying row was deleted.
+- `build/templates.js` — `fighterStub(f)` and `eventStub(e, fighters)` HTML builders. **If you edit the static fallback meta in `fighter.html` / `event.html`, mirror the change here** or the stubs drift from the canonical pages.
+- `build/slug.js` — `slugify(s)` lowercases, drops apostrophes, replaces non-alphanum runs with `-`. Falls back to `'item'` for empty strings.
+- `.github/workflows/prerender.yml` — runs on `schedule` (every 6 hours), `workflow_dispatch` (manual), and `push` to `build/**` or the workflow file. Commits as `github-actions[bot]` with `[skip ci]` so the auto-commit doesn't re-trigger the workflow.
+
+**Internal links** still go to `fighter.html?id=N` / `event.html?id=N` (via `cfl.fighterUrl` and `cfl.eventUrl`). Stubs are reachable via the sitemap and via direct sharing of slug URLs. If you ever want canonical to flip to the slug URL, change `cfl.fighterUrl` / `cfl.eventUrl` to emit slug paths and update the `<link rel="canonical">` in both the stub template and `fighter.html` / `event.html`.
+
+**Repo size**: ~5,000 stubs × ~5KB = ~25MB on disk. Git diffs stay small because most stubs are stable run-to-run; only changed fighters' files are rewritten.
 
 ### Stat Finder views
 

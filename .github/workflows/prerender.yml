@@ -1,0 +1,61 @@
+name: Prerender static stubs
+
+# Generates /f/<slug>-<id>.html and /e/<slug>-<id>.html for every fighter and
+# event in Supabase, regenerates sitemap.xml, commits any changes back to main.
+#
+# Triggers:
+#   - schedule: every 6 hours (catches scraper updates)
+#   - workflow_dispatch: manual run from the Actions tab
+#   - push to build/ or this workflow file: re-run when the build itself changes
+#
+# Pushes from this workflow do NOT re-trigger via the `paths-ignore` filter,
+# so there's no infinite loop on the auto-commit.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'build/**'
+      - '.github/workflows/prerender.yml'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prerender
+  cancel-in-progress: false
+
+jobs:
+  prerender:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Prerender stubs
+        working-directory: build
+        run: npm run prerender
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add f/ e/ sitemap.xml
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: regenerate prerendered stubs [skip ci]"
+            git push
+          fi

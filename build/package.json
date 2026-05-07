@@ -1,0 +1,12 @@
+{
+  "name": "cfl-prerender",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prerender static stubs for fighter and event pages so social unfurls and crawlers see real per-page SEO content.",
+  "scripts": {
+    "prerender": "node prerender.js"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.45.0"
+  }
+}
