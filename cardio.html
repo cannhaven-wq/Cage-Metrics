@@ -3,11 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cardio Score — Cannon Fight Lab</title>
+
+<!-- ===== Primary SEO ===== -->
+<title>UFC Fighter Cardio Scores — Who Fades in the Late Rounds | Cannon Fight Lab</title>
+<meta name="description" content="See which UFC fighters maintain output deep into fights and which ones fade. Cardio scores derived from per-round strike and takedown data, validated against 2,000+ historical fights.">
+<meta name="keywords" content="UFC cardio scores, UFC fighter conditioning, MMA late round fade, UFC stamina rankings, UFC tireless fighters, UFC cardio rankings">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/cardio.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Fighter Cardio Scores — Cannon Fight Lab">
+<meta property="og:description" content="Which UFC fighters fade late and which ones don't. Data-backed cardio scores for every fighter.">
+<meta property="og:url" content="https://cannonfightlab.com/cardio.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC fighter cardio scores">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Fighter Cardio Scores — Cannon Fight Lab">
+<meta name="twitter:description" content="Which UFC fighters fade late and which ones don't. Data-backed cardio scores.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Structured data ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What is a UFC cardio score?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "A single number that captures how a fighter performs in the second half of fights, derived from per-round strike and takedown data. A score of 100 means a fighter's round-3+ output matches their round-1 baseline. Above 100 means they sustain or push pace late; below 100 means they fade."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How are cardio tiers calculated?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cardio scores are bucketed into five tiers: Tireless (≥115), Steady (90–115), Tapers (70–90), Fades (50–70), and Collapses (<50). Each output dimension's R3+/R1 ratio is averaged together, weighted by R1 baseline volume."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which UFC fighters have the best cardio?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The leaderboard ranks every fighter with high-confidence cardio data by consistency score. Only fighters with at least 15 minutes of round-3+ data qualify for high confidence."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Why does the same fighter sometimes have different cardio scores?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Cardio scores are computed per weight class as well as career-wide. A fighter who moves up or down divisions may have meaningfully different output sustain at each weight, so each weight class gets its own score plus a CAREER aggregate row."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   /* ============== Hero ============== */
   .cardio-hero {

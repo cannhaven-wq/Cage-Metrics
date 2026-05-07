@@ -3,11 +3,77 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Head-to-head — Cannon Fight Lab</title>
+
+<!-- ===== Primary SEO ===== -->
+<title>UFC Head-to-Head Comparison — Stat Matchup Tool | Cannon Fight Lab</title>
+<meta name="description" content="Compare any two UFC fighters side-by-side. Records, cardio, striking, takedown defense, age, reach — full statistical breakdown for every matchup.">
+<meta name="keywords" content="UFC head to head, UFC fighter comparison, MMA matchup tool, UFC fighter stats compare, UFC tale of the tape">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/h2h.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Head-to-Head — Cannon Fight Lab">
+<meta property="og:description" content="Side-by-side stats for any UFC fighter matchup. Records, cardio, striking, grappling.">
+<meta property="og:url" content="https://cannonfightlab.com/h2h.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC head-to-head comparison">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Head-to-Head — Cannon Fight Lab">
+<meta name="twitter:description" content="Side-by-side stats for any UFC fighter matchup.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Structured data ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "UFC Head-to-Head Comparison Tool",
+  "url": "https://cannonfightlab.com/h2h.html",
+  "description": "Compare any two UFC fighters side-by-side with full stat breakdowns.",
+  "applicationCategory": "SportsApplication",
+  "operatingSystem": "Any",
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Cannon Fight Lab",
+    "url": "https://cannonfightlab.com/"
+  }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://cannonfightlab.com/" },
+    { "@type": "ListItem", "position": 2, "name": "Head-to-head", "item": "https://cannonfightlab.com/h2h.html" }
+  ]
+}
+</script>
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   .h2h-pickers {
     display: grid;
@@ -162,7 +228,7 @@
 
 <div class="page-hero">
   <div class="eyebrow">Compare</div>
-  <h1>Head-to-head matchup</h1>
+  <h1>UFC Head-to-Head Matchup</h1>
   <p>Pick any two fighters. Greens highlight the statistical advantage on each row.</p>
 </div>
 

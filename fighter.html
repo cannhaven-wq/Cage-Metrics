@@ -3,11 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fighter — Cannon Fight Lab</title>
+
+<!-- ===== Primary SEO =====
+     These are static defaults. Per-fighter values are overwritten at runtime
+     by updateSEO() once the fighter loads from Supabase (see bottom of file). -->
+<title>UFC Fighter Profile — Stats & Analytics | Cannon Fight Lab</title>
+<meta name="description" content="UFC fighter profile with full stats: record, cardio score, striking, grappling, recent form, and head-to-head matchups.">
+<meta name="keywords" content="UFC fighter profile, UFC fighter stats, MMA fighter analytics, UFC career stats, UFC fighter cardio">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/fighter.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="profile">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Fighter Profile — Cannon Fight Lab">
+<meta property="og:description" content="UFC fighter stats and analytics — record, cardio, striking, grappling, recent form.">
+<meta property="og:url" content="https://cannonfightlab.com/fighter.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC fighter profile">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Fighter Profile — Cannon Fight Lab">
+<meta name="twitter:description" content="UFC fighter stats and analytics. Record, cardio, striking, grappling.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   .fighter-hero {
     background: var(--bg-2);
@@ -183,6 +223,72 @@ cfl.renderFooter();
 
 const fighterId = parseInt(cfl.getQueryParam('id'), 10);
 
+// Update <head> meta tags + JSON-LD once we know which fighter this is. Modern
+// crawlers (Google, Bing) index JS-mutated meta. Twitter/Facebook unfurls
+// don't — those need prerendered HTML, handled separately by the build step.
+function setMeta(attr, key, value) {
+  let tag = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, key);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', value);
+}
+
+function injectJsonLd(id, data) {
+  let script = document.getElementById(id);
+  if (!script) {
+    script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = id;
+    document.head.appendChild(script);
+  }
+  script.textContent = JSON.stringify(data);
+}
+
+function updateFighterSEO(f) {
+  const url = `https://cannonfightlab.com/fighter.html?id=${f.id}`;
+  const careerRec = `${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''}`;
+  const division = f.division ? `, ${f.division}` : '';
+  const title = `${f.name} — UFC Fighter Stats & Analytics | Cannon Fight Lab`;
+  const desc = `${f.name}${f.nickname ? ' "' + f.nickname + '"' : ''} UFC fighter stats: ${careerRec} career record${division}. Cardio score, striking, grappling, recent form, head-to-head matchups.`;
+
+  document.title = title;
+  setMeta('name', 'description', desc);
+  setMeta('property', 'og:title', `${f.name} — UFC Fighter Stats`);
+  setMeta('property', 'og:description', desc);
+  setMeta('property', 'og:url', url);
+  setMeta('name', 'twitter:title', `${f.name} — UFC Fighter Stats`);
+  setMeta('name', 'twitter:description', desc);
+
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute('href', url);
+
+  // Athlete schema (schema.org/Person — Athlete is a subtype implied by jobTitle)
+  const athlete = {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    'name': f.name,
+    'url': url,
+    'jobTitle': 'Mixed Martial Artist',
+    'memberOf': { '@type': 'SportsOrganization', 'name': 'Ultimate Fighting Championship', 'alternateName': 'UFC' }
+  };
+  if (f.nickname) athlete.alternateName = f.nickname;
+  if (f.height_in) athlete.height = cfl.formatHeight(f.height_in);
+  injectJsonLd('athlete-schema', athlete);
+
+  injectJsonLd('breadcrumb-schema', {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://cannonfightlab.com/' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Fighters', 'item': 'https://cannonfightlab.com/fighters.html' },
+      { '@type': 'ListItem', 'position': 3, 'name': f.name, 'item': url }
+    ]
+  });
+}
+
 async function load() {
   if (!fighterId) {
     document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
@@ -202,7 +308,7 @@ async function load() {
     return;
   }
 
-  document.title = `${f.name} — Cannon Fight Lab`;
+  updateFighterSEO(f);
 
   const ufcRec = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0);
   const hasUfc = ufcRec > 0;
@@ -212,7 +318,7 @@ async function load() {
       <div class="fighter-hero-inner">
         <div class="cfl-avatar xl">${cfl.escapeHtml(cfl.initials(f.name))}</div>
         <div>
-          <div class="fh-name">${cfl.escapeHtml(f.name)}</div>
+          <h1 class="fh-name">${cfl.escapeHtml(f.name)}</h1>
           ${f.nickname ? `<div class="fh-nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
           ${f.division ? `<div class="fh-division">${cfl.escapeHtml(f.division)}</div>` : ''}
           <div class="fh-style" id="fhStyle" style="display:none"></div>
@@ -367,13 +473,16 @@ async function loadHistory() {
     const oppLink = oppId
       ? `<a class="opp-link" href="${cfl.fighterUrl(oppId)}">${cfl.escapeHtml(oppName || '—')}</a>`
       : cfl.escapeHtml(oppName || '—');
+    const dateCell = f._event
+      ? `<a class="opp-link" href="${cfl.eventUrl(f._event.id)}" title="${cfl.escapeHtml(f._event.name || '')}">${cfl.formatDate(f._event.event_date)}</a>`
+      : '—';
     return `
       <tr>
         <td><span class="result-pill ${result}">${result}</span></td>
         <td>${oppLink}</td>
         <td>${cfl.escapeHtml(f.method || '—')}</td>
         <td style="color:var(--text-2)">${finish}</td>
-        <td style="color:var(--text-3); font-size: 12px;">${f._event ? cfl.formatDate(f._event.event_date) : '—'}</td>
+        <td style="color:var(--text-3); font-size: 12px;">${dateCell}</td>
       </tr>
     `;
   }).join('');

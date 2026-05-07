@@ -3,11 +3,91 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stat finder — Cannon Fight Lab</title>
+
+<!-- ===== Primary SEO ===== -->
+<title>UFC Stat Finder — Data-Backed MMA Betting Insights | Cannon Fight Lab</title>
+<meta name="description" content="Searchable UFC betting insights: finish rate by division, ring rust effect after a loss, southpaw advantage, age edge calibration. All backed by 8,000+ historical fights.">
+<meta name="keywords" content="UFC stat finder, MMA betting insights, UFC finish rate, UFC southpaw stats, UFC age edge, MMA data">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/stats.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Stat Finder — Cannon Fight Lab">
+<meta property="og:description" content="Data-backed UFC betting insights, searchable. Real numbers across thousands of fights.">
+<meta property="og:url" content="https://cannonfightlab.com/stats.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC stat finder">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Stat Finder — Cannon Fight Lab">
+<meta name="twitter:description" content="Data-backed UFC betting insights, searchable. Real numbers across thousands of fights.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Structured data ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Do southpaws really have an advantage in MMA?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "In southpaw vs orthodox UFC bouts across thousands of historical fights, southpaws win at a rate above 50%. The exact figure is computed live from the full UFC fight history."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does reach matter in UFC fights?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "When one fighter has a 2-inch or greater reach advantage, the longer fighter wins at a rate computed across thousands of historical fights. Smaller reach gaps show much weaker edges."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Which UFC weight class has the highest finish rate?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Finish rates vary significantly by division — heavier weight classes generally finish more often, while lighter divisions trend toward decisions. Live finish rate by division is shown across every standard UFC weight class with at least 50 historical fights."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are these UFC stats predictive of individual fights?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "These edges describe aggregate patterns across the full UFC history — they describe tendencies, not predictions for any single fight. A 56% pattern still means 44% of fights go the other way. Stats are for entertainment purposes only."
+      }
+    }
+  ]
+}
+</script>
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   .insights-grid {
     display: grid;
@@ -144,7 +224,7 @@
 
 <div class="page-hero">
   <div class="eyebrow">Edges & insights</div>
-  <h1>Stat finder</h1>
+  <h1>UFC Stat Finder</h1>
   <p>Real patterns from every UFC fight in our database. The kind of edges most bettors don't bother to compute.</p>
 </div>
 

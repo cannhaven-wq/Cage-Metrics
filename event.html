@@ -3,11 +3,51 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Event — Cannon Fight Lab</title>
+
+<!-- ===== Primary SEO =====
+     Static defaults. Per-event values are overwritten at runtime by
+     updateSEO() once the event loads from Supabase. -->
+<title>UFC Event Card — Predictions & Edge Factors | Cannon Fight Lab</title>
+<meta name="description" content="Full UFC event card with model verdicts and edge factors for every fight. See cardio, striking, grappling, and matchup edges before the cage closes.">
+<meta name="keywords" content="UFC event card, UFC fight predictions, UFC event analysis, MMA event picks, UFC fight breakdown">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/event.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Event Card — Cannon Fight Lab">
+<meta property="og:description" content="Full UFC event card with model verdicts and edge factors for every fight.">
+<meta property="og:url" content="https://cannonfightlab.com/event.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC event card analysis">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Event Card — Cannon Fight Lab">
+<meta name="twitter:description" content="Full UFC event card with model verdicts and edge factors for every fight.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
   .event-hero {
     background: var(--bg-2);
@@ -164,6 +204,80 @@ cfl.renderFooter();
 
 const eventId = parseInt(cfl.getQueryParam('id'), 10);
 
+function setMeta(attr, key, value) {
+  let tag = document.querySelector(`meta[${attr}="${key}"]`);
+  if (!tag) {
+    tag = document.createElement('meta');
+    tag.setAttribute(attr, key);
+    document.head.appendChild(tag);
+  }
+  tag.setAttribute('content', value);
+}
+
+function injectJsonLd(id, data) {
+  let script = document.getElementById(id);
+  if (!script) {
+    script = document.createElement('script');
+    script.type = 'application/ld+json';
+    script.id = id;
+    document.head.appendChild(script);
+  }
+  script.textContent = JSON.stringify(data);
+}
+
+function updateEventSEO(event, fights, fighterMap) {
+  const url = `https://cannonfightlab.com/event.html?id=${event.id}`;
+  const dateStr = cfl.formatDate(event.event_date);
+  const verb = event.is_upcoming ? 'predictions and edge factors' : 'results and breakdown';
+  const title = `${event.name} — UFC ${event.is_upcoming ? 'Predictions' : 'Results'} | Cannon Fight Lab`;
+  const fightCount = (fights || []).length;
+  const desc = `${event.name} on ${dateStr}${event.location ? ' in ' + event.location : ''}. Full card with model ${verb} for ${fightCount > 0 ? 'all ' + fightCount + ' fights' : 'every fight'}.`;
+
+  document.title = title;
+  setMeta('name', 'description', desc);
+  setMeta('property', 'og:title', `${event.name} — Cannon Fight Lab`);
+  setMeta('property', 'og:description', desc);
+  setMeta('property', 'og:url', url);
+  setMeta('name', 'twitter:title', `${event.name} — Cannon Fight Lab`);
+  setMeta('name', 'twitter:description', desc);
+
+  const canonical = document.querySelector('link[rel="canonical"]');
+  if (canonical) canonical.setAttribute('href', url);
+
+  // SportsEvent schema (https://schema.org/SportsEvent)
+  const sportsEvent = {
+    '@context': 'https://schema.org',
+    '@type': 'SportsEvent',
+    'name': event.name,
+    'sport': 'Mixed Martial Arts',
+    'startDate': event.event_date,
+    'eventStatus': event.is_upcoming ? 'https://schema.org/EventScheduled' : 'https://schema.org/EventCompleted',
+    'eventAttendanceMode': 'https://schema.org/MixedEventAttendanceMode',
+    'url': url,
+    'organizer': { '@type': 'SportsOrganization', 'name': 'Ultimate Fighting Championship', 'alternateName': 'UFC' }
+  };
+  if (event.location) {
+    sportsEvent.location = { '@type': 'Place', 'name': event.location };
+  }
+  if (fighterMap && Object.keys(fighterMap).length > 0) {
+    sportsEvent.competitor = Object.values(fighterMap).map(f => ({
+      '@type': 'Person',
+      'name': f.name,
+      'url': `https://cannonfightlab.com/fighter.html?id=${f.id}`
+    }));
+  }
+  injectJsonLd('event-schema', sportsEvent);
+
+  injectJsonLd('breadcrumb-schema', {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://cannonfightlab.com/' },
+      { '@type': 'ListItem', 'position': 2, 'name': event.name, 'item': url }
+    ]
+  });
+}
+
 async function load() {
   if (!eventId) {
     document.getElementById('content').innerHTML = cfl.errorHtml('No event id provided.');
@@ -177,8 +291,6 @@ async function load() {
     document.getElementById('content').innerHTML = cfl.errorHtml('Event not found.');
     return;
   }
-
-  document.title = `${event.name} — Cannon Fight Lab`;
 
   const { data: fights } = await sb
     .from('fights')
@@ -196,6 +308,8 @@ async function load() {
       .in('id', fighterIds);
     (fighters || []).forEach(f => { fighterMap[f.id] = f; });
   }
+
+  updateEventSEO(event, fights, fighterMap);
 
   document.getElementById('content').innerHTML = `
     <div class="event-hero">
