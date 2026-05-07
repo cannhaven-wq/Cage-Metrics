@@ -191,11 +191,14 @@ WHERE e.is_upcoming = false
   AND f.method IS NOT NULL;
 
 -- ---------------------------------------------------------------------------
--- Grant SELECT to the anon role on all views
+-- Grant SELECT to BOTH anon and authenticated on every view.
+-- Granting only to anon is a footgun — signed-in users hit the views with the
+-- authenticated role and silently get empty results (HTTP 200, no error),
+-- which is brutal to debug. Always grant to both for any v_* public-data view.
 -- ---------------------------------------------------------------------------
-GRANT SELECT ON v_younger_fighter_winrate TO anon;
-GRANT SELECT ON v_southpaw_vs_orthodox TO anon;
-GRANT SELECT ON v_reach_advantage_winrate TO anon;
-GRANT SELECT ON v_title_finish_rate TO anon;
-GRANT SELECT ON v_finish_rate_by_division TO anon;
-GRANT SELECT ON v_main_event_finish_rate TO anon;
+GRANT SELECT ON v_younger_fighter_winrate  TO anon, authenticated;
+GRANT SELECT ON v_southpaw_vs_orthodox     TO anon, authenticated;
+GRANT SELECT ON v_reach_advantage_winrate  TO anon, authenticated;
+GRANT SELECT ON v_title_finish_rate        TO anon, authenticated;
+GRANT SELECT ON v_finish_rate_by_division  TO anon, authenticated;
+GRANT SELECT ON v_main_event_finish_rate   TO anon, authenticated;
