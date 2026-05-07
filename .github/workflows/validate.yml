@@ -1,0 +1,48 @@
+name: Validate edges.js accuracy
+
+# Phase 1 of the predict-winners workstream. Manual trigger only.
+# Pulls historical fights from Supabase, runs the edges.js verdict for each,
+# writes accuracy aggregates to research/results.md and results.json, commits
+# them. Read the report header for caveats — these are upper-bound numbers.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: validate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install deps
+        working-directory: research
+        run: npm install --no-audit --no-fund
+
+      - name: Run validation
+        working-directory: research
+        run: npm run validate
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/results.md research/results.json
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "research: regenerate edges.js validation results [skip ci]"
+            git push
+          fi
