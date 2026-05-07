@@ -122,6 +122,19 @@ function bandFor(prob) {
     edge_count_dist: {}, // How many fights had 0/1/2/3+ edges
   };
 
+  // Age-gap analysis — INDEPENDENT of edges.js. For each integer year of age
+  // gap, what fraction of historical fights did the younger fighter win? The
+  // gap is preserved across time (both fighters age at the same rate) so this
+  // doesn't suffer from the hindsight bias plaguing the rest of the report.
+  const ageGapAll = {};       // all fights with known ages on both sides
+  const ageGapVeterans = {};  // both fighters have 5+ UFC fights
+  const ageGapNewcomer = {};  // at least one fighter has <5 UFC fights
+  function bumpGap(map, gap, won) {
+    if (!map[gap]) map[gap] = { n: 0, younger_wins: 0 };
+    map[gap].n++;
+    if (won) map[gap].younger_wins++;
+  }
+
   for (const fight of fights) {
     const a = fighterMap[fight.fighter_a_id];
     const b = fighterMap[fight.fighter_b_id];
@@ -131,6 +144,25 @@ function bandFor(prob) {
     if (!event) { stats.skipped_no_data++; continue; }
 
     if (fight.winner_id === fight.fighter_a_id) stats.a_wins_actual++;
+
+    // Age-gap accounting (independent of edges.js firing)
+    if (a.age != null && b.age != null) {
+      const gap = Math.abs(a.age - b.age);
+      if (gap >= 1) {
+        const youngerIsA = a.age < b.age;
+        const youngerWon = (youngerIsA && fight.winner_id === fight.fighter_a_id) ||
+                           (!youngerIsA && fight.winner_id === fight.fighter_b_id);
+        const bucket = Math.min(Math.floor(gap), 12);  // 12+ goes in one bucket
+        bumpGap(ageGapAll, bucket, youngerWon);
+        const aUfc = (a.ufc_wins || 0) + (a.ufc_losses || 0);
+        const bUfc = (b.ufc_wins || 0) + (b.ufc_losses || 0);
+        if (aUfc >= 5 && bUfc >= 5) {
+          bumpGap(ageGapVeterans, bucket, youngerWon);
+        } else {
+          bumpGap(ageGapNewcomer, bucket, youngerWon);
+        }
+      }
+    }
 
     const ctx = {
       streakMap,
@@ -289,6 +321,55 @@ function bandFor(prob) {
   }
   lines.push('');
 
+  lines.push('## Age gap → younger-fighter win rate');
+  lines.push('');
+  lines.push('Independent of edges.js. For each integer year of age gap, what fraction of');
+  lines.push('historical fights did the younger fighter win? The gap is preserved across time');
+  lines.push('(both fighters age at the same rate) so this is NOT subject to hindsight bias.');
+  lines.push('');
+  lines.push('Compare each row to the model\'s assigned `pct`:');
+  lines.push('- 1–2 yrs: 52.0% (newcomer-discounted to 51.0%)');
+  lines.push('- 3–4 yrs: 55.9% (newcomer-discounted to 53.0%)');
+  lines.push('- 5–6 yrs: 58.2% (newcomer-discounted to 54.1%)');
+  lines.push('- 7–9 yrs: 63.3% (newcomer-discounted to 56.7%)');
+  lines.push('- 10+ yrs: 65.2% (newcomer-discounted to 57.6%)');
+  lines.push('');
+  lines.push('### All fights with known ages on both sides');
+  lines.push('');
+  lines.push('| Age gap | n     | younger wins |');
+  lines.push('|---------|-------|--------------|');
+  const gapKeysAll = Object.keys(ageGapAll).map(Number).sort((x, y) => x - y);
+  for (const g of gapKeysAll) {
+    const s = ageGapAll[g];
+    const label = g >= 12 ? '12+' : String(g);
+    lines.push(`| ${label.padEnd(7)} | ${String(s.n).padEnd(5)} | ${pct(s.younger_wins, s.n)} |`);
+  }
+  lines.push('');
+  lines.push('### Veterans only (both fighters have 5+ UFC fights)');
+  lines.push('');
+  lines.push('Cleaner signal — strips out the newcomer cohort where younger isn\'t reliably better.');
+  lines.push('');
+  lines.push('| Age gap | n     | younger wins |');
+  lines.push('|---------|-------|--------------|');
+  const gapKeysVet = Object.keys(ageGapVeterans).map(Number).sort((x, y) => x - y);
+  for (const g of gapKeysVet) {
+    const s = ageGapVeterans[g];
+    const label = g >= 12 ? '12+' : String(g);
+    lines.push(`| ${label.padEnd(7)} | ${String(s.n).padEnd(5)} | ${pct(s.younger_wins, s.n)} |`);
+  }
+  lines.push('');
+  lines.push('### Newcomer cohort (at least one fighter has <5 UFC fights)');
+  lines.push('');
+  lines.push('| Age gap | n     | younger wins |');
+  lines.push('|---------|-------|--------------|');
+  const gapKeysNew = Object.keys(ageGapNewcomer).map(Number).sort((x, y) => x - y);
+  for (const g of gapKeysNew) {
+    const s = ageGapNewcomer[g];
+    const label = g >= 12 ? '12+' : String(g);
+    lines.push(`| ${label.padEnd(7)} | ${String(s.n).padEnd(5)} | ${pct(s.younger_wins, s.n)} |`);
+  }
+  lines.push('');
+
   lines.push('## Edge-count distribution');
   lines.push('');
   lines.push('How many edges fired per fight?');
@@ -306,7 +387,12 @@ function bandFor(prob) {
 
   const outDir = __dirname;
   fs.writeFileSync(path.join(outDir, 'results.md'), reportText);
-  fs.writeFileSync(path.join(outDir, 'results.json'), JSON.stringify(stats, null, 2));
+  fs.writeFileSync(path.join(outDir, 'results.json'), JSON.stringify({
+    ...stats,
+    age_gap_all: ageGapAll,
+    age_gap_veterans: ageGapVeterans,
+    age_gap_newcomer: ageGapNewcomer,
+  }, null, 2));
   console.log('Wrote research/results.md and research/results.json');
 })().catch(err => {
   console.error('validate.js failed:', err);
