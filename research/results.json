@@ -641,5 +641,155 @@
     "5": 1523,
     "6": 457,
     "7": 17
+  },
+  "age_gap_all": {
+    "1": {
+      "n": 1260,
+      "younger_wins": 668
+    },
+    "2": {
+      "n": 1203,
+      "younger_wins": 624
+    },
+    "3": {
+      "n": 1084,
+      "younger_wins": 618
+    },
+    "4": {
+      "n": 901,
+      "younger_wins": 513
+    },
+    "5": {
+      "n": 835,
+      "younger_wins": 466
+    },
+    "6": {
+      "n": 647,
+      "younger_wins": 386
+    },
+    "7": {
+      "n": 499,
+      "younger_wins": 298
+    },
+    "8": {
+      "n": 411,
+      "younger_wins": 258
+    },
+    "9": {
+      "n": 296,
+      "younger_wins": 196
+    },
+    "10": {
+      "n": 199,
+      "younger_wins": 133
+    },
+    "11": {
+      "n": 138,
+      "younger_wins": 89
+    },
+    "12": {
+      "n": 271,
+      "younger_wins": 190
+    }
+  },
+  "age_gap_veterans": {
+    "1": {
+      "n": 827,
+      "younger_wins": 443
+    },
+    "2": {
+      "n": 815,
+      "younger_wins": 420
+    },
+    "3": {
+      "n": 740,
+      "younger_wins": 432
+    },
+    "4": {
+      "n": 593,
+      "younger_wins": 352
+    },
+    "5": {
+      "n": 554,
+      "younger_wins": 304
+    },
+    "6": {
+      "n": 445,
+      "younger_wins": 262
+    },
+    "7": {
+      "n": 328,
+      "younger_wins": 206
+    },
+    "8": {
+      "n": 284,
+      "younger_wins": 184
+    },
+    "9": {
+      "n": 207,
+      "younger_wins": 135
+    },
+    "10": {
+      "n": 137,
+      "younger_wins": 88
+    },
+    "11": {
+      "n": 94,
+      "younger_wins": 57
+    },
+    "12": {
+      "n": 182,
+      "younger_wins": 128
+    }
+  },
+  "age_gap_newcomer": {
+    "1": {
+      "n": 433,
+      "younger_wins": 225
+    },
+    "2": {
+      "n": 388,
+      "younger_wins": 204
+    },
+    "3": {
+      "n": 344,
+      "younger_wins": 186
+    },
+    "4": {
+      "n": 308,
+      "younger_wins": 161
+    },
+    "5": {
+      "n": 281,
+      "younger_wins": 162
+    },
+    "6": {
+      "n": 202,
+      "younger_wins": 124
+    },
+    "7": {
+      "n": 171,
+      "younger_wins": 92
+    },
+    "8": {
+      "n": 127,
+      "younger_wins": 74
+    },
+    "9": {
+      "n": 89,
+      "younger_wins": 61
+    },
+    "10": {
+      "n": 62,
+      "younger_wins": 45
+    },
+    "11": {
+      "n": 44,
+      "younger_wins": 32
+    },
+    "12": {
+      "n": 89,
+      "younger_wins": 62
+    }
   }
 }

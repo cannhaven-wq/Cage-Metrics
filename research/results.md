@@ -1,6 +1,6 @@
 # edges.js validation — phase 1 baseline
 
-Generated: 2026-05-07T02:47:38.906Z
+Generated: 2026-05-07T02:59:38.083Z
 
 **CAVEATS** (see header of `research/validate.js`):
 
@@ -115,6 +115,72 @@ Same metric but filtered to fights where this was the ONLY factor firing. Cleane
 | slpm          | 16     | 43.8%    | 52.2%   |
 | td_def        | 15     | 60.0%    | 55.1%   |
 | td_acc        | 8      | 50.0%    | 53.5%   |
+
+## Age gap → younger-fighter win rate
+
+Independent of edges.js. For each integer year of age gap, what fraction of
+historical fights did the younger fighter win? The gap is preserved across time
+(both fighters age at the same rate) so this is NOT subject to hindsight bias.
+
+Compare each row to the model's assigned `pct`:
+- 1–2 yrs: 52.0% (newcomer-discounted to 51.0%)
+- 3–4 yrs: 55.9% (newcomer-discounted to 53.0%)
+- 5–6 yrs: 58.2% (newcomer-discounted to 54.1%)
+- 7–9 yrs: 63.3% (newcomer-discounted to 56.7%)
+- 10+ yrs: 65.2% (newcomer-discounted to 57.6%)
+
+### All fights with known ages on both sides
+
+| Age gap | n     | younger wins |
+|---------|-------|--------------|
+| 1       | 1260  | 53.0% |
+| 2       | 1203  | 51.9% |
+| 3       | 1084  | 57.0% |
+| 4       | 901   | 56.9% |
+| 5       | 835   | 55.8% |
+| 6       | 647   | 59.7% |
+| 7       | 499   | 59.7% |
+| 8       | 411   | 62.8% |
+| 9       | 296   | 66.2% |
+| 10      | 199   | 66.8% |
+| 11      | 138   | 64.5% |
+| 12+     | 271   | 70.1% |
+
+### Veterans only (both fighters have 5+ UFC fights)
+
+Cleaner signal — strips out the newcomer cohort where younger isn't reliably better.
+
+| Age gap | n     | younger wins |
+|---------|-------|--------------|
+| 1       | 827   | 53.6% |
+| 2       | 815   | 51.5% |
+| 3       | 740   | 58.4% |
+| 4       | 593   | 59.4% |
+| 5       | 554   | 54.9% |
+| 6       | 445   | 58.9% |
+| 7       | 328   | 62.8% |
+| 8       | 284   | 64.8% |
+| 9       | 207   | 65.2% |
+| 10      | 137   | 64.2% |
+| 11      | 94    | 60.6% |
+| 12+     | 182   | 70.3% |
+
+### Newcomer cohort (at least one fighter has <5 UFC fights)
+
+| Age gap | n     | younger wins |
+|---------|-------|--------------|
+| 1       | 433   | 52.0% |
+| 2       | 388   | 52.6% |
+| 3       | 344   | 54.1% |
+| 4       | 308   | 52.3% |
+| 5       | 281   | 57.7% |
+| 6       | 202   | 61.4% |
+| 7       | 171   | 53.8% |
+| 8       | 127   | 58.3% |
+| 9       | 89    | 68.5% |
+| 10      | 62    | 72.6% |
+| 11      | 44    | 72.7% |
+| 12+     | 89    | 69.7% |
 
 ## Edge-count distribution
 
