@@ -124,6 +124,8 @@
   }
   .toast.show { opacity: 1; }
   .toast strong { color: var(--amber); display: block; margin-bottom: 4px; font-family: 'Barlow Condensed', sans-serif; font-size: 15px; letter-spacing: 0.5px; }
+  .toast.success { border-left-color: var(--green); }
+  .toast.success strong { color: var(--green); }
 </style>
 </head>
 <body>
@@ -142,7 +144,9 @@
       We read every message. Be specific — if it's a bug or wrong stat, please include the fighter name or page URL so we can chase it down.
     </p>
 
-    <form class="contact-form" id="contactForm" onsubmit="handleSubmit(event)">
+    <form class="contact-form" id="contactForm" action="https://formspree.io/f/mgodznag" method="POST" onsubmit="handleSubmit(event)">
+      <!-- Spam honeypot — bots fill hidden fields, humans don't. Formspree drops anything where this is non-empty. -->
+      <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" style="position:absolute; left:-5000px; opacity:0;" />
       <div class="form-row">
         <label for="name">Your name</label>
         <input type="text" id="name" name="name" required maxlength="100" autocomplete="name" />
@@ -188,18 +192,41 @@
 cfl.renderNav('');
 cfl.renderFooter();
 
-function handleSubmit(e) {
+async function handleSubmit(e) {
   e.preventDefault();
-  // Form submission is not yet wired to a backend.
-  // When we add Formspree/Supabase/etc., this is the function to update.
-  showToast(
-    'Thanks — but the form isn\'t live yet',
-    'The contact form is in the final stages of setup. Please check back soon, or reach out via the social links once those are connected.'
-  );
+  const form = e.target;
+  const button = form.querySelector('button[type="submit"]');
+  const originalLabel = button.textContent;
+  button.disabled = true;
+  button.textContent = 'Sending…';
+
+  try {
+    const res = await fetch(form.action, {
+      method: 'POST',
+      body: new FormData(form),
+      headers: { 'Accept': 'application/json' }
+    });
+    if (res.ok) {
+      form.reset();
+      showToast('Message sent', 'Thanks — we\'ll get back to you within 48 hours.', 'success');
+    } else {
+      const json = await res.json().catch(() => ({}));
+      const msg = (json.errors && json.errors[0] && json.errors[0].message)
+        || 'Please try again, or email reed@cannonfightlab.com directly.';
+      showToast('Couldn\'t send', msg);
+    }
+  } catch (err) {
+    showToast('Couldn\'t send', 'Network error. Please try again or email reed@cannonfightlab.com directly.');
+  } finally {
+    button.disabled = false;
+    button.textContent = originalLabel;
+  }
 }
 
-function showToast(title, body) {
+function showToast(title, body, variant) {
   const t = document.getElementById('toast');
+  t.classList.remove('success');
+  if (variant === 'success') t.classList.add('success');
   t.innerHTML = '<strong>' + cfl.escapeHtml(title) + '</strong>' + cfl.escapeHtml(body);
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 5000);
