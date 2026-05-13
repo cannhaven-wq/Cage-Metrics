@@ -93,21 +93,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-song-vs-figueiredo-113.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-allen-vs-costa-112.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-muhammad-vs-bonfim-114.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-song-vs-figueiredo-113.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -121,6 +114,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-kape-vs-horiguchi-116.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-burns-vs-malott-120.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -128,7 +128,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-kape-vs-horiguchi-116.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-329-117.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -150,13 +150,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-adesanya-vs-pyfer-123.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-328-chimaev-vs-strickland-111.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -366,14 +359,21 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-329-117.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-330-118.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-330-118.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-328-chimaev-vs-strickland-111.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-allen-vs-costa-112.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5315,14 +5315,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-della-maddalena-vs-prates-105.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-della-maddalena-vs-prates-105.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5728,13 +5728,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/ollie-schmid-9593.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/chris-sanford-5018.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -5743,6 +5736,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/sean-alvarez-3150.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/ollie-schmid-9593.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -5917,14 +5917,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/sung-bin-jo-2825.html</loc>
+    <loc>https://cannonfightlab.com/f/dom-mar-fan-1832.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/dom-mar-fan-1832.html</loc>
+    <loc>https://cannonfightlab.com/f/sung-bin-jo-2825.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -6086,6 +6086,20 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/mara-romero-borella-2298.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/christian-edwards-9982.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/artur-minev-9983.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -6547,13 +6561,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/william-gomis-1551.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/mateusz-rebecki-4506.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -6562,6 +6569,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/noe-hernandez-3073.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/william-gomis-1551.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -6715,13 +6729,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/colby-thicknesse-3292.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/danny-mitchell-937.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -6730,6 +6737,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/alex-schoenauer-4776.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/colby-thicknesse-3292.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -7107,13 +7121,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/tai-tuivasa-4548.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/jared-cannonier-774.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -7247,6 +7254,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/tai-tuivasa-4548.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/rodolfo-vieira-3444.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -7283,6 +7297,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/tor-troeng-4225.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/steve-erceg-3349.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -7409,13 +7430,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/myktybek-orolbai-3091.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/steve-erceg-3349.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -8801,6 +8815,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/vince-morales-1342.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/josh-stansbury-643.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -8935,13 +8956,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/marwan-rahiki-100.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/vince-morales-1342.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -10138,13 +10152,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/grant-dawson-1092.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/michael-trizano-787.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -10223,6 +10230,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/bevon-lewis-3111.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/grant-dawson-1092.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -11286,6 +11300,20 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/jack-della-maddalena-1001.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/roman-kopylov-4920.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/sedriques-dumas-2673.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -11385,20 +11413,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/jamie-varner-3224.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/jack-della-maddalena-1001.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/roman-kopylov-4920.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -11594,14 +11608,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/junior-tafa-60.html</loc>
+    <loc>https://cannonfightlab.com/f/eric-mcconico-1234.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/eric-mcconico-1234.html</loc>
+    <loc>https://cannonfightlab.com/f/junior-tafa-60.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -11979,6 +11993,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/themba-gorimbo-3172.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/joaquin-buckley-3557.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -11987,13 +12008,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/jose-ochoa-45.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/themba-gorimbo-3172.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -12189,14 +12203,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/joshua-van-509.html</loc>
+    <loc>https://cannonfightlab.com/f/djorden-santos-4036.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/djorden-santos-4036.html</loc>
+    <loc>https://cannonfightlab.com/f/joshua-van-509.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -13827,6 +13841,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/ozzy-diaz-3576.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/khamzat-chimaev-3456.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -13835,13 +13856,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/tim-elliott-1600.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/ozzy-diaz-3576.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -16410,13 +16424,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/gerald-meerschaert-1227.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/erin-blanchfield-1224.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -16467,6 +16474,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/kristian-rothaermel-3604.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/gerald-meerschaert-1227.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -24831,14 +24845,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/joel-alvarez-4835.html</loc>
+    <loc>https://cannonfightlab.com/f/steven-siler-4815.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/steven-siler-4815.html</loc>
+    <loc>https://cannonfightlab.com/f/joel-alvarez-4835.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -26700,6 +26714,20 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/f/clayton-carpenter-2629.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/carlos-prates-2640.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/f/minoki-ichihara-79.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -26777,13 +26805,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/clayton-carpenter-2629.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/goiti-yamauchi-90.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -26827,13 +26848,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/treston-vines-4612.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/f/carlos-prates-2640.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -28394,13 +28408,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/baisangur-susurkaev-3760.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/sean-gannon-724.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -28423,6 +28430,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/eugenio-tadeu-463.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/baisangur-susurkaev-3760.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -28653,14 +28667,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/marco-tulio-3907.html</loc>
+    <loc>https://cannonfightlab.com/f/alberto-uda-511.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/alberto-uda-511.html</loc>
+    <loc>https://cannonfightlab.com/f/marco-tulio-3907.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -29031,13 +29045,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/cam-rowston-4210.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/yousri-belgaroui-4221.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -29074,6 +29081,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/marcelo-mello-4208.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/cam-rowston-4210.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
@@ -29850,13 +29864,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/f/kody-steele-4779.html</loc>
-    <lastmod>2026-05-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.5</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/f/michael-mcdonald-4791.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -29900,6 +29907,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/f/corey-hill-4842.html</loc>
+    <lastmod>2026-05-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.5</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/f/kody-steele-4779.html</loc>
     <lastmod>2026-05-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.5</priority>
