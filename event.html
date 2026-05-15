@@ -175,6 +175,42 @@
     text-align: center;
   }
 
+  /* Model verdict band — shown on every fight, upcoming and past. */
+  .fight-verdict {
+    border-top: 1px solid var(--border);
+    background: var(--bg-3);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .fight-verdict .label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 600;
+  }
+  .fight-verdict .pick {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: #fff;
+  }
+  .fight-verdict .pick .pct { color: var(--red); margin-left: 6px; font-weight: 600; }
+  .fight-verdict.too-close .pick { color: var(--text-3); font-style: italic; font-weight: 500; }
+  .fight-verdict .check {
+    margin-left: auto;
+    font-size: 13px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.04em;
+  }
+  .fight-verdict .check.correct { background: rgba(0,180,90,0.18); color: var(--green); }
+  .fight-verdict .check.wrong   { background: rgba(255,56,56,0.18); color: var(--red); }
+
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
     .event-hero h1 { font-size: 26px; }
@@ -198,6 +234,7 @@
 
 <script src="_shared.js"></script>
 <script src="_auth.js"></script>
+<script src="edges.js"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -301,12 +338,55 @@ async function load() {
 
   const fighterIds = [...new Set((fights || []).flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
   let fighterMap = {};
+  // streakMap and cardioMap feed cflEdges.computeEdges. Empty objects are
+  // safe — edges.js short-circuits cleanly when a fighter is missing.
+  let streakMap = {};
+  let cardioMap = {};
+
   if (fighterIds.length > 0) {
+    // Need every column edges.js touches (age, reach, stance, striking/grappling
+    // averages, td defense). Without them, the verdict has nothing to chew on.
     const { data: fighters } = await sb
       .from('fighters')
-      .select('id, name, nickname, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws')
+      .select('id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date')
       .in('id', fighterIds);
     (fighters || []).forEach(f => { fighterMap[f.id] = f; });
+
+    // Recent form (current_streak / last_result) — matches the shape used by
+    // index.html so verdicts stay consistent across pages.
+    try {
+      const { data: streaks } = await sb
+        .from('v_fighter_recent_form')
+        .select('fighter_id, last_result, current_streak, last_5')
+        .in('fighter_id', fighterIds);
+      (streaks || []).forEach(s => {
+        const raw = s.current_streak || 0;
+        streakMap[s.fighter_id] = {
+          last_result: s.last_result,
+          win_streak:  raw > 0 ? raw : 0,
+          loss_streak: raw < 0 ? Math.abs(raw) : 0,
+          last_5: s.last_5,
+        };
+      });
+    } catch (e) {
+      console.warn('Recent form data not available:', e.message);
+    }
+
+    // Cardio scores per weight class + CAREER fallback row.
+    try {
+      const { data: cardio } = await sb
+        .from('v_fighter_consistency')
+        .select('fighter_id, weight_class, cardio_tier, confidence_tier')
+        .in('fighter_id', fighterIds);
+      (cardio || []).forEach(r => {
+        const slot = cardioMap[r.fighter_id] || (cardioMap[r.fighter_id] = { byWc: {}, career: null });
+        const entry = { tier_word: r.cardio_tier, confidence: r.confidence_tier };
+        if (r.weight_class === 'CAREER') slot.career = entry;
+        else slot.byWc[r.weight_class] = entry;
+      });
+    } catch (e) {
+      console.warn('Cardio data not available:', e.message);
+    }
   }
 
   updateEventSEO(event, fights, fighterMap);
@@ -319,13 +399,13 @@ async function load() {
     </div>
     <div class="page">
       <div id="fightsList">
-        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming)).join('')}
+        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, event.event_date)).join('')}
       </div>
     </div>
   `;
 }
 
-function renderFight(fight, fmap, isUpcoming) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, eventDate) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -350,6 +430,8 @@ function renderFight(fight, fmap, isUpcoming) {
     ? `Round ${fight.end_round} · ${cfl.escapeHtml(fight.end_time || '—')}`
     : '';
 
+  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, eventDate);
+
   return `
     <div class="${cardClass}">
       <div class="fight-card-header">
@@ -366,8 +448,45 @@ function renderFight(fight, fmap, isUpcoming) {
         ${renderFighterSide(b, 'right', bWon, aWon)}
       </div>
       ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
+      ${verdict}
     </div>
   `;
+}
+
+// Renders the model-verdict band on each fight card. For upcoming fights this
+// is just the pick. For past fights with a known winner we also tag the band
+// with ✓ or ✗ comparing the model's pick to the actual outcome.
+//
+// Past-event caveat: verdicts here are computed against CURRENT fighter
+// career stats, not stats as of the fight date. For very recent events that's
+// fine (career averages don't shift in 2 weeks). For older events this is
+// hindsight-biased, same issue as research/validate.js.
+function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, eventDate) {
+  if (!window.cflEdges) return '';
+  const { edges, aProb } = window.cflEdges.computeEdges(a, b, {
+    streakMap,
+    cardioMap,
+    fightWeightClass: fight.weight_class,
+    eventDate,
+  });
+
+  if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
+    return '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
+  }
+
+  const pickIsA = aProb > 0.5;
+  const picked  = pickIsA ? a : b;
+  const confidence = ((pickIsA ? aProb : 1 - aProb) * 100).toFixed(1);
+  const labelText = isUpcoming ? 'Model pick' : 'Model picked';
+  const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span></span>`;
+
+  let checkHtml = '';
+  if (!isUpcoming && fight.winner_id != null) {
+    const correct = (pickIsA && fight.winner_id === a.id) || (!pickIsA && fight.winner_id === b.id);
+    checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
+  }
+
+  return `<div class="fight-verdict"><span class="label">${labelText}</span>${pickHtml}${checkHtml}</div>`;
 }
 
 function renderFighterSide(f, side, won, opponentWon) {
