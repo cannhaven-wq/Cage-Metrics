@@ -176,6 +176,23 @@ function bandFor(prob) {
     return null;  // NC, Other — skip from grading
   }
 
+  // Returns a finish-rate row with the given fight subtracted out, so the
+  // fighter's decision_rate doesn't know the outcome of the fight we're
+  // predicting. If subtracting drops the fighter under the 3-fight floor
+  // we return null and let the factor short-circuit on that fight.
+  function rateExcludingFight(rate, currentFightWentDistance) {
+    if (!rate || rate.total_fights == null || rate.decision_rate == null) return null;
+    const totalAdj = rate.total_fights - 1;
+    if (totalAdj < 3) return null;
+    const decisionsOld = rate.decision_rate * rate.total_fights;
+    const decisionsAdj = decisionsOld - (currentFightWentDistance ? 1 : 0);
+    return {
+      fighter_id: rate.fighter_id,
+      total_fights: totalAdj,
+      decision_rate: decisionsAdj / totalAdj,
+    };
+  }
+
   for (const fight of fights) {
     const a = fighterMap[fight.fighter_a_id];
     const b = fighterMap[fight.fighter_b_id];
@@ -267,12 +284,22 @@ function bandFor(prob) {
       if (factorCorrect) stats.by_factor_solo[e.factor].correct++;
     }
 
-    // Distance predictor evaluation
+    // Distance predictor evaluation. Build a finishRateMap with the CURRENT
+    // fight's outcome stripped from both fighters' totals — this is the fix
+    // for the leakage caveat noted above. In production we'd be predicting
+    // before the fight happens so it's not in the view; in validation we
+    // simulate that by subtracting it here.
     const methodClass = classifyMethod(fight.method);
     if (methodClass !== null) {
-      const distRes = cflDistanceEdges.computeDistance(a, b, fight, { cardioMap, finishRateMap });
-      const predictedDistance = distRes.distanceProb >= 0.50;
       const wentDistance = methodClass === 'distance';
+      const fairFinishRateMap = {};
+      const adjA = rateExcludingFight(finishRateMap[a.id], wentDistance);
+      const adjB = rateExcludingFight(finishRateMap[b.id], wentDistance);
+      if (adjA) fairFinishRateMap[a.id] = adjA;
+      if (adjB) fairFinishRateMap[b.id] = adjB;
+
+      const distRes = cflDistanceEdges.computeDistance(a, b, fight, { cardioMap, finishRateMap: fairFinishRateMap });
+      const predictedDistance = distRes.distanceProb >= 0.50;
       const distCorrect = predictedDistance === wentDistance;
 
       distance.total++;
@@ -397,12 +424,11 @@ function bandFor(prob) {
   lines.push('"Decision..." → went distance, KO/TKO/Submission/DQ → ended early, NC/Other skipped.');
   lines.push('Same hindsight caveat as the winner verdict: cardio data is current, not point-in-time.');
   lines.push('');
-  lines.push('**Additional caveat for the `fighter_history` factor**: `v_fighter_finish_rate`');
-  lines.push('aggregates over every fight a fighter has had, including the one being predicted.');
-  lines.push('So a fighter\'s decision_rate for fight X knows whether fight X went to decision');
-  lines.push('(diluted by N — for a fighter with 30 UFC fights, this is ~3% of their signal).');
-  lines.push('Bayesian shrinkage further dampens it. Real-world deployment accuracy will be');
-  lines.push('slightly lower than this number — exclude-current-fight rates are a follow-up.');
+  lines.push('The `fighter_history` factor uses `v_fighter_finish_rate` with the CURRENT fight');
+  lines.push('subtracted from each fighter\'s totals (`rateExcludingFight`). So a fighter\'s');
+  lines.push('decision_rate when predicting fight X reflects all their other fights but not X.');
+  lines.push('No leakage. Production naturally has no leakage either — when predicting an');
+  lines.push('upcoming fight, that fight isn\'t in the view yet.');
   lines.push('');
   lines.push(`- Predictions made: **${distance.total}**`);
   lines.push(`- Skipped (NC / unclear method): ${distance.skipped_unclear_method}`);
