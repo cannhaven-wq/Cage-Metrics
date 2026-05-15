@@ -1,6 +1,6 @@
 # edges.js validation — phase 1 baseline
 
-Generated: 2026-05-15T19:03:26.045Z
+Generated: 2026-05-15T19:10:10.877Z
 
 **CAVEATS** (see header of `research/validate.js`):
 
@@ -124,7 +124,7 @@ Same hindsight caveat as the winner verdict: cardio data is current, not point-i
 
 - Predictions made: **8367**
 - Skipped (NC / unclear method): 0
-- Correct: **4646 (55.5%)**
+- Correct: **4768 (57.0%)**
 - Baseline (always pick "goes distance"): 46.9%
 - Baseline (always pick "ends early"):    53.1%
 
@@ -135,12 +135,11 @@ Well-calibrated → "actual %" lands inside the band.
 
 | Band   | n      | actual went distance | predict accuracy |
 |--------|--------|----------------------|------------------|
-| <30%   | 692    | 32.5%                | 67.5% |
-| 30-40% | 170    | 23.5%                | 76.5% |
-| 40-50% | 1883   | 39.6%                | 60.4% |
-| 50-60% | 3623   | 48.3%                | 48.3% |
-| 60-70% | 1941   | 58.3%                | 58.3% |
-| 70-80% | 58     | 51.7%                | 51.7% |
+| <30%   | 128    | 17.2%                | 82.8% |
+| 30-40% | 1501   | 35.4%                | 64.6% |
+| 40-50% | 3780   | 45.7%                | 54.3% |
+| 50-60% | 2547   | 54.0%                | 54.0% |
+| 60-70% | 411    | 64.7%                | 64.7% |
 
 ### Per-division accuracy + actual base rate
 
@@ -149,17 +148,17 @@ see if the hardcoded base rates need tuning.
 
 | Division              | n     | actual distance | predict accuracy |
 |-----------------------|-------|-----------------|------------------|
-| Lightweight           | 1396  | 47.8%           | 46.6% |
-| Welterweight          | 1332  | 47.1%           | 46.7% |
-| Middleweight          | 1096  | 40.1%           | 59.6% |
+| Lightweight           | 1396  | 47.8%           | 49.9% |
+| Welterweight          | 1332  | 47.1%           | 52.9% |
+| Middleweight          | 1096  | 40.1%           | 59.9% |
 | Bantamweight          | 971   | 55.5%           | 55.5% |
-| Featherweight         | 845   | 53.7%           | 53.7% |
+| Featherweight         | 845   | 53.7%           | 52.5% |
 | Heavyweight           | 740   | 32.2%           | 67.8% |
 | Light Heavyweight     | 716   | 36.3%           | 63.7% |
 | Flyweight             | 664   | 57.8%           | 57.8% |
 | Strawweight           | 357   | 66.4%           | 66.4% |
 | Open Weight           | 84    | 7.1%            | 92.9% |
-| Catch Weight          | 76    | 48.7%           | 48.7% |
+| Catch Weight          | 76    | 48.7%           | 50.0% |
 
 ## Age gap → younger-fighter win rate
 
