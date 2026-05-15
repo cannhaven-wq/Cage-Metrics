@@ -531,6 +531,38 @@
     letter-spacing: 0.5px;
   }
   .edge-summary .verdict-pct.even { color: var(--text-3); }
+  /* Secondary verdict row under "Data favors" — go-the-distance prediction. */
+  .distance-summary {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .distance-summary .distance-label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .distance-summary .distance-call {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: 0.5px;
+  }
+  .distance-summary .distance-pct {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--red);
+    letter-spacing: 0.5px;
+  }
   .edge-summary .verdict-pct .small {
     font-size: 14px;
     color: var(--text-3);
@@ -1108,6 +1140,7 @@
 <script src="_shared.js"></script>
 <script src="_auth.js"></script>
 <script src="edges.js"></script>
+<script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -1421,13 +1454,16 @@ async function loadFights(event) {
     console.warn('Recent form data not available:', e.message);
   }
 
-  // Fetch cardio and style data for everyone on the card. Reset both caches
-  // so a new event load doesn't reuse the previous card's fighter set.
+  // Fetch cardio, style, and per-fighter finish-rate data for everyone on
+  // the card. Reset all three caches so a new event load doesn't reuse the
+  // previous card's fighter set.
   _cardioMap = null;
   _styleMap  = null;
+  _finishRateMap = null;
   await Promise.all([
     loadCardioMap(fighterIds),
     loadStyleMap(fighterIds),
+    loadFinishRateMap(fighterIds),
   ]);
 
   list.innerHTML = fights.map(fight =>
@@ -1456,7 +1492,7 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate) {
 
   const weight = fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : '';
 
-  const edgePanel = isTopFight ? renderEdgePanel(a, b, streakMap || {}, fight.weight_class, eventDate) : '';
+  const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate) : '';
 
   return `
     <div class="${cardClass}">
@@ -1528,7 +1564,8 @@ function computeEdges(a, b, streakMap, fightWeightClass, eventDate) {
   });
 }
 
-function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
+function renderEdgePanel(a, b, fight, streakMap, eventDate) {
+  const fightWeightClass = fight.weight_class;
   const { edges, aProb } = computeEdges(a, b, streakMap, fightWeightClass, eventDate);
 
   if (edges.length === 0) {
@@ -1602,6 +1639,26 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
     verdictClass = '';
   }
 
+  // Distance call — secondary row below "Data favors". Short-circuits if
+  // distanceEdges.js hasn't loaded yet (e.g. mid-deploy cache).
+  let distanceHtml = '';
+  if (window.cflDistanceEdges) {
+    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, {
+      cardioMap: _cardioMap,
+      finishRateMap: _finishRateMap,
+    });
+    const expectsDistance = distanceProb >= 0.50;
+    const callText = expectsDistance ? 'Goes the distance' : 'Ends early';
+    const callPct  = Math.round((expectsDistance ? distanceProb : 1 - distanceProb) * 100);
+    distanceHtml = `
+      <div class="distance-summary">
+        <div class="distance-label">Distance</div>
+        <div class="distance-call">${callText}</div>
+        <div class="distance-pct">${callPct}%</div>
+      </div>
+    `;
+  }
+
   return `
     <div class="edge-panel">
       <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
@@ -1612,6 +1669,7 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
         <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
         <div class="verdict-pct ${verdictClass}">${Math.round(verdictPct)}<span class="small">%</span></div>
       </div>
+      ${distanceHtml}
     </div>
   `;
 }
@@ -1639,6 +1697,27 @@ function renderEdgePanel(a, b, streakMap, fightWeightClass, eventDate) {
 // back to the CAREER row. This handles fighters moving up/down weight classes.
 let _cardioMap = null;
 let _styleMap  = null;
+let _finishRateMap = null;
+
+async function loadFinishRateMap(fighterIds) {
+  if (_finishRateMap !== null) return _finishRateMap;
+  const sb = window.cflSupabase;
+  _finishRateMap = {};
+  try {
+    const { data, error } = await sb
+      .from('v_fighter_finish_rate')
+      .select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate')
+      .in('fighter_id', Array.from(fighterIds));
+    if (error) {
+      console.warn('Finish-rate data not available:', error.message);
+      return _finishRateMap;
+    }
+    (data || []).forEach(r => { _finishRateMap[r.fighter_id] = r; });
+  } catch (e) {
+    console.warn('Finish-rate data not available:', e.message);
+  }
+  return _finishRateMap;
+}
 
 async function loadCardioMap(fighterIds) {
   if (_cardioMap !== null) return _cardioMap;
