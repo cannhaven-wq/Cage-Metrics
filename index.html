@@ -1239,38 +1239,72 @@ loadHomepageStats();
 async function load() {
   const sb = window.cflSupabase;
 
-  // 1. Find the next upcoming event (soonest event_date that's still in the future)
-  const today = new Date().toISOString().slice(0, 10);
-  let { data: events, error: evErr } = await sb
-    .from('events')
-    .select('id, name, event_date, location, ufc_url')
-    .eq('is_upcoming', true)
-    .gte('event_date', today)
-    .order('event_date', { ascending: true })
-    .limit(1);
+  // Order of preference:
+  //   1. An event happening "now-ish" — event_date is today OR yesterday (UTC),
+  //      regardless of is_upcoming. The scraper flips is_upcoming -> false
+  //      partway through fight night once results start landing, which used
+  //      to bump the homepage to NEXT week's card mid-event. Filtering by
+  //      date instead of is_upcoming pins us to the right card for the full
+  //      duration of fight night plus the recap window.
+  //   2. Next upcoming event (is_upcoming = true, event_date strictly future).
+  //   3. Most recent past event (only when there's literally nothing else).
+  const now = new Date();
+  const todayStr     = now.toISOString().slice(0, 10);
+  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
 
-  if (evErr) {
-    document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load next event: ' + evErr.message);
-    return;
+  let event = null;
+  let phase = 'upcoming';   // 'happening' | 'upcoming' | 'fallback'
+
+  // (1) happening today or last night
+  {
+    const { data, error } = await sb
+      .from('events')
+      .select('id, name, event_date, location, ufc_url')
+      .gte('event_date', yesterdayStr)
+      .lte('event_date', todayStr)
+      .order('event_date', { ascending: false })
+      .limit(1);
+    if (error) {
+      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + error.message);
+      return;
+    }
+    if (data && data[0]) {
+      event = data[0];
+      phase = 'happening';
+    }
   }
 
-  let event = events && events[0];
-
-  // Fallback: if no truly upcoming event exists, use the most recent completed
-  let isFallback = false;
+  // (2) next upcoming
   if (!event) {
-    const { data: recent, error: recErr } = await sb
+    const { data, error } = await sb
+      .from('events')
+      .select('id, name, event_date, location, ufc_url')
+      .eq('is_upcoming', true)
+      .gt('event_date', todayStr)
+      .order('event_date', { ascending: true })
+      .limit(1);
+    if (error) {
+      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + error.message);
+      return;
+    }
+    if (data && data[0]) {
+      event = data[0];
+      phase = 'upcoming';
+    }
+  }
+
+  // (3) most recent past
+  if (!event) {
+    const { data } = await sb
       .from('events')
       .select('id, name, event_date, location, ufc_url')
       .eq('is_upcoming', false)
       .order('event_date', { ascending: false })
       .limit(1);
-    if (recErr) {
-      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + recErr.message);
-      return;
+    if (data && data[0]) {
+      event = data[0];
+      phase = 'fallback';
     }
-    event = recent && recent[0];
-    isFallback = true;
   }
 
   if (!event) {
@@ -1278,28 +1312,35 @@ async function load() {
     return;
   }
 
-  renderCountdown(event, isFallback);
+  renderCountdown(event, phase);
   await loadFights(event);
   loadStatOfDay(event);
 }
 
-function renderCountdown(event, isFallback) {
+function renderCountdown(event, phase) {
   const days = cfl.daysUntil(event.event_date);
   let pillContent;
-  if (isFallback) {
+  let eyebrow;
+
+  if (phase === 'happening') {
+    eyebrow = days === -1 ? 'Last night' : 'Live now';
+    pillContent = days === -1
+      ? '<span>Last night</span>'
+      : '<span>Tonight</span>';
+  } else if (phase === 'fallback') {
+    eyebrow = 'Most recent event';
     pillContent = `<span>Most recent</span><span class="num">${cfl.formatDateShort(event.event_date)}</span>`;
-  } else if (days === 0) {
-    pillContent = '<span>Tonight</span>';
-  } else if (days === 1) {
-    pillContent = '<span>Tomorrow</span>';
-  } else if (days < 0) {
-    pillContent = `<span>Result pending</span>`;
   } else {
-    pillContent = `<span>In</span><span class="num">${days}</span><span>day${days === 1 ? '' : 's'}</span>`;
+    // upcoming
+    eyebrow = 'Next event';
+    if (days === 0)      pillContent = '<span>Tonight</span>';
+    else if (days === 1) pillContent = '<span>Tomorrow</span>';
+    else if (days < 0)   pillContent = '<span>Result pending</span>';
+    else                 pillContent = `<span>In</span><span class="num">${days}</span><span>day${days === 1 ? '' : 's'}</span>`;
   }
 
   document.getElementById('countdownBar').innerHTML = `
-    <div class="countdown-eyebrow">${isFallback ? 'Most recent event' : 'Next event'}</div>
+    <div class="countdown-eyebrow">${eyebrow}</div>
     <div class="countdown-event-name">${cfl.escapeHtml(event.name)}</div>
     <div class="countdown-meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
     <div class="countdown-pill">${pillContent}</div>
