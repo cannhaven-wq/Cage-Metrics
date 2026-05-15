@@ -1,40 +1,40 @@
 {
-  "decided_fights": 8520,
+  "decided_fights": 8533,
   "skipped_no_data": 0,
-  "no_edges": 177,
-  "total": 8343,
-  "correct": 5521,
-  "a_wins_actual": 5469,
+  "no_edges": 166,
+  "total": 8367,
+  "correct": 5508,
+  "a_wins_actual": 5479,
   "by_band": {
-    "50-55%": {
-      "n": 2178,
-      "correct": 1164
-    },
     "70-75%": {
-      "n": 755,
-      "correct": 648
+      "n": 967,
+      "correct": 802
     },
     "60-65%": {
-      "n": 1779,
-      "correct": 1234
+      "n": 1852,
+      "correct": 1261
+    },
+    "50-55%": {
+      "n": 2116,
+      "correct": 1126
     },
     "55-60%": {
-      "n": 2028,
-      "correct": 1234
+      "n": 1908,
+      "correct": 1142
     },
     "65-70%": {
-      "n": 1491,
-      "correct": 1133
+      "n": 1281,
+      "correct": 964
     },
     "75%+": {
-      "n": 112,
-      "correct": 108
+      "n": 243,
+      "correct": 213
     }
   },
   "by_year": {
     "1994": {
-      "n": 23,
-      "correct": 20
+      "n": 22,
+      "correct": 19
     },
     "1995": {
       "n": 34,
@@ -42,7 +42,7 @@
     },
     "1996": {
       "n": 38,
-      "correct": 32
+      "correct": 31
     },
     "1997": {
       "n": 37,
@@ -54,7 +54,7 @@
     },
     "1999": {
       "n": 40,
-      "correct": 30
+      "correct": 29
     },
     "2000": {
       "n": 41,
@@ -66,141 +66,141 @@
     },
     "2002": {
       "n": 52,
-      "correct": 35
+      "correct": 34
     },
     "2003": {
       "n": 39,
-      "correct": 28
+      "correct": 27
     },
     "2004": {
-      "n": 38,
-      "correct": 24
+      "n": 37,
+      "correct": 23
     },
     "2005": {
-      "n": 77,
-      "correct": 59
+      "n": 78,
+      "correct": 60
     },
     "2006": {
       "n": 155,
-      "correct": 91
+      "correct": 89
     },
     "2007": {
-      "n": 167,
-      "correct": 113
+      "n": 168,
+      "correct": 119
     },
     "2008": {
       "n": 198,
-      "correct": 135
-    },
-    "2009": {
-      "n": 208,
       "correct": 134
     },
+    "2009": {
+      "n": 210,
+      "correct": 133
+    },
     "2010": {
-      "n": 244,
-      "correct": 152
+      "n": 246,
+      "correct": 149
     },
     "2011": {
-      "n": 294,
-      "correct": 170
+      "n": 292,
+      "correct": 172
     },
     "2012": {
       "n": 330,
-      "correct": 205
+      "correct": 207
     },
     "2013": {
-      "n": 363,
-      "correct": 235
+      "n": 365,
+      "correct": 236
     },
     "2014": {
       "n": 486,
-      "correct": 295
+      "correct": 291
     },
     "2015": {
       "n": 456,
-      "correct": 287
+      "correct": 284
     },
     "2016": {
       "n": 476,
-      "correct": 312
+      "correct": 308
     },
     "2017": {
-      "n": 440,
-      "correct": 288
+      "n": 437,
+      "correct": 285
     },
     "2018": {
-      "n": 457,
-      "correct": 297
+      "n": 460,
+      "correct": 292
     },
     "2019": {
-      "n": 493,
-      "correct": 318
+      "n": 495,
+      "correct": 320
     },
     "2020": {
-      "n": 433,
-      "correct": 290
+      "n": 436,
+      "correct": 288
     },
     "2021": {
-      "n": 486,
+      "n": 487,
       "correct": 310
     },
     "2022": {
-      "n": 488,
-      "correct": 323
+      "n": 491,
+      "correct": 322
     },
     "2023": {
       "n": 494,
-      "correct": 351
+      "correct": 353
     },
     "2024": {
-      "n": 508,
-      "correct": 349
+      "n": 507,
+      "correct": 348
     },
     "2025": {
-      "n": 510,
-      "correct": 378
+      "n": 509,
+      "correct": 375
     },
     "2026": {
-      "n": 174,
-      "correct": 126
+      "n": 187,
+      "correct": 136
     }
   },
   "by_division": {
-    "Middleweight": {
-      "n": 1087,
-      "correct": 683
-    },
     "Strawweight": {
-      "n": 356,
-      "correct": 236
+      "n": 357,
+      "correct": 238
     },
     "Bantamweight": {
       "n": 971,
-      "correct": 650
+      "correct": 643
     },
     "Welterweight": {
-      "n": 1333,
-      "correct": 869
+      "n": 1332,
+      "correct": 866
     },
-    "Light Heavyweight": {
-      "n": 713,
-      "correct": 473
+    "Middleweight": {
+      "n": 1096,
+      "correct": 683
     },
     "Flyweight": {
-      "n": 663,
-      "correct": 431
+      "n": 664,
+      "correct": 433
     },
     "Lightweight": {
-      "n": 1390,
-      "correct": 922
+      "n": 1396,
+      "correct": 931
+    },
+    "Light Heavyweight": {
+      "n": 716,
+      "correct": 462
     },
     "Featherweight": {
-      "n": 841,
-      "correct": 559
+      "n": 845,
+      "correct": 566
     },
     "Heavyweight": {
-      "n": 739,
-      "correct": 513
+      "n": 740,
+      "correct": 502
     },
     "Ultimate Fighter 33 Flyweight Tournament": {
       "n": 1,
@@ -223,8 +223,8 @@
       "correct": 0
     },
     "Catch Weight": {
-      "n": 75,
-      "correct": 51
+      "n": 76,
+      "correct": 52
     },
     "Ultimate Fighter 27 Lightweight Tournament": {
       "n": 1,
@@ -259,8 +259,8 @@
       "correct": 1
     },
     "Open Weight": {
-      "n": 85,
-      "correct": 73
+      "n": 84,
+      "correct": 71
     },
     "Ultimate Fighter Latin America Bantamweight Tournament": {
       "n": 1,
@@ -564,47 +564,47 @@
     }
   },
   "by_factor": {
+    "record": {
+      "n": 3763,
+      "correct": 2841,
+      "pct_sum": 233666
+    },
     "age": {
-      "n": 7627,
-      "correct": 4379,
-      "pct_sum": 426267.9000000155
+      "n": 7650,
+      "correct": 4391,
+      "pct_sum": 434083.25
     },
     "slpm": {
-      "n": 4236,
-      "correct": 2750,
-      "pct_sum": 223434
-    },
-    "record": {
-      "n": 3750,
-      "correct": 2836,
-      "pct_sum": 232921
+      "n": 4253,
+      "correct": 2757,
+      "pct_sum": 224327
     },
     "td_acc": {
-      "n": 3566,
+      "n": 3569,
       "correct": 2099,
-      "pct_sum": 191272
+      "pct_sum": 191424
     },
     "stance_reach": {
-      "n": 5537,
-      "correct": 2963,
-      "pct_sum": 290685
+      "n": 5550,
+      "correct": 2966,
+      "pct_sum": 291363.5
     },
     "td_def": {
-      "n": 4851,
-      "correct": 2943,
-      "pct_sum": 263123.5
+      "n": 4869,
+      "correct": 2957,
+      "pct_sum": 264108
     },
     "cardio": {
-      "n": 517,
-      "correct": 314,
-      "pct_sum": 28339
+      "n": 521,
+      "correct": 315,
+      "pct_sum": 28559
     }
   },
   "by_factor_solo": {
     "age": {
-      "n": 223,
-      "correct": 103,
-      "pct_sum": 12543.650000000003
+      "n": 224,
+      "correct": 104,
+      "pct_sum": 12810.25
     },
     "td_def": {
       "n": 15,
@@ -634,58 +634,58 @@
   },
   "edge_count_dist": {
     "0": 41,
-    "1": 369,
-    "2": 1248,
-    "3": 2331,
-    "4": 2534,
+    "1": 370,
+    "2": 1250,
+    "3": 2329,
+    "4": 2546,
     "5": 1523,
-    "6": 457,
-    "7": 17
+    "6": 456,
+    "7": 18
   },
   "age_gap_all": {
     "1": {
-      "n": 1260,
-      "younger_wins": 668
+      "n": 1264,
+      "younger_wins": 670
     },
     "2": {
-      "n": 1203,
-      "younger_wins": 624
+      "n": 1204,
+      "younger_wins": 625
     },
     "3": {
-      "n": 1084,
-      "younger_wins": 618
+      "n": 1089,
+      "younger_wins": 619
     },
     "4": {
-      "n": 901,
-      "younger_wins": 513
+      "n": 902,
+      "younger_wins": 515
     },
     "5": {
-      "n": 835,
-      "younger_wins": 466
+      "n": 834,
+      "younger_wins": 464
     },
     "6": {
-      "n": 647,
-      "younger_wins": 386
+      "n": 650,
+      "younger_wins": 389
     },
     "7": {
       "n": 499,
-      "younger_wins": 298
+      "younger_wins": 297
     },
     "8": {
-      "n": 411,
-      "younger_wins": 258
+      "n": 410,
+      "younger_wins": 257
     },
     "9": {
-      "n": 296,
-      "younger_wins": 196
+      "n": 295,
+      "younger_wins": 195
     },
     "10": {
       "n": 199,
       "younger_wins": 133
     },
     "11": {
-      "n": 138,
-      "younger_wins": 89
+      "n": 139,
+      "younger_wins": 90
     },
     "12": {
       "n": 271,
@@ -694,40 +694,40 @@
   },
   "age_gap_veterans": {
     "1": {
-      "n": 827,
+      "n": 828,
       "younger_wins": 443
     },
     "2": {
-      "n": 815,
-      "younger_wins": 420
+      "n": 817,
+      "younger_wins": 422
     },
     "3": {
-      "n": 740,
+      "n": 742,
       "younger_wins": 432
     },
     "4": {
-      "n": 593,
-      "younger_wins": 352
+      "n": 594,
+      "younger_wins": 353
     },
     "5": {
-      "n": 554,
-      "younger_wins": 304
+      "n": 553,
+      "younger_wins": 302
     },
     "6": {
-      "n": 445,
-      "younger_wins": 262
+      "n": 448,
+      "younger_wins": 265
     },
     "7": {
-      "n": 328,
-      "younger_wins": 206
+      "n": 327,
+      "younger_wins": 204
     },
     "8": {
       "n": 284,
       "younger_wins": 184
     },
     "9": {
-      "n": 207,
-      "younger_wins": 135
+      "n": 206,
+      "younger_wins": 134
     },
     "10": {
       "n": 137,
@@ -744,20 +744,20 @@
   },
   "age_gap_newcomer": {
     "1": {
-      "n": 433,
-      "younger_wins": 225
+      "n": 436,
+      "younger_wins": 227
     },
     "2": {
-      "n": 388,
-      "younger_wins": 204
+      "n": 387,
+      "younger_wins": 203
     },
     "3": {
-      "n": 344,
-      "younger_wins": 186
+      "n": 347,
+      "younger_wins": 187
     },
     "4": {
       "n": 308,
-      "younger_wins": 161
+      "younger_wins": 162
     },
     "5": {
       "n": 281,
@@ -768,12 +768,12 @@
       "younger_wins": 124
     },
     "7": {
-      "n": 171,
-      "younger_wins": 92
+      "n": 172,
+      "younger_wins": 93
     },
     "8": {
-      "n": 127,
-      "younger_wins": 74
+      "n": 126,
+      "younger_wins": 73
     },
     "9": {
       "n": 89,
@@ -784,12 +784,548 @@
       "younger_wins": 45
     },
     "11": {
-      "n": 44,
-      "younger_wins": 32
+      "n": 45,
+      "younger_wins": 33
     },
     "12": {
       "n": 89,
       "younger_wins": 62
+    }
+  },
+  "distance": {
+    "total": 8367,
+    "correct": 4646,
+    "actual_distance": 3923,
+    "actual_early": 4444,
+    "skipped_unclear_method": 0,
+    "by_band": {
+      "60-70%": {
+        "n": 1941,
+        "went_distance": 1131,
+        "predicted_correct": 1131
+      },
+      "50-60%": {
+        "n": 3623,
+        "went_distance": 1751,
+        "predicted_correct": 1751
+      },
+      "40-50%": {
+        "n": 1883,
+        "went_distance": 746,
+        "predicted_correct": 1137
+      },
+      "70-80%": {
+        "n": 58,
+        "went_distance": 30,
+        "predicted_correct": 30
+      },
+      "<30%": {
+        "n": 692,
+        "went_distance": 225,
+        "predicted_correct": 467
+      },
+      "30-40%": {
+        "n": 170,
+        "went_distance": 40,
+        "predicted_correct": 130
+      }
+    },
+    "by_division": {
+      "Strawweight": {
+        "n": 357,
+        "went_distance": 237,
+        "correct": 237
+      },
+      "Bantamweight": {
+        "n": 971,
+        "went_distance": 539,
+        "correct": 539
+      },
+      "Welterweight": {
+        "n": 1332,
+        "went_distance": 627,
+        "correct": 622
+      },
+      "Middleweight": {
+        "n": 1096,
+        "went_distance": 440,
+        "correct": 653
+      },
+      "Flyweight": {
+        "n": 664,
+        "went_distance": 384,
+        "correct": 384
+      },
+      "Lightweight": {
+        "n": 1396,
+        "went_distance": 667,
+        "correct": 650
+      },
+      "Light Heavyweight": {
+        "n": 716,
+        "went_distance": 260,
+        "correct": 456
+      },
+      "Featherweight": {
+        "n": 845,
+        "went_distance": 454,
+        "correct": 454
+      },
+      "Heavyweight": {
+        "n": 740,
+        "went_distance": 238,
+        "correct": 502
+      },
+      "Ultimate Fighter 33 Flyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 23 Light Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter China Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road to UFC 4 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "10 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Catch Weight": {
+        "n": 76,
+        "went_distance": 37,
+        "correct": 37
+      },
+      "Ultimate Fighter 27 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road to UFC 3 Flyweight Tournament Title": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Road to UFC 3 Women's Strawweight Tournament Title": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 32 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 32 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "17 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "14 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "13 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Open Weight": {
+        "n": 84,
+        "went_distance": 6,
+        "correct": 78
+      },
+      "Ultimate Fighter Latin America Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 19 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "TUF Nations Canada vs. Australia Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Superfight Championship": {
+        "n": 3,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "4 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "2 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 16 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 12 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 8 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 7 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 1 Light Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road to UFC 4 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road to UFC 4 Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road to UFC 3 Bantamweight Tournament Title": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 25 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Road To UFC 1 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Brazil 4 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 21 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter Latin America 2 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Latin America 2 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Brazil 2 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter Latin America Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Brazil 3 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Australia vs. UK Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Australia vs. UK Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Brazil 1 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 13 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter Brazil 1 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 8 Light Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 3 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 4 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter Brazil 4 Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Japan 2 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 17 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Japan Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "14 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "6 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 9 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 4 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Road To UFC 1 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Road To UFC 1 Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Road to UFC 1 Flyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 27 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter Latin America 3 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 22 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 19 Light Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter China Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 18 Women's Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 15 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 11 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 5 Lightweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 3 Light Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 2 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 2 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 1 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Super Heavyweight": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Ultimate '96 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "7 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Ultimate '95 Tournament": {
+        "n": 1,
+        "went_distance": 1,
+        "correct": 1
+      },
+      "Ultimate Fighter 33 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 28 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 28 Women's Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 23 Women's Strawweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter Brazil 3 Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "TUF Nations Canada vs. Australia Middleweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 18 Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 14 Featherweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 14 Bantamweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 10 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 9 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "Ultimate Fighter 6 Welterweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "15 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "13 Heavyweight Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "8 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      },
+      "5 Tournament": {
+        "n": 1,
+        "went_distance": 0,
+        "correct": 0
+      }
     }
   }
 }
