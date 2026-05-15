@@ -160,16 +160,30 @@
     if (a.age == null || b.age == null) return null;
     const gap = Math.abs(a.age - b.age);
     if (gap < 1) return null;
+    // Tiers calibrated against the veterans-only (5+ UFC fights) cohort
+    // from the full historical fight set — see research/results.md.
+    //
+    //   gap   actual    tier
+    //   1-2   ~52%      52.0   (no change)
+    //   3-4   ~59%      58.5   (was 55.9, undersold)
+    //   5-6   ~57%      57.0   (was 58.2, year-5 dip drags the bucket)
+    //   7-9   ~64%      64.0   (was 63.3, tiny tune)
+    //   10-11 ~62%      64.0   (NEW bucket; was lumped into top tier)
+    //   12+   ~70%      70.0   (was 65.2, ceiling was too low)
     let pct;
     if (gap <= 2)      pct = 52.0;
-    else if (gap <= 4) pct = 55.9;
-    else if (gap <= 6) pct = 58.2;
-    else if (gap <= 9) pct = 63.3;
-    else               pct = 65.2;
-    // Discount when either fighter is a UFC newcomer (< 5 fights).
+    else if (gap <= 4) pct = 58.5;
+    else if (gap <= 6) pct = 57.0;
+    else if (gap <= 9) pct = 64.0;
+    else if (gap < 12) pct = 64.0;
+    else               pct = 70.0;
+    // Newcomer discount only applies at small/medium gaps. The historical
+    // newcomer cohort actually OVERPERFORMS the veteran cohort at gap >= 9
+    // (older newcomers at big age deficits get crushed) so discounting there
+    // throws away the strongest version of the signal.
     const aTotal = (a.ufc_wins || 0) + (a.ufc_losses || 0);
     const bTotal = (b.ufc_wins || 0) + (b.ufc_losses || 0);
-    if (aTotal < 5 || bTotal < 5) {
+    if ((aTotal < 5 || bTotal < 5) && gap < 9) {
       pct = 50 + (pct - 50) * 0.5;
     }
     const youngerIsA = a.age < b.age;
