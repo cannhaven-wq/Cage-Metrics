@@ -213,6 +213,28 @@
   }
   .empty-h2h .icon { font-size: 36px; opacity: 0.3; margin-bottom: 12px; }
 
+  /* Clear-matchup row sits below the pickers. Only shown when at least one
+     fighter is selected so the empty state isn't cluttered. */
+  .h2h-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin: -16px 0 22px;
+  }
+  .h2h-clear-btn {
+    background: transparent;
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.15s, color 0.15s;
+  }
+  .h2h-clear-btn:hover { border-color: var(--red); color: var(--red); }
+
   @media (max-width: 768px) {
     .h2h-pickers { grid-template-columns: 1fr; }
     .vs-divider { padding: 6px 0; font-size: 22px; }
@@ -237,6 +259,9 @@
     <div class="picker" id="pickerA"></div>
     <div class="vs-divider">VS</div>
     <div class="picker" id="pickerB"></div>
+  </div>
+  <div class="h2h-actions" id="h2hActions" hidden>
+    <button class="h2h-clear-btn" type="button" id="clearMatchupBtn">Clear matchup</button>
   </div>
 
   <div id="compareArea">
@@ -275,9 +300,55 @@ async function load() {
   if (aId) selA = allFighters.find(f => f.id === aId);
   if (bId) selB = allFighters.find(f => f.id === bId);
 
+  // No URL params and no selection yet → demo the page with the most recent
+  // completed event's main-event matchup. Users can override via search or
+  // Clear matchup. URL stays clean (no syncUrl) so the demo doesn't get
+  // bookmarked as canonical.
+  if (!selA && !selB) {
+    await loadDemoMatchup(sb);
+  }
+
   renderPicker('A');
   renderPicker('B');
   renderCompare();
+  updateClearButton();
+}
+
+// Find the most recent completed event's main event and pre-populate selA/selB
+// from its two fighters. Silent failure — if anything goes wrong, the page
+// just falls back to its empty state.
+async function loadDemoMatchup(sb) {
+  try {
+    const { data: events } = await sb
+      .from('events')
+      .select('id')
+      .eq('is_upcoming', false)
+      .order('event_date', { ascending: false })
+      .limit(1);
+    if (!events || !events[0]) return;
+
+    const { data: fights } = await sb
+      .from('fights')
+      .select('fighter_a_id, fighter_b_id')
+      .eq('event_id', events[0].id)
+      .eq('is_main_event', true)
+      .limit(1);
+    if (!fights || !fights[0]) return;
+
+    const a = allFighters.find(f => f.id === fights[0].fighter_a_id);
+    const b = allFighters.find(f => f.id === fights[0].fighter_b_id);
+    if (a && b) {
+      selA = a;
+      selB = b;
+    }
+  } catch (e) {
+    console.warn('[h2h] demo matchup load failed:', e.message);
+  }
+}
+
+function updateClearButton() {
+  const row = document.getElementById('h2hActions');
+  if (row) row.hidden = !(selA || selB);
 }
 
 function renderPicker(side) {
@@ -350,17 +421,30 @@ function wireSearch(side) {
     renderPicker(side);
     renderCompare();
     syncUrl();
+    updateClearButton();
   });
 }
 
 document.addEventListener('click', e => {
-  const btn = e.target.closest('.picker-clear');
-  if (!btn) return;
-  const side = btn.dataset.side;
-  if (side === 'A') selA = null; else selB = null;
-  renderPicker(side);
-  renderCompare();
-  syncUrl();
+  const perSide = e.target.closest('.picker-clear');
+  if (perSide) {
+    const side = perSide.dataset.side;
+    if (side === 'A') selA = null; else selB = null;
+    renderPicker(side);
+    renderCompare();
+    syncUrl();
+    updateClearButton();
+    return;
+  }
+  if (e.target.closest('#clearMatchupBtn')) {
+    selA = null;
+    selB = null;
+    renderPicker('A');
+    renderPicker('B');
+    renderCompare();
+    syncUrl();
+    updateClearButton();
+  }
 });
 
 function syncUrl() {
