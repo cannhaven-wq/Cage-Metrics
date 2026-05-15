@@ -413,10 +413,10 @@ function bandFor(prob) {
   lines.push('');
   lines.push('| Division              | n     | actual distance | predict accuracy |');
   lines.push('|-----------------------|-------|-----------------|------------------|');
-  const divs = Object.keys(distance.by_division)
+  const distDivs = Object.keys(distance.by_division)
     .filter(d => distance.by_division[d].n >= 50)
     .sort((x, y) => distance.by_division[y].n - distance.by_division[x].n);
-  for (const d of divs) {
+  for (const d of distDivs) {
     const s = distance.by_division[d];
     lines.push(`| ${d.padEnd(21)} | ${String(s.n).padEnd(5)} | ${pct(s.went_distance, s.n).padEnd(15)} | ${pct(s.correct, s.n)} |`);
   }
