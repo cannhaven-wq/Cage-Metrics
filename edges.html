@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>How the UFC Verdict is Built — Edge Factors Methodology | Cannon Fight Lab</title>
+<meta name="description" content="The open methodology behind every Cannon Fight Lab UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. No black box.">
+<meta name="keywords" content="UFC edge factors, MMA prediction methodology, UFC fight model, UFC verdict calibration, MMA Bayesian model, UFC edge factor explained">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/edges.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="How the UFC Verdict is Built — Cannon Fight Lab">
+<meta property="og:description" content="Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. The open methodology behind every CFL verdict.">
+<meta property="og:url" content="https://cannonfightlab.com/edges.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Cannon Fight Lab — How the UFC verdict is built">
+<meta property="og:locale" content="en_US">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="How the UFC Verdict is Built — Cannon Fight Lab">
+<meta name="twitter:description" content="The open methodology behind every CFL UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Structured data ===== -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "How the UFC verdict is built — edge factors methodology",
+  "url": "https://cannonfightlab.com/edges.html",
+  "description": "The open methodology behind every Cannon Fight Lab UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update.",
+  "author": { "@type": "Organization", "name": "Cannon Fight Lab" },
+  "publisher": { "@type": "Organization", "name": "Cannon Fight Lab", "url": "https://cannonfightlab.com/" },
+  "mainEntityOfPage": "https://cannonfightlab.com/edges.html",
+  "isPartOf": { "@type": "WebSite", "name": "Cannon Fight Lab", "url": "https://cannonfightlab.com/" }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://cannonfightlab.com/" },
+    { "@type": "ListItem", "position": 2, "name": "Edge factors", "item": "https://cannonfightlab.com/edges.html" }
+  ]
+}
+</script>
+
+<!-- ===== Fonts & styles ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+<style>
+  .edges-hero {
+    background: linear-gradient(180deg, var(--bg-2), var(--bg));
+    border-bottom: 1px solid var(--border);
+    padding: 36px 32px 32px;
+    text-align: center;
+  }
+  .edges-hero .eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 10px;
+  }
+  .edges-hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 44px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+    margin-bottom: 10px;
+  }
+  .edges-hero .lede {
+    font-size: 15px;
+    color: var(--text-2);
+    max-width: 640px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  .section { margin-bottom: 48px; }
+  .section-eyebrow {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-eyebrow .dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--red);
+    display: inline-block;
+  }
+  .section h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+  .section p {
+    color: var(--text-2);
+    line-height: 1.7;
+    margin-bottom: 14px;
+    font-size: 14.5px;
+  }
+  .section p strong { color: #fff; font-weight: 600; }
+
+  /* Factor table — every edge in edges.js with its trigger + range. */
+  .factors-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 18px 0;
+  }
+  .factors-table th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .factors-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.5;
+    vertical-align: top;
+  }
+  .factors-table tr:last-child td { border-bottom: none; }
+  .factors-table .factor-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+  }
+  .factors-table .factor-range {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: var(--red);
+    font-size: 14px;
+    white-space: nowrap;
+  }
+
+  /* Math callout — mirrored from cardio.html */
+  .formula {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin: 18px 0;
+  }
+  .formula-title {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .formula-eq {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 17px;
+    color: #fff;
+    font-weight: 600;
+    line-height: 1.6;
+    letter-spacing: 0.3px;
+  }
+  .formula-eq .op { color: var(--red); padding: 0 6px; }
+  .formula-note {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 10px;
+    line-height: 1.5;
+  }
+
+  /* Calibration table */
+  .calib-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 18px 0;
+  }
+  .calib-table th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    padding: 12px 16px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .calib-table td {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .calib-table tr:last-child td { border-bottom: none; }
+  .calib-table .band {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: #fff;
+    font-size: 14px;
+  }
+  .calib-table .actual {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: var(--green);
+    font-size: 14px;
+  }
+
+  /* Caveat callout — mirrored from cardio.html */
+  .caveat {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin-bottom: 10px;
+  }
+  .caveat-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .caveat-title::before {
+    content: '!';
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: rgba(255, 167, 38, 0.15);
+    color: #ffa726;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+  }
+  .caveat p {
+    font-size: 12.5px;
+    color: var(--text-2);
+    line-height: 1.55;
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    .edges-hero { padding: 28px 16px 24px; }
+    .edges-hero h1 { font-size: 30px; }
+    .formula-eq { font-size: 15px; }
+    .factors-table th, .factors-table td { padding: 10px 12px; font-size: 12px; }
+    .factors-table .factor-name { font-size: 14px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="edges-hero">
+  <div class="eyebrow">Methodology</div>
+  <h1>How the verdict is built</h1>
+  <p class="lede">Every Cannon Fight Lab verdict is the sum of small probability shifts — each one a measurable, named factor with a published track record. No black box, no proprietary secret sauce. Every number on this page is recomputable from the public data and the open-source <code>edges.js</code> module that runs in your browser.</p>
+</div>
+
+<div class="page">
+
+  <!-- ============== What an edge factor is ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>The unit</div>
+    <h2>What an edge factor is</h2>
+    <p>An edge is a single piece of statistical evidence that nudges the verdict toward one fighter or the other. Each factor outputs three things: <strong>who it favors</strong>, <strong>by how much</strong> (a percentage between 50% and 78%), and <strong>a one-line reason</strong> that you can read on the fight card.</p>
+    <p>Most fights have 3–5 factors firing. Fewer than 2 is rare; more than 6 is rare. If no factor fires, the verdict explicitly says "even matchup" rather than guessing — the model refuses to predict where it has no signal.</p>
+  </div>
+
+  <!-- ============== The factors ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>The toolkit</div>
+    <h2>The ten factors we measure</h2>
+    <p>Every factor below is implemented in the public <code>edges.js</code> file. Conditions and ranges shown are the live values — change them in the source and the verdict on the next event card updates immediately.</p>
+    <table class="factors-table">
+      <thead>
+        <tr><th>Factor</th><th>Triggers when</th><th>Range</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="factor-name">Record</span><br><span style="font-size:12px;color:var(--text-3)">Pro W-L gap (Laplace-smoothed)</span></td>
+          <td>Adjusted win-rate gap of at least 8 percentage points between the two fighters</td>
+          <td><span class="factor-range">60–72%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Cardio</span><br><span style="font-size:12px;color:var(--text-3)">Late-round output sustain</span></td>
+          <td>Cardio tier gap of 3+ (e.g. Tireless vs Fades). See <a href="cardio.html" style="color:var(--red)">cardio methodology</a>.</td>
+          <td><span class="factor-range">54–58%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Age</span><br><span style="font-size:12px;color:var(--text-3)">Years younger</span></td>
+          <td>1+ year age gap. Newcomer-discounted at gap &lt; 9 when either fighter has &lt;5 UFC fights.</td>
+          <td><span class="factor-range">52–70%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Win streak</span><br><span style="font-size:12px;color:var(--text-3)">Current consecutive wins</span></td>
+          <td>One fighter on a 2+ win streak that's longer than the opponent's</td>
+          <td><span class="factor-range">53–63%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Loss streak</span><br><span style="font-size:12px;color:var(--text-3)">Opponent on a skid</span></td>
+          <td>One fighter on a 2+ loss streak — fades the colder fighter</td>
+          <td><span class="factor-range">53–60%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Post-loss</span><br><span style="font-size:12px;color:var(--text-3)">Layoff after a loss</span></td>
+          <td>Asymmetric post-loss state with 6+ months of rust</td>
+          <td><span class="factor-range">52–58%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Stance + reach</span><br><span style="font-size:12px;color:var(--text-3)">Striking geometry</span></td>
+          <td>Mixed stances (southpaw vs orthodox) and/or 2"+ reach gap, when striking is in play</td>
+          <td><span class="factor-range">52–57%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">Strikes/min</span><br><span style="font-size:12px;color:var(--text-3)">SLpM differential</span></td>
+          <td>1.0+ strikes/min gap, when at least one fighter strikes meaningfully</td>
+          <td><span class="factor-range">52–55%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">TD defense</span><br><span style="font-size:12px;color:var(--text-3)">Takedown defense %</span></td>
+          <td>10+ percentage-point gap in takedown defense, when grappling is in play</td>
+          <td><span class="factor-range">52–56%</span></td>
+        </tr>
+        <tr>
+          <td><span class="factor-name">TD accuracy</span><br><span style="font-size:12px;color:var(--text-3)">Takedown finish %</span></td>
+          <td>15+ percentage-point gap in takedown accuracy, when grappling is in play</td>
+          <td><span class="factor-range">52–56%</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ============== Combination math ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>The math</div>
+    <h2>How factors combine into a verdict</h2>
+    <p>Each firing factor pushes the prior probability up or down using a Bayesian odds update. A single 60% edge raises the prior from 50% to 60%; two independent 60% edges raise it to roughly 69%, not 70%, because the second update is anchored to an already-shifted prior.</p>
+    <div class="formula">
+      <div class="formula-title">Per-factor update</div>
+      <div class="formula-eq">
+        prior <span class="op">×</span> factor_pct <span class="op">÷</span> ( prior <span class="op">×</span> factor_pct <span class="op">+</span> (1 − prior) <span class="op">×</span> (1 − factor_pct) )
+      </div>
+      <div class="formula-note">Applied iteratively across every firing factor, starting from a 50/50 prior.</div>
+    </div>
+    <p>Then a hard cap is applied: the verdict can never exceed the strongest single factor by more than 6 percentage points, and is bounded at 78% on top. This prevents stacked-edges runaway — ten weak edges shouldn't claim 95% confidence in a UFC fight where the floor of randomness is roughly 25%.</p>
+  </div>
+
+  <!-- ============== What we measured ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Track record</div>
+    <h2>What we measured against the full UFC history</h2>
+    <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database (8,343 predictions across 1994–now). Headline numbers from the most recent run:</p>
+    <div class="formula">
+      <div class="formula-title">Overall accuracy</div>
+      <div class="formula-eq">
+        <strong>66.2%</strong> correct on 8,343 historical predictions
+      </div>
+      <div class="formula-note">Baseline "always pick fighter A (red corner / favorite)" lands at 64.2%, so the model's edge over the trivial baseline is roughly +2pp. The model's real value is in the per-fight resolution — knowing <em>which</em> fights it's confident about — not the headline number.</div>
+    </div>
+    <p>Calibration check: in a well-calibrated model, predictions at confidence X% should win X% of the time. Here's what the most recent validation found:</p>
+    <table class="calib-table">
+      <thead>
+        <tr><th>Predicted confidence</th><th>Actual win rate</th><th>Fights in band</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="band">50–55%</td><td class="actual">53.4%</td><td>2,178</td></tr>
+        <tr><td class="band">55–60%</td><td class="actual">60.8%</td><td>2,028</td></tr>
+        <tr><td class="band">60–65%</td><td class="actual">69.4%</td><td>1,779</td></tr>
+        <tr><td class="band">65–70%</td><td class="actual">76.0%</td><td>1,491</td></tr>
+        <tr><td class="band">70–75%</td><td class="actual">85.8%</td><td>755</td></tr>
+        <tr><td class="band">75%+</td><td class="actual">96.4%</td><td>112</td></tr>
+      </tbody>
+    </table>
+    <p>Every confidence band lands inside or above its predicted range. High-confidence verdicts (70%+) are <em>under-stated</em> if anything — when the model says it's confident, history says listen.</p>
+  </div>
+
+  <!-- ============== How we keep tuning it ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>How we tune</div>
+    <h2>A concrete example: the age recalibration</h2>
+    <p>The age factor used to assign 55.9% to fighters with a 3–4 year age advantage. We extended the validation script to compute the <em>actual</em> historical win rate at every integer age gap among veteran fighters (5+ UFC fights on both sides), where the data is cleanest. The result:</p>
+    <div class="formula">
+      <div class="formula-title">Age gap → actual younger-fighter win rate (veterans only)</div>
+      <div class="formula-eq" style="font-size: 14px; line-height: 1.8;">
+        Gap 1–2 yrs: <strong>~52%</strong> · model said 52% — on<br>
+        Gap 3–4 yrs: <strong>~59%</strong> · model said 55.9% — undersold<br>
+        Gap 5–6 yrs: <strong>~57%</strong> · model said 58.2% — slightly oversold<br>
+        Gap 7–9 yrs: <strong>~64%</strong> · model said 63.3% — on<br>
+        Gap 10–11 yrs: <strong>~62%</strong> · model said 65.2% — oversold<br>
+        Gap 12+ yrs: <strong>~70%</strong> · model said 65.2% — undersold
+      </div>
+      <div class="formula-note">Source: research/validate.js. Veterans-only because newcomer fights are noisier (older newcomers often have more regional experience and outperform their age gap).</div>
+    </div>
+    <p>We shipped new tiers that match the measured rates. The newcomer discount used to apply uniformly; it now only fires at gap &lt; 9 years because the data shows newcomer fights with 9+ year age gaps actually have <em>higher</em> win rates for the younger fighter, not lower. The age edge function is open in <code>edges.js</code> — every line of the recalibration is reviewable.</p>
+    <p>This is what "open methodology" means in practice. Factors aren't tuned to vibes; they're tuned to the database, the tuning process is documented in code, and the validation rerun confirms the change improved calibration.</p>
+  </div>
+
+  <!-- ============== Honest limitations ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Honest limitations</div>
+    <h2>What this model can't do</h2>
+    <div class="caveat">
+      <div class="caveat-title">Validation uses current career stats on historical fights</div>
+      <p>When we score the model against a 2018 fight, we use the fighters' current career averages — not their stats as they existed in 2018. That introduces a measurable hindsight bias. Year-over-year accuracy in the validation report drifts higher for recent years, confirming the effect. Real fair-replay accuracy is lower than the 66% headline. We flag this prominently in <code>research/results.md</code>.</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">Streak edges were silently broken for months</div>
+      <p>The win-streak / loss-streak / post-loss factors are listed in <code>edges.js</code>, but a data-shape mismatch meant they returned null on every fight in production until we found it. We fixed the bug and ran validation again. We mention this because "we found and fixed it" is the right framing for a working methodology, not "our model is flawless."</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">MMA has an irreducible floor of randomness</div>
+      <p>Roughly a quarter of UFC fights are won by the statistical underdog. No model — ours, the betting market's, or anyone else's — will ever predict more than ~75% of fights correctly. Anything claiming 90%+ accuracy on a meaningful sample is wrong or overfit.</p>
+    </div>
+    <div class="caveat">
+      <div class="caveat-title">Past performance is not a guarantee</div>
+      <p>Calibration on 8,000+ historical fights tells you the model's confidence numbers are honest. It does not tell you any individual upcoming fight will go the way the model predicts. Read the verdict alongside the matchup story. Stats for entertainment purposes only. 1-800-GAMBLER.</p>
+    </div>
+  </div>
+
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+</script>
+</body>
+</html>

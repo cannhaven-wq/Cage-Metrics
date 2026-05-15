@@ -159,6 +159,7 @@ function regenerateSitemap(fighterUrls, eventUrls) {
     { loc: '/parlay.html',     priority: '0.7', changefreq: 'weekly' },
     { loc: '/fighter.html',    priority: '0.6', changefreq: 'daily' },
     { loc: '/event.html',      priority: '0.6', changefreq: 'daily' },
+    { loc: '/edges.html',      priority: '0.7', changefreq: 'monthly' },
     { loc: '/pricing.html',    priority: '0.5', changefreq: 'monthly' },
     { loc: '/about.html',      priority: '0.5', changefreq: 'monthly' },
     { loc: '/contact.html',    priority: '0.4', changefreq: 'monthly' },

@@ -58,6 +58,13 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/edges.html</loc>
+    <lastmod>2026-05-15</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/pricing.html</loc>
     <lastmod>2026-05-15</lastmod>
     <changefreq>monthly</changefreq>
