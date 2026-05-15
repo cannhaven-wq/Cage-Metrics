@@ -118,6 +118,42 @@
     return null;
   }
 
+  // FIGHTER FINISH HISTORY — does either fighter have a strong career
+  // tendency toward decisions vs finishes? Uses v_fighter_finish_rate
+  // (per-fighter career decision_rate / ko_tko_rate / sub_rate over all
+  // their UFC fights, both sides). Bayesian-shrunk toward the 0.5 prior
+  // so a fighter with 3-and-3 doesn't push the prediction as hard as one
+  // with 30-and-30.
+  //
+  // The factor blends both fighters' shrunken decision rates and converts
+  // the deviation from 0.5 into a probability shift. Capped to ±12pp so it
+  // can't dominate the prediction by itself.
+  function fighterFinishFactor(a, b, finishRateMap) {
+    if (!finishRateMap) return null;
+    const ra = finishRateMap[a.id];
+    const rb = finishRateMap[b.id];
+    if (!ra || !rb) return null;
+    if (ra.total_fights < 3 || rb.total_fights < 3) return null;
+    if (ra.decision_rate == null || rb.decision_rate == null) return null;
+
+    const ALPHA = 5;  // pseudo-count toward 0.5 prior
+    const shrunkA = (ra.total_fights * ra.decision_rate + ALPHA * 0.5) / (ra.total_fights + ALPHA);
+    const shrunkB = (rb.total_fights * rb.decision_rate + ALPHA * 0.5) / (rb.total_fights + ALPHA);
+    const avg = (shrunkA + shrunkB) / 2;
+
+    // Scale: avg of 0.7 → +6pp shift, avg of 0.3 → -6pp shift, capped at ±12.
+    let delta_pp = (avg - 0.5) * 30;
+    if (delta_pp >  12) delta_pp =  12;
+    if (delta_pp < -12) delta_pp = -12;
+    if (Math.abs(delta_pp) < 1) return null;
+
+    return {
+      factor: 'fighter_history',
+      delta_pp,
+      desc: 'career decisions: ' + Math.round(shrunkA * 100) + '% / ' + Math.round(shrunkB * 100) + '%',
+    };
+  }
+
   function computeDistance(a, b, fight, ctx) {
     ctx = ctx || {};
     const baseRate = baseDistanceRate(fight.weight_class);
@@ -125,6 +161,7 @@
     const factors = [
       cardioFactor(a, b, ctx.cardioMap || null, fight.weight_class),
       roundsFactor(fight),
+      fighterFinishFactor(a, b, ctx.finishRateMap || null),
     ].filter(Boolean);
 
     // Additive combination on the probability scale. Each factor's delta_pp
@@ -147,6 +184,7 @@
     cardioFor,
     cardioFactor,
     roundsFactor,
+    fighterFinishFactor,
     computeDistance,
   };
 

@@ -105,6 +105,17 @@ function bandFor(prob) {
   }
   console.log(`Got cardio for ${Object.keys(cardioMap).length} fighters.`);
 
+  console.log('Fetching fighter finish rates from v_fighter_finish_rate...');
+  const finishRateMap = {};
+  try {
+    const rates = await fetchAll(() => sb.from('v_fighter_finish_rate')
+      .select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate'));
+    for (const r of rates) finishRateMap[r.fighter_id] = r;
+    console.log(`Got finish-rate data for ${Object.keys(finishRateMap).length} fighters.`);
+  } catch (err) {
+    console.warn('Could not load v_fighter_finish_rate (view may not be deployed yet):', err.message);
+  }
+
   // Streaks intentionally empty — see file header.
   const streakMap = {};
 
@@ -259,7 +270,7 @@ function bandFor(prob) {
     // Distance predictor evaluation
     const methodClass = classifyMethod(fight.method);
     if (methodClass !== null) {
-      const distRes = cflDistanceEdges.computeDistance(a, b, fight, { cardioMap });
+      const distRes = cflDistanceEdges.computeDistance(a, b, fight, { cardioMap, finishRateMap });
       const predictedDistance = distRes.distanceProb >= 0.50;
       const wentDistance = methodClass === 'distance';
       const distCorrect = predictedDistance === wentDistance;
@@ -385,6 +396,13 @@ function bandFor(prob) {
   lines.push('Predicts whether a fight goes to a decision. Grading uses `fight.method`:');
   lines.push('"Decision..." → went distance, KO/TKO/Submission/DQ → ended early, NC/Other skipped.');
   lines.push('Same hindsight caveat as the winner verdict: cardio data is current, not point-in-time.');
+  lines.push('');
+  lines.push('**Additional caveat for the `fighter_history` factor**: `v_fighter_finish_rate`');
+  lines.push('aggregates over every fight a fighter has had, including the one being predicted.');
+  lines.push('So a fighter\'s decision_rate for fight X knows whether fight X went to decision');
+  lines.push('(diluted by N — for a fighter with 30 UFC fights, this is ~3% of their signal).');
+  lines.push('Bayesian shrinkage further dampens it. Real-world deployment accuracy will be');
+  lines.push('slightly lower than this number — exclude-current-fight rates are a follow-up.');
   lines.push('');
   lines.push(`- Predictions made: **${distance.total}**`);
   lines.push(`- Skipped (NC / unclear method): ${distance.skipped_unclear_method}`);

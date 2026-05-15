@@ -343,10 +343,12 @@ async function load() {
 
   const fighterIds = [...new Set((fights || []).flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
   let fighterMap = {};
-  // streakMap and cardioMap feed cflEdges.computeEdges. Empty objects are
-  // safe — edges.js short-circuits cleanly when a fighter is missing.
+  // streakMap, cardioMap, finishRateMap feed the verdict modules. Empty
+  // objects are safe — edges.js and distanceEdges.js both short-circuit
+  // cleanly when a fighter's entry is missing.
   let streakMap = {};
   let cardioMap = {};
+  let finishRateMap = {};
 
   if (fighterIds.length > 0) {
     // Need every column edges.js touches (age, reach, stance, striking/grappling
@@ -391,6 +393,19 @@ async function load() {
     } catch (e) {
       console.warn('Cardio data not available:', e.message);
     }
+
+    // Per-fighter career outcome breakdown — feeds distanceEdges' fighter_history factor.
+    try {
+      const { data: rates } = await sb
+        .from('v_fighter_finish_rate')
+        .select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate')
+        .in('fighter_id', fighterIds);
+      (rates || []).forEach(r => {
+        finishRateMap[r.fighter_id] = r;
+      });
+    } catch (e) {
+      console.warn('Fighter finish-rate data not available:', e.message);
+    }
   }
 
   updateEventSEO(event, fights, fighterMap);
@@ -403,13 +418,13 @@ async function load() {
     </div>
     <div class="page">
       <div id="fightsList">
-        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, event.event_date)).join('')}
+        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, event.event_date)).join('')}
       </div>
     </div>
   `;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, eventDate) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, eventDate) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -434,7 +449,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, eventDate) {
     ? `Round ${fight.end_round} · ${cfl.escapeHtml(fight.end_time || '—')}`
     : '';
 
-  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, eventDate);
+  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, eventDate);
 
   return `
     <div class="${cardClass}">
@@ -465,7 +480,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, eventDate) {
 // career stats, not stats as of the fight date. For very recent events that's
 // fine (career averages don't shift in 2 weeks). For older events this is
 // hindsight-biased, same issue as research/validate.js.
-function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, eventDate) {
+function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, eventDate) {
   let html = '';
 
   // Winner verdict (edges.js)
@@ -497,7 +512,7 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, eventDate)
 
   // Distance verdict (distanceEdges.js)
   if (window.cflDistanceEdges) {
-    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, { cardioMap });
+    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, { cardioMap, finishRateMap });
     const distPct = (distanceProb * 100).toFixed(0);
     const expectsDistance = distanceProb >= 0.50;
     const labelText = isUpcoming ? 'Distance' : 'Distance call';
