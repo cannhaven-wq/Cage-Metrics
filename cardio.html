@@ -419,6 +419,34 @@
 
 <div class="page">
 
+  <!-- ============== Live leaderboards (TOP — lead with the actual rankings) ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Right now in the UFC</div>
+    <h2>The leaderboards</h2>
+    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific.</p>
+    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;"><strong>Read the faders list first.</strong> That's where the metric earns its keep — Michael Chandler, Tyron Woodley, Cory Sandhagen are real, named, well-known cardio collapses, and the data ranks them where you'd expect. The elite list compresses at the score cap (most "tireless" fighters tie at 140), so it's a directional list of "these are good," not a ranking. We sort ties by deepest sample so the most-confident readings rise to the top.</p>
+    <div class="leaderboards">
+      <div class="leaderboard worst">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">▼ Worst cardio</div>
+          <div class="leaderboard-sub">Fades or collapses — fade candidates in deep waters</div>
+        </div>
+        <ul class="lb-list" id="lbWorst">
+          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
+        </ul>
+      </div>
+      <div class="leaderboard best">
+        <div class="leaderboard-header">
+          <div class="leaderboard-title">▲ Best cardio</div>
+          <div class="leaderboard-sub">Tireless or steady — output sustains late</div>
+        </div>
+        <ul class="lb-list" id="lbBest">
+          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
   <!-- ============== What it measures ============== -->
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>What it measures</div>
@@ -523,34 +551,6 @@
     </ul>
     <p>Most fight cards won't have a cardio edge listed because most fighters are within 1-2 tiers of each other. When you do see "Tireless cardio vs Tapers" or "Steady cardio vs Collapses" in the edge panel, that's a real, calibrated signal worth weighting in your bet.</p>
     <p style="font-size: 13px; color: var(--text-3); margin-top: 14px; line-height: 1.6;"><strong>What this metric is better at than rating:</strong> identifying faders. The bottom of the leaderboard below names known cardio collapses — Chandler, Woodley, Sandhagen — with real differentiation. The top compresses at the cap (most elite fighters tie at 140) because the metric measures consistency, not absolute output. For betting, the actionable signal is "lean against the fader," not "lean toward the elite."</p>
-  </div>
-
-  <!-- ============== Live leaderboards ============== -->
-  <div class="section">
-    <div class="section-eyebrow"><span class="dot"></span>Right now in the UFC</div>
-    <h2>The leaderboards</h2>
-    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific.</p>
-    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;"><strong>Read the faders list first.</strong> That's where the metric earns its keep — Michael Chandler, Tyron Woodley, Cory Sandhagen are real, named, well-known cardio collapses, and the data ranks them where you'd expect. The elite list compresses at the score cap (most "tireless" fighters tie at 140), so it's a directional list of "these are good," not a ranking. We sort ties by deepest sample so the most-confident readings rise to the top.</p>
-    <div class="leaderboards">
-      <div class="leaderboard worst">
-        <div class="leaderboard-header">
-          <div class="leaderboard-title">▼ Worst cardio</div>
-          <div class="leaderboard-sub">Fades or collapses — fade candidates in deep waters</div>
-        </div>
-        <ul class="lb-list" id="lbWorst">
-          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
-        </ul>
-      </div>
-      <div class="leaderboard best">
-        <div class="leaderboard-header">
-          <div class="leaderboard-title">▲ Best cardio</div>
-          <div class="leaderboard-sub">Tireless or steady — output sustains late</div>
-        </div>
-        <ul class="lb-list" id="lbBest">
-          <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
-        </ul>
-      </div>
-    </div>
   </div>
 
   <!-- ============== Caveats ============== -->
