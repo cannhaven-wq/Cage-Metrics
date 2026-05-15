@@ -1394,14 +1394,14 @@ async function loadFights(event) {
       .in('fighter_id', Array.from(fighterIds));
     (streaks || []).forEach(s => {
       // current_streak in the view is signed: +N for N consecutive wins,
-      // -N for N consecutive losses, 0 otherwise. Split into two non-negative
-      // fields so each edge function can reason about exactly the streak it
-      // cares about, with no sign-stripping confusion.
-      const raw = s.current_streak || 0;
+      // -N for N consecutive losses, 0 otherwise. Pass it through unmodified
+      // because that's exactly what edges.js (streakEdge, lossStreakEdge,
+      // postLossEdge) expects — they each derive the win or loss component
+      // they need from the sign. Splitting it here (as this file used to)
+      // silently disabled all three streak edges in production.
       streakMap[s.fighter_id] = {
         last_result: s.last_result,
-        win_streak: raw > 0 ? raw : 0,
-        loss_streak: raw < 0 ? Math.abs(raw) : 0,
+        current_streak: s.current_streak || 0,
         last_5: s.last_5,
       };
     });

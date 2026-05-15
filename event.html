@@ -352,19 +352,18 @@ async function load() {
       .in('id', fighterIds);
     (fighters || []).forEach(f => { fighterMap[f.id] = f; });
 
-    // Recent form (current_streak / last_result) — matches the shape used by
-    // index.html so verdicts stay consistent across pages.
+    // Recent form — pass current_streak through unmodified (signed: +N wins,
+    // -N losses). edges.js's three streak factors each derive what they need
+    // from the sign, so splitting it disables them silently.
     try {
       const { data: streaks } = await sb
         .from('v_fighter_recent_form')
         .select('fighter_id, last_result, current_streak, last_5')
         .in('fighter_id', fighterIds);
       (streaks || []).forEach(s => {
-        const raw = s.current_streak || 0;
         streakMap[s.fighter_id] = {
           last_result: s.last_result,
-          win_streak:  raw > 0 ? raw : 0,
-          loss_streak: raw < 0 ? Math.abs(raw) : 0,
+          current_streak: s.current_streak || 0,
           last_5: s.last_5,
         };
       });
