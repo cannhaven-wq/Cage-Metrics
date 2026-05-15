@@ -925,6 +925,30 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
+  .past-event-accuracy {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+  .past-event-accuracy .acc-pct {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .past-event-accuracy .acc-pct.good { color: var(--green); }
+  .past-event-accuracy .acc-pct.mid  { color: var(--amber); }
+  .past-event-accuracy .acc-pct.bad  { color: var(--red); }
+  .past-event-accuracy .acc-detail {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
   .past-event-empty {
     color: var(--text-3);
     text-align: center;
@@ -1013,16 +1037,13 @@
      RECAP — "How we did last event" card. Live from v_event_accuracy so
      it updates automatically after each card.
      ===================================================================== -->
-<section class="home-recap" id="homeRecap" hidden>
-  <div class="home-recap-card">
-    <div class="home-recap-icon" id="recapIcon">✓</div>
-    <div class="home-recap-body">
-      <div class="recap-eyebrow">Last event recap</div>
-      <h3 id="recapEventName">Loading…</h3>
-      <p id="recapDetail">Pulling latest verdict performance from the database.</p>
-    </div>
-    <div class="home-recap-pct" id="recapPct">—</div>
-  </div>
+<!-- =====================================================================
+     PAST PREDICTIONS — clickable cards for every event the model has
+     committed picks on. Replaces the single-event recap card.
+     ===================================================================== -->
+<section class="home-recap" id="pastPredictionsSection" hidden>
+  <div class="home-section-break-eyebrow" style="text-align: center; margin-bottom: 18px;">Track record</div>
+  <div class="past-events-grid" id="pastEventsGrid"></div>
 </section>
 
 <!-- =====================================================================
@@ -1082,22 +1103,6 @@
   </div>
 </div>
 
-<!-- =====================================================================
-     PAST PREDICTIONS — recent events the model called, click to view
-     ===================================================================== -->
-<div class="home-section-break" id="past-predictions">
-  <div class="home-section-break-eyebrow">Track record</div>
-  <h2>Past predictions</h2>
-  <p>Recent events the model called. Click any card to see the full breakdown.</p>
-</div>
-
-<div class="past-events-grid" id="pastEventsGrid">
-  <div class="loading-state" style="grid-column: 1 / -1; padding: 32px;">
-    <div class="loading-spinner"></div>
-    <div>Loading recent events…</div>
-  </div>
-</div>
-
 <footer class="cfl-footer"></footer>
 
 <script src="_shared.js"></script>
@@ -1145,51 +1150,83 @@ async function loadHomepageStats() {
     console.warn('[home] overall accuracy fetch failed', err);
   }
 
-  // Latest event recap from v_event_accuracy — drives the recap card
+  // Past predictions grid — every event with committed picks, most recent first.
+  // Each card is clickable and goes to event.html for the full breakdown.
+  await loadPastEvents();
+}
+
+async function loadPastEvents() {
+  const sb = window.cflSupabase;
+  const section = document.getElementById('pastPredictionsSection');
+  const grid = document.getElementById('pastEventsGrid');
+  if (!section || !grid) return;
+
+  let events;
   try {
-    const { data: events, error: evErr } = await sb
+    const { data, error } = await sb
       .from('v_event_accuracy')
       .select('event_id, event_name, event_date, committed_picks, hits, misses, accuracy_pct')
       .gt('committed_picks', 0)
       .order('event_date', { ascending: false })
-      .limit(1);
-
-    if (!evErr && events && events.length > 0) {
-      const ev = events[0];
-      const pct = Number(ev.accuracy_pct).toFixed(0);
-      const dateStr = new Date(ev.event_date + 'T00:00:00').toLocaleDateString('en-US', {
-        month: 'short', day: 'numeric', year: 'numeric'
-      });
-
-      document.getElementById('recapEventName').textContent = ev.event_name;
-      document.getElementById('recapDetail').innerHTML =
-        `<strong>${ev.hits} of ${ev.committed_picks} picks</strong> hit on ${dateStr}. ` +
-        `Every verdict was logged before the card — see the math on each fight.`;
-      document.getElementById('recapPct').innerHTML =
-        `${pct}<span class="small">%</span>`;
-
-      // Color the icon green for >=60%, amber for 50-59%, red for <50%
-      const iconEl = document.getElementById('recapIcon');
-      const pctNum = Number(ev.accuracy_pct);
-      if (pctNum < 50) {
-        iconEl.style.background = 'rgba(230, 57, 70, 0.12)';
-        iconEl.style.color = 'var(--red)';
-        iconEl.textContent = '!';
-        document.getElementById('recapPct').style.color = 'var(--red)';
-      } else if (pctNum < 60) {
-        iconEl.style.background = 'rgba(255, 181, 71, 0.12)';
-        iconEl.style.color = 'var(--amber)';
-        iconEl.textContent = '·';
-        document.getElementById('recapPct').style.color = 'var(--amber)';
-      }
-      // else: keep default green ✓ from CSS
-
-      document.getElementById('homeRecap').hidden = false;
-    }
-    // If no events have committed picks yet, leave the recap card hidden
+      .limit(6);
+    if (error) throw error;
+    events = data || [];
   } catch (err) {
-    console.warn('[home] event recap fetch failed', err);
+    console.warn('[home] past events fetch failed', err);
+    return;  // leave section hidden — nothing to show
   }
+
+  if (events.length === 0) return;  // keep section hidden until first event lands
+
+  // Main-event matchup + result for each event, batched.
+  const eventIds = events.map(e => e.event_id);
+  let mainByEvent = {};
+  try {
+    const { data: mains } = await sb
+      .from('fights')
+      .select('event_id, fighter_a_name, fighter_b_name, fighter_a_id, fighter_b_id, winner_id, method, end_round')
+      .in('event_id', eventIds)
+      .eq('is_main_event', true);
+    (mains || []).forEach(f => { mainByEvent[f.event_id] = f; });
+  } catch (err) {
+    console.warn('[home] main-event fetch failed', err);
+  }
+
+  grid.innerHTML = events.map(ev => {
+    const pctNum = Number(ev.accuracy_pct);
+    const pctClass = pctNum >= 60 ? 'good' : (pctNum >= 50 ? 'mid' : 'bad');
+    const accuracyHtml =
+      '<div class="past-event-accuracy">' +
+        '<span class="acc-pct ' + pctClass + '">' + pctNum.toFixed(0) + '%</span>' +
+        '<span class="acc-detail">' + ev.hits + ' of ' + ev.committed_picks + ' picks</span>' +
+      '</div>';
+
+    const m = mainByEvent[ev.event_id];
+    let mainHtml = '';
+    if (m) {
+      let resultLine;
+      if (m.winner_id) {
+        const winnerIsA = m.winner_id === m.fighter_a_id;
+        const winner = winnerIsA ? m.fighter_a_name : m.fighter_b_name;
+        const loser  = winnerIsA ? m.fighter_b_name : m.fighter_a_name;
+        const method = m.method ? ' — ' + cfl.escapeHtml(m.method) + (m.end_round ? ' R' + m.end_round : '') : '';
+        resultLine = '<strong>' + cfl.escapeHtml(winner) + '</strong> def. ' + cfl.escapeHtml(loser) + method;
+      } else {
+        resultLine = cfl.escapeHtml(m.fighter_a_name) + ' vs ' + cfl.escapeHtml(m.fighter_b_name);
+      }
+      mainHtml = '<div class="past-event-main">' + resultLine + '</div>';
+    }
+
+    return '<a class="past-event-card" href="' + cfl.eventUrl(ev.event_id) + '">' +
+      '<div class="past-event-eyebrow">' + cfl.escapeHtml(cfl.formatDate(ev.event_date)) + '</div>' +
+      '<div class="past-event-name">' + cfl.escapeHtml(ev.event_name) + '</div>' +
+      mainHtml +
+      accuracyHtml +
+      '<div class="past-event-cta">View card →</div>' +
+      '</a>';
+  }).join('');
+
+  section.hidden = false;
 }
 
 // Kick off homepage data load (parallel to next-event loader)
@@ -1242,74 +1279,8 @@ async function load() {
   }
 
   renderCountdown(event, isFallback);
-  // Kick off past-events fetch in parallel — it doesn't depend on the upcoming
-  // event load and rendering it sooner improves perceived loading state.
-  loadPastEvents();
   await loadFights(event);
   loadStatOfDay(event);
-}
-
-// Past events strip — recent completed events with their main-event result.
-// Just navigation; clicking through goes to event.html which renders the
-// actual fight outcomes. Showing the model's verdict next to each result
-// requires verdict infrastructure on event.html (separate change).
-async function loadPastEvents() {
-  const grid = document.getElementById('pastEventsGrid');
-  if (!grid) return;
-  const sb = window.cflSupabase;
-
-  const { data: events, error } = await sb
-    .from('events')
-    .select('id, name, event_date, location')
-    .eq('is_upcoming', false)
-    .order('event_date', { ascending: false })
-    .limit(6);
-
-  if (error) {
-    grid.innerHTML = '<div class="past-event-empty">Couldn\'t load past events: ' + cfl.escapeHtml(error.message) + '</div>';
-    return;
-  }
-  if (!events || events.length === 0) {
-    grid.innerHTML = '<div class="past-event-empty">No past events yet.</div>';
-    return;
-  }
-
-  // Pull the main-event fight for each past event so each card can show the
-  // headline matchup + result. One IN query for all of them.
-  const eventIds = events.map(e => e.id);
-  const { data: mainFights } = await sb
-    .from('fights')
-    .select('event_id, fighter_a_name, fighter_b_name, fighter_a_id, fighter_b_id, winner_id, method, end_round')
-    .in('event_id', eventIds)
-    .eq('is_main_event', true);
-
-  const mainByEvent = {};
-  (mainFights || []).forEach(f => { mainByEvent[f.event_id] = f; });
-
-  grid.innerHTML = events.map(e => {
-    const m = mainByEvent[e.id];
-    let mainHtml = '';
-    if (m) {
-      let resultLine;
-      if (m.winner_id) {
-        const winnerIsA = m.winner_id === m.fighter_a_id;
-        const winner = winnerIsA ? m.fighter_a_name : m.fighter_b_name;
-        const loser  = winnerIsA ? m.fighter_b_name : m.fighter_a_name;
-        const method = m.method ? ' — ' + cfl.escapeHtml(m.method) + (m.end_round ? ' R' + m.end_round : '') : '';
-        resultLine = '<strong>' + cfl.escapeHtml(winner) + '</strong> def. ' + cfl.escapeHtml(loser) + method;
-      } else {
-        resultLine = cfl.escapeHtml(m.fighter_a_name) + ' vs ' + cfl.escapeHtml(m.fighter_b_name);
-      }
-      mainHtml = '<div class="past-event-main">' + resultLine + '</div>';
-    }
-    return '<a class="past-event-card" href="' + cfl.eventUrl(e.id) + '">' +
-      '<div class="past-event-eyebrow">' + cfl.escapeHtml(cfl.formatDate(e.event_date)) + '</div>' +
-      '<div class="past-event-name">' + cfl.escapeHtml(e.name) + '</div>' +
-      '<div class="past-event-meta">' + cfl.escapeHtml(e.location || 'Location TBD') + '</div>' +
-      mainHtml +
-      '<div class="past-event-cta">View card →</div>' +
-      '</a>';
-  }).join('');
 }
 
 function renderCountdown(event, isFallback) {
