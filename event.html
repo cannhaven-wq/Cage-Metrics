@@ -210,6 +210,10 @@
   }
   .fight-verdict .check.correct { background: rgba(0,180,90,0.18); color: var(--green); }
   .fight-verdict .check.wrong   { background: rgba(255,56,56,0.18); color: var(--red); }
+  /* Distance band sits flush against the winner band (same fight card). */
+  .fight-verdict + .fight-verdict { padding-top: 8px; }
+  .fight-verdict.distance .pick strong { color: var(--text); font-weight: 700; }
+  .fight-verdict.distance .pick .pct { color: var(--red); margin-left: 6px; font-weight: 600; }
 
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
@@ -235,6 +239,7 @@
 <script src="_shared.js"></script>
 <script src="_auth.js"></script>
 <script src="edges.js"></script>
+<script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -452,40 +457,71 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, eventDate) {
   `;
 }
 
-// Renders the model-verdict band on each fight card. For upcoming fights this
-// is just the pick. For past fights with a known winner we also tag the band
-// with ✓ or ✗ comparing the model's pick to the actual outcome.
+// Renders the model-verdict band on each fight card — winner pick + distance
+// prediction stacked. For past fights with a known winner / method we tag
+// each band with ✓ or ✗ comparing the model's call to the actual outcome.
 //
 // Past-event caveat: verdicts here are computed against CURRENT fighter
 // career stats, not stats as of the fight date. For very recent events that's
 // fine (career averages don't shift in 2 weeks). For older events this is
 // hindsight-biased, same issue as research/validate.js.
 function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, eventDate) {
-  if (!window.cflEdges) return '';
-  const { edges, aProb } = window.cflEdges.computeEdges(a, b, {
-    streakMap,
-    cardioMap,
-    fightWeightClass: fight.weight_class,
-    eventDate,
-  });
+  let html = '';
 
-  if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
-    return '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
+  // Winner verdict (edges.js)
+  if (window.cflEdges) {
+    const { edges, aProb } = window.cflEdges.computeEdges(a, b, {
+      streakMap,
+      cardioMap,
+      fightWeightClass: fight.weight_class,
+      eventDate,
+    });
+
+    if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
+      html += '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
+    } else {
+      const pickIsA = aProb > 0.5;
+      const picked  = pickIsA ? a : b;
+      const confidence = ((pickIsA ? aProb : 1 - aProb) * 100).toFixed(1);
+      const labelText = isUpcoming ? 'Winner pick' : 'Winner picked';
+      const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span></span>`;
+
+      let checkHtml = '';
+      if (!isUpcoming && fight.winner_id != null) {
+        const correct = (pickIsA && fight.winner_id === a.id) || (!pickIsA && fight.winner_id === b.id);
+        checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
+      }
+      html += `<div class="fight-verdict"><span class="label">${labelText}</span>${pickHtml}${checkHtml}</div>`;
+    }
   }
 
-  const pickIsA = aProb > 0.5;
-  const picked  = pickIsA ? a : b;
-  const confidence = ((pickIsA ? aProb : 1 - aProb) * 100).toFixed(1);
-  const labelText = isUpcoming ? 'Model pick' : 'Model picked';
-  const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span></span>`;
+  // Distance verdict (distanceEdges.js)
+  if (window.cflDistanceEdges) {
+    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, { cardioMap });
+    const distPct = (distanceProb * 100).toFixed(0);
+    const expectsDistance = distanceProb >= 0.50;
+    const labelText = isUpcoming ? 'Distance' : 'Distance call';
+    const callText = expectsDistance
+      ? `<strong>Goes the distance</strong> <span class="pct">${distPct}%</span>`
+      : `<strong>Ends early</strong> <span class="pct">${(100 - distPct)}%</span>`;
 
-  let checkHtml = '';
-  if (!isUpcoming && fight.winner_id != null) {
-    const correct = (pickIsA && fight.winner_id === a.id) || (!pickIsA && fight.winner_id === b.id);
-    checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
+    let checkHtml = '';
+    if (!isUpcoming && fight.method) {
+      // Treat any "Decision …" as went-the-distance. KO / TKO / Submission /
+      // DQ / Doctor Stop all count as early finishes. NC / Other → skip the ✓/✗
+      // tag because we can't honestly grade an inconclusive method.
+      const m = fight.method;
+      const wentDistance = m.startsWith('Decision');
+      const endedEarly   = m.includes('KO') || m.includes('TKO') || m === 'Submission' || m === 'DQ' || m === "Doctor's Stoppage";
+      if (wentDistance || endedEarly) {
+        const correct = (expectsDistance && wentDistance) || (!expectsDistance && endedEarly);
+        checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
+      }
+    }
+    html += `<div class="fight-verdict distance"><span class="label">${labelText}</span><span class="pick">${callText}</span>${checkHtml}</div>`;
   }
 
-  return `<div class="fight-verdict"><span class="label">${labelText}</span>${pickHtml}${checkHtml}</div>`;
+  return html;
 }
 
 function renderFighterSide(f, side, won, opponentWon) {
