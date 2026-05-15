@@ -38,6 +38,7 @@ const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 const cflEdges = require('../edges');
+const cflDistanceEdges = require('../distanceEdges');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -82,7 +83,7 @@ function bandFor(prob) {
 
   console.log('Fetching decided fights...');
   const fights = await fetchAll(() => sb.from('fights')
-    .select('id, event_id, fighter_a_id, fighter_b_id, winner_id, weight_class, method')
+    .select('id, event_id, fighter_a_id, fighter_b_id, winner_id, weight_class, method, is_title_fight, is_main_event')
     .not('winner_id', 'is', null));
   console.log(`Got ${fights.length} decided fights.`);
 
@@ -133,6 +134,35 @@ function bandFor(prob) {
     if (!map[gap]) map[gap] = { n: 0, younger_wins: 0 };
     map[gap].n++;
     if (won) map[gap].younger_wins++;
+  }
+
+  // Distance predictor stats. The grading uses fight.method:
+  //   - method starts with "Decision" → went the distance
+  //   - method includes KO/TKO/Submission/DQ/Doctor's Stoppage → ended early
+  //   - everything else (NC, Other, null) → skipped
+  const distance = {
+    total: 0,
+    correct: 0,
+    actual_distance: 0,    // how often fights actually went distance
+    actual_early: 0,
+    skipped_unclear_method: 0,
+    by_band: {},           // calibration: in a model-said-60% band, what % actually went distance?
+    by_division: {},       // per-division accuracy + actual base rate
+  };
+  function bandForDist(p) {
+    if (p < 0.30) return '<30%';
+    if (p < 0.40) return '30-40%';
+    if (p < 0.50) return '40-50%';
+    if (p < 0.60) return '50-60%';
+    if (p < 0.70) return '60-70%';
+    if (p < 0.80) return '70-80%';
+    return '80%+';
+  }
+  function classifyMethod(m) {
+    if (!m) return null;
+    if (m.startsWith('Decision')) return 'distance';
+    if (m.includes('KO') || m.includes('TKO') || m === 'Submission' || m === 'DQ' || m === "Doctor's Stoppage") return 'early';
+    return null;  // NC, Other — skip from grading
   }
 
   for (const fight of fights) {
@@ -224,6 +254,35 @@ function bandFor(prob) {
       stats.by_factor_solo[e.factor].n++;
       stats.by_factor_solo[e.factor].pct_sum += e.pct;
       if (factorCorrect) stats.by_factor_solo[e.factor].correct++;
+    }
+
+    // Distance predictor evaluation
+    const methodClass = classifyMethod(fight.method);
+    if (methodClass !== null) {
+      const distRes = cflDistanceEdges.computeDistance(a, b, fight, { cardioMap });
+      const predictedDistance = distRes.distanceProb >= 0.50;
+      const wentDistance = methodClass === 'distance';
+      const distCorrect = predictedDistance === wentDistance;
+
+      distance.total++;
+      if (distCorrect) distance.correct++;
+      if (wentDistance) distance.actual_distance++; else distance.actual_early++;
+
+      // Calibration band — what % of fights in this model-probability band actually went distance?
+      const dband = bandForDist(distRes.distanceProb);
+      if (!distance.by_band[dband]) distance.by_band[dband] = { n: 0, went_distance: 0, predicted_correct: 0 };
+      distance.by_band[dband].n++;
+      if (wentDistance) distance.by_band[dband].went_distance++;
+      if (distCorrect) distance.by_band[dband].predicted_correct++;
+
+      // Per-division accuracy + actual base rate
+      const div = fight.weight_class || 'Unknown';
+      if (!distance.by_division[div]) distance.by_division[div] = { n: 0, went_distance: 0, correct: 0 };
+      distance.by_division[div].n++;
+      if (wentDistance) distance.by_division[div].went_distance++;
+      if (distCorrect) distance.by_division[div].correct++;
+    } else {
+      distance.skipped_unclear_method++;
     }
   }
 
@@ -321,6 +380,48 @@ function bandFor(prob) {
   }
   lines.push('');
 
+  lines.push('## Distance predictor (distanceEdges.js)');
+  lines.push('');
+  lines.push('Predicts whether a fight goes to a decision. Grading uses `fight.method`:');
+  lines.push('"Decision..." → went distance, KO/TKO/Submission/DQ → ended early, NC/Other skipped.');
+  lines.push('Same hindsight caveat as the winner verdict: cardio data is current, not point-in-time.');
+  lines.push('');
+  lines.push(`- Predictions made: **${distance.total}**`);
+  lines.push(`- Skipped (NC / unclear method): ${distance.skipped_unclear_method}`);
+  lines.push(`- Correct: **${distance.correct} (${pct(distance.correct, distance.total)})**`);
+  lines.push(`- Baseline (always pick "goes distance"): ${pct(distance.actual_distance, distance.total)}`);
+  lines.push(`- Baseline (always pick "ends early"):    ${pct(distance.actual_early, distance.total)}`);
+  lines.push('');
+  lines.push('### Calibration by predicted-distance band');
+  lines.push('');
+  lines.push('When model says distance probability is X%, what % of fights actually went distance?');
+  lines.push('Well-calibrated → "actual %" lands inside the band.');
+  lines.push('');
+  lines.push('| Band   | n      | actual went distance | predict accuracy |');
+  lines.push('|--------|--------|----------------------|------------------|');
+  const dbands = ['<30%', '30-40%', '40-50%', '50-60%', '60-70%', '70-80%', '80%+'];
+  for (const b of dbands) {
+    const s = distance.by_band[b];
+    if (!s) continue;
+    lines.push(`| ${b.padEnd(6)} | ${String(s.n).padEnd(6)} | ${pct(s.went_distance, s.n).padEnd(20)} | ${pct(s.predicted_correct, s.n)} |`);
+  }
+  lines.push('');
+  lines.push('### Per-division accuracy + actual base rate');
+  lines.push('');
+  lines.push('Compare the "actual distance rate" column to distanceEdges.js DIVISION_DISTANCE_RATE to');
+  lines.push('see if the hardcoded base rates need tuning.');
+  lines.push('');
+  lines.push('| Division              | n     | actual distance | predict accuracy |');
+  lines.push('|-----------------------|-------|-----------------|------------------|');
+  const divs = Object.keys(distance.by_division)
+    .filter(d => distance.by_division[d].n >= 50)
+    .sort((x, y) => distance.by_division[y].n - distance.by_division[x].n);
+  for (const d of divs) {
+    const s = distance.by_division[d];
+    lines.push(`| ${d.padEnd(21)} | ${String(s.n).padEnd(5)} | ${pct(s.went_distance, s.n).padEnd(15)} | ${pct(s.correct, s.n)} |`);
+  }
+  lines.push('');
+
   lines.push('## Age gap → younger-fighter win rate');
   lines.push('');
   lines.push('Independent of edges.js. For each integer year of age gap, what fraction of');
@@ -392,6 +493,7 @@ function bandFor(prob) {
     age_gap_all: ageGapAll,
     age_gap_veterans: ageGapVeterans,
     age_gap_newcomer: ageGapNewcomer,
+    distance: distance,
   }, null, 2));
   console.log('Wrote research/results.md and research/results.json');
 })().catch(err => {
