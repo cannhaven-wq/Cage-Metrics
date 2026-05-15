@@ -38,24 +38,26 @@
   'use strict';
 
   // Empirical baseline rates for the fraction of fights in each division that
-  // go to a decision. Hand-tuned from rough UFC historical norms — replace
-  // with live v_finish_rate_by_division values once that's plumbed in.
+  // go to a decision. v2 values calibrated against actual UFC history
+  // (research/results.md, "Per-division accuracy + actual base rate" table).
+  // Men's divisions are measured; Women's are still hand-estimates (small
+  // sample sizes; below the validate.js >=50-fight cutoff).
   const DIVISION_DISTANCE_RATE = {
-    'Heavyweight':            0.25,
-    'Light Heavyweight':      0.40,
-    'Middleweight':           0.45,
-    'Welterweight':           0.50,
-    'Lightweight':            0.52,
-    'Featherweight':          0.58,
-    'Bantamweight':           0.62,
-    'Flyweight':              0.65,
-    'Strawweight':            0.65,
-    "Women's Strawweight":    0.78,
-    "Women's Flyweight":      0.72,
-    "Women's Bantamweight":   0.68,
-    "Women's Featherweight":  0.65,
-    'Catch Weight':           0.50,
-    'Open Weight':            0.30,
+    'Heavyweight':            0.32,  // v2: was 0.25, measured 32.2%
+    'Light Heavyweight':      0.36,  // v2: was 0.40, measured 36.3%
+    'Middleweight':           0.40,  // v2: was 0.45, measured 40.1%
+    'Welterweight':           0.47,  // v2: was 0.50, measured 47.1%
+    'Lightweight':            0.48,  // v2: was 0.52, measured 47.8%
+    'Featherweight':          0.54,  // v2: was 0.58, measured 53.7%
+    'Bantamweight':           0.55,  // v2: was 0.62, measured 55.5%
+    'Flyweight':              0.58,  // v2: was 0.65, measured 57.8%
+    'Strawweight':            0.66,  // v2: was 0.65, measured 66.4%
+    "Women's Strawweight":    0.78,  // hand-estimate, small sample
+    "Women's Flyweight":      0.72,  // hand-estimate
+    "Women's Bantamweight":   0.68,  // hand-estimate
+    "Women's Featherweight":  0.65,  // hand-estimate
+    'Catch Weight':           0.49,  // v2: was 0.50, measured 48.7%
+    'Open Weight':            0.07,  // v2: was 0.30, measured 7.1% (early UFC tournaments)
   };
 
   const CARDIO_TIER_RANK = {
@@ -103,11 +105,12 @@
   }
 
   // ROUNDS / TITLE — title fights and 5-round main events tilt toward
-  // decisions. Title fights more strongly (championship caution: both
-  // fighters fight defensively to protect their position).
+  // decisions. The title bump used to be +6 but the 70-80% calibration band
+  // ended up worse than coin-flip (research/results.md) — the +6 was pushing
+  // fights into the over-confident zone. v2: dropped to +2.
   function roundsFactor(fight) {
     if (fight.is_title_fight) {
-      return { factor: 'title', delta_pp: 6, desc: 'title fight (5 rounds + championship caution)' };
+      return { factor: 'title', delta_pp: 2, desc: 'title fight (modest distance tilt)' };
     }
     if (fight.is_main_event) {
       return { factor: 'rounds', delta_pp: 2, desc: '5-round main event' };
