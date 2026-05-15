@@ -1,6 +1,6 @@
 # edges.js validation — phase 1 baseline
 
-Generated: 2026-05-15T19:20:02.462Z
+Generated: 2026-05-15T19:25:33.661Z
 
 **CAVEATS** (see header of `research/validate.js`):
 
@@ -122,16 +122,15 @@ Predicts whether a fight goes to a decision. Grading uses `fight.method`:
 "Decision..." → went distance, KO/TKO/Submission/DQ → ended early, NC/Other skipped.
 Same hindsight caveat as the winner verdict: cardio data is current, not point-in-time.
 
-**Additional caveat for the `fighter_history` factor**: `v_fighter_finish_rate`
-aggregates over every fight a fighter has had, including the one being predicted.
-So a fighter's decision_rate for fight X knows whether fight X went to decision
-(diluted by N — for a fighter with 30 UFC fights, this is ~3% of their signal).
-Bayesian shrinkage further dampens it. Real-world deployment accuracy will be
-slightly lower than this number — exclude-current-fight rates are a follow-up.
+The `fighter_history` factor uses `v_fighter_finish_rate` with the CURRENT fight
+subtracted from each fighter's totals (`rateExcludingFight`). So a fighter's
+decision_rate when predicting fight X reflects all their other fights but not X.
+No leakage. Production naturally has no leakage either — when predicting an
+upcoming fight, that fight isn't in the view yet.
 
 - Predictions made: **8367**
 - Skipped (NC / unclear method): 0
-- Correct: **5176 (61.9%)**
+- Correct: **4893 (58.5%)**
 - Baseline (always pick "goes distance"): 46.9%
 - Baseline (always pick "ends early"):    53.1%
 
@@ -142,12 +141,12 @@ Well-calibrated → "actual %" lands inside the band.
 
 | Band   | n      | actual went distance | predict accuracy |
 |--------|--------|----------------------|------------------|
-| <30%   | 587    | 17.0%                | 83.0% |
-| 30-40% | 1566   | 35.6%                | 64.4% |
-| 40-50% | 2926   | 42.9%                | 57.1% |
-| 50-60% | 2516   | 56.8%                | 56.8% |
-| 60-70% | 615    | 72.4%                | 72.4% |
-| 70-80% | 157    | 87.3%                | 87.3% |
+| <30%   | 522    | 23.8%                | 76.2% |
+| 30-40% | 1574   | 37.4%                | 62.6% |
+| 40-50% | 3026   | 45.1%                | 54.9% |
+| 50-60% | 2523   | 53.8%                | 53.8% |
+| 60-70% | 586    | 65.9%                | 65.9% |
+| 70-80% | 136    | 76.5%                | 76.5% |
 
 ### Per-division accuracy + actual base rate
 
@@ -156,17 +155,17 @@ see if the hardcoded base rates need tuning.
 
 | Division              | n     | actual distance | predict accuracy |
 |-----------------------|-------|-----------------|------------------|
-| Lightweight           | 1396  | 47.8%           | 64.0% |
-| Welterweight          | 1332  | 47.1%           | 61.8% |
+| Lightweight           | 1396  | 47.8%           | 55.1% |
+| Welterweight          | 1332  | 47.1%           | 54.9% |
 | Middleweight          | 1096  | 40.1%           | 59.9% |
-| Bantamweight          | 971   | 55.5%           | 56.8% |
-| Featherweight         | 845   | 53.7%           | 57.6% |
+| Bantamweight          | 971   | 55.5%           | 55.5% |
+| Featherweight         | 845   | 53.7%           | 53.7% |
 | Heavyweight           | 740   | 32.2%           | 67.8% |
 | Light Heavyweight     | 716   | 36.3%           | 63.7% |
-| Flyweight             | 664   | 57.8%           | 58.6% |
+| Flyweight             | 664   | 57.8%           | 58.1% |
 | Strawweight           | 357   | 66.4%           | 66.4% |
 | Open Weight           | 84    | 7.1%            | 92.9% |
-| Catch Weight          | 76    | 48.7%           | 67.1% |
+| Catch Weight          | 76    | 48.7%           | 57.9% |
 
 ## Age gap → younger-fighter win rate
 
