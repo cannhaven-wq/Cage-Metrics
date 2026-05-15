@@ -214,6 +214,36 @@
   .fight-verdict + .fight-verdict { padding-top: 8px; }
   .fight-verdict.distance .pick strong { color: var(--text); font-weight: 700; }
   .fight-verdict.distance .pick .pct { color: var(--red); margin-left: 6px; font-weight: 600; }
+  /* Market band — shows consensus odds + the model's edge over the market. */
+  .fight-verdict.market .market-odds {
+    color: var(--text-3);
+    font-family: 'Barlow Condensed', sans-serif;
+    margin-left: 4px;
+  }
+  .fight-verdict.market .edge {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: var(--text-2);
+    background: var(--bg);
+  }
+  .fight-verdict.market .edge.pos { color: var(--green); background: rgba(0,180,90,0.12); }
+  .fight-verdict.market .edge.neg { color: var(--red);   background: rgba(255,56,56,0.10); }
+  .fight-verdict.market .value-badge {
+    margin-left: 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: #1a1a1a;
+    background: var(--amber, #ffb547);
+    letter-spacing: 0.06em;
+  }
 
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
@@ -349,6 +379,7 @@ async function load() {
   let streakMap = {};
   let cardioMap = {};
   let finishRateMap = {};
+  let oddsMap = {};
 
   if (fighterIds.length > 0) {
     // Need every column edges.js touches (age, reach, stance, striking/grappling
@@ -408,6 +439,19 @@ async function load() {
     }
   }
 
+  // Market consensus odds for this event's fights (vig-removed, averaged
+  // across US books by the fetch-odds workflow). Missing rows are fine —
+  // the verdict band silently omits the market row when we have no data.
+  try {
+    const { data: odds } = await sb
+      .from('fight_odds')
+      .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at')
+      .eq('event_id', event.id);
+    (odds || []).forEach(r => { oddsMap[r.fight_id] = r; });
+  } catch (e) {
+    console.warn('Market odds not available:', e.message);
+  }
+
   updateEventSEO(event, fights, fighterMap);
 
   document.getElementById('content').innerHTML = `
@@ -418,13 +462,13 @@ async function load() {
     </div>
     <div class="page">
       <div id="fightsList">
-        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, event.event_date)).join('')}
+        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date)).join('')}
       </div>
     </div>
   `;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, eventDate) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -449,7 +493,8 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
     ? `Round ${fight.end_round} · ${cfl.escapeHtml(fight.end_time || '—')}`
     : '';
 
-  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, eventDate);
+  const odds = (oddsMap || {})[fight.id] || null;
+  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate);
 
   return `
     <div class="${cardClass}">
@@ -480,7 +525,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
 // career stats, not stats as of the fight date. For very recent events that's
 // fine (career averages don't shift in 2 weeks). For older events this is
 // hindsight-biased, same issue as research/validate.js.
-function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, eventDate) {
+function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, marketOdds, eventDate) {
   let html = '';
 
   // Winner verdict (edges.js)
@@ -534,6 +579,38 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
       }
     }
     html += `<div class="fight-verdict distance"><span class="label">${labelText}</span><span class="pick">${callText}</span>${checkHtml}</div>`;
+  }
+
+  // Market consensus + edge vs model. Skipped silently if we have no odds
+  // row for this fight (most past events won't, since we just started
+  // fetching). Edge is model probability minus market-implied probability,
+  // both expressed as the side the MODEL picks.
+  if (marketOdds && window.cflEdges) {
+    const { aProb } = window.cflEdges.computeEdges(a, b, {
+      streakMap, cardioMap, fightWeightClass: fight.weight_class, eventDate,
+    });
+    const modelPickA = aProb > 0.5;
+    const modelProb  = modelPickA ? aProb : (1 - aProb);
+    const marketProb = modelPickA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
+    const marketOddsAm = modelPickA ? marketOdds.american_odds_a : marketOdds.american_odds_b;
+    const pickedName = modelPickA ? a.name : b.name;
+    if (marketProb != null) {
+      const edgePp = (modelProb - marketProb) * 100;
+      const edgeRound = Math.round(edgePp);
+      // Sign formatting + value badge threshold (>=3pp model-over-market edge
+      // on the model's pick = "value bet")
+      const edgeStr = (edgeRound > 0 ? '+' : '') + edgeRound + 'pp';
+      const isValue = edgePp >= 3;
+      const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
+      const labelText = isUpcoming ? 'Market' : 'Closing market';
+      const valueBadge = isValue ? '<span class="value-badge">⚡ Value</span>' : '';
+      html += `<div class="fight-verdict market">
+        <span class="label">${labelText}</span>
+        <span class="pick">${cfl.escapeHtml(pickedName)} <span class="market-odds">${oddsStr}</span> <span class="pct">${Math.round(marketProb * 100)}%</span></span>
+        <span class="edge ${edgePp > 0 ? 'pos' : (edgePp < 0 ? 'neg' : '')}">Edge ${edgeStr}</span>
+        ${valueBadge}
+      </div>`;
+    }
   }
 
   return html;

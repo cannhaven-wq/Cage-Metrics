@@ -1,0 +1,45 @@
+name: Fetch UFC odds
+
+# Pulls current moneyline odds from The Odds API and upserts a per-fight
+# consensus into Supabase (fight_odds table). Runs every 6 hours and on
+# manual trigger. The script writes via the Supabase service-role key
+# (kept in GitHub Secrets) which bypasses RLS — it never appears in the
+# repo or the browser.
+#
+# Cost: 1 Odds API request per run. Free tier is 500/month; 4 runs/day
+# is 120/month, leaving 380 headroom for manual fight-night refreshes.
+
+on:
+  schedule:
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read  # script writes to Supabase, never to the repo
+
+concurrency:
+  group: odds
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Fetch and upsert odds
+        working-directory: build
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node fetch-odds.js

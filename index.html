@@ -563,6 +563,57 @@
     color: var(--red);
     letter-spacing: 0.5px;
   }
+  /* Market consensus row — sits below the distance row, same hierarchy. */
+  .market-summary {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .market-summary .market-label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+  .market-summary .market-pick {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: 0.3px;
+  }
+  .market-summary .market-odds { color: var(--text-3); margin-left: 4px; font-weight: 700; }
+  .market-summary .market-pct  { color: var(--text-3); margin-left: 4px; font-weight: 700; }
+  .market-summary .market-edge {
+    margin-left: auto;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: var(--text-2);
+    background: var(--bg);
+  }
+  .market-summary .market-edge.pos { color: var(--green); background: rgba(0,180,90,0.12); }
+  .market-summary .market-edge.neg { color: var(--red);   background: rgba(255,56,56,0.10); }
+  .market-summary .market-value-badge {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 6px;
+    color: #1a1a1a;
+    background: var(--amber, #ffb547);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
   .edge-summary .verdict-pct .small {
     font-size: 14px;
     color: var(--text-3);
@@ -1460,10 +1511,12 @@ async function loadFights(event) {
   _cardioMap = null;
   _styleMap  = null;
   _finishRateMap = null;
+  _oddsMap = null;
   await Promise.all([
     loadCardioMap(fighterIds),
     loadStyleMap(fighterIds),
     loadFinishRateMap(fighterIds),
+    loadOddsMap(event.id),
   ]);
 
   list.innerHTML = fights.map(fight =>
@@ -1659,6 +1712,35 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate) {
     `;
   }
 
+  // Market consensus row — shows the book's implied probability on the
+  // MODEL'S pick, plus the edge in pp. Value badge if model is >=3pp
+  // above the market on its own pick. Silently omitted if we have no
+  // odds row for this fight.
+  let marketHtml = '';
+  const oddsRow = _oddsMap && fight && fight.id ? _oddsMap[fight.id] : null;
+  if (oddsRow && verdictClass !== 'even') {
+    const modelPickA = aProb > 0.5;
+    const marketProb = modelPickA ? oddsRow.implied_prob_a : oddsRow.implied_prob_b;
+    const marketOddsAm = modelPickA ? oddsRow.american_odds_a : oddsRow.american_odds_b;
+    if (marketProb != null) {
+      const edgePp = (verdictPct / 100 - marketProb) * 100;
+      const edgeRound = Math.round(edgePp);
+      const edgeStr = (edgeRound > 0 ? '+' : '') + edgeRound + 'pp';
+      const isValue = edgePp >= 3;
+      const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
+      const valueBadge = isValue ? '<span class="market-value-badge">⚡ Value</span>' : '';
+      const edgeClass = edgePp > 0 ? 'pos' : (edgePp < 0 ? 'neg' : '');
+      marketHtml = `
+        <div class="market-summary">
+          <div class="market-label">Market</div>
+          <div class="market-pick">${cfl.escapeHtml(verdictName)} <span class="market-odds">${oddsStr}</span> <span class="market-pct">${Math.round(marketProb * 100)}%</span></div>
+          <div class="market-edge ${edgeClass}">Edge ${edgeStr}</div>
+          ${valueBadge}
+        </div>
+      `;
+    }
+  }
+
   return `
     <div class="edge-panel">
       <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
@@ -1670,6 +1752,7 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate) {
         <div class="verdict-pct ${verdictClass}">${Math.round(verdictPct)}<span class="small">%</span></div>
       </div>
       ${distanceHtml}
+      ${marketHtml}
     </div>
   `;
 }
@@ -1698,6 +1781,27 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate) {
 let _cardioMap = null;
 let _styleMap  = null;
 let _finishRateMap = null;
+let _oddsMap = null;
+
+async function loadOddsMap(eventId) {
+  if (_oddsMap !== null) return _oddsMap;
+  const sb = window.cflSupabase;
+  _oddsMap = {};
+  try {
+    const { data, error } = await sb
+      .from('fight_odds')
+      .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b')
+      .eq('event_id', eventId);
+    if (error) {
+      console.warn('Market odds not available:', error.message);
+      return _oddsMap;
+    }
+    (data || []).forEach(r => { _oddsMap[r.fight_id] = r; });
+  } catch (e) {
+    console.warn('Market odds not available:', e.message);
+  }
+  return _oddsMap;
+}
 
 async function loadFinishRateMap(fighterIds) {
   if (_finishRateMap !== null) return _finishRateMap;
