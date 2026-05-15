@@ -874,6 +874,64 @@
     font-size: 14px;
     margin: 0;
   }
+  /* Past-predictions card grid */
+  .past-events-grid {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px 56px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 14px;
+  }
+  .past-event-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .past-event-card:hover { border-color: var(--red); transform: translateY(-2px); }
+  .past-event-eyebrow {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .past-event-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.15;
+    margin-bottom: 8px;
+  }
+  .past-event-meta {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-bottom: 14px;
+  }
+  .past-event-main { font-size: 13px; color: var(--text-2); line-height: 1.4; }
+  .past-event-main strong { color: var(--text); font-weight: 600; }
+  .past-event-cta {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--red);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .past-event-empty {
+    color: var(--text-3);
+    text-align: center;
+    padding: 32px;
+    font-size: 13px;
+    grid-column: 1 / -1;
+  }
   /* Mobile responsive */
   @media (max-width: 900px) {
     .home-hero-inner {
@@ -1024,6 +1082,22 @@
   </div>
 </div>
 
+<!-- =====================================================================
+     PAST PREDICTIONS — recent events the model called, click to view
+     ===================================================================== -->
+<div class="home-section-break" id="past-predictions">
+  <div class="home-section-break-eyebrow">Track record</div>
+  <h2>Past predictions</h2>
+  <p>Recent events the model called. Click any card to see the full breakdown.</p>
+</div>
+
+<div class="past-events-grid" id="pastEventsGrid">
+  <div class="loading-state" style="grid-column: 1 / -1; padding: 32px;">
+    <div class="loading-spinner"></div>
+    <div>Loading recent events…</div>
+  </div>
+</div>
+
 <footer class="cfl-footer"></footer>
 
 <script src="_shared.js"></script>
@@ -1168,8 +1242,74 @@ async function load() {
   }
 
   renderCountdown(event, isFallback);
+  // Kick off past-events fetch in parallel — it doesn't depend on the upcoming
+  // event load and rendering it sooner improves perceived loading state.
+  loadPastEvents();
   await loadFights(event);
   loadStatOfDay(event);
+}
+
+// Past events strip — recent completed events with their main-event result.
+// Just navigation; clicking through goes to event.html which renders the
+// actual fight outcomes. Showing the model's verdict next to each result
+// requires verdict infrastructure on event.html (separate change).
+async function loadPastEvents() {
+  const grid = document.getElementById('pastEventsGrid');
+  if (!grid) return;
+  const sb = window.cflSupabase;
+
+  const { data: events, error } = await sb
+    .from('events')
+    .select('id, name, event_date, location')
+    .eq('is_upcoming', false)
+    .order('event_date', { ascending: false })
+    .limit(6);
+
+  if (error) {
+    grid.innerHTML = '<div class="past-event-empty">Couldn\'t load past events: ' + cfl.escapeHtml(error.message) + '</div>';
+    return;
+  }
+  if (!events || events.length === 0) {
+    grid.innerHTML = '<div class="past-event-empty">No past events yet.</div>';
+    return;
+  }
+
+  // Pull the main-event fight for each past event so each card can show the
+  // headline matchup + result. One IN query for all of them.
+  const eventIds = events.map(e => e.id);
+  const { data: mainFights } = await sb
+    .from('fights')
+    .select('event_id, fighter_a_name, fighter_b_name, fighter_a_id, fighter_b_id, winner_id, method, end_round')
+    .in('event_id', eventIds)
+    .eq('is_main_event', true);
+
+  const mainByEvent = {};
+  (mainFights || []).forEach(f => { mainByEvent[f.event_id] = f; });
+
+  grid.innerHTML = events.map(e => {
+    const m = mainByEvent[e.id];
+    let mainHtml = '';
+    if (m) {
+      let resultLine;
+      if (m.winner_id) {
+        const winnerIsA = m.winner_id === m.fighter_a_id;
+        const winner = winnerIsA ? m.fighter_a_name : m.fighter_b_name;
+        const loser  = winnerIsA ? m.fighter_b_name : m.fighter_a_name;
+        const method = m.method ? ' — ' + cfl.escapeHtml(m.method) + (m.end_round ? ' R' + m.end_round : '') : '';
+        resultLine = '<strong>' + cfl.escapeHtml(winner) + '</strong> def. ' + cfl.escapeHtml(loser) + method;
+      } else {
+        resultLine = cfl.escapeHtml(m.fighter_a_name) + ' vs ' + cfl.escapeHtml(m.fighter_b_name);
+      }
+      mainHtml = '<div class="past-event-main">' + resultLine + '</div>';
+    }
+    return '<a class="past-event-card" href="' + cfl.eventUrl(e.id) + '">' +
+      '<div class="past-event-eyebrow">' + cfl.escapeHtml(cfl.formatDate(e.event_date)) + '</div>' +
+      '<div class="past-event-name">' + cfl.escapeHtml(e.name) + '</div>' +
+      '<div class="past-event-meta">' + cfl.escapeHtml(e.location || 'Location TBD') + '</div>' +
+      mainHtml +
+      '<div class="past-event-cta">View card →</div>' +
+      '</a>';
+  }).join('');
 }
 
 function renderCountdown(event, isFallback) {
