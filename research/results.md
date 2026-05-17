@@ -1,6 +1,6 @@
 # edges.js validation — phase 1 baseline
 
-Generated: 2026-05-15T19:25:33.661Z
+Generated: 2026-05-17T13:49:35.731Z
 
 **CAVEATS** (see header of `research/validate.js`):
 
@@ -10,11 +10,11 @@ Generated: 2026-05-15T19:25:33.661Z
 
 ## Headline
 
-- Decided fights in DB: **8533**
+- Decided fights in DB: **8546**
 - Skipped (missing fighter or event row): 0
-- Skipped (no edges fired): 166
-- Predictions made: **8367**
-- Predictions correct: **5508 (65.8%)**
+- Skipped (no edges fired): 1891
+- Predictions made: **6655**
+- Predictions correct: **4552 (68.4%)**
 
 Sanity: fighter A wins in **64.2%** of decided fights — should be near 50% if A/B labelling is random.
 
@@ -24,12 +24,12 @@ Does a 65% verdict actually win 65% of the time? If yes, model is calibrated.
 
 | Band     | n      | accuracy | expected |
 |----------|--------|----------|----------|
-| 50-55%   | 2116   | 53.2%    | 50%+     |
-| 55-60%   | 1908   | 59.9%    | 55%+     |
-| 60-65%   | 1852   | 68.1%    | 60%+     |
-| 65-70%   | 1281   | 75.3%    | 65%+     |
-| 70-75%   | 967    | 82.9%    | 70%+     |
-| 75%+     | 243    | 87.7%    | 75+%+    |
+| 50-55%   | 1952   | 55.9%    | 50%+     |
+| 55-60%   | 1614   | 64.7%    | 55%+     |
+| 60-65%   | 1676   | 72.7%    | 60%+     |
+| 65-70%   | 1008   | 81.6%    | 65%+     |
+| 70-75%   | 399    | 92.7%    | 70%+     |
+| 75%+     | 6      | 100.0%   | 75+%+    |
 
 ## Accuracy by year
 
@@ -38,55 +38,55 @@ the current-stats-on-old-fights problem is significant.
 
 | Year | n     | accuracy |
 |------|-------|----------|
-| 1994 | 22    | 86.4% |
-| 1995 | 34    | 79.4% |
-| 1996 | 38    | 81.6% |
-| 1997 | 37    | 86.5% |
-| 1998 | 25    | 76.0% |
-| 1999 | 40    | 72.5% |
-| 2000 | 41    | 70.7% |
-| 2001 | 39    | 69.2% |
-| 2002 | 52    | 65.4% |
-| 2003 | 39    | 69.2% |
-| 2004 | 37    | 62.2% |
-| 2005 | 78    | 76.9% |
-| 2006 | 155   | 57.4% |
-| 2007 | 168   | 70.8% |
-| 2008 | 198   | 67.7% |
-| 2009 | 210   | 63.3% |
-| 2010 | 246   | 60.6% |
-| 2011 | 292   | 58.9% |
-| 2012 | 330   | 62.7% |
-| 2013 | 365   | 64.7% |
-| 2014 | 486   | 59.9% |
-| 2015 | 456   | 62.3% |
-| 2016 | 476   | 64.7% |
-| 2017 | 437   | 65.2% |
-| 2018 | 460   | 63.5% |
-| 2019 | 495   | 64.6% |
-| 2020 | 436   | 66.1% |
-| 2021 | 487   | 63.7% |
-| 2022 | 491   | 65.6% |
-| 2023 | 494   | 71.5% |
-| 2024 | 507   | 68.6% |
-| 2025 | 509   | 73.7% |
-| 2026 | 187   | 72.7% |
+| 1994 | 20    | 95.0% |
+| 1995 | 31    | 90.3% |
+| 1996 | 31    | 90.3% |
+| 1997 | 31    | 83.9% |
+| 1998 | 23    | 78.3% |
+| 1999 | 39    | 69.2% |
+| 2000 | 38    | 71.1% |
+| 2001 | 38    | 68.4% |
+| 2002 | 43    | 65.1% |
+| 2003 | 32    | 71.9% |
+| 2004 | 28    | 78.6% |
+| 2005 | 75    | 73.3% |
+| 2006 | 130   | 63.1% |
+| 2007 | 136   | 65.4% |
+| 2008 | 165   | 64.8% |
+| 2009 | 165   | 70.3% |
+| 2010 | 201   | 64.2% |
+| 2011 | 230   | 61.7% |
+| 2012 | 269   | 63.6% |
+| 2013 | 299   | 67.6% |
+| 2014 | 369   | 65.9% |
+| 2015 | 368   | 63.6% |
+| 2016 | 354   | 63.6% |
+| 2017 | 345   | 66.7% |
+| 2018 | 350   | 66.0% |
+| 2019 | 389   | 63.2% |
+| 2020 | 330   | 66.1% |
+| 2021 | 371   | 69.0% |
+| 2022 | 378   | 68.0% |
+| 2023 | 386   | 73.8% |
+| 2024 | 406   | 76.1% |
+| 2025 | 417   | 78.4% |
+| 2026 | 168   | 75.0% |
 
 ## Accuracy by division
 
 | Division              | n     | accuracy |
 |-----------------------|-------|----------|
-| Lightweight           | 1396  | 66.7% |
-| Welterweight          | 1332  | 65.0% |
-| Middleweight          | 1096  | 62.3% |
-| Bantamweight          | 971   | 66.2% |
-| Featherweight         | 845   | 67.0% |
-| Heavyweight           | 740   | 67.8% |
-| Light Heavyweight     | 716   | 64.5% |
-| Flyweight             | 664   | 65.2% |
-| Strawweight           | 357   | 66.7% |
-| Open Weight           | 84    | 84.5% |
-| Catch Weight          | 76    | 68.4% |
+| Lightweight           | 1112  | 67.5% |
+| Welterweight          | 1041  | 64.7% |
+| Middleweight          | 888   | 66.6% |
+| Bantamweight          | 766   | 71.7% |
+| Featherweight         | 667   | 67.6% |
+| Heavyweight           | 601   | 67.6% |
+| Light Heavyweight     | 556   | 71.6% |
+| Flyweight             | 534   | 70.6% |
+| Strawweight           | 285   | 70.2% |
+| Open Weight           | 74    | 90.5% |
+| Catch Weight          | 63    | 66.7% |
 
 ## Per-factor accuracy
 
@@ -95,13 +95,9 @@ confidence the model assigned this factor — a well-calibrated factor has accur
 
 | Factor        | n      | accuracy | pct_avg |
 |---------------|--------|----------|---------|
-| age           | 7650   | 57.4%    | 56.7%   |
-| stance_reach  | 5550   | 53.4%    | 52.5%   |
-| td_def        | 4869   | 60.7%    | 54.2%   |
-| slpm          | 4253   | 64.8%    | 52.7%   |
-| record        | 3763   | 75.5%    | 62.1%   |
-| td_acc        | 3569   | 58.8%    | 53.6%   |
-| cardio        | 521    | 60.5%    | 54.8%   |
+| td_def        | 4905   | 60.7%    | 54.2%   |
+| record        | 3767   | 75.5%    | 62.1%   |
+| cardio        | 524    | 60.1%    | 54.8%   |
 
 ## Per-factor accuracy — SOLO edge fights only
 
@@ -109,12 +105,9 @@ Same metric but filtered to fights where this was the ONLY factor firing. Cleane
 
 | Factor        | n      | accuracy | pct_avg |
 |---------------|--------|----------|---------|
-| age           | 224    | 46.4%    | 57.2%   |
-| record        | 62     | 91.9%    | 64.9%   |
-| stance_reach  | 45     | 64.4%    | 52.8%   |
-| slpm          | 16     | 43.8%    | 52.2%   |
-| td_def        | 15     | 60.0%    | 55.1%   |
-| td_acc        | 8      | 50.0%    | 53.5%   |
+| td_def        | 2570   | 59.0%    | 54.2%   |
+| record        | 1510   | 75.8%    | 62.1%   |
+| cardio        | 149    | 58.4%    | 54.7%   |
 
 ## Distance predictor (distanceEdges.js)
 
@@ -128,11 +121,11 @@ decision_rate when predicting fight X reflects all their other fights but not X.
 No leakage. Production naturally has no leakage either — when predicting an
 upcoming fight, that fight isn't in the view yet.
 
-- Predictions made: **8367**
+- Predictions made: **6655**
 - Skipped (NC / unclear method): 0
-- Correct: **4893 (58.5%)**
-- Baseline (always pick "goes distance"): 46.9%
-- Baseline (always pick "ends early"):    53.1%
+- Correct: **3859 (58.0%)**
+- Baseline (always pick "goes distance"): 46.2%
+- Baseline (always pick "ends early"):    53.8%
 
 ### Calibration by predicted-distance band
 
@@ -141,12 +134,12 @@ Well-calibrated → "actual %" lands inside the band.
 
 | Band   | n      | actual went distance | predict accuracy |
 |--------|--------|----------------------|------------------|
-| <30%   | 522    | 23.8%                | 76.2% |
-| 30-40% | 1574   | 37.4%                | 62.6% |
-| 40-50% | 3026   | 45.1%                | 54.9% |
-| 50-60% | 2523   | 53.8%                | 53.8% |
-| 60-70% | 586    | 65.9%                | 65.9% |
-| 70-80% | 136    | 76.5%                | 76.5% |
+| <30%   | 424    | 22.2%                | 77.8% |
+| 30-40% | 1268   | 37.1%                | 62.9% |
+| 40-50% | 2408   | 45.4%                | 54.6% |
+| 50-60% | 1987   | 52.9%                | 52.9% |
+| 60-70% | 474    | 62.7%                | 62.7% |
+| 70-80% | 94     | 73.4%                | 73.4% |
 
 ### Per-division accuracy + actual base rate
 
@@ -155,17 +148,17 @@ see if the hardcoded base rates need tuning.
 
 | Division              | n     | actual distance | predict accuracy |
 |-----------------------|-------|-----------------|------------------|
-| Lightweight           | 1396  | 47.8%           | 55.1% |
-| Welterweight          | 1332  | 47.1%           | 54.9% |
-| Middleweight          | 1096  | 40.1%           | 59.9% |
-| Bantamweight          | 971   | 55.5%           | 55.5% |
-| Featherweight         | 845   | 53.7%           | 53.7% |
-| Heavyweight           | 740   | 32.2%           | 67.8% |
-| Light Heavyweight     | 716   | 36.3%           | 63.7% |
-| Flyweight             | 664   | 57.8%           | 58.1% |
-| Strawweight           | 357   | 66.4%           | 66.4% |
-| Open Weight           | 84    | 7.1%            | 92.9% |
-| Catch Weight          | 76    | 48.7%           | 57.9% |
+| Lightweight           | 1112  | 48.6%           | 54.0% |
+| Welterweight          | 1041  | 47.0%           | 54.9% |
+| Middleweight          | 888   | 39.9%           | 60.1% |
+| Bantamweight          | 766   | 55.1%           | 55.1% |
+| Featherweight         | 667   | 52.6%           | 52.3% |
+| Heavyweight           | 601   | 30.9%           | 69.1% |
+| Light Heavyweight     | 556   | 36.0%           | 64.0% |
+| Flyweight             | 534   | 55.2%           | 55.6% |
+| Strawweight           | 285   | 62.5%           | 62.5% |
+| Open Weight           | 74    | 6.8%            | 93.2% |
+| Catch Weight          | 63    | 50.8%           | 57.1% |
 
 ## Age gap → younger-fighter win rate
 
@@ -184,17 +177,17 @@ Compare each row to the model's assigned `pct`:
 
 | Age gap | n     | younger wins |
 |---------|-------|--------------|
-| 1       | 1264  | 53.0% |
-| 2       | 1204  | 51.9% |
-| 3       | 1089  | 56.8% |
-| 4       | 902   | 57.1% |
-| 5       | 834   | 55.6% |
-| 6       | 650   | 59.8% |
-| 7       | 499   | 59.5% |
+| 1       | 1265  | 53.0% |
+| 2       | 1209  | 52.0% |
+| 3       | 1092  | 56.8% |
+| 4       | 904   | 57.1% |
+| 5       | 836   | 55.7% |
+| 6       | 652   | 59.8% |
+| 7       | 498   | 59.4% |
 | 8       | 410   | 62.7% |
 | 9       | 295   | 66.1% |
 | 10      | 199   | 66.8% |
-| 11      | 139   | 64.7% |
+| 11      | 140   | 64.3% |
 | 12+     | 271   | 70.1% |
 
 ### Veterans only (both fighters have 5+ UFC fights)
@@ -203,13 +196,13 @@ Cleaner signal — strips out the newcomer cohort where younger isn't reliably b
 
 | Age gap | n     | younger wins |
 |---------|-------|--------------|
-| 1       | 828   | 53.5% |
-| 2       | 817   | 51.7% |
-| 3       | 742   | 58.2% |
-| 4       | 594   | 59.4% |
-| 5       | 553   | 54.6% |
-| 6       | 448   | 59.2% |
-| 7       | 327   | 62.4% |
+| 1       | 826   | 53.4% |
+| 2       | 821   | 51.8% |
+| 3       | 744   | 58.2% |
+| 4       | 596   | 59.2% |
+| 5       | 552   | 54.7% |
+| 6       | 450   | 59.1% |
+| 7       | 326   | 62.3% |
 | 8       | 284   | 64.8% |
 | 9       | 206   | 65.0% |
 | 10      | 137   | 64.2% |
@@ -220,17 +213,17 @@ Cleaner signal — strips out the newcomer cohort where younger isn't reliably b
 
 | Age gap | n     | younger wins |
 |---------|-------|--------------|
-| 1       | 436   | 52.1% |
-| 2       | 387   | 52.5% |
-| 3       | 347   | 53.9% |
-| 4       | 308   | 52.6% |
-| 5       | 281   | 57.7% |
+| 1       | 439   | 52.2% |
+| 2       | 388   | 52.6% |
+| 3       | 348   | 53.7% |
+| 4       | 308   | 52.9% |
+| 5       | 284   | 57.7% |
 | 6       | 202   | 61.4% |
 | 7       | 172   | 54.1% |
 | 8       | 126   | 57.9% |
 | 9       | 89    | 68.5% |
 | 10      | 62    | 72.6% |
-| 11      | 45    | 73.3% |
+| 11      | 46    | 71.7% |
 | 12+     | 89    | 69.7% |
 
 ## Edge-count distribution
@@ -239,12 +232,8 @@ How many edges fired per fight?
 
 | Edges per fight | count |
 |-----------------|-------|
-| 0               | 41 |
-| 1               | 370 |
-| 2               | 1250 |
-| 3               | 2329 |
-| 4               | 2546 |
-| 5               | 1523 |
-| 6               | 456 |
-| 7               | 18 |
+| 0               | 1879 |
+| 1               | 4229 |
+| 2               | 2319 |
+| 3               | 119 |
 

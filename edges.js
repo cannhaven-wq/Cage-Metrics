@@ -15,15 +15,13 @@
 //
 // CONTEXT object (`ctx`) shape:
 //   {
-//     streakMap: { [fighter_id]: { current_streak, last_result, ... } },
 //     cardioMap: { [fighter_id]: { career: {...}, byWc: { [wc]: {...} } } },
 //     fightWeightClass: 'Welterweight' | etc,
-//     eventDate: 'YYYY-MM-DD'
 //   }
 //
 // EDGE OBJECT shape (returned by each factor):
 //   {
-//     factor: 'age' | 'record' | 'cardio' | ...   // stable machine-readable id
+//     factor: 'record' | 'cardio' | 'td_def',
 //     favors: 'a' | 'b',
 //     pct: number,                                  // 50.0–78.0
 //     fighterName: string,                          // who the edge favors
@@ -32,6 +30,14 @@
 //                                                   //   name (which is bolded
 //                                                   //   separately at render)
 //   }
+//
+// MODEL HISTORY: an earlier version of this module fed ten edges (age, streak,
+// loss_streak, post_loss, stance_reach, slpm, td_acc, plus the current three)
+// into the Bayesian combiner. Backtest against 8,533 historical fights
+// (research/subset-test.js) showed those seven extra factors sat at 52–57%
+// per-fire accuracy and acted as correlated noise that diluted the strong
+// signals: feeding only record/cardio/td_def yields 68.4% accuracy vs 66.3%
+// with all ten. They were removed on 2026-05-17.
 // =============================================================================
 
 (function (root) {
@@ -42,13 +48,10 @@
   // =========================================================================
 
   const STYLE_THRESHOLDS = {
-    // Capability gates (used by willHaveStriking / willHaveWrestling, NOT
-    // by classifyStyle). These ask "does this fighter do this AT ALL?"
-    // Lower bar by design — they gate whether striking-only / grappling-only
-    // edge factors apply, and a fighter with even a single takedown attempt
-    // average above 1 is going to make grappling relevant.
+    // Capability gate used by willHaveWrestling. Lower bar by design — asks
+    // "does this fighter shoot AT ALL?" A career td_avg of even 1 attempt per
+    // 15 minutes makes grappling relevant enough to apply td_def.
     TD_LOW: 1.0,
-    SLPM_LOW: 2.0,
 
     // Dominance-ratio classifier thresholds (used by classifyStyle).
     // These represent the "real producer" line — above this is a meaningful
@@ -123,12 +126,6 @@
     return 'low_volume';
   }
 
-  function willHaveStriking(a, b) {
-    const slpmA = a.slpm == null ? 0 : a.slpm;
-    const slpmB = b.slpm == null ? 0 : b.slpm;
-    return slpmA >= STYLE_THRESHOLDS.SLPM_LOW || slpmB >= STYLE_THRESHOLDS.SLPM_LOW;
-  }
-
   function willHaveWrestling(a, b) {
     const tdA = a.td_avg == null ? 0 : a.td_avg;
     const tdB = b.td_avg == null ? 0 : b.td_avg;
@@ -155,197 +152,6 @@
   // =========================================================================
   // EDGE FACTORS
   // =========================================================================
-
-  function ageEdge(a, b) {
-    if (a.age == null || b.age == null) return null;
-    const gap = Math.abs(a.age - b.age);
-    if (gap < 1) return null;
-    // Tiers calibrated against the veterans-only (5+ UFC fights) cohort
-    // from the full historical fight set — see research/results.md.
-    //
-    //   gap   actual    tier
-    //   1-2   ~52%      52.0   (no change)
-    //   3-4   ~59%      58.5   (was 55.9, undersold)
-    //   5-6   ~57%      57.0   (was 58.2, year-5 dip drags the bucket)
-    //   7-9   ~64%      64.0   (was 63.3, tiny tune)
-    //   10-11 ~62%      64.0   (NEW bucket; was lumped into top tier)
-    //   12+   ~70%      70.0   (was 65.2, ceiling was too low)
-    let pct;
-    if (gap <= 2)      pct = 52.0;
-    else if (gap <= 4) pct = 58.5;
-    else if (gap <= 6) pct = 57.0;
-    else if (gap <= 9) pct = 64.0;
-    else if (gap < 12) pct = 64.0;
-    else               pct = 70.0;
-    // Newcomer discount only applies at small/medium gaps. The historical
-    // newcomer cohort actually OVERPERFORMS the veteran cohort at gap >= 9
-    // (older newcomers at big age deficits get crushed) so discounting there
-    // throws away the strongest version of the signal.
-    const aTotal = (a.ufc_wins || 0) + (a.ufc_losses || 0);
-    const bTotal = (b.ufc_wins || 0) + (b.ufc_losses || 0);
-    if ((aTotal < 5 || bTotal < 5) && gap < 9) {
-      pct = 50 + (pct - 50) * 0.5;
-    }
-    const youngerIsA = a.age < b.age;
-    return {
-      factor: 'age',
-      favors: youngerIsA ? 'a' : 'b',
-      pct,
-      fighterName: youngerIsA ? a.name : b.name,
-      desc: 'is ' + gap + ' year' + (gap === 1 ? '' : 's') + ' younger',
-    };
-  }
-
-  function streakEdge(a, b, streakMap) {
-    const sa = streakMap && streakMap[a.id];
-    const sb = streakMap && streakMap[b.id];
-    if (!sa || !sb) return null;
-    const aWinStreak = Math.max(sa.current_streak || 0, 0);
-    const bWinStreak = Math.max(sb.current_streak || 0, 0);
-    if (aWinStreak < 2 && bWinStreak < 2) return null;
-    if (aWinStreak === bWinStreak) return null;
-    const aHotter = aWinStreak > bWinStreak;
-    const hotterStreak = aHotter ? aWinStreak : bWinStreak;
-    let pct;
-    if (hotterStreak >= 5)      pct = 62.9;
-    else if (hotterStreak >= 3) pct = 55.1;
-    else                        pct = 53.3;
-    return {
-      factor: 'streak',
-      favors: aHotter ? 'a' : 'b',
-      pct,
-      fighterName: aHotter ? a.name : b.name,
-      desc: 'on a ' + hotterStreak + '-fight win streak',
-    };
-  }
-
-  function lossStreakEdge(a, b, streakMap) {
-    const sa = streakMap && streakMap[a.id];
-    const sb = streakMap && streakMap[b.id];
-    if (!sa || !sb) return null;
-    const aLossStreak = Math.max(-(sa.current_streak || 0), 0);
-    const bLossStreak = Math.max(-(sb.current_streak || 0), 0);
-    if (aLossStreak < 2 && bLossStreak < 2) return null;
-    if (aLossStreak === bLossStreak) return null;
-    const aColder = aLossStreak > bLossStreak;
-    const colderStreak = aColder ? aLossStreak : bLossStreak;
-    let pct;
-    if (colderStreak >= 5)      pct = 60.0;
-    else if (colderStreak >= 3) pct = 55.5;
-    else                        pct = 53.0;
-    // The edge favors the OPPONENT of the colder fighter.
-    return {
-      factor: 'loss_streak',
-      favors: aColder ? 'b' : 'a',
-      pct,
-      fighterName: aColder ? b.name : a.name,
-      desc: 'opponent on a ' + colderStreak + '-fight skid',
-    };
-  }
-
-  function postLossEdge(a, b, streakMap, eventDate) {
-    const sa = streakMap && streakMap[a.id];
-    const sb = streakMap && streakMap[b.id];
-    if (!sa || !sb) return null;
-    const aOffLoss = sa.last_result !== 'W';
-    const bOffLoss = sb.last_result !== 'W';
-    if (aOffLoss === bOffLoss) return null;
-    const offLossFighter = aOffLoss ? a : b;
-    const lfd = offLossFighter.last_fight_date;
-    let daysOff = null;
-    if (lfd && eventDate) {
-      const ms = new Date(lfd + 'T00:00:00Z').getTime();
-      const ed = new Date(eventDate + 'T00:00:00Z').getTime();
-      daysOff = Math.round((ed - ms) / (1000 * 60 * 60 * 24));
-    }
-    if (daysOff == null || daysOff < 0) {
-      return {
-        factor: 'post_loss',
-        favors: aOffLoss ? 'b' : 'a',
-        pct: 51.5,
-        fighterName: (aOffLoss ? b : a).name,
-        desc: 'opponent coming off a loss',
-      };
-    }
-    if (daysOff < 180) return null;
-    let pct;
-    let descSuffix;
-    const months = Math.round(daysOff / 30);
-    if (daysOff < 270) {
-      pct = 51.5;
-      descSuffix = 'opponent coming off a loss (' + months + ' months out)';
-    } else if (daysOff < 365) {
-      pct = 52.5;
-      descSuffix = 'opponent off a loss with ' + months + ' months rust';
-    } else {
-      pct = 58.0;
-      descSuffix = 'opponent off a loss with ' + months + ' months rust (major risk)';
-    }
-    return {
-      factor: 'post_loss',
-      favors: aOffLoss ? 'b' : 'a',
-      pct,
-      fighterName: (aOffLoss ? b : a).name,
-      desc: descSuffix,
-    };
-  }
-
-  function stanceReachEdge(a, b) {
-    if (!willHaveStriking(a, b)) return null;
-    const reachA = a.reach_in;
-    const reachB = b.reach_in;
-    const stanceA = a.stance;
-    const stanceB = b.stance;
-    const reachGap = (reachA != null && reachB != null) ? Math.abs(reachA - reachB) : 0;
-    const meaningfulReach = reachGap >= 2;
-    const cleanA = ['Orthodox', 'Southpaw'].indexOf(stanceA) >= 0;
-    const cleanB = ['Orthodox', 'Southpaw'].indexOf(stanceB) >= 0;
-    const cleanMixed = cleanA && cleanB && stanceA !== stanceB;
-
-    if (cleanMixed && meaningfulReach) {
-      const southpawIsA = stanceA === 'Southpaw';
-      const southpawReach = southpawIsA ? reachA : reachB;
-      const orthodoxReach = southpawIsA ? reachB : reachA;
-      if (southpawReach > orthodoxReach) {
-        return {
-          factor: 'stance_reach',
-          favors: southpawIsA ? 'a' : 'b',
-          pct: 57.0,
-          fighterName: southpawIsA ? a.name : b.name,
-          desc: 'southpaw + ' + reachGap + '" reach combo',
-        };
-      }
-      const orthodoxIsA = !southpawIsA;
-      return {
-        factor: 'stance_reach',
-        favors: orthodoxIsA ? 'a' : 'b',
-        pct: 52.0,
-        fighterName: orthodoxIsA ? a.name : b.name,
-        desc: 'has ' + reachGap + '" reach (offsets stance disadvantage)',
-      };
-    }
-    if (cleanMixed && !meaningfulReach) {
-      const southpawIsA = stanceA === 'Southpaw';
-      return {
-        factor: 'stance_reach',
-        favors: southpawIsA ? 'a' : 'b',
-        pct: 51.5,
-        fighterName: southpawIsA ? a.name : b.name,
-        desc: 'southpaw vs orthodox',
-      };
-    }
-    if (meaningfulReach) {
-      const aLonger = reachA > reachB;
-      return {
-        factor: 'stance_reach',
-        favors: aLonger ? 'a' : 'b',
-        pct: 52.0,
-        fighterName: aLonger ? a.name : b.name,
-        desc: 'has ' + reachGap + '" reach advantage',
-      };
-    }
-    return null;
-  }
 
   function recordEdge(a, b) {
     const aw = a.wins || 0, al = a.losses || 0;
@@ -374,25 +180,6 @@
     };
   }
 
-  function slpmEdge(a, b) {
-    if (a.slpm == null || b.slpm == null) return null;
-    if (!willHaveStriking(a, b)) return null;
-    const gap = Math.abs(a.slpm - b.slpm);
-    if (gap < 1.0) return null;
-    let pct;
-    if (gap >= 3.0)      pct = 55.0;
-    else if (gap >= 2.0) pct = 53.5;
-    else                 pct = 52.0;
-    const aBetter = a.slpm > b.slpm;
-    return {
-      factor: 'slpm',
-      favors: aBetter ? 'a' : 'b',
-      pct,
-      fighterName: aBetter ? a.name : b.name,
-      desc: 'throws ' + gap.toFixed(1) + ' more strikes/min',
-    };
-  }
-
   function tdDefEdge(a, b) {
     if (a.td_def == null || b.td_def == null) return null;
     if (!willHaveWrestling(a, b)) return null;
@@ -409,29 +196,6 @@
       pct,
       fighterName: aBetter ? a.name : b.name,
       desc: 'has ' + gap + 'pp better takedown defense',
-    };
-  }
-
-  // Takedown accuracy gap. Only meaningful when at least one fighter actually
-  // shoots (willHaveWrestling gates this). Conservative tiers — career-average
-  // td_acc on the fighters table can be noisy, especially for fighters with
-  // low td_avg (small sample of attempts).
-  function tdAccEdge(a, b) {
-    if (a.td_acc == null || b.td_acc == null) return null;
-    if (!willHaveWrestling(a, b)) return null;
-    const gap = Math.abs(a.td_acc - b.td_acc);
-    if (gap < 15) return null;
-    let pct;
-    if (gap >= 40)      pct = 56.0;
-    else if (gap >= 25) pct = 54.0;
-    else                pct = 52.0;
-    const aBetter = a.td_acc > b.td_acc;
-    return {
-      factor: 'td_acc',
-      favors: aBetter ? 'a' : 'b',
-      pct,
-      fighterName: aBetter ? a.name : b.name,
-      desc: 'lands takedowns ' + gap + 'pp more often',
     };
   }
 
@@ -470,22 +234,13 @@
 
   function computeEdges(a, b, ctx) {
     ctx = ctx || {};
-    const streakMap = ctx.streakMap || {};
     const cardioMap = ctx.cardioMap || null;
     const wc = ctx.fightWeightClass || null;
-    const ed = ctx.eventDate || null;
 
     const edges = [
       recordEdge(a, b),
       cardioEdge(a, b, cardioMap, wc),
-      ageEdge(a, b),
-      streakEdge(a, b, streakMap),
-      lossStreakEdge(a, b, streakMap),
-      postLossEdge(a, b, streakMap, ed),
       tdDefEdge(a, b),
-      tdAccEdge(a, b),
-      slpmEdge(a, b),
-      stanceReachEdge(a, b),
     ].filter(Boolean);
 
     // Bayesian combination of edges.
@@ -514,19 +269,11 @@
     CARDIO_TIER_RANK,
     // Helpers
     classifyStyle,
-    willHaveStriking,
     willHaveWrestling,
     cardioFor,
     // Edge factors (exported for testing / debugging)
-    ageEdge,
-    streakEdge,
-    lossStreakEdge,
-    postLossEdge,
-    stanceReachEdge,
     recordEdge,
-    slpmEdge,
     tdDefEdge,
-    tdAccEdge,
     cardioEdge,
     // Main entry point
     computeEdges,
