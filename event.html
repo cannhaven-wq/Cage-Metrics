@@ -381,76 +381,41 @@ async function load() {
   let finishRateMap = {};
   let oddsMap = {};
 
-  if (fighterIds.length > 0) {
-    // Need every column edges.js touches (age, reach, stance, striking/grappling
-    // averages, td defense). Without them, the verdict has nothing to chew on.
-    const { data: fighters } = await sb
-      .from('fighters')
-      .select('id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date')
-      .in('id', fighterIds);
-    (fighters || []).forEach(f => { fighterMap[f.id] = f; });
+  // All four lookups (fighters, cardio, finish-rate, odds) are independent of
+  // each other — fanned out in parallel rather than awaited sequentially, which
+  // used to add ~4 round trips of latency before render. streakMap is left
+  // empty; the v_fighter_recent_form view query was removed when edges.js's
+  // streak factors went away.
+  const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date';
+  const [fightersR, cardioR, finishR, oddsR] = await Promise.all([
+    fighterIds.length
+      ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
+      : Promise.resolve({ data: [] }),
+    fighterIds.length
+      ? sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier, confidence_tier').in('fighter_id', fighterIds)
+      : Promise.resolve({ data: [] }),
+    fighterIds.length
+      ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
+      : Promise.resolve({ data: [] }),
+    sb.from('fight_odds').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
+  ]);
 
-    // Recent form — pass current_streak through unmodified (signed: +N wins,
-    // -N losses). edges.js's three streak factors each derive what they need
-    // from the sign, so splitting it disables them silently.
-    try {
-      const { data: streaks } = await sb
-        .from('v_fighter_recent_form')
-        .select('fighter_id, last_result, current_streak, last_5')
-        .in('fighter_id', fighterIds);
-      (streaks || []).forEach(s => {
-        streakMap[s.fighter_id] = {
-          last_result: s.last_result,
-          current_streak: s.current_streak || 0,
-          last_5: s.last_5,
-        };
-      });
-    } catch (e) {
-      console.warn('Recent form data not available:', e.message);
-    }
+  if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
+  (fightersR.data || []).forEach(f => { fighterMap[f.id] = f; });
 
-    // Cardio scores per weight class + CAREER fallback row.
-    try {
-      const { data: cardio } = await sb
-        .from('v_fighter_consistency')
-        .select('fighter_id, weight_class, cardio_tier, confidence_tier')
-        .in('fighter_id', fighterIds);
-      (cardio || []).forEach(r => {
-        const slot = cardioMap[r.fighter_id] || (cardioMap[r.fighter_id] = { byWc: {}, career: null });
-        const entry = { tier_word: r.cardio_tier, confidence: r.confidence_tier };
-        if (r.weight_class === 'CAREER') slot.career = entry;
-        else slot.byWc[r.weight_class] = entry;
-      });
-    } catch (e) {
-      console.warn('Cardio data not available:', e.message);
-    }
+  if (cardioR.error) console.warn('Cardio data not available:', cardioR.error.message);
+  (cardioR.data || []).forEach(r => {
+    const slot = cardioMap[r.fighter_id] || (cardioMap[r.fighter_id] = { byWc: {}, career: null });
+    const entry = { tier_word: r.cardio_tier, confidence: r.confidence_tier };
+    if (r.weight_class === 'CAREER') slot.career = entry;
+    else slot.byWc[r.weight_class] = entry;
+  });
 
-    // Per-fighter career outcome breakdown — feeds distanceEdges' fighter_history factor.
-    try {
-      const { data: rates } = await sb
-        .from('v_fighter_finish_rate')
-        .select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate')
-        .in('fighter_id', fighterIds);
-      (rates || []).forEach(r => {
-        finishRateMap[r.fighter_id] = r;
-      });
-    } catch (e) {
-      console.warn('Fighter finish-rate data not available:', e.message);
-    }
-  }
+  if (finishR.error) console.warn('Fighter finish-rate data not available:', finishR.error.message);
+  (finishR.data || []).forEach(r => { finishRateMap[r.fighter_id] = r; });
 
-  // Market consensus odds for this event's fights (vig-removed, averaged
-  // across US books by the fetch-odds workflow). Missing rows are fine —
-  // the verdict band silently omits the market row when we have no data.
-  try {
-    const { data: odds } = await sb
-      .from('fight_odds')
-      .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at')
-      .eq('event_id', event.id);
-    (odds || []).forEach(r => { oddsMap[r.fight_id] = r; });
-  } catch (e) {
-    console.warn('Market odds not available:', e.message);
-  }
+  if (oddsR.error) console.warn('Market odds not available:', oddsR.error.message);
+  (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
 
   updateEventSEO(event, fights, fighterMap);
 

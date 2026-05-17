@@ -1479,31 +1479,10 @@ async function loadFights(event) {
   const fighterMap = {};
   fighters.forEach(f => { fighterMap[f.id] = f; });
 
-  // Fetch recent form for each fighter on this card (for edge panel).
-  // Reads from v_fighter_recent_form which derives from the fights table
-  // directly — bypasses the broken last_5 column on the fighters table.
+  // streakMap is no longer consumed by edges.js (streak/loss_streak/post_loss
+  // edges were removed). Pass an empty object to preserve renderFight's
+  // signature without firing the v_fighter_recent_form view query.
   const streakMap = {};
-  try {
-    const { data: streaks } = await sb
-      .from('v_fighter_recent_form')
-      .select('fighter_id, last_result, current_streak, last_5')
-      .in('fighter_id', Array.from(fighterIds));
-    (streaks || []).forEach(s => {
-      // current_streak in the view is signed: +N for N consecutive wins,
-      // -N for N consecutive losses, 0 otherwise. Pass it through unmodified
-      // because that's exactly what edges.js (streakEdge, lossStreakEdge,
-      // postLossEdge) expects — they each derive the win or loss component
-      // they need from the sign. Splitting it here (as this file used to)
-      // silently disabled all three streak edges in production.
-      streakMap[s.fighter_id] = {
-        last_result: s.last_result,
-        current_streak: s.current_streak || 0,
-        last_5: s.last_5,
-      };
-    });
-  } catch (e) {
-    console.warn('Recent form data not available:', e.message);
-  }
 
   // Fetch cardio, style, and per-fighter finish-rate data for everyone on
   // the card. Reset all three caches so a new event load doesn't reuse the
@@ -2152,8 +2131,13 @@ function renderCardioRow(ca, cb) {
 async function loadStatOfDay(event) {
   const strip = document.getElementById('statStrip');
   const sb = window.cflSupabase;
-  const { count: fightsCount } = await sb.from('fights').select('id', { count: 'exact', head: true });
-  const { count: fightersCount } = await sb.from('fighters').select('id', { count: 'exact', head: true });
+  // 'estimated' reads pg_class.reltuples in microseconds; 'exact' would force
+  // a full table scan on every page load (slow, anon-cold especially). Both
+  // queries are independent so we run them in parallel.
+  const [{ count: fightsCount }, { count: fightersCount }] = await Promise.all([
+    sb.from('fights').select('id', { count: 'estimated', head: true }),
+    sb.from('fighters').select('id', { count: 'estimated', head: true }),
+  ]);
   strip.innerHTML = `
     <div class="stat-of-day">
       <div class="lbl">Card breakdown</div>
