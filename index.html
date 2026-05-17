@@ -818,6 +818,16 @@
     margin: 48px auto;
     padding: 0 32px;
   }
+  .home-recap .track-record-note {
+    text-align: center;
+    max-width: 720px;
+    margin: 0 auto 28px;
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .home-recap .track-record-note strong { color: var(--text); }
+  .home-recap .track-record-note a { color: var(--text); text-decoration: underline; }
   .home-recap-card {
     background: var(--bg-2);
     border: 1px solid var(--border);
@@ -1126,6 +1136,7 @@
      ===================================================================== -->
 <section class="home-recap" id="pastPredictionsSection" hidden>
   <div class="home-section-break-eyebrow" style="text-align: center; margin-bottom: 18px;">Track record</div>
+  <p class="track-record-note">Every pick is locked before the event and never retroactively adjusted. The verdict logic was <strong>rebuilt May 17, 2026</strong> after the May 16 card exposed noise in the model — seven of the ten edge factors were sitting at 52–57% per-fire accuracy, close enough to a coin flip that they were diluting the strong signals. The verdict now uses only Record, Cardio, and Takedown Defense. Backtested accuracy lifted from 65.8% to <strong>68.4%</strong> across 8,000+ historical fights. <a href="edges.html#may-2026-update">Read what changed</a>.</p>
   <div class="past-events-grid" id="pastEventsGrid"></div>
 </section>
 

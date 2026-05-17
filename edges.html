@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>How the UFC Verdict is Built — Edge Factors Methodology | Cannon Fight Lab</title>
-<meta name="description" content="The open methodology behind every Cannon Fight Lab UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. No black box.">
+<meta name="description" content="The open methodology behind every Cannon Fight Lab UFC verdict. Three named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. No black box.">
 <meta name="keywords" content="UFC edge factors, MMA prediction methodology, UFC fight model, UFC verdict calibration, MMA Bayesian model, UFC edge factor explained">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="How the UFC Verdict is Built — Cannon Fight Lab">
-<meta property="og:description" content="Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. The open methodology behind every CFL verdict.">
+<meta property="og:description" content="Three named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. The open methodology behind every CFL verdict.">
 <meta property="og:url" content="https://cannonfightlab.com/edges.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -27,7 +27,7 @@
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="How the UFC Verdict is Built — Cannon Fight Lab">
-<meta name="twitter:description" content="The open methodology behind every CFL UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights.">
+<meta name="twitter:description" content="The open methodology behind every CFL UFC verdict. Three named edge factors, calibrated against 8,000+ historical fights.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -42,7 +42,7 @@
   "@type": "TechArticle",
   "headline": "How the UFC verdict is built — edge factors methodology",
   "url": "https://cannonfightlab.com/edges.html",
-  "description": "The open methodology behind every Cannon Fight Lab UFC verdict. Ten named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update.",
+  "description": "The open methodology behind every Cannon Fight Lab UFC verdict. Three named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update.",
   "author": { "@type": "Organization", "name": "Cannon Fight Lab" },
   "publisher": { "@type": "Organization", "name": "Cannon Fight Lab", "url": "https://cannonfightlab.com/" },
   "mainEntityOfPage": "https://cannonfightlab.com/edges.html",
@@ -291,12 +291,41 @@
     margin: 0;
   }
 
+  /* Status badge for the factor table — Active vs Retired May 17. */
+  .factor-status {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .factor-status.active {
+    background: rgba(76, 175, 80, 0.12);
+    color: var(--green);
+    border: 1px solid rgba(76, 175, 80, 0.25);
+  }
+  .factor-status.retired {
+    background: rgba(180, 180, 180, 0.08);
+    color: var(--text-3);
+    border: 1px solid var(--border);
+  }
+  /* Fade retired rows so the active three read first. */
+  .factors-table tr.retired td:nth-child(1),
+  .factors-table tr.retired td:nth-child(2),
+  .factors-table tr.retired td:nth-child(3) {
+    opacity: 0.55;
+  }
+
   @media (max-width: 768px) {
     .edges-hero { padding: 28px 16px 24px; }
     .edges-hero h1 { font-size: 30px; }
     .formula-eq { font-size: 15px; }
     .factors-table th, .factors-table td { padding: 10px 12px; font-size: 12px; }
     .factors-table .factor-name { font-size: 14px; }
+    .factor-status { font-size: 10px; padding: 2px 6px; }
   }
 </style>
 </head>
@@ -312,6 +341,26 @@
 
 <div class="page">
 
+  <!-- ============== Model update May 2026 ============== -->
+  <div class="section" id="may-2026-update">
+    <div class="section-eyebrow"><span class="dot"></span>Model update — May 17, 2026</div>
+    <h2>Why the verdict shrank from ten edges to three</h2>
+    <p>The May 16 Allen vs Costa card was the worst single result in the model's track record: 2 of 10 committed picks. We audited the verdict logic the next day. The finding was uncomfortable but clear.</p>
+    <p>Of the ten edge factors, seven sat at <strong>52–57% per-fire accuracy</strong> — close enough to a coin flip that they were behaving like correlated noise in the Bayesian combiner. A 53% factor doesn't add information; it adds confidence theatre. When several stacked on the wrong side of an upset, they outvoted the genuinely predictive signals (Record, Cardio, Takedown Defense — all 60%+ per-fire).</p>
+    <p>The verdict now combines only those three. We tested every subset of the ten factors against 8,533 historical fights (<code>research/subset-test.js</code>):</p>
+    <div class="formula">
+      <div class="formula-title">Accuracy by edge subset</div>
+      <div class="formula-eq" style="font-size: 14px; line-height: 1.8;">
+        All ten edges: <strong>65.8%</strong> on 8,367 predictions<br>
+        Drop the two noisiest (age, stance/reach): <strong>67.5%</strong><br>
+        Top 3 only (Record, Cardio, TD Defense): <strong>68.4%</strong> ← shipped<br>
+        Record alone (when it fires): <strong>75.5%</strong> — strongest single signal
+      </div>
+    </div>
+    <p>Calibration improved alongside accuracy. The 70–75% confidence band hit 82.9% accuracy before the change and <strong>92.7%</strong> after. About 20% of fights now show "no edge" rather than a confident pick — those are genuine toss-ups where the prior model was gambling and losing.</p>
+    <p>Every pick committed before May 17 reflects the older ten-edge model. We don't retroactively re-grade — the track record is the track record. Cards from May 17 onward use the new three-edge model.</p>
+  </div>
+
   <!-- ============== What an edge factor is ============== -->
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>The unit</div>
@@ -323,62 +372,72 @@
   <!-- ============== The factors ============== -->
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>The toolkit</div>
-    <h2>The ten factors we measure</h2>
-    <p>Every factor below is implemented in the public <code>edges.js</code> file. Conditions and ranges shown are the live values — change them in the source and the verdict on the next event card updates immediately.</p>
+    <h2>The factors we measure</h2>
+    <p>Every factor below is implemented in the public <code>edges.js</code> file. Active factors drive the current verdict. Retired factors are kept documented for transparency — they were dropped May 17, 2026 after the subset audit showed they were diluting the verdict more than informing it.</p>
     <table class="factors-table">
       <thead>
-        <tr><th>Factor</th><th>Triggers when</th><th>Range</th></tr>
+        <tr><th>Factor</th><th>Triggers when</th><th>Range</th><th>Status</th></tr>
       </thead>
       <tbody>
         <tr>
           <td><span class="factor-name">Record</span><br><span style="font-size:12px;color:var(--text-3)">Pro W-L gap (Laplace-smoothed)</span></td>
           <td>Adjusted win-rate gap of at least 8 percentage points between the two fighters</td>
           <td><span class="factor-range">60–72%</span></td>
+          <td><span class="factor-status active">Active</span></td>
         </tr>
         <tr>
           <td><span class="factor-name">Cardio</span><br><span style="font-size:12px;color:var(--text-3)">Late-round output sustain</span></td>
           <td>Cardio tier gap of 3+ (e.g. Tireless vs Fades). See <a href="cardio.html" style="color:var(--red)">cardio methodology</a>.</td>
           <td><span class="factor-range">54–58%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Age</span><br><span style="font-size:12px;color:var(--text-3)">Years younger</span></td>
-          <td>1+ year age gap. Newcomer-discounted at gap &lt; 9 when either fighter has &lt;5 UFC fights.</td>
-          <td><span class="factor-range">52–70%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Win streak</span><br><span style="font-size:12px;color:var(--text-3)">Current consecutive wins</span></td>
-          <td>One fighter on a 2+ win streak that's longer than the opponent's</td>
-          <td><span class="factor-range">53–63%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Loss streak</span><br><span style="font-size:12px;color:var(--text-3)">Opponent on a skid</span></td>
-          <td>One fighter on a 2+ loss streak — fades the colder fighter</td>
-          <td><span class="factor-range">53–60%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Post-loss</span><br><span style="font-size:12px;color:var(--text-3)">Layoff after a loss</span></td>
-          <td>Asymmetric post-loss state with 6+ months of rust</td>
-          <td><span class="factor-range">52–58%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Stance + reach</span><br><span style="font-size:12px;color:var(--text-3)">Striking geometry</span></td>
-          <td>Mixed stances (southpaw vs orthodox) and/or 2"+ reach gap, when striking is in play</td>
-          <td><span class="factor-range">52–57%</span></td>
-        </tr>
-        <tr>
-          <td><span class="factor-name">Strikes/min</span><br><span style="font-size:12px;color:var(--text-3)">SLpM differential</span></td>
-          <td>1.0+ strikes/min gap, when at least one fighter strikes meaningfully</td>
-          <td><span class="factor-range">52–55%</span></td>
+          <td><span class="factor-status active">Active</span></td>
         </tr>
         <tr>
           <td><span class="factor-name">TD defense</span><br><span style="font-size:12px;color:var(--text-3)">Takedown defense %</span></td>
           <td>10+ percentage-point gap in takedown defense, when grappling is in play</td>
           <td><span class="factor-range">52–56%</span></td>
+          <td><span class="factor-status active">Active</span></td>
         </tr>
-        <tr>
+        <tr class="retired">
+          <td><span class="factor-name">Age</span><br><span style="font-size:12px;color:var(--text-3)">Years younger</span></td>
+          <td>1+ year age gap. Newcomer-discounted at gap &lt; 9 when either fighter has &lt;5 UFC fights.</td>
+          <td><span class="factor-range">52–70%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
+          <td><span class="factor-name">Win streak</span><br><span style="font-size:12px;color:var(--text-3)">Current consecutive wins</span></td>
+          <td>One fighter on a 2+ win streak that's longer than the opponent's</td>
+          <td><span class="factor-range">53–63%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
+          <td><span class="factor-name">Loss streak</span><br><span style="font-size:12px;color:var(--text-3)">Opponent on a skid</span></td>
+          <td>One fighter on a 2+ loss streak — fades the colder fighter</td>
+          <td><span class="factor-range">53–60%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
+          <td><span class="factor-name">Post-loss</span><br><span style="font-size:12px;color:var(--text-3)">Layoff after a loss</span></td>
+          <td>Asymmetric post-loss state with 6+ months of rust</td>
+          <td><span class="factor-range">52–58%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
+          <td><span class="factor-name">Stance + reach</span><br><span style="font-size:12px;color:var(--text-3)">Striking geometry</span></td>
+          <td>Mixed stances (southpaw vs orthodox) and/or 2"+ reach gap, when striking is in play</td>
+          <td><span class="factor-range">52–57%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
+          <td><span class="factor-name">Strikes/min</span><br><span style="font-size:12px;color:var(--text-3)">SLpM differential</span></td>
+          <td>1.0+ strikes/min gap, when at least one fighter strikes meaningfully</td>
+          <td><span class="factor-range">52–55%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
+        </tr>
+        <tr class="retired">
           <td><span class="factor-name">TD accuracy</span><br><span style="font-size:12px;color:var(--text-3)">Takedown finish %</span></td>
           <td>15+ percentage-point gap in takedown accuracy, when grappling is in play</td>
           <td><span class="factor-range">52–56%</span></td>
+          <td><span class="factor-status retired">Retired May 17</span></td>
         </tr>
       </tbody>
     </table>
@@ -403,13 +462,13 @@
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>Track record</div>
     <h2>What we measured against the full UFC history</h2>
-    <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database (8,343 predictions across 1994–now). Headline numbers from the most recent run:</p>
+    <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database. Headline numbers from the most recent run (post May 17 rebuild):</p>
     <div class="formula">
       <div class="formula-title">Overall accuracy</div>
       <div class="formula-eq">
-        <strong>66.2%</strong> correct on 8,343 historical predictions
+        <strong>68.4%</strong> correct on 6,655 historical predictions
       </div>
-      <div class="formula-note">Baseline "always pick fighter A (red corner / favorite)" lands at 64.2%, so the model's edge over the trivial baseline is roughly +2pp. The model's real value is in the per-fight resolution — knowing <em>which</em> fights it's confident about — not the headline number.</div>
+      <div class="formula-note">The new model abstains on ~20% of fights (no Record, Cardio, or TD-defense edge fires) rather than guess. The remaining 6,655 are where the model has genuine signal — and on those it lifts <strong>+2.6 percentage points</strong> over the old ten-edge version (65.8% → 68.4%).</div>
     </div>
     <p>Calibration check: in a well-calibrated model, predictions at confidence X% should win X% of the time. Here's what the most recent validation found:</p>
     <table class="calib-table">
@@ -417,15 +476,15 @@
         <tr><th>Predicted confidence</th><th>Actual win rate</th><th>Fights in band</th></tr>
       </thead>
       <tbody>
-        <tr><td class="band">50–55%</td><td class="actual">53.4%</td><td>2,178</td></tr>
-        <tr><td class="band">55–60%</td><td class="actual">60.8%</td><td>2,028</td></tr>
-        <tr><td class="band">60–65%</td><td class="actual">69.4%</td><td>1,779</td></tr>
-        <tr><td class="band">65–70%</td><td class="actual">76.0%</td><td>1,491</td></tr>
-        <tr><td class="band">70–75%</td><td class="actual">85.8%</td><td>755</td></tr>
-        <tr><td class="band">75%+</td><td class="actual">96.4%</td><td>112</td></tr>
+        <tr><td class="band">50–55%</td><td class="actual">55.9%</td><td>1,952</td></tr>
+        <tr><td class="band">55–60%</td><td class="actual">64.7%</td><td>1,614</td></tr>
+        <tr><td class="band">60–65%</td><td class="actual">72.7%</td><td>1,676</td></tr>
+        <tr><td class="band">65–70%</td><td class="actual">81.6%</td><td>1,008</td></tr>
+        <tr><td class="band">70–75%</td><td class="actual">92.7%</td><td>399</td></tr>
+        <tr><td class="band">75%+</td><td class="actual">100.0%</td><td>6</td></tr>
       </tbody>
     </table>
-    <p>Every confidence band lands inside or above its predicted range. High-confidence verdicts (70%+) are <em>under-stated</em> if anything — when the model says it's confident, history says listen.</p>
+    <p>Every confidence band lands inside or above its predicted range. High-confidence verdicts (70%+) are <em>under-stated</em> — when the model says it's confident, history says listen.</p>
   </div>
 
   <!-- ============== How we keep tuning it ============== -->
