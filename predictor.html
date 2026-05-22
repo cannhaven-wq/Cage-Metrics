@@ -317,6 +317,79 @@
     color: var(--text-3);
   }
   .upcoming-controls .pill strong { color: var(--text); font-weight: 600; }
+
+  /* How-to-use panel */
+  details.howto {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  details.howto > summary {
+    cursor: pointer;
+    list-style: none;
+    padding: 14px 18px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  details.howto > summary::-webkit-details-marker { display: none; }
+  details.howto > summary::after {
+    content: 'Open ▾';
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  details.howto[open] > summary::after { content: 'Close ▴'; }
+  details.howto .howto-body {
+    padding: 0 18px 18px;
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  details.howto h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin: 18px 0 8px;
+  }
+  details.howto h3:first-child { margin-top: 0; }
+  details.howto ol, details.howto ul { padding-left: 20px; margin-bottom: 12px; }
+  details.howto li { margin-bottom: 8px; }
+  details.howto li strong { color: var(--text); font-weight: 600; }
+  details.howto dl { display: grid; grid-template-columns: 110px 1fr; gap: 6px 14px; margin: 8px 0 14px; }
+  details.howto dt {
+    font-weight: 600;
+    color: #fff;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  details.howto dd { font-size: 13px; color: var(--text-2); margin: 0; }
+  details.howto .caveat {
+    background: var(--bg-3);
+    border-left: 2px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 4px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  details.howto .caveat strong { color: var(--amber); }
+  details.howto a { color: var(--red); border-bottom: 1px dotted var(--red); }
   .upcoming-fight td.num { font-variant-numeric: tabular-nums; }
   .upcoming-fight .vid {
     font-family: 'Barlow Condensed', sans-serif;
@@ -365,6 +438,58 @@
   <div id="modelDetail"></div>
 
   <div class="section-label" style="margin-top: 28px;">Upcoming picks · with bet sizing</div>
+
+  <details class="howto" open>
+    <summary>How to use this page</summary>
+    <div class="howto-body">
+
+      <h3>What this is</h3>
+      <p>Each line below is a fight on an upcoming UFC card. For every fight, every model we've trained
+      gives its own predicted win probability for each fighter and compares it to what the betting market is offering.
+      When the model thinks a fighter is meaningfully more likely to win than the market price implies, the row gets
+      flagged ★ — that's a candidate bet.</p>
+
+      <h3>How to read a row</h3>
+      <dl>
+        <dt>Model</dt>     <dd>Which version of our predictor made the pick. v3 is the most advanced; v1 the simplest.</dd>
+        <dt>Pick</dt>      <dd>The fighter the model favors more than the market does.</dd>
+        <dt>Opener</dt>    <dd>The American odds that fighter opened at (BFO consensus across multiple sportsbooks).</dd>
+        <dt>Op p</dt>      <dd>What the opener implies about that fighter's win probability.</dd>
+        <dt>Model p</dt>   <dd>What our model predicts the fighter's win probability actually is.</dd>
+        <dt>Edge</dt>      <dd><strong>(Model p − Opener p).</strong> The gap. Bigger gap = better bet, in theory.</dd>
+        <dt>Stake</dt>     <dd>How much we recommend you bet, given your bankroll. See "Bet sizing" below.</dd>
+        <dt>★</dt>          <dd>The model flags this row as a bet (edge ≥ 5%).</dd>
+      </dl>
+
+      <h3>3-step quick start</h3>
+      <ol>
+        <li><strong>Set your bankroll.</strong> Type your total betting capital into the Bankroll box. Stake amounts scale automatically.</li>
+        <li><strong>Check "Consensus only."</strong> A consensus pick is when 2+ different model versions independently flag the same fighter. The page hides everything else — these are the highest-confidence bets of the card.</li>
+        <li><strong>Bet the recommended Stake on the recommended Pick.</strong> We recommend <a href="https://polymarket.com/sports/ufc" target="_blank" rel="noopener">Polymarket</a> for execution (no sportsbook vig, no banning winners).</li>
+      </ol>
+
+      <h3>Bet sizing — the "Kelly" thing</h3>
+      <p>Kelly is a formula that tells you the bet size that mathematically maximizes long-term growth, given your model's
+      win probability and the odds offered. Bigger edges = bigger stakes. We default to <strong>Half Kelly</strong> because
+      Full Kelly has brutal short-term variance — half-Kelly captures ~75% of the long-run growth with ~25% of the swings.</p>
+      <p>Max bet cap (default 5%) is a safety net against any single bet wrecking the bankroll if the model is wrong about
+      one fighter. Even at 0% Kelly value, you'll never be exposed beyond this cap on one bet.</p>
+
+      <h3>Edge thresholds — when to bet</h3>
+      <p>We use <strong>edge ≥ 5%</strong> as the default "would_bet" threshold. Lower thresholds catch more bets but include
+      more marginal ones; higher thresholds (7–10%) are more selective with better per-bet ROI but fewer opportunities.
+      The model card stats above show how each threshold performed historically.</p>
+
+      <div class="caveat">
+        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. The model's backtest
+        shows ~+5–10% ROI on the 2023+ hold-out, but real-world ROI is typically 30–60% lower due to liquidity friction
+        and book limits. Confidence intervals on the ROI estimate cross zero — meaning a losing month or two is normal,
+        not a sign the strategy is broken. Never bet money you can't afford to see swing 30–40% down before recovering.
+        Always gamble responsibly. 1-800-GAMBLER.
+      </div>
+    </div>
+  </details>
+
   <div class="upcoming-controls" id="upcomingControls">
     <label>Bankroll
       <input type="number" id="bankrollInput" min="0" step="100" value="10000">
