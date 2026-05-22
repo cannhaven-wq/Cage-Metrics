@@ -258,6 +258,7 @@
 <div class="page">
   <div id="topKpis" class="grid-top"></div>
   <div id="modelBlocks"></div>
+  <div id="bfoVsPmSection"></div>
 </div>
 
 <footer class="cfl-footer"></footer>
@@ -308,6 +309,36 @@ cfl.renderFooter();
   function payoutOnWin(american) {
     return american < 0 ? 10000.0 / Math.abs(american) : Number(american);
   }
+
+  // ---------- pull Polymarket closer prices (book = 'Polymarket') ----------
+  const pmMap = {};   // key `${fight_id}|${side}` -> { implied, american }
+  let pmBookId = null;
+  const { data: pmBookRow } = await sb
+    .from('odds_books').select('id').eq('name', 'Polymarket').limit(1).maybeSingle();
+  if (pmBookRow?.id) {
+    pmBookId = pmBookRow.id;
+    let from = 0, page = 1000;
+    while (true) {
+      const { data, error } = await sb
+        .from('fight_odds')
+        .select('fight_id,fighter_id,side,american_odds,implied_prob,captured_at')
+        .eq('book_id', pmBookId)
+        .eq('is_closer', true)
+        .range(from, from + page - 1);
+      if (error) { console.warn('PM fetch:', error); break; }
+      if (!data?.length) break;
+      for (const r of data) {
+        pmMap[`${r.fight_id}|${r.side}`] = {
+          implied: Number(r.implied_prob),
+          american: Number(r.american_odds),
+        };
+      }
+      if (data.length < page) break;
+      from += page;
+    }
+  }
+  const pmFightCount = new Set(Object.keys(pmMap).map(k => k.split('|')[0])).size;
+  console.log(`Polymarket coverage: ${pmFightCount} fights with closer prices`);
 
   // ---------- render: re-run on every control change ----------
   function compute() {
@@ -569,6 +600,189 @@ cfl.renderFooter();
       </div>
       `;
     }).join('');
+
+    // ---------- BFO vs Polymarket comparison ----------
+    const pmEl = document.getElementById('bfoVsPmSection');
+    if (!pmFightCount) {
+      pmEl.innerHTML = `
+        <div class="section-h" style="margin-top: 32px;">BFO vs Polymarket comparison</div>
+        <div class="empty">No Polymarket prices yet. Run the historical backfill workflow first.</div>
+      `;
+      return;
+    }
+
+    // For each model, find predictions on fights that ALSO have Polymarket prices.
+    // Compute ROI for the same picks at BFO opener vs Polymarket close.
+    const minEdgePm = minEdge;  // same edge threshold for both sides
+
+    const pmModelStats = models.map(m => {
+      const rows = (byModel[m.id] || []).filter(r => {
+        const key = `${r.fight_id}|${r.side}`;
+        return pmMap[key];
+      });
+      if (!rows.length) return null;
+
+      let bfo_bets = 0, bfo_wins = 0, bfo_pnl = 0;
+      let pm_bets = 0, pm_wins = 0, pm_pnl = 0;
+      let common = 0, common_wins = 0;
+      let bfo_only_pnl = 0, pm_only_pnl = 0;
+
+      const fights_with_both_signals = [];
+
+      rows.forEach(r => {
+        const pm = pmMap[`${r.fight_id}|${r.side}`];
+        const bfoEdge = Number(r.edge);
+        const pmEdge = Number(r.model_p) - pm.implied;
+        const win = !!r.won;
+        const bfoBet = bfoEdge != null && bfoEdge > minEdgePm
+          && (sideMode === 'all' || (sideMode === 'fav' && r.opener_implied_p >= 0.5) || (sideMode === 'dog' && r.opener_implied_p < 0.5));
+        const pmBet = pmEdge > minEdgePm
+          && (sideMode === 'all' || (sideMode === 'fav' && pm.implied >= 0.5) || (sideMode === 'dog' && pm.implied < 0.5));
+
+        if (bfoBet) {
+          bfo_bets++;
+          if (win) { bfo_wins++; bfo_pnl += payoutOnWin(r.opener_american_odds) * (stake/100); }
+          else { bfo_pnl -= stake; }
+        }
+        if (pmBet) {
+          pm_bets++;
+          if (win) { pm_wins++; pm_pnl += payoutOnWin(pm.american) * (stake/100); }
+          else { pm_pnl -= stake; }
+        }
+        if (bfoBet && pmBet) {
+          common++; if (win) common_wins++;
+          if (win) {
+            bfo_only_pnl += payoutOnWin(r.opener_american_odds) * (stake/100);
+            pm_only_pnl  += payoutOnWin(pm.american) * (stake/100);
+          } else {
+            bfo_only_pnl -= stake; pm_only_pnl -= stake;
+          }
+          if (fights_with_both_signals.length < 30) {
+            fights_with_both_signals.push({
+              date: r.event_date,
+              fight_id: r.fight_id,
+              fighter_id: r.fighter_id,
+              side: r.side,
+              model_p: r.model_p,
+              bfo_p: r.opener_implied_p,
+              pm_p: pm.implied,
+              bfo_odds: r.opener_american_odds,
+              pm_odds: pm.american,
+              won: win,
+              bfo_pnl: win ? payoutOnWin(r.opener_american_odds) * (stake/100) : -stake,
+              pm_pnl:  win ? payoutOnWin(pm.american) * (stake/100) : -stake,
+            });
+          }
+        }
+      });
+
+      const bfo_roi = bfo_bets ? (bfo_pnl / (bfo_bets * stake)) * 100 : 0;
+      const pm_roi  = pm_bets  ? (pm_pnl  / (pm_bets  * stake)) * 100 : 0;
+      const common_bfo_roi = common ? (bfo_only_pnl / (common * stake)) * 100 : 0;
+      const common_pm_roi  = common ? (pm_only_pnl  / (common * stake)) * 100 : 0;
+
+      return {
+        id: m.id, name: m.name,
+        nFights: rows.length,
+        bfo_bets, bfo_wins, bfo_pnl, bfo_roi,
+        pm_bets, pm_wins, pm_pnl, pm_roi,
+        common, common_wins,
+        common_bfo_roi, common_pm_roi,
+        common_bfo_pnl: bfo_only_pnl, common_pm_pnl: pm_only_pnl,
+        diff_roi: common_pm_roi - common_bfo_roi,
+        diff_pnl: pm_only_pnl - bfo_only_pnl,
+        fights_with_both_signals,
+      };
+    }).filter(Boolean);
+
+    const fmtMoney = (v) => `${v>=0?'+':''}$${Math.round(v).toLocaleString()}`;
+    const fmtRoi   = (v) => `${v>=0?'+':''}${v.toFixed(2)}%`;
+    const colorClass = (v) => v > 0 ? 'pos' : (v < 0 ? 'neg' : 'dim');
+
+    pmEl.innerHTML = `
+      <div class="section-h" style="margin-top: 32px;">BFO vs Polymarket — head-to-head</div>
+      <div style="font-size:13px;color:var(--text-2);margin-bottom:12px;max-width:780px;line-height:1.6;">
+        Out of all model predictions, <strong style="color:#fff">${pmFightCount}</strong> fights have Polymarket closer prices.
+        Below: same model picks at the current edge filter, bet at BFO opener vs Polymarket close. The "same fights" columns
+        restrict to bets where <em>both</em> price sources cleared the edge threshold — apples-to-apples comparison.
+      </div>
+
+      ${pmModelStats.map(s => `
+        <div class="model-block">
+          <div class="head">
+            <h2>${esc(s.name)}</h2>
+            <span class="vid">${esc(s.id)}</span>
+          </div>
+          <div class="body">
+
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">
+              All bets at edge > ${(minEdgePm*100).toFixed(0)}%
+            </div>
+            <table class="lab-table" style="margin-bottom:22px;">
+              <thead><tr>
+                <th>Book</th><th>Bets</th><th>Wins</th><th>Win %</th>
+                <th>P&amp;L</th><th>ROI</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td class="mono">BFO opener</td>
+                  <td>${s.bfo_bets}</td>
+                  <td>${s.bfo_wins}</td>
+                  <td>${s.bfo_bets ? ((s.bfo_wins/s.bfo_bets)*100).toFixed(1) : 0}%</td>
+                  <td class="${colorClass(s.bfo_pnl)}">${fmtMoney(s.bfo_pnl)}</td>
+                  <td class="${colorClass(s.bfo_roi)}">${fmtRoi(s.bfo_roi)}</td>
+                </tr>
+                <tr>
+                  <td class="mono">Polymarket</td>
+                  <td>${s.pm_bets}</td>
+                  <td>${s.pm_wins}</td>
+                  <td>${s.pm_bets ? ((s.pm_wins/s.pm_bets)*100).toFixed(1) : 0}%</td>
+                  <td class="${colorClass(s.pm_pnl)}">${fmtMoney(s.pm_pnl)}</td>
+                  <td class="${colorClass(s.pm_roi)}">${fmtRoi(s.pm_roi)}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.08em;">
+              Apples-to-apples: ${s.common} fights where both books cleared the edge
+            </div>
+            ${s.common === 0 ? `<div class="empty" style="padding:14px;">No fights cleared the edge on both sides.</div>` : `
+            <table class="lab-table">
+              <thead><tr>
+                <th>Book</th><th>Bets</th><th>Wins</th><th>Win %</th>
+                <th>P&amp;L</th><th>ROI</th>
+              </tr></thead>
+              <tbody>
+                <tr>
+                  <td class="mono">BFO opener</td>
+                  <td>${s.common}</td>
+                  <td>${s.common_wins}</td>
+                  <td>${((s.common_wins/s.common)*100).toFixed(1)}%</td>
+                  <td class="${colorClass(s.common_bfo_pnl)}">${fmtMoney(s.common_bfo_pnl)}</td>
+                  <td class="${colorClass(s.common_bfo_roi)}">${fmtRoi(s.common_bfo_roi)}</td>
+                </tr>
+                <tr>
+                  <td class="mono">Polymarket</td>
+                  <td>${s.common}</td>
+                  <td>${s.common_wins}</td>
+                  <td>${((s.common_wins/s.common)*100).toFixed(1)}%</td>
+                  <td class="${colorClass(s.common_pm_pnl)}">${fmtMoney(s.common_pm_pnl)}</td>
+                  <td class="${colorClass(s.common_pm_roi)}">${fmtRoi(s.common_pm_roi)}</td>
+                </tr>
+                <tr style="border-top:2px solid var(--border-2);">
+                  <td class="mono" style="color:#fff;font-weight:600;">Difference</td>
+                  <td colspan="3"></td>
+                  <td class="${colorClass(s.diff_pnl)}" style="font-weight:600;">${fmtMoney(s.diff_pnl)}</td>
+                  <td class="${colorClass(s.diff_roi)}" style="font-weight:600;">${fmtRoi(s.diff_roi)}</td>
+                </tr>
+              </tbody>
+            </table>
+            `}
+
+          </div>
+        </div>
+      `).join('')}
+    `;
   }
 
   compute();
