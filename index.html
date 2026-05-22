@@ -719,11 +719,11 @@
   .home-hero-inner {
     max-width: 1200px;
     margin: 0 auto;
-    padding: 80px 32px 64px;
+    padding: 44px 32px 40px;
     position: relative;
     display: grid;
-    grid-template-columns: 1fr 360px;
-    gap: 60px;
+    grid-template-columns: 1fr 420px;
+    gap: 48px;
     align-items: center;
   }
   .home-hero-eyebrow {
@@ -745,20 +745,20 @@
   }
   .home-hero h1 {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 64px;
+    font-size: 56px;
     font-weight: 800;
     color: var(--text);
-    line-height: 1.05;
+    line-height: 1.02;
     letter-spacing: -1px;
-    margin: 0 0 22px;
+    margin: 0 0 16px;
   }
   .home-hero h1 .accent { color: var(--red); }
   .home-hero p.lede {
-    font-size: 18px;
+    font-size: 16px;
     color: var(--text-2);
-    line-height: 1.6;
+    line-height: 1.55;
     max-width: 580px;
-    margin: 0 0 28px;
+    margin: 0 0 22px;
   }
   .home-hero-cta-row {
     display: flex;
@@ -769,53 +769,91 @@
     padding: 14px 28px;
     font-size: 15px;
   }
-  /* Right-side stat panel — mirrors the OG image layout */
-  .home-hero-stats {
+  /* Right-side model panel — lists each trained model with its live pick accuracy. */
+  .home-hero-models {
     border-left: 1px solid var(--border);
-    padding-left: 36px;
+    padding-left: 28px;
   }
-  .home-hero-stat {
-    margin-bottom: 26px;
-  }
-  .home-hero-stat:last-child { margin-bottom: 0; }
-  .home-hero-stat .num {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1;
-    letter-spacing: -1px;
-  }
-  .home-hero-stat .num.lg { font-size: 78px; }
-  .home-hero-stat .num.md { font-size: 60px; }
-  .home-hero-stat .num .pct,
-  .home-hero-stat .num .plus { color: var(--red); font-size: 0.55em; }
-  .home-hero-stat .label {
+  .home-hero-models .panel-label {
     font-size: 11px;
     font-weight: 600;
     color: var(--text-3);
     letter-spacing: 0.2em;
     text-transform: uppercase;
-    margin-top: 8px;
+    margin-bottom: 14px;
   }
-  .home-hero-stat .sublabel {
-    font-size: 12px;
+  .hero-model-row {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: baseline;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .hero-model-row:last-of-type { border-bottom: none; }
+  .hero-model-row .vid {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--red);
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+  .hero-model-row .name {
+    font-size: 13px;
+    color: var(--text);
+    font-weight: 500;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .hero-model-row .name .subline {
+    display: block;
+    font-size: 10px;
     color: var(--text-3);
+    font-weight: 500;
+    letter-spacing: 0.04em;
     margin-top: 2px;
-    font-style: italic;
   }
-  .home-hero-stat .num-loading {
+  .hero-model-row .pct {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1;
+    letter-spacing: -0.5px;
+    font-variant-numeric: tabular-nums;
+  }
+  .hero-model-row .pct.good { color: var(--green); }
+  .hero-model-row .pct.mid  { color: var(--amber, #ffb547); }
+  .hero-model-row .pct.bad  { color: var(--red); }
+  .hero-model-row .pct.na   { color: var(--text-3); font-size: 18px; font-weight: 600; }
+  .home-hero-models .panel-footnote {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
     color: var(--text-3);
-    font-size: 32px;
+    letter-spacing: 0.06em;
   }
-  .home-hero-divider {
-    height: 1px;
-    background: var(--border);
-    margin: 22px 0;
+  .home-hero-models .panel-footnote strong {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: 0;
+    margin-right: 6px;
+  }
+  .home-hero-models .models-loading {
+    color: var(--text-3);
+    font-size: 13px;
+    padding: 10px 0;
   }
   /* "How we did last event" recap card */
   .home-recap {
     max-width: 1200px;
-    margin: 48px auto;
+    margin: 32px auto;
     padding: 0 32px;
   }
   .home-recap .track-record-note {
@@ -883,7 +921,7 @@
   /* Feature pillars — what makes CFL different */
   .home-pillars {
     max-width: 1200px;
-    margin: 64px auto;
+    margin: 40px auto;
     padding: 0 32px;
   }
   .home-pillars h2 {
@@ -943,7 +981,7 @@
   /* Section break above the next event */
   .home-section-break {
     max-width: 1200px;
-    margin: 64px auto 0;
+    margin: 40px auto 0;
     padding: 0 32px;
   }
   .home-section-break-eyebrow {
@@ -1070,15 +1108,14 @@
       padding: 48px 20px 36px;
       gap: 36px;
     }
-    .home-hero h1 { font-size: 44px; }
-    .home-hero-stats {
+    .home-hero h1 { font-size: 40px; }
+    .home-hero-models {
       border-left: none;
       border-top: 1px solid var(--border);
       padding-left: 0;
-      padding-top: 28px;
+      padding-top: 22px;
     }
-    .home-hero-stat .num.lg { font-size: 60px; }
-    .home-hero-stat .num.md { font-size: 48px; }
+    .hero-model-row .pct { font-size: 24px; }
     .home-recap-card {
       grid-template-columns: 1fr;
       gap: 14px;
@@ -1115,27 +1152,23 @@
   <div class="home-hero-inner">
     <div>
       <div class="home-hero-eyebrow">UFC Analytics Platform</div>
-      <h1>Calibrated UFC<br>predictions backed<br>by <span class="accent">real data.</span></h1>
+      <h1>Calibrated UFC predictions backed by <span class="accent">real data.</span></h1>
       <p class="lede">Cardio scores, head-to-head matchups, and edge factors validated against thousands of historical UFC fights. Every verdict is logged before the card so the track record is honest, not retrofitted.</p>
       <div class="home-hero-cta-row">
         <a href="#next-event" class="btn">See next event →</a>
         <a href="/cardio.html" class="btn ghost">How the cardio score works</a>
       </div>
     </div>
-    <aside class="home-hero-stats">
-      <div class="home-hero-stat">
-        <!-- Live: pulled from v_overall_accuracy. Falls back to a static
-             label if the query fails so the page still looks intentional. -->
-        <div class="num lg" id="heroAccuracyNum"><span class="num-loading">—</span></div>
-        <div class="label" id="heroAccuracyLabel">Loading track record</div>
-        <div class="sublabel" id="heroAccuracyEvents"></div>
+    <aside class="home-hero-models">
+      <!-- Live model breakdown — one row per trained model in model_versions,
+           with cumulative pick accuracy on graded fights from model_predictions.
+           Falls back silently to a hold-out accuracy fragment if no graded
+           picks exist yet for a model. -->
+      <div class="panel-label">Model accuracy</div>
+      <div id="heroModelList">
+        <div class="models-loading">Loading models…</div>
       </div>
-      <div class="home-hero-divider"></div>
-      <div class="home-hero-stat">
-        <div class="num md">8,000<span class="plus">+</span></div>
-        <div class="label">Fights backtested</div>
-        <div class="sublabel">Edge factors validated against history</div>
-      </div>
+      <div class="panel-footnote"><strong>8,000+</strong> historical fights backtested</div>
     </aside>
   </div>
 </section>
@@ -1228,40 +1261,79 @@ cfl.renderFooter();
 // =============================================================================
 
 async function loadHomepageStats() {
+  // Populate the hero model panel + past-events grid in parallel.
+  await Promise.all([loadHeroModels(), loadPastEvents()]);
+}
+
+// Hero model breakdown — one row per trained model, with cumulative graded-pick
+// accuracy. Cumulative is computed client-side from model_predictions (same
+// source the per-event cards use) so the hero number is always consistent
+// with the per-event detail below.
+async function loadHeroModels() {
+  const listEl = document.getElementById('heroModelList');
+  if (!listEl) return;
   const sb = window.cflSupabase;
 
-  // Cumulative accuracy from v_overall_accuracy — drives the big hero number
+  let models = [];
   try {
-    const { data: overall, error: overallErr } = await sb
-      .from('v_overall_accuracy')
-      .select('events_tracked, committed_picks, hits, accuracy_pct')
-      .limit(1)
-      .single();
-
-    if (!overallErr && overall && overall.committed_picks > 0) {
-      const numEl = document.getElementById('heroAccuracyNum');
-      const labelEl = document.getElementById('heroAccuracyLabel');
-      const subEl = document.getElementById('heroAccuracyEvents');
-      const pct = Number(overall.accuracy_pct).toFixed(0);
-      numEl.innerHTML = `${pct}<span class="pct">%</span>`;
-      labelEl.textContent = 'Model accuracy';
-      const evN = overall.events_tracked || 1;
-      const evWord = evN === 1 ? 'event' : 'events';
-      subEl.textContent = `${overall.hits} of ${overall.committed_picks} picks across ${evN} ${evWord}`;
-    } else {
-      // No data yet — show neutral placeholder rather than 0%
-      const numEl = document.getElementById('heroAccuracyNum');
-      const labelEl = document.getElementById('heroAccuracyLabel');
-      numEl.innerHTML = `<span class="num-loading">Tracking</span>`;
-      labelEl.textContent = 'Audit goes live with next event';
-    }
+    const { data, error } = await sb
+      .from('model_versions')
+      .select('id, name, test_accuracy')
+      .order('id');
+    if (error) throw error;
+    models = data || [];
   } catch (err) {
-    console.warn('[home] overall accuracy fetch failed', err);
+    console.warn('[home] model_versions fetch failed', err);
+    listEl.innerHTML = '<div class="models-loading">Models unavailable</div>';
+    return;
+  }
+  if (models.length === 0) {
+    listEl.innerHTML = '<div class="models-loading">No models trained yet</div>';
+    return;
   }
 
-  // Past predictions grid — every event with committed picks, most recent first.
-  // Each card is clickable and goes to event.html for the full breakdown.
-  await loadPastEvents();
+  // Cumulative picks/hits per model from graded predictions only.
+  const stats = {};
+  try {
+    const rows = await cfl.fetchAll(() => sb
+      .from('model_predictions')
+      .select('model_version, model_p, outcome_known, won')
+      .eq('outcome_known', true));
+    (rows || []).forEach(p => {
+      if (Number(p.model_p) <= 0.5) return;  // only the picked side
+      const s = stats[p.model_version] || (stats[p.model_version] = { picks: 0, hits: 0 });
+      s.picks += 1;
+      if (p.won === true) s.hits += 1;
+    });
+  } catch (err) {
+    console.warn('[home] model_predictions fetch failed', err);
+  }
+
+  listEl.innerHTML = models.map(m => {
+    const s = stats[m.id];
+    const nameLine = cfl.escapeHtml(m.name || '');
+    let pctHtml, subline;
+    if (s && s.picks > 0) {
+      const pct = (s.hits / s.picks) * 100;
+      const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'mid' : 'bad');
+      pctHtml = `<div class="pct ${cls}">${pct.toFixed(0)}%</div>`;
+      subline = `${s.hits} of ${s.picks} graded picks`;
+    } else if (m.test_accuracy != null) {
+      const pct = Number(m.test_accuracy) * 100;
+      pctHtml = `<div class="pct na">${pct.toFixed(0)}%</div>`;
+      subline = 'hold-out (no live picks yet)';
+    } else {
+      pctHtml = `<div class="pct na">—</div>`;
+      subline = 'no picks yet';
+    }
+    return `
+      <div class="hero-model-row">
+        <div class="vid">${cfl.escapeHtml(m.id)}</div>
+        <div class="name">${nameLine}<span class="subline">${cfl.escapeHtml(subline)}</span></div>
+        ${pctHtml}
+      </div>
+    `;
+  }).join('');
 }
 
 async function loadPastEvents() {
