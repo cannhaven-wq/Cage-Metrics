@@ -35,10 +35,18 @@ Every page is its own standalone HTML file at the repo root (`index.html`, `figh
 Every page that has a nav must load **both** of these in order, before calling `cfl.renderNav()`:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
 <script src="_shared.js"></script>
 <script src="_auth.js"></script>
 ```
+
+The Supabase CDN URL is **version-pinned + SRI-hashed** (sha384). This blocks supply-chain tampering — if the CDN ever serves a different file at that path, the browser refuses to execute it. When you bump the version, regenerate the hash with:
+
+```powershell
+$tmp=[IO.Path]::GetTempFileName(); Invoke-WebRequest -Uri 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@<NEW>/dist/umd/supabase.min.js' -OutFile $tmp -UseBasicParsing; "sha384-" + [Convert]::ToBase64String([Security.Cryptography.SHA384]::Create().ComputeHash([IO.File]::ReadAllBytes($tmp))); Remove-Item $tmp
+```
+
+…then grep+replace the URL and `integrity=` across every HTML file in the repo (they must all stay in sync, or hash mismatches will break specific pages silently).
 
 - `_shared.js` creates `window.cflSupabase` and the `window.cfl` helper namespace (incl. `cfl.renderNav`, `cfl.renderFooter`, `cfl.fetchAll` for >1000-row queries).
 - `_auth.js` creates `window.cflAuth` and is what populates the auth slot inside the nav. **If `_auth.js` is missing, the nav renders but never reflects logged-in state** — this is the most common nav bug.

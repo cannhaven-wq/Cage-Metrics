@@ -19,7 +19,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="_shared.css">
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 </head>
 <body>
@@ -75,11 +75,19 @@ if (params.has('reset')) {
   msgArea.innerHTML = '<div class="auth-success">Password updated. Sign in with your new password.</div>';
 }
 
+// Only allow same-origin paths to prevent open-redirect phishing.
+// Rejects absolute URLs (http://evil.com), protocol-relative (//evil.com),
+// and anything that doesn't start with a single "/".
+function safeNext() {
+  const raw = params.get('next') || '/';
+  if (!raw.startsWith('/') || raw.startsWith('//')) return '/';
+  return raw;
+}
+
 // If already signed in, bounce to where they were going (or home)
 cflAuth.ready().then(() => {
   if (cflAuth.isSignedIn()) {
-    const next = params.get('next') || '/';
-    window.location.href = next;
+    window.location.href = safeNext();
   }
 });
 
@@ -101,8 +109,7 @@ form.addEventListener('submit', async (e) => {
     return;
   }
 
-  const next = params.get('next') || '/';
-  window.location.href = next;
+  window.location.href = safeNext();
 });
 </script>
 </body>
