@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lab — CFL Internal Backtest</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  body { font-family: 'Inter', sans-serif; }
+  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .lab-header {
+    background: linear-gradient(180deg, rgba(230,57,70,0.06), transparent);
+    border-bottom: 1px solid var(--border);
+    padding: 36px 32px 28px;
+  }
+  .lab-header .label {
+    font-size: 11px;
+    color: var(--red);
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    margin-bottom: 6px;
+  }
+  .lab-header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 38px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .lab-header p { color: var(--text-2); font-size: 14px; max-width: 740px; }
+
+  .toolbar {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 32px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 13px;
+  }
+  .toolbar label { color: var(--text-3); margin-right: 6px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .toolbar select, .toolbar input {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 13px;
+  }
+  .toolbar select:focus, .toolbar input:focus { outline: 1px solid var(--red); }
+  .toolbar .stake { width: 80px; }
+
+  .grid-top {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .kpi {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .kpi .lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 6px;
+  }
+  .kpi .val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 30px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.05;
+  }
+  .kpi .val.pos { color: var(--green); }
+  .kpi .val.neg { color: var(--red); }
+  .kpi .sub { font-size: 11px; color: var(--text-3); margin-top: 4px; }
+
+  .model-block {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 18px;
+    overflow: hidden;
+  }
+  .model-block .head {
+    padding: 14px 22px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .model-block .head h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .model-block .head .vid {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 800;
+    color: var(--red);
+    font-size: 14px;
+    letter-spacing: 0.05em;
+  }
+  .model-block .body { padding: 22px; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+    margin-bottom: 22px;
+  }
+  .kpi-row .kpi { padding: 12px 14px; }
+  .kpi-row .kpi .val { font-size: 22px; }
+  .kpi-row .kpi .sub { font-size: 10px; }
+
+  .chart-wrap {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 16px 6px;
+    margin-bottom: 22px;
+  }
+  .chart-wrap .title {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .chart-wrap .title .h {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+  }
+  .chart-wrap .title .meta {
+    font-size: 11px;
+    color: var(--text-2);
+  }
+  svg.curve { width: 100%; display: block; }
+
+  table.lab-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  table.lab-table th, table.lab-table td {
+    padding: 7px 10px;
+    text-align: right;
+    border-bottom: 1px solid var(--border);
+  }
+  table.lab-table th {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    background: var(--bg-3);
+  }
+  table.lab-table th:first-child, table.lab-table td:first-child { text-align: left; }
+  table.lab-table .pos { color: var(--green); }
+  table.lab-table .neg { color: var(--red); }
+  table.lab-table .dim { color: var(--text-3); }
+
+  .grid-2col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  @media (max-width: 880px) { .grid-2col { grid-template-columns: 1fr; } }
+
+  .section-h {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 600;
+    margin: 22px 0 10px;
+  }
+
+  .projection-card {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.65;
+  }
+  .projection-card strong { color: #fff; font-weight: 600; }
+  .projection-card .pos { color: var(--green); }
+  .projection-card .neg { color: var(--red); }
+
+  .err, .empty {
+    padding: 30px;
+    text-align: center;
+    color: var(--text-2);
+    border: 1px dashed var(--border-2);
+    border-radius: 10px;
+  }
+  .err { color: var(--red); border-color: rgba(230,57,70,0.3); }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="lab-header">
+  <div class="label">Internal · not for distribution</div>
+  <h1>Lab — Backtest Dashboard</h1>
+  <p>Flat-stake backtest of every model on the 2023+ hold-out, against the BFO consensus opener. Adjust stake size and minimum edge to see how the bankroll curve changes. Forward ROI projections include a ±1σ confidence band based on sample variance.</p>
+</div>
+
+<div class="toolbar">
+  <div><label>Stake / bet</label><input class="stake mono" id="stakeInput" type="number" min="1" step="10" value="100"></div>
+  <div><label>Min edge</label>
+    <select id="edgeInput">
+      <option value="0.00">0%</option>
+      <option value="0.02">2%</option>
+      <option value="0.03">3%</option>
+      <option value="0.05" selected>5%</option>
+      <option value="0.07">7%</option>
+      <option value="0.10">10%</option>
+    </select>
+  </div>
+  <div><label>Side</label>
+    <select id="sideInput">
+      <option value="all" selected>All</option>
+      <option value="fav">Favorites only</option>
+      <option value="dog">Underdogs only</option>
+    </select>
+  </div>
+  <div style="flex:1"></div>
+  <div class="mono" style="font-size:11px;color:var(--text-3)" id="metaInfo"></div>
+</div>
+
+<div class="page">
+  <div id="topKpis" class="grid-top"></div>
+  <div id="modelBlocks"></div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+
+(async function () {
+  const sb = window.cflSupabase;
+  const esc = window.cfl.escapeHtml;
+  const stakeEl = document.getElementById('stakeInput');
+  const edgeEl  = document.getElementById('edgeInput');
+  const sideEl  = document.getElementById('sideInput');
+  const topEl   = document.getElementById('topKpis');
+  const blockEl = document.getElementById('modelBlocks');
+  const metaEl  = document.getElementById('metaInfo');
+
+  // ---------- pull models + all graded predictions ----------
+  const { data: models, error: mErr } = await sb
+    .from('model_versions').select('*').order('id');
+  if (mErr) { blockEl.innerHTML = `<div class="err">${esc(mErr.message)}</div>`; return; }
+  if (!models?.length) { blockEl.innerHTML = `<div class="empty">No models trained yet.</div>`; return; }
+
+  const byModel = {};
+  for (const m of models) {
+    const all = [];
+    let from = 0, page = 1000;
+    while (true) {
+      const { data, error } = await sb
+        .from('model_predictions')
+        .select('fight_id,fighter_id,side,event_date,model_p,opener_implied_p,opener_american_odds,edge,would_bet,outcome_known,won,pnl_usd')
+        .eq('model_version', m.id)
+        .eq('outcome_known', true)
+        .order('event_date', { ascending: true })
+        .range(from, from + page - 1);
+      if (error) { console.error(error); break; }
+      if (!data?.length) break;
+      all.push(...data);
+      if (data.length < page) break;
+      from += page;
+    }
+    byModel[m.id] = all;
+  }
+
+  function payoutOnWin(american) {
+    return american < 0 ? 10000.0 / Math.abs(american) : Number(american);
+  }
+
+  // ---------- render: re-run on every control change ----------
+  function compute() {
+    const stake = Math.max(1, Number(stakeEl.value) || 100);
+    const minEdge = Number(edgeEl.value);
+    const sideMode = sideEl.value;
+
+    function filterBets(rows) {
+      return rows.filter(r => {
+        if (r.opener_american_odds == null || r.edge == null) return false;
+        if (Number(r.edge) <= minEdge) return false;
+        if (sideMode === 'fav' && r.opener_implied_p < 0.5) return false;
+        if (sideMode === 'dog' && r.opener_implied_p >= 0.5) return false;
+        return true;
+      });
+    }
+
+    function statsFor(rows) {
+      const bets = filterBets(rows);
+      // recompute PnL at the current stake (the table stores $100 stake)
+      const bets2 = bets.map(b => {
+        const win = !!b.won;
+        const pnl = win ? payoutOnWin(b.opener_american_odds) * (stake / 100) : -stake;
+        return { ...b, pnl, win };
+      });
+
+      const n = bets2.length;
+      const wins = bets2.filter(b => b.win).length;
+      const totalPnl = bets2.reduce((s, b) => s + b.pnl, 0);
+      const totalStaked = n * stake;
+      const roi = n ? (totalPnl / totalStaked) * 100 : 0;
+      const winPct = n ? (wins / n) * 100 : 0;
+
+      // cumulative curve (sorted chronologically)
+      let curve = [], cum = 0, peak = 0, maxDD = 0, curLossStreak = 0, maxLossStreak = 0, curWinStreak = 0, maxWinStreak = 0;
+      for (const b of bets2) {
+        cum += b.pnl;
+        peak = Math.max(peak, cum);
+        maxDD = Math.min(maxDD, cum - peak);
+        if (b.win) { curWinStreak++; maxWinStreak = Math.max(maxWinStreak, curWinStreak); curLossStreak = 0; }
+        else      { curLossStreak++; maxLossStreak = Math.max(maxLossStreak, curLossStreak); curWinStreak = 0; }
+        curve.push({ date: b.event_date, cum });
+      }
+
+      // by year
+      const byYear = {};
+      bets2.forEach(b => {
+        const y = (b.event_date || '').slice(0, 4);
+        if (!byYear[y]) byYear[y] = { n: 0, wins: 0, pnl: 0 };
+        byYear[y].n++;
+        if (b.win) byYear[y].wins++;
+        byYear[y].pnl += b.pnl;
+      });
+
+      // standard deviation of per-bet PnL (for confidence band)
+      const meanPnl = n ? totalPnl / n : 0;
+      const variance = n ? bets2.reduce((s, b) => s + Math.pow(b.pnl - meanPnl, 2), 0) / n : 0;
+      const stdev = Math.sqrt(variance);
+      // SE of ROI per bet
+      const seRoi = n ? (stdev / Math.sqrt(n)) / stake * 100 : 0;
+
+      return {
+        n, wins, totalPnl, totalStaked, roi, winPct, maxDD,
+        maxLossStreak, maxWinStreak, curve, byYear,
+        meanPnl, stdev, seRoi,
+      };
+    }
+
+    // ---------- aggregate KPIs across models ----------
+    let totalBets = 0, totalWins = 0, totalPnl = 0, totalStaked = 0;
+    const modelStats = {};
+    for (const m of models) {
+      const s = statsFor(byModel[m.id] || []);
+      modelStats[m.id] = s;
+      totalBets += s.n; totalWins += s.wins; totalPnl += s.totalPnl; totalStaked += s.totalStaked;
+    }
+    const overallRoi = totalStaked ? (totalPnl / totalStaked) * 100 : 0;
+    const overallWinPct = totalBets ? (totalWins / totalBets) * 100 : 0;
+    const monthsSpan = (function () {
+      let earliest = null, latest = null;
+      for (const m of models) {
+        for (const b of (byModel[m.id] || [])) {
+          if (!earliest || b.event_date < earliest) earliest = b.event_date;
+          if (!latest   || b.event_date > latest)   latest   = b.event_date;
+        }
+      }
+      if (!earliest || !latest) return 1;
+      const d1 = new Date(earliest), d2 = new Date(latest);
+      return Math.max(1, (d2 - d1) / (1000 * 60 * 60 * 24 * 30));
+    })();
+
+    metaEl.textContent = `${totalBets} bets · stake $${stake} · edge >${(minEdge*100).toFixed(0)}% · ${sideMode === 'all' ? 'all sides' : sideMode}`;
+
+    // top KPIs
+    topEl.innerHTML = `
+      <div class="kpi">
+        <div class="lbl">Total bets</div>
+        <div class="val mono">${totalBets.toLocaleString()}</div>
+        <div class="sub">across ${models.length} model${models.length===1?'':'s'}</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Total staked</div>
+        <div class="val mono">$${totalStaked.toLocaleString()}</div>
+        <div class="sub">${totalBets} × $${stake}</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Net P&L</div>
+        <div class="val mono ${totalPnl>0?'pos':(totalPnl<0?'neg':'')}">${totalPnl>=0?'+':''}$${Math.round(totalPnl).toLocaleString()}</div>
+        <div class="sub">${overallWinPct.toFixed(1)}% win rate</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Overall ROI</div>
+        <div class="val mono ${overallRoi>0?'pos':(overallRoi<0?'neg':'')}">${overallRoi>=0?'+':''}${overallRoi.toFixed(2)}%</div>
+        <div class="sub">~${(totalBets / monthsSpan).toFixed(1)} bets/month</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Avg P&L / month</div>
+        <div class="val mono ${totalPnl>0?'pos':(totalPnl<0?'neg':'')}">${totalPnl>=0?'+':''}$${Math.round(totalPnl/monthsSpan).toLocaleString()}</div>
+        <div class="sub">at this stake & edge</div>
+      </div>
+    `;
+
+    // ---------- per-model blocks ----------
+    blockEl.innerHTML = models.map(m => {
+      const s = modelStats[m.id];
+      if (!s.n) {
+        return `<div class="model-block">
+          <div class="head"><h2>${esc(m.name)}</h2><span class="vid">${esc(m.id)}</span></div>
+          <div class="body"><div class="empty">No bets at this edge threshold.</div></div>
+        </div>`;
+      }
+
+      // SVG sparkline / cumulative curve
+      const W = 920, H = 180, PAD = 22;
+      const xs = s.curve.map((_, i) => i);
+      const ys = s.curve.map(p => p.cum);
+      const yMin = Math.min(0, ...ys);
+      const yMax = Math.max(0, ...ys);
+      const yRange = (yMax - yMin) || 1;
+      const xRange = (xs.length - 1) || 1;
+      const points = s.curve.map((p, i) => {
+        const x = PAD + (i / xRange) * (W - PAD * 2);
+        const y = H - PAD - ((p.cum - yMin) / yRange) * (H - PAD * 2);
+        return [x, y];
+      });
+      const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
+      const zeroY = H - PAD - ((0 - yMin) / yRange) * (H - PAD * 2);
+
+      // projection: 95% confidence band on ROI
+      const ciHalf = 1.96 * s.seRoi;
+      const projLow = s.roi - ciHalf;
+      const projHi  = s.roi + ciHalf;
+
+      // year table
+      const yearRows = Object.entries(s.byYear).sort(([a],[b])=>a.localeCompare(b)).map(([y, r]) => {
+        const roi = r.n ? (r.pnl / (r.n * stake)) * 100 : 0;
+        return `<tr>
+          <td>${y}</td>
+          <td>${r.n}</td>
+          <td>${r.wins}</td>
+          <td>${r.n? ((r.wins/r.n)*100).toFixed(1) : 0}%</td>
+          <td class="${r.pnl>0?'pos':'neg'}">${r.pnl>=0?'+':''}$${Math.round(r.pnl).toLocaleString()}</td>
+          <td class="${roi>0?'pos':'neg'}">${roi>=0?'+':''}${roi.toFixed(2)}%</td>
+        </tr>`;
+      }).join('');
+
+      // edge sweep table (re-bucket independently of the toolbar filter)
+      const allRowsForModel = byModel[m.id] || [];
+      const edgeBuckets = [0, 0.02, 0.03, 0.05, 0.07, 0.10];
+      const edgeRows = edgeBuckets.map(thr => {
+        const sub = allRowsForModel.filter(r => {
+          if (r.opener_american_odds == null || r.edge == null) return false;
+          if (Number(r.edge) <= thr) return false;
+          if (sideMode === 'fav' && r.opener_implied_p < 0.5) return false;
+          if (sideMode === 'dog' && r.opener_implied_p >= 0.5) return false;
+          return true;
+        });
+        const w = sub.filter(b => b.won).length;
+        const pnl = sub.reduce((acc, b) => acc + (b.won ? payoutOnWin(b.opener_american_odds) * (stake/100) : -stake), 0);
+        const roi = sub.length ? (pnl / (sub.length * stake)) * 100 : 0;
+        return `<tr>
+          <td>${thr === 0 ? 'any' : '>' + (thr*100).toFixed(0)+'%'}</td>
+          <td>${sub.length}</td>
+          <td>${w}</td>
+          <td>${sub.length? ((w/sub.length)*100).toFixed(1) : 0}%</td>
+          <td class="${pnl>0?'pos':'neg'}">${pnl>=0?'+':''}$${Math.round(pnl).toLocaleString()}</td>
+          <td class="${roi>0?'pos':'neg'}">${roi>=0?'+':''}${roi.toFixed(2)}%</td>
+        </tr>`;
+      }).join('');
+
+      return `
+      <div class="model-block">
+        <div class="head">
+          <h2>${esc(m.name)}</h2>
+          <span class="vid">${esc(m.id)}</span>
+        </div>
+        <div class="body">
+
+          <div class="kpi-row">
+            <div class="kpi"><div class="lbl">Bets</div><div class="val mono">${s.n}</div><div class="sub">at filter</div></div>
+            <div class="kpi"><div class="lbl">Win rate</div><div class="val mono">${s.winPct.toFixed(1)}%</div><div class="sub">${s.wins}/${s.n}</div></div>
+            <div class="kpi"><div class="lbl">Net P&amp;L</div><div class="val mono ${s.totalPnl>0?'pos':(s.totalPnl<0?'neg':'')}">${s.totalPnl>=0?'+':''}$${Math.round(s.totalPnl).toLocaleString()}</div><div class="sub">on $${s.totalStaked.toLocaleString()} staked</div></div>
+            <div class="kpi"><div class="lbl">ROI</div><div class="val mono ${s.roi>0?'pos':(s.roi<0?'neg':'')}">${s.roi>=0?'+':''}${s.roi.toFixed(2)}%</div><div class="sub">per $ wagered</div></div>
+            <div class="kpi"><div class="lbl">Max drawdown</div><div class="val mono neg">$${Math.round(s.maxDD).toLocaleString()}</div><div class="sub">${stake}-flat bankroll</div></div>
+            <div class="kpi"><div class="lbl">Worst streak</div><div class="val mono">L${s.maxLossStreak}</div><div class="sub">vs best W${s.maxWinStreak}</div></div>
+          </div>
+
+          <div class="chart-wrap">
+            <div class="title">
+              <span class="h">Cumulative P&amp;L · $${stake}-flat bankroll</span>
+              <span class="meta">${s.curve.length ? s.curve[0].date + ' → ' + s.curve[s.curve.length-1].date : ''}</span>
+            </div>
+            <svg class="curve" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+              <line x1="${PAD}" x2="${W-PAD}" y1="${zeroY}" y2="${zeroY}" stroke="#2a2a2a" stroke-dasharray="2,4"/>
+              <path d="${path}" fill="none" stroke="${s.totalPnl >= 0 ? 'var(--green)' : 'var(--red)'}" stroke-width="1.8"/>
+              <text x="${PAD}" y="${H-6}" fill="#555" font-size="10" font-family="JetBrains Mono">${s.curve[0]?.date.slice(0,7) ?? ''}</text>
+              <text x="${W-PAD}" y="${H-6}" text-anchor="end" fill="#555" font-size="10" font-family="JetBrains Mono">${s.curve[s.curve.length-1]?.date.slice(0,7) ?? ''}</text>
+              <text x="${W-PAD}" y="${PAD+2}" text-anchor="end" fill="#555" font-size="10" font-family="JetBrains Mono">peak +$${Math.round(yMax).toLocaleString()}</text>
+              <text x="${W-PAD}" y="${H-PAD+12}" text-anchor="end" fill="#555" font-size="10" font-family="JetBrains Mono">low $${Math.round(yMin).toLocaleString()}</text>
+            </svg>
+          </div>
+
+          <div class="grid-2col">
+            <div>
+              <div class="section-h">By year</div>
+              <table class="lab-table">
+                <thead><tr><th>Year</th><th>Bets</th><th>Wins</th><th>Win %</th><th>P&amp;L</th><th>ROI</th></tr></thead>
+                <tbody>${yearRows}</tbody>
+              </table>
+            </div>
+            <div>
+              <div class="section-h">By edge threshold</div>
+              <table class="lab-table">
+                <thead><tr><th>Edge</th><th>Bets</th><th>Wins</th><th>Win %</th><th>P&amp;L</th><th>ROI</th></tr></thead>
+                <tbody>${edgeRows}</tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="section-h">Forward projection</div>
+          <div class="projection-card">
+            With ${s.n} historical bets at this filter, mean ROI is
+            <strong class="${s.roi>0?'pos':(s.roi<0?'neg':'')}">${s.roi>=0?'+':''}${s.roi.toFixed(2)}%</strong>
+            with a 95% confidence band of
+            <strong class="${projLow>0?'pos':'neg'}">${projLow>=0?'+':''}${projLow.toFixed(2)}%</strong>
+            to
+            <strong class="${projHi>0?'pos':'neg'}">${projHi>=0?'+':''}${projHi.toFixed(2)}%</strong>.
+            Per-bet std dev <strong class="mono">$${s.stdev.toFixed(2)}</strong>.
+            At ~${(s.n / monthsSpan).toFixed(1)} bets/month, expected monthly P&amp;L is
+            <strong class="${s.roi>0?'pos':'neg'}">${s.roi>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * s.roi / 100).toLocaleString()}</strong>
+            (band:
+            <strong>${projLow>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * projLow / 100).toLocaleString()}</strong>
+            to
+            <strong>${projHi>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * projHi / 100).toLocaleString()}</strong>).
+            The band is wide because the sample is small — the more bets accumulate, the tighter this gets.
+          </div>
+
+        </div>
+      </div>
+      `;
+    }).join('');
+  }
+
+  compute();
+  [stakeEl, edgeEl, sideEl].forEach(el => el.addEventListener('change', compute));
+  stakeEl.addEventListener('input', compute);
+})();
+</script>
+</body>
+</html>
