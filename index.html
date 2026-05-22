@@ -1018,29 +1018,43 @@
     text-transform: uppercase;
     letter-spacing: 0.08em;
   }
-  .past-event-accuracy {
+  .past-event-models {
     margin-top: 14px;
     padding-top: 12px;
     border-top: 1px solid var(--border);
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    column-gap: 14px;
+    row-gap: 6px;
     align-items: baseline;
-    gap: 10px;
   }
-  .past-event-accuracy .acc-pct {
+  .past-event-models .pe-model-label {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+  .past-event-models .pe-model-pct {
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
+    font-size: 24px;
     font-weight: 800;
     line-height: 1;
+    font-variant-numeric: tabular-nums;
   }
-  .past-event-accuracy .acc-pct.good { color: var(--green); }
-  .past-event-accuracy .acc-pct.mid  { color: var(--amber); }
-  .past-event-accuracy .acc-pct.bad  { color: var(--red); }
-  .past-event-accuracy .acc-detail {
+  .past-event-models .pe-model-pct.good { color: var(--green); }
+  .past-event-models .pe-model-pct.mid  { color: var(--amber); }
+  .past-event-models .pe-model-pct.bad  { color: var(--red); }
+  .past-event-models .pe-model-pct.na   { color: var(--text-3); font-size: 18px; }
+  .past-event-models .pe-model-detail {
     font-size: 11px;
     color: var(--text-3);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     font-weight: 600;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
   }
   .past-event-empty {
     color: var(--text-3);
@@ -1287,13 +1301,47 @@ async function loadPastEvents() {
     console.warn('[home] main-event fetch failed', err);
   }
 
+  // Per-model accuracy from model_predictions, keyed by event_date + version.
+  // Counts one pick per fight per model (the side with model_p > 0.5).
+  const MODEL_VERSIONS = ['v1', 'v2', 'v3'];
+  const modelStats = {};  // 'YYYY-MM-DD::v1' -> { picks, hits }
+  try {
+    const eventDates = events.map(e => e.event_date);
+    const { data: preds } = await sb
+      .from('model_predictions')
+      .select('model_version, event_date, model_p, outcome_known, won')
+      .in('event_date', eventDates)
+      .eq('outcome_known', true);
+    (preds || []).forEach(p => {
+      if (Number(p.model_p) <= 0.5) return;  // only the picked side
+      const k = p.event_date + '::' + p.model_version;
+      if (!modelStats[k]) modelStats[k] = { picks: 0, hits: 0 };
+      modelStats[k].picks += 1;
+      if (p.won === true) modelStats[k].hits += 1;
+    });
+  } catch (err) {
+    console.warn('[home] model predictions fetch failed', err);
+  }
+
+  function modelRowHtml(eventDate, version) {
+    const s = modelStats[eventDate + '::' + version];
+    const labelHtml = '<div class="pe-model-label">' + version + '</div>';
+    if (!s || s.picks === 0) {
+      return labelHtml +
+        '<div class="pe-model-pct na">—</div>' +
+        '<div class="pe-model-detail">no picks</div>';
+    }
+    const pct = (s.hits / s.picks) * 100;
+    const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'mid' : 'bad');
+    return labelHtml +
+      '<div class="pe-model-pct ' + cls + '">' + pct.toFixed(0) + '%</div>' +
+      '<div class="pe-model-detail">' + s.hits + ' of ' + s.picks + '</div>';
+  }
+
   grid.innerHTML = events.map(ev => {
-    const pctNum = Number(ev.accuracy_pct);
-    const pctClass = pctNum >= 60 ? 'good' : (pctNum >= 50 ? 'mid' : 'bad');
-    const accuracyHtml =
-      '<div class="past-event-accuracy">' +
-        '<span class="acc-pct ' + pctClass + '">' + pctNum.toFixed(0) + '%</span>' +
-        '<span class="acc-detail">' + ev.hits + ' of ' + ev.committed_picks + ' picks</span>' +
+    const modelsHtml =
+      '<div class="past-event-models">' +
+        MODEL_VERSIONS.map(v => modelRowHtml(ev.event_date, v)).join('') +
       '</div>';
 
     const m = mainByEvent[ev.event_id];
@@ -1316,7 +1364,7 @@ async function loadPastEvents() {
       '<div class="past-event-eyebrow">' + cfl.escapeHtml(cfl.formatDate(ev.event_date)) + '</div>' +
       '<div class="past-event-name">' + cfl.escapeHtml(ev.event_name) + '</div>' +
       mainHtml +
-      accuracyHtml +
+      modelsHtml +
       '<div class="past-event-cta">View card →</div>' +
       '</a>';
   }).join('');
