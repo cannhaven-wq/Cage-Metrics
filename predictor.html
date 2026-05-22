@@ -252,6 +252,71 @@
   }
   .upcoming-fight tr.bet { background: rgba(76,175,80,0.06); }
   .upcoming-fight tr.bet .star { color: var(--green); font-weight: 800; }
+  .upcoming-fight tr.consensus { background: rgba(230,57,70,0.10); }
+  .upcoming-fight tr.consensus.bet { background: rgba(230,57,70,0.18); }
+  .upcoming-fight tr.consensus td.stake { color: #fff; font-weight: 700; }
+  .upcoming-fight td.stake {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .upcoming-fight .head .consensus-badge {
+    display: inline-block;
+    margin-left: 10px;
+    padding: 2px 7px;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    vertical-align: middle;
+  }
+
+  /* Upcoming controls */
+  .upcoming-controls {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+  .upcoming-controls label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-2);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+  }
+  .upcoming-controls input[type="number"],
+  .upcoming-controls select {
+    background: var(--bg);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  .upcoming-controls input[type="number"] { width: 110px; }
+  .upcoming-controls input:focus, .upcoming-controls select:focus {
+    outline: 1px solid var(--red);
+  }
+  .upcoming-controls .pill {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+  .upcoming-controls .pill strong { color: var(--text); font-weight: 600; }
   .upcoming-fight td.num { font-variant-numeric: tabular-nums; }
   .upcoming-fight .vid {
     font-family: 'Barlow Condensed', sans-serif;
@@ -299,7 +364,30 @@
   <div class="section-label" style="margin-top: 28px;">Model detail</div>
   <div id="modelDetail"></div>
 
-  <div class="section-label" style="margin-top: 28px;">Upcoming picks</div>
+  <div class="section-label" style="margin-top: 28px;">Upcoming picks · with bet sizing</div>
+  <div class="upcoming-controls" id="upcomingControls">
+    <label>Bankroll
+      <input type="number" id="bankrollInput" min="0" step="100" value="10000">
+    </label>
+    <label>Kelly fraction
+      <select id="kellyInput">
+        <option value="0.25">Quarter</option>
+        <option value="0.5" selected>Half</option>
+        <option value="1.0">Full</option>
+      </select>
+    </label>
+    <label>Max bet
+      <select id="maxBetInput">
+        <option value="0.02">2% of bankroll</option>
+        <option value="0.05" selected>5% of bankroll</option>
+        <option value="0.10">10% of bankroll</option>
+      </select>
+    </label>
+    <label style="text-transform:none; font-weight:500; color:var(--text);">
+      <input type="checkbox" id="consensusInput"> Consensus only
+    </label>
+    <div class="pill" id="bankrollPill"></div>
+  </div>
   <div id="upcomingList"></div>
 </div>
 
@@ -502,20 +590,80 @@ cfl.renderFooter();
   });
   const fightOrder = Object.values(byFight).sort((a, b) => (a.event_date || '').localeCompare(b.event_date || ''));
 
-  if (fightOrder.length === 0) {
-    document.getElementById('upcomingList').innerHTML =
-      `<div class="empty-state">No upcoming picks yet. Predictions populate after each model's training run, and openers populate when the live cron sees them on BFO.</div>`;
-  } else {
-    // resolve fight + fighter names in one batch
+  // Restore bankroll from localStorage and wire controls
+  const bankrollEl = document.getElementById('bankrollInput');
+  const kellyEl    = document.getElementById('kellyInput');
+  const maxBetEl   = document.getElementById('maxBetInput');
+  const consensusEl= document.getElementById('consensusInput');
+  const pillEl     = document.getElementById('bankrollPill');
+  try {
+    const saved = JSON.parse(localStorage.getItem('cfl_predictor_settings') || '{}');
+    if (saved.bankroll != null) bankrollEl.value = saved.bankroll;
+    if (saved.kelly != null) kellyEl.value = saved.kelly;
+    if (saved.maxBet != null) maxBetEl.value = saved.maxBet;
+    if (saved.consensus != null) consensusEl.checked = saved.consensus;
+  } catch {}
+
+  function decimalOdds(american) {
+    if (american == null) return null;
+    return american < 0 ? 1 + (100 / Math.abs(american)) : 1 + (american / 100);
+  }
+
+  function kellyStake(modelP, american, bankroll, frac, maxFrac) {
+    if (modelP == null || modelP <= 0 || modelP >= 1) return 0;
+    const d = decimalOdds(american);
+    if (!d || d <= 1) return 0;
+    const b = d - 1, p = modelP, q = 1 - p;
+    const f = (b * p - q) / b;
+    if (f <= 0) return 0;
+    return Math.min(bankroll * f * frac, bankroll * maxFrac);
+  }
+
+  // Pre-resolve fight + fighter names if there are any upcoming
+  let fightMap = {}, fighterMap = {};
+  if (fightOrder.length > 0) {
     const fightIds = fightOrder.map(f => f.fight_id);
     const fighterIds = [...new Set(upcomingRows.map(r => r.fighter_id))];
     const [{ data: fightRows }, { data: fighterRows }] = await Promise.all([
       sb.from('fights').select('id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
       sb.from('fighters').select('id,name').in('id', fighterIds),
     ]);
-    const fightMap = Object.fromEntries((fightRows || []).map(f => [f.id, f]));
-    const fighterMap = Object.fromEntries((fighterRows || []).map(f => [f.id, f.name]));
-    document.getElementById('upcomingList').innerHTML = fightOrder.map(fr => {
+    fightMap = Object.fromEntries((fightRows || []).map(f => [f.id, f]));
+    fighterMap = Object.fromEntries((fighterRows || []).map(f => [f.id, f.name]));
+  }
+
+  function renderUpcoming() {
+    const bankroll = Math.max(0, Number(bankrollEl.value) || 0);
+    const kFrac    = Number(kellyEl.value) || 0.5;
+    const maxFrac  = Number(maxBetEl.value) || 0.05;
+    const consensusOnly = consensusEl.checked;
+
+    // persist
+    try {
+      localStorage.setItem('cfl_predictor_settings', JSON.stringify({
+        bankroll, kelly: kFrac, maxBet: maxFrac, consensus: consensusOnly
+      }));
+    } catch {}
+    pillEl.innerHTML = `Max single bet <strong>$${(bankroll * maxFrac).toFixed(0)}</strong> · Kelly × <strong>${kFrac}</strong>`;
+
+    if (fightOrder.length === 0) {
+      document.getElementById('upcomingList').innerHTML =
+        `<div class="empty-state">No upcoming picks yet. Predictions populate after each model's training run, and openers populate when the live cron sees them on BFO.</div>`;
+      return;
+    }
+
+    // Per fight: detect consensus (2+ different models with would_bet=true on the same side)
+    const renderedFights = [];
+    for (const fr of fightOrder) {
+      // votes per side: how many models say would_bet for that side
+      const votes = { A: new Set(), B: new Set() };
+      fr.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model); });
+      const consensusSide = votes.A.size >= 2 ? 'A' : (votes.B.size >= 2 ? 'B' : null);
+      const consensusModels = consensusSide ? [...votes[consensusSide]].sort() : [];
+      const isConsensus = !!consensusSide;
+
+      if (consensusOnly && !isConsensus) continue;
+
       const f = fightMap[fr.fight_id] || {};
       const header = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
       const lines = fr.rows
@@ -523,34 +671,51 @@ cfl.renderFooter();
         .map(r => {
           const name = fighterMap[r.fighter_id] || `Fighter ${r.fighter_id}`;
           const edgeStr = r.edge != null ? `${r.edge > 0 ? '+' : ''}${(r.edge * 100).toFixed(1)}%` : '—';
+          const isConsensusRow = r.would_bet && r.side === consensusSide;
+          const stake = r.would_bet ? kellyStake(r.model_p, r.opener_american_odds, bankroll, kFrac, maxFrac) : 0;
+          const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
           return `
-            <tr class="${r.would_bet ? 'bet' : ''}">
+            <tr class="${r.would_bet ? 'bet' : ''} ${isConsensusRow ? 'consensus' : ''}">
               <td><span class="vid">${escapeHtml(r.model)}</span></td>
               <td>${escapeHtml(name)}</td>
               <td class="num">${r.opener_american_odds != null ? fmtOdds(r.opener_american_odds) : '—'}</td>
               <td class="num">${r.opener_implied_p != null ? (r.opener_implied_p*100).toFixed(1)+'%' : '—'}</td>
               <td class="num">${(r.model_p*100).toFixed(1)}%</td>
               <td class="num">${edgeStr}</td>
+              <td class="num stake">${stakeStr}</td>
               <td class="star">${r.would_bet ? '★' : ''}</td>
             </tr>
           `;
         }).join('');
-      return `
+      renderedFights.push(`
         <div class="upcoming-fight">
           <div class="head">
-            <div class="matchup">${header}</div>
+            <div class="matchup">
+              ${header}
+              ${isConsensus ? `<span class="consensus-badge">Consensus (${consensusModels.join('+')})</span>` : ''}
+            </div>
             <div class="date">${fr.event_date}</div>
           </div>
           <table>
             <thead><tr>
-              <th>Model</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Model p</th><th>Edge</th><th></th>
+              <th>Model</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Model p</th><th>Edge</th><th>Stake</th><th></th>
             </tr></thead>
             <tbody>${lines}</tbody>
           </table>
         </div>
-      `;
-    }).join('');
+      `);
+    }
+
+    document.getElementById('upcomingList').innerHTML = renderedFights.length
+      ? renderedFights.join('')
+      : `<div class="empty-state">No fights match the current filter. Try unchecking "Consensus only".</div>`;
   }
+
+  renderUpcoming();
+  [bankrollEl, kellyEl, maxBetEl, consensusEl].forEach(el => {
+    el.addEventListener('change', renderUpcoming);
+    if (el.tagName === 'INPUT' && el.type === 'number') el.addEventListener('input', renderUpcoming);
+  });
 })();
 </script>
 </body>
