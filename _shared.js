@@ -122,6 +122,10 @@
         <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
           <span class="full">Stat finder</span><span class="short">Stats</span>
         </a>
+        <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>
+          <span class="full">Predictor</span><span class="short">Pred</span>
+          <span class="cfl-nav-tag" style="margin-left:6px; background:transparent; border:1px solid var(--red); color:var(--red);">Lab</span>
+        </a>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
         <span class="cfl-nav-tag">Beta</span>
       </div>
