@@ -109,6 +109,9 @@
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links">
+        <a href="picks.html" ${active === 'picks' ? 'class="active"' : ''}>
+          <span class="full">Picks</span><span class="short">Picks</span>
+        </a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
           <span class="full">Next event</span><span class="short">Event</span>
         </a>

@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Picks — Cannon Fight Lab</title>
+<meta name="description" content="This week's UFC moneyline picks from the Cannon Fight Lab models — the consensus bets the multi-model predictor flags as value, sized for your bankroll.">
+<link rel="canonical" href="https://cannonfightlab.com/picks.html">
+
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  /* -------- Page hero -------- */
+  .picks-hero {
+    background: linear-gradient(180deg, rgba(230, 57, 70, 0.10), transparent 80%);
+    border-bottom: 1px solid var(--border);
+    padding: 40px 32px 32px;
+    text-align: center;
+  }
+  .picks-hero .eyebrow {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.20em;
+    margin-bottom: 10px;
+  }
+  .picks-hero h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 44px;
+    font-weight: 900;
+    color: #fff;
+    letter-spacing: 0.4px;
+    line-height: 1.05;
+    margin-bottom: 12px;
+  }
+  .picks-hero .event {
+    font-size: 14px;
+    color: var(--text-2);
+    letter-spacing: 0.04em;
+  }
+  .picks-hero .event strong { color: #fff; font-weight: 700; }
+  .picks-hero .event .sep { margin: 0 8px; color: var(--text-3); }
+
+  /* -------- Track record strip -------- */
+  .record-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    padding: 22px 32px 0;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .record-strip .kpi {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+  }
+  .record-strip .lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 4px;
+  }
+  .record-strip .val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .record-strip .val.pos { color: var(--green); }
+  .record-strip .val.neg { color: var(--red); }
+  .record-strip .sub {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+  }
+
+  /* -------- Toolbar (bankroll / kelly) -------- */
+  .picks-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+    padding: 18px 32px 6px;
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+  .picks-toolbar label {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .picks-toolbar input, .picks-toolbar select {
+    background: var(--bg-2);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-family: inherit;
+    font-size: 13px;
+    margin-left: 6px;
+  }
+  .picks-toolbar .pill {
+    background: var(--bg-3);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--text-2);
+  }
+  .picks-toolbar .pill strong { color: #fff; font-weight: 700; }
+
+  /* -------- Main page wrap -------- */
+  .picks-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 22px 32px 48px;
+  }
+
+  .event-section { margin-bottom: 40px; }
+  .event-section .ev-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 18px;
+  }
+  .event-section .ev-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 24px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.5px;
+  }
+  .event-section .ev-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .event-section .ev-meta .sep { margin: 0 6px; color: var(--border-2); }
+
+  /* -------- Pick card (the main UI) -------- */
+  .pick-card {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 22px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.15s, transform 0.15s;
+  }
+  .pick-card:hover { border-color: var(--border-2); }
+  .pick-card.premium      { border-left: 4px solid #c084fc; }
+  .pick-card.conviction   { border-left: 4px solid #4ade80; }
+  .pick-card.young        { border-left: 4px solid #38bdf8; }
+  .pick-card.balanced     { border-left: 4px solid #facc15; }
+  .pick-card.avoid        { border-left: 4px solid #f87171; opacity: 0.7; }
+
+  .pick-card .matchup {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 6px;
+  }
+  .pick-card .matchup .vs { color: var(--text-3); margin: 0 6px; }
+
+  .pick-card .row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 20px;
+    align-items: center;
+  }
+  .pick-card .who {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .pick-card .name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.4px;
+    line-height: 1.1;
+  }
+  .pick-card .odds {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-2);
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 5px;
+    padding: 2px 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-card .stake-block {
+    text-align: right;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .pick-card .stake-lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+  }
+  .pick-card .stake-val {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--green);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-card .stake-sub {
+    font-size: 11px;
+    color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-card .rationale {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 14px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .pick-card .rationale .agree {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10.5px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+  }
+  .pick-card .rationale .agree strong { color: #fff; font-weight: 800; }
+  .pick-card .rationale .edge {
+    color: var(--green);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .pick-card .rationale .edge.neg { color: var(--red); }
+
+  /* -------- Indicator chips (admin only; same look as predictor) -------- */
+  .cfl-ind {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .cfl-ind .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  .ind-premium         { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
+  .ind-premium .dot    { background: #c084fc; box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
+  .ind-high_conviction { background: rgba(34, 197, 94, 0.16);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.45);  }
+  .ind-high_conviction .dot { background: #4ade80; }
+  .ind-young_dog       { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
+  .ind-young_dog .dot  { background: #38bdf8; }
+  .ind-balanced        { background: rgba(234, 179, 8, 0.16);  color: #fde68a; border: 1px solid rgba(234, 179, 8, 0.45);  }
+  .ind-balanced .dot   { background: #facc15; }
+  .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.40);  }
+  .ind-avoid_sub_loss .dot { background: #f87171; }
+
+  /* -------- Watch list (non-consensus fights) -------- */
+  .watch-list {
+    margin-top: 26px;
+  }
+  .watch-list .wl-title {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 10px;
+  }
+  .watch-list .wl-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .watch-list .wl-row:last-child { border-bottom: 0; }
+  .watch-list .wl-row .matchup-line { color: var(--text-2); }
+  .watch-list .wl-row .matchup-line .vs { color: var(--text-3); margin: 0 6px; }
+  .watch-list .wl-row .note { color: var(--text-3); font-size: 11px; }
+  .watch-list .wl-row.has-single-bet .note { color: var(--amber); }
+
+  /* -------- Empty / loading states -------- */
+  .empty-state {
+    background: var(--bg-2);
+    border: 1px dashed var(--border-2);
+    border-radius: 10px;
+    padding: 24px;
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+  }
+
+  /* -------- Bottom caveats -------- */
+  .picks-caveat {
+    margin-top: 40px;
+    padding: 18px 22px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.7;
+  }
+  .picks-caveat strong { color: #fff; }
+  .picks-caveat a { color: var(--red); text-decoration: underline; text-underline-offset: 2px; }
+
+  @media (max-width: 600px) {
+    .picks-hero { padding: 28px 18px 22px; }
+    .picks-hero h1 { font-size: 32px; }
+    .picks-page { padding: 18px 14px 36px; }
+    .picks-toolbar { padding: 14px 18px 6px; }
+    .record-strip { padding: 16px 18px 0; }
+    .pick-card { padding: 16px 18px; }
+    .pick-card .name { font-size: 22px; }
+    .pick-card .stake-val { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="picks-hero">
+  <div class="eyebrow">Moneyline picks</div>
+  <h1 id="picksHeroTitle">Loading this week's card…</h1>
+  <div class="event" id="picksHeroEvent"></div>
+</div>
+
+<div class="record-strip" id="recordStrip"></div>
+
+<div class="picks-toolbar">
+  <label>Bankroll
+    <input type="number" id="bankrollInput" min="0" step="100" value="1000">
+  </label>
+  <label>Kelly fraction
+    <select id="kellyInput">
+      <option value="0.25">Quarter</option>
+      <option value="0.5" selected>Half</option>
+      <option value="1.0">Full</option>
+    </select>
+  </label>
+  <label>Max bet
+    <select id="maxBetInput">
+      <option value="0.02">2%</option>
+      <option value="0.05" selected>5%</option>
+      <option value="0.10">10%</option>
+    </select>
+  </label>
+  <div class="pill" id="bankrollPill">Sized for $1,000 bankroll</div>
+</div>
+
+<div class="picks-page">
+  <div id="picksList">
+    <div class="empty-state">Loading picks…</div>
+  </div>
+
+  <div class="picks-caveat">
+    <strong>How this page works.</strong> We run multiple ML models against every UFC fight. When 2+ models independently flag the same fighter as undervalued by the opening market, we show it here with a recommended Kelly-sized stake. <strong>Edge</strong> is the gap between the model's win probability and the opener's implied probability — a 10%+ edge has historically meant a real value bet, not noise.<br><br>
+    Track record above is on graded historical picks at the consensus level. Actual bankroll growth lags backtest figures because of slippage and book limits — assume 30–60% lower in practice. <a href="predictor.html">See the full Predictor lab</a> for per-model detail, hold-out backtests, and feature breakdowns.<br><br>
+    <strong>Not advice.</strong> Always gamble responsibly. 1-800-GAMBLER.
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('picks');
+cfl.renderFooter();
+
+(async function () {
+  const sb = window.cflSupabase;
+  const escapeHtml = window.cfl.escapeHtml || (s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
+  const fmtOdds = n => (n > 0 ? `+${n}` : `${n}`);
+
+  // ---- Indicator metadata (admin-only chips on cards) ----
+  const INDICATOR_LABEL = {
+    PREMIUM: 'PREMIUM', HIGH_CONVICTION: 'HIGH CONVICTION', YOUNG_DOG: 'YOUNG DOG',
+    BALANCED: 'BALANCED', AVOID_SUB_LOSS: 'AVOID',
+  };
+  const INDICATOR_PRIORITY = {
+    PREMIUM: 100, HIGH_CONVICTION: 80, YOUNG_DOG: 70, BALANCED: 60, AVOID_SUB_LOSS: -50,
+  };
+  const INDICATOR_TITLE = {
+    PREMIUM: 'Edge ≥ 0.20 · younger dog · coming off W (+63.5% backtest ROI)',
+    HIGH_CONVICTION: 'Edge ≥ 0.20 (+18.6% backtest ROI)',
+    YOUNG_DOG: 'Edge ≥ 0.20 · younger dog (+47.8% backtest ROI)',
+    BALANCED: 'Edge ≥ 0.15 · ≤+250 · younger (+28.6% backtest ROI)',
+    AVOID_SUB_LOSS: 'Anti-filter — dog coming off a submission loss (−35% ROI)',
+  };
+
+  // ---- Auth + indicators (RLS-gated; non-admins get [] from Supabase) ----
+  let isAdmin = false;
+  try {
+    if (window.cflAuth?.ready) {
+      await window.cflAuth.ready();
+      isAdmin = !!window.cflAuth.isAdmin?.();
+    }
+  } catch {}
+
+  // ---- Pull predictions across all models ----
+  // We want both graded (for track record) and upcoming (for picks).
+  const { data: models, error: mErr } = await sb.from('model_versions').select('id,name').order('id');
+  if (mErr || !models?.length) {
+    document.getElementById('picksList').innerHTML = `<div class="empty-state">No models trained yet. Check back after the next training run.</div>`;
+    return;
+  }
+  const versionIds = models.map(m => m.id);
+
+  const allPreds = await window.cfl.fetchAll(() =>
+    sb.from('model_predictions')
+      .select('model_version,fight_id,fighter_id,side,event_date,model_p,opener_implied_p,opener_american_odds,edge,would_bet,outcome_known,won,pnl_usd')
+      .in('model_version', versionIds)
+      .order('event_date', { ascending: false })
+  );
+
+  // ---- Track record: consensus picks (2+ models would_bet same side), graded only ----
+  const consensusGraded = computeConsensusPicks(allPreds.filter(r => r.outcome_known));
+  const totalBets = consensusGraded.length;
+  const wins = consensusGraded.filter(p => p.won).length;
+  const pnl = consensusGraded.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
+  const roi = totalBets ? (100 * pnl / (totalBets * 100)) : 0;
+
+  // Recent (last 60 days) for "trending" KPI
+  const cutoff = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+  const recent = consensusGraded.filter(p => p.event_date >= cutoff);
+  const recentWins = recent.filter(p => p.won).length;
+  const recentPnl = recent.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
+  const recentRoi = recent.length ? (100 * recentPnl / (recent.length * 100)) : 0;
+
+  renderRecordStrip({
+    totalBets, wins, roi, recent: recent.length, recentWins, recentRoi
+  });
+
+  // ---- Indicator fetch (admin only) ----
+  const indicatorsByKey = {};
+  if (isAdmin) {
+    const { data: inds } = await sb.from('prediction_indicators')
+      .select('model_version,fight_id,fighter_id,indicator')
+      .in('model_version', versionIds);
+    if (inds) {
+      for (const i of inds) {
+        const k = `${i.fight_id}|${i.fighter_id}`;
+        (indicatorsByKey[k] = indicatorsByKey[k] || new Set()).add(i.indicator);
+      }
+    }
+  }
+  function fightSideIndicators(fightId, fighterId) {
+    const s = indicatorsByKey[`${fightId}|${fighterId}`];
+    return s ? [...s].sort((a, b) => (INDICATOR_PRIORITY[b] || 0) - (INDICATOR_PRIORITY[a] || 0)) : [];
+  }
+  function topIndicator(fightId, fighterId) {
+    const tags = fightSideIndicators(fightId, fighterId);
+    return tags[0] || null;
+  }
+
+  // ---- Find the next upcoming event(s) with picks ----
+  const today = new Date().toISOString().slice(0, 10);
+  const upcoming = allPreds.filter(p => !p.outcome_known && p.event_date >= today);
+  if (!upcoming.length) {
+    document.getElementById('picksHeroTitle').textContent = 'No upcoming picks yet';
+    document.getElementById('picksHeroEvent').textContent = 'Predictions populate after the next training run.';
+    document.getElementById('picksList').innerHTML = `<div class="empty-state">No upcoming picks available. The models retrain after each event; check back in a few hours.</div>`;
+    return;
+  }
+
+  // Resolve fight + fighter + event names
+  const fightIds = [...new Set(upcoming.map(p => p.fight_id))];
+  const fighterIds = [...new Set(upcoming.map(p => p.fighter_id))];
+  const [{ data: fightRows }, { data: fighterRows }] = await Promise.all([
+    sb.from('fights').select('id,event_id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
+    sb.from('fighters').select('id,name').in('id', fighterIds),
+  ]);
+  const fightMap = Object.fromEntries((fightRows || []).map(f => [f.id, f]));
+  const fighterMap = Object.fromEntries((fighterRows || []).map(f => [f.id, f.name]));
+  const eventIds = [...new Set((fightRows || []).map(f => f.event_id).filter(Boolean))];
+  let eventMap = {};
+  if (eventIds.length) {
+    const { data: eventRows } = await sb.from('events').select('id,name,event_date,location').in('id', eventIds);
+    eventMap = Object.fromEntries((eventRows || []).map(e => [e.id, e]));
+  }
+
+  // ---- Group upcoming by event ----
+  const byEvent = {};
+  for (const r of upcoming) {
+    const f = fightMap[r.fight_id];
+    const eid = f?.event_id ?? '__unknown__';
+    if (!byEvent[eid]) byEvent[eid] = { eventId: eid, event: eventMap[eid] || null, fights: {} };
+    if (!byEvent[eid].fights[r.fight_id]) byEvent[eid].fights[r.fight_id] = { fight_id: r.fight_id, rows: [] };
+    byEvent[eid].fights[r.fight_id].rows.push(r);
+  }
+  const events = Object.values(byEvent).sort((a, b) => {
+    const ad = a.event?.event_date || '9999';
+    const bd = b.event?.event_date || '9999';
+    return ad.localeCompare(bd);
+  });
+
+  // ---- Hero: feature the next event ----
+  const heroEv = events[0]?.event;
+  if (heroEv) {
+    document.getElementById('picksHeroTitle').textContent = heroEv.name || 'This week\'s picks';
+    const date = formatDate(heroEv.event_date);
+    const loc = heroEv.location ? `<span class="sep">·</span>${escapeHtml(heroEv.location)}` : '';
+    const eventFights = Object.values(events[0].fights);
+    const eventConsensus = countConsensusForEvent(eventFights);
+    const consensusFrag = eventConsensus > 0
+      ? `<span class="sep">·</span><strong>${eventConsensus} consensus pick${eventConsensus === 1 ? '' : 's'}</strong>`
+      : `<span class="sep">·</span>no consensus picks this card`;
+    document.getElementById('picksHeroEvent').innerHTML =
+      `<strong>${escapeHtml(date)}</strong>${loc}${consensusFrag}`;
+  }
+
+  // ---- Render ----
+  renderEvents(events);
+  wireToolbar();
+
+  // ====================== helpers ======================
+
+  function computeConsensusPicks(rows) {
+    // Group by fight_id+side; require would_bet=true on 2+ different models for same side.
+    const byFightSide = {};
+    for (const r of rows) {
+      if (!r.would_bet) continue;
+      const k = `${r.fight_id}|${r.side}`;
+      (byFightSide[k] = byFightSide[k] || []).push(r);
+    }
+    const out = [];
+    for (const k in byFightSide) {
+      const arr = byFightSide[k];
+      const models = new Set(arr.map(r => r.model_version));
+      if (models.size < 2) continue;
+      // Use the first row's outcome (they all share fight_id and same outcome)
+      const r0 = arr[0];
+      out.push({
+        fight_id: r0.fight_id,
+        fighter_id: r0.fighter_id,
+        side: r0.side,
+        event_date: r0.event_date,
+        won: r0.won,
+        pnl_usd: r0.pnl_usd,
+        models: [...models].sort(),
+      });
+    }
+    return out;
+  }
+
+  function countConsensusForEvent(eventFights) {
+    let n = 0;
+    for (const f of eventFights) {
+      const votes = { A: new Set(), B: new Set() };
+      f.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
+      if (votes.A.size >= 2 || votes.B.size >= 2) n++;
+    }
+    return n;
+  }
+
+  function decimalOdds(american) {
+    return american < 0 ? 1 + (100 / Math.abs(american)) : 1 + (american / 100);
+  }
+  function kellyStake(modelP, american, bankroll, frac, maxFrac) {
+    if (modelP == null || modelP <= 0 || modelP >= 1) return 0;
+    const d = decimalOdds(american);
+    if (!d || d <= 1) return 0;
+    const b = d - 1, p = modelP, q = 1 - p;
+    const f = (b * p - q) / b;
+    if (f <= 0) return 0;
+    return Math.min(bankroll * f * frac, bankroll * maxFrac);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso + 'T00:00:00Z');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+  }
+
+  function renderRecordStrip({ totalBets, wins, roi, recent, recentWins, recentRoi }) {
+    const el = document.getElementById('recordStrip');
+    const roiClass = roi > 0 ? 'pos' : (roi < 0 ? 'neg' : '');
+    const recentRoiClass = recentRoi > 0 ? 'pos' : (recentRoi < 0 ? 'neg' : '');
+    el.innerHTML = `
+      <div class="kpi">
+        <div class="lbl">All-time consensus bets</div>
+        <div class="val">${totalBets.toLocaleString()}</div>
+        <div class="sub">${wins} wins · ${(100*wins/Math.max(totalBets,1)).toFixed(1)}% hit rate</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">All-time ROI</div>
+        <div class="val ${roiClass}">${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%</div>
+        <div class="sub">$100 flat-stake basis</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Last 60 days</div>
+        <div class="val">${recent} bets</div>
+        <div class="sub">${recentWins} wins</div>
+      </div>
+      <div class="kpi">
+        <div class="lbl">Last 60 ROI</div>
+        <div class="val ${recentRoiClass}">${recent ? (recentRoi >= 0 ? '+' : '') + recentRoi.toFixed(1) + '%' : '—'}</div>
+        <div class="sub">recent trend</div>
+      </div>
+    `;
+  }
+
+  function wireToolbar() {
+    const bankrollEl = document.getElementById('bankrollInput');
+    const kellyEl    = document.getElementById('kellyInput');
+    const maxBetEl   = document.getElementById('maxBetInput');
+    try {
+      const saved = JSON.parse(localStorage.getItem('cfl_picks_settings') || '{}');
+      if (saved.bankroll != null) bankrollEl.value = saved.bankroll;
+      if (saved.kelly != null) kellyEl.value = saved.kelly;
+      if (saved.maxBet != null) maxBetEl.value = saved.maxBet;
+    } catch {}
+    function rerender() {
+      const bankroll = Math.max(0, Number(bankrollEl.value) || 0);
+      const kFrac    = Number(kellyEl.value) || 0.5;
+      const maxFrac  = Number(maxBetEl.value) || 0.05;
+      try {
+        localStorage.setItem('cfl_picks_settings', JSON.stringify({ bankroll, kelly: kFrac, maxBet: maxFrac }));
+      } catch {}
+      document.getElementById('bankrollPill').innerHTML = `Sized for <strong>$${bankroll.toLocaleString()}</strong> bankroll · max bet <strong>$${Math.round(bankroll * maxFrac).toLocaleString()}</strong>`;
+      renderEvents(events);
+    }
+    [bankrollEl, kellyEl, maxBetEl].forEach(el => {
+      el.addEventListener('change', rerender);
+      if (el.tagName === 'INPUT' && el.type === 'number') el.addEventListener('input', rerender);
+    });
+    // First paint
+    rerender();
+  }
+
+  function renderEvents(events) {
+    const bankrollEl = document.getElementById('bankrollInput');
+    const kellyEl    = document.getElementById('kellyInput');
+    const maxBetEl   = document.getElementById('maxBetInput');
+    const bankroll = Math.max(0, Number(bankrollEl.value) || 0);
+    const kFrac    = Number(kellyEl.value) || 0.5;
+    const maxFrac  = Number(maxBetEl.value) || 0.05;
+
+    const rendered = [];
+    for (const ev of events) {
+      const evFights = Object.values(ev.fights);
+      const evDate = ev.event?.event_date || evFights[0]?.rows?.[0]?.event_date || '';
+      const evName = ev.event?.name || 'Upcoming card';
+      const evLoc = ev.event?.location || '';
+
+      // Compute consensus + priority per fight
+      const fightsWithMeta = evFights.map(f => {
+        const votes = { A: new Set(), B: new Set() };
+        f.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
+        let consensusSide = null;
+        if (votes.A.size >= 2) consensusSide = 'A';
+        else if (votes.B.size >= 2) consensusSide = 'B';
+        return { fight: f, consensusSide, votes };
+      });
+      // Sort: consensus fights first, sub-sorted by indicator priority + edge
+      const consensusFights = fightsWithMeta
+        .filter(x => x.consensusSide)
+        .map(x => {
+          const consensusRows = x.fight.rows.filter(r => r.would_bet && r.side === x.consensusSide);
+          const avgEdge = consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / Math.max(consensusRows.length, 1);
+          const avgModelP = consensusRows.reduce((s, r) => s + r.model_p, 0) / Math.max(consensusRows.length, 1);
+          const pickedFighter = consensusRows[0]?.fighter_id;
+          const opener = consensusRows[0]?.opener_american_odds;
+          const top = topIndicator(x.fight.fight_id, pickedFighter);
+          const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
+          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, opener, top, pri };
+        })
+        .sort((a, b) => (b.pri - a.pri) || (b.avgEdge - a.avgEdge));
+      const watchList = fightsWithMeta.filter(x => !x.consensusSide);
+
+      const consensusFrags = consensusFights.map(x => renderPickCard(x, bankroll, kFrac, maxFrac, fightMap, fighterMap));
+      const watchFrag = renderWatchList(watchList, fightMap, fighterMap);
+
+      const consensusEmpty = consensusFights.length === 0
+        ? `<div class="empty-state">No consensus picks on this card — wait it out or shop watch-list below.</div>`
+        : consensusFrags.join('');
+
+      rendered.push(`
+        <div class="event-section">
+          <div class="ev-head">
+            <div class="ev-name">${escapeHtml(evName)}</div>
+            <div class="ev-meta">
+              ${escapeHtml(formatDate(evDate))}
+              ${evLoc ? `<span class="sep">·</span>${escapeHtml(evLoc)}` : ''}
+              <span class="sep">·</span>${evFights.length} fight${evFights.length === 1 ? '' : 's'}
+              ${consensusFights.length ? `<span class="sep">·</span>${consensusFights.length} consensus` : ''}
+            </div>
+          </div>
+          ${consensusEmpty}
+          ${watchFrag}
+        </div>
+      `);
+    }
+
+    document.getElementById('picksList').innerHTML = rendered.join('');
+  }
+
+  function renderPickCard(x, bankroll, kFrac, maxFrac, fightMap, fighterMap) {
+    const f = fightMap[x.fight.fight_id] || {};
+    const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
+    const pickName = fighterMap[x.pickedFighter] || `Fighter ${x.pickedFighter}`;
+    const stake = x.opener ? kellyStake(x.avgModelP, x.opener, bankroll, kFrac, maxFrac) : 0;
+    const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
+    const stakePct = bankroll > 0 ? (100 * stake / bankroll).toFixed(1) : '0.0';
+    const cardClass = x.top === 'PREMIUM' ? 'premium'
+      : x.top === 'HIGH_CONVICTION' ? 'conviction'
+      : x.top === 'YOUNG_DOG' ? 'young'
+      : x.top === 'BALANCED' ? 'balanced'
+      : (x.top === 'AVOID_SUB_LOSS' && x.pri < 0) ? 'avoid'
+      : '';
+    const inds = fightSideIndicators(x.fight.fight_id, x.pickedFighter);
+    const indFrags = (isAdmin && inds.length)
+      ? inds.map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`).join(' ')
+      : '';
+    const modelsStr = x.consensusRows.map(r => r.model_version).sort().join(' + ');
+    const edgePct = (x.avgEdge * 100).toFixed(1);
+    const modelProb = (x.avgModelP * 100).toFixed(1);
+    const marketProb = x.opener
+      ? (x.opener < 0 ? (100 * Math.abs(x.opener) / (Math.abs(x.opener) + 100)) : (100 * 100 / (x.opener + 100))).toFixed(1)
+      : '—';
+    return `
+      <div class="pick-card ${cardClass}">
+        <div class="matchup">${matchup}</div>
+        <div class="row">
+          <div class="who">
+            <div class="name">${escapeHtml(pickName)}</div>
+            <div><span class="odds">${x.opener != null ? fmtOdds(x.opener) : '—'}</span></div>
+          </div>
+          <div class="stake-block">
+            <div class="stake-lbl">Recommended stake</div>
+            <div class="stake-val">${stakeStr}</div>
+            <div class="stake-sub">${stakePct}% of bankroll</div>
+          </div>
+        </div>
+        <div class="rationale">
+          <span class="agree"><strong>${modelsStr}</strong> agree</span>
+          <span>Model: <strong style="color:#fff;">${modelProb}%</strong> · Market: ${marketProb}% · <span class="edge ${x.avgEdge < 0 ? 'neg' : ''}">${x.avgEdge >= 0 ? '+' : ''}${edgePct}% edge</span></span>
+          ${indFrags}
+        </div>
+      </div>
+    `;
+  }
+
+  function renderWatchList(watchList, fightMap, fighterMap) {
+    if (!watchList.length) return '';
+    const rows = watchList.map(x => {
+      const f = fightMap[x.fight.fight_id] || {};
+      const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
+      const singleBets = x.fight.rows.filter(r => r.would_bet);
+      const hasSingle = singleBets.length > 0;
+      let note = '<span class="note">no model flagged</span>';
+      if (hasSingle) {
+        const singleSide = singleBets[0].side;
+        const sideName = singleSide === 'A' ? (f.fighter_a_name || '?') : (f.fighter_b_name || '?');
+        const versions = [...new Set(singleBets.map(r => r.model_version))].sort().join(', ');
+        note = `<span class="note">single model: ${escapeHtml(versions)} on <strong style="color:var(--amber);">${escapeHtml(sideName)}</strong></span>`;
+      }
+      return `
+        <div class="wl-row ${hasSingle ? 'has-single-bet' : ''}">
+          <div class="matchup-line">${matchup}</div>
+          ${note}
+        </div>
+      `;
+    }).join('');
+    return `
+      <div class="watch-list">
+        <div class="wl-title">Watch list — no consensus, no recommended bet</div>
+        ${rows}
+      </div>
+    `;
+  }
+})();
+</script>
+</body>
+</html>
