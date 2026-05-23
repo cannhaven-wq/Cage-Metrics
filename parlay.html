@@ -227,6 +227,24 @@
     text-overflow: ellipsis;
   }
   .pick-fighter .meta { font-size: 11px; color: var(--text-3); }
+  .pick-odds-pill {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 3px 9px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+    line-height: 1.2;
+    flex-shrink: 0;
+  }
+  .pick-odds-pill.dog  { color: #86efac; border-color: rgba(76,175,80,0.45); }
+  .pick-odds-pill.fav  { color: #fca5a5; border-color: rgba(239,68,68,0.40); }
+  .pick-odds-pill.unknown { color: var(--text-3); }
+  .pick-fighter.selected .pick-odds-pill { background: rgba(76,175,80,0.18); }
   .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
 
   .slip {
@@ -346,7 +364,7 @@
 <div class="page-hero">
   <div class="eyebrow">Build & evaluate</div>
   <h1>UFC Parlay Builder</h1>
-  <p>Pick your fighters from the upcoming card. Enter the sportsbook odds. See your combined payout and implied probability.</p>
+  <p>Pick fighters from the upcoming card — each one's opener is pre-filled, edit if your book has a better price. Combined payout + implied probability update live.</p>
 </div>
 
 <div class="page">
@@ -392,6 +410,21 @@ let stake = 10;
 let upcomingEvents = [];
 let fightsByEvent = {};
 let fightersById = {};
+// (fight_id):(fighter_id) -> american opener from BFO consensus (book_id=6)
+let openerByPick = {};
+
+function fmtAmerican(n) {
+  if (n == null || isNaN(n)) return '—';
+  return n > 0 ? '+' + n : String(n);
+}
+function openerFor(fightId, fighterId) {
+  const v = openerByPick[`${fightId}:${fighterId}`];
+  return (v == null) ? null : Number(v);
+}
+function oddsClass(n) {
+  if (n == null) return 'unknown';
+  return n < 0 ? 'fav' : 'dog';
+}
 
 async function load() {
   const sb = window.cflSupabase;
@@ -436,6 +469,21 @@ async function load() {
     (fighters || []).forEach(f => { fightersById[f.id] = f; });
   }
 
+  // Pull consensus opener (book_id=6) so we can pre-fill leg odds on click
+  // and show a price on each fighter card before the user picks.
+  const allFightIds = (fights || []).map(f => f.id);
+  if (allFightIds.length > 0) {
+    const { data: openers } = await sb
+      .from('fight_odds')
+      .select('fight_id, fighter_id, american_odds')
+      .in('fight_id', allFightIds)
+      .eq('book_id', 6)
+      .eq('is_opener', true);
+    (openers || []).forEach(o => {
+      openerByPick[`${o.fight_id}:${o.fighter_id}`] = o.american_odds;
+    });
+  }
+
   render();
 }
 
@@ -465,23 +513,27 @@ function renderPickRow(f) {
   const b = fightersById[f.fighter_b_id];
   const aSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_a_id);
   const bSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_b_id);
+  const aOdds = openerFor(f.id, f.fighter_a_id);
+  const bOdds = openerFor(f.id, f.fighter_b_id);
 
   return `
     <div class="pick-row">
-      <div class="pick-fighter ${aSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_a_id}" data-name="${cfl.escapeHtml(f.fighter_a_name)}" data-opp="${cfl.escapeHtml(f.fighter_b_name)}">
+      <div class="pick-fighter ${aSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_a_id}" data-name="${cfl.escapeHtml(f.fighter_a_name)}" data-opp="${cfl.escapeHtml(f.fighter_b_name)}" data-odds="${aOdds != null ? aOdds : ''}">
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_a_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_a_name)}</div>
           <div class="meta">${a ? cfl.formatRecord(a.ufc_wins, a.ufc_losses, a.ufc_draws) + ' UFC' : '—'}</div>
         </div>
+        <div class="pick-odds-pill ${oddsClass(aOdds)}">${fmtAmerican(aOdds)}</div>
       </div>
       <div class="pick-vs">VS</div>
-      <div class="pick-fighter right ${bSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_b_id}" data-name="${cfl.escapeHtml(f.fighter_b_name)}" data-opp="${cfl.escapeHtml(f.fighter_a_name)}">
+      <div class="pick-fighter right ${bSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_b_id}" data-name="${cfl.escapeHtml(f.fighter_b_name)}" data-opp="${cfl.escapeHtml(f.fighter_a_name)}" data-odds="${bOdds != null ? bOdds : ''}">
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_b_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_b_name)}</div>
           <div class="meta">${b ? cfl.formatRecord(b.ufc_wins, b.ufc_losses, b.ufc_draws) + ' UFC' : '—'}</div>
         </div>
+        <div class="pick-odds-pill ${oddsClass(bOdds)}">${fmtAmerican(bOdds)}</div>
       </div>
     </div>
   `;
@@ -499,12 +551,16 @@ document.addEventListener('click', e => {
     if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
       legs.splice(existingIndex, 1);
     } else {
+      // Pre-fill the leg odds with the BFO consensus opener so users see a
+      // working parlay immediately. They can still type over it if they got
+      // a better number on their book.
+      const opener = openerFor(fightId, fighterId);
       const newLeg = {
         fightId,
         fighterId,
         fighterName: pf.dataset.name,
         opponentName: pf.dataset.opp,
-        odds: ''
+        odds: opener != null ? String(opener) : ''
       };
       if (existingIndex >= 0) {
         legs[existingIndex] = newLeg;
@@ -601,8 +657,8 @@ function renderSlip() {
       </div>
     </div>
     <div class="help-box">
-      Enter <strong>American odds</strong> like <code style="color:var(--red)">-150</code> (favorite) or <code style="color:var(--red)">+220</code> (underdog).<br>
-      Implied probability shows what the sportsbook is pricing in. Combined % is the chance all your picks hit.
+      Each leg is pre-filled with the <strong>BFO consensus opener</strong>. Type over it with your own book's price if you got a better number.<br>
+      Implied % shows what the price is pricing in. Combined % is the chance all your picks hit at once.
     </div>
   `;
   updateSlipHandle();
