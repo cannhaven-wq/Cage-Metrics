@@ -46,8 +46,8 @@
   .model-card {
     background: var(--bg-2);
     border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
+    border-radius: 10px;
+    padding: 14px 16px;
     transition: border-color 0.15s;
   }
   .model-card:hover { border-color: var(--border-2); }
@@ -76,11 +76,16 @@
     letter-spacing: 0.05em;
   }
   .model-card .desc {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--text-2);
-    line-height: 1.6;
-    margin-bottom: 16px;
-    min-height: 60px;
+    line-height: 1.55;
+    margin-bottom: 12px;
+    min-height: 0;
+    max-height: 3.1em;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
   }
   .model-card .stats {
     display: grid;
@@ -202,38 +207,135 @@
 
   /* Admin-only indicator chips (prediction_indicators table; RLS-gated) */
   .cfl-ind {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     font-family: 'Barlow Condensed', sans-serif;
-    font-size: 10px;
+    font-size: 11px;
     font-weight: 700;
-    padding: 1px 5px;
-    margin-left: 4px;
-    border-radius: 3px;
+    padding: 2px 8px;
+    margin: 0 4px 2px 0;
+    border-radius: 999px;
     letter-spacing: 0.06em;
-    vertical-align: middle;
-    line-height: 1.3;
+    line-height: 1.4;
+    white-space: nowrap;
   }
-  .ind-high_conviction { background: rgba(34, 197, 94, 0.18);  color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
-  .ind-young_dog       { background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
-  .ind-premium         { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
-  .ind-balanced        { background: rgba(234, 179, 8, 0.18);  color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); }
-  .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.18);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+  .cfl-ind .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 5px;
+  }
+  .ind-premium         { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
+  .ind-premium .dot    { background: #c084fc; box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
+  .ind-high_conviction { background: rgba(34, 197, 94, 0.16);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.45);  }
+  .ind-high_conviction .dot { background: #4ade80; }
+  .ind-young_dog       { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
+  .ind-young_dog .dot  { background: #38bdf8; }
+  .ind-balanced        { background: rgba(234, 179, 8, 0.16);  color: #fde68a; border: 1px solid rgba(234, 179, 8, 0.45);  }
+  .ind-balanced .dot   { background: #facc15; }
+  .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.40);  }
+  .ind-avoid_sub_loss .dot { background: #f87171; }
+
+  /* A row of chips clustered together under a pick */
+  .indicator-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0;
+    margin-top: 4px;
+  }
 
   /* Admin-mode banner — visible only when isAdmin */
   .admin-banner {
     display: none;
-    background: linear-gradient(180deg, rgba(168, 85, 247, 0.15), transparent);
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.12), rgba(168, 85, 247, 0.03));
     border: 1px solid rgba(168, 85, 247, 0.30);
-    color: #c084fc;
-    border-radius: 8px;
-    padding: 10px 14px;
-    margin-bottom: 18px;
-    font-size: 12px;
-    line-height: 1.6;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 22px;
   }
   .admin-banner.active { display: block; }
-  .admin-banner strong { color: #d8b4fe; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px; font-size: 11px; }
-  .admin-banner code { background: rgba(168, 85, 247, 0.12); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+  .admin-banner .ab-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .admin-banner .ab-tag {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #d8b4fe;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    background: rgba(168, 85, 247, 0.18);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    padding: 2px 8px;
+    border-radius: 4px;
+  }
+  .admin-banner .ab-title {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .ab-legend {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 8px 14px;
+  }
+  .ab-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .ab-legend-row .roi { color: var(--green); font-variant-numeric: tabular-nums; font-weight: 600; margin-left: auto; padding-left: 8px; }
+  .ab-legend-row.neg .roi { color: var(--red); }
+  .ab-legend-row .rule { color: var(--text-3); font-size: 10.5px; }
+
+  /* Upcoming event header */
+  .upcoming-event {
+    margin-top: 28px;
+    margin-bottom: 14px;
+  }
+  .upcoming-event:first-child { margin-top: 0; }
+  .upcoming-event .ev-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 0 8px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .upcoming-event .ev-name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: 0.6px;
+    line-height: 1.15;
+  }
+  .upcoming-event .ev-meta {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+  }
+  .upcoming-event .ev-meta .sep { margin: 0 6px; color: var(--border-2); }
+  .upcoming-event .ev-meta .flagged { color: #c084fc; font-weight: 700; }
+  .upcoming-event .ev-empty {
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-3);
+    background: var(--bg-2);
+    border: 1px dashed var(--border);
+    border-radius: 8px;
+  }
 
   /* Upcoming */
   .upcoming-fight {
@@ -294,6 +396,19 @@
     color: var(--text);
     font-weight: 600;
   }
+  /* Fight-level indicator cluster on the header */
+  .upcoming-fight .head .fight-inds {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+  }
+  .upcoming-fight.has-premium      { border-left: 3px solid #c084fc; }
+  .upcoming-fight.has-conviction   { border-left: 3px solid #4ade80; }
+  .upcoming-fight.has-young        { border-left: 3px solid #38bdf8; }
+  .upcoming-fight.has-balanced     { border-left: 3px solid #facc15; }
+  .upcoming-fight.has-avoid        { opacity: 0.62; }
+
   .upcoming-fight .head .consensus-badge {
     display: inline-block;
     margin-left: 10px;
@@ -467,19 +582,42 @@
 
 <div class="page">
   <div id="adminBanner" class="admin-banner">
-    <strong>Admin view</strong>
-    Indicator chips are visible on picks below: <code>HC</code> high-conviction · <code>YD</code> younger dog · <code>PR</code> premium · <code>BAL</code> balanced · <code>AVD</code> avoid (prior submission loss). These derive from a backtest filter scan and are hidden from regular users.
+    <div class="ab-head">
+      <span class="ab-tag">Admin view</span>
+      <span class="ab-title">Indicator chips highlight high-ROI patterns on dog picks. Hidden from non-admin users.</span>
+    </div>
+    <div class="ab-legend">
+      <div class="ab-legend-row">
+        <span class="cfl-ind ind-premium"><span class="dot"></span>PREMIUM</span>
+        <span class="rule">edge≥0.20 · younger · coming off W</span>
+        <span class="roi">+63.5%</span>
+      </div>
+      <div class="ab-legend-row">
+        <span class="cfl-ind ind-high_conviction"><span class="dot"></span>HIGH CONVICTION</span>
+        <span class="rule">edge ≥ 0.20</span>
+        <span class="roi">+18.6%</span>
+      </div>
+      <div class="ab-legend-row">
+        <span class="cfl-ind ind-young_dog"><span class="dot"></span>YOUNG DOG</span>
+        <span class="rule">edge≥0.20 · younger</span>
+        <span class="roi">+47.8%</span>
+      </div>
+      <div class="ab-legend-row">
+        <span class="cfl-ind ind-balanced"><span class="dot"></span>BALANCED</span>
+        <span class="rule">edge≥0.15 · ≤+250 · younger</span>
+        <span class="roi">+28.6%</span>
+      </div>
+      <div class="ab-legend-row neg">
+        <span class="cfl-ind ind-avoid_sub_loss"><span class="dot"></span>AVOID</span>
+        <span class="rule">picked dog coming off a submission loss</span>
+        <span class="roi">−35%</span>
+      </div>
+    </div>
   </div>
 
-  <div class="section-label">Models</div>
-  <div id="modelGrid" class="models-grid"></div>
+  <div class="section-label">Upcoming picks · with bet sizing</div>
 
-  <div class="section-label" style="margin-top: 28px;">Model detail</div>
-  <div id="modelDetail"></div>
-
-  <div class="section-label" style="margin-top: 28px;">Upcoming picks · with bet sizing</div>
-
-  <details class="howto" open>
+  <details class="howto">
     <summary>How to use this page</summary>
     <div class="howto-body">
 
@@ -554,6 +692,14 @@
     <div class="pill" id="bankrollPill"></div>
   </div>
   <div id="upcomingList"></div>
+
+  <div class="section-label" style="margin-top: 48px;">How the models compare</div>
+  <p style="font-size: 12px; color: var(--text-3); margin: 6px 0 14px; line-height: 1.6;">
+    Each model trains on UFC fights through 2022 and is evaluated on the 2023+ hold-out. Click a row for the full backtest breakdown and recent graded picks.
+  </p>
+  <div id="modelGrid" class="models-grid"></div>
+
+  <div id="modelDetail" style="margin-top: 22px;"></div>
 </div>
 
 <footer class="cfl-footer"></footer>
@@ -645,22 +791,62 @@ cfl.renderFooter();
     }
   }
   const INDICATOR_LABEL = {
-    HIGH_CONVICTION: 'HC',
-    YOUNG_DOG: 'YD',
-    PREMIUM: 'PR',
-    BALANCED: 'BAL',
-    AVOID_SUB_LOSS: 'AVD',
+    PREMIUM: 'PREMIUM',
+    HIGH_CONVICTION: 'HIGH CONVICTION',
+    YOUNG_DOG: 'YOUNG DOG',
+    BALANCED: 'BALANCED',
+    AVOID_SUB_LOSS: 'AVOID',
+  };
+  const INDICATOR_TITLE = {
+    PREMIUM: 'Edge ≥ 0.20 · picked dog is younger by 2+ yrs · coming off a win  (+63.5% historical ROI)',
+    HIGH_CONVICTION: 'Edge ≥ 0.20  (+18.6% historical ROI)',
+    YOUNG_DOG: 'Edge ≥ 0.20 · picked dog is younger  (+47.8% historical ROI)',
+    BALANCED: 'Edge ≥ 0.15 · opener ≤ +250 · picked dog is younger  (+28.6% historical ROI, biggest sample)',
+    AVOID_SUB_LOSS: 'Anti-filter — picked fighter is coming off a submission loss  (−35% ROI when fired)',
+  };
+  // Priority for sort + the strongest-signal badge per fight.
+  // Higher = stronger buy; AVOID is a negative anti-signal.
+  const INDICATOR_PRIORITY = {
+    PREMIUM: 100,
+    HIGH_CONVICTION: 80,
+    YOUNG_DOG: 70,
+    BALANCED: 60,
+    AVOID_SUB_LOSS: -50,
   };
   function indicatorChips(modelVersion, fightId, fighterId) {
     if (!isAdminView) return '';
     const k = `${modelVersion}|${fightId}|${fighterId}`;
     const tags = indicatorsByKey[k];
     if (!tags || !tags.length) return '';
-    // Stable order so chips don't shuffle between renders
-    const order = ['HIGH_CONVICTION','YOUNG_DOG','PREMIUM','BALANCED','AVOID_SUB_LOSS'];
-    return tags.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b))
-      .map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(t)}">${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`)
-      .join('');
+    return `<span class="indicator-row">` + tags.slice()
+      .sort((a, b) => (INDICATOR_PRIORITY[b] || 0) - (INDICATOR_PRIORITY[a] || 0))
+      .map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`)
+      .join('') + `</span>`;
+  }
+
+  // Strongest indicator across all picks on a given fight (any model, any side).
+  // Used for fight-level priority sort + the headline chip on the fight header.
+  function fightTopIndicator(fightId) {
+    if (!isAdminView) return null;
+    let best = null;
+    let bestPri = -Infinity;
+    for (const k in indicatorsByKey) {
+      if (!k.includes(`|${fightId}|`)) continue;
+      for (const t of indicatorsByKey[k]) {
+        const p = INDICATOR_PRIORITY[t] ?? 0;
+        if (p > bestPri) { bestPri = p; best = t; }
+      }
+    }
+    return best;
+  }
+  function fightAllIndicators(fightId) {
+    if (!isAdminView) return [];
+    const found = new Set();
+    for (const k in indicatorsByKey) {
+      if (!k.includes(`|${fightId}|`)) continue;
+      for (const t of indicatorsByKey[k]) found.add(t);
+    }
+    return [...found].sort((a, b) => (INDICATOR_PRIORITY[b] || 0) - (INDICATOR_PRIORITY[a] || 0));
   }
 
   // ---- model cards ----
@@ -833,17 +1019,22 @@ cfl.renderFooter();
     return Math.min(bankroll * f * frac, bankroll * maxFrac);
   }
 
-  // Pre-resolve fight + fighter names if there are any upcoming
-  let fightMap = {}, fighterMap = {};
+  // Pre-resolve fight + fighter + event info if there are any upcoming
+  let fightMap = {}, fighterMap = {}, eventMap = {};
   if (fightOrder.length > 0) {
     const fightIds = fightOrder.map(f => f.fight_id);
     const fighterIds = [...new Set(upcomingRows.map(r => r.fighter_id))];
     const [{ data: fightRows }, { data: fighterRows }] = await Promise.all([
-      sb.from('fights').select('id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
+      sb.from('fights').select('id,event_id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
       sb.from('fighters').select('id,name').in('id', fighterIds),
     ]);
     fightMap = Object.fromEntries((fightRows || []).map(f => [f.id, f]));
     fighterMap = Object.fromEntries((fighterRows || []).map(f => [f.id, f.name]));
+    const eventIds = [...new Set((fightRows || []).map(f => f.event_id).filter(Boolean))];
+    if (eventIds.length) {
+      const { data: eventRows } = await sb.from('events').select('id,name,event_date,location').in('id', eventIds);
+      eventMap = Object.fromEntries((eventRows || []).map(e => [e.id, e]));
+    }
   }
 
   function renderUpcoming() {
@@ -866,62 +1057,131 @@ cfl.renderFooter();
       return;
     }
 
-    // Per fight: detect consensus (2+ different models with would_bet=true on the same side)
-    const renderedFights = [];
+    // ---- Group fights by event ----
+    const byEvent = {};
     for (const fr of fightOrder) {
-      // votes per side: how many models say would_bet for that side
-      const votes = { A: new Set(), B: new Set() };
-      fr.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model); });
-      const consensusSide = votes.A.size >= 2 ? 'A' : (votes.B.size >= 2 ? 'B' : null);
-      const consensusModels = consensusSide ? [...votes[consensusSide]].sort() : [];
-      const isConsensus = !!consensusSide;
+      const f = fightMap[fr.fight_id];
+      const eid = f?.event_id ?? '__unknown__';
+      if (!byEvent[eid]) byEvent[eid] = { eventId: eid, event: eventMap[eid] || null, fights: [] };
+      byEvent[eid].fights.push(fr);
+    }
+    // Sort events by date ASC (soonest first); unknown event_id last
+    const events = Object.values(byEvent).sort((a, b) => {
+      const ad = a.event?.event_date || a.fights[0]?.event_date || '9999';
+      const bd = b.event?.event_date || b.fights[0]?.event_date || '9999';
+      return ad.localeCompare(bd);
+    });
 
-      if (consensusOnly && !isConsensus) continue;
+    // ---- Render each event ----
+    const renderedEvents = [];
+    for (const ev of events) {
+      // Per-fight indicator priority for sort + badging
+      const enriched = ev.fights.map(fr => {
+        const top = fightTopIndicator(fr.fight_id);
+        const all = fightAllIndicators(fr.fight_id);
+        const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
+        // Consensus detection (across models)
+        const votes = { A: new Set(), B: new Set() };
+        fr.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model); });
+        const consensusSide = votes.A.size >= 2 ? 'A' : (votes.B.size >= 2 ? 'B' : null);
+        const consensusModels = consensusSide ? [...votes[consensusSide]].sort() : [];
+        return { fr, top, all, pri, consensusSide, consensusModels, isConsensus: !!consensusSide };
+      });
+      // Sort fights within event: indicator priority desc, then consensus, then fight_id
+      enriched.sort((a, b) => (b.pri - a.pri) || ((b.isConsensus?1:0) - (a.isConsensus?1:0)) || (a.fr.fight_id - b.fr.fight_id));
 
-      const f = fightMap[fr.fight_id] || {};
-      const header = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
-      const lines = fr.rows
-        .sort((a, b) => a.model.localeCompare(b.model) || a.side.localeCompare(b.side))
-        .map(r => {
-          const name = fighterMap[r.fighter_id] || `Fighter ${r.fighter_id}`;
-          const edgeStr = r.edge != null ? `${r.edge > 0 ? '+' : ''}${(r.edge * 100).toFixed(1)}%` : '—';
-          const isConsensusRow = r.would_bet && r.side === consensusSide;
-          const stake = r.would_bet ? kellyStake(r.model_p, r.opener_american_odds, bankroll, kFrac, maxFrac) : 0;
-          const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
-          return `
-            <tr class="${r.would_bet ? 'bet' : ''} ${isConsensusRow ? 'consensus' : ''}">
-              <td><span class="vid">${escapeHtml(r.model)}</span></td>
-              <td>${escapeHtml(name)}${indicatorChips(r.model, r.fight_id, r.fighter_id)}</td>
-              <td class="num">${r.opener_american_odds != null ? fmtOdds(r.opener_american_odds) : '—'}</td>
-              <td class="num">${r.opener_implied_p != null ? (r.opener_implied_p*100).toFixed(1)+'%' : '—'}</td>
-              <td class="num">${(r.model_p*100).toFixed(1)}%</td>
-              <td class="num">${edgeStr}</td>
-              <td class="num stake">${stakeStr}</td>
-              <td class="star">${r.would_bet ? '★' : ''}</td>
-            </tr>
-          `;
-        }).join('');
-      renderedFights.push(`
-        <div class="upcoming-fight">
-          <div class="head">
-            <div class="matchup">
-              ${header}
-              ${isConsensus ? `<span class="consensus-badge">Consensus (${consensusModels.join('+')})</span>` : ''}
+      // Apply consensus-only filter at fight level
+      const visible = consensusOnly ? enriched.filter(e => e.isConsensus) : enriched;
+
+      // Event header
+      const evDate = ev.event?.event_date || ev.fights[0]?.event_date || '';
+      const evName = ev.event?.name || 'Upcoming card';
+      const evLoc = ev.event?.location || '';
+      const flagged = enriched.filter(e => e.top && (INDICATOR_PRIORITY[e.top] ?? 0) > 0).length;
+      const flaggedFrag = (isAdminView && flagged > 0)
+        ? `<span class="sep">·</span><span class="flagged">${flagged} flagged</span>`
+        : '';
+      const fightCountFrag = `<span class="sep">·</span>${enriched.length} fight${enriched.length === 1 ? '' : 's'}`;
+      const locFrag = evLoc ? `<span class="sep">·</span>${escapeHtml(evLoc)}` : '';
+
+      // Fight cards
+      const fightFrags = visible.map(({ fr, top, all, consensusSide, consensusModels, isConsensus }) => {
+        const f = fightMap[fr.fight_id] || {};
+        const header = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
+        const lines = fr.rows
+          .sort((a, b) => a.model.localeCompare(b.model) || a.side.localeCompare(b.side))
+          .map(r => {
+            const name = fighterMap[r.fighter_id] || `Fighter ${r.fighter_id}`;
+            const edgeStr = r.edge != null ? `${r.edge > 0 ? '+' : ''}${(r.edge * 100).toFixed(1)}%` : '—';
+            const isConsensusRow = r.would_bet && r.side === consensusSide;
+            const stake = r.would_bet ? kellyStake(r.model_p, r.opener_american_odds, bankroll, kFrac, maxFrac) : 0;
+            const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
+            return `
+              <tr class="${r.would_bet ? 'bet' : ''} ${isConsensusRow ? 'consensus' : ''}">
+                <td><span class="vid">${escapeHtml(r.model)}</span></td>
+                <td>${escapeHtml(name)}${indicatorChips(r.model, r.fight_id, r.fighter_id)}</td>
+                <td class="num">${r.opener_american_odds != null ? fmtOdds(r.opener_american_odds) : '—'}</td>
+                <td class="num">${r.opener_implied_p != null ? (r.opener_implied_p*100).toFixed(1)+'%' : '—'}</td>
+                <td class="num">${(r.model_p*100).toFixed(1)}%</td>
+                <td class="num">${edgeStr}</td>
+                <td class="num stake">${stakeStr}</td>
+                <td class="star">${r.would_bet ? '★' : ''}</td>
+              </tr>
+            `;
+          }).join('');
+
+        // Fight-level CSS hook based on strongest indicator
+        const fightClass = top === 'PREMIUM' ? 'has-premium'
+          : top === 'HIGH_CONVICTION' ? 'has-conviction'
+          : top === 'YOUNG_DOG' ? 'has-young'
+          : top === 'BALANCED' ? 'has-balanced'
+          : (top === 'AVOID_SUB_LOSS' && enriched.find(e => e.fr.fight_id === fr.fight_id).pri < 0) ? 'has-avoid'
+          : '';
+
+        // Fight-level indicator chips (deduped across model picks for this fight)
+        const fightChips = (isAdminView && all.length)
+          ? `<div class="fight-inds">${all.map(t =>
+              `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`
+            ).join('')}</div>`
+          : '';
+
+        return `
+          <div class="upcoming-fight ${fightClass}">
+            <div class="head">
+              <div class="matchup">
+                ${header}
+                ${isConsensus ? `<span class="consensus-badge">Consensus (${consensusModels.join('+')})</span>` : ''}
+                ${fightChips}
+              </div>
+              <div class="date">${fr.event_date}</div>
             </div>
-            <div class="date">${fr.event_date}</div>
+            <table>
+              <thead><tr>
+                <th>Model</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Model p</th><th>Edge</th><th>Stake</th><th></th>
+              </tr></thead>
+              <tbody>${lines}</tbody>
+            </table>
           </div>
-          <table>
-            <thead><tr>
-              <th>Model</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Model p</th><th>Edge</th><th>Stake</th><th></th>
-            </tr></thead>
-            <tbody>${lines}</tbody>
-          </table>
+        `;
+      }).join('');
+
+      const evBody = visible.length
+        ? fightFrags
+        : `<div class="ev-empty">No fights match the current filter on this card.</div>`;
+
+      renderedEvents.push(`
+        <div class="upcoming-event">
+          <div class="ev-head">
+            <div class="ev-name">${escapeHtml(evName)}</div>
+            <div class="ev-meta">${escapeHtml(evDate)}${locFrag}${fightCountFrag}${flaggedFrag}</div>
+          </div>
+          ${evBody}
         </div>
       `);
     }
 
-    document.getElementById('upcomingList').innerHTML = renderedFights.length
-      ? renderedFights.join('')
+    document.getElementById('upcomingList').innerHTML = renderedEvents.length
+      ? renderedEvents.join('')
       : `<div class="empty-state">No fights match the current filter. Try unchecking "Consensus only".</div>`;
   }
 
