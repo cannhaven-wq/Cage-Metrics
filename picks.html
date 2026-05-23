@@ -861,7 +861,7 @@ cfl.renderFooter();
     const toWin     = (opener && stake > 0)
       ? Math.round(opener < 0 ? stake * (100 / Math.abs(opener)) : stake * (opener / 100))
       : 0;
-    const indChip = (isAdminView && best.top && (INDICATOR_PRIORITY[best.top] ?? 0) > 0)
+    const indChip = (isAdmin && best.top && (INDICATOR_PRIORITY[best.top] ?? 0) > 0)
       ? `<span class="cfl-ind ind-${best.top.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[best.top] || best.top)}"><span class="dot"></span>${INDICATOR_LABEL[best.top] || escapeHtml(best.top)}</span>`
       : '';
     const tagLabel = bestPri >= 100 ? 'STRONGEST SIGNAL · S-TIER'
