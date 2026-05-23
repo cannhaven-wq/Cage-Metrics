@@ -172,10 +172,24 @@
   }
   .pick-card:hover { border-color: var(--border-2); }
   .pick-card.premium      { border-left: 4px solid #c084fc; }
+  .pick-card.clv          { border-left: 4px solid #2dd4bf; }
   .pick-card.conviction   { border-left: 4px solid #4ade80; }
   .pick-card.young        { border-left: 4px solid #38bdf8; }
   .pick-card.balanced     { border-left: 4px solid #facc15; }
-  .pick-card.avoid        { border-left: 4px solid #f87171; opacity: 0.7; }
+  .pick-card.avoid        { border-left: 4px solid #ef4444; opacity: 0.7; }
+
+  /* Demoted picks in watch-list (anti-filter fired) */
+  .watch-list .wl-row.demoted {
+    color: var(--text-3);
+  }
+  .watch-list .wl-row.demoted .matchup-line {
+    text-decoration: line-through;
+    text-decoration-color: rgba(239, 68, 68, 0.45);
+    text-decoration-thickness: 1px;
+  }
+  .watch-list .wl-row.demoted .note {
+    color: #f87171;
+  }
 
   .pick-card .matchup {
     font-family: 'Barlow Condensed', sans-serif;
@@ -297,6 +311,8 @@
   }
   .ind-premium         { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
   .ind-premium .dot    { background: #c084fc; box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
+  .ind-clv_agree       { background: rgba(20, 184, 166, 0.16); color: #5eead4; border: 1px solid rgba(20, 184, 166, 0.45); }
+  .ind-clv_agree .dot  { background: #2dd4bf; box-shadow: 0 0 6px rgba(45, 212, 191, 0.55); }
   .ind-high_conviction { background: rgba(34, 197, 94, 0.16);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.45);  }
   .ind-high_conviction .dot { background: #4ade80; }
   .ind-young_dog       { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
@@ -305,6 +321,10 @@
   .ind-balanced .dot   { background: #facc15; }
   .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.40);  }
   .ind-avoid_sub_loss .dot { background: #f87171; }
+  .ind-stance_avoid    { background: rgba(251, 146, 60, 0.14); color: #fdba74; border: 1px solid rgba(251, 146, 60, 0.40); }
+  .ind-stance_avoid .dot   { background: #fb923c; }
+  .ind-clv_fade        { background: rgba(220, 38, 38, 0.16);  color: #fecaca; border: 1px solid rgba(220, 38, 38, 0.50);  }
+  .ind-clv_fade .dot       { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
 
   /* -------- Watch list (non-consensus fights) -------- */
   .watch-list {
@@ -429,19 +449,28 @@ cfl.renderFooter();
 
   // ---- Indicator metadata (admin-only chips on cards) ----
   const INDICATOR_LABEL = {
-    PREMIUM: 'PREMIUM', HIGH_CONVICTION: 'HIGH CONVICTION', YOUNG_DOG: 'YOUNG DOG',
-    BALANCED: 'BALANCED', AVOID_SUB_LOSS: 'AVOID',
+    PREMIUM: 'PREMIUM', CLV_AGREE: 'CLV AGREE',
+    HIGH_CONVICTION: 'HIGH CONVICTION', YOUNG_DOG: 'YOUNG DOG', BALANCED: 'BALANCED',
+    STANCE_AVOID: 'STANCE FADE', AVOID_SUB_LOSS: 'AVOID — SUB LOSS', CLV_FADE: 'CLV FADE',
   };
   const INDICATOR_PRIORITY = {
-    PREMIUM: 100, HIGH_CONVICTION: 80, YOUNG_DOG: 70, BALANCED: 60, AVOID_SUB_LOSS: -50,
+    PREMIUM: 100, CLV_AGREE: 90, HIGH_CONVICTION: 80, YOUNG_DOG: 70, BALANCED: 60,
+    STANCE_AVOID: -40, AVOID_SUB_LOSS: -50, CLV_FADE: -70,
   };
   const INDICATOR_TITLE = {
     PREMIUM: 'Edge ≥ 0.20 · younger dog · coming off W (+63.5% backtest ROI)',
+    CLV_AGREE: 'Closing line moved ≥+2% toward pick — sharp money agreed (+28% historical ROI)',
     HIGH_CONVICTION: 'Edge ≥ 0.20 (+18.6% backtest ROI)',
     YOUNG_DOG: 'Edge ≥ 0.20 · younger dog (+47.8% backtest ROI)',
     BALANCED: 'Edge ≥ 0.15 · ≤+250 · younger (+28.6% backtest ROI)',
+    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite (−35.5% ROI)',
     AVOID_SUB_LOSS: 'Anti-filter — dog coming off a submission loss (−35% ROI)',
+    CLV_FADE: 'Anti-filter — closing line moved against pick (−44% ROI)',
   };
+  // Indicators that disqualify a pick from the consensus block on this page.
+  // Picks with any of these firing get demoted to the watch list with the
+  // reason shown — see renderEvents.
+  const ANTI_FILTERS = new Set(['STANCE_AVOID', 'AVOID_SUB_LOSS', 'CLV_FADE']);
 
   // ---- Auth + indicators (RLS-gated; non-admins get [] from Supabase) ----
   let isAdmin = false;
@@ -707,8 +736,11 @@ cfl.renderFooter();
         else if (votes.B.size >= 2) consensusSide = 'B';
         return { fight: f, consensusSide, votes };
       });
-      // Sort: consensus fights first, sub-sorted by indicator priority + edge
-      const consensusFights = fightsWithMeta
+      // Build enriched consensus list, splitting anti-filtered picks into the
+      // demoted set. Each consensus side gets evaluated for any firing anti-
+      // filter; if one fires, the fight gets pushed to the watch list instead
+      // of getting a big pick card.
+      const consensusAll = fightsWithMeta
         .filter(x => x.consensusSide)
         .map(x => {
           const consensusRows = x.fight.rows.filter(r => r.would_bet && r.side === x.consensusSide);
@@ -716,18 +748,23 @@ cfl.renderFooter();
           const avgModelP = consensusRows.reduce((s, r) => s + r.model_p, 0) / Math.max(consensusRows.length, 1);
           const pickedFighter = consensusRows[0]?.fighter_id;
           const opener = consensusRows[0]?.opener_american_odds;
+          const allInds = fightSideIndicators(x.fight.fight_id, pickedFighter);
+          const triggered = allInds.filter(t => ANTI_FILTERS.has(t));
           const top = topIndicator(x.fight.fight_id, pickedFighter);
           const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
-          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, opener, top, pri };
-        })
+          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, opener, top, pri, antiFilters: triggered };
+        });
+      const consensusFights = consensusAll
+        .filter(x => x.antiFilters.length === 0)
         .sort((a, b) => (b.pri - a.pri) || (b.avgEdge - a.avgEdge));
-      const watchList = fightsWithMeta.filter(x => !x.consensusSide);
+      const demotedFights = consensusAll.filter(x => x.antiFilters.length > 0);
+      const watchListRaw = fightsWithMeta.filter(x => !x.consensusSide);
 
       const consensusFrags = consensusFights.map(x => renderPickCard(x, bankroll, kFrac, maxFrac, fightMap, fighterMap));
-      const watchFrag = renderWatchList(watchList, fightMap, fighterMap);
+      const watchFrag = renderWatchList(watchListRaw, demotedFights, fightMap, fighterMap);
 
       const consensusEmpty = consensusFights.length === 0
-        ? `<div class="empty-state">No consensus picks on this card — wait it out or shop watch-list below.</div>`
+        ? `<div class="empty-state">No consensus picks survive the anti-filters on this card. ${demotedFights.length ? 'Demoted picks visible in the watch list.' : 'Shop watch-list below.'}</div>`
         : consensusFrags.join('');
 
       rendered.push(`
@@ -758,10 +795,11 @@ cfl.renderFooter();
     const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
     const stakePct = bankroll > 0 ? (100 * stake / bankroll).toFixed(1) : '0.0';
     const cardClass = x.top === 'PREMIUM' ? 'premium'
+      : x.top === 'CLV_AGREE' ? 'clv'
       : x.top === 'HIGH_CONVICTION' ? 'conviction'
       : x.top === 'YOUNG_DOG' ? 'young'
       : x.top === 'BALANCED' ? 'balanced'
-      : (x.top === 'AVOID_SUB_LOSS' && x.pri < 0) ? 'avoid'
+      : (x.pri < 0) ? 'avoid'
       : '';
     const inds = fightSideIndicators(x.fight.fight_id, x.pickedFighter);
     const indFrags = (isAdmin && inds.length)
@@ -796,9 +834,27 @@ cfl.renderFooter();
     `;
   }
 
-  function renderWatchList(watchList, fightMap, fighterMap) {
-    if (!watchList.length) return '';
-    const rows = watchList.map(x => {
+  function renderWatchList(watchList, demoted, fightMap, fighterMap) {
+    if (!watchList.length && !demoted.length) return '';
+
+    // Demoted consensus picks (anti-filter fired)
+    const demotedRows = demoted.map(x => {
+      const f = fightMap[x.fight.fight_id] || {};
+      const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
+      const pickName = fighterMap[x.pickedFighter] || `Fighter ${x.pickedFighter}`;
+      const indFrags = x.antiFilters.map(t =>
+        `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`
+      ).join(' ');
+      return `
+        <div class="wl-row demoted">
+          <div class="matchup-line">${matchup} <span style="color:var(--text-3);">(would be: ${escapeHtml(pickName)})</span></div>
+          <span class="note">${indFrags || 'anti-filter fired'}</span>
+        </div>
+      `;
+    }).join('');
+
+    // Non-consensus fights
+    const watchRows = watchList.map(x => {
       const f = fightMap[x.fight.fight_id] || {};
       const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
       const singleBets = x.fight.rows.filter(r => r.would_bet);
@@ -817,10 +873,18 @@ cfl.renderFooter();
         </div>
       `;
     }).join('');
+
+    const demotedBlock = demotedRows
+      ? `<div class="wl-title" style="color:#f87171;">Demoted by anti-filter — would have been consensus picks, but the filter rules say skip</div>${demotedRows}`
+      : '';
+    const watchBlock = watchRows
+      ? `<div class="wl-title" style="margin-top:${demotedRows ? '18px' : '0'};">Watch list — no consensus, no recommended bet</div>${watchRows}`
+      : '';
+
     return `
       <div class="watch-list">
-        <div class="wl-title">Watch list — no consensus, no recommended bet</div>
-        ${rows}
+        ${demotedBlock}
+        ${watchBlock}
       </div>
     `;
   }

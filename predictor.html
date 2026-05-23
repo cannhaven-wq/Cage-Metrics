@@ -228,6 +228,8 @@
   }
   .ind-premium         { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
   .ind-premium .dot    { background: #c084fc; box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
+  .ind-clv_agree       { background: rgba(20, 184, 166, 0.16); color: #5eead4; border: 1px solid rgba(20, 184, 166, 0.45); }
+  .ind-clv_agree .dot  { background: #2dd4bf; box-shadow: 0 0 6px rgba(45, 212, 191, 0.55); }
   .ind-high_conviction { background: rgba(34, 197, 94, 0.16);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.45);  }
   .ind-high_conviction .dot { background: #4ade80; }
   .ind-young_dog       { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
@@ -236,6 +238,10 @@
   .ind-balanced .dot   { background: #facc15; }
   .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.40);  }
   .ind-avoid_sub_loss .dot { background: #f87171; }
+  .ind-stance_avoid    { background: rgba(251, 146, 60, 0.14); color: #fdba74; border: 1px solid rgba(251, 146, 60, 0.40); }
+  .ind-stance_avoid .dot   { background: #fb923c; }
+  .ind-clv_fade        { background: rgba(220, 38, 38, 0.16);  color: #fecaca; border: 1px solid rgba(220, 38, 38, 0.50);  }
+  .ind-clv_fade .dot       { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
 
   /* A row of chips clustered together under a pick */
   .indicator-row {
@@ -404,10 +410,11 @@
     margin-top: 6px;
   }
   .upcoming-fight.has-premium      { border-left: 3px solid #c084fc; }
+  .upcoming-fight.has-clv          { border-left: 3px solid #2dd4bf; }
   .upcoming-fight.has-conviction   { border-left: 3px solid #4ade80; }
   .upcoming-fight.has-young        { border-left: 3px solid #38bdf8; }
   .upcoming-fight.has-balanced     { border-left: 3px solid #facc15; }
-  .upcoming-fight.has-avoid        { opacity: 0.62; }
+  .upcoming-fight.has-avoid        { opacity: 0.62; border-left: 3px solid #ef4444; }
 
   .upcoming-fight .head .consensus-badge {
     display: inline-block;
@@ -593,6 +600,11 @@
         <span class="roi">+63.5%</span>
       </div>
       <div class="ab-legend-row">
+        <span class="cfl-ind ind-clv_agree"><span class="dot"></span>CLV AGREE</span>
+        <span class="rule">closer moved ≥+2% prob toward us</span>
+        <span class="roi">+28.1%</span>
+      </div>
+      <div class="ab-legend-row">
         <span class="cfl-ind ind-high_conviction"><span class="dot"></span>HIGH CONVICTION</span>
         <span class="rule">edge ≥ 0.20</span>
         <span class="roi">+18.6%</span>
@@ -608,9 +620,19 @@
         <span class="roi">+28.6%</span>
       </div>
       <div class="ab-legend-row neg">
-        <span class="cfl-ind ind-avoid_sub_loss"><span class="dot"></span>AVOID</span>
-        <span class="rule">picked dog coming off a submission loss</span>
+        <span class="cfl-ind ind-stance_avoid"><span class="dot"></span>STANCE FADE</span>
+        <span class="rule">orthodox dog vs southpaw favorite</span>
+        <span class="roi">−35.5%</span>
+      </div>
+      <div class="ab-legend-row neg">
+        <span class="cfl-ind ind-avoid_sub_loss"><span class="dot"></span>AVOID — SUB LOSS</span>
+        <span class="rule">dog coming off a submission loss</span>
         <span class="roi">−35%</span>
+      </div>
+      <div class="ab-legend-row neg">
+        <span class="cfl-ind ind-clv_fade"><span class="dot"></span>CLV FADE</span>
+        <span class="rule">closer moved ≥−2% prob (line drifting against us)</span>
+        <span class="roi">−44.2%</span>
       </div>
     </div>
   </div>
@@ -792,26 +814,35 @@ cfl.renderFooter();
   }
   const INDICATOR_LABEL = {
     PREMIUM: 'PREMIUM',
+    CLV_AGREE: 'CLV AGREE',
     HIGH_CONVICTION: 'HIGH CONVICTION',
     YOUNG_DOG: 'YOUNG DOG',
     BALANCED: 'BALANCED',
-    AVOID_SUB_LOSS: 'AVOID',
+    STANCE_AVOID: 'STANCE FADE',
+    AVOID_SUB_LOSS: 'AVOID — SUB LOSS',
+    CLV_FADE: 'CLV FADE',
   };
   const INDICATOR_TITLE = {
     PREMIUM: 'Edge ≥ 0.20 · picked dog is younger by 2+ yrs · coming off a win  (+63.5% historical ROI)',
+    CLV_AGREE: 'Closing line moved at least +2% prob toward this pick — sharp money agreed  (+28% historical ROI on CLV+ cohort)',
     HIGH_CONVICTION: 'Edge ≥ 0.20  (+18.6% historical ROI)',
     YOUNG_DOG: 'Edge ≥ 0.20 · picked dog is younger  (+47.8% historical ROI)',
     BALANCED: 'Edge ≥ 0.15 · opener ≤ +250 · picked dog is younger  (+28.6% historical ROI, biggest sample)',
-    AVOID_SUB_LOSS: 'Anti-filter — picked fighter is coming off a submission loss  (−35% ROI when fired)',
+    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite  (−35.5% ROI, 180 hist bets)',
+    AVOID_SUB_LOSS: 'Anti-filter — picked fighter is coming off a submission loss  (−35% ROI)',
+    CLV_FADE: 'Anti-filter — closing line moved against this pick (sharp money disagreed)  (−44% ROI on CLV− cohort)',
   };
   // Priority for sort + the strongest-signal badge per fight.
-  // Higher = stronger buy; AVOID is a negative anti-signal.
+  // Higher = stronger buy; AVOIDs are negative anti-signals.
   const INDICATOR_PRIORITY = {
     PREMIUM: 100,
+    CLV_AGREE: 90,
     HIGH_CONVICTION: 80,
     YOUNG_DOG: 70,
     BALANCED: 60,
+    STANCE_AVOID: -40,
     AVOID_SUB_LOSS: -50,
+    CLV_FADE: -70,
   };
   function indicatorChips(modelVersion, fightId, fighterId) {
     if (!isAdminView) return '';
@@ -1131,11 +1162,13 @@ cfl.renderFooter();
           }).join('');
 
         // Fight-level CSS hook based on strongest indicator
+        const isAvoid = ['STANCE_AVOID','AVOID_SUB_LOSS','CLV_FADE'].includes(top);
         const fightClass = top === 'PREMIUM' ? 'has-premium'
+          : top === 'CLV_AGREE' ? 'has-clv'
           : top === 'HIGH_CONVICTION' ? 'has-conviction'
           : top === 'YOUNG_DOG' ? 'has-young'
           : top === 'BALANCED' ? 'has-balanced'
-          : (top === 'AVOID_SUB_LOSS' && enriched.find(e => e.fr.fight_id === fr.fight_id).pri < 0) ? 'has-avoid'
+          : isAvoid ? 'has-avoid'
           : '';
 
         // Fight-level indicator chips (deduped across model picks for this fight)
