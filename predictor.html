@@ -1139,27 +1139,54 @@ cfl.renderFooter();
       const fightFrags = visible.map(({ fr, top, all, consensusSide, consensusModels, isConsensus }) => {
         const f = fightMap[fr.fight_id] || {};
         const header = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
-        const lines = fr.rows
-          .sort((a, b) => a.model.localeCompare(b.model) || a.side.localeCompare(b.side))
-          .map(r => {
-            const name = fighterMap[r.fighter_id] || `Fighter ${r.fighter_id}`;
-            const edgeStr = r.edge != null ? `${r.edge > 0 ? '+' : ''}${(r.edge * 100).toFixed(1)}%` : '—';
-            const isConsensusRow = r.would_bet && r.side === consensusSide;
-            const stake = r.would_bet ? kellyStake(r.model_p, r.opener_american_odds, bankroll, kFrac, maxFrac) : 0;
-            const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
-            return `
-              <tr class="${r.would_bet ? 'bet' : ''} ${isConsensusRow ? 'consensus' : ''}">
-                <td><span class="vid">${escapeHtml(r.model)}</span></td>
-                <td>${escapeHtml(name)}${indicatorChips(r.model, r.fight_id, r.fighter_id)}</td>
-                <td class="num">${r.opener_american_odds != null ? fmtOdds(r.opener_american_odds) : '—'}</td>
-                <td class="num">${r.opener_implied_p != null ? (r.opener_implied_p*100).toFixed(1)+'%' : '—'}</td>
-                <td class="num">${(r.model_p*100).toFixed(1)}%</td>
-                <td class="num">${edgeStr}</td>
-                <td class="num stake">${stakeStr}</td>
-                <td class="star">${r.would_bet ? '★' : ''}</td>
-              </tr>
-            `;
-          }).join('');
+        // Compress to ONE row per fighter that at least one model bets on.
+        // Aggregate model_p/edge across the agreeing models; show which models
+        // voted in a chips column. Fighters with zero model bets are omitted.
+        const bySide = { A: [], B: [] };
+        fr.rows.forEach(r => { if (r.would_bet) bySide[r.side]?.push(r); });
+        const compressed = [];
+        for (const side of ['A','B']) {
+          const bettingRows = bySide[side];
+          if (!bettingRows || !bettingRows.length) continue;
+          const r0 = bettingRows[0];
+          const name = fighterMap[r0.fighter_id] || `Fighter ${r0.fighter_id}`;
+          const models = bettingRows.map(r => r.model_version).sort();
+          const avgModelP = bettingRows.reduce((s, r) => s + r.model_p, 0) / bettingRows.length;
+          const avgEdge   = bettingRows.reduce((s, r) => s + (r.edge || 0), 0) / bettingRows.length;
+          const opener    = r0.opener_american_odds;
+          const openerP   = r0.opener_implied_p;
+          const isConsensusRow = side === consensusSide;
+          const stake     = kellyStake(avgModelP, opener, bankroll, kFrac, maxFrac);
+          const stakeStr  = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
+          const modelChips = models.map(m =>
+            `<span class="vid" style="margin-right:3px;">${escapeHtml(m)}</span>`
+          ).join('');
+          // Per-fighter union of indicators across all models that bet
+          const indKey = `${fr.fight_id}|${r0.fighter_id}`;
+          const indSet = new Set();
+          models.forEach(m => {
+            const k = `${m}|${fr.fight_id}|${r0.fighter_id}`;
+            (indicatorsByKey[k] || []).forEach(t => indSet.add(t));
+          });
+          const indFrags = (isAdminView && indSet.size)
+            ? [...indSet].sort((a, b) => (INDICATOR_PRIORITY[b] || 0) - (INDICATOR_PRIORITY[a] || 0))
+                .map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`)
+                .join('')
+            : '';
+          compressed.push(`
+            <tr class="bet ${isConsensusRow ? 'consensus' : ''}">
+              <td>${modelChips}</td>
+              <td>${escapeHtml(name)}${indFrags ? `<span class="indicator-row" style="margin-top:4px;">${indFrags}</span>` : ''}</td>
+              <td class="num">${opener != null ? fmtOdds(opener) : '—'}</td>
+              <td class="num">${openerP != null ? (openerP*100).toFixed(1)+'%' : '—'}</td>
+              <td class="num">${(avgModelP*100).toFixed(1)}%</td>
+              <td class="num">${avgEdge >= 0 ? '+' : ''}${(avgEdge*100).toFixed(1)}%</td>
+              <td class="num stake">${stakeStr}</td>
+              <td class="star">★</td>
+            </tr>
+          `);
+        }
+        const lines = compressed.join('');
 
         // Fight-level CSS hook based on strongest indicator
         const isAvoid = ['STANCE_AVOID','AVOID_SUB_LOSS','CLV_FADE'].includes(top);
@@ -1188,12 +1215,12 @@ cfl.renderFooter();
               </div>
               <div class="date">${fr.event_date}</div>
             </div>
-            <table>
+            ${lines ? `<table>
               <thead><tr>
-                <th>Model</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Model p</th><th>Edge</th><th>Stake</th><th></th>
+                <th>Models</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Avg p</th><th>Avg edge</th><th>Stake</th><th></th>
               </tr></thead>
               <tbody>${lines}</tbody>
-            </table>
+            </table>` : `<div class="empty-state" style="margin: 12px 14px 16px;">No model flagged a bet on this fight.</div>`}
           </div>
         `;
       }).join('');
