@@ -48,7 +48,7 @@
       try {
         const { data, error } = await sb
           .from('profiles')
-          .select('id, email, display_name, tier, tier_expires_at, beta_premium, created_at')
+          .select('id, email, display_name, tier, tier_expires_at, beta_premium, is_admin, created_at')
           .eq('id', userId)
           .single();
         if (error) {
@@ -131,6 +131,12 @@
   auth.isPremium = function () { return auth.getTier() === 'premium'; };
   auth.isBetaPremium = function () {
     return !!(_currentProfile && _currentProfile.beta_premium);
+  };
+  // isAdmin is a presentation-level check. Real protection is the RLS policy
+  // on prediction_indicators — non-admins get an empty result from Supabase
+  // even if the client lies about isAdmin.
+  auth.isAdmin = function () {
+    return !!(_currentProfile && _currentProfile.is_admin);
   };
   auth.isSignedIn = function () { return !!_currentUser; };
 

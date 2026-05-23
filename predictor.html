@@ -200,6 +200,41 @@
   .pick-row .pnl.neg { color: var(--red); }
   .pick-row .edge.pos { color: var(--green); }
 
+  /* Admin-only indicator chips (prediction_indicators table; RLS-gated) */
+  .cfl-ind {
+    display: inline-block;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 5px;
+    margin-left: 4px;
+    border-radius: 3px;
+    letter-spacing: 0.06em;
+    vertical-align: middle;
+    line-height: 1.3;
+  }
+  .ind-high_conviction { background: rgba(34, 197, 94, 0.18);  color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.35); }
+  .ind-young_dog       { background: rgba(99, 102, 241, 0.18); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.35); }
+  .ind-premium         { background: rgba(168, 85, 247, 0.18); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.35); }
+  .ind-balanced        { background: rgba(234, 179, 8, 0.18);  color: #facc15; border: 1px solid rgba(234, 179, 8, 0.35); }
+  .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.18);  color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
+
+  /* Admin-mode banner — visible only when isAdmin */
+  .admin-banner {
+    display: none;
+    background: linear-gradient(180deg, rgba(168, 85, 247, 0.15), transparent);
+    border: 1px solid rgba(168, 85, 247, 0.30);
+    color: #c084fc;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+  .admin-banner.active { display: block; }
+  .admin-banner strong { color: #d8b4fe; text-transform: uppercase; letter-spacing: 0.08em; margin-right: 6px; font-size: 11px; }
+  .admin-banner code { background: rgba(168, 85, 247, 0.12); padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+
   /* Upcoming */
   .upcoming-fight {
     background: var(--bg-2);
@@ -431,6 +466,11 @@
 </div>
 
 <div class="page">
+  <div id="adminBanner" class="admin-banner">
+    <strong>Admin view</strong>
+    Indicator chips are visible on picks below: <code>HC</code> high-conviction · <code>YD</code> younger dog · <code>PR</code> premium · <code>BAL</code> balanced · <code>AVD</code> avoid (prior submission loss). These derive from a backtest filter scan and are hidden from regular users.
+  </div>
+
   <div class="section-label">Models</div>
   <div id="modelGrid" class="models-grid"></div>
 
@@ -574,6 +614,55 @@ cfl.renderFooter();
     byModel[m.id] = all;
   }
 
+  // ---- indicators (admin-only) ----
+  // prediction_indicators is RLS-gated to is_admin profiles; a non-admin's
+  // query returns []. We still check isAdmin client-side to skip the fetch
+  // entirely and show the admin banner.
+  const indicatorsByKey = {};
+  let isAdminView = false;
+  try {
+    if (window.cflAuth && window.cflAuth.ready) {
+      await window.cflAuth.ready();
+      isAdminView = !!window.cflAuth.isAdmin?.();
+    }
+  } catch (e) {
+    console.warn('[predictor] auth ready failed', e);
+  }
+  if (isAdminView) {
+    document.getElementById('adminBanner')?.classList.add('active');
+    const versionList = models.map(m => m.id);
+    const { data: inds, error: iErr } = await sb
+      .from('prediction_indicators')
+      .select('model_version, fight_id, fighter_id, indicator')
+      .in('model_version', versionList);
+    if (iErr) {
+      console.warn('[predictor] indicators fetch failed', iErr.message);
+    } else if (inds) {
+      for (const i of inds) {
+        const k = `${i.model_version}|${i.fight_id}|${i.fighter_id}`;
+        (indicatorsByKey[k] = indicatorsByKey[k] || []).push(i.indicator);
+      }
+    }
+  }
+  const INDICATOR_LABEL = {
+    HIGH_CONVICTION: 'HC',
+    YOUNG_DOG: 'YD',
+    PREMIUM: 'PR',
+    BALANCED: 'BAL',
+    AVOID_SUB_LOSS: 'AVD',
+  };
+  function indicatorChips(modelVersion, fightId, fighterId) {
+    if (!isAdminView) return '';
+    const k = `${modelVersion}|${fightId}|${fighterId}`;
+    const tags = indicatorsByKey[k];
+    if (!tags || !tags.length) return '';
+    // Stable order so chips don't shuffle between renders
+    const order = ['HIGH_CONVICTION','YOUNG_DOG','PREMIUM','BALANCED','AVOID_SUB_LOSS'];
+    return tags.slice().sort((a, b) => order.indexOf(a) - order.indexOf(b))
+      .map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(t)}">${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`)
+      .join('');
+  }
+
   // ---- model cards ----
   function roiAt(rows, edge) {
     const bets = rows.filter(r => r.outcome_known && r.edge != null && r.edge > edge && r.opener_american_odds != null);
@@ -653,7 +742,7 @@ cfl.renderFooter();
       <div class="pick-row">
         <span class="dim">${(p.event_date || '').slice(0, 10)}</span>
         <span class="fight">fight #${p.fight_id}</span>
-        <span class="pick">${escapeHtml((window.__pickerNames && window.__pickerNames[p.fighter_id]) || ('Fighter '+p.fighter_id))}</span>
+        <span class="pick">${escapeHtml((window.__pickerNames && window.__pickerNames[p.fighter_id]) || ('Fighter '+p.fighter_id))}${indicatorChips(m.id, p.fight_id, p.fighter_id)}</span>
         <span class="odds">${fmtOdds(p.opener_american_odds)}</span>
         <span class="edge pos">${(p.edge != null) ? '+' + (p.edge * 100).toFixed(1) + '%' : '—'}</span>
         <span class="result ${p.won ? 'W' : 'L'}">${p.won ? 'W' : 'L'}</span>
@@ -802,7 +891,7 @@ cfl.renderFooter();
           return `
             <tr class="${r.would_bet ? 'bet' : ''} ${isConsensusRow ? 'consensus' : ''}">
               <td><span class="vid">${escapeHtml(r.model)}</span></td>
-              <td>${escapeHtml(name)}</td>
+              <td>${escapeHtml(name)}${indicatorChips(r.model, r.fight_id, r.fighter_id)}</td>
               <td class="num">${r.opener_american_odds != null ? fmtOdds(r.opener_american_odds) : '—'}</td>
               <td class="num">${r.opener_implied_p != null ? (r.opener_implied_p*100).toFixed(1)+'%' : '—'}</td>
               <td class="num">${(r.model_p*100).toFixed(1)}%</td>
