@@ -352,6 +352,133 @@
   .watch-list .wl-row .note { color: var(--text-3); font-size: 11px; }
   .watch-list .wl-row.has-single-bet .note { color: var(--amber); }
 
+  /* -------- "Top pick" hero card (sits between record strip & list) -------- */
+  .top-pick-wrap {
+    max-width: 1200px;
+    margin: 22px auto 0;
+    padding: 0 32px;
+  }
+  .top-pick {
+    position: relative;
+    background: linear-gradient(135deg, rgba(168,85,247,0.12) 0%, rgba(45,212,191,0.08) 50%, rgba(230,57,70,0.10) 100%);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    border-radius: 14px;
+    padding: 22px 26px;
+    overflow: hidden;
+  }
+  .top-pick::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; bottom: 0;
+    width: 4px;
+    background: linear-gradient(180deg, #c084fc, #2dd4bf);
+  }
+  .top-pick .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fde68a;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    margin-bottom: 4px;
+  }
+  .top-pick .matchup-sub {
+    font-size: 12px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  .top-pick .body {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 22px;
+    align-items: center;
+  }
+  .top-pick .name {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 42px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+  }
+  .top-pick .meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+  .top-pick .odds-pill {
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-variant-numeric: tabular-nums;
+  }
+  .top-pick .payout {
+    text-align: right;
+    padding-left: 12px;
+    border-left: 1px solid rgba(255,255,255,0.08);
+  }
+  .top-pick .payout .lbl {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 2px;
+  }
+  .top-pick .payout .bet-amt {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--green);
+    line-height: 1;
+  }
+  .top-pick .payout .to-win {
+    font-size: 12px;
+    color: var(--text-2);
+    margin-top: 2px;
+    font-variant-numeric: tabular-nums;
+  }
+  .top-pick .payout .to-win strong { color: #fff; }
+  .top-pick .rationale {
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .top-pick .rationale .agree {
+    background: rgba(0,0,0,0.25);
+    border: 1px solid var(--border-2);
+    border-radius: 4px;
+    padding: 2px 7px;
+    font-size: 10.5px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+  }
+  .top-pick .rationale .agree strong { color: #fff; }
+  .top-pick .rationale .edge { color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+
   /* -------- Empty / loading states -------- */
   .empty-state {
     background: var(--bg-2);
@@ -381,11 +508,20 @@
     .picks-hero { padding: 28px 18px 22px; }
     .picks-hero h1 { font-size: 32px; }
     .picks-page { padding: 18px 14px 36px; }
-    .picks-toolbar { padding: 14px 18px 6px; }
+    .picks-toolbar { padding: 14px 18px 6px; gap: 10px; }
+    .picks-toolbar label { font-size: 10px; }
     .record-strip { padding: 16px 18px 0; }
     .pick-card { padding: 16px 18px; }
-    .pick-card .name { font-size: 22px; }
-    .pick-card .stake-val { font-size: 22px; }
+    .pick-card .row { grid-template-columns: 1fr; gap: 10px; }
+    .pick-card .stake-block { text-align: left; }
+    .pick-card .name { font-size: 24px; }
+    .pick-card .stake-val { font-size: 26px; }
+    .top-pick-wrap { padding: 0 16px; }
+    .top-pick { padding: 18px 18px; }
+    .top-pick .body { grid-template-columns: 1fr; gap: 14px; }
+    .top-pick .name { font-size: 32px; }
+    .top-pick .payout { text-align: left; padding-left: 0; border-left: 0; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 12px; }
+    .top-pick .payout .bet-amt { font-size: 28px; }
   }
 </style>
 </head>
@@ -401,22 +537,24 @@
 
 <div class="record-strip" id="recordStrip"></div>
 
+<div class="top-pick-wrap" id="topPickWrap"></div>
+
 <div class="picks-toolbar">
   <label>Bankroll
     <input type="number" id="bankrollInput" min="0" step="100" value="1000">
   </label>
-  <label>Kelly fraction
-    <select id="kellyInput">
-      <option value="0.25">Quarter</option>
-      <option value="0.5" selected>Half</option>
-      <option value="1.0">Full</option>
+  <label>Bet size
+    <select id="kellyInput" title="How aggressive your stake math is. Half is the standard.">
+      <option value="0.25">Conservative</option>
+      <option value="0.5" selected>Standard</option>
+      <option value="1.0">Aggressive</option>
     </select>
   </label>
-  <label>Max bet
+  <label>Max single bet
     <select id="maxBetInput">
-      <option value="0.02">2%</option>
-      <option value="0.05" selected>5%</option>
-      <option value="0.10">10%</option>
+      <option value="0.02">2% of roll</option>
+      <option value="0.05" selected>5% of roll</option>
+      <option value="0.10">10% of roll</option>
     </select>
   </label>
   <div class="pill" id="bankrollPill">Sized for $1,000 bankroll</div>
@@ -428,9 +566,9 @@
   </div>
 
   <div class="picks-caveat">
-    <strong>How this page works.</strong> We run multiple ML models against every UFC fight. When 2+ models independently flag the same fighter as undervalued by the opening market, we show it here with a recommended Kelly-sized stake. <strong>Edge</strong> is the gap between the model's win probability and the opener's implied probability — a 10%+ edge has historically meant a real value bet, not noise.<br><br>
-    Track record above is on graded historical picks at the consensus level. Actual bankroll growth lags backtest figures because of slippage and book limits — assume 30–60% lower in practice. <a href="predictor.html">See the full Predictor lab</a> for per-model detail, hold-out backtests, and feature breakdowns.<br><br>
-    <strong>Not advice.</strong> Always gamble responsibly. 1-800-GAMBLER.
+    <strong>How this works.</strong> Multiple models run on every UFC fight. When 2+ models independently say the same fighter is undervalued by the opening line, it shows up here with a stake sized to your bankroll. The <strong>edge</strong> number is how much value we think there is — bigger gap, better bet.<br><br>
+    Track record above is real graded picks at the consensus level. Real-world ROI is usually 30–60% lower than backtest once you account for slippage and book limits. Bet what you can afford to lose. <a href="predictor.html">Lab view</a> has the full breakdown if you want the receipts.<br><br>
+    <strong>Not advice. Gamble responsibly. 1-800-GAMBLER.</strong>
   </div>
 </div>
 
@@ -662,14 +800,14 @@ cfl.renderFooter();
     const recentRoiClass = recentRoi > 0 ? 'pos' : (recentRoi < 0 ? 'neg' : '');
     el.innerHTML = `
       <div class="kpi">
-        <div class="lbl">All-time consensus bets</div>
+        <div class="lbl">Total picks</div>
         <div class="val">${totalBets.toLocaleString()}</div>
-        <div class="sub">${wins} wins · ${(100*wins/Math.max(totalBets,1)).toFixed(1)}% hit rate</div>
+        <div class="sub">${wins} wins · ${(100*wins/Math.max(totalBets,1)).toFixed(1)}% hit</div>
       </div>
       <div class="kpi">
         <div class="lbl">All-time ROI</div>
         <div class="val ${roiClass}">${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%</div>
-        <div class="sub">$100 flat-stake basis</div>
+        <div class="sub">on $100 flat stakes</div>
       </div>
       <div class="kpi">
         <div class="lbl">Last 60 days</div>
@@ -677,9 +815,86 @@ cfl.renderFooter();
         <div class="sub">${recentWins} wins</div>
       </div>
       <div class="kpi">
-        <div class="lbl">Last 60 ROI</div>
+        <div class="lbl">Recent ROI</div>
         <div class="val ${recentRoiClass}">${recent ? (recentRoi >= 0 ? '+' : '') + recentRoi.toFixed(1) + '%' : '—'}</div>
-        <div class="sub">recent trend</div>
+        <div class="sub">last 60 days</div>
+      </div>
+    `;
+  }
+
+  // -------- Top Pick (the "lock of the card") --------
+  // Picks the highest-priority consensus pick on the SOONEST upcoming event,
+  // skipping any with an anti-filter firing. Renders a big hero card.
+  function renderTopPick(events, bankroll, kFrac, maxFrac) {
+    const wrap = document.getElementById('topPickWrap');
+    if (!wrap) return;
+    if (!events || !events.length) { wrap.innerHTML = ''; return; }
+    const ev = events[0];
+    let best = null;
+    let bestPri = -Infinity;
+    for (const fr of Object.values(ev.fights)) {
+      const votes = { A: new Set(), B: new Set() };
+      fr.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
+      const consensusSide = votes.A.size >= 2 ? 'A' : (votes.B.size >= 2 ? 'B' : null);
+      if (!consensusSide) continue;
+      const consensusRows = fr.rows.filter(r => r.would_bet && r.side === consensusSide);
+      const pickedFighter = consensusRows[0]?.fighter_id;
+      const inds = fightSideIndicators(fr.fight_id, pickedFighter);
+      if (inds.some(t => ANTI_FILTERS.has(t))) continue;
+      const top = topIndicator(fr.fight_id, pickedFighter);
+      const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 30;
+      if (pri > bestPri) {
+        bestPri = pri;
+        best = { ev, fr, consensusSide, consensusRows, pickedFighter, top, inds };
+      }
+    }
+    if (!best) { wrap.innerHTML = ''; return; }
+    const f = fightMap[best.fr.fight_id] || {};
+    const pickName = fighterMap[best.pickedFighter] || `Fighter ${best.pickedFighter}`;
+    const oppName = (f.fighter_a_id === best.pickedFighter) ? f.fighter_b_name : f.fighter_a_name;
+    const opener = best.consensusRows[0]?.opener_american_odds;
+    const avgModelP = best.consensusRows.reduce((s, r) => s + r.model_p, 0) / best.consensusRows.length;
+    const avgEdge   = best.consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / best.consensusRows.length;
+    const marketP   = best.consensusRows[0]?.opener_implied_p;
+    const stake     = opener ? kellyStake(avgModelP, opener, bankroll, kFrac, maxFrac) : 0;
+    const stakeStr  = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
+    const toWin     = (opener && stake > 0)
+      ? Math.round(opener < 0 ? stake * (100 / Math.abs(opener)) : stake * (opener / 100))
+      : 0;
+    const indChip = (isAdminView && best.top && (INDICATOR_PRIORITY[best.top] ?? 0) > 0)
+      ? `<span class="cfl-ind ind-${best.top.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[best.top] || best.top)}"><span class="dot"></span>${INDICATOR_LABEL[best.top] || escapeHtml(best.top)}</span>`
+      : '';
+    const tagLabel = bestPri >= 100 ? 'TOP PICK · S-TIER'
+                    : bestPri >= 80 ? 'TOP PICK · A-TIER'
+                    : bestPri >= 60 ? 'TOP PICK · B-TIER'
+                    : 'TOP CONSENSUS';
+    const modelsStr = best.consensusRows.map(r => r.model_version).sort().join(' + ');
+    const evDate = formatDate(best.ev.event?.event_date || '');
+
+    wrap.innerHTML = `
+      <div class="top-pick">
+        <div class="tag">${tagLabel} ${indChip}</div>
+        <div class="matchup-sub">${escapeHtml(pickName)} vs ${escapeHtml(oppName || '?')} · ${escapeHtml(evDate)}</div>
+        <div class="body">
+          <div>
+            <div class="name">${escapeHtml(pickName)}</div>
+            <div class="meta">
+              <span class="odds-pill">${opener != null ? fmtOdds(opener) : '—'}</span>
+              <span>Our take <strong style="color:#fff;">${(avgModelP*100).toFixed(0)}%</strong></span>
+              <span>Market <strong style="color:#fff;">${marketP != null ? (marketP*100).toFixed(0)+'%' : '—'}</strong></span>
+              <span class="edge" style="color:var(--green); font-weight:700;">+${(avgEdge*100).toFixed(1)}% edge</span>
+            </div>
+          </div>
+          <div class="payout">
+            <div class="lbl">Suggested bet</div>
+            <div class="bet-amt">${stakeStr}</div>
+            <div class="to-win">to win <strong>$${toWin.toLocaleString()}</strong></div>
+          </div>
+        </div>
+        <div class="rationale">
+          <span class="agree"><strong>${modelsStr}</strong> agree</span>
+          <span>${best.consensusRows.length} of 4 models flagged this as a value play.</span>
+        </div>
       </div>
     `;
   }
@@ -702,6 +917,7 @@ cfl.renderFooter();
         localStorage.setItem('cfl_picks_settings', JSON.stringify({ bankroll, kelly: kFrac, maxBet: maxFrac }));
       } catch {}
       document.getElementById('bankrollPill').innerHTML = `Sized for <strong>$${bankroll.toLocaleString()}</strong> bankroll · max bet <strong>$${Math.round(bankroll * maxFrac).toLocaleString()}</strong>`;
+      renderTopPick(events, bankroll, kFrac, maxFrac);
       renderEvents(events);
     }
     [bankrollEl, kellyEl, maxBetEl].forEach(el => {
@@ -820,14 +1036,14 @@ cfl.renderFooter();
             <div><span class="odds">${x.opener != null ? fmtOdds(x.opener) : '—'}</span></div>
           </div>
           <div class="stake-block">
-            <div class="stake-lbl">Recommended stake</div>
+            <div class="stake-lbl">Suggested bet</div>
             <div class="stake-val">${stakeStr}</div>
-            <div class="stake-sub">${stakePct}% of bankroll</div>
+            <div class="stake-sub">${stakePct}% of roll</div>
           </div>
         </div>
         <div class="rationale">
           <span class="agree"><strong>${modelsStr}</strong> agree</span>
-          <span>Model: <strong style="color:#fff;">${modelProb}%</strong> · Market: ${marketProb}% · <span class="edge ${x.avgEdge < 0 ? 'neg' : ''}">${x.avgEdge >= 0 ? '+' : ''}${edgePct}% edge</span></span>
+          <span>Our take <strong style="color:#fff;">${modelProb}%</strong> · Market <strong style="color:#fff;">${marketProb}%</strong> · <span class="edge ${x.avgEdge < 0 ? 'neg' : ''}">${x.avgEdge >= 0 ? '+' : ''}${edgePct}% edge</span></span>
           ${indFrags}
         </div>
       </div>
@@ -875,10 +1091,10 @@ cfl.renderFooter();
     }).join('');
 
     const demotedBlock = demotedRows
-      ? `<div class="wl-title" style="color:#f87171;">Demoted by anti-filter — would have been consensus picks, but the filter rules say skip</div>${demotedRows}`
+      ? `<div class="wl-title" style="color:#f87171;">Skipping — anti-signal fired (the filters say avoid)</div>${demotedRows}`
       : '';
     const watchBlock = watchRows
-      ? `<div class="wl-title" style="margin-top:${demotedRows ? '18px' : '0'};">Watch list — no consensus, no recommended bet</div>${watchRows}`
+      ? `<div class="wl-title" style="margin-top:${demotedRows ? '18px' : '0'};">Passing — no consensus, no recommended bet</div>${watchRows}`
       : '';
 
     return `

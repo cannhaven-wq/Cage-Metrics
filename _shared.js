@@ -108,30 +108,29 @@
         <span class="full">Cannon Fight <span class="accent">Lab</span></span>
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
-      <div class="cfl-nav-links">
-        <a href="picks.html" ${active === 'picks' ? 'class="active"' : ''}>
-          <span class="full">Picks</span><span class="short">Picks</span>
+      <button class="cfl-nav-burger" id="cflNavBurger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+      <div class="cfl-nav-links" id="cflNavLinks">
+        <a class="cfl-nav-cta-link ${active === 'picks' ? 'active' : ''}" href="picks.html">
+          Picks
         </a>
+        <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay</a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
           <span class="full">Next event</span><span class="short">Event</span>
         </a>
-        <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
-        <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
+        <span class="cfl-nav-divider" aria-hidden="true"></span>
         <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>
           <span class="full">Head-to-head</span><span class="short">H2H</span>
         </a>
-        <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>
-          <span class="full">Parlay builder</span><span class="short">Parlay</span>
-        </a>
-        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
-          <span class="full">Stat finder</span><span class="short">Stats</span>
-        </a>
+        <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
+        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stats</a>
+        <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
+        <span class="cfl-nav-divider" aria-hidden="true"></span>
         <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>
-          <span class="full">Predictor</span><span class="short">Pred</span>
-          <span class="cfl-nav-tag" style="margin-left:6px; background:transparent; border:1px solid var(--red); color:var(--red);">Lab</span>
+          Lab
         </a>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
-        <span class="cfl-nav-tag">Beta</span>
       </div>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
     `;
@@ -143,6 +142,22 @@
       if (window.cflAuth) {
         const slot = document.getElementById('cflNavSlot');
         window.cflAuth.renderNavSlot(slot);
+      }
+      // Mobile drawer toggle
+      const burger = document.getElementById('cflNavBurger');
+      const links  = document.getElementById('cflNavLinks');
+      if (burger && links) {
+        burger.addEventListener('click', () => {
+          const open = navEl.classList.toggle('cfl-nav-open');
+          burger.setAttribute('aria-expanded', open ? 'true' : 'false');
+        });
+        // Close on link tap (mobile)
+        links.querySelectorAll('a').forEach(a => {
+          a.addEventListener('click', () => {
+            navEl.classList.remove('cfl-nav-open');
+            burger.setAttribute('aria-expanded', 'false');
+          });
+        });
       }
     }
   };
