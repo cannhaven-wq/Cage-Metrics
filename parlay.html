@@ -247,6 +247,37 @@
   .pick-fighter.selected .pick-odds-pill { background: rgba(76,175,80,0.18); }
   .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
 
+  /* Per-leg model insight block in the slip */
+  .slip-leg-models {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 10px;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--border-2);
+    font-size: 11px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .slip-leg-models .vote-pill {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 999px;
+    padding: 1px 8px;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .slip-leg-models .vote-pill.has-bet  { color: #86efac; border-color: rgba(76,175,80,0.45); }
+  .slip-leg-models .vote-pill.no-bet   { color: var(--text-3); }
+  .slip-leg-models .model-stat strong  { color: #fff; font-variant-numeric: tabular-nums; }
+  .slip-leg-models .model-stat .edge.pos { color: #86efac; font-weight: 700; }
+  .slip-leg-models .model-stat .edge.neg { color: #fca5a5; font-weight: 700; }
+  .slip-leg-models.muted { color: var(--text-3); font-style: italic; }
+
   .slip {
     background: var(--bg-2);
     border: 1px solid var(--border);
@@ -412,6 +443,8 @@ let fightsByEvent = {};
 let fightersById = {};
 // (fight_id):(fighter_id) -> american opener from BFO consensus (book_id=6)
 let openerByPick = {};
+// (fight_id):(fighter_id) -> [{ model_version, model_p, edge, would_bet }, ...]
+let modelsByPick = {};
 
 function fmtAmerican(n) {
   if (n == null || isNaN(n)) return '—';
@@ -473,18 +506,37 @@ async function load() {
   // and show a price on each fighter card before the user picks.
   const allFightIds = (fights || []).map(f => f.id);
   if (allFightIds.length > 0) {
-    const { data: openers } = await sb
-      .from('fight_odds')
-      .select('fight_id, fighter_id, american_odds')
-      .in('fight_id', allFightIds)
-      .eq('book_id', 6)
-      .eq('is_opener', true);
+    const [{ data: openers }, { data: preds }] = await Promise.all([
+      sb.from('fight_odds')
+        .select('fight_id, fighter_id, american_odds')
+        .in('fight_id', allFightIds)
+        .eq('book_id', 6)
+        .eq('is_opener', true),
+      sb.from('model_predictions')
+        .select('model_version, fight_id, fighter_id, model_p, edge, would_bet')
+        .in('fight_id', allFightIds)
+        .eq('outcome_known', false),
+    ]);
     (openers || []).forEach(o => {
       openerByPick[`${o.fight_id}:${o.fighter_id}`] = o.american_odds;
+    });
+    (preds || []).forEach(p => {
+      const k = `${p.fight_id}:${p.fighter_id}`;
+      (modelsByPick[k] = modelsByPick[k] || []).push(p);
     });
   }
 
   render();
+}
+
+function modelSummaryFor(fightId, fighterId) {
+  const arr = modelsByPick[`${fightId}:${fighterId}`] || [];
+  if (arr.length === 0) return null;
+  const betCount = arr.filter(r => r.would_bet).length;
+  const avgP = arr.reduce((s, r) => s + Number(r.model_p), 0) / arr.length;
+  const avgEdge = arr.reduce((s, r) => s + (r.edge != null ? Number(r.edge) : 0), 0) / arr.length;
+  const votes = arr.map(r => r.model_version).sort();
+  return { total: arr.length, betCount, avgP, avgEdge, votes };
 }
 
 function render() {
@@ -522,7 +574,7 @@ function renderPickRow(f) {
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_a_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_a_name)}</div>
-          <div class="meta">${a ? cfl.formatRecord(a.ufc_wins, a.ufc_losses, a.ufc_draws) + ' UFC' : '—'}</div>
+          <div class="meta">${a ? cfl.formatRecord(a.wins, a.losses, a.draws) + ' pro' : '—'}</div>
         </div>
         <div class="pick-odds-pill ${oddsClass(aOdds)}">${fmtAmerican(aOdds)}</div>
       </div>
@@ -531,7 +583,7 @@ function renderPickRow(f) {
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_b_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_b_name)}</div>
-          <div class="meta">${b ? cfl.formatRecord(b.ufc_wins, b.ufc_losses, b.ufc_draws) + ' UFC' : '—'}</div>
+          <div class="meta">${b ? cfl.formatRecord(b.wins, b.losses, b.draws) + ' pro' : '—'}</div>
         </div>
         <div class="pick-odds-pill ${oddsClass(bOdds)}">${fmtAmerican(bOdds)}</div>
       </div>
@@ -605,6 +657,24 @@ function renderSlip() {
 
   const legsHtml = legs.map((leg, i) => {
     const implied = leg.odds ? americanToImplied(leg.odds) : null;
+    const ms = modelSummaryFor(leg.fightId, leg.fighterId);
+    let modelsBlock = '';
+    if (ms) {
+      const edgePct = (ms.avgEdge * 100).toFixed(1);
+      const edgeCls = ms.avgEdge >= 0.0001 ? 'pos' : (ms.avgEdge <= -0.0001 ? 'neg' : '');
+      const edgeSign = ms.avgEdge >= 0 ? '+' : '';
+      const voteCls = ms.betCount > 0 ? 'has-bet' : 'no-bet';
+      modelsBlock = `
+        <div class="slip-leg-models">
+          <span class="vote-pill ${voteCls}">${ms.betCount}/${ms.total} bet</span>
+          <span class="model-stat">our take <strong>${(ms.avgP * 100).toFixed(0)}%</strong></span>
+          <span class="model-stat"><span class="edge ${edgeCls}">${edgeSign}${edgePct}%</span> edge</span>
+          <span class="model-stat" style="color:var(--text-3); font-size:10px;">${ms.votes.join(' + ')}</span>
+        </div>
+      `;
+    } else {
+      modelsBlock = `<div class="slip-leg-models muted">no model prediction yet</div>`;
+    }
     return `
       <div class="slip-leg">
         <div class="slip-leg-top">
@@ -616,6 +686,7 @@ function renderSlip() {
           <input type="text" class="odds-input" data-idx="${i}" placeholder="-150" value="${cfl.escapeHtml(leg.odds)}" />
           <div class="implied">${implied != null ? (implied * 100).toFixed(1) + '%' : '—'}</div>
         </div>
+        ${modelsBlock}
       </div>
     `;
   }).join('');
