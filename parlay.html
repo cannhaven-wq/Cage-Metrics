@@ -247,6 +247,68 @@
   .pick-fighter.selected .pick-odds-pill { background: rgba(76,175,80,0.18); }
   .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
 
+  /* Model selector strip — sits above the upcoming card */
+  .model-strip {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 18px;
+  }
+  .model-strip .label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    margin-bottom: 8px;
+  }
+  .model-strip .buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .model-strip button {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 6px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.12s;
+  }
+  .model-strip button:hover { color: #fff; border-color: #3a3a3a; }
+  .model-strip button.active {
+    background: var(--red);
+    color: #fff;
+    border-color: var(--red);
+  }
+  .model-strip .info {
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.55;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+  }
+  .model-strip .info .name {
+    color: #fff;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .model-strip .info .stats {
+    display: inline-flex;
+    gap: 12px;
+    margin-left: 8px;
+    color: var(--text-3);
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+  }
+  .model-strip .info .stats strong { color: #fff; }
+
   /* Per-leg model insight block in the slip */
   .slip-leg-models {
     display: flex;
@@ -401,6 +463,11 @@
 <div class="page">
   <div class="parlay-layout">
     <div class="build-area">
+      <div class="model-strip" id="modelStrip" style="display:none;">
+        <div class="label">Model perspective for the slip</div>
+        <div class="buttons" id="modelButtons"></div>
+        <div class="info" id="modelInfo"></div>
+      </div>
       <h2>Upcoming fights</h2>
       <div id="upcomingArea">
         <div class="loading-state"><div class="loading-spinner"></div><div>Loading upcoming events…</div></div>
@@ -445,6 +512,11 @@ let fightersById = {};
 let openerByPick = {};
 // (fight_id):(fighter_id) -> [{ model_version, model_p, edge, would_bet }, ...]
 let modelsByPick = {};
+// model_versions rows
+let modelVersions = [];
+// Which model's lens the slip uses. 'all' = aggregate across all models;
+// any other value (e.g. 'v3', 'v4') filters to just that one.
+let selectedModel = 'all';
 
 function fmtAmerican(n) {
   if (n == null || isNaN(n)) return '—';
@@ -502,11 +574,11 @@ async function load() {
     (fighters || []).forEach(f => { fightersById[f.id] = f; });
   }
 
-  // Pull consensus opener (book_id=6) so we can pre-fill leg odds on click
-  // and show a price on each fighter card before the user picks.
+  // Pull consensus opener (book_id=6), model predictions, and model_versions
+  // info in parallel.
   const allFightIds = (fights || []).map(f => f.id);
   if (allFightIds.length > 0) {
-    const [{ data: openers }, { data: preds }] = await Promise.all([
+    const [{ data: openers }, { data: preds }, { data: mvers }] = await Promise.all([
       sb.from('fight_odds')
         .select('fight_id, fighter_id, american_odds')
         .in('fight_id', allFightIds)
@@ -516,6 +588,9 @@ async function load() {
         .select('model_version, fight_id, fighter_id, model_p, edge, would_bet')
         .in('fight_id', allFightIds)
         .eq('outcome_known', false),
+      sb.from('model_versions')
+        .select('id, name, description, features_summary, test_accuracy, test_log_loss')
+        .order('id'),
     ]);
     (openers || []).forEach(o => {
       openerByPick[`${o.fight_id}:${o.fighter_id}`] = o.american_odds;
@@ -524,19 +599,76 @@ async function load() {
       const k = `${p.fight_id}:${p.fighter_id}`;
       (modelsByPick[k] = modelsByPick[k] || []).push(p);
     });
+    modelVersions = mvers || [];
   }
 
+  renderModelStrip();
   render();
 }
 
+function renderModelStrip() {
+  if (!modelVersions.length) return;
+  const strip = document.getElementById('modelStrip');
+  if (!strip) return;
+  strip.style.display = 'block';
+
+  const buttons = document.getElementById('modelButtons');
+  const opts = [{ id: 'all', label: 'All (aggregate)' }]
+    .concat(modelVersions.map(m => ({ id: m.id, label: m.id.toUpperCase() })));
+  buttons.innerHTML = opts.map(o =>
+    `<button data-mid="${cfl.escapeHtml(o.id)}" class="${o.id === selectedModel ? 'active' : ''}">${cfl.escapeHtml(o.label)}</button>`
+  ).join('');
+
+  buttons.querySelectorAll('button').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedModel = b.dataset.mid;
+      renderModelStrip();   // refresh active state + info
+      renderSlip();         // re-compute leg insights
+    });
+  });
+
+  renderModelInfo();
+}
+
+function renderModelInfo() {
+  const info = document.getElementById('modelInfo');
+  if (!info) return;
+  if (selectedModel === 'all') {
+    info.innerHTML = `
+      <span class="name">All — aggregate across all ${modelVersions.length} model versions.</span>
+      The "votes" pill in your slip counts how many models flag the pick, the take and edge are means.
+    `;
+    return;
+  }
+  const mv = modelVersions.find(m => m.id === selectedModel);
+  if (!mv) { info.innerHTML = ''; return; }
+  const acc = mv.test_accuracy != null ? (Number(mv.test_accuracy) * 100).toFixed(1) + '%' : '—';
+  const ll = mv.test_log_loss != null ? Number(mv.test_log_loss).toFixed(4) : '—';
+  const desc = mv.description || mv.features_summary || '';
+  info.innerHTML = `
+    <span class="name">${cfl.escapeHtml(mv.id)} — ${cfl.escapeHtml(mv.name || '')}</span>
+    ${cfl.escapeHtml(desc.length > 240 ? desc.slice(0, 240) + '…' : desc)}
+    <span class="stats">
+      <span>Test acc <strong>${acc}</strong></span>
+      <span>Log-loss <strong>${ll}</strong></span>
+    </span>
+  `;
+}
+
 function modelSummaryFor(fightId, fighterId) {
-  const arr = modelsByPick[`${fightId}:${fighterId}`] || [];
-  if (arr.length === 0) return null;
+  const all = modelsByPick[`${fightId}:${fighterId}`] || [];
+  if (all.length === 0) return null;
+  // Filter to the selected lens. 'all' = aggregate across every model.
+  const arr = (selectedModel === 'all') ? all : all.filter(r => r.model_version === selectedModel);
+  if (arr.length === 0) {
+    // Selected model didn't score this fight — fall back to a "no data" state
+    return { total: 0, betCount: 0, avgP: null, avgEdge: null, votes: [], filtered: true };
+  }
   const betCount = arr.filter(r => r.would_bet).length;
   const avgP = arr.reduce((s, r) => s + Number(r.model_p), 0) / arr.length;
   const avgEdge = arr.reduce((s, r) => s + (r.edge != null ? Number(r.edge) : 0), 0) / arr.length;
   const votes = arr.map(r => r.model_version).sort();
-  return { total: arr.length, betCount, avgP, avgEdge, votes };
+  return { total: arr.length, betCount, avgP, avgEdge, votes, filtered: selectedModel !== 'all' };
 }
 
 function render() {
@@ -659,21 +791,26 @@ function renderSlip() {
     const implied = leg.odds ? americanToImplied(leg.odds) : null;
     const ms = modelSummaryFor(leg.fightId, leg.fighterId);
     let modelsBlock = '';
-    if (ms) {
+    if (!ms) {
+      modelsBlock = `<div class="slip-leg-models muted">no model prediction yet</div>`;
+    } else if (ms.avgP == null) {
+      modelsBlock = `<div class="slip-leg-models muted">${cfl.escapeHtml(selectedModel)} didn't score this fight — try "All" or a different model</div>`;
+    } else {
       const edgePct = (ms.avgEdge * 100).toFixed(1);
       const edgeCls = ms.avgEdge >= 0.0001 ? 'pos' : (ms.avgEdge <= -0.0001 ? 'neg' : '');
       const edgeSign = ms.avgEdge >= 0 ? '+' : '';
       const voteCls = ms.betCount > 0 ? 'has-bet' : 'no-bet';
+      const voteLabel = ms.filtered
+        ? (ms.betCount > 0 ? `${selectedModel} BET` : `${selectedModel} no bet`)
+        : `${ms.betCount}/${ms.total} bet`;
       modelsBlock = `
         <div class="slip-leg-models">
-          <span class="vote-pill ${voteCls}">${ms.betCount}/${ms.total} bet</span>
-          <span class="model-stat">our take <strong>${(ms.avgP * 100).toFixed(0)}%</strong></span>
+          <span class="vote-pill ${voteCls}">${cfl.escapeHtml(voteLabel)}</span>
+          <span class="model-stat">${ms.filtered ? 'model' : 'our take'} <strong>${(ms.avgP * 100).toFixed(0)}%</strong></span>
           <span class="model-stat"><span class="edge ${edgeCls}">${edgeSign}${edgePct}%</span> edge</span>
-          <span class="model-stat" style="color:var(--text-3); font-size:10px;">${ms.votes.join(' + ')}</span>
+          ${ms.filtered ? '' : `<span class="model-stat" style="color:var(--text-3); font-size:10px;">${ms.votes.join(' + ')}</span>`}
         </div>
       `;
-    } else {
-      modelsBlock = `<div class="slip-leg-models muted">no model prediction yet</div>`;
     }
     return `
       <div class="slip-leg">
