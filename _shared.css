@@ -411,13 +411,17 @@ footer.cfl-footer {
   .cfl-logo .short { display: inline; }
   .cfl-logo { font-size: 22px; flex-shrink: 0; }
 
-  /* Burger replaces the inline links on mobile */
-  .cfl-nav-burger { display: flex; flex-shrink: 0; margin-left: auto; }
+  /* Burger sits at the far right (standard mobile pattern). DOM order is
+     [logo][links][slot][burger], so the slot's margin-left:auto pushes both
+     slot and burger to the right edge. */
+  .cfl-nav-burger { display: flex; flex-shrink: 0; }
+  .cfl-nav-slot { flex-shrink: 0; }
 
-  /* Slot (login/avatar) sits next to the burger, not at the far right */
-  .cfl-nav-slot { margin-left: 0; flex-shrink: 0; }
-
-  /* Drawer: hidden by default, slides in when nav-open is toggled */
+  /* Drawer: hidden by default, slides in when nav-open is toggled.
+     The extra 56px in the closed transform ensures the drawer's bottom edge
+     stays above the nav bar — otherwise the drawer (z-index 99) overlaps the
+     nav bar's own siblings (z-index auto) within nav's stacking context and
+     its last item paints over the logo/burger/slot. */
   .cfl-nav-links {
     position: fixed;
     top: 56px;
@@ -430,9 +434,9 @@ footer.cfl-footer {
     gap: 0;
     margin: 0;
     padding: 4px 0 10px;
-    max-height: calc(100vh - 56px);
+    height: calc(100vh - 56px);
     overflow-y: auto;
-    transform: translateY(-100%);
+    transform: translateY(calc(-100% - 56px));
     transition: transform 0.18s ease;
     z-index: 99;
   }

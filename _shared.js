@@ -103,19 +103,23 @@
   // --------- Nav renderer ---------
   // Marks active link based on current page
   cfl.renderNav = function (active) {
+    // DOM order matters on mobile: slot comes before burger so the flex layout
+    // ends up [logo] ......... [slot][burger] with burger as the far-right tap
+    // target (standard mobile pattern). The drawer is position:fixed so its
+    // DOM position doesn't affect the bar layout.
     const navHtml = `
       <a class="cfl-logo" href="index.html">
         <span class="full">Cannon Fight <span class="accent">Lab</span></span>
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
-      <button class="cfl-nav-burger" id="cflNavBurger" aria-label="Menu" aria-expanded="false">
-        <span></span><span></span><span></span>
-      </button>
       <div class="cfl-nav-links" id="cflNavLinks">
         <a class="cfl-nav-cta-link ${active === 'picks' ? 'active' : ''}" href="picks.html">
           Picks
         </a>
         <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay</a>
+        <a href="mybook.html" ${active === 'mybook' ? 'class="active"' : ''} data-auth-only="true" style="display:none">
+          <span class="full">My Book</span><span class="short">Book</span>
+        </a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
           <span class="full">Next event</span><span class="short">Event</span>
         </a>
@@ -133,6 +137,9 @@
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
+      <button class="cfl-nav-burger" id="cflNavBurger" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     `;
     const navEl = document.querySelector('nav.cfl-nav');
     if (navEl) {
