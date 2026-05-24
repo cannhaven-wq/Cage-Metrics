@@ -173,11 +173,13 @@
   cfl.renderFooter = function () {
     const footerHtml = `
       <div class="footer-logo">Cannon Fight <span class="accent">Lab</span></div>
-      <div class="cfl-footer-text">Stats for entertainment purposes only. Always gamble responsibly. 1-800-GAMBLER</div>
+      <div class="cfl-footer-text">Cannon Fight Lab is an analytics publication, not a sportsbook. Statistics describe historical patterns and do not predict individual fight outcomes. 21+ only. Problem gambling? Call 1-800-GAMBLER or the Tennessee REDLINE at 1-800-889-9789.</div>
       <div class="cfl-footer-links">
         <a href="about.html">About</a>
         <a href="contact.html">Contact</a>
+        <a href="methodology.html">Methodology</a>
         <a href="disclaimer.html">Disclaimer</a>
+        <a href="privacy.html">Privacy</a>
       </div>
     `;
     const footEl = document.querySelector('footer.cfl-footer');

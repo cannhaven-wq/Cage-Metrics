@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>Disclaimer — Cannon Fight Lab</title>
-<meta name="description" content="Cannon Fight Lab disclaimer. Stats and predictions are for entertainment and informational purposes only. Always gamble responsibly.">
+<meta name="description" content="Cannon Fight Lab disclaimer. Stats and predictions are for informational and entertainment purposes only. 21+. Always gamble responsibly.">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://cannonfightlab.com/disclaimer.html">
@@ -15,14 +15,14 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="Disclaimer — Cannon Fight Lab">
-<meta property="og:description" content="Stats and predictions are for entertainment purposes only.">
+<meta property="og:description" content="Stats and predictions are for informational and entertainment purposes only.">
 <meta property="og:url" content="https://cannonfightlab.com/disclaimer.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Disclaimer — Cannon Fight Lab">
-<meta name="twitter:description" content="Stats and predictions are for entertainment purposes only.">
+<meta name="twitter:description" content="Stats and predictions are for informational and entertainment purposes only.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -42,36 +42,52 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 <style>
-  .legal {
-    max-width: 760px;
-    margin: 0 auto;
-  }
+  .legal { max-width: 760px; margin: 0 auto; }
   .legal h2 {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 22px;
     font-weight: 800;
     color: #fff;
-    margin: 32px 0 12px;
+    margin: 32px 0 6px;
     letter-spacing: 0.5px;
   }
-  .legal h2:first-child { margin-top: 0; }
+  .legal h2:first-of-type { margin-top: 0; }
+  .legal .subhead {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
   .legal p {
-    font-size: 14px;
+    font-size: 15px;
     color: var(--text-2);
     line-height: 1.75;
     margin-bottom: 14px;
   }
-  .legal ul {
-    margin-bottom: 14px;
-    padding-left: 20px;
-  }
+  .legal p.muted { color: var(--text-3); font-size: 14px; }
+  .legal ul { margin: 10px 0 18px; padding: 0; list-style: none; }
   .legal li {
-    font-size: 14px;
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
     color: var(--text-2);
+    font-size: 15px;
     line-height: 1.7;
-    margin-bottom: 6px;
+  }
+  .legal li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
   }
   .legal strong { color: var(--text); font-weight: 600; }
+  .legal a { color: var(--red); text-decoration: none; }
+  .legal a:hover { text-decoration: underline; }
 
   .responsible-banner {
     background: linear-gradient(180deg, var(--bg-2), var(--bg));
@@ -108,12 +124,72 @@
     text-decoration: underline;
   }
 
+  .top-warning {
+    background: rgba(230, 57, 70, 0.08);
+    border: 1px solid rgba(230, 57, 70, 0.4);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 36px;
+  }
+  .top-warning .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .top-warning p { font-size: 15px; color: var(--text); margin: 0; line-height: 1.7; }
+
+  .resources {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 22px 26px;
+    margin-top: 36px;
+  }
+  .resources h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 12px;
+    letter-spacing: 0.3px;
+  }
+  .resources .res-row {
+    display: flex;
+    gap: 14px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    align-items: baseline;
+    flex-wrap: wrap;
+  }
+  .resources .res-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .resources .res-name {
+    font-weight: 600;
+    color: #fff;
+    font-size: 14px;
+    min-width: 200px;
+  }
+  .resources .res-contact {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--red);
+    letter-spacing: 0.5px;
+  }
+  .resources .res-desc { color: var(--text-2); font-size: 13px; }
+
   .last-updated {
     font-size: 12px;
     color: var(--text-3);
     margin-top: 32px;
     padding-top: 20px;
     border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 768px) {
+    .resources .res-name { min-width: 0; }
   }
 </style>
 </head>
@@ -122,7 +198,7 @@
 <nav class="cfl-nav"></nav>
 
 <div class="page-hero">
-  <div class="eyebrow">Important</div>
+  <div class="eyebrow">Legal</div>
   <h1>Disclaimer & responsible gambling</h1>
   <p>Read this. It matters.</p>
 </div>
@@ -134,66 +210,92 @@
       <div class="label">Problem gambling? Get help now.</div>
       <div class="number">1-800-GAMBLER</div>
       <div class="text">
-        Free, confidential, 24/7. Or visit <a href="https://www.1800gambler.net" target="_blank" rel="noopener">1800gambler.net</a>.
+        Free, confidential, 24/7. Tennessee residents: <strong style="color:#fff;">1-800-889-9789</strong> (REDLINE). Or visit <a href="https://www.1800gambler.net" target="_blank" rel="noopener">1800gambler.net</a>.
       </div>
     </div>
 
-    <h2>Entertainment only</h2>
-    <p>
-      Cannon Fight Lab is an analytics and information platform. <strong>We do not accept bets, take wagers, or process any form of gambling transaction.</strong> All statistics, comparisons, projections, parlay calculators, and historical patterns shown on this site are provided for informational and entertainment purposes only.
-    </p>
+    <div class="top-warning">
+      <div class="label">Read this first</div>
+      <p>Cannon Fight Lab publishes statistical analysis for informational and entertainment purposes only. We are not a sportsbook, we do not accept wagers, and we do not provide gambling advice. Nothing on this site is a prediction or a guarantee. If you choose to bet, you bet at your own risk. You must be 21 or older and physically located in a jurisdiction where sports wagering is legal.</p>
+    </div>
 
-    <h2>No predictions, no guarantees</h2>
-    <p>
-      The data on this site describes <strong>historical patterns and aggregate trends</strong>. It does not predict any individual fight outcome. A statistic showing that "younger fighters win 56% of the time" still means that 44% of the time, the older fighter wins. Past results do not guarantee future outcomes.
-    </p>
-    <p>
-      Use of this site to inform any wager is entirely at your own risk. Cannon Fight Lab makes no representations about the accuracy, reliability, completeness, or timeliness of any data shown. Stats are pulled from public sources and may contain errors.
-    </p>
+    <h2>1. Nature of this site</h2>
+    <div class="subhead">What we are</div>
+    <p>Cannon Fight Lab is an independent analytics publication owned and operated by Cannon Fight Lab LLC, a Tennessee limited liability company. We aggregate publicly available historical UFC fight data and publish derived statistical insights, base rates, and fighter profiles.</p>
+    <p>We are not licensed as a sportsbook, gaming operator, or gambling service in Tennessee or any other jurisdiction. We do not accept money, do not process bets, do not hold customer funds, and do not provide individualized betting advice.</p>
 
-    <h2>Gamble responsibly</h2>
-    <p>
-      Sports betting can be addictive and harmful. If you choose to gamble, please follow these guidelines:
-    </p>
+    <h2>2. No prediction, no guarantee</h2>
+    <div class="subhead">What our numbers mean</div>
+    <p>The statistics, win rates, and implied win percentages published on this site describe <em>historical patterns</em> in completed UFC fights. Past performance — of a fighter, of a stance, of an age group, of any measured signal — does not predict future results.</p>
+    <p>A fighter described as a 62% favorite under our model loses 38% of the time historically when that same set of conditions held. Single-fight outcomes have substantial random variance that no statistical model can eliminate. Anyone telling you otherwise is selling you something.</p>
+    <p>We make no representation, warranty, or guarantee — express or implied — that any statistic on this site will accurately predict any individual fight outcome.</p>
+
+    <h2>3. Data accuracy</h2>
+    <div class="subhead">Best effort, not perfection</div>
+    <p>Historical fight data is sourced from publicly available records and refreshed on a regular automated schedule. We make a good-faith effort to ensure accuracy, but the data may contain errors introduced at the source, by the scraping process, by data-type conversions, or by gaps in coverage for older fights.</p>
+    <p>If you spot what looks like an error, <a href="contact.html">let us know</a>. We treat substantiation questions seriously and correct documented errors as quickly as we can.</p>
+    <p class="muted">See the <a href="methodology.html">methodology page</a> for a full breakdown of how each statistic on this site is calculated, what the sample size is, and what the known limitations are.</p>
+
+    <h2>4. Not financial, investment, or professional advice</h2>
+    <div class="subhead">We are not your advisor</div>
+    <p>Nothing on Cannon Fight Lab constitutes financial advice, investment advice, gambling advice, or a recommendation to place any specific bet. We do not know your financial situation, your risk tolerance, your jurisdiction, or your gambling history, and we are not in a position to advise you on any of those things.</p>
+    <p>Decisions you make based on information published here are entirely your own. Cannon Fight Lab LLC, its owners, contributors, and affiliates accept no liability for losses — direct, indirect, consequential, or otherwise — incurred by users who act on information found on this site.</p>
+
+    <h2>5. Affiliate disclosure</h2>
+    <div class="subhead">How we make money</div>
+    <p>This site contains affiliate links to licensed sportsbooks. If you click through an affiliate link and open an account or place a wager, we may receive a referral commission from the sportsbook. This commission is paid by the sportsbook, not by you, and does not change the odds you receive, the bonuses you qualify for, or any other aspect of your experience with that sportsbook.</p>
+    <p>The presence of an affiliate link does not constitute an endorsement of any specific bet, market, or wagering strategy. We have no financial incentive tied to whether you win or lose any specific wager — only to whether you create an account with the sportsbook.</p>
+
+    <h2>6. Eligibility and jurisdiction</h2>
+    <div class="subhead">Who can use sportsbook links</div>
+    <p>Sports wagering laws vary by jurisdiction. To follow an affiliate link to a licensed sportsbook and open an account, you must:</p>
     <ul>
-      <li><strong>Set a budget</strong> before you bet, and never exceed it.</li>
-      <li><strong>Never gamble money you can't afford to lose.</strong></li>
-      <li><strong>Never bet to chase losses.</strong> If you've lost, walk away.</li>
-      <li><strong>Don't gamble under the influence</strong> of alcohol, drugs, or strong emotion.</li>
-      <li><strong>Take regular breaks.</strong> Gambling should be one part of a balanced life, never the center of it.</li>
-      <li><strong>Know the warning signs:</strong> betting more than you intended, hiding bets from family, gambling to escape problems, borrowing money to bet.</li>
+      <li>Be 21 years of age or older</li>
+      <li>Be physically located in a jurisdiction where sports wagering with that sportsbook is legal</li>
+      <li>Not be on any sportsbook's self-exclusion list</li>
+      <li>Comply with all applicable local, state, and federal laws</li>
     </ul>
+    <p>Tennessee residents: you must be 21+ and physically present in Tennessee to wager with a Tennessee-licensed sportsbook. Sports wagering is regulated by the Tennessee Sports Wagering Council.</p>
 
-    <h2>If you need help</h2>
-    <p>
-      If you or someone you know may have a gambling problem, free and confidential help is available right now:
-    </p>
-    <ul>
-      <li><strong>National helpline:</strong> 1-800-GAMBLER (1-800-426-2537)</li>
-      <li><strong>Online resources:</strong> <a href="https://www.ncpgambling.org" target="_blank" rel="noopener" style="color: var(--text); text-decoration: underline;">National Council on Problem Gambling</a></li>
-      <li><strong>Self-exclusion:</strong> Most legal sportsbooks offer voluntary self-exclusion programs. Use them if you need to.</li>
-    </ul>
+    <h2>7. Use at your own risk</h2>
+    <div class="subhead">Limitation of liability</div>
+    <p>This site is provided on an "as is" and "as available" basis. To the maximum extent permitted by law, Cannon Fight Lab LLC disclaims all warranties, express or implied, including but not limited to warranties of merchantability, fitness for a particular purpose, accuracy, completeness, and non-infringement.</p>
+    <p>In no event will Cannon Fight Lab LLC be liable for any damages — including direct, indirect, incidental, consequential, special, exemplary, or punitive damages — arising out of or in connection with your use of this site or any information published on it.</p>
 
-    <h2>Eligibility & legality</h2>
-    <p>
-      Sports betting is legal only in certain U.S. states and only for individuals <strong>21 years of age or older</strong> (18+ in some jurisdictions). Cannon Fight Lab does not verify your age or jurisdiction. It is your responsibility to ensure that any wagering activity you engage in is legal where you live.
-    </p>
-    <p>
-      Cannon Fight Lab is not affiliated with the UFC, Zuffa LLC, TKO Group Holdings, or any sportsbook operator unless explicitly stated. UFC, Ultimate Fighting Championship, and related marks are trademarks of their respective owners.
-    </p>
+    <h2>8. Trademarks and third parties</h2>
+    <div class="subhead">Names mentioned on this site</div>
+    <p>Cannon Fight Lab is not affiliated with, endorsed by, or sponsored by the Ultimate Fighting Championship, Zuffa LLC, TKO Group Holdings, or any sportsbook. UFC, the UFC logo, and fighter names are trademarks of their respective owners and are used here for identification purposes only under nominative fair use.</p>
 
-    <h2>Data sources & accuracy</h2>
-    <p>
-      Fighter and fight data is sourced from publicly available UFC statistics. While we make best efforts to keep this data current and accurate, errors and omissions may occur. Recently completed events may take 24-48 hours to fully populate. If you spot a stat that looks wrong, please <a href="contact.html" style="color: var(--red); text-decoration: underline;">let us know</a>.
-    </p>
+    <h2>9. Changes to this disclaimer</h2>
+    <div class="subhead">Stays current</div>
+    <p>We may update this disclaimer at any time to reflect changes in the law, in our practices, or in the site itself. The "Last updated" date at the bottom of this page reflects the most recent change. Material changes will be announced at the top of the site for a reasonable period.</p>
 
-    <h2>Limitation of liability</h2>
-    <p>
-      Cannon Fight Lab, its operators, and its contributors are not liable for any losses, damages, or consequences resulting from the use of this site or reliance on any information provided. Use this site at your own discretion and risk. By using Cannon Fight Lab, you acknowledge and accept these terms.
-    </p>
+    <div class="resources">
+      <h3>Problem gambling resources</h3>
+      <div class="res-row">
+        <div class="res-name">National Problem Gambling Helpline</div>
+        <div class="res-contact">1-800-GAMBLER</div>
+        <div class="res-desc">24/7 confidential support, all U.S. states</div>
+      </div>
+      <div class="res-row">
+        <div class="res-name">Tennessee REDLINE</div>
+        <div class="res-contact">1-800-889-9789</div>
+        <div class="res-desc">Tennessee residents, 24/7</div>
+      </div>
+      <div class="res-row">
+        <div class="res-name">Tennessee Sports Wagering Council</div>
+        <div class="res-contact">tn.gov/swc</div>
+        <div class="res-desc">Self-exclusion and responsible gambling tools</div>
+      </div>
+      <div class="res-row">
+        <div class="res-name">Gamblers Anonymous</div>
+        <div class="res-contact">gamblersanonymous.org</div>
+        <div class="res-desc">Peer-support meetings nationwide</div>
+      </div>
+    </div>
 
     <div class="last-updated">
-      Last updated: April 30, 2026 · Cannon Fight Lab is operated by Reed Cannon. Cannon Fight Lab is not a sportsbook.
+      Last updated: May 24, 2026 · Cannon Fight Lab is operated by Cannon Fight Lab LLC. Cannon Fight Lab is not a sportsbook.
     </div>
 
   </div>

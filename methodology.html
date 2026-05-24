@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>Methodology — Cannon Fight Lab</title>
+<meta name="description" content="How Cannon Fight Lab calculates every headline statistic — data sources, sample sizes, formulas, and known limitations for each metric we publish.">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="https://cannonfightlab.com/methodology.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="Methodology — Cannon Fight Lab">
+<meta property="og:description" content="Transparent documentation of every formula, sample size, and known limitation behind the numbers on Cannon Fight Lab.">
+<meta property="og:url" content="https://cannonfightlab.com/methodology.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Twitter Card ===== -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Methodology — Cannon Fight Lab">
+<meta name="twitter:description" content="How CFL calculates every headline statistic.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=navfix1">
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+<style>
+  html { scroll-behavior: smooth; }
+
+  .legal { max-width: 880px; margin: 0 auto; }
+  .legal p { font-size: 15px; color: var(--text-2); line-height: 1.75; margin-bottom: 14px; }
+  .legal p.muted { color: var(--text-3); font-size: 14px; }
+  .legal strong { color: var(--text); font-weight: 600; }
+
+  .toc {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    margin-bottom: 40px;
+  }
+  .toc-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 12px;
+  }
+  .toc ol { list-style: none; counter-reset: toc; padding: 0; }
+  .toc li { counter-increment: toc; padding: 4px 0; font-size: 14px; }
+  .toc li::before {
+    content: counter(toc, decimal-leading-zero);
+    color: var(--red);
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    margin-right: 12px;
+    font-size: 13px;
+  }
+  .toc a { color: var(--text-2); text-decoration: none; transition: color 0.15s; }
+  .toc a:hover { color: #fff; }
+
+  section.method { margin-bottom: 48px; scroll-margin-top: 72px; }
+  section.method h2 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 28px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 8px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  section.method .subhead {
+    font-size: 12px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 20px;
+  }
+  section.method h3 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    margin: 24px 0 10px;
+    letter-spacing: 0.3px;
+  }
+  section.method ul { list-style: none; margin: 12px 0 16px; padding: 0; }
+  section.method ul li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  section.method ul li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+  }
+
+  .stat-callout {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin: 18px 0;
+  }
+  .stat-callout .headline {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .stat-callout .sample {
+    font-size: 12px;
+    color: var(--text-3);
+    font-family: 'Inter', sans-serif;
+  }
+  .stat-callout .sample strong { color: var(--text-2); font-weight: 600; }
+
+  .formula {
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    padding: 14px 18px;
+    margin: 14px 0;
+    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 13px;
+    color: var(--text);
+    overflow-x: auto;
+    white-space: pre-wrap;
+    line-height: 1.55;
+  }
+  .formula .label {
+    display: block;
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  table.method-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  table.method-table th {
+    background: var(--bg-3);
+    padding: 10px 14px;
+    text-align: left;
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+  table.method-table td {
+    padding: 10px 14px;
+    font-size: 14px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-2);
+  }
+  table.method-table tr:last-child td { border-bottom: none; }
+  table.method-table td.num {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-weight: 700;
+    color: var(--red);
+    font-size: 16px;
+  }
+
+  .warn-box {
+    background: rgba(230, 57, 70, 0.06);
+    border: 1px solid rgba(230, 57, 70, 0.3);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin: 20px 0;
+  }
+  .warn-box .warn-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 6px;
+  }
+  .warn-box p { color: var(--text); font-size: 14px; margin: 0; line-height: 1.65; }
+
+  .back-to-top {
+    display: inline-block;
+    margin-top: 24px;
+    font-size: 12px;
+    color: var(--text-3);
+    text-decoration: none;
+  }
+  .back-to-top:hover { color: var(--text-2); }
+
+  .last-updated {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 40px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Documentation</div>
+  <h1>How we calculate everything you see</h1>
+  <p>Every headline statistic on Cannon Fight Lab is derived from a transparent query against historical UFC fight data. This page documents the data sources, sample sizes, formulas, and known limitations of each metric we publish.</p>
+</div>
+
+<div class="page">
+  <div class="legal">
+
+    <div class="toc">
+      <div class="toc-title">Contents</div>
+      <ol>
+        <li><a href="#data-source">Data source and coverage</a></li>
+        <li><a href="#age-gap">Age-gap win rate</a></li>
+        <li><a href="#reach-gap">Reach-gap win rate</a></li>
+        <li><a href="#stance">Stance matchup win rate</a></li>
+        <li><a href="#implied-win">Implied win percentage model</a></li>
+        <li><a href="#fighter-style">Fighter style classification</a></li>
+        <li><a href="#cardio">Cardio and consistency scores</a></li>
+        <li><a href="#exclusions">What we deliberately do not publish</a></li>
+        <li><a href="#limitations">Known limitations</a></li>
+        <li><a href="#updates">How and when this data updates</a></li>
+      </ol>
+    </div>
+
+    <section class="method" id="data-source">
+      <h2>01 &nbsp;Data source and coverage</h2>
+      <div class="subhead">Where the numbers come from</div>
+      <p>All historical fight data on CFL is sourced from the official UFC statistics website, accessed via public HTTP requests at a rate-limited cadence designed to avoid burdening their servers. We collect publicly available facts only — fighter biographical data, fight outcomes, and round-level box-score statistics. We do not collect personal information, do not bypass any authentication or rate limit, and do not republish source HTML.</p>
+      <p>The database powering this site currently contains:</p>
+      <ul>
+        <li>4,492 fighter profiles covering substantially the full historical UFC roster</li>
+        <li>8,766 completed fights with outcome, method, round, and weight class</li>
+        <li>782 events spanning UFC history through the most recent card</li>
+      </ul>
+      <p class="muted">Fight metadata (who fought whom, who won, by what method, in what round) is complete across the dataset. Per-fight round-by-round statistics (significant strikes, takedowns, control time) are populated for the subset of fights where UFC published them — primarily Zuffa-era events.</p>
+    </section>
+
+    <section class="method" id="age-gap">
+      <h2>02 &nbsp;Age-gap win rate</h2>
+      <div class="subhead">The single strongest demographic signal we have measured</div>
+      <p>For every completed UFC fight in the dataset where both fighters' dates of birth are known, we compute the age difference in whole years between the two fighters on the date of the fight. We then bucket fights by the absolute age gap and measure the win rate of the younger fighter within each bucket.</p>
+
+      <div class="stat-callout">
+        <div class="headline">When one fighter is 5+ years younger, they win 62.4% of the time.</div>
+        <div class="sample"><strong>Sample:</strong> 3,309 fights. <strong>Source:</strong> Completed UFC fights with both DOBs known.</div>
+      </div>
+
+      <h3>Formula</h3>
+<div class="formula"><span class="label">Age gap</span>age_gap = abs(fighter_a.age_at_fight - fighter_b.age_at_fight)
+younger_won = 1 if winner.age_at_fight &lt; loser.age_at_fight else 0
+win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in bucket)</div>
+
+      <h3>Why we trust this signal</h3>
+      <ul>
+        <li>The sample size (3,309 fights) is large enough to be statistically meaningful</li>
+        <li>The pattern is monotonic — larger age gaps produce larger win-rate gaps for the younger fighter, which is what you would expect if the effect is real and not noise</li>
+        <li>Age is exogenous — fighters cannot manipulate it, and matchmaking does not systematically pair younger versus older fighters in a way that would confound the result</li>
+      </ul>
+
+      <h3>Known caveats</h3>
+      <ul>
+        <li>Effect size diminishes for age gaps under 2 years (within normal cohort variation)</li>
+        <li>Heavyweight division shows a slightly weaker age effect than lighter weight classes, likely because power-punching ages better than speed</li>
+        <li>This is a population-level finding and does not predict any individual fight outcome</li>
+      </ul>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="reach-gap">
+      <h2>03 &nbsp;Reach-gap win rate</h2>
+      <div class="subhead">Smaller signal than age, but cleaner than most</div>
+      <p>For every completed UFC fight where both fighters' reach measurements are recorded, we compute the reach difference in whole inches and measure the win rate of the longer-reach fighter at each gap.</p>
+
+      <div class="stat-callout">
+        <div class="headline">When one fighter has a 4+ inch reach advantage, they win 55.0% of the time.</div>
+        <div class="sample"><strong>Sample:</strong> 2,006 fights. <strong>Source:</strong> Completed UFC fights with both reach measurements recorded.</div>
+      </div>
+
+      <h3>Formula</h3>
+<div class="formula"><span class="label">Reach gap</span>reach_gap = abs(fighter_a.reach_in - fighter_b.reach_in)
+longer_won = 1 if winner.reach_in &gt; loser.reach_in else 0
+win_rate(bucket) = sum(longer_won where reach_gap in bucket) / count(reach_gap in bucket)</div>
+
+      <h3>Known caveats</h3>
+      <ul>
+        <li>Reach is correlated with height and weight class — within a single weight class the effect is smaller than it appears at the cross-divisional level</li>
+        <li>Reach matters more for primary strikers than for grappling-first fighters</li>
+        <li>Effect decays smoothly with smaller gaps; a 1-inch reach advantage is statistically indistinguishable from no advantage</li>
+      </ul>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="stance">
+      <h2>04 &nbsp;Stance matchup win rate</h2>
+      <div class="subhead">Strong signal in one specific matchup, noise elsewhere</div>
+      <p>For every completed UFC fight where both fighters' stances are recorded, we group fights by the specific stance pairing (Orthodox vs Orthodox, Orthodox vs Southpaw, Switch vs Southpaw, etc.) and measure win rates by stance.</p>
+
+      <div class="stat-callout">
+        <div class="headline">Switch-stance fighters beat Southpaws 58.1% of the time.</div>
+        <div class="sample"><strong>Sample:</strong> 191 fights. <strong>Source:</strong> Completed UFC fights between fighters with recorded stances of Switch and Southpaw.</div>
+      </div>
+
+      <h3>Why we report only the matchups with real signal</h3>
+      <p>Most stance pairings cluster near 50% and are not predictive. We publish only the specific pairings where the deviation from 50% is large enough and the sample is wide enough to be worth a bettor's attention. Orthodox-versus-Orthodox is treated as a 50% baseline.</p>
+
+      <h3>Known caveats</h3>
+      <ul>
+        <li>The Switch-vs-Southpaw sample (191 fights) is far smaller than the age or reach samples — the confidence interval around 58.1% is wider</li>
+        <li>"Switch" classification depends on how UFC categorizes a fighter, which is occasionally inconsistent</li>
+        <li>This effect may partially reflect that Switch-stance fighters tend to be more experienced, not that the stance itself confers an advantage</li>
+      </ul>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="implied-win">
+      <h2>05 &nbsp;Implied win percentage model</h2>
+      <div class="subhead">How CFL produces a per-fight number from the base rates above</div>
+      <p>For each upcoming fight, we compute an implied win percentage for each fighter by starting at 50% and additively applying the deviation from base rate contributed by each measured signal.</p>
+
+      <h3>Formula</h3>
+<div class="formula"><span class="label">Implied win %</span>implied_win_pct = 0.50
+                  + age_gap_deviation
+                  + reach_gap_deviation
+                  + stance_matchup_deviation
+
+Each deviation = (measured_win_rate_in_bucket - 0.50)
+Deviations are signed in the direction of the favored fighter.</div>
+
+      <h3>What this model deliberately is not</h3>
+      <ul>
+        <li>It is not a multivariate regression. Each signal is applied independently, which slightly overcounts when signals are correlated (e.g., age and reach can interact)</li>
+        <li>It does not include career stats like finish rate, strikes-per-minute, or takedown defense. Those metrics are confounded with fighter quality and we have not yet isolated their independent predictive value</li>
+        <li>It does not adjust for opponent quality, recent form, weight cut, layoff, or camp changes</li>
+      </ul>
+
+      <div class="warn-box">
+        <div class="warn-label">Important</div>
+        <p>The implied win percentage published on CFL is a description of historical patterns applied to a future event. It is not a prediction of the outcome of any individual fight. Single-fight outcomes have substantial variance that no statistical model can eliminate.</p>
+      </div>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="fighter-style">
+      <h2>06 &nbsp;Fighter style classification</h2>
+      <div class="subhead">Grappler, Striker, Hybrid — three buckets only</div>
+      <p>For every fighter with at least 10 minutes of Round 1 fight time in the dataset, we classify their style based on Round 1 output rates. We use Round 1 specifically because later rounds are confounded by fatigue, damage taken, and tactical adjustments — Round 1 reveals fighter intent more cleanly.</p>
+
+      <h3>Scoring</h3>
+<div class="formula"><span class="label">Round 1 output scores</span>grapp_score = (takedowns_landed × 60 + control_seconds) per round
+strk_score  = significant_strikes_landed per round
+
+grapp_norm = grapp_score / 90      (90 is roughly the 70th-percentile producer line)
+strk_norm  = strk_score / 16       (16 is roughly the 70th-percentile producer line)</div>
+
+      <h3>Classification logic</h3>
+      <p>We use a <em>dominance-ratio</em> approach rather than fixed thresholds. Fixed thresholds incorrectly classified extreme grapplers as "hybrid" because their striking output happened to clear an absolute floor. Dominance ratio asks: relative to their own activity, what does this fighter actually do?</p>
+
+      <table class="method-table">
+        <thead>
+          <tr><th>Bucket</th><th>Rule</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="num">Grappler</td><td>grapp_norm ≥ 1.0 AND grapp_norm ≥ 2× strk_norm (or strk = 0)</td></tr>
+          <tr><td class="num">Striker</td><td>strk_norm ≥ 1.0 AND strk_norm ≥ 2× grapp_norm (or grapp = 0)</td></tr>
+          <tr><td class="num">Hybrid</td><td>Both ≥ 1.0 and neither dominates 2:1</td></tr>
+          <tr><td class="num">Below threshold</td><td>Classified by whichever phase shows higher output</td></tr>
+        </tbody>
+      </table>
+
+      <p class="muted">We use the term "grappler" intentionally — the bucket includes both shoot-takedown wrestlers (e.g., Khabib Nurmagomedov) and submission grapplers (e.g., Charles Oliveira). Distinguishing those two sub-styles is a future enhancement.</p>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="cardio">
+      <h2>07 &nbsp;Cardio and consistency scores</h2>
+      <div class="subhead">Does output hold up in Round 3 and beyond?</div>
+      <p>For fighters with sufficient three-plus round fight data, we measure the ratio of output in Round 3+ versus Round 1. A 1.0 ratio means perfectly maintained pace; below 0.7 indicates measurable cardio fall-off.</p>
+
+      <h3>Grappling cardio metric</h3>
+<div class="formula"><span class="label">Grappling output per round</span>grapp_output = (takedowns_landed × 60 + control_seconds)
+
+ratio = grapp_output_R3plus_per_round / grapp_output_R1_per_round
+ratio is capped at a divisional cap to prevent small-denominator spikes</div>
+
+      <p>The takedown-attempt-based version of this metric (used in earlier drafts) was discarded — it penalized one-shot finishers like Khamzat Chimaev and rewarded fighters who shoot inefficiently. The control-time-aware version measures grappling success, not effort.</p>
+
+      <h3>Striking cardio metric</h3>
+      <p class="muted">The striking effectiveness rewrite is in progress. Current striking cardio is reported only where the underlying sample supports it, and is flagged as preliminary on the fighter page.</p>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="exclusions">
+      <h2>08 &nbsp;What we deliberately do not publish</h2>
+      <div class="subhead">Conservative analytical path</div>
+      <p>We measured several other variables and chose not to publish them as base rates because they failed our internal tests for being clean, single-variable signals.</p>
+      <ul>
+        <li><strong>Finish rate.</strong> Strongly correlated with fighter quality — high-finish-rate fighters tend to face weaker opposition early in their careers. We cannot yet isolate the independent contribution</li>
+        <li><strong>Strikes landed per minute (SLPM).</strong> Same confound as finish rate. A high SLPM may reflect dominant matchmaking rather than predictive striking volume</li>
+        <li><strong>Takedown defense.</strong> Sample-size issues for fighters who are rarely shot on. Reported on the fighter card but not used in the implied win percentage model</li>
+        <li><strong>Recent form / last five.</strong> Reported as a streak but not modeled — small samples and high variance make it noisy</li>
+        <li><strong>Short-notice replacements.</strong> Sample size too small for any specific weight class to be informative</li>
+      </ul>
+      <p>If and when we develop methods that isolate these signals cleanly, we will publish them with full methodology and sample sizes documented here.</p>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="limitations">
+      <h2>09 &nbsp;Known limitations</h2>
+      <div class="subhead">What this data cannot tell you</div>
+      <ul>
+        <li>None of these statistics predict any individual fight outcome. They describe historical population-level patterns</li>
+        <li>The implied win percentage is additive across signals and does not account for interactions between them</li>
+        <li>UFC matchmaking is non-random. Title contenders fight title contenders. This biases certain base rates in ways we have not fully corrected for</li>
+        <li>Per-fight round-by-round statistics are missing for older fights — analytics that require these stats use the subset of fights for which they exist, which skews more recent</li>
+        <li>Stance, reach, and DOB are self-reported through UFC and occasionally inconsistent or missing</li>
+        <li>Sample sizes for sub-buckets (e.g., specific weight class within a specific stance matchup) are often too small to be informative and we generally do not publish them</li>
+      </ul>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <section class="method" id="updates">
+      <h2>10 &nbsp;How and when this data updates</h2>
+      <div class="subhead">Refresh cadence and source-of-truth</div>
+      <ul>
+        <li>Fight outcomes and event data update nightly via a scheduled scraper</li>
+        <li>Fighter career averages refresh after each new fight is recorded</li>
+        <li>Base-rate analytics (age gap, reach gap, stance) are recomputed weekly against the latest dataset</li>
+        <li>If a methodology changes — formula, bucket boundaries, sample inclusion rules — this page is updated and the change is dated</li>
+      </ul>
+      <p class="muted">Disagreement with a specific number? Spot a methodology error? <a href="contact.html" style="color: var(--red); text-decoration: underline;">Get in touch</a> — we treat substantiation questions as the most important questions a user can ask.</p>
+      <a href="#" class="back-to-top">Back to top ↑</a>
+    </section>
+
+    <div class="last-updated">
+      Last updated: May 24, 2026 · Cannon Fight Lab is operated by Reed Cannon. Cannon Fight Lab is not a sportsbook.
+    </div>
+
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=navfix1"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+</script>
+</body>
+</html>
