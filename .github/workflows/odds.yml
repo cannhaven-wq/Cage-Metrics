@@ -1,17 +1,21 @@
-name: Fetch UFC odds
+name: Fetch UFC odds (DISABLED)
 
-# Pulls current moneyline odds from The Odds API and upserts a per-fight
-# consensus into Supabase (fight_odds table). Runs every 6 hours and on
-# manual trigger. The script writes via the Supabase service-role key
-# (kept in GitHub Secrets) which bypasses RLS — it never appears in the
-# repo or the browser.
+# DISABLED 2026-05-24. The base `fight_odds` table in Supabase is now owned by
+# the cage-metrics-odds-scrapper repo (per-poll BFO snapshots, Railway cron).
+# Its schema (`fight_id, side, book_id, american_odds, captured_at, ...`) is
+# incompatible with this script's consensus shape (`american_odds_a/b,
+# implied_prob_a/b, bookmaker_count, fetched_at`), so every scheduled run was
+# failing on upsert with `column does not exist`.
 #
-# Cost: 1 Odds API request per run. Free tier is 500/month; 4 runs/day
-# is 120/month, leaving 380 headroom for manual fight-night refreshes.
+# The frontend now reads consensus odds from the `v_fight_odds_consensus` view
+# (see v_fight_odds_consensus.sql), which aggregates the snapshot table on
+# read. If we ever want a true Odds API consensus alongside the BFO scrape,
+# point this script at a separately named table (e.g., fight_odds_oddsapi) and
+# re-enable.
+#
+# Manual dispatch only — no cron — so it doesn't keep failing in the logs.
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 permissions:

@@ -1899,7 +1899,7 @@ async function loadOddsMap(eventId) {
   _oddsMap = {};
   try {
     const { data, error } = await sb
-      .from('fight_odds')
+      .from('v_fight_odds_consensus')
       .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b')
       .eq('event_id', eventId);
     if (error) {

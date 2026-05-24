@@ -397,7 +397,7 @@ async function load() {
     fighterIds.length
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
-    sb.from('fight_odds').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
+    sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
   ]);
 
   if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
