@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Book — Cannon Fight Lab</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/mybook.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=navfix1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  .book-wrap { max-width: 1100px; margin: 28px auto 64px; padding: 0 20px; }
+  .book-header { margin-bottom: 28px; }
+  .book-header h1 {
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 38px; font-weight: 800; color: var(--text);
+    letter-spacing: -0.5px; margin: 0 0 4px;
+  }
+  .book-header .lede { color: var(--text-2); font-size: 14px; margin: 0; max-width: 680px; line-height: 1.5; }
+
+  /* --- Bankroll bar ----------------------------------------------------- */
+  .bk-bar {
+    display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 18px; margin-bottom: 22px;
+  }
+  .bk-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .bk-cell .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
+  .bk-cell .val {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-size: 26px; color: var(--text); font-variant-numeric: tabular-nums;
+  }
+  .bk-cell .val.pos { color: var(--green); }
+  .bk-cell .val.neg { color: var(--red); }
+  .bk-cell .sub { font-size: 11px; color: var(--text-3); }
+  .bk-edit {
+    display: flex; gap: 8px; align-items: center; margin-top: 10px;
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .bk-edit label { font-size: 12px; color: var(--text-2); }
+  .bk-edit input, .bk-edit select {
+    background: var(--bg-3); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 6px 10px; color: var(--text);
+    font: 500 13px 'Inter', sans-serif; outline: none; width: 110px;
+  }
+  .bk-edit input:focus, .bk-edit select:focus { border-color: var(--red); }
+  .bk-edit .btn { padding: 6px 14px; font-size: 12px; }
+  .bk-edit .sep { flex: 1; }
+
+  /* --- Section ---------------------------------------------------------- */
+  .sec { margin-top: 28px; }
+  .sec h2 {
+    font-family: 'Barlow Condensed', sans-serif; font-size: 22px;
+    font-weight: 700; color: var(--text); margin: 0 0 6px;
+    letter-spacing: -0.3px;
+  }
+  .sec .desc { font-size: 13px; color: var(--text-3); margin: 0 0 14px; }
+
+  /* --- This week's picks (loggers) -------------------------------------- */
+  .logger {
+    background: var(--bg-2); border: 1px solid var(--border);
+    border-radius: 12px; padding: 16px; margin-bottom: 12px;
+  }
+  .logger .top {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline;
+    margin-bottom: 10px;
+  }
+  .logger .matchup { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; color: var(--text); }
+  .logger .matchup .pick { color: var(--green); }
+  .logger .matchup .vs   { color: var(--text-3); margin: 0 6px; font-weight: 400; }
+  .logger .meta { font-size: 12px; color: var(--text-3); }
+  .logger .meta .badge {
+    display: inline-block; padding: 1px 8px; border-radius: 4px;
+    background: rgba(34,197,94,0.10); color: #86efac;
+    font-weight: 600; margin-right: 6px;
+  }
+  .logger .open-price {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
+    color: var(--text); font-variant-numeric: tabular-nums;
+  }
+  .logger .row {
+    display: grid; grid-template-columns: 1.1fr 0.9fr 0.9fr 0.9fr auto auto;
+    gap: 10px; align-items: end;
+  }
+  .logger .field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .logger .field label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  .logger .field input, .logger .field select {
+    background: var(--bg-3); border: 1px solid var(--border-2);
+    border-radius: 6px; padding: 8px 10px; color: var(--text);
+    font: 500 13px 'Inter', sans-serif; outline: none; width: 100%;
+  }
+  .logger .field input:focus, .logger .field select:focus { border-color: var(--red); }
+  .logger .computed {
+    background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.30);
+    border-radius: 6px; padding: 8px 10px; color: var(--green);
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
+    text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .logger .computed.neg { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.30); color: var(--red); }
+  .logger .computed.zero { background: var(--bg-3); border-color: var(--border-2); color: var(--text-3); }
+  .logger .btn { padding: 9px 18px; font-size: 13px; white-space: nowrap; }
+  @media (max-width: 720px) {
+    .logger .row { grid-template-columns: 1fr 1fr; }
+    .logger .row > .field-stake, .logger .row > .field-edge { grid-column: span 1; }
+    .logger .btn-cell { grid-column: 1 / -1; }
+  }
+
+  /* --- Tables ----------------------------------------------------------- */
+  .tbl-wrap { background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .tbl th {
+    background: var(--bg-3); text-align: left; padding: 10px 12px;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text-3); font-weight: 600; border-bottom: 1px solid var(--border);
+  }
+  .tbl td { padding: 11px 12px; border-bottom: 1px solid var(--border); color: var(--text); }
+  .tbl tr:last-child td { border-bottom: none; }
+  .tbl td.num { font-variant-numeric: tabular-nums; text-align: right; }
+  .tbl td.pos { color: var(--green); }
+  .tbl td.neg { color: var(--red); }
+  .tbl td .status {
+    display: inline-block; padding: 1px 7px; border-radius: 4px; font-size: 11px;
+    font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .tbl td .status.open { background: rgba(99,102,241,0.14); color: #a5b4fc; }
+  .tbl td .status.won  { background: rgba(34,197,94,0.14); color: #86efac; }
+  .tbl td .status.lost { background: rgba(239,68,68,0.14); color: #fca5a5; }
+  .tbl td .status.push { background: rgba(148,163,184,0.14); color: #cbd5e1; }
+  .tbl-link {
+    background: none; border: none; color: var(--text-3); cursor: pointer;
+    font-size: 12px; padding: 2px 4px;
+  }
+  .tbl-link:hover { color: var(--red); }
+  .empty {
+    padding: 28px; text-align: center; color: var(--text-3); font-size: 13px; font-style: italic;
+  }
+
+  /* --- Perf cards ------------------------------------------------------- */
+  .perf-grid {
+    display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 12px;
+  }
+  @media (max-width: 720px) { .perf-grid { grid-template-columns: repeat(2, 1fr); } }
+  .perf-card {
+    background: var(--bg-2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 4px;
+  }
+  .perf-card .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
+  .perf-card .val {
+    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 26px;
+    color: var(--text); font-variant-numeric: tabular-nums;
+  }
+  .perf-card .val.pos { color: var(--green); }
+  .perf-card .val.neg { color: var(--red); }
+  .perf-card .sub { font-size: 11px; color: var(--text-3); }
+
+  #loadingState { padding: 60px; text-align: center; color: var(--text-3); }
+  .msg { padding: 10px 14px; border-radius: 8px; margin: 10px 0; font-size: 13px; }
+  .msg.ok  { background: rgba(34,197,94,0.10); color: #86efac; border: 1px solid rgba(34,197,94,0.30); }
+  .msg.err { background: rgba(239,68,68,0.10); color: #fca5a5; border: 1px solid rgba(239,68,68,0.30); }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div id="loadingState">Loading your book…</div>
+
+<div class="book-wrap" id="bookContent" style="display:none">
+
+  <div class="book-header">
+    <h1>My Book</h1>
+    <p class="lede">
+      Your private bet log. Pick from this week's consensus picks, log the price
+      you actually got at whichever book had the best number, and track your
+      real ROI vs the backtest. Bets settle automatically once the fight is
+      graded.
+    </p>
+  </div>
+
+  <div id="msgArea"></div>
+
+  <!-- Bankroll bar -->
+  <div class="bk-bar">
+    <div class="bk-cell">
+      <div class="lbl">Current bankroll</div>
+      <div class="val" id="bkCurrent">—</div>
+    </div>
+    <div class="bk-cell">
+      <div class="lbl">Initial deposit</div>
+      <div class="val" id="bkInitial">—</div>
+    </div>
+    <div class="bk-cell">
+      <div class="lbl">Net P&L</div>
+      <div class="val" id="bkNet">—</div>
+      <div class="sub" id="bkNetPct">—</div>
+    </div>
+    <div class="bk-cell">
+      <div class="lbl">Open exposure</div>
+      <div class="val" id="bkExposure">$0</div>
+      <div class="sub" id="bkExposureN">no open bets</div>
+    </div>
+  </div>
+
+  <div class="bk-edit">
+    <label>Set bankroll</label>
+    <input type="number" id="bkSetInput" min="0" step="10" placeholder="1000">
+    <label>Kelly</label>
+    <select id="bkKelly">
+      <option value="0.25">Quarter</option>
+      <option value="0.5" selected>Half</option>
+      <option value="1.0">Full</option>
+    </select>
+    <label>Cap per fight</label>
+    <select id="bkCap">
+      <option value="0.02">2%</option>
+      <option value="0.05" selected>5%</option>
+      <option value="0.10">10%</option>
+    </select>
+    <span class="sep"></span>
+    <button class="btn" id="bkSaveBtn">Save</button>
+  </div>
+
+  <!-- This week's picks -->
+  <div class="sec">
+    <h2>Log this week's picks</h2>
+    <p class="desc">
+      Consensus picks (2+ models agreeing, anti-filters dropped, edge ≥ 10% at the BFO opener)
+      from the next upcoming card. Pick your book, enter the price you got,
+      and we'll size the bet at <strong>half-Kelly off your price</strong>
+      capped at <strong>5% of bankroll</strong>.
+    </p>
+    <div id="weekPicks"></div>
+  </div>
+
+  <!-- Open bets -->
+  <div class="sec">
+    <h2>Open bets</h2>
+    <p class="desc">Bets awaiting result. Settle automatically when the fight grades.</p>
+    <div class="tbl-wrap" id="openTblWrap"></div>
+  </div>
+
+  <!-- Settled bets -->
+  <div class="sec">
+    <h2>Settled bets</h2>
+    <p class="desc">Your real history with running bankroll, CLV vs the BFO opener, and ROI on dollars at risk.</p>
+    <div class="tbl-wrap" id="settledTblWrap"></div>
+  </div>
+
+  <!-- Performance -->
+  <div class="sec">
+    <h2>Performance</h2>
+    <p class="desc">Live numbers from your actual bets. Compare with the backtest's +20% ROI on dollars at risk for the picks-page methodology.</p>
+    <div class="perf-grid" id="perfGrid"></div>
+  </div>
+
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=navfix1"></script>
+<script src="_auth.js?v=mybook1"></script>
+<script>
+(async function () {
+  cfl.renderNav('mybook');
+  cfl.renderFooter();
+
+  // Hard auth gate. requireAuth bounces to login if not signed in.
+  await window.cflAuth.ready();
+  if (!window.cflAuth.requireAuth('/mybook.html')) return;
+  const user = window.cflAuth.getUser();
+  const sb = window.cflSupabase;
+
+  // ---- Helpers -------------------------------------------------------------
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => (n >= 0 ? '$' : '-$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const moneyDelta = (n) => (n >= 0 ? '+$' : '-$') + Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  const americanFmt = (a) => a == null ? '—' : (a >= 0 ? `+${a}` : `${a}`);
+
+  function americanToDecimal(a) {
+    return a >= 0 ? 1 + a / 100 : 1 + 100 / Math.abs(a);
+  }
+  function impliedProb(a) {
+    return a >= 0 ? 100 / (a + 100) : Math.abs(a) / (Math.abs(a) + 100);
+  }
+  function kellyStake(modelP, american, bankroll, frac, maxFrac) {
+    if (!american || !modelP) return 0;
+    const b = american >= 0 ? american / 100 : 100 / Math.abs(american);
+    const f = (b * modelP - (1 - modelP)) / b;
+    if (f <= 0) return 0;
+    return Math.min(bankroll * f * frac, bankroll * maxFrac);
+  }
+  function pnlForBet(stake, american, won) {
+    if (won == null) return null;
+    const payout = american >= 0 ? stake * (american / 100) : stake * (100 / Math.abs(american));
+    return won ? payout : -stake;
+  }
+  function showMsg(text, kind) {
+    const div = document.createElement('div');
+    div.className = 'msg ' + (kind || 'ok');
+    div.textContent = text;
+    $('msgArea').appendChild(div);
+    setTimeout(() => div.remove(), 4000);
+  }
+
+  // ---- 1. Bankroll load / save --------------------------------------------
+  let bankroll = null; // {current_amount, initial_deposit, kelly_fraction, max_bet_fraction}
+
+  async function loadBankroll() {
+    const { data, error } = await sb
+      .from('user_bankrolls').select('*').eq('user_id', user.id).maybeSingle();
+    if (error) throw error;
+    if (data) {
+      bankroll = data;
+    } else {
+      // Seed a row with defaults
+      const seed = { user_id: user.id, current_amount: 0, initial_deposit: 0, kelly_fraction: 0.5, max_bet_fraction: 0.05 };
+      const { data: ins, error: insErr } = await sb.from('user_bankrolls').insert(seed).select().single();
+      if (insErr) throw insErr;
+      bankroll = ins;
+    }
+  }
+
+  async function saveBankroll(patch) {
+    const { data, error } = await sb.from('user_bankrolls')
+      .update(patch).eq('user_id', user.id).select().single();
+    if (error) throw error;
+    bankroll = data;
+  }
+
+  $('bkSaveBtn').addEventListener('click', async () => {
+    try {
+      const amount = parseFloat($('bkSetInput').value);
+      const kelly  = parseFloat($('bkKelly').value);
+      const cap    = parseFloat($('bkCap').value);
+      const patch = { kelly_fraction: kelly, max_bet_fraction: cap };
+      if (!isNaN(amount) && amount >= 0) {
+        patch.current_amount = amount;
+        if (!bankroll.initial_deposit || bankroll.initial_deposit === 0) {
+          patch.initial_deposit = amount;
+        }
+      }
+      await saveBankroll(patch);
+      showMsg('Bankroll saved.', 'ok');
+      await render();
+    } catch (e) {
+      console.error(e);
+      showMsg('Failed to save: ' + (e.message || e), 'err');
+    }
+  });
+
+  // ---- 2. Pull data: model preds, fights, fighters, events, user bets -----
+  let weekPicksData = []; // upcoming consensus picks (one card)
+  let userBets = [];
+
+  const betMetaCache = new Map(); // fight_id -> { eventName, eventDate, fighterAName, fighterBName }
+  const fighterNameCache = new Map(); // fighter_id -> name
+
+  async function loadUserBets() {
+    const { data, error } = await sb.from('user_bets')
+      .select('*').eq('user_id', user.id).order('placed_at', { ascending: false });
+    if (error) throw error;
+    userBets = data || [];
+    // Enrich with fighter + fight + event names for display
+    const fightIds = [...new Set(userBets.map(b => b.fight_id))].filter(id => !betMetaCache.has(id));
+    if (fightIds.length === 0) return;
+    const { data: fights } = await sb.from('fights')
+      .select('id,event_id,fighter_a_id,fighter_b_id').in('id', fightIds);
+    const fighterIds = new Set();
+    (fights || []).forEach(f => { fighterIds.add(f.fighter_a_id); fighterIds.add(f.fighter_b_id); });
+    userBets.forEach(b => fighterIds.add(b.fighter_id));
+    const needFighters = [...fighterIds].filter(id => !fighterNameCache.has(id));
+    if (needFighters.length > 0) {
+      const { data: ftrs } = await sb.from('fighters').select('id,name').in('id', needFighters);
+      (ftrs || []).forEach(f => fighterNameCache.set(f.id, f.name));
+    }
+    const eventIds = [...new Set((fights || []).map(f => f.event_id))];
+    let eventMap = new Map();
+    if (eventIds.length) {
+      const { data: evs } = await sb.from('events').select('id,name,event_date').in('id', eventIds);
+      (evs || []).forEach(e => eventMap.set(e.id, e));
+    }
+    (fights || []).forEach(f => {
+      const ev = eventMap.get(f.event_id);
+      betMetaCache.set(f.id, {
+        eventName: ev?.name || '',
+        eventDate: ev?.event_date || '',
+        fighterAId: f.fighter_a_id,
+        fighterBId: f.fighter_b_id,
+      });
+    });
+  }
+
+  function describeBet(b) {
+    const meta = betMetaCache.get(b.fight_id);
+    const pickName = fighterNameCache.get(b.fighter_id) || `Fighter #${b.fighter_id}`;
+    let oppName = 'Opp';
+    if (meta) {
+      const oppId = b.side === 'A' ? meta.fighterBId : meta.fighterAId;
+      oppName = fighterNameCache.get(oppId) || `Fighter #${oppId}`;
+    }
+    return { pickName, oppName, eventName: meta?.eventName || '', eventDate: meta?.eventDate || '' };
+  }
+
+  // For this week's picks: get the soonest upcoming event, consensus picks on it
+  async function loadWeekPicks() {
+    // Pull predictions for upcoming fights (outcome_known=false)
+    const today = new Date().toISOString().slice(0, 10);
+    const { data: preds, error: pErr } = await sb.from('model_predictions')
+      .select('model_version,fight_id,fighter_id,side,event_date,model_p,opener_american_odds,opener_implied_p,edge,would_bet,outcome_known')
+      .eq('outcome_known', false).gte('event_date', today).order('event_date');
+    if (pErr) throw pErr;
+    if (!preds || preds.length === 0) { weekPicksData = []; return; }
+
+    // Soonest event date
+    const nextDate = preds.reduce((m, r) => !m || r.event_date < m ? r.event_date : m, null);
+    const eventPreds = preds.filter(r => r.event_date === nextDate);
+
+    // Consensus per (fight, fighter): 2+ would_bet voters and edge >= 0.10
+    const grouped = new Map();
+    for (const r of eventPreds) {
+      const k = r.fight_id + ':' + r.fighter_id;
+      if (!grouped.has(k)) grouped.set(k, []);
+      grouped.get(k).push(r);
+    }
+    const picks = [];
+    const seenFight = new Set();
+    for (const [k, rows] of grouped) {
+      const voters = rows.filter(r => r.would_bet);
+      if (voters.length < 2) continue;
+      const avgEdge = voters.reduce((s, r) => s + (+r.edge || 0), 0) / voters.length;
+      if (avgEdge < 0.10) continue;
+      const fid = rows[0].fight_id;
+      if (seenFight.has(fid)) continue;
+      seenFight.add(fid);
+      const v4 = rows.find(r => r.model_version === 'v4');
+      const modelP = v4 ? +v4.model_p : voters.reduce((s, r) => s + +r.model_p, 0) / voters.length;
+      picks.push({
+        fight_id: rows[0].fight_id,
+        fighter_id: rows[0].fighter_id,
+        side: rows[0].side,
+        event_date: rows[0].event_date,
+        model_p: modelP,
+        opener: rows[0].opener_american_odds,
+        edge: avgEdge,
+        voters: voters.map(v => v.model_version).sort(),
+      });
+    }
+    if (picks.length === 0) { weekPicksData = []; return; }
+
+    // Look up fight + fighter info for display
+    const fightIds = [...new Set(picks.map(p => p.fight_id))];
+    const fighterIds = [...new Set(picks.flatMap(p => [p.fighter_id]))];
+    const { data: fights } = await sb.from('fights')
+      .select('id,event_id,fighter_a_id,fighter_b_id,bout_order')
+      .in('id', fightIds);
+    const allFighterIds = new Set();
+    (fights || []).forEach(f => { allFighterIds.add(f.fighter_a_id); allFighterIds.add(f.fighter_b_id); });
+    fighterIds.forEach(id => allFighterIds.add(id));
+    const { data: fighters } = await sb.from('fighters')
+      .select('id,name').in('id', [...allFighterIds]);
+    const fightMap = new Map((fights || []).map(f => [f.id, f]));
+    const fighterMap = new Map((fighters || []).map(f => [f.id, f]));
+    const eventId = (fights || []).map(f => f.event_id)[0];
+    let eventName = '';
+    if (eventId) {
+      const { data: ev } = await sb.from('events').select('id,name,event_date').eq('id', eventId).single();
+      if (ev) eventName = ev.name;
+    }
+
+    for (const p of picks) {
+      const f = fightMap.get(p.fight_id);
+      p.pickName = fighterMap.get(p.fighter_id)?.name || 'Pick';
+      const oppId = f ? (p.side === 'A' ? f.fighter_b_id : f.fighter_a_id) : null;
+      p.oppName = oppId ? (fighterMap.get(oppId)?.name || 'Opp') : 'Opp';
+      p.eventName = eventName;
+    }
+    weekPicksData = picks;
+  }
+
+  // ---- 3. Auto-grade open bets --------------------------------------------
+  async function autoGradeOpen() {
+    const open = userBets.filter(b => b.status === 'open');
+    if (open.length === 0) return;
+    const fightIds = [...new Set(open.map(b => b.fight_id))];
+    const { data: preds, error } = await sb.from('model_predictions')
+      .select('fight_id,fighter_id,outcome_known,won')
+      .eq('outcome_known', true).in('fight_id', fightIds);
+    if (error) { console.error(error); return; }
+    if (!preds || preds.length === 0) return;
+    // Build winner lookup: any prediction row for a fight with outcome_known=true
+    // and won=true gives us the winning fighter_id.
+    const winnerByFight = new Map();
+    for (const r of preds) {
+      if (r.won === true) winnerByFight.set(r.fight_id, r.fighter_id);
+    }
+    // Some graded fights only have the losing row reported as won=false on both sides
+    // (e.g. a draw). Capture the set of graded fights anyway:
+    const gradedFights = new Set(preds.map(r => r.fight_id));
+    let settled = 0;
+    for (const b of open) {
+      if (!gradedFights.has(b.fight_id)) continue;
+      const winner = winnerByFight.get(b.fight_id);
+      let status, won, pnl;
+      if (!winner) {
+        status = 'push'; won = null; pnl = 0;
+      } else if (winner === b.fighter_id) {
+        status = 'won'; won = true; pnl = pnlForBet(+b.stake_usd, b.placed_price_american, true);
+      } else {
+        status = 'lost'; won = false; pnl = pnlForBet(+b.stake_usd, b.placed_price_american, false);
+      }
+      const { error: upErr } = await sb.from('user_bets').update({
+        status, won, pnl_usd: pnl, settled_at: new Date().toISOString(),
+      }).eq('id', b.id);
+      if (upErr) { console.error(upErr); continue; }
+      // Apply to bankroll
+      bankroll.current_amount = +bankroll.current_amount + +pnl;
+      settled++;
+    }
+    if (settled > 0) {
+      await saveBankroll({ current_amount: bankroll.current_amount });
+      await loadUserBets();
+      showMsg(`Settled ${settled} bet${settled === 1 ? '' : 's'}.`, 'ok');
+    }
+  }
+
+  // ---- 4. Place a bet ------------------------------------------------------
+  async function placeBet(pick, book, priceAmerican, stakeUsd) {
+    const implied = impliedProb(priceAmerican);
+    const edge = pick.model_p - implied;
+    const row = {
+      user_id: user.id,
+      fight_id: pick.fight_id,
+      fighter_id: pick.fighter_id,
+      side: pick.side,
+      book,
+      placed_price_american: priceAmerican,
+      opener_price_american: pick.opener,
+      stake_usd: stakeUsd,
+      model_p: pick.model_p,
+      edge_at_placement: edge,
+      status: 'open',
+    };
+    const { error } = await sb.from('user_bets').insert(row);
+    if (error) throw error;
+  }
+
+  // ---- 5. Render -----------------------------------------------------------
+  function renderBankroll() {
+    const cur = +bankroll.current_amount;
+    const init = +bankroll.initial_deposit;
+    const net = cur - init;
+    const openExp = userBets.filter(b => b.status === 'open').reduce((s, b) => s + (+b.stake_usd || 0), 0);
+    const openN = userBets.filter(b => b.status === 'open').length;
+    $('bkCurrent').textContent = money(cur);
+    $('bkInitial').textContent = init > 0 ? money(init) : 'set below ↓';
+    $('bkNet').textContent = init > 0 ? moneyDelta(net) : '—';
+    $('bkNet').className = 'val ' + (net > 0 ? 'pos' : net < 0 ? 'neg' : '');
+    $('bkNetPct').textContent = init > 0 ? `${net >= 0 ? '+' : ''}${(net / init * 100).toFixed(1)}% vs initial` : '';
+    $('bkExposure').textContent = money(openExp);
+    $('bkExposureN').textContent = openN === 0 ? 'no open bets' : `${openN} open bet${openN === 1 ? '' : 's'}`;
+    $('bkSetInput').placeholder = String(cur || 1000);
+    $('bkKelly').value = String(+bankroll.kelly_fraction);
+    $('bkCap').value = String(+bankroll.max_bet_fraction);
+  }
+
+  function renderWeekPicks() {
+    const wrap = $('weekPicks');
+    if (weekPicksData.length === 0) {
+      wrap.innerHTML = `<div class="logger empty">No consensus picks on the next upcoming card. Check back after the next round of model runs.</div>`;
+      return;
+    }
+    const cur = +bankroll.current_amount;
+    const kFrac = +bankroll.kelly_fraction;
+    const maxFrac = +bankroll.max_bet_fraction;
+    const alreadyBetFights = new Set(userBets.filter(b => b.status === 'open').map(b => b.fight_id + ':' + b.fighter_id));
+
+    wrap.innerHTML = weekPicksData.map((p, i) => {
+      const already = alreadyBetFights.has(p.fight_id + ':' + p.fighter_id);
+      const openerKellyAt = kellyStake(p.model_p, p.opener, cur, kFrac, maxFrac);
+      const headerBadge = already
+        ? `<span class="meta"><span class="badge" style="background:rgba(99,102,241,0.14);color:#a5b4fc">Already logged</span></span>`
+        : '';
+      return `
+      <div class="logger" data-i="${i}">
+        <div class="top">
+          <div class="matchup">
+            <span class="pick">${cfl.escapeHtml(p.pickName)}</span>
+            <span class="vs">vs</span>
+            <span>${cfl.escapeHtml(p.oppName)}</span>
+          </div>
+          <div class="meta">
+            ${cfl.escapeHtml(p.eventName || p.event_date)} ·
+            <span class="badge">${p.voters.length} of 4 models</span>
+            opener <span class="open-price">${americanFmt(p.opener)}</span> ·
+            opener-edge ${(p.edge * 100).toFixed(1)}% · model says ${(p.model_p * 100).toFixed(1)}%
+          </div>
+          ${headerBadge}
+        </div>
+        <div class="row">
+          <div class="field">
+            <label>Book</label>
+            <select class="book-sel">
+              <option>DraftKings</option>
+              <option>FanDuel</option>
+              <option>BetMGM</option>
+              <option>Caesars</option>
+              <option>BetRivers</option>
+              <option>Bet365</option>
+              <option>ESPN BET</option>
+              <option>Other</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>Your price</label>
+            <input type="number" class="price-in" placeholder="${p.opener > 0 ? '+' + p.opener : p.opener}" step="1">
+          </div>
+          <div class="field field-edge">
+            <label>Your edge</label>
+            <div class="computed zero edge-out">—</div>
+          </div>
+          <div class="field field-stake">
+            <label>Stake</label>
+            <div class="computed zero stake-out">—</div>
+          </div>
+          <div class="field btn-cell">
+            <label>&nbsp;</label>
+            <button class="btn place-btn" ${already ? 'disabled' : ''}>${already ? 'Logged' : 'Log bet'}</button>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    // Wire each logger
+    document.querySelectorAll('.logger[data-i]').forEach(el => {
+      const i = +el.dataset.i;
+      const pick = weekPicksData[i];
+      const priceIn = el.querySelector('.price-in');
+      const edgeOut = el.querySelector('.edge-out');
+      const stakeOut = el.querySelector('.stake-out');
+      const bookSel = el.querySelector('.book-sel');
+      const placeBtn = el.querySelector('.place-btn');
+
+      function recompute() {
+        const v = parseInt(priceIn.value, 10);
+        if (isNaN(v) || v === 0) {
+          edgeOut.textContent = '—'; edgeOut.className = 'computed zero edge-out';
+          stakeOut.textContent = '—'; stakeOut.className = 'computed zero stake-out';
+          return;
+        }
+        const imp = impliedProb(v);
+        const edge = pick.model_p - imp;
+        const stake = kellyStake(pick.model_p, v, +bankroll.current_amount, +bankroll.kelly_fraction, +bankroll.max_bet_fraction);
+        const edgePct = edge * 100;
+        edgeOut.textContent = `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%`;
+        edgeOut.className = 'computed edge-out ' + (edge > 0 ? '' : 'neg');
+        if (stake > 0) {
+          stakeOut.textContent = '$' + Math.round(stake).toLocaleString();
+          stakeOut.className = 'computed stake-out';
+        } else {
+          stakeOut.textContent = '$0 (no edge)';
+          stakeOut.className = 'computed zero stake-out';
+        }
+      }
+      priceIn.addEventListener('input', recompute);
+
+      placeBtn.addEventListener('click', async () => {
+        const v = parseInt(priceIn.value, 10);
+        if (isNaN(v)) { showMsg('Enter the price you got.', 'err'); return; }
+        const stake = kellyStake(pick.model_p, v, +bankroll.current_amount, +bankroll.kelly_fraction, +bankroll.max_bet_fraction);
+        if (stake <= 0) { showMsg('No edge at that price — methodology says skip.', 'err'); return; }
+        placeBtn.disabled = true; placeBtn.textContent = 'Logging…';
+        try {
+          await placeBet(pick, bookSel.value, v, Math.round(stake * 100) / 100);
+          showMsg(`Logged ${pick.pickName} for $${Math.round(stake)} at ${bookSel.value}.`, 'ok');
+          await loadUserBets();
+          renderBankroll();
+          renderWeekPicks(); // re-render to mark "already logged"
+          renderOpen();
+          renderPerf();
+        } catch (e) {
+          console.error(e);
+          showMsg('Failed to log: ' + (e.message || e), 'err');
+          placeBtn.disabled = false; placeBtn.textContent = 'Log bet';
+        }
+      });
+    });
+  }
+
+  function renderOpen() {
+    const wrap = $('openTblWrap');
+    const open = userBets.filter(b => b.status === 'open');
+    if (open.length === 0) {
+      wrap.innerHTML = `<div class="empty">No open bets right now.</div>`;
+      return;
+    }
+    wrap.innerHTML = `
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Placed</th><th>Fight</th><th>Pick</th><th>Book</th>
+            <th class="num">Price</th><th class="num">Stake</th>
+            <th class="num">Edge</th><th class="num">To win</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${open.map(b => {
+            const toWin = b.placed_price_american >= 0
+              ? +b.stake_usd * (b.placed_price_american / 100)
+              : +b.stake_usd * (100 / Math.abs(b.placed_price_american));
+            const placed = (b.placed_at || '').slice(0, 10);
+            const edge = b.edge_at_placement != null ? (b.edge_at_placement * 100).toFixed(1) + '%' : '—';
+            const m = describeBet(b);
+            return `<tr>
+              <td>${placed}</td>
+              <td>${cfl.escapeHtml(m.pickName)} <span style="color:var(--text-3)">vs</span> ${cfl.escapeHtml(m.oppName)}<br><span style="color:var(--text-3);font-size:11px">${cfl.escapeHtml(m.eventName)}</span></td>
+              <td>${cfl.escapeHtml(m.pickName)}</td>
+              <td>${cfl.escapeHtml(b.book)}</td>
+              <td class="num">${americanFmt(b.placed_price_american)}</td>
+              <td class="num">$${(+b.stake_usd).toFixed(0)}</td>
+              <td class="num">${edge}</td>
+              <td class="num">$${toWin.toFixed(0)}</td>
+              <td><button class="tbl-link" data-del="${b.id}" title="Delete this bet">×</button></td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    `;
+    wrap.querySelectorAll('[data-del]').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        if (!confirm('Delete this bet?')) return;
+        const id = btn.dataset.del;
+        const { error } = await sb.from('user_bets').delete().eq('id', id);
+        if (error) { showMsg('Delete failed: ' + error.message, 'err'); return; }
+        await loadUserBets();
+        renderBankroll(); renderOpen(); renderPerf();
+        showMsg('Bet deleted.', 'ok');
+      });
+    });
+  }
+
+  function renderSettled() {
+    const wrap = $('settledTblWrap');
+    const settled = userBets.filter(b => b.status !== 'open').slice().sort(
+      (a, b) => (a.settled_at || '').localeCompare(b.settled_at || '')
+    );
+    if (settled.length === 0) {
+      wrap.innerHTML = `<div class="empty">No settled bets yet. They'll appear here automatically as fights grade.</div>`;
+      return;
+    }
+    let running = +bankroll.initial_deposit;
+    const rows = settled.map(b => {
+      const pnl = +b.pnl_usd || 0;
+      running += pnl;
+      const clv = (b.opener_price_american && b.placed_price_american)
+        ? (impliedProb(b.opener_price_american) - impliedProb(b.placed_price_american)) * 100
+        : null;
+      const settledD = (b.settled_at || '').slice(0, 10);
+      const m = describeBet(b);
+      return `<tr>
+        <td>${settledD}</td>
+        <td>${cfl.escapeHtml(m.pickName)} <span style="color:var(--text-3)">vs</span> ${cfl.escapeHtml(m.oppName)}</td>
+        <td>${cfl.escapeHtml(b.book)}</td>
+        <td class="num">${americanFmt(b.placed_price_american)}</td>
+        <td class="num">$${(+b.stake_usd).toFixed(0)}</td>
+        <td><span class="status ${b.status}">${b.status}</span></td>
+        <td class="num ${pnl > 0 ? 'pos' : pnl < 0 ? 'neg' : ''}">${pnl === 0 ? '$0' : (pnl > 0 ? '+$' + pnl.toFixed(0) : '-$' + Math.abs(pnl).toFixed(0))}</td>
+        <td class="num">${clv == null ? '—' : `${clv > 0 ? '+' : ''}${clv.toFixed(1)}%`}</td>
+        <td class="num">$${running.toFixed(0)}</td>
+      </tr>`;
+    });
+    wrap.innerHTML = `
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>Settled</th><th>Pick</th><th>Book</th>
+            <th class="num">Price</th><th class="num">Stake</th>
+            <th>Status</th><th class="num">PnL</th>
+            <th class="num">CLV</th><th class="num">Running</th>
+          </tr>
+        </thead>
+        <tbody>${rows.reverse().join('')}</tbody>
+      </table>
+    `;
+  }
+
+  function renderPerf() {
+    const grid = $('perfGrid');
+    const settled = userBets.filter(b => b.status === 'won' || b.status === 'lost');
+    const wins = settled.filter(b => b.status === 'won').length;
+    const losses = settled.filter(b => b.status === 'lost').length;
+    const n = wins + losses;
+    const totalStake = settled.reduce((s, b) => s + (+b.stake_usd || 0), 0);
+    const totalPnl = settled.reduce((s, b) => s + (+b.pnl_usd || 0), 0);
+    const roi = totalStake > 0 ? totalPnl / totalStake * 100 : 0;
+    const winRate = n > 0 ? wins / n * 100 : 0;
+    const clvVals = settled.filter(b => b.opener_price_american && b.placed_price_american)
+      .map(b => (impliedProb(b.opener_price_american) - impliedProb(b.placed_price_american)) * 100);
+    const avgClv = clvVals.length ? clvVals.reduce((s, v) => s + v, 0) / clvVals.length : null;
+
+    grid.innerHTML = `
+      <div class="perf-card">
+        <div class="lbl">Record</div>
+        <div class="val">${wins}-${losses}</div>
+        <div class="sub">${n > 0 ? winRate.toFixed(1) + '% win rate' : 'no settled bets'}</div>
+      </div>
+      <div class="perf-card">
+        <div class="lbl">ROI on $ at risk</div>
+        <div class="val ${roi > 0 ? 'pos' : roi < 0 ? 'neg' : ''}">${n > 0 ? (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%' : '—'}</div>
+        <div class="sub">backtest: ~+20% at DK</div>
+      </div>
+      <div class="perf-card">
+        <div class="lbl">Avg CLV vs opener</div>
+        <div class="val ${avgClv > 0 ? 'pos' : avgClv < 0 ? 'neg' : ''}">${avgClv == null ? '—' : (avgClv >= 0 ? '+' : '') + avgClv.toFixed(1) + '%'}</div>
+        <div class="sub">positive = you beat the opener</div>
+      </div>
+      <div class="perf-card">
+        <div class="lbl">Total staked</div>
+        <div class="val">${money(totalStake)}</div>
+        <div class="sub">across ${n} graded bet${n === 1 ? '' : 's'}</div>
+      </div>
+    `;
+  }
+
+  async function render() {
+    renderBankroll();
+    renderWeekPicks();
+    renderOpen();
+    renderSettled();
+    renderPerf();
+  }
+
+  // ---- Boot ----------------------------------------------------------------
+  try {
+    await loadBankroll();
+    await loadUserBets();
+    await autoGradeOpen();
+    await loadWeekPicks();
+    $('loadingState').style.display = 'none';
+    $('bookContent').style.display  = '';
+    await render();
+  } catch (e) {
+    console.error(e);
+    $('loadingState').textContent = 'Failed to load: ' + (e.message || e);
+  }
+})();
+</script>
+</body>
+</html>

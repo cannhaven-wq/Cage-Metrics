@@ -234,6 +234,10 @@
   auth.renderNavSlot = function (containerEl) {
     if (!containerEl) return;
     function paint() {
+      // Show/hide nav links flagged as auth-only based on current state.
+      document.querySelectorAll('[data-auth-only="true"]').forEach(el => {
+        el.style.display = (_currentUser && _currentProfile) ? '' : 'none';
+      });
       if (_currentUser && _currentProfile) {
         const initials = (_currentProfile.display_name || _currentProfile.email || '?')
           .split(/[\s@]+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
