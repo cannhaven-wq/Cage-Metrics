@@ -685,15 +685,30 @@ cfl.renderFooter();
     return;
   }
 
-  // Resolve fight + fighter + event names
+  // Resolve fight + fighter + event names + LIVE consensus odds. The picks
+  // page used to render opener_american_odds / opener_implied_p, which froze
+  // the displayed line at the moment the model ran. That made the page
+  // visibly disagree with BestFightOdds for any fight where the market had
+  // moved (often by 100+ points on short-notice replacements). We now pull
+  // v_fight_odds_consensus and recompute edge live; opener_* remains the
+  // fallback for fights where no live capture exists yet.
   const fightIds = [...new Set(upcoming.map(p => p.fight_id))];
   const fighterIds = [...new Set(upcoming.map(p => p.fighter_id))];
-  const [{ data: fightRows }, { data: fighterRows }] = await Promise.all([
+  const [{ data: fightRows }, { data: fighterRows }, { data: consensusRows }] = await Promise.all([
     sb.from('fights').select('id,event_id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
     sb.from('fighters').select('id,name').in('id', fighterIds),
+    sb.from('v_fight_odds_consensus').select('fight_id,american_odds_a,american_odds_b,implied_prob_a,implied_prob_b').in('fight_id', fightIds),
   ]);
   const fightMap = Object.fromEntries((fightRows || []).map(f => [f.id, f]));
   const fighterMap = Object.fromEntries((fighterRows || []).map(f => [f.id, f.name]));
+  const consensusMap = Object.fromEntries((consensusRows || []).map(c => [c.fight_id, c]));
+  function currentMarket(fightId, side) {
+    const c = consensusMap[fightId];
+    if (!c) return { american: null, implied: null };
+    return side === 'A'
+      ? { american: c.american_odds_a, implied: c.implied_prob_a }
+      : { american: c.american_odds_b, implied: c.implied_prob_b };
+  }
   const eventIds = [...new Set((fightRows || []).map(f => f.event_id).filter(Boolean))];
   let eventMap = {};
   if (eventIds.length) {
@@ -852,14 +867,17 @@ cfl.renderFooter();
     const f = fightMap[best.fr.fight_id] || {};
     const pickName = fighterMap[best.pickedFighter] || `Fighter ${best.pickedFighter}`;
     const oppName = (f.fighter_a_id === best.pickedFighter) ? f.fighter_b_name : f.fighter_a_name;
-    const opener = best.consensusRows[0]?.opener_american_odds;
+    const cm = currentMarket(best.fr.fight_id, best.consensusSide);
+    const displayOdds = cm.american ?? best.consensusRows[0]?.opener_american_odds;
+    const marketP     = cm.implied  ?? best.consensusRows[0]?.opener_implied_p;
     const avgModelP = best.consensusRows.reduce((s, r) => s + r.model_p, 0) / best.consensusRows.length;
-    const avgEdge   = best.consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / best.consensusRows.length;
-    const marketP   = best.consensusRows[0]?.opener_implied_p;
-    const stake     = opener ? kellyStake(avgModelP, opener, bankroll, kFrac, maxFrac) : 0;
+    const avgEdge   = marketP != null
+      ? (avgModelP - marketP)
+      : (best.consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / best.consensusRows.length);
+    const stake     = displayOdds ? kellyStake(avgModelP, displayOdds, bankroll, kFrac, maxFrac) : 0;
     const stakeStr  = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
-    const toWin     = (opener && stake > 0)
-      ? Math.round(opener < 0 ? stake * (100 / Math.abs(opener)) : stake * (opener / 100))
+    const toWin     = (displayOdds && stake > 0)
+      ? Math.round(displayOdds < 0 ? stake * (100 / Math.abs(displayOdds)) : stake * (displayOdds / 100))
       : 0;
     const indChip = (isAdmin && best.top && (INDICATOR_PRIORITY[best.top] ?? 0) > 0)
       ? `<span class="cfl-ind ind-${best.top.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[best.top] || best.top)}"><span class="dot"></span>${INDICATOR_LABEL[best.top] || escapeHtml(best.top)}</span>`
@@ -879,7 +897,7 @@ cfl.renderFooter();
           <div>
             <div class="name">${escapeHtml(pickName)}</div>
             <div class="meta">
-              <span class="odds-pill">${opener != null ? fmtOdds(opener) : '—'}</span>
+              <span class="odds-pill">${displayOdds != null ? fmtOdds(displayOdds) : '—'}</span>
               <span>Our take <strong style="color:#fff;">${(avgModelP*100).toFixed(0)}%</strong></span>
               <span>Market <strong style="color:#fff;">${marketP != null ? (marketP*100).toFixed(0)+'%' : '—'}</strong></span>
               <span class="edge" style="color:var(--green); font-weight:700;">+${(avgEdge*100).toFixed(1)}% edge</span>
@@ -960,15 +978,19 @@ cfl.renderFooter();
         .filter(x => x.consensusSide)
         .map(x => {
           const consensusRows = x.fight.rows.filter(r => r.would_bet && r.side === x.consensusSide);
-          const avgEdge = consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / Math.max(consensusRows.length, 1);
           const avgModelP = consensusRows.reduce((s, r) => s + r.model_p, 0) / Math.max(consensusRows.length, 1);
           const pickedFighter = consensusRows[0]?.fighter_id;
-          const opener = consensusRows[0]?.opener_american_odds;
+          const cm = currentMarket(x.fight.fight_id, x.consensusSide);
+          const displayOdds = cm.american ?? consensusRows[0]?.opener_american_odds;
+          const marketP     = cm.implied  ?? consensusRows[0]?.opener_implied_p;
+          const avgEdge = marketP != null
+            ? (avgModelP - marketP)
+            : (consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / Math.max(consensusRows.length, 1));
           const allInds = fightSideIndicators(x.fight.fight_id, pickedFighter);
           const triggered = allInds.filter(t => ANTI_FILTERS.has(t));
           const top = topIndicator(x.fight.fight_id, pickedFighter);
           const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
-          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, opener, top, pri, antiFilters: triggered };
+          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, displayOdds, marketP, top, pri, antiFilters: triggered };
         });
       const consensusFights = consensusAll
         .filter(x => x.antiFilters.length === 0)
@@ -1007,7 +1029,7 @@ cfl.renderFooter();
     const f = fightMap[x.fight.fight_id] || {};
     const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
     const pickName = fighterMap[x.pickedFighter] || `Fighter ${x.pickedFighter}`;
-    const stake = x.opener ? kellyStake(x.avgModelP, x.opener, bankroll, kFrac, maxFrac) : 0;
+    const stake = x.displayOdds ? kellyStake(x.avgModelP, x.displayOdds, bankroll, kFrac, maxFrac) : 0;
     const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
     const stakePct = bankroll > 0 ? (100 * stake / bankroll).toFixed(1) : '0.0';
     const cardClass = x.top === 'PREMIUM' ? 'premium'
@@ -1024,16 +1046,14 @@ cfl.renderFooter();
     const modelsStr = x.consensusRows.map(r => r.model_version).sort().join(' + ');
     const edgePct = (x.avgEdge * 100).toFixed(1);
     const modelProb = (x.avgModelP * 100).toFixed(1);
-    const marketProb = x.opener
-      ? (x.opener < 0 ? (100 * Math.abs(x.opener) / (Math.abs(x.opener) + 100)) : (100 * 100 / (x.opener + 100))).toFixed(1)
-      : '—';
+    const marketProb = x.marketP != null ? (x.marketP * 100).toFixed(1) : '—';
     return `
       <div class="pick-card ${cardClass}">
         <div class="matchup">${matchup}</div>
         <div class="row">
           <div class="who">
             <div class="name">${escapeHtml(pickName)}</div>
-            <div><span class="odds">${x.opener != null ? fmtOdds(x.opener) : '—'}</span></div>
+            <div><span class="odds">${x.displayOdds != null ? fmtOdds(x.displayOdds) : '—'}</span></div>
           </div>
           <div class="stake-block">
             <div class="stake-lbl">Kelly stake math</div>
