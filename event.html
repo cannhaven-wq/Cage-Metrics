@@ -81,6 +81,57 @@
   }
   .event-hero .pill.upcoming { background: var(--red); color: #fff; }
 
+  .model-acc-strip {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--border);
+    padding: 16px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+  .model-acc-strip .acc-label {
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    font-weight: 700;
+  }
+  .model-acc-strip .acc-cells {
+    display: flex;
+    gap: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .model-acc-strip .acc-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 8px 16px;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    min-width: 76px;
+  }
+  .model-acc-strip .acc-mv {
+    font: 700 11px 'Inter', sans-serif;
+    color: var(--text-3);
+    letter-spacing: 0.06em;
+  }
+  .model-acc-strip .acc-rec {
+    font: 700 18px 'Barlow Condensed', sans-serif;
+    line-height: 1;
+    color: var(--text);
+  }
+  .model-acc-strip .acc-pct {
+    font: 600 10px 'Inter', sans-serif;
+    color: var(--text-3);
+  }
+  .model-acc-strip .acc-rec.good, .model-acc-strip .acc-pct.good { color: var(--green); }
+  .model-acc-strip .acc-rec.ok,   .model-acc-strip .acc-pct.ok   { color: var(--text-2); }
+  .model-acc-strip .acc-rec.bad,  .model-acc-strip .acc-pct.bad  { color: var(--red); }
+
   .fight-card {
     background: var(--bg-2);
     border: 1px solid var(--border);
@@ -387,7 +438,8 @@ async function load() {
   // empty; the v_fighter_recent_form view query was removed when edges.js's
   // streak factors went away.
   const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date';
-  const [fightersR, cardioR, finishR, oddsR] = await Promise.all([
+  const fightIds = (fights || []).map(f => f.id);
+  const [fightersR, cardioR, finishR, oddsR, predsR] = await Promise.all([
     fighterIds.length
       ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
       : Promise.resolve({ data: [] }),
@@ -398,6 +450,11 @@ async function load() {
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
     sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
+    // Trained-model picks for past-event accuracy strip. Only fetched when
+    // the event has fights; rows are empty for upcoming events (outcome_known=false).
+    fightIds.length && !event.is_upcoming
+      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won').in('fight_id', fightIds).eq('outcome_known', true)
+      : Promise.resolve({ data: [] }),
   ]);
 
   if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
@@ -417,6 +474,18 @@ async function load() {
   if (oddsR.error) console.warn('Market odds not available:', oddsR.error.message);
   (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
 
+  if (predsR.error) console.warn('Model predictions not available:', predsR.error.message);
+  // Per-model accuracy: a model "picked" the fighter with model_p > 0.5 on
+  // each fight. Ties at exactly 0.5 are excluded as "no opinion". Walk the
+  // predictions once, accumulate {n, wins} per model_version.
+  const modelAccuracy = {};
+  (predsR.data || []).forEach(p => {
+    if (p.model_p == null || +p.model_p <= 0.5) return;
+    const slot = modelAccuracy[p.model_version] || (modelAccuracy[p.model_version] = { n: 0, wins: 0 });
+    slot.n += 1;
+    if (p.won) slot.wins += 1;
+  });
+
   updateEventSEO(event, fights, fighterMap);
 
   document.getElementById('content').innerHTML = `
@@ -425,12 +494,38 @@ async function load() {
       <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
     </div>
+    ${renderModelAccuracyStrip(modelAccuracy)}
     <div class="page">
       <div id="fightsList">
         ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date)).join('')}
       </div>
     </div>
   `;
+}
+
+// Past-event-only banner showing each trained model's pick accuracy on this
+// card. Picks are sides where model_p > 0.5 (ties excluded). Renders nothing
+// for upcoming events or events without graded predictions.
+function renderModelAccuracyStrip(modelAccuracy) {
+  const versions = Object.keys(modelAccuracy).sort();
+  if (!versions.length) return '';
+  const cells = versions.map(mv => {
+    const { n, wins } = modelAccuracy[mv];
+    if (!n) return '';
+    const pct = wins / n * 100;
+    const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'ok' : 'bad');
+    return `
+      <div class="acc-cell">
+        <div class="acc-mv">${cfl.escapeHtml(mv.toUpperCase())}</div>
+        <div class="acc-rec ${cls}">${wins}/${n}</div>
+        <div class="acc-pct ${cls}">${pct.toFixed(0)}%</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="model-acc-strip">
+      <div class="acc-label">Model accuracy on this card</div>
+      <div class="acc-cells">${cells}</div>
+    </div>`;
 }
 
 function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate) {
