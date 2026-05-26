@@ -457,7 +457,7 @@
 <div class="page-hero">
   <div class="eyebrow">Build & evaluate</div>
   <h1>UFC Parlay Builder</h1>
-  <p>Pick fighters from the upcoming card — each one's opener is pre-filled, edit if your book has a better price. Combined payout + implied probability update live.</p>
+  <p>Pick fighters from the upcoming card — each one's <strong>best price across books right now</strong> is pre-filled, edit if your book has a better number. Combined payout + implied probability update live.</p>
 </div>
 
 <div class="page">
@@ -508,8 +508,9 @@ let stake = 10;
 let upcomingEvents = [];
 let fightsByEvent = {};
 let fightersById = {};
-// (fight_id):(fighter_id) -> american opener from BFO consensus (book_id=6)
-let openerByPick = {};
+// (fight_id):(fighter_id) -> { american, book } best price across books right now
+// (or BFO consensus opener as fallback when no live capture exists yet).
+let bestPriceByPick = {};
 // (fight_id):(fighter_id) -> [{ model_version, model_p, edge, would_bet }, ...]
 let modelsByPick = {};
 // model_versions rows
@@ -522,9 +523,13 @@ function fmtAmerican(n) {
   if (n == null || isNaN(n)) return '—';
   return n > 0 ? '+' + n : String(n);
 }
-function openerFor(fightId, fighterId) {
-  const v = openerByPick[`${fightId}:${fighterId}`];
-  return (v == null) ? null : Number(v);
+function bestPriceFor(fightId, fighterId) {
+  const v = bestPriceByPick[`${fightId}:${fighterId}`];
+  return (v == null) ? null : Number(v.american);
+}
+function bestBookFor(fightId, fighterId) {
+  const v = bestPriceByPick[`${fightId}:${fighterId}`];
+  return v ? (v.book || null) : null;
 }
 function oddsClass(n) {
   if (n == null) return 'unknown';
@@ -574,11 +579,20 @@ async function load() {
     (fighters || []).forEach(f => { fightersById[f.id] = f; });
   }
 
-  // Pull consensus opener (book_id=6), model predictions, and model_versions
-  // info in parallel.
+  // Pull live odds (last 6h), opener fallback, model predictions, model_versions,
+  // and the book name list in parallel. The parlay leg pre-fill uses best-available
+  // price across books right now; opener (BFO consensus, book_id=6) is the fallback
+  // for fights that have no live captures yet.
   const allFightIds = (fights || []).map(f => f.id);
   if (allFightIds.length > 0) {
-    const [{ data: openers }, { data: preds }, { data: mvers }] = await Promise.all([
+    const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+    const [liveRows, { data: openers }, { data: preds }, { data: mvers }, { data: books }] = await Promise.all([
+      cfl.fetchAll(() => sb.from('fight_odds')
+        .select('fight_id, fighter_id, book_id, american_odds, captured_at')
+        .in('fight_id', allFightIds)
+        .eq('is_opener', false)
+        .eq('is_closer', false)
+        .gte('captured_at', sixHoursAgo)),
       sb.from('fight_odds')
         .select('fight_id, fighter_id, american_odds')
         .in('fight_id', allFightIds)
@@ -591,10 +605,34 @@ async function load() {
       sb.from('model_versions')
         .select('id, name, description, features_summary, test_accuracy, test_log_loss')
         .order('id'),
+      sb.from('odds_books').select('id, name'),
     ]);
-    (openers || []).forEach(o => {
-      openerByPick[`${o.fight_id}:${o.fighter_id}`] = o.american_odds;
+
+    // Step 1: per (fight, fighter, book) keep only the latest live capture
+    const bookName = {};
+    (books || []).forEach(b => { bookName[b.id] = b.name; });
+    const latest = {};
+    (liveRows || []).forEach(r => {
+      const k = `${r.fight_id}:${r.fighter_id}:${r.book_id}`;
+      const prev = latest[k];
+      if (!prev || r.captured_at > prev.captured_at) latest[k] = r;
     });
+    // Step 2: per (fight, fighter) pick the row with the best American payout
+    Object.values(latest).forEach(r => {
+      const k = `${r.fight_id}:${r.fighter_id}`;
+      const prev = bestPriceByPick[k];
+      if (!prev || r.american_odds > prev.american) {
+        bestPriceByPick[k] = { american: r.american_odds, book: bookName[r.book_id] || null };
+      }
+    });
+    // Step 3: opener fallback for any fighter with no live capture (e.g. fight just added)
+    (openers || []).forEach(o => {
+      const k = `${o.fight_id}:${o.fighter_id}`;
+      if (!bestPriceByPick[k]) {
+        bestPriceByPick[k] = { american: o.american_odds, book: 'opener' };
+      }
+    });
+
     (preds || []).forEach(p => {
       const k = `${p.fight_id}:${p.fighter_id}`;
       (modelsByPick[k] = modelsByPick[k] || []).push(p);
@@ -697,8 +735,8 @@ function renderPickRow(f) {
   const b = fightersById[f.fighter_b_id];
   const aSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_a_id);
   const bSelected = legs.some(l => l.fightId === f.id && l.fighterId === f.fighter_b_id);
-  const aOdds = openerFor(f.id, f.fighter_a_id);
-  const bOdds = openerFor(f.id, f.fighter_b_id);
+  const aOdds = bestPriceFor(f.id, f.fighter_a_id);
+  const bOdds = bestPriceFor(f.id, f.fighter_b_id);
 
   return `
     <div class="pick-row">
@@ -735,16 +773,16 @@ document.addEventListener('click', e => {
     if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
       legs.splice(existingIndex, 1);
     } else {
-      // Pre-fill the leg odds with the BFO consensus opener so users see a
-      // working parlay immediately. They can still type over it if they got
-      // a better number on their book.
-      const opener = openerFor(fightId, fighterId);
+      // Pre-fill the leg odds with the best price currently available across all
+      // books we track, so users see a working parlay at the best line they can
+      // shop to. They can still type over it if they got an even better number.
+      const best = bestPriceFor(fightId, fighterId);
       const newLeg = {
         fightId,
         fighterId,
         fighterName: pf.dataset.name,
         opponentName: pf.dataset.opp,
-        odds: opener != null ? String(opener) : ''
+        odds: best != null ? String(best) : ''
       };
       if (existingIndex >= 0) {
         legs[existingIndex] = newLeg;
@@ -865,7 +903,7 @@ function renderSlip() {
       </div>
     </div>
     <div class="help-box">
-      Each leg is pre-filled with the <strong>BFO consensus opener</strong>. Type over it with your own book's price if you got a better number.<br>
+      Each leg is pre-filled with the <strong>best price available across books right now</strong> (we shop FanDuel, Caesars, BetRivers, BetWay, Unibet, Polymarket, Kalshi, and others). Type over it with your own book's price if you got an even better number.<br>
       Implied % shows what the price is pricing in. Combined % is the chance all your picks hit at once.
     </div>
   `;
