@@ -121,6 +121,12 @@
   .logger .verdict.marginal{ background: rgba(234,179,8,0.18); color: #facc15; }
   .logger .verdict.skip    { background: rgba(239,68,68,0.18); color: var(--red); }
   .logger .btn { padding: 9px 18px; font-size: 13px; white-space: nowrap; }
+  .logger .reset-btn {
+    background: none; border: none; padding: 4px 0 0 0; margin: 0;
+    color: var(--text-3); font: 500 11px 'Inter', sans-serif;
+    cursor: pointer; text-align: center; width: 100%;
+  }
+  .logger .reset-btn:hover { color: var(--text); text-decoration: underline; }
   @media (max-width: 720px) {
     .logger .row { grid-template-columns: 1fr 1fr; }
     .logger .row > .field-stake, .logger .row > .field-edge { grid-column: span 1; }
@@ -648,6 +654,7 @@
           <div class="field btn-cell">
             <label>&nbsp;</label>
             <button class="btn place-btn" ${already ? 'disabled' : ''}>${already ? 'Logged' : 'Log bet'}</button>
+            <button type="button" class="reset-btn" ${already ? 'style="display:none"' : ''}>↺ Reset</button>
           </div>
         </div>
       </div>`;
@@ -706,6 +713,18 @@
       priceIn.addEventListener('input', recompute);
       stakeIn.addEventListener('input', () => { stakeIn.dataset.dirty = '1'; });
 
+      const resetBtn = el.querySelector('.reset-btn');
+      if (resetBtn) {
+        resetBtn.addEventListener('click', () => {
+          priceIn.value = '';
+          stakeIn.value = '';
+          delete stakeIn.dataset.dirty;
+          if (bookSel.options.length > 0) bookSel.selectedIndex = 0;
+          recompute();
+          priceIn.focus();
+        });
+      }
+
       placeBtn.addEventListener('click', async () => {
         const v = parseInt(priceIn.value, 10);
         if (isNaN(v)) { showMsg('Enter the price you got.', 'err'); return; }
@@ -724,6 +743,7 @@
           // typed on the other loggers (the whole point of logging in batch).
           placeBtn.textContent = 'Logged';
           // disabled stays true
+          if (resetBtn) resetBtn.style.display = 'none';
           const top = el.querySelector('.top');
           if (top && !top.querySelector('.badge[data-already]')) {
             const badge = document.createElement('span');
