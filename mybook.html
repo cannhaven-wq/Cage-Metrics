@@ -111,6 +111,15 @@
   }
   .logger .computed.neg { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.30); color: var(--red); }
   .logger .computed.zero { background: var(--bg-3); border-color: var(--border-2); color: var(--text-3); }
+  .logger .computed.marginal { background: rgba(234,179,8,0.10); border-color: rgba(234,179,8,0.35); color: #facc15; }
+  .logger .verdict {
+    display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px;
+    font: 700 10px 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase;
+    vertical-align: middle;
+  }
+  .logger .verdict.bet     { background: rgba(34,197,94,0.18); color: var(--green); }
+  .logger .verdict.marginal{ background: rgba(234,179,8,0.18); color: #facc15; }
+  .logger .verdict.skip    { background: rgba(239,68,68,0.18); color: var(--red); }
   .logger .btn { padding: 9px 18px; font-size: 13px; white-space: nowrap; }
   @media (max-width: 720px) {
     .logger .row { grid-template-columns: 1fr 1fr; }
@@ -629,7 +638,7 @@
           </div>
           <div class="field field-edge">
             <label>Your edge</label>
-            <div class="computed zero edge-out">—</div>
+            <div class="computed zero edge-out">—<span class="verdict" style="display:none;"></span></div>
           </div>
           <div class="field field-stake">
             <label>Stake ($)</label>
@@ -655,10 +664,16 @@
       const bookSel = el.querySelector('.book-sel');
       const placeBtn = el.querySelector('.place-btn');
 
+      // Match the model's would_bet threshold (5%). Edges below this are
+      // "marginal" — Kelly may still suggest a tiny stake but the model
+      // wouldn't take it.
+      const BET_THRESHOLD = 0.05;
+
       function recompute() {
         const v = parseInt(priceIn.value, 10);
         if (isNaN(v) || v === 0) {
-          edgeOut.textContent = '—'; edgeOut.className = 'computed zero edge-out';
+          edgeOut.innerHTML = '—<span class="verdict" style="display:none;"></span>';
+          edgeOut.className = 'computed zero edge-out';
           kellyHint.innerHTML = '&nbsp;';
           if (!stakeIn.dataset.dirty) stakeIn.value = '';
           return;
@@ -667,8 +682,19 @@
         const edge = pick.model_p - imp;
         const stake = kellyStake(pick.model_p, v, +bankroll.current_amount, +bankroll.kelly_fraction, +bankroll.max_bet_fraction);
         const edgePct = edge * 100;
-        edgeOut.textContent = `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%`;
-        edgeOut.className = 'computed edge-out ' + (edge > 0 ? '' : 'neg');
+
+        let verdictText, verdictClass, edgeClass;
+        if (edge >= BET_THRESHOLD) {
+          verdictText = '✓ Bet'; verdictClass = 'bet'; edgeClass = '';
+        } else if (edge > 0) {
+          verdictText = 'Marginal'; verdictClass = 'marginal'; edgeClass = 'marginal';
+        } else {
+          verdictText = '✗ Skip'; verdictClass = 'skip'; edgeClass = 'neg';
+        }
+        edgeOut.innerHTML = `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%` +
+          `<span class="verdict ${verdictClass}">${verdictText}</span>`;
+        edgeOut.className = 'computed edge-out ' + edgeClass;
+
         if (stake > 0) {
           kellyHint.textContent = `Kelly suggests $${Math.round(stake).toLocaleString()}`;
           if (!stakeIn.dataset.dirty) stakeIn.value = Math.round(stake);
@@ -691,9 +717,20 @@
           showMsg(`Logged ${pick.pickName} for $${Math.round(stake)} at ${bookSel.value}.`, 'ok');
           await loadUserBets();
           renderBankroll();
-          renderWeekPicks(); // re-render to mark "already logged"
           renderOpen();
           renderPerf();
+          // In-place mark this logger as logged. We deliberately do NOT call
+          // renderWeekPicks() — that would wipe price/stake values the user
+          // typed on the other loggers (the whole point of logging in batch).
+          placeBtn.textContent = 'Logged';
+          // disabled stays true
+          const top = el.querySelector('.top');
+          if (top && !top.querySelector('.badge[data-already]')) {
+            const badge = document.createElement('span');
+            badge.className = 'meta';
+            badge.innerHTML = ' <span class="badge" data-already="1" style="background:rgba(99,102,241,0.14);color:#a5b4fc">Already logged</span>';
+            top.appendChild(badge);
+          }
         } catch (e) {
           console.error(e);
           showMsg('Failed to log: ' + (e.message || e), 'err');
