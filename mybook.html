@@ -632,8 +632,9 @@
             <div class="computed zero edge-out">—</div>
           </div>
           <div class="field field-stake">
-            <label>Stake</label>
-            <div class="computed zero stake-out">—</div>
+            <label>Stake ($)</label>
+            <input type="number" class="stake-in" placeholder="—" step="1" min="0" inputmode="decimal">
+            <div class="kelly-hint" style="font-size:10px; color:var(--text-3); margin-top:2px; min-height:12px;">&nbsp;</div>
           </div>
           <div class="field btn-cell">
             <label>&nbsp;</label>
@@ -649,7 +650,8 @@
       const pick = weekPicksData[i];
       const priceIn = el.querySelector('.price-in');
       const edgeOut = el.querySelector('.edge-out');
-      const stakeOut = el.querySelector('.stake-out');
+      const stakeIn = el.querySelector('.stake-in');
+      const kellyHint = el.querySelector('.kelly-hint');
       const bookSel = el.querySelector('.book-sel');
       const placeBtn = el.querySelector('.place-btn');
 
@@ -657,7 +659,8 @@
         const v = parseInt(priceIn.value, 10);
         if (isNaN(v) || v === 0) {
           edgeOut.textContent = '—'; edgeOut.className = 'computed zero edge-out';
-          stakeOut.textContent = '—'; stakeOut.className = 'computed zero stake-out';
+          kellyHint.innerHTML = '&nbsp;';
+          if (!stakeIn.dataset.dirty) stakeIn.value = '';
           return;
         }
         const imp = impliedProb(v);
@@ -667,20 +670,21 @@
         edgeOut.textContent = `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%`;
         edgeOut.className = 'computed edge-out ' + (edge > 0 ? '' : 'neg');
         if (stake > 0) {
-          stakeOut.textContent = '$' + Math.round(stake).toLocaleString();
-          stakeOut.className = 'computed stake-out';
+          kellyHint.textContent = `Kelly suggests $${Math.round(stake).toLocaleString()}`;
+          if (!stakeIn.dataset.dirty) stakeIn.value = Math.round(stake);
         } else {
-          stakeOut.textContent = '$0 (no edge)';
-          stakeOut.className = 'computed zero stake-out';
+          kellyHint.textContent = 'Kelly says skip (no edge)';
+          if (!stakeIn.dataset.dirty) stakeIn.value = '';
         }
       }
       priceIn.addEventListener('input', recompute);
+      stakeIn.addEventListener('input', () => { stakeIn.dataset.dirty = '1'; });
 
       placeBtn.addEventListener('click', async () => {
         const v = parseInt(priceIn.value, 10);
         if (isNaN(v)) { showMsg('Enter the price you got.', 'err'); return; }
-        const stake = kellyStake(pick.model_p, v, +bankroll.current_amount, +bankroll.kelly_fraction, +bankroll.max_bet_fraction);
-        if (stake <= 0) { showMsg('No edge at that price — methodology says skip.', 'err'); return; }
+        const stake = parseFloat(stakeIn.value);
+        if (isNaN(stake) || stake <= 0) { showMsg('Enter the amount you bet.', 'err'); return; }
         placeBtn.disabled = true; placeBtn.textContent = 'Logging…';
         try {
           await placeBet(pick, bookSel.value, v, Math.round(stake * 100) / 100);
