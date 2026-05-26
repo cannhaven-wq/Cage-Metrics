@@ -132,6 +132,55 @@
   .model-acc-strip .acc-rec.ok,   .model-acc-strip .acc-pct.ok   { color: var(--text-2); }
   .model-acc-strip .acc-rec.bad,  .model-acc-strip .acc-pct.bad  { color: var(--red); }
 
+  .model-picks-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .model-picks-row .mp-label {
+    font: 700 10px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin-right: 4px;
+  }
+  .model-pick-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font: 600 11px 'Inter', sans-serif;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+  }
+  .model-pick-pill .mp-mv {
+    font: 800 10px 'Inter', sans-serif;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+  }
+  .model-pick-pill .mp-pct { color: var(--text-3); font-weight: 500; }
+  .model-pick-pill .mp-mark { font-weight: 700; }
+  .model-pick-pill.correct {
+    background: rgba(34,197,94,0.10);
+    border-color: rgba(34,197,94,0.30);
+    color: var(--green);
+  }
+  .model-pick-pill.correct .mp-mv,
+  .model-pick-pill.correct .mp-pct { color: var(--green); opacity: 0.85; }
+  .model-pick-pill.wrong {
+    background: rgba(239,68,68,0.10);
+    border-color: rgba(239,68,68,0.30);
+    color: var(--red);
+  }
+  .model-pick-pill.wrong .mp-mv,
+  .model-pick-pill.wrong .mp-pct { color: var(--red); opacity: 0.85; }
+
   .fight-card {
     background: var(--bg-2);
     border: 1px solid var(--border);
@@ -450,10 +499,12 @@ async function load() {
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
     sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
-    // Trained-model picks for past-event accuracy strip. Only fetched when
-    // the event has fights; rows are empty for upcoming events (outcome_known=false).
-    fightIds.length && !event.is_upcoming
-      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won').in('fight_id', fightIds).eq('outcome_known', true)
+    // Trained-model predictions. Used for both the per-event accuracy strip
+    // (past events) and the per-fight pick pills (both past + upcoming). For
+    // upcoming events `won` is null and `outcome_known` is false, but the
+    // pick row (model_p, fighter_id) is still useful — model already ran.
+    fightIds.length
+      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won, outcome_known').in('fight_id', fightIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -475,15 +526,26 @@ async function load() {
   (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
 
   if (predsR.error) console.warn('Model predictions not available:', predsR.error.message);
-  // Per-model accuracy: a model "picked" the fighter with model_p > 0.5 on
-  // each fight. Ties at exactly 0.5 are excluded as "no opinion". Walk the
-  // predictions once, accumulate {n, wins} per model_version.
+  // Single pass: build per-fight picks AND per-event accuracy from predictions.
+  //   picksByFight[fight_id][model_version] = { fighter_id, model_p, won, outcome_known }
+  //   modelAccuracy[model_version] = { n, wins }   ← only for graded picks (past events)
+  // A "pick" is the side with model_p > 0.5; ties at 0.5 are excluded.
+  const picksByFight = {};
   const modelAccuracy = {};
   (predsR.data || []).forEach(p => {
     if (p.model_p == null || +p.model_p <= 0.5) return;
-    const slot = modelAccuracy[p.model_version] || (modelAccuracy[p.model_version] = { n: 0, wins: 0 });
-    slot.n += 1;
-    if (p.won) slot.wins += 1;
+    const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
+    slot[p.model_version] = {
+      fighter_id: p.fighter_id,
+      model_p: +p.model_p,
+      won: p.won,
+      outcome_known: p.outcome_known,
+    };
+    if (p.outcome_known) {
+      const acc = modelAccuracy[p.model_version] || (modelAccuracy[p.model_version] = { n: 0, wins: 0 });
+      acc.n += 1;
+      if (p.won) acc.wins += 1;
+    }
   });
 
   updateEventSEO(event, fights, fighterMap);
@@ -497,7 +559,7 @@ async function load() {
     ${renderModelAccuracyStrip(modelAccuracy)}
     <div class="page">
       <div id="fightsList">
-        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date)).join('')}
+        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, picksByFight)).join('')}
       </div>
     </div>
   `;
@@ -528,7 +590,7 @@ function renderModelAccuracyStrip(modelAccuracy) {
     </div>`;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, picksByFight) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -555,6 +617,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
 
   const odds = (oddsMap || {})[fight.id] || null;
   const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate);
+  const modelPicks = renderModelPicks(fight, fmap, (picksByFight || {})[fight.id]);
 
   return `
     <div class="${cardClass}">
@@ -573,8 +636,37 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
       </div>
       ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
       ${verdict}
+      ${modelPicks}
     </div>
   `;
+}
+
+// Compact strip of trained-model picks for a single fight. One pill per
+// model (v1..v4). On past fights the pill is colored by ✓/✗ outcome; on
+// upcoming fights it's neutral. Hidden if no model has a pick for this
+// fight (e.g. fight added after the last training run).
+function renderModelPicks(fight, fmap, fightPicks) {
+  if (!fightPicks) return '';
+  const versions = Object.keys(fightPicks).sort();
+  if (!versions.length) return '';
+  const pills = versions.map(mv => {
+    const pick = fightPicks[mv];
+    const picked = fmap[pick.fighter_id];
+    if (!picked) return '';
+    const pct = (pick.model_p * 100).toFixed(0);
+    let cls = 'neutral', mark = '';
+    if (pick.outcome_known) {
+      if (pick.won === true)       { cls = 'correct'; mark = ' ✓'; }
+      else if (pick.won === false) { cls = 'wrong';   mark = ' ✗'; }
+    }
+    return `
+      <span class="model-pick-pill ${cls}">
+        <span class="mp-mv">${cfl.escapeHtml(mv.toUpperCase())}</span>
+        <span class="mp-name">${cfl.escapeHtml(picked.name)}</span>
+        <span class="mp-pct">${pct}%</span><span class="mp-mark">${mark}</span>
+      </span>`;
+  }).join('');
+  return `<div class="model-picks-row"><span class="mp-label">Trained models</span>${pills}</div>`;
 }
 
 // Renders the model-verdict band on each fight card — winner pick + distance
