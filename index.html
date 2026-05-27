@@ -1444,8 +1444,27 @@ async function loadPastEvents() {
   section.hidden = false;
 }
 
-// Kick off homepage data load (parallel to next-event loader)
-loadHomepageStats();
+// Kick off homepage data load (parallel to next-event loader).
+// Wrap in catch so a hung/blocked Supabase request can't leave the hero
+// model panel in a perpetual "Loading models..." state. This has been
+// observed in browsers with strict tracking prevention (Edge, Brave) or
+// adblockers that silently drop requests to *.supabase.co — the fetch
+// Promise never resolves AND never rejects, so the await hangs forever
+// unless something else aborts it.
+loadHomepageStats().catch(err => {
+  console.warn('[home] homepage stats load failed', err);
+  const heroList = document.getElementById('heroModelList');
+  if (heroList && heroList.querySelector('.models-loading')) {
+    heroList.innerHTML = '<div class="models-loading">Models unavailable</div>';
+  }
+});
+setTimeout(() => {
+  const heroList = document.getElementById('heroModelList');
+  const loadingEl = heroList && heroList.querySelector('.models-loading');
+  if (loadingEl && loadingEl.textContent.indexOf('Loading') === 0) {
+    heroList.innerHTML = '<div class="models-loading">Models unavailable — check ad blocker / tracking prevention</div>';
+  }
+}, 15000);
 
 // =============================================================================
 // LOAD: next event + its fights + the fighters in those fights
@@ -2367,7 +2386,22 @@ if (window.cflAuth && window.cflAuth.ready) {
   updateBetaBanner();
 }
 
-load();
+load().catch(err => {
+  console.warn('[home] next-event load failed', err);
+  const cb = document.getElementById('countdownBar');
+  if (cb && cb.querySelector('.loading-spinner')) {
+    cb.innerHTML = cfl.errorHtml('Failed to load next event: ' + (err && err.message ? err.message : err) + '. Try refreshing.');
+  }
+});
+// Safety net: if a request silently hangs (tracking-prevention/adblocker
+// dropping *.supabase.co without rejecting the fetch), replace the
+// "Loading next event…" spinner with an actionable error.
+setTimeout(() => {
+  const cb = document.getElementById('countdownBar');
+  if (cb && cb.querySelector('.loading-spinner')) {
+    cb.innerHTML = cfl.errorHtml("Couldn't reach the database. If you use a tracking-prevention extension or strict browser privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.");
+  }
+}, 15000);
 </script>
 </body>
 </html>
