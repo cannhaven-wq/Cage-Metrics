@@ -787,7 +787,13 @@ function renderFighterSide(f, side, won, opponentWon) {
   `;
 }
 
-load();
+load().catch(err => {
+  console.error('[event] load failed:', err);
+  document.getElementById('content').innerHTML = cfl.errorHtml(
+    'Failed to load this event: ' + (err && err.message ? err.message : err) +
+    '. Try refreshing the page.'
+  );
+});
 </script>
 </body>
 </html>
