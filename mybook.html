@@ -294,7 +294,7 @@
 
   // Hard auth gate. requireAuth bounces to login if not signed in.
   await window.cflAuth.ready();
-  if (!window.cflAuth.requireAuth('/mybook.html')) return;
+  if (!(await window.cflAuth.requireAuth('/mybook.html'))) return;
   const user = window.cflAuth.getUser();
   const sb = window.cflSupabase;
 
