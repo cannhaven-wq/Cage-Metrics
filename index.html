@@ -290,6 +290,26 @@
   .fight-fighter .style-chip.style-low_volume  { background: var(--bg-3); color: var(--text-3); }
   .fight-fighter.right .style-chip { float: right; }
 
+  /* Moneyline odds chip — book price next to the fighter, no model comparison.
+     Favorites (negative number) get a subtle red tint, underdogs stay neutral. */
+  .fight-fighter .fighter-odds {
+    display: inline-block;
+    margin-top: 6px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font: 700 12px 'Inter', sans-serif;
+    background: var(--bg-3);
+    color: var(--text-2);
+    border: 1px solid var(--border-2);
+    letter-spacing: 0.02em;
+  }
+  .fight-fighter .fighter-odds.fav {
+    background: rgba(230, 57, 70, 0.10);
+    color: var(--red);
+    border-color: rgba(230, 57, 70, 0.30);
+  }
+  .fight-fighter.right .fighter-odds { float: right; }
+
   .fight-vs {
     font-family: 'Barlow Condensed', sans-serif;
     font-size: 18px;
@@ -1775,6 +1795,9 @@ async function loadFights(event) {
     loadCardioMap(fighterIds),
     loadStyleMap(fighterIds),
     loadFinishRateMap(fighterIds),
+    // Book moneyline odds — surfaced under each fighter's name as raw market
+    // info, NOT compared to the model. Value-vs-market analysis lives on a
+    // separate page so the Next Event card stays focused on the moneyline pick.
     loadOddsMap(event.id),
     // Trained-model predictions for the four production models we want on the
     // homepage. Filtered server-side so we don't pull picks from experimental
@@ -1889,6 +1912,7 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode, p
 
   const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate, modelMode, picksByFight) : '';
   const trainedPicks = renderTrainedPicks(fight, fmap, (picksByFight || {})[fight.id]);
+  const oddsRow = _oddsMap && _oddsMap[fight.id];
 
   return `
     <div class="${cardClass}">
@@ -1897,12 +1921,12 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode, p
         ${weight}
       </div>
       <div class="fight-body">
-        ${renderFighterSide(a, 'left', fight.weight_class)}
+        ${renderFighterSide(a, 'left', fight.weight_class, oddsRow ? oddsRow.american_odds_a : null)}
         <div class="fight-vs">
           VS
           <a class="compare" href="${cfl.h2hUrl(a.id, b.id)}">Compare →</a>
         </div>
-        ${renderFighterSide(b, 'right', fight.weight_class)}
+        ${renderFighterSide(b, 'right', fight.weight_class, oddsRow ? oddsRow.american_odds_b : null)}
       </div>
       ${renderQuickStats(a, b, fight.weight_class)}
       ${edgePanel}
@@ -1941,7 +1965,7 @@ function renderTrainedPicks(fight, fmap, fightPicks) {
   return `<div class="hp-trained-picks"><span class="tp-label">Trained models</span>${pills}</div>`;
 }
 
-function renderFighterSide(f, side, weightClass) {
+function renderFighterSide(f, side, weightClass, americanOdds) {
   const w = f.wins ?? 0;
   const l = f.losses ?? 0;
   const d = f.draws ?? 0;
@@ -1961,6 +1985,15 @@ function renderFighterSide(f, side, weightClass) {
     unknown: ''
   }[style] || '';
 
+  // Moneyline odds — raw book price, no model comparison. Favorites get a
+  // subtle red tint to mirror sportsbook conventions.
+  let oddsHtml = '';
+  if (americanOdds != null) {
+    const oddsStr = americanOdds > 0 ? `+${americanOdds}` : String(americanOdds);
+    const fav = americanOdds < 0 ? ' fav' : '';
+    oddsHtml = `<div class="fighter-odds${fav}">${oddsStr}</div>`;
+  }
+
   return `
     <a class="fight-fighter ${side}" href="${cfl.fighterUrl(f.id)}">
       <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(f.name))}</div>
@@ -1969,6 +2002,7 @@ function renderFighterSide(f, side, weightClass) {
         ${f.nickname ? `<div class="nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
         <div class="record"><strong>${recordStr}</strong>${recordLabel ? ' ' + recordLabel : ''}</div>
         ${styleLabel ? `<div class="style-chip style-${style}">${styleLabel}</div>` : ''}
+        ${oddsHtml}
       </div>
     </a>
   `;
@@ -2051,34 +2085,6 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
     `;
   }
 
-  // Market consensus row — book's implied probability on the model's pick,
-  // plus the value vs the model in pp. Silently omitted if we have no odds
-  // row for this fight or no model pick.
-  let marketHtml = '';
-  const oddsRow = _oddsMap && fight && fight.id ? _oddsMap[fight.id] : null;
-  if (oddsRow && picked) {
-    const modelPickA = picked === a;
-    const marketProb = modelPickA ? oddsRow.implied_prob_a : oddsRow.implied_prob_b;
-    const marketOddsAm = modelPickA ? oddsRow.american_odds_a : oddsRow.american_odds_b;
-    if (marketProb != null) {
-      const edgePp = (verdictPct / 100 - marketProb) * 100;
-      const edgeRound = Math.round(edgePp);
-      const edgeStr = (edgeRound > 0 ? '+' : '') + edgeRound + 'pp';
-      const isValue = edgePp >= 3;
-      const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
-      const valueBadge = isValue ? '<span class="market-value-badge">⚡ Value</span>' : '';
-      const edgeClass = edgePp > 0 ? 'pos' : (edgePp < 0 ? 'neg' : '');
-      marketHtml = `
-        <div class="market-summary">
-          <div class="market-label">Market</div>
-          <div class="market-pick">${cfl.escapeHtml(verdictName)} <span class="market-odds">${oddsStr}</span> <span class="market-pct">${Math.round(marketProb * 100)}%</span></div>
-          <div class="market-edge ${edgeClass}">Value ${edgeStr}</div>
-          ${valueBadge}
-        </div>
-      `;
-    }
-  }
-
   return `
     <div class="edge-panel">
       <div class="edge-summary">
@@ -2088,7 +2094,6 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
         ${movHtml}
       </div>
       ${distanceHtml}
-      ${marketHtml}
     </div>
   `;
 }
