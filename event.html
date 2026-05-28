@@ -345,6 +345,148 @@
     letter-spacing: 0.06em;
   }
 
+  /* Model selector — sits above the fight list, lets the user swap which
+     variant of the heuristic model runs on every card. Re-renders verdicts
+     in place, no page reload. */
+  .model-selector {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 20px;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+  .model-selector .ms-label {
+    font: 700 10px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--text-3);
+  }
+  .model-selector select {
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font: 600 12px 'Inter', sans-serif;
+    cursor: pointer;
+  }
+  .model-selector .ms-blurb {
+    font: 500 11px 'Inter', sans-serif;
+    color: var(--text-3);
+    margin-left: auto;
+    max-width: 380px;
+    line-height: 1.4;
+  }
+  @media (max-width: 560px) {
+    .model-selector .ms-blurb { margin-left: 0; max-width: none; }
+  }
+
+  /* Method-of-victory pill row — sits inside the winner verdict band, shows
+     the picked fighter's expected KO / SUB / DEC split. The pill that
+     represents the highest probability is highlighted. */
+  .mov-pills {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-left: 6px;
+  }
+  .mov-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font: 600 10px 'Inter', sans-serif;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+  }
+  .mov-pill .mov-kind { font-weight: 800; color: var(--text-2); }
+  .mov-pill.lead {
+    background: rgba(255,56,56,0.10);
+    border-color: rgba(255,56,56,0.30);
+    color: var(--red);
+  }
+  .mov-pill.lead .mov-kind { color: var(--red); }
+
+  /* "Why this pick?" disclosure under each verdict band. Lists every edge
+     factor that fired, who it favors, and its base probability. Collapsed
+     by default — visitor opts in. */
+  .fight-why {
+    border-top: 1px solid var(--border);
+    background: var(--bg);
+    padding: 0 20px;
+  }
+  .fight-why summary {
+    cursor: pointer;
+    padding: 8px 0;
+    font: 600 11px 'Inter', sans-serif;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    list-style: none;
+    user-select: none;
+  }
+  .fight-why summary::-webkit-details-marker { display: none; }
+  .fight-why summary::before {
+    content: '▸';
+    display: inline-block;
+    margin-right: 8px;
+    color: var(--text-3);
+    transition: transform 0.15s;
+  }
+  .fight-why[open] summary::before { transform: rotate(90deg); }
+  .fight-why summary:hover { color: var(--text-2); }
+  .fight-why .why-body {
+    padding: 4px 0 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fight-why .why-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font: 500 12px 'Inter', sans-serif;
+    color: var(--text-2);
+    line-height: 1.4;
+  }
+  .fight-why .why-factor {
+    display: inline-block;
+    font: 800 10px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-3);
+    background: var(--bg-3);
+    padding: 3px 8px;
+    border-radius: 4px;
+    min-width: 72px;
+    text-align: center;
+  }
+  .fight-why .why-pct {
+    font: 700 12px 'Barlow Condensed', sans-serif;
+    color: var(--red);
+    min-width: 44px;
+  }
+  .fight-why .why-fighter { font-weight: 700; color: var(--text); }
+  .fight-why .why-none {
+    font-style: italic;
+    color: var(--text-3);
+    padding: 4px 0;
+  }
+  .fight-why .why-mov {
+    border-top: 1px dashed var(--border);
+    margin-top: 4px;
+    padding-top: 10px;
+    font-size: 11px;
+    color: var(--text-3);
+  }
+
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
     .event-hero h1 { font-size: 26px; }
@@ -550,6 +692,20 @@ async function load() {
 
   updateEventSEO(event, fights, fighterMap);
 
+  // Stash everything renderFight needs so the model selector can re-render
+  // verdicts in place when the visitor swaps modes.
+  _renderState = {
+    fights: fights || [],
+    fighterMap,
+    isUpcoming: event.is_upcoming,
+    streakMap,
+    cardioMap,
+    finishRateMap,
+    oddsMap,
+    eventDate: event.event_date,
+    picksByFight,
+  };
+
   document.getElementById('content').innerHTML = `
     <div class="event-hero">
       <h1>${cfl.escapeHtml(event.name)}</h1>
@@ -558,11 +714,129 @@ async function load() {
     </div>
     ${renderModelAccuracyStrip(modelAccuracy)}
     <div class="page">
+      ${renderModelSelector()}
       <div id="fightsList">
-        ${(fights || []).map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, picksByFight)).join('')}
+        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, picksByFight, _currentModelMode)).join('')}
       </div>
     </div>
   `;
+
+  const sel = document.getElementById('modelModeSelect');
+  if (sel) sel.addEventListener('change', (e) => {
+    _currentModelMode = e.target.value;
+    rerenderFights();
+  });
+}
+
+// =============================================================================
+// Model selector + re-render
+// =============================================================================
+// The selector swaps which subset of edge factors the heuristic model runs on
+// every fight. Default is 'full' (all three factors — the same model that ships
+// in edges.js). The single-factor variants exist for "what if the model only
+// looked at cardio?" comparisons — useful for spotting fights where the full
+// model and a focused variant disagree, which usually means an interesting
+// stylistic matchup. None of these touch the trained model predictions shown
+// in the model-acc-strip above; those come from the model_predictions table
+// and are unaffected by this selector.
+
+let _renderState = null;
+let _currentModelMode = 'full';
+
+const MODEL_MODES = [
+  { key: 'full',   label: 'Full edges (record + cardio + grappling)',
+    blurb: 'Bayesian combination of all three edge factors. Default.' },
+  { key: 'record', label: 'Record only',
+    blurb: 'Picks based purely on win/loss record gap. Ignores style.' },
+  { key: 'cardio', label: 'Cardio only',
+    blurb: 'Picks based purely on the gas-tank tier gap. Best on later-round finishes.' },
+  { key: 'tddef',  label: 'Anti-grappler (TD defense only)',
+    blurb: 'Picks the fighter with the better takedown defense, when relevant.' },
+];
+
+function renderModelSelector() {
+  const opts = MODEL_MODES.map(m =>
+    `<option value="${m.key}" ${m.key === _currentModelMode ? 'selected' : ''}>${cfl.escapeHtml(m.label)}</option>`
+  ).join('');
+  const current = MODEL_MODES.find(m => m.key === _currentModelMode) || MODEL_MODES[0];
+  return `
+    <div class="model-selector">
+      <span class="ms-label">Model</span>
+      <select id="modelModeSelect">${opts}</select>
+      <span class="ms-blurb" id="modelModeBlurb">${cfl.escapeHtml(current.blurb)}</span>
+    </div>
+  `;
+}
+
+function rerenderFights() {
+  if (!_renderState) return;
+  const s = _renderState;
+  const list = document.getElementById('fightsList');
+  if (list) {
+    list.innerHTML = s.fights.map(f =>
+      renderFight(f, s.fighterMap, s.isUpcoming, s.streakMap, s.cardioMap, s.finishRateMap, s.oddsMap, s.eventDate, s.picksByFight, _currentModelMode)
+    ).join('');
+  }
+  const blurb = document.getElementById('modelModeBlurb');
+  if (blurb) {
+    const m = MODEL_MODES.find(m => m.key === _currentModelMode) || MODEL_MODES[0];
+    blurb.textContent = m.blurb;
+  }
+}
+
+// =============================================================================
+// Method-of-victory inference
+// =============================================================================
+// edges.js produces a single winner probability (aProb). It does NOT predict
+// finish method directly. We split the winner's probability across KO / SUB /
+// DEC using the picked fighter's career finish-rate distribution (from
+// v_fighter_finish_rate) as a base, then nudge by matchup-specific signals:
+//   - Opponent has fading/collapsing cardio  → boost KO  (gas tank fails late)
+//   - Opponent has weak td_def AND we have   → boost SUB (positional control
+//     real takedown ability                                opens up subs)
+// Returns { ko, sub, dec } that sum to 1. NOT multiplied by aProb — caller
+// can do that if it wants the full {pick wins by X} probability.
+function computeMOV(picked, opponent, finishRateMap, cardioMap, fightWeightClass) {
+  const fr = (finishRateMap || {})[picked.id] || {};
+  // Defaults reflect rough UFC base rates: ~30% KO, ~15% SUB, ~55% DEC.
+  let ko  = fr.ko_tko_rate  != null ? +fr.ko_tko_rate  : 0.30;
+  let sub = fr.sub_rate     != null ? +fr.sub_rate     : 0.15;
+  let dec = fr.decision_rate != null ? +fr.decision_rate : 0.55;
+
+  // Opponent's cardio: fades/collapses → boost KO probability.
+  if (window.cflEdges && cardioMap) {
+    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, cardioMap);
+    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
+      ko += 0.10;
+    }
+  }
+  // Opponent has weak takedown defense AND picked has real grappling output
+  // (td_avg ≥ 2 attempts per 15 min) → boost SUB. The td_avg gate prevents
+  // boosting SUB for a pure striker who happens to fight a sub-vulnerable
+  // grappler.
+  if (opponent.td_def != null && opponent.td_def < 60
+      && picked.td_avg != null && picked.td_avg >= 2.0) {
+    sub += 0.10;
+  }
+
+  const total = ko + sub + dec;
+  if (total <= 0) return { ko: 0.30, sub: 0.15, dec: 0.55 };
+  return { ko: ko / total, sub: sub / total, dec: dec / total };
+}
+
+function renderMovPills(mov, pickedFighter) {
+  const items = [
+    { key: 'ko',  label: 'KO',  pct: mov.ko  * 100 },
+    { key: 'sub', label: 'SUB', pct: mov.sub * 100 },
+    { key: 'dec', label: 'DEC', pct: mov.dec * 100 },
+  ];
+  const leader = items.reduce((max, it) => it.pct > max.pct ? it : max, items[0]);
+  return `<span class="mov-pills">` + items.map(it =>
+    `<span class="mov-pill ${it.key === leader.key ? 'lead' : ''}">
+       <span class="mov-kind">${it.label}</span>
+       <span>${it.pct.toFixed(0)}%</span>
+     </span>`
+  ).join('') + `</span>`;
 }
 
 // Past-event-only banner showing each trained model's pick accuracy on this
@@ -590,7 +864,7 @@ function renderModelAccuracyStrip(modelAccuracy) {
     </div>`;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, picksByFight) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, picksByFight, modelMode) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -616,7 +890,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
     : '';
 
   const odds = (oddsMap || {})[fight.id] || null;
-  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate);
+  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate, modelMode);
   const modelPicks = renderModelPicks(fight, fmap, (picksByFight || {})[fight.id]);
 
   return `
@@ -677,26 +951,54 @@ function renderModelPicks(fight, fmap, fightPicks) {
 // career stats, not stats as of the fight date. For very recent events that's
 // fine (career averages don't shift in 2 weeks). For older events this is
 // hindsight-biased, same issue as research/validate.js.
-function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, marketOdds, eventDate) {
+function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, marketOdds, eventDate, modelMode) {
   let html = '';
 
-  // Winner verdict (edges.js)
+  // Translate the model-selector value into a `factors` whitelist for
+  // edges.js. 'full' = all three (no filter). Single-factor modes restrict to
+  // one edge type.
+  const factorsByMode = {
+    full:   null,
+    record: ['record'],
+    cardio: ['cardio'],
+    tddef:  ['td_def'],
+  };
+  const factors = factorsByMode[modelMode || 'full'];
+
+  // Winner verdict (edges.js). Hoist `edges`, `aProb`, and the picked fighter
+  // to function scope so the methodology disclosure at the bottom of the card
+  // can render the same edges without recomputing.
+  let edges = [];
+  let aProb = 0.5;
+  let picked = null;
+  let opponent = null;
   if (window.cflEdges) {
-    const { edges, aProb } = window.cflEdges.computeEdges(a, b, {
+    const r = window.cflEdges.computeEdges(a, b, {
       streakMap,
       cardioMap,
       fightWeightClass: fight.weight_class,
       eventDate,
+      factors,
     });
+    edges = r.edges;
+    aProb = r.aProb;
 
     if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
       html += '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
     } else {
       const pickIsA = aProb > 0.5;
-      const picked  = pickIsA ? a : b;
+      picked   = pickIsA ? a : b;
+      opponent = pickIsA ? b : a;
       const confidence = ((pickIsA ? aProb : 1 - aProb) * 100).toFixed(1);
       const labelText = isUpcoming ? 'Winner pick' : 'Winner picked';
-      const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span></span>`;
+
+      // Method-of-victory split for the picked fighter. Shown as three pills
+      // right after the confidence — visitor sees at a glance whether the
+      // model thinks this is a KO matchup, a sub matchup, or a likely
+      // decision.
+      const mov = computeMOV(picked, opponent, finishRateMap, cardioMap, fight.weight_class);
+      const movHtml = renderMovPills(mov, picked);
+      const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span>${movHtml}</span>`;
 
       let checkHtml = '';
       if (!isUpcoming && fight.winner_id != null) {
@@ -736,11 +1038,9 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
   // Market consensus + edge vs model. Skipped silently if we have no odds
   // row for this fight (most past events won't, since we just started
   // fetching). Edge is model probability minus market-implied probability,
-  // both expressed as the side the MODEL picks.
+  // both expressed as the side the MODEL picks. Uses the already-computed
+  // aProb from the winner band so the market edge respects the model toggle.
   if (marketOdds && window.cflEdges) {
-    const { aProb } = window.cflEdges.computeEdges(a, b, {
-      streakMap, cardioMap, fightWeightClass: fight.weight_class, eventDate,
-    });
     const modelPickA = aProb > 0.5;
     const modelProb  = modelPickA ? aProb : (1 - aProb);
     const marketProb = modelPickA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
@@ -765,7 +1065,61 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
     }
   }
 
+  // "Why this pick?" disclosure. Lists every edge factor that fired plus a
+  // plain-text gloss on the method-of-victory split. Collapsed by default
+  // so visitors who just want the call aren't buried in detail.
+  if (window.cflEdges) {
+    const whyRows = edges.length
+      ? edges.map(renderWhyRow).join('')
+      : '<div class="why-none">No clear edges in this matchup — coin flip on paper.</div>';
+    const movExplanation = picked
+      ? renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fight.weight_class)
+      : '';
+    html += `
+      <details class="fight-why">
+        <summary>Why this pick?</summary>
+        <div class="why-body">
+          ${whyRows}
+          ${movExplanation}
+        </div>
+      </details>`;
+  }
+
   return html;
+}
+
+function renderWhyRow(edge) {
+  const factorLabel = edge.factor === 'td_def' ? 'TD Def'
+                    : edge.factor.charAt(0).toUpperCase() + edge.factor.slice(1);
+  return `
+    <div class="why-row">
+      <span class="why-factor">${factorLabel}</span>
+      <span class="why-pct">${edge.pct.toFixed(0)}%</span>
+      <span><span class="why-fighter">${cfl.escapeHtml(edge.fighterName)}</span> ${cfl.escapeHtml(edge.desc)}</span>
+    </div>`;
+}
+
+function renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fightWeightClass) {
+  const reasons = [];
+  const fr = (finishRateMap || {})[picked.id];
+  if (fr && fr.ko_tko_rate != null && +fr.ko_tko_rate >= 0.40) {
+    reasons.push(`${picked.name} finishes ${(fr.ko_tko_rate * 100).toFixed(0)}% of wins by KO/TKO`);
+  }
+  if (fr && fr.sub_rate != null && +fr.sub_rate >= 0.30) {
+    reasons.push(`${picked.name} finishes ${(fr.sub_rate * 100).toFixed(0)}% of wins by submission`);
+  }
+  if (window.cflEdges && cardioMap) {
+    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, cardioMap);
+    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
+      reasons.push(`${opponent.name}'s cardio (${oppCardio.tier_word}) opens up late KO`);
+    }
+  }
+  if (opponent.td_def != null && opponent.td_def < 60
+      && picked.td_avg != null && picked.td_avg >= 2.0) {
+    reasons.push(`${opponent.name} only ${opponent.td_def}% TD defense vs ${picked.name}'s grappling`);
+  }
+  if (!reasons.length) return '';
+  return `<div class="why-mov"><strong>Method signals:</strong> ${reasons.map(r => cfl.escapeHtml(r)).join(' · ')}</div>`;
 }
 
 function renderFighterSide(f, side, won, opponentWon) {

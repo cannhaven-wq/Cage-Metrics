@@ -236,11 +236,19 @@
     ctx = ctx || {};
     const cardioMap = ctx.cardioMap || null;
     const wc = ctx.fightWeightClass || null;
+    // Optional whitelist of factor names. If absent, all three factors run
+    // (current default). Used by event.html's model selector to compute
+    // record-only / cardio-only / td-def-only variants for "What if the model
+    // only looked at X?" comparisons.
+    const allow = ctx.factors && ctx.factors.length
+      ? new Set(ctx.factors)
+      : null;
+    const pass = (e) => (e && (!allow || allow.has(e.factor))) ? e : null;
 
     const edges = [
-      recordEdge(a, b),
-      cardioEdge(a, b, cardioMap, wc),
-      tdDefEdge(a, b),
+      pass(recordEdge(a, b)),
+      pass(cardioEdge(a, b, cardioMap, wc)),
+      pass(tdDefEdge(a, b)),
     ].filter(Boolean);
 
     // Bayesian combination of edges.
