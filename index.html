@@ -708,6 +708,58 @@
     .fights-header { flex-wrap: wrap; gap: 8px; }
   }
 
+  /* Trained model picks row — one pill per model_version under each fight's
+     edge panel. Pills show the model id, the picked fighter, and the model's
+     confidence. For past fights with a graded outcome the pill turns green
+     for correct / red for wrong. Mirrors event.html's model-picks-row. */
+  .hp-trained-picks {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-3);
+  }
+  .hp-trained-picks .tp-label {
+    font: 700 10px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--text-3);
+    margin-right: 4px;
+  }
+  .hp-trained-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 9px;
+    border-radius: 999px;
+    font: 600 11px 'Inter', sans-serif;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    color: var(--text-2);
+  }
+  .hp-trained-pill .tp-mv {
+    font: 800 10px 'Inter', sans-serif;
+    color: var(--text-3);
+    letter-spacing: 0.04em;
+  }
+  .hp-trained-pill .tp-pct { color: var(--text-3); font-weight: 500; }
+  .hp-trained-pill.correct {
+    background: rgba(34,197,94,0.10);
+    border-color: rgba(34,197,94,0.30);
+    color: var(--green);
+  }
+  .hp-trained-pill.correct .tp-mv,
+  .hp-trained-pill.correct .tp-pct { color: var(--green); opacity: 0.85; }
+  .hp-trained-pill.wrong {
+    background: rgba(239,68,68,0.10);
+    border-color: rgba(239,68,68,0.30);
+    color: var(--red);
+  }
+  .hp-trained-pill.wrong .tp-mv,
+  .hp-trained-pill.wrong .tp-pct { color: var(--red); opacity: 0.85; }
+
   /* Beta premium banner — shown to logged-out users above the hero.
      Dismissible (closed state persists in localStorage). Hides automatically
      for signed-in users since they already have premium access. */
@@ -1721,19 +1773,48 @@ async function loadFights(event) {
   _styleMap  = null;
   _finishRateMap = null;
   _oddsMap = null;
-  await Promise.all([
+  const fightIds = fights.map(f => f.id);
+  const [, , , , predsR] = await Promise.all([
     loadCardioMap(fighterIds),
     loadStyleMap(fighterIds),
     loadFinishRateMap(fighterIds),
     loadOddsMap(event.id),
+    // Trained-model predictions for the four production models we want on the
+    // homepage. Filtered server-side so we don't pull picks from experimental
+    // or deprecated model versions that exist in the table.
+    fightIds.length
+      ? sb.from('model_predictions')
+          .select('model_version, fight_id, fighter_id, model_p, won, outcome_known')
+          .in('fight_id', fightIds)
+          .in('model_version', HP_VISIBLE_MODELS)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  // Build picksByFight[fight_id][model_version] = { fighter_id, model_p, won,
+  // outcome_known }. Only counts picks where model_p > 0.5 (the model's "side"
+  // call); ties at 0.5 are excluded.
+  const picksByFight = {};
+  if (!predsR.error) {
+    (predsR.data || []).forEach(p => {
+      if (p.model_p == null || +p.model_p <= 0.5) return;
+      const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
+      slot[p.model_version] = {
+        fighter_id: p.fighter_id,
+        model_p: +p.model_p,
+        won: p.won,
+        outcome_known: p.outcome_known,
+      };
+    });
+  } else {
+    console.warn('Trained model predictions not available:', predsR.error.message);
+  }
 
   // Stash the inputs renderFight needs so the model selector can re-render
   // the whole card without re-querying Supabase when the visitor swaps modes.
-  _hpRenderState = { fights, fighterMap, streakMap, eventDate: event.event_date };
+  _hpRenderState = { fights, fighterMap, streakMap, eventDate: event.event_date, picksByFight };
 
   list.innerHTML = fights.map(fight =>
-    renderFight(fight, fighterMap, streakMap, true, event.event_date, _hpModelMode)
+    renderFight(fight, fighterMap, streakMap, true, event.event_date, _hpModelMode, picksByFight)
   ).join('');
 
   // Re-render the card list when the model selector changes. Idempotent —
@@ -1755,11 +1836,11 @@ function hpRerenderFights() {
   if (!list) return;
   const s = _hpRenderState;
   list.innerHTML = s.fights.map(fight =>
-    renderFight(fight, s.fighterMap, s.streakMap, true, s.eventDate, _hpModelMode)
+    renderFight(fight, s.fighterMap, s.streakMap, true, s.eventDate, _hpModelMode, s.picksByFight)
   ).join('');
 }
 
-function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode) {
+function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode, picksByFight) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
 
@@ -1781,6 +1862,7 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode) {
   const weight = fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : '';
 
   const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate, modelMode) : '';
+  const trainedPicks = renderTrainedPicks(fight, fmap, (picksByFight || {})[fight.id]);
 
   return `
     <div class="${cardClass}">
@@ -1798,8 +1880,39 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode) {
       </div>
       ${renderQuickStats(a, b, fight.weight_class)}
       ${edgePanel}
+      ${trainedPicks}
     </div>
   `;
+}
+
+// Trained-model picks pill row. One pill per visible model_version, showing
+// the model's picked fighter and confidence. For past fights with a graded
+// outcome the pill turns green (correct) or red (wrong). Skips silently when
+// no picks are available for this fight.
+function renderTrainedPicks(fight, fmap, fightPicks) {
+  if (!fightPicks) return '';
+  // Render in the canonical order (v1 → v4) regardless of how Supabase returned
+  // them. Versions that have no pick for this fight are dropped silently.
+  const pills = HP_VISIBLE_MODELS.map(mv => {
+    const pick = fightPicks[mv];
+    if (!pick) return '';
+    const picked = fmap[pick.fighter_id];
+    if (!picked) return '';
+    const pct = (pick.model_p * 100).toFixed(0);
+    let cls = '';
+    if (pick.outcome_known) {
+      if (pick.won === true)       cls = 'correct';
+      else if (pick.won === false) cls = 'wrong';
+    }
+    return `
+      <span class="hp-trained-pill ${cls}">
+        <span class="tp-mv">${cfl.escapeHtml(mv.toUpperCase())}</span>
+        <span>${cfl.escapeHtml(picked.name)}</span>
+        <span class="tp-pct">${pct}%</span>
+      </span>`;
+  }).filter(Boolean).join('');
+  if (!pills) return '';
+  return `<div class="hp-trained-picks"><span class="tp-label">Trained models</span>${pills}</div>`;
 }
 
 function renderFighterSide(f, side, weightClass) {
@@ -2047,6 +2160,12 @@ let _oddsMap = null;
 // renderFight needs so the selector can re-render without re-querying.
 let _hpModelMode = 'full';
 let _hpRenderState = null;
+
+// Which trained model_versions to surface on the homepage Next Event card.
+// Predictions for other versions in the model_predictions table are filtered
+// out server-side. Keep this list in sync with the lab.html tab if/when new
+// production models ship.
+const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4'];
 
 // Method-of-victory inference for the homepage Next Event card. Splits the
 // picked fighter's winner probability across KO / SUB / DEC using career
