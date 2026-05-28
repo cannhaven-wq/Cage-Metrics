@@ -15,14 +15,24 @@
 --
 -- What this view does:
 --   For each fight, take the LATEST snapshot per (side, book) from the live
---   cron, average the implied probabilities across books per side, vig-remove
---   by normalizing the two sides to sum to 1.0, and back-derive a "consensus"
---   American odds for display.
+--   cron, then expose TWO sets of numbers:
+--
+--   1. american_odds_a / american_odds_b
+--      Back-derived from the RAW consensus implied probability (vig-preserved).
+--      These match what books actually show — asymmetric, with the vig baked
+--      in. This is what bettors expect to see on display.
+--
+--   2. implied_prob_a / implied_prob_b
+--      VIG-REMOVED probabilities, normalized so a + b = 1.0. These are the
+--      "fair" probabilities for use by model-edge / value-pick math
+--      (model_p − implied_prob = edge in pp). Do NOT display these as a
+--      book price — they will always come out symmetric.
 --
 --   Filters out fake epoch (1970) opener rows produced by historical backfills,
 --   so only real polled data feeds the consensus.
 --
--- Read by: index.html (loadOddsMap), event.html (renderEvent).
+-- Read by: index.html (loadOddsMap, fighter odds chip),
+--          event.html (renderEvent, market band).
 -- Writers: NONE. The underlying base table is written by the Railway cron in
 --          cage-metrics-odds-scrapper; this view is computed on read.
 -- Safe to re-run.
@@ -45,7 +55,7 @@ side_avg AS (
   SELECT
     fight_id,
     side,
-    AVG(implied_prob)::numeric        AS avg_implied,
+    AVG(implied_prob)::numeric        AS avg_implied,   -- raw, vig-preserved
     COUNT(DISTINCT book_id)::integer  AS book_count,
     MAX(captured_at)                  AS latest_capture
   FROM latest_per_book
@@ -54,50 +64,46 @@ side_avg AS (
 pivoted AS (
   SELECT
     a.fight_id,
-    a.avg_implied                       AS raw_implied_a,
-    b.avg_implied                       AS raw_implied_b,
+    a.avg_implied                       AS raw_implied_a,   -- with vig
+    b.avg_implied                       AS raw_implied_b,   -- with vig
     GREATEST(a.book_count, b.book_count) AS bookmaker_count,
     GREATEST(a.latest_capture, b.latest_capture) AS fetched_at
   FROM side_avg a
   JOIN side_avg b USING (fight_id)
   WHERE a.side = 'A' AND b.side = 'B'
-),
-devigged AS (
-  SELECT
-    fight_id,
-    -- vig-remove: normalize so the two sides sum to 1.0
-    (raw_implied_a / NULLIF(raw_implied_a + raw_implied_b, 0))::real AS implied_prob_a,
-    (raw_implied_b / NULLIF(raw_implied_a + raw_implied_b, 0))::real AS implied_prob_b,
-    bookmaker_count,
-    fetched_at
-  FROM pivoted
 )
 SELECT
-  d.fight_id,
+  p.fight_id,
   f.event_id,
   f.fighter_a_id,
   f.fighter_b_id,
   f.fighter_a_name,
   f.fighter_b_name,
-  -- back-derive American odds from the vig-removed implied prob
+  -- DISPLAY PRICES: back-derived from RAW (vig-preserved) consensus implied
+  -- probability. Asymmetric, matches actual book lines.
   CASE
-    WHEN d.implied_prob_a IS NULL THEN NULL
-    WHEN d.implied_prob_a >= 0.5
-      THEN ROUND(-100.0 * d.implied_prob_a / NULLIF(1 - d.implied_prob_a, 0))::integer
-    ELSE  ROUND( 100.0 * (1 - d.implied_prob_a) / NULLIF(d.implied_prob_a, 0))::integer
+    WHEN p.raw_implied_a IS NULL THEN NULL
+    WHEN p.raw_implied_a >= 0.5
+      THEN ROUND(-100.0 * p.raw_implied_a / NULLIF(1 - p.raw_implied_a, 0))::integer
+    ELSE  ROUND( 100.0 * (1 - p.raw_implied_a) / NULLIF(p.raw_implied_a, 0))::integer
   END AS american_odds_a,
   CASE
-    WHEN d.implied_prob_b IS NULL THEN NULL
-    WHEN d.implied_prob_b >= 0.5
-      THEN ROUND(-100.0 * d.implied_prob_b / NULLIF(1 - d.implied_prob_b, 0))::integer
-    ELSE  ROUND( 100.0 * (1 - d.implied_prob_b) / NULLIF(d.implied_prob_b, 0))::integer
+    WHEN p.raw_implied_b IS NULL THEN NULL
+    WHEN p.raw_implied_b >= 0.5
+      THEN ROUND(-100.0 * p.raw_implied_b / NULLIF(1 - p.raw_implied_b, 0))::integer
+    ELSE  ROUND( 100.0 * (1 - p.raw_implied_b) / NULLIF(p.raw_implied_b, 0))::integer
   END AS american_odds_b,
-  d.implied_prob_a,
-  d.implied_prob_b,
-  d.bookmaker_count,
-  d.fetched_at
-FROM devigged d
-JOIN fights f ON f.id = d.fight_id;
+  -- VIG-REMOVED FAIR PROBS: for model edge / value math. Sum to 1.0.
+  (p.raw_implied_a / NULLIF(p.raw_implied_a + p.raw_implied_b, 0))::real AS implied_prob_a,
+  (p.raw_implied_b / NULLIF(p.raw_implied_a + p.raw_implied_b, 0))::real AS implied_prob_b,
+  -- RAW IMPLIED PROBS (with vig). Exposed for completeness; rarely needed
+  -- directly since the display odds above already encode this.
+  p.raw_implied_a::real AS implied_prob_a_raw,
+  p.raw_implied_b::real AS implied_prob_b_raw,
+  p.bookmaker_count,
+  p.fetched_at
+FROM pivoted p
+JOIN fights f ON f.id = p.fight_id;
 
 -- Public-data view: anon + authenticated must both have SELECT, otherwise
 -- signed-in users see empty results with HTTP 200 and no error (per CLAUDE.md).
