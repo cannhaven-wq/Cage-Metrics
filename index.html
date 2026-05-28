@@ -1993,63 +1993,10 @@ function computeEdges(a, b, streakMap, fightWeightClass, eventDate) {
 
 function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFight) {
   const fightWeightClass = fight.weight_class;
-  // Heuristic edges always computed — they drive the "Cannon Fight Lab edges"
-  // breakdown rows. The verdict ("Data favors X") below the edges is driven
-  // by the selected trained model (consensus / v1..v4), NOT the heuristic.
-  const { edges } = cflEdges.computeEdges(a, b, {
-    streakMap,
-    cardioMap: _cardioMap,
-    fightWeightClass,
-    eventDate,
-  });
-
-  // Sort all edges by strength (most predictive first). The verdict math
-  // already used ALL edges (computed in computeEdges above), but for display
-  // we cap based on user tier.
-  //
-  // FREE tier: top 2 edges visible + premium prompt if there are more
-  // PREMIUM tier: top 4 edges visible (cap stays for UI clarity, not gating)
-  //
-  // Note: edges.js logic and verdict math are intentionally NOT gated. Anyone
-  // viewing the page source can read the math. We're gating the convenience
-  // of seeing it pre-computed, not the algorithm. If/when we add real
-  // premium-only data (closing odds, custom backtests), THAT will be RLS-gated
-  // server-side. Display gating here is appropriate for the current scope.
-  edges.sort((x, y) => y.pct - x.pct);
-  const isPremium = (window.cflAuth && window.cflAuth.isPremium && window.cflAuth.isPremium());
-  const visibleCap = isPremium ? 4 : 2;
-  const displayEdges = edges.slice(0, visibleCap);
-  const hiddenCount = Math.max(0, edges.length - visibleCap);
-
-  const rowsHtml = displayEdges.length
-    ? displayEdges.map(e => `
-        <div class="edge-row">
-          <div class="marker favors-${e.favors}">${cfl.escapeHtml(cfl.initials(e.favors === 'a' ? a.name : b.name))}</div>
-          <div class="desc"><strong>${cfl.escapeHtml(e.fighterName)}</strong> ${cfl.escapeHtml(e.desc)}</div>
-          <div class="pct">${e.pct.toFixed(1)}%</div>
-        </div>
-      `).join('')
-    : `<div class="edge-row">
-         <div class="marker neutral">Even</div>
-         <div class="desc">No clear statistical edge for either fighter — heuristic sees this as a coin flip on paper.</div>
-       </div>`;
-
-  // For free users: if there are more edges hidden, show an inline prompt to
-  // upgrade. Doesn't appear for premium users or when there's nothing hidden.
-  const lockedPromptHtml = (!isPremium && hiddenCount > 0) ? `
-    <div class="premium-prompt inline">
-      <div class="premium-prompt-header">
-        <div class="lock-icon">🔒</div>
-        <div class="premium-prompt-title">${hiddenCount} more edge factor${hiddenCount === 1 ? '' : 's'} hidden</div>
-      </div>
-      <div class="premium-prompt-body">Premium unlocks every edge driving this verdict — see the full math.</div>
-      <a href="/pricing.html" class="premium-prompt-cta">See Premium →</a>
-    </div>
-  ` : '';
 
   // Verdict comes from the SELECTED model — either consensus across trained
-  // models, or a single named model (V1..V4). The heuristic edges above are
-  // shown for transparency but don't drive the pick.
+  // models, or a single named model (V1..V4). The Next Event card is about
+  // surfacing model predictions, so no heuristic edge-factor breakdown here.
   const fightPicks = (picksByFight || {})[fight.id];
   let pickResult = null;
   let verdictLabel = 'Consensus picks';
@@ -2074,8 +2021,8 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
     verdictName = pickResult.picked.name;
     verdictPct = pickResult.pct;
     verdictClass = '';
-    // MOV split for the picked fighter — same logic as before, just driven by
-    // whichever model picked the winner.
+    // MOV split for the picked fighter — career finish rates nudged by
+    // matchup signals. Leading method gets the red pill.
     const mov = hpComputeMov(pickResult.picked, pickResult.opponent, fightWeightClass);
     movHtml = hpRenderMovPills(mov);
   } else {
@@ -2084,7 +2031,7 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
     verdictClass = 'even';
   }
 
-  // Distance call — secondary row below "Data favors". Short-circuits if
+  // Distance call — secondary row below the verdict. Short-circuits if
   // distanceEdges.js hasn't loaded yet (e.g. mid-deploy cache).
   let distanceHtml = '';
   if (window.cflDistanceEdges) {
@@ -2104,10 +2051,9 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
     `;
   }
 
-  // Market consensus row — shows the book's implied probability on the
-  // MODEL'S pick, plus the edge in pp. Value badge if model is >=3pp
-  // above the market on its own pick. Silently omitted if we have no
-  // odds row for this fight.
+  // Market consensus row — book's implied probability on the model's pick,
+  // plus the value vs the model in pp. Silently omitted if we have no odds
+  // row for this fight or no model pick.
   let marketHtml = '';
   const oddsRow = _oddsMap && fight && fight.id ? _oddsMap[fight.id] : null;
   if (oddsRow && picked) {
@@ -2126,7 +2072,7 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
         <div class="market-summary">
           <div class="market-label">Market</div>
           <div class="market-pick">${cfl.escapeHtml(verdictName)} <span class="market-odds">${oddsStr}</span> <span class="market-pct">${Math.round(marketProb * 100)}%</span></div>
-          <div class="market-edge ${edgeClass}">Edge ${edgeStr}</div>
+          <div class="market-edge ${edgeClass}">Value ${edgeStr}</div>
           ${valueBadge}
         </div>
       `;
@@ -2135,9 +2081,6 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
 
   return `
     <div class="edge-panel">
-      <div class="edge-eyebrow"><span class="dot"></span>Cannon Fight Lab edges</div>
-      <div class="edge-list">${rowsHtml}</div>
-      ${lockedPromptHtml}
       <div class="edge-summary">
         <div class="verdict-label">${cfl.escapeHtml(verdictLabel)}</div>
         <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
