@@ -2048,17 +2048,13 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
       : `${modelMode.toUpperCase()} picks`;
   }
 
-  let verdictName, verdictPct, verdictClass, movHtml = '';
+  let verdictName, verdictPct, verdictClass;
   let picked = null;
   if (pickResult) {
     picked = pickResult.picked;
     verdictName = pickResult.picked.name;
     verdictPct = pickResult.pct;
     verdictClass = '';
-    // MOV split for the picked fighter — career finish rates nudged by
-    // matchup signals. Leading method gets the red pill.
-    const mov = hpComputeMov(pickResult.picked, pickResult.opponent, fightWeightClass);
-    movHtml = hpRenderMovPills(mov);
   } else {
     verdictName = 'No prediction yet';
     verdictPct = 0;
@@ -2091,7 +2087,6 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFi
         <div class="verdict-label">${cfl.escapeHtml(verdictLabel)}</div>
         <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
         <div class="verdict-pct ${verdictClass}">${pickResult ? Math.round(verdictPct) + '<span class="small">%</span>' : ''}</div>
-        ${movHtml}
       </div>
       ${distanceHtml}
     </div>
