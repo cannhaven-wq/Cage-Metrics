@@ -1,0 +1,75 @@
+name: Social auto-poster
+
+# Posts the next UFC card's model picks to X and Reddit each week.
+# Runs Wednesday 17:00 UTC (≈ 10am PT / 1pm ET — peak engagement window
+# and two days before most cards). Idempotent: tracks the last-posted
+# event id in .funnel-state/last-posted-event.txt and skips if it matches.
+#
+# Either platform is independently optional — if its secrets aren't set,
+# that platform is skipped. If neither is set, the job runs in pure
+# dry-run mode and exits 0.
+
+on:
+  schedule:
+    - cron: '0 17 * * 3'   # Wednesdays 17:00 UTC
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Re-post even if marker matches'
+        required: false
+        default: 'false'
+      dry_run:
+        description: 'Print only, do not post'
+        required: false
+        default: 'false'
+
+permissions:
+  contents: write   # so we can commit the marker file back
+
+concurrency:
+  group: social-post
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Post to socials
+        working-directory: build
+        env:
+          X_API_KEY: ${{ secrets.X_API_KEY }}
+          X_API_SECRET: ${{ secrets.X_API_SECRET }}
+          X_ACCESS_TOKEN: ${{ secrets.X_ACCESS_TOKEN }}
+          X_ACCESS_SECRET: ${{ secrets.X_ACCESS_SECRET }}
+          REDDIT_CLIENT_ID: ${{ secrets.REDDIT_CLIENT_ID }}
+          REDDIT_CLIENT_SECRET: ${{ secrets.REDDIT_CLIENT_SECRET }}
+          REDDIT_USERNAME: ${{ secrets.REDDIT_USERNAME }}
+          REDDIT_PASSWORD: ${{ secrets.REDDIT_PASSWORD }}
+          REDDIT_SUBREDDIT: ${{ secrets.REDDIT_SUBREDDIT }}
+          FORCE_POST: ${{ github.event.inputs.force }}
+          SOCIAL_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: npm run social-post
+
+      - name: Commit marker
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .funnel-state/ || true
+          if git diff --staged --quiet; then
+            echo "No marker change to commit."
+          else
+            git commit -m "chore: update social-post marker [skip ci]"
+            git push
+          fi

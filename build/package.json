@@ -5,7 +5,9 @@
   "description": "Prerender static stubs for fighter and event pages so social unfurls and crawlers see real per-page SEO content.",
   "scripts": {
     "prerender": "node prerender.js",
-    "draft-post": "node draft-post.js"
+    "draft-post": "node draft-post.js",
+    "send-digest": "node send-digest.js",
+    "social-post": "node social-post.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"
