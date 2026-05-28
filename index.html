@@ -643,6 +643,71 @@
     .edge-summary .verdict-pct { font-size: 22px; }
   }
 
+  /* Homepage model selector — dropdown in the fights-header that lets visitors
+     swap which subset of edge factors the heuristic runs on the next-event
+     card. Mirrors the same control on event.html. */
+  .hp-model-selector {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .hp-model-selector label {
+    font: 700 10px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--text-3);
+  }
+  .hp-model-selector select {
+    background: var(--bg-3);
+    color: var(--text);
+    border: 1px solid var(--border-2);
+    border-radius: 6px;
+    padding: 5px 9px;
+    font: 600 12px 'Inter', sans-serif;
+    cursor: pointer;
+  }
+
+  /* Method-of-victory pills — sits inside .edge-summary as a third row,
+     under the verdict %. Three pills (KO / SUB / DEC) with the leading
+     method highlighted red. */
+  .hp-mov-pills {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+    align-items: center;
+  }
+  .hp-mov-pills .mov-label {
+    font: 700 9px 'Inter', sans-serif;
+    text-transform: uppercase;
+    letter-spacing: 0.10em;
+    color: var(--text-3);
+    margin-right: 4px;
+  }
+  .hp-mov-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font: 600 11px 'Inter', sans-serif;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    color: var(--text-3);
+  }
+  .hp-mov-pill .mov-kind { font-weight: 800; color: var(--text-2); }
+  .hp-mov-pill.lead {
+    background: rgba(255,56,56,0.10);
+    border-color: rgba(255,56,56,0.30);
+    color: var(--red);
+  }
+  .hp-mov-pill.lead .mov-kind { color: var(--red); }
+
+  @media (max-width: 768px) {
+    .fights-header { flex-wrap: wrap; gap: 8px; }
+  }
+
   /* Beta premium banner — shown to logged-out users above the hero.
      Dismissible (closed state persists in localStorage). Hides automatically
      for signed-in users since they already have premium access. */
@@ -1239,6 +1304,15 @@
     <div class="fights-header">
       <h2>Card</h2>
       <div class="sub" id="cardCount"></div>
+      <div class="hp-model-selector">
+        <label for="hpModelSelect">Model</label>
+        <select id="hpModelSelect">
+          <option value="full">Full edges (record + cardio + grappling)</option>
+          <option value="record">Record only</option>
+          <option value="cardio">Cardio only</option>
+          <option value="tddef">Anti-grappler (TD defense only)</option>
+        </select>
+      </div>
     </div>
     <div id="fightsList"></div>
   </div>
@@ -1654,12 +1728,38 @@ async function loadFights(event) {
     loadOddsMap(event.id),
   ]);
 
+  // Stash the inputs renderFight needs so the model selector can re-render
+  // the whole card without re-querying Supabase when the visitor swaps modes.
+  _hpRenderState = { fights, fighterMap, streakMap, eventDate: event.event_date };
+
   list.innerHTML = fights.map(fight =>
-    renderFight(fight, fighterMap, streakMap, true, event.event_date)
+    renderFight(fight, fighterMap, streakMap, true, event.event_date, _hpModelMode)
+  ).join('');
+
+  // Re-render the card list when the model selector changes. Idempotent —
+  // the listener is removed and re-added on every loadFights so swapping
+  // events doesn't stack handlers.
+  const sel = document.getElementById('hpModelSelect');
+  if (sel) {
+    sel.value = _hpModelMode;
+    sel.onchange = (e) => {
+      _hpModelMode = e.target.value;
+      hpRerenderFights();
+    };
+  }
+}
+
+function hpRerenderFights() {
+  if (!_hpRenderState) return;
+  const list = document.getElementById('fightsList');
+  if (!list) return;
+  const s = _hpRenderState;
+  list.innerHTML = s.fights.map(fight =>
+    renderFight(fight, s.fighterMap, s.streakMap, true, s.eventDate, _hpModelMode)
   ).join('');
 }
 
-function renderFight(fight, fmap, streakMap, isTopFight, eventDate) {
+function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
 
@@ -1680,7 +1780,7 @@ function renderFight(fight, fmap, streakMap, isTopFight, eventDate) {
 
   const weight = fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : '';
 
-  const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate) : '';
+  const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate, modelMode) : '';
 
   return `
     <div class="${cardClass}">
@@ -1752,9 +1852,24 @@ function computeEdges(a, b, streakMap, fightWeightClass, eventDate) {
   });
 }
 
-function renderEdgePanel(a, b, fight, streakMap, eventDate) {
+function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode) {
   const fightWeightClass = fight.weight_class;
-  const { edges, aProb } = computeEdges(a, b, streakMap, fightWeightClass, eventDate);
+  // Translate the model-selector value into a factor whitelist for edges.js.
+  // 'full' = all three (default behavior, no filter).
+  const factorsByMode = {
+    full:   null,
+    record: ['record'],
+    cardio: ['cardio'],
+    tddef:  ['td_def'],
+  };
+  const factors = factorsByMode[modelMode || 'full'];
+  const { edges, aProb } = cflEdges.computeEdges(a, b, {
+    streakMap,
+    cardioMap: _cardioMap,
+    fightWeightClass,
+    eventDate,
+    factors,
+  });
 
   if (edges.length === 0) {
     return `
@@ -1814,17 +1929,25 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate) {
     </div>
   ` : '';
 
-  let verdictName, verdictPct, verdictClass;
+  let verdictName, verdictPct, verdictClass, movHtml = '';
   const aPct = aProb * 100;
   if (Math.abs(aProb - 0.5) < 0.025) {
     verdictName = 'Even matchup';
     verdictPct = 50;
     verdictClass = 'even';
   } else {
-    const winner = aProb > 0.5 ? a : b;
+    const pickIsA = aProb > 0.5;
+    const winner = pickIsA ? a : b;
+    const loser  = pickIsA ? b : a;
     verdictName = winner.name;
-    verdictPct = aProb > 0.5 ? aPct : (100 - aPct);
+    verdictPct = pickIsA ? aPct : (100 - aPct);
     verdictClass = '';
+    // Method-of-victory split for the picked fighter. Base from career finish
+    // rates (v_fighter_finish_rate), nudged by matchup signals — opponent's
+    // fading cardio boosts KO; weak opponent td_def + picked grappling output
+    // boosts SUB. Renormalized to 100%; leading method gets the red pill.
+    const mov = hpComputeMov(winner, loser, fightWeightClass);
+    movHtml = hpRenderMovPills(mov);
   }
 
   // Distance call — secondary row below "Data favors". Short-circuits if
@@ -1885,6 +2008,7 @@ function renderEdgePanel(a, b, fight, streakMap, eventDate) {
         <div class="verdict-label">Data favors</div>
         <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
         <div class="verdict-pct ${verdictClass}">${Math.round(verdictPct)}<span class="small">%</span></div>
+        ${movHtml}
       </div>
       ${distanceHtml}
       ${marketHtml}
@@ -1917,6 +2041,53 @@ let _cardioMap = null;
 let _styleMap  = null;
 let _finishRateMap = null;
 let _oddsMap = null;
+
+// Homepage model selector state. _hpModelMode is one of MODEL_MODES keys
+// ('full' | 'record' | 'cardio' | 'tddef'); _hpRenderState caches the inputs
+// renderFight needs so the selector can re-render without re-querying.
+let _hpModelMode = 'full';
+let _hpRenderState = null;
+
+// Method-of-victory inference for the homepage Next Event card. Splits the
+// picked fighter's winner probability across KO / SUB / DEC using career
+// finish rates as a base, then nudges by matchup signals. Returns
+// { ko, sub, dec } that sum to 1. Mirrors the same logic in event.html.
+function hpComputeMov(picked, opponent, fightWeightClass) {
+  const fr = _finishRateMap && _finishRateMap[picked.id];
+  let ko  = fr && fr.ko_tko_rate   != null ? +fr.ko_tko_rate   : 0.30;
+  let sub = fr && fr.sub_rate      != null ? +fr.sub_rate      : 0.15;
+  let dec = fr && fr.decision_rate != null ? +fr.decision_rate : 0.55;
+  // Opponent's cardio fading/collapsing → boost KO (gas tank fails late).
+  if (window.cflEdges && _cardioMap) {
+    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, _cardioMap);
+    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
+      ko += 0.10;
+    }
+  }
+  // Weak opponent td_def + picked has real grappling output → boost SUB.
+  if (opponent.td_def != null && opponent.td_def < 60
+      && picked.td_avg != null && picked.td_avg >= 2.0) {
+    sub += 0.10;
+  }
+  const total = ko + sub + dec;
+  if (total <= 0) return { ko: 0.30, sub: 0.15, dec: 0.55 };
+  return { ko: ko / total, sub: sub / total, dec: dec / total };
+}
+
+function hpRenderMovPills(mov) {
+  const items = [
+    { key: 'ko',  label: 'KO',  pct: mov.ko  * 100 },
+    { key: 'sub', label: 'SUB', pct: mov.sub * 100 },
+    { key: 'dec', label: 'DEC', pct: mov.dec * 100 },
+  ];
+  const leader = items.reduce((max, it) => it.pct > max.pct ? it : max, items[0]);
+  return `
+    <div class="hp-mov-pills">
+      <span class="mov-label">Method</span>
+      ${items.map(it => `<span class="hp-mov-pill ${it.key === leader.key ? 'lead' : ''}"><span class="mov-kind">${it.label}</span><span>${it.pct.toFixed(0)}%</span></span>`).join('')}
+    </div>
+  `;
+}
 
 async function loadOddsMap(eventId) {
   if (_oddsMap !== null) return _oddsMap;
