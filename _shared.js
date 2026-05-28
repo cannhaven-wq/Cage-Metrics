@@ -230,5 +230,111 @@
     return `<div class="fighter-chip">${inner}</div>`;
   };
 
+  // --------- Traffic-funnel widgets ---------
+  // Drop a signup CTA into any page:
+  //   <div class="cfl-funnel-cta" data-source="fighters-bottom"></div>
+  // …then call cfl.renderFunnelCtas() after the page loads. We auto-hide
+  // each banner if the visitor is already signed in, so it never nags
+  // existing users.
+  cfl.renderFunnelCtas = function () {
+    const els = document.querySelectorAll('.cfl-funnel-cta:not([data-cfl-rendered])');
+    if (!els.length) return;
+    const signedIn = window.cflAuth && window.cflAuth.isSignedIn && window.cflAuth.isSignedIn();
+    els.forEach(el => {
+      el.setAttribute('data-cfl-rendered', '1');
+      if (signedIn) { el.style.display = 'none'; return; }
+      const source = el.getAttribute('data-source') || 'inline';
+      const headline = el.getAttribute('data-headline') || 'Free during beta — every edge factor unlocked.';
+      const sub = el.getAttribute('data-sub') || 'Create a free account to track your picks, see every model verdict, and get the weekly preview email.';
+      el.innerHTML = `
+        <div class="cfl-funnel-cta-inner">
+          <div class="cfl-funnel-cta-copy">
+            <strong>${cfl.escapeHtml(headline)}</strong>
+            <span>${cfl.escapeHtml(sub)}</span>
+          </div>
+          <div class="cfl-funnel-cta-actions">
+            <a class="btn" href="/signup.html?src=${encodeURIComponent(source)}">Create free account →</a>
+          </div>
+        </div>
+      `;
+    });
+    // Re-evaluate on auth change so the banner disappears immediately after
+    // signup without a hard reload.
+    if (window.cflAuth && window.cflAuth.onAuthChange) {
+      window.cflAuth.onAuthChange((user) => {
+        if (user) {
+          document.querySelectorAll('.cfl-funnel-cta[data-cfl-rendered]').forEach(el => { el.style.display = 'none'; });
+        }
+      });
+    }
+  };
+
+  // Email-only lead magnet. Drop:
+  //   <div class="cfl-email-capture" data-source="home-footer"></div>
+  // …then call cfl.renderEmailCaptures(). Submitting writes to the
+  // email_subscribers table; the digest workflow picks it up from there.
+  cfl.renderEmailCaptures = function () {
+    const els = document.querySelectorAll('.cfl-email-capture:not([data-cfl-rendered])');
+    els.forEach(el => {
+      el.setAttribute('data-cfl-rendered', '1');
+      const source = el.getAttribute('data-source') || 'inline';
+      const headline = el.getAttribute('data-headline') || 'Weekly fight preview, free.';
+      const sub = el.getAttribute('data-sub') || 'Get every upcoming UFC card with the model’s verdict in your inbox.';
+      el.innerHTML = `
+        <div class="cfl-email-capture-inner">
+          <div class="cfl-email-capture-copy">
+            <strong>${cfl.escapeHtml(headline)}</strong>
+            <span>${cfl.escapeHtml(sub)}</span>
+          </div>
+          <form class="cfl-email-capture-form" novalidate>
+            <input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
+            <button type="submit">Subscribe</button>
+          </form>
+          <div class="cfl-email-capture-msg" aria-live="polite"></div>
+        </div>
+      `;
+      const form = el.querySelector('form');
+      const input = el.querySelector('input[type=email]');
+      const btn = el.querySelector('button');
+      const msg = el.querySelector('.cfl-email-capture-msg');
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        msg.textContent = '';
+        msg.classList.remove('err', 'ok');
+        if (!window.cflAuth || !window.cflAuth.subscribeEmail) {
+          msg.classList.add('err');
+          msg.textContent = 'Subscription is temporarily unavailable.';
+          return;
+        }
+        btn.disabled = true;
+        const originalLabel = btn.textContent;
+        btn.textContent = 'Submitting…';
+        const { error } = await window.cflAuth.subscribeEmail(input.value, source);
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+        if (error) {
+          msg.classList.add('err');
+          msg.textContent = error.message || 'Something went wrong. Try again.';
+          return;
+        }
+        msg.classList.add('ok');
+        msg.textContent = 'Subscribed. Check your inbox before the next card.';
+        form.reset();
+      });
+    });
+  };
+
+  // Auto-render funnel widgets whenever the DOM is ready. Safe to call this
+  // even on pages that don't include any widget elements — the queries return
+  // empty NodeLists and short-circuit.
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => {
+      cfl.renderFunnelCtas();
+      cfl.renderEmailCaptures();
+    });
+  } else {
+    setTimeout(() => { cfl.renderFunnelCtas(); cfl.renderEmailCaptures(); }, 0);
+  }
+
   window.cfl = cfl;
 })();

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Unsubscribe — Cannon Fight Lab</title>
+<meta name="description" content="Unsubscribe from the Cannon Fight Lab weekly preview email.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/unsubscribe.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=navfix1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-dzQgxMPp/h+N0t5qDf6Bp516wKZr3pXgGMpA7/ZM6tiWkqYo90N060L03dxnZ8Tf" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <h1>Unsubscribe</h1>
+    <p class="auth-sub">Remove your email from the Cannon Fight Lab weekly preview list.</p>
+
+    <div id="status" style="margin: 24px 0; min-height: 1.5em;">Processing…</div>
+
+    <div class="auth-footer">
+      <a href="/">← Back to Cannon Fight Lab</a>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=navfix1"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav();
+cfl.renderFooter();
+
+(async function () {
+  const status = document.getElementById('status');
+  const params = new URLSearchParams(location.search);
+  const token = (params.get('token') || '').trim();
+  if (!token) {
+    status.innerHTML = '<div class="auth-error">Missing unsubscribe token. Use the link from your most recent email.</div>';
+    return;
+  }
+  const sb = window.cflSupabase;
+  const { data, error } = await sb.rpc('unsubscribe_email', { p_token: token });
+  if (error) {
+    status.innerHTML = '<div class="auth-error">Something went wrong. ' + cfl.escapeHtml(error.message) + '</div>';
+    return;
+  }
+  if (data === true) {
+    status.innerHTML = '<div class="auth-success"><strong>Unsubscribed.</strong> You won\'t receive any more preview emails.</div>';
+  } else {
+    status.innerHTML = '<div class="auth-success">Already unsubscribed, or the token has expired.</div>';
+  }
+})();
+</script>
+</body>
+</html>

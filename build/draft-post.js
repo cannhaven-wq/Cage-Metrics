@@ -194,7 +194,7 @@ async function main() {
   r.push(`Per-fight breakdown with the edge factors that drove each verdict: ${eventUrl}`);
   r.push(`Rolling accuracy across every prior card: ${trackUrl}`);
   r.push('');
-  r.push(`*Free tool. No Discord, no DMs, no capped picks. If a verdict bombs it'll be on the receipts thread.*`);
+  r.push(`*Free tool. No Discord, no DMs, no capped picks. Free account unlocks every edge factor, saved picks, and the weekly preview email: ${SITE}/signup.html?src=reddit*`);
 
   // ----- Twitter thread -----
   // Tweet 1 = hook + link. Then one tweet per fight (truncated to 280 with
@@ -214,7 +214,8 @@ async function main() {
   }
   tweets.push(
     `Grading thread Sunday. Track record never deletes a missed call.\n\n` +
-    `${SITE}`
+    `Free account unlocks every edge factor + the weekly preview email:\n` +
+    `${SITE}/signup.html?src=x`
   );
 
   process.stdout.write('=================== REDDIT (paste into r/MMABetting) ===================\n\n');

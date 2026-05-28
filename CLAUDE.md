@@ -69,9 +69,24 @@ This is a workaround for a Supabase auth-lock hang bug (see `supabase/auth-js#76
 
 ### Data layer (Supabase)
 
-- Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist` (and analytics views prefixed `v_*`).
+- Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).
 - **RLS policies on public-data tables (`events`, `fighters`, `fights`, `fight_rounds`, every `v_*` view) must grant `SELECT TO anon, authenticated`.** An anon-only policy causes signed-in users to see empty results with HTTP 200 and no error — extremely hard to debug. When adding a new public view or table, always grant to both roles.
 - The Supabase publishable key is committed in `_shared.js`. That's intentional — it's a public anon key, all access is enforced by RLS.
+
+### Secrets (env vars, NEVER paste in chat)
+
+Recurring secrets live as environment variables on the Claude Code environment (configured once via the web UI → Environment settings) and as GitHub Actions secrets (same names). **Read them from `process.env.<NAME>` directly — do not ask the user for the value, and do not commit them.** If a secret is unset, scripts must fall back gracefully (e.g. dry-run mode) rather than fail loudly.
+
+| Env var | Used by | Purpose |
+|---|---|---|
+| `SUPABASE_SERVICE_ROLE_KEY` | `build/send-digest.js`, future admin scripts | Bypass RLS to read `email_subscribers` and other private tables. Get from Supabase dashboard → Project Settings → API → `service_role` key. |
+| `RESEND_API_KEY` | `build/send-digest.js` | Send the weekly digest. Missing → script auto-falls-back to dry-run. |
+| `RESEND_FROM` | `build/send-digest.js` | Verified sender, e.g. `Cannon Fight Lab <hello@cannonfightlab.com>`. |
+| `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | `build/social-post.js` | OAuth 1.0a creds for posting to X. Missing → that platform is skipped. |
+| `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`, `REDDIT_SUBREDDIT` | `build/social-post.js` | Script-app creds for posting to Reddit. Missing → that platform is skipped. |
+| `ODDS_API_KEY` | `build/fetch-odds.js` (disabled workflow) | The Odds API. |
+
+Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
 ### Verdict / edge logic
 

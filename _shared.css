@@ -868,3 +868,116 @@ footer.cfl-footer {
   .pricing-page { padding: 32px 16px 48px; }
   .pricing-page h1 { font-size: 36px; }
 }
+
+/* =============================================================================
+   Traffic-funnel widgets — inline signup CTA + email-only capture.
+   Auto-rendered by cfl.renderFunnelCtas / cfl.renderEmailCaptures in _shared.js.
+   ============================================================================= */
+.cfl-funnel-cta,
+.cfl-email-capture {
+  margin: 28px auto;
+  max-width: 880px;
+}
+.cfl-funnel-cta-inner {
+  background: linear-gradient(135deg, var(--red) 0%, var(--red-dark) 100%);
+  color: #fff;
+  padding: 22px 26px;
+  border-radius: 8px;
+  display: flex;
+  gap: 22px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.cfl-funnel-cta-copy { flex: 1 1 300px; }
+.cfl-funnel-cta-copy strong {
+  display: block;
+  font-size: 16px;
+  margin-bottom: 3px;
+  font-weight: 700;
+}
+.cfl-funnel-cta-copy span {
+  color: #fff;
+  opacity: 0.88;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.cfl-funnel-cta-actions a.btn {
+  background: #fff;
+  color: var(--red-dark);
+  padding: 10px 22px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+  white-space: nowrap;
+  display: inline-block;
+}
+.cfl-funnel-cta-actions a.btn:hover { background: #f5f5f5; }
+
+.cfl-email-capture-inner {
+  background: var(--bg-2);
+  border: 1px solid var(--border);
+  padding: 22px 24px;
+  border-radius: 8px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 18px;
+  align-items: center;
+}
+.cfl-email-capture-copy strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  margin-bottom: 3px;
+  font-weight: 600;
+}
+.cfl-email-capture-copy span {
+  color: var(--text-2);
+  font-size: 13px;
+}
+.cfl-email-capture-form {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.cfl-email-capture-form input[type=email] {
+  background: var(--bg);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 220px;
+}
+.cfl-email-capture-form input[type=email]:focus {
+  outline: none;
+  border-color: var(--red);
+}
+.cfl-email-capture-form button {
+  background: var(--red);
+  color: #fff;
+  border: 0;
+  padding: 10px 18px;
+  border-radius: 6px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cfl-email-capture-form button:hover { background: var(--red-dark); }
+.cfl-email-capture-form button:disabled { opacity: 0.6; cursor: wait; }
+.cfl-email-capture-msg {
+  grid-column: 1 / -1;
+  font-size: 13px;
+  min-height: 1em;
+}
+.cfl-email-capture-msg.ok  { color: var(--green); }
+.cfl-email-capture-msg.err { color: var(--red); }
+
+@media (max-width: 640px) {
+  .cfl-funnel-cta-inner,
+  .cfl-email-capture-inner { padding: 18px; grid-template-columns: 1fr; }
+  .cfl-email-capture-form { flex-direction: column; }
+  .cfl-email-capture-form input[type=email] { min-width: 0; width: 100%; }
+}

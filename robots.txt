@@ -5,3 +5,6 @@ Allow: /
 
 # Sitemap location for search engines
 Sitemap: https://cannonfightlab.com/sitemap.xml
+
+# RSS feed (upcoming UFC cards with model verdicts)
+# https://cannonfightlab.com/feed.xml

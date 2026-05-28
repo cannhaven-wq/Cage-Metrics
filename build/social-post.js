@@ -1,0 +1,303 @@
+// Social auto-poster. Runs on Wednesday afternoon UTC via social-post.yml.
+// Posts a short summary of the next UFC card to X (Twitter v2 API) and
+// Reddit (script-style OAuth app). Both targets are optional — if the
+// secrets for a platform aren't set, that platform is skipped silently.
+//
+// The post body is generated here directly rather than scraping draft-post.js
+// stdout. Same source data (model_predictions + cardio) so the messaging
+// stays consistent with the email digest and the on-site previews.
+//
+// Idempotency: we don't double-post on the same event. The script writes a
+// marker file at .funnel-state/last-posted-event.txt with the event id,
+// and the workflow commits it back. If the latest upcoming event matches
+// the marker, the script exits 0 without posting. To force a re-post:
+// delete the marker file (or set FORCE_POST=1).
+//
+// Secrets (set in repo settings as actions secrets, optional):
+//   X_BEARER_TOKEN, X_API_KEY, X_API_SECRET, X_ACCESS_TOKEN, X_ACCESS_SECRET
+//   REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD,
+//   REDDIT_SUBREDDIT (defaults to "u_<username>" — i.e. user profile, safest)
+
+const fs = require('fs');
+const path = require('path');
+const crypto = require('crypto');
+const { createClient } = require('@supabase/supabase-js');
+
+const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
+const SITE = 'https://cannonfightlab.com';
+
+const ROOT = path.resolve(__dirname, '..');
+const STATE_DIR = path.join(ROOT, '.funnel-state');
+const MARKER = path.join(STATE_DIR, 'last-posted-event.txt');
+const FORCE = /^(1|true|yes)$/i.test(process.env.FORCE_POST || '');
+const DRY_RUN = /^(1|true|yes)$/i.test(process.env.SOCIAL_DRY_RUN || '');
+
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const todayUTC = () => new Date().toISOString().slice(0, 10);
+
+function formatLongDate(isoDate) {
+  if (!isoDate) return '';
+  const d = new Date(isoDate + 'T00:00:00');
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+}
+
+async function buildPost(event) {
+  const { data: fights } = await sb.from('fights')
+    .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, is_main_event, is_title_fight')
+    .eq('event_id', event.id)
+    .order('is_main_event', { ascending: false })
+    .order('id', { ascending: true });
+  if (!fights || !fights.length) return null;
+
+  const fightIds = fights.map(f => f.id);
+  const { data: preds } = await sb.from('model_predictions')
+    .select('model_version, fight_id, fighter_id, model_p')
+    .in('fight_id', fightIds);
+
+  const picksByFight = {};
+  (preds || []).forEach(p => {
+    if (p.model_p == null || +p.model_p <= 0.5) return;
+    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {})[p.model_version] =
+      { fighter_id: p.fighter_id, model_p: +p.model_p };
+  });
+
+  // Pull up to 5 highest-confidence fights (with main/title prioritized).
+  const lines = [];
+  for (const f of fights) {
+    const picks = picksByFight[f.id] || {};
+    const versions = Object.keys(picks);
+    if (!versions.length) continue;
+    const tally = {};
+    versions.forEach(v => { tally[picks[v].fighter_id] = (tally[picks[v].fighter_id] || 0) + 1; });
+    const sorted = Object.entries(tally).sort((x, y) => y[1] - x[1]);
+    const winnerId = +sorted[0][0];
+    const winnerName = winnerId === f.fighter_a_id ? f.fighter_a_name : f.fighter_b_name;
+    const winningPs = versions
+      .filter(v => picks[v].fighter_id === winnerId)
+      .map(v => picks[v].model_p);
+    const avg = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
+    lines.push({
+      aName: f.fighter_a_name,
+      bName: f.fighter_b_name,
+      flag: f.is_title_fight ? 'TITLE' : (f.is_main_event ? 'MAIN' : ''),
+      pickName: winnerName,
+      pct: Math.round(avg * 100),
+      isMain: f.is_main_event || f.is_title_fight
+    });
+  }
+  if (!lines.length) return null;
+
+  // Sort: main/title first (preserve given order within), then by confidence.
+  lines.sort((a, b) => (b.isMain - a.isMain) || (b.pct - a.pct));
+  const headlineLines = lines.slice(0, 5);
+
+  const eventUrl = `${SITE}/event.html?id=${event.id}`;
+  const date = formatLongDate(event.event_date);
+
+  // Twitter: must fit 280 chars. Format conservatively.
+  const tweet = (() => {
+    const header = `🥊 ${event.name} — model picks, locked in.\n${date}\n\n`;
+    const cta = `\nFull card + edges + free account:\n${eventUrl}`;
+    let body = '';
+    for (const l of headlineLines) {
+      const tag = l.flag ? ` [${l.flag}]` : '';
+      const line = `${l.aName} vs ${l.bName}${tag}\n→ ${l.pickName} ${l.pct}%\n`;
+      if ((header + body + line + cta).length > 275) break;
+      body += line;
+    }
+    return (header + body + cta).slice(0, 280);
+  })();
+
+  // Reddit: title + selftext markdown.
+  const redditTitle = `[Model picks] ${event.name} — ${date}`;
+  const redditBody = (() => {
+    const parts = [];
+    parts.push(`Posting verdicts before the card so receipts are timestamped.\n`);
+    parts.push(`| Fight | Pick | Conf |`);
+    parts.push(`|---|---|---|`);
+    for (const l of headlineLines) {
+      const tag = l.flag ? ` **[${l.flag}]**` : '';
+      parts.push(`| ${l.aName} vs ${l.bName}${tag} | ${l.pickName} | ${l.pct}% |`);
+    }
+    parts.push('');
+    parts.push(`Full card with the edge factors that drove each verdict: ${eventUrl}`);
+    parts.push('');
+    parts.push(`*Free tool. Free account unlocks every edge + weekly preview email: ${SITE}/signup.html?src=reddit*`);
+    return parts.join('\n');
+  })();
+
+  return { tweet, redditTitle, redditBody };
+}
+
+// -------------------- X (Twitter v2) --------------------
+function oauth1Header({ url, method, params, consumer, token }) {
+  // RFC 5849 1.0 — only the subset needed for POST /2/tweets with JSON body.
+  // For a JSON body the body is NOT included in the signature; only oauth_*
+  // + query params participate.
+  const oauthParams = {
+    oauth_consumer_key: consumer.key,
+    oauth_token: token.key,
+    oauth_signature_method: 'HMAC-SHA1',
+    oauth_timestamp: Math.floor(Date.now() / 1000).toString(),
+    oauth_nonce: crypto.randomBytes(16).toString('hex'),
+    oauth_version: '1.0'
+  };
+  const allParams = { ...oauthParams, ...(params || {}) };
+  const enc = s => encodeURIComponent(s).replace(/[!*'()]/g, c => '%' + c.charCodeAt(0).toString(16).toUpperCase());
+  const baseParams = Object.keys(allParams).sort()
+    .map(k => `${enc(k)}=${enc(allParams[k])}`).join('&');
+  const baseString = `${method.toUpperCase()}&${enc(url)}&${enc(baseParams)}`;
+  const signingKey = `${enc(consumer.secret)}&${enc(token.secret)}`;
+  const signature = crypto.createHmac('sha1', signingKey).update(baseString).digest('base64');
+  const header = 'OAuth ' + Object.entries({ ...oauthParams, oauth_signature: signature })
+    .sort()
+    .map(([k, v]) => `${enc(k)}="${enc(v)}"`)
+    .join(', ');
+  return header;
+}
+
+async function postToX(tweetText) {
+  const key = process.env.X_API_KEY;
+  const secret = process.env.X_API_SECRET;
+  const accessToken = process.env.X_ACCESS_TOKEN;
+  const accessSecret = process.env.X_ACCESS_SECRET;
+  if (!key || !secret || !accessToken || !accessSecret) {
+    console.log('[x] secrets missing → skipping X post.');
+    return { skipped: true };
+  }
+  if (DRY_RUN) {
+    console.log('[x] dry-run, would post:\n---\n' + tweetText + '\n---');
+    return { dryRun: true };
+  }
+  const url = 'https://api.twitter.com/2/tweets';
+  const auth = oauth1Header({
+    url, method: 'POST', params: {},
+    consumer: { key, secret },
+    token: { key: accessToken, secret: accessSecret }
+  });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { Authorization: auth, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: tweetText })
+  });
+  if (!res.ok) {
+    const body = await res.text();
+    console.error('[x] post failed:', res.status, body);
+    return { ok: false, status: res.status, body };
+  }
+  const j = await res.json();
+  console.log('[x] posted tweet id:', j.data?.id);
+  return { ok: true, id: j.data?.id };
+}
+
+// -------------------- Reddit --------------------
+async function postToReddit(title, selftext) {
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
+  if (!clientId || !clientSecret || !username || !password) {
+    console.log('[reddit] secrets missing → skipping Reddit post.');
+    return { skipped: true };
+  }
+  // Default to posting on the user's own profile (u_<username>) — safest;
+  // self-promo rules vary wildly per subreddit. Override via REDDIT_SUBREDDIT.
+  const subreddit = process.env.REDDIT_SUBREDDIT || `u_${username}`;
+  const ua = `cfl-funnel/1.0 by /u/${username}`;
+  if (DRY_RUN) {
+    console.log(`[reddit] dry-run, would post to r/${subreddit}:\nTITLE: ${title}\n---\n${selftext}\n---`);
+    return { dryRun: true };
+  }
+  // 1. Password grant for an access token.
+  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
+  const tokRes = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basic}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': ua
+    },
+    body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+  });
+  if (!tokRes.ok) {
+    console.error('[reddit] token request failed:', tokRes.status, await tokRes.text());
+    return { ok: false };
+  }
+  const tok = (await tokRes.json()).access_token;
+  // 2. Submit the post.
+  const submit = await fetch('https://oauth.reddit.com/api/submit', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${tok}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': ua
+    },
+    body: new URLSearchParams({
+      sr: subreddit,
+      kind: 'self',
+      title,
+      text: selftext,
+      api_type: 'json',
+      sendreplies: 'true'
+    }).toString()
+  });
+  const sj = await submit.json().catch(() => ({}));
+  const errors = sj?.json?.errors || [];
+  if (!submit.ok || errors.length) {
+    console.error('[reddit] submit failed:', submit.status, JSON.stringify(sj).slice(0, 400));
+    return { ok: false, errors };
+  }
+  const url = sj?.json?.data?.url;
+  console.log('[reddit] posted:', url);
+  return { ok: true, url };
+}
+
+// -------------------- main --------------------
+(async () => {
+  try {
+    const t = todayUTC();
+    const { data: events } = await sb
+      .from('events')
+      .select('id, name, event_date, location')
+      .eq('is_upcoming', true)
+      .gte('event_date', t)
+      .order('event_date', { ascending: true })
+      .limit(1);
+    const event = events && events[0];
+    if (!event) { console.log('[social] no upcoming events.'); return; }
+
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+    let lastPosted = '';
+    try { lastPosted = fs.readFileSync(MARKER, 'utf8').trim(); } catch (_) {}
+    if (!FORCE && lastPosted === String(event.id)) {
+      console.log(`[social] event ${event.id} already posted (marker matches). use FORCE_POST=1 to re-post.`);
+      return;
+    }
+
+    const post = await buildPost(event);
+    if (!post) {
+      console.log('[social] no verdicts yet for this card — skipping.');
+      return;
+    }
+
+    console.log(`[social] posting for event ${event.id}: ${event.name}`);
+    console.log(`[social] tweet length: ${post.tweet.length}`);
+
+    const [xRes, rRes] = await Promise.all([
+      postToX(post.tweet),
+      postToReddit(post.redditTitle, post.redditBody)
+    ]);
+
+    const anySucceeded = xRes.ok || rRes.ok || xRes.dryRun || rRes.dryRun;
+    if (anySucceeded && !DRY_RUN) {
+      fs.writeFileSync(MARKER, String(event.id) + '\n');
+      console.log(`[social] marker updated → ${event.id}`);
+    }
+    console.log('[social] done. x=' + JSON.stringify(xRes) + ' reddit=' + JSON.stringify(rRes));
+  } catch (err) {
+    console.error('[social] failed:', err);
+    process.exit(1);
+  }
+})();

@@ -227,6 +227,26 @@
     return { data, error };
   };
 
+  // Lower-friction lead-magnet entry point — email-only subscription to the
+  // weekly fight-preview digest. Distinct from joinWaitlist (which is the
+  // paid-tier interest list). The digest itself contains the CTA back to
+  // signup.html, completing the funnel.
+  auth.subscribeEmail = async function (email, source) {
+    const cleaned = String(email || '').trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
+      return { data: null, error: { message: 'Please enter a valid email address.' } };
+    }
+    // ON CONFLICT DO NOTHING via upsert with ignoreDuplicates so re-submitting
+    // an already-subscribed email returns success without erroring.
+    const { data, error } = await sb
+      .from('email_subscribers')
+      .upsert(
+        { email: cleaned, source: source || 'unknown' },
+        { onConflict: 'email', ignoreDuplicates: true }
+      );
+    return { data, error };
+  };
+
   // -------- nav integration helpers --------
   // Returns the HTML for the "auth slot" in the nav — either signed-in user
   // initials with dropdown, or "Sign in / Sign up" links. Pages call this
