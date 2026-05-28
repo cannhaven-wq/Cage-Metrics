@@ -79,6 +79,7 @@ Recurring secrets live as environment variables on the Claude Code environment (
 
 | Env var | Used by | Purpose |
 |---|---|---|
+| `SUPABASE_DB_URL` | Claude Code sessions applying SQL migrations via `psql` | Direct Postgres connection string (port 5432, not pooler — pooler doesn't allow DDL). Format: `postgresql://postgres:[password]@db.[ref].supabase.co:5432/postgres`. Get from Supabase dashboard → Project Settings → Database → Connection string → URI (Direct connection). When set, Claude applies migrations (`*.sql` files in repo root) directly with `psql "$SUPABASE_DB_URL" -f path/to/migration.sql` instead of asking the user to paste SQL into the Supabase SQL Editor. |
 | `SUPABASE_SERVICE_ROLE_KEY` | `build/send-digest.js`, future admin scripts | Bypass RLS to read `email_subscribers` and other private tables. Get from Supabase dashboard → Project Settings → API → `service_role` key. |
 | `RESEND_API_KEY` | `build/send-digest.js` | Send the weekly digest. Missing → script auto-falls-back to dry-run. |
 | `RESEND_FROM` | `build/send-digest.js` | Verified sender, e.g. `Cannon Fight Lab <hello@cannonfightlab.com>`. |
