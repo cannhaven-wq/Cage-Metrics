@@ -1,42 +1,56 @@
 # Macau fetch — event 113, model v5
-Generated: 2026-05-30T17:00:33.726Z
+Generated: 2026-05-30T17:06:53.541Z
 
 ## Event
-#113: UFC Fight Night: Song vs. Figueiredo  (2026-05-30, upcoming=true)
+#113: UFC Fight Night: Song vs. Figueiredo  (2026-05-30, upcoming=false)
 
 ## Upcoming events (is_upcoming=true)
-  #113  2026-05-30  UFC Fight Night: Song vs. Figueiredo
   #114  2026-06-06  UFC Fight Night: Muhammad vs. Bonfim
   #115  2026-06-14  UFC Freedom 250
   #116  2026-06-20  UFC Fight Night: Kape vs. Horiguchi
+  #2510  2026-06-27  UFC Fight Night: Fiziev vs. Torres
 
 ## v_event_accuracy for event 113
-[]
+[
+  {
+    "event_id": 113,
+    "event_name": "UFC Fight Night: Song vs. Figueiredo",
+    "event_date": "2026-05-30",
+    "committed_picks": 11,
+    "excluded_picks": 1,
+    "hits": 8,
+    "misses": 3,
+    "accuracy_pct": 72.7,
+    "bets_with_odds": 0,
+    "total_pnl": null,
+    "roi_pct": null
+  }
+]
 
 ## Actual results (13 fights)
-  Song Yadong vs Deiveson Figueiredo [MAIN] → not yet decided
-  Zhang Mingyang vs Alonzo Menifield → not yet decided
-  Sergei Pavlovich vs Tallison Teixeira → not yet decided
-  Kai Asakura vs Cameron Smotherman → not yet decided
+  Song Yadong vs Deiveson Figueiredo [MAIN] → WON: Song Yadong (Submission, R2)
+  Zhang Mingyang vs Alonzo Menifield → WON: Alonzo Menifield (KO/TKO, R1)
+  Sergei Pavlovich vs Tallison Teixeira → WON: Sergei Pavlovich (KO/TKO, R1)
+  Kai Asakura vs Cameron Smotherman → WON: Kai Asakura (KO/TKO, R1)
   Alex Perez vs Sumudaerji → not yet decided
-  Carlston Harris vs Jake Matthews → not yet decided
-  Yi Sak Lee vs Luis Felipe Dias → not yet decided
-  Aoriqileng vs Cody Haddon → not yet decided
-  Rei Tsuruya vs Luis Gurule → not yet decided
-  Angela Hill vs Xiong Jingnan → not yet decided
-  Loma Lookboonmee vs Jaqueline Amorim → not yet decided
-  Zhu Kangjie vs Rodrigo Vera → not yet decided
-  Ding Meng vs Jose Henrique → not yet decided
+  Carlston Harris vs Jake Matthews → WON: Jake Matthews (Decision - Unanimous, R3)
+  Yi Sak Lee vs Luis Felipe Dias → WON: Luis Felipe Dias (KO/TKO, R1)
+  Aoriqileng vs Cody Haddon → WON: Cody Haddon (KO/TKO, R2)
+  Rei Tsuruya vs Luis Gurule → WON: Rei Tsuruya (Submission, R1)
+  Angela Hill vs Xiong Jingnan → WON: Angela Hill (Decision - Unanimous, R3)
+  Loma Lookboonmee vs Jaqueline Amorim → WON: Jaqueline Amorim (Submission, R1)
+  Zhu Kangjie vs Rodrigo Vera → WON: Rodrigo Vera (KO/TKO, R1)
+  Ding Meng vs Jose Henrique → WON: Jose Henrique (Decision - Split, R3)
 
 ## v5 predictions for 2026-05-30: 12 rows
-  ungraded                     v5 picked (fight 38: Song Yadong vs Deiveson Figueiredo) @ 78.6%
-  ungraded                     v5 picked (fight 39: Zhang Mingyang vs Alonzo Menifield) @ 66.6%
-  ungraded                     v5 picked (fight 43: Carlston Harris vs Jake Matthews) @ 76.6%
-  ungraded                     v5 picked (fight 40: Sergei Pavlovich vs Tallison Teixeira) @ 69.7%
+  ✓ HIT                        v5 picked (fight 38: Song Yadong vs Deiveson Figueiredo) @ 78.6%
+  ✗ MISS                       v5 picked (fight 39: Zhang Mingyang vs Alonzo Menifield) @ 66.6%
+  ✓ HIT                        v5 picked (fight 43: Carlston Harris vs Jake Matthews) @ 76.6%
+  ✓ HIT                        v5 picked (fight 40: Sergei Pavlovich vs Tallison Teixeira) @ 69.7%
   ungraded                     v5 picked (fight 42: Alex Perez vs Sumudaerji) @ 53.0%
-  ungraded                     v5 picked (fight 48: Loma Lookboonmee vs Jaqueline Amorim) @ 60.8%
+  ✓ HIT                        v5 picked (fight 48: Loma Lookboonmee vs Jaqueline Amorim) @ 60.8%
 
-## v5 accuracy on this card: 0/0 (no graded picks)
+## v5 accuracy on this card: 4/5 = 80.0%
 
 ## RAW: model_predictions (v5)
 ```json
@@ -53,8 +67,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": -300,
     "edge": 0.035889,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": true,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:50.053733+00:00"
   },
@@ -70,8 +84,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": 250,
     "edge": -0.083733,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": false,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:50.053733+00:00"
   },
@@ -87,8 +101,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": -300,
     "edge": -0.083971,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": false,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:50.053733+00:00"
   },
@@ -104,8 +118,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": 250,
     "edge": 0.025565,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": true,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:50.053733+00:00"
   },
@@ -121,8 +135,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": 170,
     "edge": -0.143143,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": false,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   },
@@ -138,8 +152,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": -200,
     "edge": 0.099719,
     "would_bet": true,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": true,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   },
@@ -155,8 +169,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": -250,
     "edge": -0.016807,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": true,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   },
@@ -172,8 +186,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": 210,
     "edge": -0.02855,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": false,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   },
@@ -223,8 +237,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": 210,
     "edge": 0.034937,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": false,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   },
@@ -240,8 +254,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "opener_american_odds": -250,
     "edge": -0.105903,
     "would_bet": false,
-    "outcome_known": false,
-    "won": null,
+    "outcome_known": true,
+    "won": true,
     "pnl_usd": null,
     "created_at": "2026-05-30T05:53:51.458786+00:00"
   }
@@ -256,9 +270,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 4866,
     "fighter_a_name": "Song Yadong",
     "fighter_b_name": "Deiveson Figueiredo",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 1200,
+    "method": "Submission",
+    "end_round": 2,
     "weight_class": "Bantamweight",
     "is_main_event": true
   },
@@ -268,9 +282,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 2559,
     "fighter_a_name": "Zhang Mingyang",
     "fighter_b_name": "Alonzo Menifield",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 2559,
+    "method": "KO/TKO",
+    "end_round": 1,
     "weight_class": "Light Heavyweight",
     "is_main_event": false
   },
@@ -280,9 +294,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 3311,
     "fighter_a_name": "Sergei Pavlovich",
     "fighter_b_name": "Tallison Teixeira",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 1488,
+    "method": "KO/TKO",
+    "end_round": 1,
     "weight_class": "Heavyweight",
     "is_main_event": false
   },
@@ -292,9 +306,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 3844,
     "fighter_a_name": "Kai Asakura",
     "fighter_b_name": "Cameron Smotherman",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 2981,
+    "method": "KO/TKO",
+    "end_round": 1,
     "weight_class": "Bantamweight",
     "is_main_event": false
   },
@@ -305,8 +319,8 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_a_name": "Alex Perez",
     "fighter_b_name": "Sumudaerji",
     "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "method": "No Contest",
+    "end_round": 2,
     "weight_class": "Flyweight",
     "is_main_event": false
   },
@@ -316,9 +330,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 2938,
     "fighter_a_name": "Carlston Harris",
     "fighter_b_name": "Jake Matthews",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 2938,
+    "method": "Decision - Unanimous",
+    "end_round": 3,
     "weight_class": "Welterweight",
     "is_main_event": false
   },
@@ -328,9 +342,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 4266,
     "fighter_a_name": "Yi Sak Lee",
     "fighter_b_name": "Luis Felipe Dias",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 4266,
+    "method": "KO/TKO",
+    "end_round": 1,
     "weight_class": "Middleweight",
     "is_main_event": false
   },
@@ -340,9 +354,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 44,
     "fighter_a_name": "Aoriqileng",
     "fighter_b_name": "Cody Haddon",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 44,
+    "method": "KO/TKO",
+    "end_round": 2,
     "weight_class": "Bantamweight",
     "is_main_event": false
   },
@@ -352,9 +366,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 823,
     "fighter_a_name": "Rei Tsuruya",
     "fighter_b_name": "Luis Gurule",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 2353,
+    "method": "Submission",
+    "end_round": 1,
     "weight_class": "Flyweight",
     "is_main_event": false
   },
@@ -364,9 +378,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 65,
     "fighter_a_name": "Angela Hill",
     "fighter_b_name": "Xiong Jingnan",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 1021,
+    "method": "Decision - Unanimous",
+    "end_round": 3,
     "weight_class": "Strawweight",
     "is_main_event": false
   },
@@ -376,9 +390,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 2549,
     "fighter_a_name": "Loma Lookboonmee",
     "fighter_b_name": "Jaqueline Amorim",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 2549,
+    "method": "Submission",
+    "end_round": 1,
     "weight_class": "Strawweight",
     "is_main_event": false
   },
@@ -388,9 +402,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 10976,
     "fighter_a_name": "Zhu Kangjie",
     "fighter_b_name": "Rodrigo Vera",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 10976,
+    "method": "KO/TKO",
+    "end_round": 1,
     "weight_class": "Featherweight",
     "is_main_event": false
   },
@@ -400,9 +414,9 @@ Generated: 2026-05-30T17:00:33.726Z
     "fighter_b_id": 4039,
     "fighter_a_name": "Ding Meng",
     "fighter_b_name": "Jose Henrique",
-    "winner_id": null,
-    "method": null,
-    "end_round": null,
+    "winner_id": 4039,
+    "method": "Decision - Split",
+    "end_round": 3,
     "weight_class": "Welterweight",
     "is_main_event": false
   }
