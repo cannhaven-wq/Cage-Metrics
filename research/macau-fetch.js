@@ -40,6 +40,27 @@ const log = (s = '') => out.push(s);
   log(`## Event`);
   log(`#${ev.id}: ${ev.name}  (${ev.event_date}, upcoming=${ev.is_upcoming})\n`);
 
+  // --- Next upcoming card(s) ----------------------------------------------
+  const upcoming = await rest(
+    `events?is_upcoming=eq.true&select=id,name,event_date&order=event_date.asc&limit=4`
+  );
+  log(`## Upcoming events (is_upcoming=true)`);
+  if (!upcoming.length) log(`  (none)`);
+  upcoming.forEach((e) => log(`  #${e.id}  ${e.event_date}  ${e.name}`));
+  log('');
+
+  // --- v_event_accuracy recap for this event ------------------------------
+  try {
+    const acc = await rest(
+      `v_event_accuracy?event_id=eq.${eventId}&select=*`
+    );
+    log(`## v_event_accuracy for event ${eventId}`);
+    log(JSON.stringify(acc, null, 2));
+    log('');
+  } catch (e) {
+    log(`## v_event_accuracy for event ${eventId}: ERROR ${e.message}\n`);
+  }
+
   // --- Fights (actual results) --------------------------------------------
   const fights = await rest(
     `fights?event_id=eq.${eventId}` +
