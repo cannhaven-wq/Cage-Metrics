@@ -1,0 +1,46 @@
+name: Macau v5 result fetch
+
+# One-off helper: runs research/macau-fetch.js on a GitHub runner (which CAN
+# reach Supabase, unlike the cloud dev sandbox) and commits the output to
+# research/macau-result.md so it can be pulled back and read.
+#
+# Triggers on push to the feature branch when the fetch script or this workflow
+# changes. The auto-commit carries [skip ci] so it does not re-trigger.
+
+on:
+  push:
+    branches:
+      - claude/macau-event-v5-accuracy-kWvZe
+    paths:
+      - 'research/macau-fetch.js'
+      - '.github/workflows/macau-result.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Fetch v5 picks + actual results
+        run: node research/macau-fetch.js 113 v5
+
+      - name: Commit result
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/macau-result.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: macau v5 fetch result [skip ci]"
+            git push
+          fi
