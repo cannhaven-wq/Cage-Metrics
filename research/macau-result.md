@@ -1,8 +1,17 @@
 # Macau fetch — event 113, model v5
-Generated: 2026-05-30T15:50:17.209Z
+Generated: 2026-05-30T16:41:40.036Z
 
 ## Event
 #113: UFC Fight Night: Song vs. Figueiredo  (2026-05-30, upcoming=true)
+
+## Upcoming events (is_upcoming=true)
+  #113  2026-05-30  UFC Fight Night: Song vs. Figueiredo
+  #114  2026-06-06  UFC Fight Night: Muhammad vs. Bonfim
+  #115  2026-06-14  UFC Freedom 250
+  #116  2026-06-20  UFC Fight Night: Kape vs. Horiguchi
+
+## v_event_accuracy for event 113
+[]
 
 ## Actual results (13 fights)
   Song Yadong vs Deiveson Figueiredo [MAIN] → not yet decided
