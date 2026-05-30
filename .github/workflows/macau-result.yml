@@ -22,6 +22,7 @@ on:
       - claude/macau-event-v5-accuracy-kWvZe
     paths:
       - 'research/macau-fetch.js'
+      - 'research/ufcstats-probe.js'
       - '.github/workflows/macau-result.yml'
   workflow_dispatch:
   schedule:
@@ -45,11 +46,14 @@ jobs:
       - name: Fetch v5 picks + actual results
         run: node research/macau-fetch.js 113 v5
 
+      - name: Probe ufcstats (diagnose scraper)
+        run: node research/ufcstats-probe.js || true
+
       - name: Commit result
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add research/macau-result.md
+          git add research/macau-result.md research/ufcstats-probe.md
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
