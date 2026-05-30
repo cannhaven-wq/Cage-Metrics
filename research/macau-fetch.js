@@ -14,7 +14,7 @@
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
 
-// Re-read trigger: bump to re-run the CI fetch against current Supabase state.
+// Re-read trigger (card reported finished): re-run CI fetch against current DB.
 const eventId = process.argv[2] || '113';
 const modelVersion = process.argv[3] || 'v5';
 
