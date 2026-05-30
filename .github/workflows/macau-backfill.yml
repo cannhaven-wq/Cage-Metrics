@@ -1,0 +1,48 @@
+name: Macau backfill
+
+# One-off: writes the Macau (event 113) results into Supabase via the
+# service-role key, because ufcstats blocks datacenter IPs so the Railway
+# scraper can't fetch them. Triggers on push to the feature branch when the
+# backfill script changes. Commits a result log with [skip ci].
+#
+# After it runs and the homepage is correct, delete this workflow + script.
+
+on:
+  push:
+    branches:
+      - claude/macau-event-v5-accuracy-kWvZe
+    paths:
+      - 'research/macau-backfill.js'
+      - '.github/workflows/macau-backfill.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Backfill Macau results
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: node research/macau-backfill.js
+
+      - name: Commit result log
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add research/macau-backfill-result.md
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: macau backfill result log [skip ci]"
+            git push
+          fi
