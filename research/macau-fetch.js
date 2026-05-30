@@ -147,3 +147,5 @@ function finish() {
   fs.writeFileSync('research/macau-result.md', text);
   process.stdout.write(text);
 }
+
+// re-read: scrape just ran (164939)
