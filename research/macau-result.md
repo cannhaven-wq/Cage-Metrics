@@ -1,5 +1,5 @@
 # Macau fetch — event 113, model v5
-Generated: 2026-05-30T15:25:57.452Z
+Generated: 2026-05-30T15:41:25.951Z
 
 ## Event
 #113: UFC Fight Night: Song vs. Figueiredo  (2026-05-30, upcoming=true)
