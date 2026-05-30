@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sat, 30 May 2026 13:06:23 GMT</lastBuildDate>
+  <lastBuildDate>Sat, 30 May 2026 19:01:01 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC Fight Night: Song vs. Figueiredo</title>
-    <link>https://cannonfightlab.com/event.html?id=113</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=113</guid>
-    <pubDate>Sat, 30 May 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Song vs. Figueiredo card — Macau, China.</description>
-  </item>
   <item>
     <title>UFC Fight Night: Muhammad vs. Bonfim</title>
     <link>https://cannonfightlab.com/event.html?id=114</link>
