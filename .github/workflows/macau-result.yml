@@ -1,11 +1,20 @@
 name: Macau v5 result fetch
 
-# One-off helper: runs research/macau-fetch.js on a GitHub runner (which CAN
-# reach Supabase, unlike the cloud dev sandbox) and commits the output to
+# Runs research/macau-fetch.js on a GitHub runner (which CAN reach Supabase,
+# unlike the cloud dev sandbox) and commits the output to
 # research/macau-result.md so it can be pulled back and read.
 #
-# Triggers on push to the feature branch when the fetch script or this workflow
-# changes. The auto-commit carries [skip ci] so it does not re-trigger.
+# Triggers:
+#   - push to the feature branch (re-run when the fetch script changes)
+#   - workflow_dispatch (manual re-run from the Actions tab)
+#   - schedule: every 2 hours, to auto-capture results once the card is graded.
+#     NOTE: GitHub only runs `schedule` triggers for workflow files on the
+#     DEFAULT branch (main). On a feature branch this cron never fires — the
+#     workflow has to be on main for the schedule to take effect.
+#
+# The auto-commit carries [skip ci] so it does not re-trigger the push event.
+# Once the card is graded and macau-result.md is captured, delete the
+# `schedule:` block (or the whole file) so the cron stops running.
 
 on:
   push:
@@ -14,6 +23,9 @@ on:
     paths:
       - 'research/macau-fetch.js'
       - '.github/workflows/macau-result.yml'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 */2 * * *'
 
 permissions:
   contents: write
