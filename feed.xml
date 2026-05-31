@@ -6,57 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sun, 31 May 2026 13:18:37 GMT</lastBuildDate>
+  <lastBuildDate>Sun, 31 May 2026 19:04:45 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC Fight Night: Muhammad vs. Bonfim</title>
-    <link>https://cannonfightlab.com/event.html?id=114</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=114</guid>
-    <pubDate>Sat, 06 Jun 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Muhammad vs. Bonfim card — Las Vegas, Nevada, USA.</description>
-  </item>
-  <item>
-    <title>UFC Freedom 250</title>
-    <link>https://cannonfightlab.com/event.html?id=115</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=115</guid>
-    <pubDate>Sun, 14 Jun 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Freedom 250 card — Washington, DC, USA.</description>
-  </item>
-  <item>
-    <title>UFC Fight Night: Kape vs. Horiguchi</title>
-    <link>https://cannonfightlab.com/event.html?id=116</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=116</guid>
-    <pubDate>Sat, 20 Jun 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Kape vs. Horiguchi card — Las Vegas, Nevada, USA.</description>
-  </item>
-  <item>
-    <title>UFC Fight Night: Fiziev vs. Torres</title>
-    <link>https://cannonfightlab.com/event.html?id=2510</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2510</guid>
-    <pubDate>Sat, 27 Jun 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Fiziev vs. Torres card — Baku, Azerbaijan.</description>
-  </item>
-  <item>
-    <title>UFC 329: McGregor vs. Holloway 2</title>
-    <link>https://cannonfightlab.com/event.html?id=117</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=117</guid>
-    <pubDate>Sat, 11 Jul 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 329: McGregor vs. Holloway 2 card — Las Vegas, Nevada, USA.</description>
-  </item>
-  <item>
-    <title>UFC Fight Night</title>
-    <link>https://cannonfightlab.com/event.html?id=2563</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2563</guid>
-    <pubDate>Sat, 18 Jul 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night card — Oklahoma City, Oklahoma, USA.</description>
-  </item>
-  <item>
-    <title>UFC 330</title>
-    <link>https://cannonfightlab.com/event.html?id=118</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=118</guid>
-    <pubDate>Sat, 15 Aug 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 330 card — Philadelphia, Pennsylvania, USA.</description>
-  </item>
 
 </channel>
 </rss>
