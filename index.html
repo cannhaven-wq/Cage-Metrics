@@ -1524,7 +1524,9 @@ async function loadPastEvents() {
 
   // Per-model accuracy from model_predictions, keyed by event_date + version.
   // Counts one pick per fight per model (the side with model_p > 0.5).
-  const MODEL_VERSIONS = ['v1', 'v2', 'v3'];
+  // Keep in sync with HP_VISIBLE_MODELS so the per-event recap shows the same
+  // models (incl. v4/v5) as the rest of the homepage.
+  const MODEL_VERSIONS = ['v1', 'v2', 'v3', 'v4', 'v5'];
   const modelStats = {};  // 'YYYY-MM-DD::v1' -> { picks, hits }
   try {
     const eventDates = events.map(e => e.event_date);
