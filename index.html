@@ -1493,12 +1493,16 @@ async function loadPastEvents() {
 
   let events;
   try {
+    // v_track_record_events surfaces any completed event that has graded picks —
+    // either a locked rules-based verdict (committed_picks > 0) OR graded ML
+    // model picks. This lets cards appear for events where only the ML models
+    // committed (e.g. when the rules-based snapshotter wasn't running), using
+    // the model accuracy shown on each card.
     const { data, error } = await sb
-      .from('v_event_accuracy')
+      .from('v_track_record_events')
       .select('event_id, event_name, event_date, committed_picks, hits, misses, accuracy_pct')
-      .gt('committed_picks', 0)
       .order('event_date', { ascending: false })
-      .limit(6);
+      .limit(8);
     if (error) throw error;
     events = data || [];
   } catch (err) {
