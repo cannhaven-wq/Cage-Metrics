@@ -6,8 +6,50 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 29 Jun 2026 02:41:01 GMT</lastBuildDate>
+  <lastBuildDate>Mon, 29 Jun 2026 10:25:30 GMT</lastBuildDate>
 
+  <item>
+    <title>UFC 329: McGregor vs. Holloway 2</title>
+    <link>https://cannonfightlab.com/event.html?id=117</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=117</guid>
+    <pubDate>Sat, 11 Jul 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC 329: McGregor vs. Holloway 2 card — Las Vegas, Nevada, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Du Plessis vs. Usman</title>
+    <link>https://cannonfightlab.com/event.html?id=2563</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2563</guid>
+    <pubDate>Sat, 18 Jul 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Du Plessis vs. Usman card — Oklahoma City, Oklahoma, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Ankalaev vs. Rountree Jr</title>
+    <link>https://cannonfightlab.com/event.html?id=2619</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2619</guid>
+    <pubDate>Sat, 25 Jul 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Ankalaev vs. Rountree Jr card — Abu Dhabi, Abu Dhabi, United Arab Emirates.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Medic vs. Rodriguez</title>
+    <link>https://cannonfightlab.com/event.html?id=2620</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2620</guid>
+    <pubDate>Sat, 01 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Medic vs. Rodriguez card — Belgrade, Vojvodina, Serbia.</description>
+  </item>
+  <item>
+    <title>UFC 330: Makhachev vs. Machado Garry</title>
+    <link>https://cannonfightlab.com/event.html?id=118</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=118</guid>
+    <pubDate>Sat, 15 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC 330: Makhachev vs. Machado Garry card — Philadelphia, Pennsylvania, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Hernandez vs. Rodrigues</title>
+    <link>https://cannonfightlab.com/event.html?id=2626</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2626</guid>
+    <pubDate>Sat, 22 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Hernandez vs. Rodrigues card — Sacramento, California, USA.</description>
+  </item>
 
 </channel>
 </rss>
