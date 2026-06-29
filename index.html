@@ -1528,7 +1528,11 @@ async function loadPastEvents() {
 
   // Per-model accuracy from model_predictions, keyed by event_date + version.
   // Counts one pick per fight per model (the side with model_p > 0.5).
-  const MODEL_VERSIONS = ['v1', 'v2', 'v3'];
+  // v5 (the flagship XGBoost model) is included; it only covers events from
+  // when it came online, so older cards show "—" for it. v4 is intentionally
+  // omitted — its snapshot data doesn't follow the model_p>0.5 pick convention
+  // and renders as inconsistent blanks.
+  const MODEL_VERSIONS = ['v1', 'v2', 'v3', 'v5'];
   const modelStats = {};  // 'YYYY-MM-DD::v1' -> { picks, hits }
   try {
     const eventDates = events.map(e => e.event_date);
