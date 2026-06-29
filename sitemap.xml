@@ -5105,13 +5105,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-67-all-or-nothing-806.html</loc>
-    <lastmod>2026-06-29</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-evans-vs-salmon-807.html</loc>
     <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
@@ -5413,14 +5406,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-67-all-or-nothing-806.html</loc>
     <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-35-throwdown-852.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
     <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5708,6 +5701,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/e/ufc-36-worlds-collide-851.html</loc>
+    <lastmod>2026-06-29</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-35-throwdown-852.html</loc>
     <lastmod>2026-06-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
