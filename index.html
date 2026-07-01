@@ -269,6 +269,14 @@
 #home .mh-v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; color: var(--red); text-transform: uppercase; }
 #home .mh-name { font-size: 12.5px; font-weight: 600; color: var(--text); margin-left: 6px; }
 #home .mh-desc { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-top: 3px; }
+#home .mh-weights { margin-top: 8px; }
+#home .mhw-title { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
+#home .mhw-row { display: grid; grid-template-columns: 170px 1fr 34px; align-items: center; gap: 8px; padding: 2px 0; }
+#home .mhw-label { font-size: 11.5px; color: var(--text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#home .mhw-track { height: 7px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
+#home .mhw-track i { display: block; height: 100%; background: var(--red); border-radius: 4px; opacity: .85; }
+#home .mhw-pct { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+@media (max-width: 560px) { #home .mhw-row { grid-template-columns: 120px 1fr 30px; } }
 
 /* ===== Input weights (box graph) per fight ===== */
 #home .weights { border-top: 1px solid var(--line); padding-top: 12px; }
@@ -607,7 +615,7 @@ setTimeout(() => {
 // =============================================================================
 // NEXT CARD — event selection (preserved), lean fight-card render
 // =============================================================================
-const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5'];
+const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
 let _cardioMap = null;
 let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
@@ -620,8 +628,22 @@ const MODEL_EXPLAIN = {
   v2: 'Blends a chess-style Elo rating (updated after every fight) with gradient-boosted decision trees.',
   v3: 'Adds recent-form weighting, style matchups (striker vs grappler), and durability/chin signals on top of the basics.',
   v4: 'A stacker — a meta-model that learns the best way to combine v1, v2, and v3 into a single call.',
-  v5: 'Our flagship. Gradient-boosted trees (XGBoost) on performance stats adjusted for strength of schedule. Most accurate — ~75% on 2025.',
+  v5: 'Our flagship. Gradient-boosted trees (XGBoost) anchored on the betting line, plus performance stats adjusted for strength of schedule. Most accurate — ~75% on 2025.',
+  v6: 'The value hunter. Reads the betting line as an input and looks for fights where the market opened wrong. Picks fewer fights, but picks them to make money — not just to be right.',
 };
+
+// Per-model input-weight graphs — real feature importances exported from each
+// trained model (model/export_input_weights.py in the scrapper repo), grouped
+// into plain-English buckets. Static file; regenerate on retrain.
+let _modelWeights = null;
+async function loadModelWeights() {
+  if (_modelWeights) return _modelWeights;
+  try {
+    const res = await fetch('model-weights.json?v=1');
+    if (res.ok) _modelWeights = await res.json();
+  } catch (e) { console.warn('[home] model weights fetch failed', e); }
+  return _modelWeights;
+}
 
 async function load() {
   const sb = window.cflSupabase;
@@ -850,8 +872,31 @@ function renderModelExplanations(modelNames) {
     if (!d && !nm) return '';
     return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
       `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
-      `<div class="mh-desc">${cfl.escapeHtml(d)}</div></div>`;
+      `<div class="mh-desc">${cfl.escapeHtml(d)}</div>` +
+      `<div class="mh-weights" data-model="${mv}"></div></div>`;
   }).join('');
+  renderModelWeightGraphs();
+}
+
+// "What it weighs" bar graph per model — real importances from the trained
+// models, not marketing copy. Top buckets only; bar width = share of the
+// model's total signal.
+async function renderModelWeightGraphs() {
+  const weights = await loadModelWeights();
+  if (!weights) return;
+  HP_VISIBLE_MODELS.forEach(mv => {
+    const slot = document.querySelector(`.mh-weights[data-model="${mv}"]`);
+    const w = weights[mv];
+    if (!slot || !w || !w.weights || !w.weights.length) return;
+    const top = w.weights.slice(0, 6);
+    const max = top[0].pct || 1;
+    slot.innerHTML = `<div class="mhw-title">What it weighs</div>` + top.map(b =>
+      `<div class="mhw-row">
+        <div class="mhw-label">${cfl.escapeHtml(b.label)}</div>
+        <div class="mhw-track"><i style="width:${Math.max(4, (b.pct / max) * 100).toFixed(0)}%"></i></div>
+        <div class="mhw-pct">${b.pct.toFixed(0)}%</div>
+      </div>`).join('');
+  });
 }
 
 function wireControls() {

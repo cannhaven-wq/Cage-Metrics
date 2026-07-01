@@ -1,0 +1,236 @@
+{
+ "v1": {
+  "method": "|standardized LR coefficient|",
+  "weights": [
+   {
+    "label": "Fight context",
+    "pct": 38.0
+   },
+   {
+    "label": "Striking output & defense",
+    "pct": 21.4
+   },
+   {
+    "label": "Age",
+    "pct": 13.7
+   },
+   {
+    "label": "Grappling & takedowns",
+    "pct": 13.5
+   },
+   {
+    "label": "Size (height/reach)",
+    "pct": 5.3
+   },
+   {
+    "label": "Other signals",
+    "pct": 3.0
+   },
+   {
+    "label": "Submission game",
+    "pct": 3.0
+   },
+   {
+    "label": "KO power & durability",
+    "pct": 1.8
+   }
+  ]
+ },
+ "v2": {
+  "method": "|standardized LR coefficient|",
+  "weights": [
+   {
+    "label": "Fight context",
+    "pct": 32.6
+   },
+   {
+    "label": "Striking output & defense",
+    "pct": 19.1
+   },
+   {
+    "label": "Age",
+    "pct": 11.7
+   },
+   {
+    "label": "Grappling & takedowns",
+    "pct": 11.6
+   },
+   {
+    "label": "Elo rating",
+    "pct": 6.2
+   },
+   {
+    "label": "Other signals",
+    "pct": 5.4
+   },
+   {
+    "label": "Size (height/reach)",
+    "pct": 4.7
+   },
+   {
+    "label": "Recent form & record",
+    "pct": 4.4
+   },
+   {
+    "label": "Submission game",
+    "pct": 2.5
+   },
+   {
+    "label": "KO power & durability",
+    "pct": 1.6
+   }
+  ]
+ },
+ "v3": {
+  "method": "|standardized LR coefficient|",
+  "weights": [
+   {
+    "label": "Fight context",
+    "pct": 29.2
+   },
+   {
+    "label": "Striking output & defense",
+    "pct": 17.2
+   },
+   {
+    "label": "Grappling & takedowns",
+    "pct": 10.2
+   },
+   {
+    "label": "Stance matchup",
+    "pct": 9.1
+   },
+   {
+    "label": "Age",
+    "pct": 9.0
+   },
+   {
+    "label": "Recent form & record",
+    "pct": 8.0
+   },
+   {
+    "label": "Elo rating",
+    "pct": 3.9
+   },
+   {
+    "label": "Size (height/reach)",
+    "pct": 3.8
+   },
+   {
+    "label": "Submission game",
+    "pct": 3.4
+   },
+   {
+    "label": "Other signals",
+    "pct": 3.3
+   },
+   {
+    "label": "KO power & durability",
+    "pct": 2.4
+   }
+  ]
+ },
+ "v4": {
+  "method": "|LR coefficient| (all inputs are 0-1 probabilities)",
+  "weights": [
+   {
+    "label": "Betting line",
+    "pct": 34.7
+   },
+   {
+    "label": "Model agreement",
+    "pct": 31.7
+   },
+   {
+    "label": "v3's pick",
+    "pct": 14.1
+   },
+   {
+    "label": "v1's pick",
+    "pct": 9.2
+   },
+   {
+    "label": "v2's pick",
+    "pct": 8.8
+   },
+   {
+    "label": "Model disagreement",
+    "pct": 1.5
+   }
+  ]
+ },
+ "v5": {
+  "method": "XGBoost total gain (5-seed mean)",
+  "weights": [
+   {
+    "label": "Betting line",
+    "pct": 40.1
+   },
+   {
+    "label": "Schedule-adjusted performance",
+    "pct": 36.3
+   },
+   {
+    "label": "Age",
+    "pct": 7.0
+   },
+   {
+    "label": "Size (height/reach)",
+    "pct": 5.6
+   },
+   {
+    "label": "Submission game",
+    "pct": 4.1
+   },
+   {
+    "label": "Layoff & activity",
+    "pct": 3.7
+   },
+   {
+    "label": "KO power & durability",
+    "pct": 2.3
+   }
+  ]
+ },
+ "v6": {
+  "method": "XGBoost total gain (5-seed mean)",
+  "weights": [
+   {
+    "label": "Betting line",
+    "pct": 36.4
+   },
+   {
+    "label": "Schedule-adjusted performance",
+    "pct": 35.0
+   },
+   {
+    "label": "Age",
+    "pct": 9.3
+   },
+   {
+    "label": "Size (height/reach)",
+    "pct": 6.0
+   },
+   {
+    "label": "Submission game",
+    "pct": 4.0
+   },
+   {
+    "label": "Layoff & activity",
+    "pct": 3.8
+   },
+   {
+    "label": "KO power & durability",
+    "pct": 2.4
+   },
+   {
+    "label": "Experience",
+    "pct": 1.9
+   },
+   {
+    "label": "Recent form & record",
+    "pct": 1.1
+   }
+  ]
+ }
+}
