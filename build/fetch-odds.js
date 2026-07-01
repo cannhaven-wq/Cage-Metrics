@@ -76,6 +76,17 @@ function americanToImplied(american) {
   return -american / (-american + 100);
 }
 
+function impliedToAmerican(p) {
+  if (p == null || p <= 0 || p >= 1) return null;
+  return Math.round(p >= 0.5 ? (-100 * p) / (1 - p) : (100 * (1 - p)) / p);
+}
+
+// The synthetic consensus "book": one row per (fight, side) per run holding the
+// median implied probability across all real books in that snapshot. Gives the
+// models a single canonical price series — and, via the is_opener flag below, a
+// locked opening price — even though the underlying book set varies run to run.
+const CONSENSUS_BOOK_NAME = 'CFL Consensus (Odds API)';
+
 // -----------------------------------------------------------------------------
 // 1. Fetch raw odds from The Odds API (one request = whole MMA slate)
 // -----------------------------------------------------------------------------
@@ -273,6 +284,72 @@ async function resolveBooks(oddsEvents) {
       console.log('[done] matched 0 fights — nothing to insert');
       return;
     }
+
+    // ---- consensus rows: median implied prob per (fight, side) across books ----
+    let consensusBookId = bookId.get(CONSENSUS_BOOK_NAME.toLowerCase());
+    if (!consensusBookId) {
+      const { data: cb, error: cbErr } = await sb
+        .from('odds_books')
+        .upsert([{ name: CONSENSUS_BOOK_NAME, short_code: 'cflc' }],
+                { onConflict: 'name', ignoreDuplicates: false })
+        .select('id')
+        .single();
+      if (cbErr) throw new Error(`consensus book upsert: ${cbErr.message}`);
+      consensusBookId = cb.id;
+    }
+    const bySide = new Map(); // fight_id|fighter_id -> { template row, probs[] }
+    for (const r of rows) {
+      const k = `${r.fight_id}|${r.fighter_id}`;
+      if (!bySide.has(k)) bySide.set(k, { r, probs: [] });
+      bySide.get(k).probs.push(r.implied_prob);
+    }
+    for (const { r, probs } of bySide.values()) {
+      probs.sort((x, y) => x - y);
+      const mid = Math.floor(probs.length / 2);
+      const med = probs.length % 2 ? probs[mid] : (probs[mid - 1] + probs[mid]) / 2;
+      const american = impliedToAmerican(med);
+      if (american == null) continue;
+      rows.push({
+        fight_id: r.fight_id,
+        fighter_id: r.fighter_id,
+        book_id: consensusBookId,
+        side: r.side,
+        american_odds: american,
+        implied_prob: Number(med.toFixed(6)),
+        captured_at,
+        source_url: SOURCE_TAG,
+      });
+    }
+
+    // ---- opener flagging: first captured price per (fight, side, book) ----
+    // A row is the opener if that (fight, fighter, book) combo has never had an
+    // opener row before. This is what gives every future pick a locked opening
+    // price — the models' ROI accounting depends on it (see model/v6 in the
+    // scrapper repo). BFO-era history already carries is_opener on book 6.
+    const fightIds = [...new Set(rows.map(r => r.fight_id))];
+    const priorOpeners = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: page, error: poErr } = await sb
+        .from('fight_odds')
+        .select('fight_id, fighter_id, book_id')
+        .in('fight_id', fightIds)
+        .eq('is_opener', true)
+        .range(from, from + 999);
+      if (poErr) throw new Error(`prior openers fetch: ${poErr.message}`);
+      priorOpeners.push(...(page || []));
+      if (!page || page.length < 1000) break;
+    }
+    const hasOpener = new Set(priorOpeners.map(o => `${o.fight_id}|${o.fighter_id}|${o.book_id}`));
+    let openersMarked = 0;
+    for (const r of rows) {
+      const k = `${r.fight_id}|${r.fighter_id}|${r.book_id}`;
+      if (!hasOpener.has(k)) {
+        r.is_opener = true;
+        hasOpener.add(k); // one opener per combo per run
+        openersMarked++;
+      }
+    }
+    if (openersMarked) console.log(`[openers] marking ${openersMarked} first-capture row(s) as openers`);
 
     if (DRY_RUN) {
       console.log(`[dry-run] would insert ${rows.length} row(s) across ${matchedFights} fight(s). Sample:`);
