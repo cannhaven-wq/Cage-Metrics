@@ -96,16 +96,31 @@ async function fetchOddsFromApi() {
     '?regions=us&markets=h2h&oddsFormat=american&dateFormat=iso' +
     `&apiKey=${encodeURIComponent(ODDS_API_KEY)}`;
 
-  const res = await fetch(url);
-  console.log(`[odds-api] quota: used=${res.headers.get('x-requests-used')}, ` +
-    `remaining=${res.headers.get('x-requests-remaining')}`);
-
-  if (!res.ok) {
-    throw new Error(`Odds API ${res.status} ${res.statusText}: ${await res.text()}`);
+  // Retry transient failures (network, 429, 5xx) — a lost run here can cost a
+  // fight's opener, since openers are first-capture. 4xx (bad key/params) is
+  // not retried: the answer won't change and failed calls still show quota use.
+  let lastErr;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    let res;
+    try {
+      res = await fetch(url);
+    } catch (netErr) {
+      lastErr = netErr;
+      await new Promise(r => setTimeout(r, 2000 * attempt));
+      continue;
+    }
+    console.log(`[odds-api] quota: used=${res.headers.get('x-requests-used')}, ` +
+      `remaining=${res.headers.get('x-requests-remaining')}`);
+    if (res.ok) {
+      const events = await res.json();
+      console.log(`[odds-api] got ${events.length} MMA events`);
+      return events;
+    }
+    lastErr = new Error(`Odds API ${res.status} ${res.statusText}: ${await res.text()}`);
+    if (res.status < 500 && res.status !== 429) break;
+    await new Promise(r => setTimeout(r, 2000 * attempt));
   }
-  const events = await res.json();
-  console.log(`[odds-api] got ${events.length} MMA events`);
-  return events;
+  throw lastErr;
 }
 
 // -----------------------------------------------------------------------------
@@ -281,7 +296,24 @@ async function resolveBooks(oddsEvents) {
     }
 
     if (rows.length === 0) {
-      console.log('[done] matched 0 fights — nothing to insert');
+      // Zero matches is legitimate in the off-week lull before books post the
+      // next card — but during fight week odds always exist, so matching
+      // nothing with a card imminent means the matcher or the API feed is
+      // broken. Fail loudly instead of silently skipping snapshot windows
+      // (openers are first-capture; quiet gaps corrupt them).
+      const today = new Date().toISOString().slice(0, 10);
+      const soon = new Date(Date.now() + 3 * 86400000).toISOString().slice(0, 10);
+      const { data: imminent, error: imErr } = await sb
+        .from('events')
+        .select('name, event_date')
+        .gte('event_date', today)
+        .lte('event_date', soon);
+      if (imErr) throw new Error(`imminent events check: ${imErr.message}`);
+      if (imminent && imminent.length) {
+        throw new Error(`matched 0 fights while ${imminent.length} card(s) are within 3 days ` +
+          `(${imminent.map(e => e.name).join(', ')}) — matching is broken`);
+      }
+      console.log('[done] matched 0 fights — nothing to insert (no imminent card, likely off-week)');
       return;
     }
 
