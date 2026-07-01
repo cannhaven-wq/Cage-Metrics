@@ -613,7 +613,7 @@
 <div class="page-hero">
   <div class="eyebrow">Predictor</div>
   <h1>Win-probability models, tracked transparently</h1>
-  <p>Each model trains on UFC fights through 2022 and is evaluated on 2023+ hold-out. ROI is computed at the opening line — the realistic price a model would need to beat. Click a model for the full breakdown.</p>
+  <p>Each stat is measured only on fights none of the models trained on. Because the models don't share a training cutoff, every number here uses the same fully out-of-sample window — UFC cards from January 2025 onward — so the comparison is apples-to-apples. ROI is computed at the opening line — the realistic price a model would need to beat. Click a model for the full breakdown.</p>
 </div>
 
 <div class="page">
@@ -710,8 +710,8 @@
       The model card stats above show how each threshold performed historically.</p>
 
       <div class="caveat">
-        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. The model's backtest
-        shows ~+5–10% ROI on the 2023+ hold-out, but real-world ROI is typically 30–60% lower due to liquidity friction
+        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. The strongest models
+        show ~+12–15% ROI on the out-of-sample 2025+ window, but real-world ROI is typically 30–60% lower due to liquidity friction
         and book limits. Confidence intervals on the ROI estimate cross zero — meaning a losing month or two is normal,
         not a sign the strategy is broken. Never bet money you can't afford to see swing 30–40% down before recovering.
         Always gamble responsibly. 1-800-GAMBLER.
@@ -746,7 +746,7 @@
 
   <div class="section-label" style="margin-top: 48px;">How the models compare</div>
   <p style="font-size: 12px; color: var(--text-3); margin: 6px 0 14px; line-height: 1.6;">
-    Each model trains on UFC fights through 2022 and is evaluated on the 2023+ hold-out. Click a row for the full backtest breakdown and recent graded picks.
+    Every stat is measured on the same fully out-of-sample window — UFC cards from January 2025 onward, which none of the models trained on. Click a row for the full backtest breakdown and recent graded picks.
   </p>
   <div id="modelGrid" class="models-grid"></div>
 
@@ -910,11 +910,13 @@ cfl.renderFooter();
   }
 
   // ---- model cards ----
-  // Models train on fights through 2022 and are evaluated on the 2023+ hold-out.
-  // Pre-2023 rows (e.g. v5's backfilled point-in-time picks) are IN-SAMPLE — the
-  // model saw those outcomes during training — so counting them inflates ROI and
-  // the record. Every betting / track-record stat is restricted to the hold-out.
-  const HOLDOUT_START = '2023-01-01';
+  // Every stat below is measured on the SAME fully out-of-sample window so the
+  // comparison is apples-to-apples. The models don't share a training cutoff
+  // (v1–v4 train through 2022; v5 trains through 2023 and calibrates on 2024),
+  // so the only window that is clean for ALL of them is 2025-onward. Counting
+  // earlier fights — especially v5's backfilled pre-2024 point-in-time picks —
+  // is in-sample and inflates ROI and the record, so it's excluded.
+  const HOLDOUT_START = '2025-01-01';
   const isHoldout = r => r.outcome_known && (r.event_date || '') >= HOLDOUT_START;
 
   function roiAt(rows, edge) {
@@ -925,9 +927,9 @@ cfl.renderFooter();
     return { bets: bets.length, wins, win_pct: 100 * wins / bets.length, roi: pnl / (bets.length * 100) * 100, pnl };
   }
 
-  // Straight-up pick record on the hold-out: the model's pick is the >50% side of
-  // each graded fight. This is the honest track record across every graded hold-out
-  // fight — independent of the edge/betting filter above.
+  // Straight-up pick record on the window: the model's pick is the >50% side of
+  // each graded fight. This is the honest track record across every graded
+  // out-of-sample fight — independent of the edge/betting filter above.
   function pickRecord(rows) {
     const picks = rows.filter(r => isHoldout(r) && r.model_p != null && r.model_p > 0.5);
     const wins = picks.filter(r => r.won).length;
@@ -955,8 +957,8 @@ cfl.renderFooter();
           </div>
           <div>
             <div class="lbl">accuracy</div>
-            <div class="val">${((m.test_accuracy ?? 0) * 100).toFixed(1)}%</div>
-            <div class="sub">on 2023+ hold-out</div>
+            <div class="val">${(rec.n ? rec.acc : (m.test_accuracy ?? 0) * 100).toFixed(1)}%</div>
+            <div class="sub">out-of-sample, 2025+</div>
           </div>
           <div>
             <div class="lbl">ROI @ 5%</div>
@@ -964,7 +966,7 @@ cfl.renderFooter();
             <div class="sub">${headline.bets} bets</div>
           </div>
         </div>
-        ${rec.n ? `<div class="track-rec">Track record <strong>${rec.wins}–${rec.losses}</strong> <span class="tr-acc">${rec.acc.toFixed(1)}%</span> <span class="tr-note">across ${rec.n.toLocaleString()} graded fights · 2023+ hold-out, never trained on</span></div>` : ''}
+        ${rec.n ? `<div class="track-rec">Track record <strong>${rec.wins}–${rec.losses}</strong> <span class="tr-acc">${rec.acc.toFixed(1)}%</span> <span class="tr-note">across ${rec.n.toLocaleString()} graded fights since Jan 2025 · fully out-of-sample for every model</span></div>` : ''}
       </div>
     `;
   }).join('');
