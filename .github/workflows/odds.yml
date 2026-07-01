@@ -1,21 +1,20 @@
-name: Fetch UFC odds (DISABLED)
+name: Fetch UFC odds
 
-# DISABLED 2026-05-24. The base `fight_odds` table in Supabase is now owned by
-# the cage-metrics-odds-scrapper repo (per-poll BFO snapshots, Railway cron).
-# Its schema (`fight_id, side, book_id, american_odds, captured_at, ...`) is
-# incompatible with this script's consensus shape (`american_odds_a/b,
-# implied_prob_a/b, bookmaker_count, fetched_at`), so every scheduled run was
-# failing on upsert with `column does not exist`.
+# Pulls current UFC moneyline odds from The Odds API and writes per-book snapshot
+# rows into `fight_odds` (same shape the BFO Railway cron uses), which the
+# `v_fight_odds_consensus` view and the index/event/parlay pages read.
 #
-# The frontend now reads consensus odds from the `v_fight_odds_consensus` view
-# (see v_fight_odds_consensus.sql), which aggregates the snapshot table on
-# read. If we ever want a true Odds API consensus alongside the BFO scrape,
-# point this script at a separately named table (e.g., fight_odds_oddsapi) and
-# re-enable.
+# Requires two repo secrets:
+#   - ODDS_API_KEY               (the-odds-api.com)
+#   - SUPABASE_SERVICE_ROLE_KEY  (Supabase → Project Settings → API; legacy JWT
+#                                 service_role key — bypasses RLS to write)
 #
-# Manual dispatch only — no cron — so it doesn't keep failing in the logs.
+# Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
+# whole MMA slate. Every 2h = ~360 requests/month, under the 500 free-tier cap.
 
 on:
+  schedule:
+    - cron: '0 */2 * * *'   # every 2 hours
   workflow_dispatch:
 
 permissions:
@@ -41,7 +40,7 @@ jobs:
         working-directory: build
         run: npm install --no-audit --no-fund
 
-      - name: Fetch and upsert odds
+      - name: Fetch and insert odds
         working-directory: build
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
