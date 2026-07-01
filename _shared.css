@@ -13,7 +13,7 @@
   --border-2: #2a2a2a;
   --text: #f0f0f0;
   --text-2: #999999;
-  --text-3: #555555;
+  --text-3: #808080;
   --blue: #378ADD;
   --green: #4CAF50;
   --amber: #ffb547;
@@ -220,6 +220,20 @@ input[type="text"]:focus, input[type="number"]:focus, select:focus {
   border-color: var(--red);
 }
 input::placeholder { color: var(--text-3); }
+
+/* Visible keyboard focus across interactive elements. Inputs above clear their
+   outline for mouse use; :focus-visible restores a clear ring for keyboard nav
+   without affecting mouse clicks. */
+a:focus-visible,
+button:focus-visible,
+.btn:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+[tabindex]:focus-visible {
+  outline: 2px solid var(--red);
+  outline-offset: 2px;
+}
 
 /* ============== Avatar / fighter chip ============== */
 .cfl-avatar {

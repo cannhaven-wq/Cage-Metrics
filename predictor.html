@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=navfix1">
+<link rel="stylesheet" href="_shared.css?v=a11y1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 
@@ -564,6 +564,10 @@
     border-radius: 10px;
   }
   .err-state { color: var(--red); border-color: rgba(230,57,70,0.3); }
+
+  /* Quiet inline note for fights where no model flagged a bet — keeps these
+     rows from reading as visually loud as fights that DO have signals. */
+  .no-bet { padding: 8px 14px 12px; color: var(--text-3); font-size: 12.5px; }
 
   @media (max-width: 640px) {
     .pick-row { grid-template-columns: 70px 1fr 60px 50px 50px; gap: 6px; font-size: 12px; }
@@ -1220,7 +1224,7 @@ cfl.renderFooter();
                 <th>Models</th><th>Pick</th><th>Opener</th><th>Op p</th><th>Avg p</th><th>Avg edge</th><th>Stake</th><th></th>
               </tr></thead>
               <tbody>${lines}</tbody>
-            </table>` : `<div class="empty-state" style="margin: 12px 14px 16px;">No model flagged a bet on this fight.</div>`}
+            </table>` : `<div class="no-bet">No model flagged a bet on this fight.</div>`}
           </div>
         `;
       }).join('');

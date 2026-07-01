@@ -59,7 +59,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=navfix1">
+<link rel="stylesheet" href="_shared.css?v=a11y1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -246,6 +246,17 @@
   .pick-odds-pill.unknown { color: var(--text-3); }
   .pick-fighter.selected .pick-odds-pill { background: rgba(76,175,80,0.18); }
   .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
+  /* Keyboard focus ring for the (button-role) fighter tiles */
+  .pick-fighter:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+
+  /* Phones: the 1fr|auto|1fr matchup row can't fit two fighters + odds side by
+     side, so stack it — fighter A, VS, fighter B — instead of overflowing.
+     640px matches the predictor's pick-row reflow breakpoint. */
+  @media (max-width: 640px) {
+    .pick-row { grid-template-columns: 1fr; gap: 4px; }
+    .pick-fighter.right { flex-direction: row; text-align: left; }
+    .pick-vs { padding: 2px 0; font-size: 12px; text-align: center; }
+  }
 
   /* Model selector strip — sits above the upcoming card */
   .model-strip {
@@ -740,7 +751,7 @@ function renderPickRow(f) {
 
   return `
     <div class="pick-row">
-      <div class="pick-fighter ${aSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_a_id}" data-name="${cfl.escapeHtml(f.fighter_a_name)}" data-opp="${cfl.escapeHtml(f.fighter_b_name)}" data-odds="${aOdds != null ? aOdds : ''}">
+      <div class="pick-fighter ${aSelected ? 'selected' : ''}" role="button" tabindex="0" aria-pressed="${aSelected ? 'true' : 'false'}" aria-label="Add ${cfl.escapeHtml(f.fighter_a_name)} to parlay" data-fight="${f.id}" data-fighter="${f.fighter_a_id}" data-name="${cfl.escapeHtml(f.fighter_a_name)}" data-opp="${cfl.escapeHtml(f.fighter_b_name)}" data-odds="${aOdds != null ? aOdds : ''}">
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_a_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_a_name)}</div>
@@ -749,7 +760,7 @@ function renderPickRow(f) {
         <div class="pick-odds-pill ${oddsClass(aOdds)}">${fmtAmerican(aOdds)}</div>
       </div>
       <div class="pick-vs">VS</div>
-      <div class="pick-fighter right ${bSelected ? 'selected' : ''}" data-fight="${f.id}" data-fighter="${f.fighter_b_id}" data-name="${cfl.escapeHtml(f.fighter_b_name)}" data-opp="${cfl.escapeHtml(f.fighter_a_name)}" data-odds="${bOdds != null ? bOdds : ''}">
+      <div class="pick-fighter right ${bSelected ? 'selected' : ''}" role="button" tabindex="0" aria-pressed="${bSelected ? 'true' : 'false'}" aria-label="Add ${cfl.escapeHtml(f.fighter_b_name)} to parlay" data-fight="${f.id}" data-fighter="${f.fighter_b_id}" data-name="${cfl.escapeHtml(f.fighter_b_name)}" data-opp="${cfl.escapeHtml(f.fighter_a_name)}" data-odds="${bOdds != null ? bOdds : ''}">
         <div class="cfl-avatar sm">${cfl.escapeHtml(cfl.initials(f.fighter_b_name))}</div>
         <div style="flex:1; min-width: 0;">
           <div class="name">${cfl.escapeHtml(f.fighter_b_name)}</div>
@@ -761,39 +772,48 @@ function renderPickRow(f) {
   `;
 }
 
+function togglePick(pf) {
+  const fightId = parseInt(pf.dataset.fight, 10);
+  const fighterId = parseInt(pf.dataset.fighter, 10);
+  if (!fighterId) return;
+
+  const existingIndex = legs.findIndex(l => l.fightId === fightId);
+  const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
+  if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
+    legs.splice(existingIndex, 1);
+  } else {
+    // Pre-fill the leg odds with the best price currently available across all
+    // books we track, so users see a working parlay at the best line they can
+    // shop to. They can still type over it if they got an even better number.
+    const best = bestPriceFor(fightId, fighterId);
+    const newLeg = {
+      fightId,
+      fighterId,
+      fighterName: pf.dataset.name,
+      opponentName: pf.dataset.opp,
+      odds: best != null ? String(best) : ''
+    };
+    if (existingIndex >= 0) {
+      legs[existingIndex] = newLeg;
+    } else {
+      legs.push(newLeg);
+    }
+  }
+  render();
+  renderSlip();
+  if (wasAdded) pulseSlip();
+}
+
 document.addEventListener('click', e => {
   const pf = e.target.closest('.pick-fighter');
-  if (pf) {
-    const fightId = parseInt(pf.dataset.fight, 10);
-    const fighterId = parseInt(pf.dataset.fighter, 10);
-    if (!fighterId) return;
+  if (pf) togglePick(pf);
+});
 
-    const existingIndex = legs.findIndex(l => l.fightId === fightId);
-    const wasAdded = !(existingIndex >= 0 && legs[existingIndex].fighterId === fighterId);
-    if (existingIndex >= 0 && legs[existingIndex].fighterId === fighterId) {
-      legs.splice(existingIndex, 1);
-    } else {
-      // Pre-fill the leg odds with the best price currently available across all
-      // books we track, so users see a working parlay at the best line they can
-      // shop to. They can still type over it if they got an even better number.
-      const best = bestPriceFor(fightId, fighterId);
-      const newLeg = {
-        fightId,
-        fighterId,
-        fighterName: pf.dataset.name,
-        opponentName: pf.dataset.opp,
-        odds: best != null ? String(best) : ''
-      };
-      if (existingIndex >= 0) {
-        legs[existingIndex] = newLeg;
-      } else {
-        legs.push(newLeg);
-      }
-    }
-    render();
-    renderSlip();
-    if (wasAdded) pulseSlip();
-  }
+// Keyboard activation for the role="button" fighter tiles (Enter / Space).
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Enter' && e.key !== ' ' && e.key !== 'Spacebar') return;
+  const pf = e.target.closest && e.target.closest('.pick-fighter');
+  if (pf) { e.preventDefault(); togglePick(pf); }
 });
 
 function pulseSlip() {
@@ -903,7 +923,7 @@ function renderSlip() {
       </div>
     </div>
     <div class="help-box">
-      Each leg is pre-filled with the <strong>best price available across books right now</strong> (we shop FanDuel, Caesars, BetRivers, BetWay, Unibet, Polymarket, Kalshi, and others). Type over it with your own book's price if you got an even better number.<br>
+      Each leg is pre-filled with the <strong>best price available across books right now</strong> (we shop DraftKings, FanDuel, BetMGM, Bovada, BetOnline, BetUS, Polymarket, and others). Type over it with your own book's price if you got an even better number.<br>
       Implied % shows what the price is pricing in. Combined % is the chance all your picks hit at once.
     </div>
   `;
