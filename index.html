@@ -254,6 +254,41 @@
   #home .trust-item + .trust-item::before { display: none; }
   #home .steps { grid-template-columns: 1fr; }
 }
+
+/* ===== Model filter + model explanations ===== */
+#home .model-filter { display: inline-flex; align-items: center; gap: 8px; }
+#home .model-filter label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
+#home .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 10px; font: 600 12.5px 'Space Grotesk', sans-serif; cursor: pointer; }
+#home .model-how { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+#home .model-how > summary { list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
+#home .model-how > summary::-webkit-details-marker { display: none; }
+#home .model-how > summary::before { content: '▸'; color: var(--text-3); transition: transform .15s; }
+#home .model-how[open] > summary::before { transform: rotate(90deg); }
+#home .mh-item { padding: 10px 0; border-bottom: 1px solid var(--line); }
+#home .mh-item:last-child { border-bottom: none; }
+#home .mh-v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; color: var(--red); text-transform: uppercase; }
+#home .mh-name { font-size: 12.5px; font-weight: 600; color: var(--text); margin-left: 6px; }
+#home .mh-desc { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-top: 3px; }
+
+/* ===== Input weights (box graph) per fight ===== */
+#home .weights { border-top: 1px solid var(--line); padding-top: 12px; }
+#home .weights > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); }
+#home .weights > summary::-webkit-details-marker { display: none; }
+#home .weights > summary .lbl { display: flex; align-items: center; gap: 6px; }
+#home .weights > summary .lbl::before { content: '▸'; color: var(--text-3); transition: transform .15s; }
+#home .weights[open] > summary .lbl::before { transform: rotate(90deg); }
+#home .wt-net { color: var(--text-3); font-weight: 500; font-size: 11.5px; white-space: nowrap; }
+#home .wt-body { margin-top: 12px; }
+#home .wt-note { font-size: 11px; color: var(--text-3); line-height: 1.4; margin-bottom: 10px; }
+#home .wt-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; margin-bottom: 8px; }
+#home .wt-row:last-child { margin-bottom: 0; }
+#home .wt-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+#home .wt-track { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
+#home .wt-track > i { display: block; height: 100%; border-radius: 4px; background: var(--text-3); }
+#home .wt-row.support .wt-track > i { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+#home .wt-row.against .wt-track > i { background: var(--amber); }
+#home .wt-pct { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-2); white-space: nowrap; }
+#home .wt-empty { font-size: 12px; color: var(--text-3); line-height: 1.45; }
 </style>
 </head>
 <body>
@@ -287,6 +322,7 @@
       <div class="panel-head"><span class="t">Model Accuracy</span><span class="v">v5 · 70% on 2025</span></div>
       <div id="heroModelList"><div class="models-loading">Loading models…</div></div>
       <div class="panel-foot"><strong>8,000+</strong> historical fights backtested</div>
+      <details class="model-how" id="modelHow"><summary>How each model works</summary><div id="modelHowBody"></div></details>
     </aside>
   </section>
 
@@ -304,6 +340,10 @@
         <button data-sort="value">Value</button>
       </div>
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
+      <div class="model-filter" style="margin-left:auto">
+        <label for="hpModelSelect">Model</label>
+        <select id="hpModelSelect"><option value="consensus">Consensus (all models)</option></select>
+      </div>
     </div>
     <div class="fights" id="fightsList"></div>
   </section>
@@ -570,7 +610,18 @@ setTimeout(() => {
 const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5'];
 let _cardioMap = null;
 let _oddsMap = null;
-let _leanState = null;   // { fights, fighterMap, picksByFight, eventId }
+let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
+let _hpSortKey = 'order';
+let _hpModelMode = 'consensus';
+
+// Plain-English explanation of each model. Reed can refine the wording.
+const MODEL_EXPLAIN = {
+  v1: 'A plain statistical baseline — weighs a handful of fighter stats in a straight line. The floor every other model has to beat.',
+  v2: 'Blends a chess-style Elo rating (updated after every fight) with gradient-boosted decision trees.',
+  v3: 'Adds recent-form weighting, style matchups (striker vs grappler), and durability/chin signals on top of the basics.',
+  v4: 'A stacker — a meta-model that learns the best way to combine v1, v2, and v3 into a single call.',
+  v5: 'Our flagship. Gradient-boosted trees (XGBoost) on performance stats adjusted for strength of schedule. Most accurate — ~75% on 2025.',
+};
 
 async function load() {
   const sb = window.cflSupabase;
@@ -669,7 +720,7 @@ async function loadFights(event) {
   _cardioMap = null;
   _oddsMap = null;
   const fightIds = fights.map(f => f.id);
-  const [, , predsR] = await Promise.all([
+  const [, , predsR, namesR] = await Promise.all([
     loadCardioMap(fighterIds),
     loadOddsMap(event.id),
     fightIds.length
@@ -678,7 +729,11 @@ async function loadFights(event) {
           .in('fight_id', fightIds)
           .in('model_version', HP_VISIBLE_MODELS)
       : Promise.resolve({ data: [] }),
+    sb.from('model_versions').select('id, name').in('id', HP_VISIBLE_MODELS),
   ]);
+
+  const modelNames = {};
+  if (!namesR.error) (namesR.data || []).forEach(m => { modelNames[m.id] = m.name; });
 
   const picksByFight = {};
   if (!predsR.error) {
@@ -691,20 +746,21 @@ async function loadFights(event) {
     console.warn('Trained model predictions not available:', predsR.error.message);
   }
 
-  _leanState = { fights, fighterMap, picksByFight, eventId: event.id };
-  renderLeanCards('order');
-  wireSort();
+  _leanState = { fights, fighterMap, picksByFight, eventId: event.id, modelNames };
+  populateModelSelect(modelNames);
+  renderModelExplanations(modelNames);
+  renderLeanCards();
+  wireControls();
 }
 
 // Cardio tier ranking for edge comparison.
 const CARDIO_RANK = { tireless: 5, steady: 4, tapers: 3, fades: 2, collapses: 1 };
 
-function renderLeanCards(sortKey) {
+function renderLeanCards() {
   if (!_leanState) return;
   const list = document.getElementById('fightsList');
   const { fights, fighterMap, picksByFight, eventId } = _leanState;
 
-  // Build a render model per fight so we can sort by computed fields.
   const cards = fights.map((fight, idx) => buildFightModel(fight, idx, fighterMap, picksByFight, eventId))
     .filter(Boolean);
 
@@ -713,9 +769,114 @@ function renderLeanCards(sortKey) {
     conf:  (a, b) => b.confidence - a.confidence,
     value: (a, b) => b.value - a.value,
   };
-  cards.sort(sorters[sortKey] || sorters.order);
+  cards.sort(sorters[_hpSortKey] || sorters.order);
 
   list.innerHTML = cards.map(c => c.html).join('');
+}
+
+// Pick for a fight under the selected model mode (consensus or a single model).
+function pickForFight(fightPicks, a, b, mode) {
+  if (!mode || mode === 'consensus') return getConsensusPick(fightPicks, a, b);
+  return getTrainedPick(mode, fightPicks, a, b);
+}
+
+function getTrainedPick(modelKey, fightPicks, a, b) {
+  if (!fightPicks) return null;
+  const p = fightPicks[modelKey];
+  if (!p) return null;
+  const picked = p.fighter_id === a.id ? a : (p.fighter_id === b.id ? b : null);
+  if (!picked) return null;
+  const opponent = picked === a ? b : a;
+  return { picked, opponent, pct: p.model_p * 100 };
+}
+
+// Input-weights "box graph" — the transparent, rules-based edge factors behind
+// the pick (Record / Cardio / Takedown D), each sized by its weight. Green when
+// a factor supports the model's pick, amber when it cuts against it. Visible to
+// everyone. Delegates the math to edges.js (single source of truth).
+function renderWeights(a, b, fight, pick) {
+  if (!(window.cflEdges && window.cflEdges.computeEdges)) return '';
+  let v;
+  try {
+    v = window.cflEdges.computeEdges(a, b, { cardioMap: _cardioMap, fightWeightClass: fight.weight_class });
+  } catch (e) { return ''; }
+  const LABEL = { record: 'Record', cardio: 'Cardio', td_def: 'Takedown D' };
+  let net;
+  if (v.edges.length) {
+    const aFav = v.aProb >= 0.5;
+    const who = aFav ? a : b;
+    const pctNet = Math.round((aFav ? v.aProb : 1 - v.aProb) * 100);
+    net = `Edge lean: ${cfl.escapeHtml(lastName(who.name))} ${pctNet}%`;
+  } else {
+    net = 'No strong edges';
+  }
+  const rows = v.edges.map(e => {
+    const fav = e.favors === 'a' ? a : b;
+    const supports = pick && fav.id === pick.picked.id;
+    const cls = pick ? (supports ? 'support' : 'against') : '';
+    const w = Math.max(6, Math.min(100, ((e.pct - 50) / 22) * 100));
+    return `<div class="wt-row ${cls}">
+      <div class="wt-label">${LABEL[e.factor] || e.factor}</div>
+      <div class="wt-track"><i style="width:${w.toFixed(0)}%"></i></div>
+      <div class="wt-pct">${e.pct.toFixed(0)}% ${cfl.escapeHtml(lastName(fav.name))}</div>
+    </div>`;
+  }).join('');
+  const body = v.edges.length
+    ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs every model sees. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
+    : `<div class="wt-empty">No strong edge on record, cardio, or takedown defense here — the pick leans on the model's broader stat weighting.</div>`;
+  return `<details class="weights"><summary><span class="lbl">Input weights</span><span class="wt-net">${net}</span></summary><div class="wt-body">${body}</div></details>`;
+}
+
+function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }
+
+function populateModelSelect(modelNames) {
+  const sel = document.getElementById('hpModelSelect');
+  if (!sel) return;
+  const opts = ['<option value="consensus">Consensus (all models)</option>'];
+  HP_VISIBLE_MODELS.forEach(mv => {
+    const nm = modelNames && modelNames[mv];
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(mv.toUpperCase() + (nm ? ' · ' + nm : ''))}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = _hpModelMode;
+}
+
+function renderModelExplanations(modelNames) {
+  const body = document.getElementById('modelHowBody');
+  if (!body) return;
+  body.innerHTML = HP_VISIBLE_MODELS.map(mv => {
+    const nm = modelNames && modelNames[mv] ? modelNames[mv] : '';
+    const d = MODEL_EXPLAIN[mv] || '';
+    if (!d && !nm) return '';
+    return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
+      `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
+      `<div class="mh-desc">${cfl.escapeHtml(d)}</div></div>`;
+  }).join('');
+}
+
+function wireControls() {
+  const seg = document.getElementById('sortSeg');
+  const hint = document.getElementById('sortHint');
+  if (seg && !seg._wired) {
+    seg._wired = true;
+    const hints = {
+      order: 'Main event first, top of the card down.',
+      conf: 'Most confident picks first.',
+      value: 'Biggest edge over the market first.',
+    };
+    seg.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      [].forEach.call(seg.querySelectorAll('button'), b => b.classList.toggle('active', b === btn));
+      _hpSortKey = btn.dataset.sort;
+      renderLeanCards();
+      if (hint) hint.textContent = hints[_hpSortKey] || '';
+    });
+  }
+  const sel = document.getElementById('hpModelSelect');
+  if (sel && !sel._wired) {
+    sel._wired = true;
+    sel.addEventListener('change', () => { _hpModelMode = sel.value; renderLeanCards(); });
+  }
 }
 
 function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
@@ -724,7 +885,7 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   if (!a || !b) return null;
 
   const fightPicks = (picksByFight || {})[fight.id];
-  const pick = getConsensusPick(fightPicks, a, b);   // {picked, opponent, pct, voteCount, totalVotes} | null
+  const pick = pickForFight(fightPicks, a, b, _hpModelMode);   // {picked, opponent, pct} | null
 
   // Card-position label
   let wt = fight.weight_class || 'Bout';
@@ -789,6 +950,7 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
       <div class="matchup">${sideA}<div class="vs">VS</div>${sideB}</div>
       ${pickbar}
       ${bulletsHtml}
+      ${renderWeights(a, b, fight, pick)}
       <a href="${cfl.eventUrl(eventId)}" class="btn btn-ghost btn-block">View matchup</a>
     </div>`;
 

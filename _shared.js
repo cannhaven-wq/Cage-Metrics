@@ -124,7 +124,6 @@
           <span class="full">Next event</span><span class="short">Event</span>
         </a>
         <span class="cfl-nav-divider" aria-hidden="true"></span>
-        <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
         <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stats</a>
         <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
         <span class="cfl-nav-divider" aria-hidden="true"></span>
