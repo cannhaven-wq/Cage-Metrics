@@ -46,13 +46,15 @@ a { color: inherit; text-decoration: none; }
 
 /* ============== NAV ============== */
 nav.cfl-nav {
-  background: var(--bg-2);
+  background: rgba(10, 12, 15, 0.72);
+  backdrop-filter: saturate(160%) blur(14px);
+  -webkit-backdrop-filter: saturate(160%) blur(14px);
   border-bottom: 1px solid var(--border);
   padding: 0 32px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  height: 56px;
+  height: 60px;
   position: sticky;
   top: 0;
   z-index: 100;
@@ -121,6 +123,39 @@ nav.cfl-nav {
   background: var(--border-2);
   margin: 0 4px;
 }
+
+/* Tools dropdown — desktop hover/focus panel; flattens into the drawer on mobile */
+.cfl-nav-menu { position: relative; display: inline-flex; align-items: center; }
+.cfl-nav-menu-btn {
+  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--text-2); background: transparent; border: 0; cursor: pointer;
+  padding: 0; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
+  transition: color 0.15s;
+}
+.cfl-nav-menu-btn::after { content: '▾'; font-size: 10px; color: var(--text-3); }
+.cfl-nav-menu-btn:hover,
+.cfl-nav-menu:hover .cfl-nav-menu-btn,
+.cfl-nav-menu-btn.active { color: #fff; }
+/* invisible hover bridge across the gap so the panel doesn't drop on the way down */
+.cfl-nav-menu::after { content: ''; position: absolute; top: 100%; left: -10px; right: -10px; height: 16px; }
+.cfl-nav-menu-panel {
+  position: absolute; top: calc(100% + 14px); left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  min-width: 190px; background: var(--bg-1); border: 1px solid var(--border-2);
+  border-radius: 12px; padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.45);
+  opacity: 0; visibility: hidden; transition: opacity 0.16s, transform 0.16s; z-index: 101;
+}
+.cfl-nav-menu:hover .cfl-nav-menu-panel,
+.cfl-nav-menu:focus-within .cfl-nav-menu-panel {
+  opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0);
+}
+.cfl-nav-menu-panel a {
+  display: block; padding: 9px 12px; border-radius: 8px;
+  font-size: 13px; color: var(--text-2); font-weight: 500; white-space: nowrap;
+}
+.cfl-nav-menu-panel a:hover,
+.cfl-nav-menu-panel a.active { background: var(--bg-3); color: #fff; }
+.cfl-nav-menu-panel a.active::after { content: none; }
 
 /* Mobile burger button — desktop hides it */
 .cfl-nav-burger {
@@ -495,6 +530,20 @@ footer.cfl-footer {
     margin: 2px 0;
   }
   .cfl-nav-tag { display: none; }
+
+  /* Tools dropdown flattens into the drawer: hide the button, show items inline */
+  .cfl-nav-menu { display: block; position: static; }
+  .cfl-nav-menu::after { display: none; }
+  .cfl-nav-menu-btn { display: none; }
+  .cfl-nav-menu-panel {
+    position: static; opacity: 1; visibility: visible; transform: none;
+    background: transparent; border: 0; box-shadow: none; padding: 0; min-width: 0;
+  }
+  .cfl-nav-menu-panel a {
+    padding: 14px 22px; font-size: 15px; font-weight: 600;
+    border-bottom: 1px solid var(--border); border-radius: 0;
+  }
+  .cfl-nav-menu-panel a.active { color: #fff; background: var(--bg-3); }
 
   .stats-grid-4 { grid-template-columns: repeat(2, 1fr); }
   .stats-grid-3 { grid-template-columns: repeat(2, 1fr); }

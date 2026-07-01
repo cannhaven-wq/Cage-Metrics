@@ -113,23 +113,20 @@
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
-        <a class="cfl-nav-cta-link ${active === 'picks' ? 'active' : ''}" href="picks.html">
-          Picks
-        </a>
-        <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay</a>
-        <a href="mybook.html" ${active === 'mybook' ? 'class="active"' : ''} data-auth-only="true" style="display:none">
-          <span class="full">My Book</span><span class="short">Book</span>
-        </a>
+        <a class="cfl-nav-cta-link ${active === 'picks' ? 'active' : ''}" href="picks.html">Picks</a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
-          <span class="full">Next event</span><span class="short">Event</span>
+          <span class="full">Next Card</span><span class="short">Card</span>
         </a>
-        <span class="cfl-nav-divider" aria-hidden="true"></span>
-        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stats</a>
-        <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>
-        <span class="cfl-nav-divider" aria-hidden="true"></span>
-        <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>
-          Lab
-        </a>
+        <div class="cfl-nav-menu">
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','mybook'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
+          <div class="cfl-nav-menu-panel">
+            <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
+            <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
+            <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stat Finder</a>
+            <a href="mybook.html" ${active === 'mybook' ? 'class="active"' : ''} data-auth-only="true" style="display:none">My Book</a>
+          </div>
+        </div>
+        <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>Lab</a>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
