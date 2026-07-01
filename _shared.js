@@ -124,9 +124,6 @@
           <span class="full">Next event</span><span class="short">Event</span>
         </a>
         <span class="cfl-nav-divider" aria-hidden="true"></span>
-        <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>
-          <span class="full">Head-to-head</span><span class="short">H2H</span>
-        </a>
         <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
         <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stats</a>
         <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio</a>

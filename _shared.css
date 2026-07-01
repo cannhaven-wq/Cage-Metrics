@@ -3,20 +3,32 @@
    ========================================================================== */
 
 :root {
-  --red: #e63946;
-  --red-dark: #c1121f;
-  --bg: #0a0a0a;
-  --bg-2: #111111;
-  --bg-3: #181818;
-  --bg-4: #1e1e1e;
-  --border: #222222;
-  --border-2: #2a2a2a;
-  --text: #f0f0f0;
-  --text-2: #999999;
-  --text-3: #808080;
-  --blue: #378ADD;
-  --green: #4CAF50;
+  /* Brand + signal colors — red reserved for brand/primary action,
+     green = win/edge, amber = caution. */
+  --red: #ff3b47;
+  --red-dark: #d81f2a;
+  --red-2: #d81f2a;
+  --green: #3fd07a;
+  --green-dim: #1f5f3c;
+  --blue: #4a9be8;
   --amber: #ffb547;
+  /* Neutral ramp — warmer near-black with more elevation steps. Old names
+     (--bg-2/3/4, --border, --border-2) kept so un-migrated pages don't break;
+     --bg-1/--line/--line-2 are the new aliases the redesigned components use. */
+  --bg: #08090b;
+  --bg-1: #0d0f12;
+  --bg-2: #0f1318;
+  --bg-3: #161a20;
+  --bg-4: #1c212a;
+  --border: #20252d;
+  --border-2: #2b313b;
+  --line: #20252d;
+  --line-2: #2b313b;
+  --text: #f4f6f8;
+  --text-2: #a0a8b4;
+  --text-3: #6b7480;
+  --radius: 14px;
+  --shadow: 0 8px 30px rgba(0,0,0,.45);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -24,7 +36,7 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Space Grotesk', 'Inter', sans-serif;
   font-size: 15px;
   line-height: 1.6;
   min-height: 100vh;

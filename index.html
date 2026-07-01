@@ -6,8 +6,8 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>Cannon Fight Lab — 70% Accurate UFC Predictions & Fighter Analytics</title>
-<meta name="description" content="70% accurate UFC fight predictions, tied for most accurate public model on the internet. Verified on 368 graded 2025 fights. Fighter cardio scores, head-to-head matchups, and a transparent locked-pick track record.">
-<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, fighter head to head, UFC fight model, MMA edge factors, accurate UFC picks">
+<meta name="description" content="70% accurate UFC fight predictions, tied for most accurate public model on the internet. Verified on 368 graded 2025 fights. Fighter cardio scores, model picks, edge factors, and a transparent locked-pick track record.">
+<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, accurate UFC picks">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/">
@@ -27,18 +27,15 @@
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Cannon Fight Lab — 70% Accurate UFC Predictions">
-<meta name="twitter:description" content="70% accurate UFC predictions verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Cardio scores, head-to-head, edge factors.">
+<meta name="twitter:description" content="70% accurate UFC predictions verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Cardio scores, model picks, edge factors.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
-<meta name="theme-color" content="#0a0a0a">
+<meta name="theme-color" content="#08090b">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
 <!-- ===== Structured data (JSON-LD) ===== -->
-<!-- Tells search engines that CFL is a sports analytics web application,
-     reachable at this URL, with a clear name. Helps Google understand the
-     site for rich-result eligibility (sitelinks, knowledge panel). -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -62,1217 +59,208 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=a11y1">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rd1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
-<!-- Plausible analytics — privacy-friendly, no cookie banner needed. -->
-<!-- Replace 'cannonfightlab.com' with your registered Plausible domain if different. -->
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
 <style>
-  /* Page-specific styles */
-  .countdown-bar {
-    background: linear-gradient(180deg, var(--bg-2), var(--bg));
-    border-bottom: 1px solid var(--border);
-    padding: 28px 32px;
-    text-align: center;
-  }
-  .countdown-eyebrow {
-    font-size: 11px;
-    color: var(--red);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.15em;
-    margin-bottom: 8px;
-  }
-  .countdown-event-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 44px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1;
-    margin-bottom: 6px;
-  }
-  .countdown-meta {
-    font-size: 14px;
-    color: var(--text-2);
-    margin-bottom: 14px;
-  }
-  .countdown-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--red);
-    color: #fff;
-    padding: 6px 16px;
-    border-radius: 999px;
-    font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .countdown-pill .num {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-  }
+/* =====================================================================
+   HOMEPAGE REDESIGN — scoped under #home so nothing collides with
+   the shared component library in _shared.css?v=rd1. Uses the shared design
+   tokens (--bg, --bg-1, --line, --red, --green, ...).
+   ===================================================================== */
+#home { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+#home .glow-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 15% -5%, rgba(255,59,71,.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(74,155,232,.06), transparent 55%); }
 
-  /* Stat of the day */
-  .stat-strip {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 12px;
-    margin-top: 4px;
-    margin-bottom: 36px;
-  }
-  .stat-of-day {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--red);
-    border-radius: 10px;
-    padding: 18px 20px;
-  }
-  .stat-of-day .lbl {
-    font-size: 11px;
-    color: var(--red);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    margin-bottom: 8px;
-  }
-  .stat-of-day .big {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    line-height: 1.1;
-    margin-bottom: 4px;
-  }
-  .stat-of-day .big .sec {
-    font-size: 16px;
-    color: var(--text-3);
-    font-weight: 600;
-    margin-left: 8px;
-  }
-  .stat-of-day .sub { font-size: 12px; color: var(--text-2); }
+/* Section scaffolding */
+#home .section { padding: 34px 0; }
+#home .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
+#home .sec-head h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; color: #fff; letter-spacing: .2px; }
+#home .sec-head .sub { font-size: 13px; color: var(--text-3); margin-top: 3px; }
+#home .sec-head a { font-size: 13px; color: var(--text-2); font-weight: 500; white-space: nowrap; }
+#home .sec-head a:hover { color: #fff; }
 
-  /* Fights list */
-  .fights-section { margin-bottom: 40px; }
-  .fights-header {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    margin-bottom: 18px;
-  }
-  .fights-header h2 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: #fff;
-    letter-spacing: 0.5px;
-  }
-  .fights-header .sub {
-    font-size: 12px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-  }
+/* Buttons (override shared .btn within #home for the new look) */
+#home .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center;
+  font-family: 'Space Grotesk', sans-serif; font-weight: 600; font-size: 13.5px; cursor: pointer;
+  border-radius: 10px; padding: 10px 18px; border: 1px solid transparent; transition: .15s; white-space: nowrap; }
+#home .btn-primary { background: var(--red); color: #fff; }
+#home .btn-primary:hover { background: var(--red-2); transform: translateY(-1px); }
+#home .btn-ghost { background: var(--bg-2); border-color: var(--line-2); color: var(--text); }
+#home .btn-ghost:hover { background: var(--bg-3); border-color: #3a424e; }
+#home .btn-lg { padding: 14px 24px; font-size: 15px; border-radius: 12px; }
+#home .btn-block { width: 100%; }
 
-  .fight-card {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    margin-bottom: 12px;
-    overflow: hidden;
-    transition: border-color 0.15s;
-  }
-  .fight-card:hover { border-color: #2f2f2f; }
-  .fight-card.main { border-color: var(--red); }
-  .fight-card.title { border-color: #d4af37; }
+/* ===== HERO ===== */
+#home .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 44px; align-items: center; padding: 60px 0 44px; }
+#home .hp-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 18px; }
+#home .hp-eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--red); }
+#home .hero h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 56px; line-height: 1.03;
+  letter-spacing: -.4px; color: #fff; }
+#home .hero h1 .hl { color: var(--red); }
+#home .hero p.lede { color: var(--text-2); font-size: 16.5px; line-height: 1.6; max-width: 500px; margin: 18px 0 28px; }
+#home .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 
-  .fight-card-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 16px;
-    background: var(--bg-3);
-    border-bottom: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-  }
-  .fight-card-header .badge {
-    font-size: 9px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    background: var(--red);
-    color: #fff;
-    letter-spacing: 0.05em;
-  }
-  .fight-card-header .badge.title { background: #d4af37; color: #1a1a1a; }
-  .fight-card-header .weight { color: var(--text-2); }
+/* Accuracy proof panel */
+#home .panel { background: linear-gradient(180deg, var(--bg-1), var(--bg)); border: 1px solid var(--line);
+  border-radius: 18px; padding: 24px; box-shadow: var(--shadow); }
+#home .panel-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+#home .panel-head .t { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+#home .panel-head .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 14px; color: var(--green); }
+#home .bar { height: 6px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
+#home .bar > i { display: block; height: 100%; border-radius: 4px; background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+/* loadHeroModels output rows */
+#home .hero-model-row { display: grid; grid-template-columns: 26px 1fr auto; gap: 12px; align-items: center; padding: 11px 0; }
+#home .hero-model-row + .hero-model-row { border-top: 1px solid var(--line); }
+#home .hero-model-row .vid { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 12px; color: var(--text-3); text-transform: uppercase; text-align: center; }
+#home .hero-model-row .name { font-size: 12.5px; color: var(--text-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#home .hero-model-row .name .subline { display: block; font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
+#home .hero-model-row .pct { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 22px; color: #fff; font-variant-numeric: tabular-nums; }
+#home .hero-model-row .pct.good { color: var(--green); }
+#home .hero-model-row .pct.mid { color: var(--amber); }
+#home .hero-model-row .pct.bad { color: var(--red); }
+#home .hero-model-row .pct.na { color: var(--text-3); font-size: 16px; }
+#home .hero-model-bar { grid-column: 2; margin-top: 6px; }
+#home .models-loading { color: var(--text-3); font-size: 13px; padding: 10px 0; }
+#home .panel-foot { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--text-3); }
+#home .panel-foot strong { font-family: 'Barlow Condensed', sans-serif; font-size: 15px; color: #fff; margin-right: 6px; }
 
-  .fight-body {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 24px;
-    padding: 18px 20px;
-  }
+/* ===== NEXT CARD header + sort ===== */
+#home .card-head { margin-bottom: 14px; }
+#home .card-head .eyebrow-live { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--red); display: inline-flex; align-items: center; gap: 7px; }
+#home .card-head .eyebrow-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+#home .card-head h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; color: #fff; margin-top: 6px; }
+#home .card-head .meta { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+#home .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0 20px; }
+#home .fl-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
+#home .fl-hint { font-size: 12.5px; color: var(--text-3); }
+#home .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+#home .seg button { font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--text-2); background: transparent; border: 0; padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: .15s; }
+#home .seg button:hover { color: #fff; }
+#home .seg button.active { background: var(--red); color: #fff; }
 
-  .fight-fighter {
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    cursor: pointer;
-    transition: opacity 0.15s;
-  }
-  .fight-fighter:hover { opacity: 0.85; }
-  .fight-fighter.right {
-    flex-direction: row-reverse;
-    text-align: right;
-  }
-  .fight-fighter .meta-block {
-    flex: 1;
-    min-width: 0;
-  }
-  .fight-fighter .name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.1;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .fight-fighter .nick {
-    font-size: 12px;
-    color: var(--text-2);
-    font-style: italic;
-    margin-top: 2px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .fight-fighter .record {
-    font-size: 12px;
-    color: var(--text-3);
-    margin-top: 4px;
-    font-family: 'Barlow Condensed', sans-serif;
-    letter-spacing: 0.5px;
-  }
-  .fight-fighter .record strong { color: var(--text); font-weight: 600; }
-  /* Style chip: small color-coded pill below the record line.
-     Striker = red (high-damage / KO threat connotation)
-     Grappler = blue (control / pressure connotation; covers wrestlers,
-                BJJ players, sambo, judo — anyone whose game is on the mat)
-     Well-rounded = neutral grey
-     Low volume = darker grey, deemphasized */
-  .fight-fighter .style-chip {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 10px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    line-height: 1.4;
-  }
-  .fight-fighter .style-chip.style-striker     { background: rgba(230, 57, 70, 0.15); color: var(--red); }
-  .fight-fighter .style-chip.style-grappler    { background: rgba(55, 138, 221, 0.15); color: var(--blue); }
-  .fight-fighter .style-chip.style-hybrid      { background: rgba(212, 175, 55, 0.15); color: var(--amber, #d4af37); }
-  .fight-fighter .style-chip.style-well_rounded{ background: var(--bg-3); color: var(--text-2); }
-  .fight-fighter .style-chip.style-low_volume  { background: var(--bg-3); color: var(--text-3); }
-  .fight-fighter.right .style-chip { float: right; }
+/* ===== Lean fight cards ===== */
+#home .fights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+#home .fight { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; transition: .16s; }
+#home .fight:hover { border-color: var(--line-2); }
+#home .fight-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+#home .fight-hd .wt { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 600; }
+#home .cbadge { display: inline-flex; align-items: center; gap: 5px; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+#home .cbadge.high { background: rgba(63,208,122,.15); color: var(--green); }
+#home .cbadge.med { background: rgba(255,181,71,.15); color: var(--amber); }
+#home .cbadge.low { background: rgba(160,168,180,.12); color: var(--text-2); }
+#home .cbadge.value { background: transparent; border: 1px solid var(--green); color: var(--green); }
+#home .cbadge.pending { background: var(--bg-3); color: var(--text-3); }
+#home .matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
+#home .side { display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 12px 6px; border-radius: 10px; border: 1px solid transparent; text-decoration: none; }
+#home .side.pick { border-color: rgba(63,208,122,.35); background: rgba(63,208,122,.06); }
+#home .ava { width: 46px; height: 46px; border-radius: 50%; background: var(--bg-3); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 16px; color: var(--text-2); }
+#home .side.pick .ava { border-color: var(--green); color: var(--green); }
+#home .side .nm { font-size: 13.5px; font-weight: 600; color: var(--text); line-height: 1.2; }
+#home .side .rec { font-size: 11px; color: var(--text-3); }
+#home .vs { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 15px; color: var(--text-3); }
+#home .pickbar { display: flex; align-items: center; justify-content: space-between; background: var(--bg-2); border-radius: 10px; padding: 10px 14px; }
+#home .pickbar .lab { font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); }
+#home .pickbar .nm { font-weight: 700; color: #fff; font-size: 14px; }
+#home .pickbar .cf { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; color: var(--green); line-height: 1; }
+#home .pickbar .cf.med { color: var(--amber); }
+#home .pickbar .cf.low { color: var(--text-2); }
+#home .pb-right { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+#home .edge { font-size: 10.5px; font-weight: 600; letter-spacing: .02em; }
+#home .edge.pos { color: var(--green); }
+#home .edge.flat { color: var(--text-3); }
+#home .edges { list-style: none; display: flex; flex-direction: column; gap: 7px; margin: 0; padding: 0; }
+#home .edges li { display: flex; gap: 8px; font-size: 12.5px; color: var(--text-2); align-items: flex-start; }
+#home .edges li svg { width: 14px; height: 14px; fill: none; stroke: var(--green); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; flex-shrink: 0; }
+#home .fight-note { font-size: 12px; color: var(--text-3); }
 
-  /* Moneyline odds chip — book price next to the fighter, no model comparison.
-     Favorites (negative number) get a subtle red tint, underdogs stay neutral. */
-  .fight-fighter .fighter-odds {
-    display: inline-block;
-    margin-top: 6px;
-    padding: 3px 9px;
-    border-radius: 6px;
-    font: 700 12px 'Inter', sans-serif;
-    background: var(--bg-3);
-    color: var(--text-2);
-    border: 1px solid var(--border-2);
-    letter-spacing: 0.02em;
-  }
-  .fight-fighter .fighter-odds.fav {
-    background: rgba(230, 57, 70, 0.10);
-    color: var(--red);
-    border-color: rgba(230, 57, 70, 0.30);
-  }
-  .fight-fighter.right .fighter-odds { float: right; }
+/* ===== Track record ===== */
+#home .track-note { color: var(--text-2); font-size: 13.5px; line-height: 1.55; max-width: 860px; margin: 6px 0 20px; }
+#home .track-note strong { color: var(--text); }
+#home .track-note a { color: var(--red); }
+#home .past-events-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+#home .past-event-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; text-decoration: none; color: inherit; display: block; transition: .16s; }
+#home .past-event-card:hover { border-color: var(--line-2); transform: translateY(-2px); box-shadow: var(--shadow); }
+#home .past-event-eyebrow { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; }
+#home .past-event-name { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 700; color: #fff; line-height: 1.15; margin: 7px 0 4px; }
+#home .past-event-main { font-size: 12.5px; color: var(--text-2); line-height: 1.4; }
+#home .past-event-main strong { color: var(--text); }
+#home .past-event-models { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); display: grid; grid-template-columns: auto 1fr auto; column-gap: 12px; row-gap: 7px; align-items: baseline; }
+#home .pe-model-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .08em; font-weight: 700; font-variant-numeric: tabular-nums; }
+#home .pe-model-pct { font-family: 'Barlow Condensed', sans-serif; font-size: 20px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+#home .pe-model-pct.good { color: var(--green); } #home .pe-model-pct.mid { color: var(--amber); }
+#home .pe-model-pct.bad { color: var(--red); } #home .pe-model-pct.na { color: var(--text-3); font-size: 15px; }
+#home .pe-model-detail { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; }
+#home .past-event-cta { margin-top: 14px; font-size: 12px; color: var(--red); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; }
 
-  .fight-vs {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--red);
-    letter-spacing: 0.1em;
-    text-align: center;
-  }
-  .fight-vs .compare {
-    display: block;
-    margin-top: 6px;
-    font-size: 10px;
-    color: var(--text-3);
-    font-weight: 500;
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    text-decoration: none;
-    transition: color 0.15s;
-  }
-  .fight-vs .compare:hover { color: var(--red); }
+/* ===== Toolkit ===== */
+#home .tools { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+#home .tool { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 20px; transition: .16s; text-decoration: none; color: inherit; display: block; }
+#home .tool:hover { border-color: var(--line-2); transform: translateY(-2px); }
+#home .tool-ic { width: 38px; height: 38px; border-radius: 10px; background: var(--bg-3); display: flex; align-items: center; justify-content: center; margin-bottom: 14px; }
+#home .tool-ic svg { width: 19px; height: 19px; fill: none; stroke: var(--red); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#home .tool h3 { font-size: 15px; font-weight: 600; color: #fff; margin-bottom: 5px; }
+#home .tool p { font-size: 12.5px; color: var(--text-3); line-height: 1.45; margin-bottom: 12px; }
+#home .tool .go { font-size: 12.5px; font-weight: 600; color: var(--red); }
 
-  /* Comparison-bar stats: each row has fighter A's value+bar on the left,
-     fighter B's value+bar on the right, with a thin centerline divider.
-     Bar length encodes magnitude — leader's bar always reaches the outer
-     edge, trailing fighter's bar shows their fraction of the leader. */
-  .fight-stats {
-    padding: 14px 20px 18px;
-    border-top: 1px solid var(--border);
-    background: var(--bg);
-  }
-  /* Two visually distinguishable groupings inside .fight-stats:
-     physicals (tape-of-the-tape, on top) and performance (derived stats, below).
-     Separated by a subtle divider line so the eye can parse them as
-     "static facts about the fighters" vs "computed performance signal." */
-  .fstat-section + .fstat-section {
-    margin-top: 14px;
-    padding-top: 14px;
-    border-top: 1px dashed var(--border);
-  }
-  .fstat-row {
-    display: grid;
-    grid-template-columns: 1fr auto 1fr;
-    align-items: center;
-    gap: 14px;
-    margin-bottom: 12px;
-  }
-  .fstat-row:last-child { margin-bottom: 0; }
-  .fstat-label {
-    font-size: 10px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 600;
-    text-align: center;
-    min-width: 92px;
-    line-height: 1.2;
-  }
-  .fstat-label-link {
-    color: inherit;
-    text-decoration: none;
-    border-bottom: 1px dotted var(--text-3);
-    padding-bottom: 1px;
-    transition: color 0.15s, border-color 0.15s;
-  }
-  .fstat-label-link:hover {
-    color: var(--red);
-    border-bottom-color: var(--red);
-  }
-  .fstat-side {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    height: 18px;
-  }
-  .fstat-side.left { justify-content: flex-end; }
-  .fstat-side.right { justify-content: flex-start; flex-direction: row-reverse; }
-  .fstat-val {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-2);
-    letter-spacing: 0.5px;
-    min-width: 44px;
-    text-align: center;
-    flex-shrink: 0;
-  }
-  .fstat-side.left .fstat-val { text-align: right; }
-  .fstat-side.right .fstat-val { text-align: left; }
-  .fstat-val.winner { color: var(--green); }
-  .fstat-bar {
-    flex: 1;
-    height: 6px;
-    background: var(--bg-3);
-    border-radius: 3px;
-    overflow: hidden;
-    position: relative;
-    max-width: 220px;
-  }
-  .fstat-fill {
-    position: absolute;
-    top: 0; bottom: 0;
-    background: var(--text-3);
-    border-radius: 3px;
-    transition: width 0.3s;
-  }
-  .fstat-fill.winner { background: var(--green); }
-  .fstat-side.left  .fstat-fill { right: 0; }
-  .fstat-side.right .fstat-fill { left: 0; }
-  .fstat-tier-tag {
-    font-size: 9px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #ffa726;
-    margin-left: 6px;
-    flex-shrink: 0;
-  }
-  .fstat-side.right .fstat-tier-tag { margin-left: 0; margin-right: 6px; }
+/* ===== Why trust ===== */
+#home .trust { background: var(--bg-1); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; }
+#home .trust-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+#home .trust-item { text-align: center; position: relative; }
+#home .trust-item + .trust-item::before { content: ''; position: absolute; left: -10px; top: 6px; bottom: 6px; width: 1px; background: var(--line); }
+#home .trust-item .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; color: #fff; line-height: 1; }
+#home .trust-item .n .u { color: var(--green); }
+#home .trust-item .l { font-size: 12px; color: var(--text-2); margin-top: 6px; line-height: 1.35; }
+#home .trust-foot { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-3); }
+#home .trust-foot a { color: var(--red); font-weight: 600; }
 
-  /* ============== Cardio row — tier word + small score ============== */
-  /* Cardio rows replace the bare numeric value with a stacked layout:
-     a tier word (Tireless / Steady / etc.) on top, the numeric score
-     in muted small text underneath. Reuses .fstat-bar/.fstat-fill so
-     the visual rhythm of the stat block is preserved. */
-  .cardio-stack {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    line-height: 1.05;
-    min-width: 56px;
-  }
-  .fstat-side.right .cardio-stack { align-items: flex-start; }
-  .cardio-tier-word {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-2);
-    letter-spacing: 0.3px;
-  }
-  .cardio-tier-word.winner { color: var(--green); }
-  .cardio-score-small {
-    font-size: 11px;
-    color: var(--text-3);
-    font-weight: 500;
-    margin-top: 1px;
-  }
+/* ===== How to use ===== */
+#home .steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; }
+#home .step { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+#home .step .num { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: var(--red); line-height: 1; }
+#home .step .st { font-size: 13px; color: var(--text); font-weight: 600; margin-top: 8px; line-height: 1.3; }
+#home .step .sd { font-size: 11.5px; color: var(--text-3); margin-top: 5px; line-height: 1.4; }
 
-  /* ============== Edge panel (top 3 fights only) ============== */
-  .edge-panel {
-    border-top: 1px solid var(--border);
-    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
-    padding: 18px 22px 20px;
-  }
-  .edge-eyebrow {
-    font-size: 10px;
-    color: var(--red);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700;
-    margin-bottom: 12px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .edge-eyebrow .dot {
-    width: 5px; height: 5px; border-radius: 50%;
-    background: var(--red);
-    display: inline-block;
-  }
-  .edge-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 14px;
-  }
-  .edge-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-    line-height: 1.4;
-  }
-  .edge-row .marker {
-    flex-shrink: 0;
-    width: 44px;
-    text-align: center;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    padding: 3px 0;
-    border-radius: 4px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .edge-row .marker.favors-a { background: rgba(76, 175, 80, 0.12); color: var(--green); border: 1px solid rgba(76,175,80,0.25); }
-  .edge-row .marker.favors-b { background: rgba(55, 138, 221, 0.12); color: var(--blue); border: 1px solid rgba(55,138,221,0.25); }
-  .edge-row .marker.neutral  { background: var(--bg-3); color: var(--text-3); border: 1px solid var(--border-2); }
-  .edge-row .desc { color: var(--text); flex: 1; }
-  .edge-row .desc strong { color: #fff; }
-  .edge-row .pct {
-    flex-shrink: 0;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-2);
-    letter-spacing: 0.5px;
-  }
+/* ===== Skeleton loaders (P4) ===== */
+#home .skel-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; height: 240px; }
+#home .skel { background: linear-gradient(100deg, var(--bg-2) 30%, var(--bg-3) 50%, var(--bg-2) 70%); background-size: 200% 100%; animation: sk 1.3s infinite; border-radius: 6px; }
+@keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+#home .load-err { grid-column: 1 / -1; text-align: center; padding: 40px 20px; color: var(--text-3); font-size: 14px; }
 
-  .edge-summary {
-    border-top: 1px solid var(--border);
-    padding-top: 14px;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .edge-summary .verdict-label {
-    font-size: 10px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .edge-summary .verdict-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--green);
-    letter-spacing: 0.5px;
-    line-height: 1;
-  }
-  .edge-summary .verdict-name.even { color: var(--text-2); }
-  .edge-summary .verdict-pct {
-    margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--green);
-    letter-spacing: 0.5px;
-  }
-  .edge-summary .verdict-pct.even { color: var(--text-3); }
-  /* Secondary verdict row under "Data favors" — go-the-distance prediction. */
-  .distance-summary {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--border);
-    display: flex;
-    align-items: center;
-    gap: 14px;
-  }
-  .distance-summary .distance-label {
-    font-size: 10px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .distance-summary .distance-call {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text);
-    letter-spacing: 0.5px;
-  }
-  .distance-summary .distance-pct {
-    margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 800;
-    color: var(--red);
-    letter-spacing: 0.5px;
-  }
-  /* Market consensus row — sits below the distance row, same hierarchy. */
-  .market-summary {
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px dashed var(--border);
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .market-summary .market-label {
-    font-size: 10px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.12em;
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .market-summary .market-pick {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text);
-    letter-spacing: 0.3px;
-  }
-  .market-summary .market-odds { color: var(--text-3); margin-left: 4px; font-weight: 700; }
-  .market-summary .market-pct  { color: var(--text-3); margin-left: 4px; font-weight: 700; }
-  .market-summary .market-edge {
-    margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 13px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    padding: 3px 10px;
-    border-radius: 6px;
-    color: var(--text-2);
-    background: var(--bg);
-  }
-  .market-summary .market-edge.pos { color: var(--green); background: rgba(0,180,90,0.12); }
-  .market-summary .market-edge.neg { color: var(--red);   background: rgba(255,56,56,0.10); }
-  .market-summary .market-value-badge {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 12px;
-    font-weight: 800;
-    padding: 3px 10px;
-    border-radius: 6px;
-    color: #1a1a1a;
-    background: var(--amber, #ffb547);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .edge-summary .verdict-pct .small {
-    font-size: 14px;
-    color: var(--text-3);
-    margin-left: 4px;
-    font-weight: 600;
-  }
+/* ===== Beta banner (kept, restyled inline via _shared tokens) ===== */
+.beta-banner { background: linear-gradient(90deg, rgba(255,59,71,.12), rgba(74,155,232,.08)); border-bottom: 1px solid var(--line); padding: 10px 32px; display: none; align-items: center; justify-content: center; gap: 14px; font-size: 13px; color: var(--text); text-align: center; flex-wrap: wrap; }
+.beta-banner.show { display: flex; }
+.beta-banner .tag { background: var(--red); color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: .08em; }
+.beta-banner .msg strong { color: #fff; font-weight: 600; }
+.beta-banner .cta { color: var(--red); text-decoration: none; font-weight: 600; }
+.beta-banner .cta:hover { text-decoration: underline; }
+.beta-banner .dismiss { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 8px; }
+.beta-banner .dismiss:hover { color: var(--text); }
 
-  /* Mobile */
-  @media (max-width: 768px) {
-    .countdown-event-name { font-size: 30px; }
-    .stat-strip { grid-template-columns: 1fr; }
-    .fight-body { grid-template-columns: 1fr auto 1fr; gap: 8px; padding: 14px 12px; }
-    .fight-fighter { gap: 8px; }
-    .fight-fighter .name { font-size: 16px; }
-    .fight-fighter .nick { font-size: 10px; }
-    .fight-stats { padding: 12px 14px 14px; }
-    .fstat-label { min-width: 70px; font-size: 9px; }
-    .fstat-row { gap: 8px; margin-bottom: 10px; }
-    .fstat-val { font-size: 13px; min-width: 36px; }
-    .fstat-bar { max-width: none; }
-    .fight-vs { font-size: 14px; }
-    .countdown-bar { padding: 20px 16px; }
-    .edge-panel { padding: 14px 14px 16px; }
-    .edge-row { font-size: 12px; gap: 10px; }
-    .edge-row .marker { width: 36px; font-size: 12px; }
-    .edge-summary .verdict-name { font-size: 18px; }
-    .edge-summary .verdict-pct { font-size: 22px; }
-  }
-
-  /* Homepage model selector — dropdown in the fights-header that lets visitors
-     swap which subset of edge factors the heuristic runs on the next-event
-     card. Mirrors the same control on event.html. */
-  .hp-model-selector {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .hp-model-selector label {
-    font: 700 10px 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.10em;
-    color: var(--text-3);
-  }
-  .hp-model-selector select {
-    background: var(--bg-3);
-    color: var(--text);
-    border: 1px solid var(--border-2);
-    border-radius: 6px;
-    padding: 5px 9px;
-    font: 600 12px 'Inter', sans-serif;
-    cursor: pointer;
-  }
-
-  /* Method-of-victory pills — sits inside .edge-summary as a third row,
-     under the verdict %. Three pills (KO / SUB / DEC) with the leading
-     method highlighted red. */
-  .hp-mov-pills {
-    grid-column: 1 / -1;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 8px;
-    align-items: center;
-  }
-  .hp-mov-pills .mov-label {
-    font: 700 9px 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.10em;
-    color: var(--text-3);
-    margin-right: 4px;
-  }
-  .hp-mov-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    padding: 3px 9px;
-    border-radius: 999px;
-    font: 600 11px 'Inter', sans-serif;
-    background: var(--bg-2);
-    border: 1px solid var(--border-2);
-    color: var(--text-3);
-  }
-  .hp-mov-pill .mov-kind { font-weight: 800; color: var(--text-2); }
-  .hp-mov-pill.lead {
-    background: rgba(255,56,56,0.10);
-    border-color: rgba(255,56,56,0.30);
-    color: var(--red);
-  }
-  .hp-mov-pill.lead .mov-kind { color: var(--red); }
-
-  @media (max-width: 768px) {
-    .fights-header { flex-wrap: wrap; gap: 8px; }
-  }
-
-  /* Trained model picks row — one pill per model_version under each fight's
-     edge panel. Pills show the model id, the picked fighter, and the model's
-     confidence. For past fights with a graded outcome the pill turns green
-     for correct / red for wrong. Mirrors event.html's model-picks-row. */
-  .hp-trained-picks {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    padding: 10px 16px;
-    border-top: 1px solid var(--border);
-    background: var(--bg-3);
-  }
-  .hp-trained-picks .tp-label {
-    font: 700 10px 'Inter', sans-serif;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--text-3);
-    margin-right: 4px;
-  }
-  .hp-trained-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 4px 9px;
-    border-radius: 999px;
-    font: 600 11px 'Inter', sans-serif;
-    background: var(--bg-2);
-    border: 1px solid var(--border-2);
-    color: var(--text-2);
-  }
-  .hp-trained-pill .tp-mv {
-    font: 800 10px 'Inter', sans-serif;
-    color: var(--text-3);
-    letter-spacing: 0.04em;
-  }
-  .hp-trained-pill .tp-pct { color: var(--text-3); font-weight: 500; }
-  .hp-trained-pill.correct {
-    background: rgba(34,197,94,0.10);
-    border-color: rgba(34,197,94,0.30);
-    color: var(--green);
-  }
-  .hp-trained-pill.correct .tp-mv,
-  .hp-trained-pill.correct .tp-pct { color: var(--green); opacity: 0.85; }
-  .hp-trained-pill.wrong {
-    background: rgba(239,68,68,0.10);
-    border-color: rgba(239,68,68,0.30);
-    color: var(--red);
-  }
-  .hp-trained-pill.wrong .tp-mv,
-  .hp-trained-pill.wrong .tp-pct { color: var(--red); opacity: 0.85; }
-
-  /* Beta premium banner — shown to logged-out users above the hero.
-     Dismissible (closed state persists in localStorage). Hides automatically
-     for signed-in users since they already have premium access. */
-  .beta-banner {
-    background: linear-gradient(90deg, rgba(230,57,70,0.12), rgba(212,175,55,0.10));
-    border-bottom: 1px solid var(--border);
-    padding: 10px 32px;
-    display: none;
-    align-items: center;
-    justify-content: center;
-    gap: 14px;
-    font-size: 13px;
-    color: var(--text);
-    text-align: center;
-    flex-wrap: wrap;
-  }
-  .beta-banner.show { display: flex; }
-  .beta-banner .tag {
-    background: var(--red);
-    color: #fff;
-    font-size: 10px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 4px;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .beta-banner .msg { color: var(--text); }
-  .beta-banner .msg strong { color: #fff; font-weight: 600; }
-  .beta-banner .cta {
-    color: var(--red);
-    text-decoration: none;
-    font-weight: 600;
-    border-bottom: 1px solid rgba(230,57,70,0.4);
-    padding-bottom: 1px;
-    transition: border-color 0.15s;
-  }
-  .beta-banner .cta:hover { border-bottom-color: var(--red); }
-  .beta-banner .dismiss {
-    background: none;
-    border: none;
-    color: var(--text-3);
-    cursor: pointer;
-    font-size: 18px;
-    line-height: 1;
-    padding: 4px 8px;
-    margin-left: 4px;
-    transition: color 0.15s;
-  }
-  .beta-banner .dismiss:hover { color: var(--text); }
-  @media (max-width: 600px) {
-    .beta-banner { padding: 10px 16px; font-size: 12px; }
-  }
-
-  /* ====================================================================
-     HOMEPAGE HERO + MARKETING SECTIONS — only used on index.html
-     ==================================================================== */
-  .home-hero {
-    position: relative;
-    overflow: hidden;
-    border-bottom: 1px solid var(--border);
-    background: linear-gradient(180deg, var(--bg-2) 0%, var(--bg) 100%);
-  }
-  .home-hero-grid {
-    position: absolute;
-    inset: 0;
-    background-image:
-      linear-gradient(var(--border) 1px, transparent 1px),
-      linear-gradient(90deg, var(--border) 1px, transparent 1px);
-    background-size: 80px 80px;
-    opacity: 0.3;
-    pointer-events: none;
-  }
-  .home-hero-inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 44px 32px 40px;
-    position: relative;
-    display: grid;
-    grid-template-columns: 1fr 420px;
-    gap: 48px;
-    align-items: center;
-  }
-  .home-hero-eyebrow {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--red);
-    text-transform: uppercase;
-    letter-spacing: 0.18em;
-    margin-bottom: 18px;
-  }
-  .home-hero-eyebrow::before {
-    content: '';
-    display: inline-block;
-    width: 28px; height: 3px;
-    background: var(--red);
-  }
-  .home-hero h1 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 56px;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1.02;
-    letter-spacing: -1px;
-    margin: 0 0 16px;
-  }
-  .home-hero h1 .accent { color: var(--red); }
-  .home-hero p.lede {
-    font-size: 16px;
-    color: var(--text-2);
-    line-height: 1.55;
-    max-width: 580px;
-    margin: 0 0 22px;
-  }
-  .home-hero-cta-row {
-    display: flex;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-  .home-hero-cta-row .btn {
-    padding: 14px 28px;
-    font-size: 15px;
-  }
-  /* Right-side model panel — lists each trained model with its live pick accuracy. */
-  .home-hero-models {
-    border-left: 1px solid var(--border);
-    padding-left: 28px;
-  }
-  .home-hero-models .panel-label {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-3);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 14px;
-  }
-  .hero-model-row {
-    display: grid;
-    grid-template-columns: 28px 1fr auto;
-    align-items: baseline;
-    gap: 12px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border);
-  }
-  .hero-model-row:last-of-type { border-bottom: none; }
-  .hero-model-row .vid {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--red);
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-  }
-  .hero-model-row .name {
-    font-size: 13px;
-    color: var(--text);
-    font-weight: 500;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-  .hero-model-row .name .subline {
-    display: block;
-    font-size: 10px;
-    color: var(--text-3);
-    font-weight: 500;
-    letter-spacing: 0.04em;
-    margin-top: 2px;
-  }
-  .hero-model-row .pct {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--text);
-    line-height: 1;
-    letter-spacing: -0.5px;
-    font-variant-numeric: tabular-nums;
-  }
-  .hero-model-row .pct.good { color: var(--green); }
-  .hero-model-row .pct.mid  { color: var(--amber, #ffb547); }
-  .hero-model-row .pct.bad  { color: var(--red); }
-  .hero-model-row .pct.na   { color: var(--text-3); font-size: 18px; font-weight: 600; }
-  .home-hero-models .panel-footnote {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-    font-size: 11px;
-    color: var(--text-3);
-    letter-spacing: 0.06em;
-  }
-  .home-hero-models .panel-footnote strong {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text);
-    letter-spacing: 0;
-    margin-right: 6px;
-  }
-  .home-hero-models .models-loading {
-    color: var(--text-3);
-    font-size: 13px;
-    padding: 10px 0;
-  }
-  /* "How we did last event" recap card */
-  .home-recap {
-    max-width: 1200px;
-    margin: 32px auto;
-    padding: 0 32px;
-  }
-  .home-recap .track-record-note {
-    text-align: center;
-    max-width: 720px;
-    margin: 0 auto 28px;
-    color: var(--text-2);
-    font-size: 14px;
-    line-height: 1.55;
-  }
-  .home-recap .track-record-note strong { color: var(--text); }
-  .home-recap .track-record-note a { color: var(--text); text-decoration: underline; }
-  .home-recap-card {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    padding: 28px 32px;
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    gap: 32px;
-    align-items: center;
-  }
-  .home-recap-icon {
-    width: 56px; height: 56px;
-    border-radius: 50%;
-    background: rgba(76, 175, 80, 0.12);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--green);
-    font-family: 'Barlow Condensed', sans-serif;
-    font-weight: 800;
-    font-size: 24px;
-  }
-  .home-recap-body .recap-eyebrow {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-3);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 6px;
-  }
-  .home-recap-body h3 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 26px;
-    font-weight: 700;
-    color: var(--text);
-    margin: 0 0 4px;
-    letter-spacing: -0.5px;
-  }
-  .home-recap-body p {
-    font-size: 14px;
-    color: var(--text-2);
-    margin: 0;
-    line-height: 1.5;
-  }
-  .home-recap-body p strong { color: var(--text); }
-  .home-recap-pct {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 56px;
-    font-weight: 800;
-    color: var(--green);
-    line-height: 1;
-    text-align: right;
-  }
-  .home-recap-pct .small { font-size: 0.5em; color: var(--text-3); }
-  /* Feature pillars — what makes CFL different */
-  .home-pillars {
-    max-width: 1200px;
-    margin: 40px auto;
-    padding: 0 32px;
-  }
-  .home-pillars h2 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text);
-    margin: 0 0 8px;
-    letter-spacing: -0.5px;
-  }
-  .home-pillars .lede {
-    color: var(--text-2);
-    font-size: 16px;
-    margin-bottom: 28px;
-    max-width: 720px;
-  }
-  .home-pillars-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-  }
-  .home-pillar {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 22px;
-    text-decoration: none;
-    color: inherit;
-    transition: border-color 0.15s, transform 0.15s;
-  }
-  .home-pillar:hover {
-    border-color: var(--red);
-    transform: translateY(-2px);
-  }
-  .home-pillar .pillar-eyebrow {
-    font-size: 10px;
-    font-weight: 600;
-    color: var(--red);
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    margin-bottom: 12px;
-  }
-  .home-pillar h3 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: var(--text);
-    margin: 0 0 8px;
-    letter-spacing: -0.3px;
-  }
-  .home-pillar p {
-    font-size: 13px;
-    color: var(--text-2);
-    margin: 0;
-    line-height: 1.55;
-  }
-  /* Section break above the next event */
-  .home-section-break {
-    max-width: 1200px;
-    margin: 40px auto 0;
-    padding: 0 32px;
-  }
-  .home-section-break-eyebrow {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-3);
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
-    margin-bottom: 4px;
-  }
-  .home-section-break h2 {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 36px;
-    font-weight: 800;
-    color: var(--text);
-    margin: 0 0 4px;
-    letter-spacing: -0.5px;
-  }
-  .home-section-break p {
-    color: var(--text-2);
-    font-size: 14px;
-    margin: 0;
-  }
-  /* Past-predictions card grid */
-  .past-events-grid {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 32px 56px;
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 14px;
-  }
-  .past-event-card {
-    background: var(--bg-2);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px;
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    transition: border-color 0.15s, transform 0.15s;
-  }
-  .past-event-card:hover { border-color: var(--red); transform: translateY(-2px); }
-  .past-event-eyebrow {
-    font-size: 11px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 600;
-    margin-bottom: 6px;
-  }
-  .past-event-name {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 22px;
-    font-weight: 700;
-    color: #fff;
-    line-height: 1.15;
-    margin-bottom: 8px;
-  }
-  .past-event-meta {
-    font-size: 12px;
-    color: var(--text-2);
-    margin-bottom: 14px;
-  }
-  .past-event-main { font-size: 13px; color: var(--text-2); line-height: 1.4; }
-  .past-event-main strong { color: var(--text); font-weight: 600; }
-  .past-event-cta {
-    margin-top: 16px;
-    font-size: 12px;
-    color: var(--red);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-  }
-  .past-event-models {
-    margin-top: 14px;
-    padding-top: 12px;
-    border-top: 1px solid var(--border);
-    display: grid;
-    grid-template-columns: auto 1fr auto;
-    column-gap: 14px;
-    row-gap: 6px;
-    align-items: baseline;
-  }
-  .past-event-models .pe-model-label {
-    font-size: 11px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.1em;
-    font-weight: 700;
-    font-variant-numeric: tabular-nums;
-  }
-  .past-event-models .pe-model-pct {
-    font-family: 'Barlow Condensed', sans-serif;
-    font-size: 24px;
-    font-weight: 800;
-    line-height: 1;
-    font-variant-numeric: tabular-nums;
-  }
-  .past-event-models .pe-model-pct.good { color: var(--green); }
-  .past-event-models .pe-model-pct.mid  { color: var(--amber); }
-  .past-event-models .pe-model-pct.bad  { color: var(--red); }
-  .past-event-models .pe-model-pct.na   { color: var(--text-3); font-size: 18px; }
-  .past-event-models .pe-model-detail {
-    font-size: 11px;
-    color: var(--text-3);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 600;
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-  }
-  .past-event-empty {
-    color: var(--text-3);
-    text-align: center;
-    padding: 32px;
-    font-size: 13px;
-    grid-column: 1 / -1;
-  }
-  /* Mobile responsive */
-  @media (max-width: 900px) {
-    .home-hero-inner {
-      grid-template-columns: 1fr;
-      padding: 48px 20px 36px;
-      gap: 36px;
-    }
-    .home-hero h1 { font-size: 40px; }
-    .home-hero-models {
-      border-left: none;
-      border-top: 1px solid var(--border);
-      padding-left: 0;
-      padding-top: 22px;
-    }
-    .hero-model-row .pct { font-size: 24px; }
-    .home-recap-card {
-      grid-template-columns: 1fr;
-      gap: 14px;
-      padding: 22px;
-    }
-    .home-recap-pct { text-align: left; font-size: 44px; }
-    .home-pillars-grid { grid-template-columns: 1fr 1fr; }
-  }
-  @media (max-width: 560px) {
-    .home-pillars-grid { grid-template-columns: 1fr; }
-  }
+@media (max-width: 900px) {
+  #home .hero { grid-template-columns: 1fr; gap: 30px; padding: 40px 0; }
+  #home .hero h1 { font-size: 42px; }
+  #home .fights { grid-template-columns: 1fr; }
+  #home .past-events-grid { grid-template-columns: 1fr; }
+  #home .tools { grid-template-columns: 1fr; }
+  #home .trust-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+  #home .trust-item + .trust-item::before { display: none; }
+  #home .steps { grid-template-columns: 1fr; }
+}
 </style>
 </head>
 <body>
 
 <nav class="cfl-nav"></nav>
 
-<!-- Beta premium banner — only shown to logged-out users, dismissible.
-     Visibility is controlled by JS via .show class so we never flash
-     an incorrect state on initial load. -->
+<!-- Beta premium banner — logged-out only, dismissible. -->
 <div class="beta-banner" id="betaBanner">
   <span class="tag">Beta</span>
   <span class="msg"><strong>Free premium during beta</strong> — full edge factors, no card required.</span>
@@ -1280,122 +268,108 @@
   <button class="dismiss" id="betaBannerDismiss" aria-label="Dismiss">&times;</button>
 </div>
 
-<!-- =====================================================================
-     HERO — first impression for cold visitors. Returning users scroll
-     past or click "See next event →" to anchor down to the card.
-     ===================================================================== -->
-<section class="home-hero">
-  <div class="home-hero-grid"></div>
-  <div class="home-hero-inner">
+<div class="glow-bg" aria-hidden="true"></div>
+
+<main id="home">
+
+  <!-- 1 · HERO -->
+  <section class="hero">
     <div>
-      <div class="home-hero-eyebrow">UFC Analytics Platform</div>
-      <h1><span class="accent">70%</span> accurate UFC predictions, backed by real data.</h1>
-      <p class="lede">Our latest ML model picks UFC winners at 70.0% on 368 graded 2025 fights — tied for the most accurate public model on the internet, on a 50%+ larger verified test than the nearest competitor. Cardio scores, head-to-head matchups, and edge factors validated against thousands of historical fights. Every verdict is locked before the card so the track record is honest, not retrofitted.</p>
-      <div class="home-hero-cta-row">
-        <a href="#next-event" class="btn">See next event →</a>
-        <a href="/cardio.html" class="btn ghost">How the cardio score works</a>
+      <div class="hp-eyebrow">UFC Analytics Platform</div>
+      <h1>UFC predictions<br>backed by <span class="hl">real fight data.</span></h1>
+      <p class="lede">Model-driven picks, edge factors, cardio scores, and matchup stats for every UFC card.</p>
+      <div class="hero-cta">
+        <a href="#next" class="btn btn-primary btn-lg">See Next Card →</a>
+        <a href="#track" class="btn btn-ghost btn-lg">See the track record</a>
       </div>
     </div>
-    <aside class="home-hero-models">
-      <!-- Live model breakdown — one row per trained model in model_versions,
-           with cumulative pick accuracy on graded fights from model_predictions.
-           Falls back silently to a hold-out accuracy fragment if no graded
-           picks exist yet for a model. -->
-      <div class="panel-label">Model accuracy</div>
-      <div id="heroModelList">
-        <div class="models-loading">Loading models…</div>
-      </div>
-      <div class="panel-footnote"><strong>8,000+</strong> historical fights backtested</div>
+    <aside class="panel">
+      <div class="panel-head"><span class="t">Model Accuracy</span><span class="v">v5 · 70% on 2025</span></div>
+      <div id="heroModelList"><div class="models-loading">Loading models…</div></div>
+      <div class="panel-foot"><strong>8,000+</strong> historical fights backtested</div>
     </aside>
-  </div>
-</section>
+  </section>
 
-<!-- =====================================================================
-     RECAP — "How we did last event" card. Live from v_event_accuracy so
-     it updates automatically after each card.
-     ===================================================================== -->
-<!-- =====================================================================
-     PAST PREDICTIONS — clickable cards for every event the model has
-     committed picks on. Replaces the single-event recap card.
-     ===================================================================== -->
-<section class="home-recap" id="pastPredictionsSection" hidden>
-  <div class="home-section-break-eyebrow" style="text-align: center; margin-bottom: 18px;">Track record</div>
-  <p class="track-record-note">Every pick is locked before the event and never retroactively adjusted. The rules-based verdict was <strong>rebuilt May 17, 2026</strong> after the May 16 card exposed noise in the model — seven of the ten edge factors were sitting at 52–57% per-fire accuracy, close enough to a coin flip that they were diluting the strong signals. The verdict now uses only Record, Cardio, and Takedown Defense. Backtested accuracy lifted from 65.8% to <strong>68.4%</strong> across 8,000+ historical fights. Our newer ML model (v5) hits <strong>70.0%</strong> on 368 graded 2025 UFC fights — tied with the most accurate public UFC prediction model on the internet, on a 50%+ larger verified test sample. <a href="edges.html#may-2026-update">Read what changed</a>.</p>
-  <div class="past-events-grid" id="pastEventsGrid"></div>
-</section>
-
-<!-- =====================================================================
-     FEATURE PILLARS — what makes CFL different from tout services.
-     ===================================================================== -->
-<section class="home-pillars">
-  <h2>Built for bettors, not for hype</h2>
-  <p class="lede">No locks, no parlay shoutouts, no premium picks group. Just open data, transparent methodology, and a public track record.</p>
-  <div class="home-pillars-grid">
-    <a class="home-pillar" href="/cardio.html">
-      <div class="pillar-eyebrow">Cardio Scores</div>
-      <h3>Who fades in deep waters</h3>
-      <p>Per-round output ratios across every fighter's recent fights. Identifies fade candidates before fight night.</p>
-    </a>
-    <a class="home-pillar" href="/h2h.html">
-      <div class="pillar-eyebrow">Head-to-Head</div>
-      <h3>Side-by-side matchup tool</h3>
-      <p>Compare any two UFC fighters across record, age, reach, cardio, striking, and grappling — instantly.</p>
-    </a>
-    <a class="home-pillar" href="/edges.html">
-      <div class="pillar-eyebrow">Edge Factors</div>
-      <h3>Verdicts you can audit</h3>
-      <p>Each fight verdict shows the strongest edge factors that drove it. No black-box picks; you see the math.</p>
-    </a>
-    <a class="home-pillar" href="/stats.html">
-      <div class="pillar-eyebrow">Stat Finder</div>
-      <h3>Insights from real data</h3>
-      <p>Searchable database of MMA betting insights — finish rates, ring rust, southpaw advantage — all from history.</p>
-    </a>
-  </div>
-</section>
-
-<!-- =====================================================================
-     SECTION BREAK — visual transition into the existing next-event view
-     ===================================================================== -->
-<div class="home-section-break" id="next-event">
-  <div class="home-section-break-eyebrow">Live now</div>
-  <h2>The next UFC card</h2>
-  <p>Every fight on the upcoming card with the model's verdict and the strongest edge factors that drove it.</p>
-</div>
-
-<div class="countdown-bar" id="countdownBar">
-  <div class="loading-state" style="padding: 12px;">
-    <div class="loading-spinner"></div>
-    <div>Loading next event…</div>
-  </div>
-</div>
-
-<div class="page">
-  <div class="stat-strip" id="statStrip"></div>
-  <div class="fights-section">
-    <div class="fights-header">
-      <h2>Card</h2>
-      <div class="sub" id="cardCount"></div>
-      <div class="hp-model-selector">
-        <label for="hpModelSelect">Model</label>
-        <select id="hpModelSelect">
-          <option value="consensus">Consensus (loading…)</option>
-        </select>
-      </div>
+  <!-- 2 · NEXT CARD -->
+  <section class="section" id="next">
+    <div class="card-head" id="cardHead">
+      <div class="eyebrow-live"><span class="dot"></span> Loading…</div>
+      <h2>The next UFC card</h2>
     </div>
-    <div id="fightsList"></div>
-  </div>
-</div>
+    <div class="filters">
+      <span class="fl-label">Sort</span>
+      <div class="seg" id="sortSeg">
+        <button data-sort="order" class="active">Card order</button>
+        <button data-sort="conf">Confidence</button>
+        <button data-sort="value">Value</button>
+      </div>
+      <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
+    </div>
+    <div class="fights" id="fightsList"></div>
+  </section>
 
-<!-- Traffic-funnel widgets — rendered by cfl.renderEmailCaptures /
-     cfl.renderFunnelCtas in _shared.js. The signup CTA auto-hides for
-     already-signed-in visitors, so it never nags existing users. -->
+  <!-- 3 · TRACK RECORD -->
+  <section class="section" id="track">
+    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded, none edited after the event.</div></div><a href="edges.html#may-2026-update">Read what changed →</a></div>
+    <p class="track-note">Every pick is locked before the event and never retroactively adjusted. Our newer ML model (v5) hits <strong>70.0%</strong> on 368 graded 2025 UFC fights — tied with the most accurate public UFC prediction model on the internet, on a 50%+ larger verified test sample. Backtested accuracy across 8,000+ historical fights lifted from 65.8% to <strong>68.4%</strong> after the rules-based verdict was rebuilt to use only Record, Cardio, and Takedown Defense.</p>
+    <div class="past-events-grid" id="pastEventsGrid" hidden></div>
+  </section>
+
+  <!-- 4 · TOOLKIT -->
+  <section class="section">
+    <div class="sec-head"><div><h2>The toolkit</h2><div class="sub">Everything you need to work a card.</div></div></div>
+    <div class="tools" style="margin-top:14px">
+      <a class="tool" href="parlay.html">
+        <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <h3>Parlay Builder</h3><p>Stack the model's strongest edges across a card into a single slip and see combined odds.</p><span class="go">Build a parlay →</span>
+      </a>
+      <a class="tool" href="cardio.html">
+        <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+        <h3>Cardio Scores</h3><p>See who holds output in the later rounds and who fades — the edge books miss most.</p><span class="go">Open cardio →</span>
+      </a>
+      <a class="tool" href="stats.html">
+        <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M6 20v-6"/><path d="M12 20V4"/><path d="M18 20v-9"/></svg></div>
+        <h3>Stat Finder</h3><p>Situational trends across 8,000+ fights — age gaps, southpaws, reach, finish rates.</p><span class="go">Open Stat Finder →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- 5 · WHY TRUST -->
+  <section class="section">
+    <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
+    <div class="trust" style="margin-top:14px">
+      <div class="trust-grid">
+        <div class="trust-item"><div class="n">368</div><div class="l">graded 2025 fights</div></div>
+        <div class="trust-item"><div class="n">70.0<span class="u">%</span></div><div class="l">model accuracy</div></div>
+        <div class="trust-item"><div class="n">Locked</div><div class="l">picks set before events</div></div>
+        <div class="trust-item"><div class="n">Zero</div><div class="l">retroactive edits</div></div>
+        <div class="trust-item"><div class="n">8,000<span class="u">+</span></div><div class="l">historical fights backtested</div></div>
+      </div>
+      <div class="trust-foot">Want the full picture? <a href="methodology.html">Read the methodology →</a></div>
+    </div>
+  </section>
+
+  <!-- 6 · HOW TO USE -->
+  <section class="section">
+    <div class="sec-head"><div><h2>How to use CFL before a card</h2></div></div>
+    <div class="steps" style="margin-top:14px">
+      <div class="step"><div class="num">1</div><div class="st">Check the model pick</div><div class="sd">Who the model likes, and by how much.</div></div>
+      <div class="step"><div class="num">2</div><div class="st">Review confidence</div><div class="sd">High, medium, or a thin lean worth a second look.</div></div>
+      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the pick — cardio, TDD, age.</div></div>
+      <div class="step"><div class="num">4</div><div class="st">Check sportsbook odds</div><div class="sd">Line up the model's number against the price.</div></div>
+      <div class="step"><div class="num">5</div><div class="st">Bet only on value</div><div class="sd">When the price gives an edge — never on hype.</div></div>
+    </div>
+  </section>
+
+</main>
+
+<!-- Traffic-funnel widgets -->
 <div class="cfl-email-capture" data-source="home-bottom"></div>
 <div class="cfl-funnel-cta" data-source="home-bottom"></div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=navfix1"></script>
+<script src="_shared.js?v=rd1"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="distanceEdges.js"></script>
@@ -1404,20 +378,12 @@ cfl.renderNav('home');
 cfl.renderFooter();
 
 // =============================================================================
-// HOMEPAGE: hero accuracy + last-event recap
-// Runs in parallel with the next-event loader below. Degrades silently if the
-// views aren't reachable so the page never looks broken.
+// HERO model accuracy panel + track-record past events (preserved wiring)
 // =============================================================================
-
 async function loadHomepageStats() {
-  // Populate the hero model panel + past-events grid in parallel.
   await Promise.all([loadHeroModels(), loadPastEvents()]);
 }
 
-// Hero model breakdown — one row per trained model, with cumulative graded-pick
-// accuracy. Cumulative is computed client-side from model_predictions (same
-// source the per-event cards use) so the hero number is always consistent
-// with the per-event detail below.
 async function loadHeroModels() {
   const listEl = document.getElementById('heroModelList');
   if (!listEl) return;
@@ -1441,7 +407,6 @@ async function loadHeroModels() {
     return;
   }
 
-  // Cumulative picks/hits per model from graded predictions only.
   const stats = {};
   try {
     const rows = await cfl.fetchAll(() => sb
@@ -1449,7 +414,7 @@ async function loadHeroModels() {
       .select('model_version, model_p, outcome_known, won')
       .eq('outcome_known', true));
     (rows || []).forEach(p => {
-      if (Number(p.model_p) <= 0.5) return;  // only the picked side
+      if (Number(p.model_p) <= 0.5) return;
       const s = stats[p.model_version] || (stats[p.model_version] = { picks: 0, hits: 0 });
       s.picks += 1;
       if (p.won === true) s.hits += 1;
@@ -1461,25 +426,29 @@ async function loadHeroModels() {
   listEl.innerHTML = models.map(m => {
     const s = stats[m.id];
     const nameLine = cfl.escapeHtml(m.name || '');
-    let pctHtml, subline;
+    let pctVal = null, pctHtml, subline;
     if (s && s.picks > 0) {
-      const pct = (s.hits / s.picks) * 100;
-      const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'mid' : 'bad');
-      pctHtml = `<div class="pct ${cls}">${pct.toFixed(0)}%</div>`;
+      pctVal = (s.hits / s.picks) * 100;
+      const cls = pctVal >= 60 ? 'good' : (pctVal >= 50 ? 'mid' : 'bad');
+      pctHtml = `<div class="pct ${cls}">${pctVal.toFixed(0)}%</div>`;
       subline = `${s.hits} of ${s.picks} graded picks`;
     } else if (m.test_accuracy != null) {
-      const pct = Number(m.test_accuracy) * 100;
-      pctHtml = `<div class="pct na">${pct.toFixed(0)}%</div>`;
+      pctVal = Number(m.test_accuracy) * 100;
+      pctHtml = `<div class="pct na">${pctVal.toFixed(0)}%</div>`;
       subline = 'hold-out (no live picks yet)';
     } else {
       pctHtml = `<div class="pct na">—</div>`;
       subline = 'no picks yet';
     }
+    const barHtml = pctVal != null
+      ? `<div class="hero-model-bar bar"><i style="width:${Math.max(0, Math.min(100, pctVal)).toFixed(0)}%"></i></div>`
+      : '';
     return `
       <div class="hero-model-row">
         <div class="vid">${cfl.escapeHtml(m.id)}</div>
         <div class="name">${nameLine}<span class="subline">${cfl.escapeHtml(subline)}</span></div>
         ${pctHtml}
+        ${barHtml}
       </div>
     `;
   }).join('');
@@ -1487,32 +456,24 @@ async function loadHeroModels() {
 
 async function loadPastEvents() {
   const sb = window.cflSupabase;
-  const section = document.getElementById('pastPredictionsSection');
   const grid = document.getElementById('pastEventsGrid');
-  if (!section || !grid) return;
+  if (!grid) return;
 
   let events;
   try {
-    // v_track_record_events surfaces any completed event that has graded picks —
-    // either a locked rules-based verdict (committed_picks > 0) OR graded ML
-    // model picks. This lets cards appear for events where only the ML models
-    // committed (e.g. when the rules-based snapshotter wasn't running), using
-    // the model accuracy shown on each card.
     const { data, error } = await sb
       .from('v_track_record_events')
       .select('event_id, event_name, event_date, committed_picks, hits, misses, accuracy_pct')
       .order('event_date', { ascending: false })
-      .limit(8);
+      .limit(6);
     if (error) throw error;
     events = data || [];
   } catch (err) {
     console.warn('[home] past events fetch failed', err);
-    return;  // leave section hidden — nothing to show
+    return;
   }
+  if (events.length === 0) return;
 
-  if (events.length === 0) return;  // keep section hidden until first event lands
-
-  // Main-event matchup + result for each event, batched.
   const eventIds = events.map(e => e.event_id);
   let mainByEvent = {};
   try {
@@ -1526,14 +487,8 @@ async function loadPastEvents() {
     console.warn('[home] main-event fetch failed', err);
   }
 
-  // Per-model accuracy from model_predictions, keyed by event_date + version.
-  // Counts one pick per fight per model (the side with model_p > 0.5).
-  // v5 (the flagship XGBoost model) is included; it only covers events from
-  // when it came online, so older cards show "—" for it. v4 is intentionally
-  // omitted — its snapshot data doesn't follow the model_p>0.5 pick convention
-  // and renders as inconsistent blanks.
   const MODEL_VERSIONS = ['v1', 'v2', 'v3', 'v5'];
-  const modelStats = {};  // 'YYYY-MM-DD::v1' -> { picks, hits }
+  const modelStats = {};
   try {
     const eventDates = events.map(e => e.event_date);
     const { data: preds } = await sb
@@ -1542,7 +497,7 @@ async function loadPastEvents() {
       .in('event_date', eventDates)
       .eq('outcome_known', true);
     (preds || []).forEach(p => {
-      if (Number(p.model_p) <= 0.5) return;  // only the picked side
+      if (Number(p.model_p) <= 0.5) return;
       const k = p.event_date + '::' + p.model_version;
       if (!modelStats[k]) modelStats[k] = { picks: 0, hits: 0 };
       modelStats[k].picks += 1;
@@ -1556,9 +511,7 @@ async function loadPastEvents() {
     const s = modelStats[eventDate + '::' + version];
     const labelHtml = '<div class="pe-model-label">' + version + '</div>';
     if (!s || s.picks === 0) {
-      return labelHtml +
-        '<div class="pe-model-pct na">—</div>' +
-        '<div class="pe-model-detail">no picks</div>';
+      return labelHtml + '<div class="pe-model-pct na">—</div><div class="pe-model-detail">no picks</div>';
     }
     const pct = (s.hits / s.picks) * 100;
     const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'mid' : 'bad');
@@ -1568,11 +521,8 @@ async function loadPastEvents() {
   }
 
   grid.innerHTML = events.map(ev => {
-    const modelsHtml =
-      '<div class="past-event-models">' +
-        MODEL_VERSIONS.map(v => modelRowHtml(ev.event_date, v)).join('') +
-      '</div>';
-
+    const modelsHtml = '<div class="past-event-models">' +
+      MODEL_VERSIONS.map(v => modelRowHtml(ev.event_date, v)).join('') + '</div>';
     const m = mainByEvent[ev.event_id];
     let mainHtml = '';
     if (m) {
@@ -1580,7 +530,7 @@ async function loadPastEvents() {
       if (m.winner_id) {
         const winnerIsA = m.winner_id === m.fighter_a_id;
         const winner = winnerIsA ? m.fighter_a_name : m.fighter_b_name;
-        const loser  = winnerIsA ? m.fighter_b_name : m.fighter_a_name;
+        const loser = winnerIsA ? m.fighter_b_name : m.fighter_a_name;
         const method = m.method ? ' — ' + cfl.escapeHtml(m.method) + (m.end_round ? ' R' + m.end_round : '') : '';
         resultLine = '<strong>' + cfl.escapeHtml(winner) + '</strong> def. ' + cfl.escapeHtml(loser) + method;
       } else {
@@ -1588,26 +538,17 @@ async function loadPastEvents() {
       }
       mainHtml = '<div class="past-event-main">' + resultLine + '</div>';
     }
-
     return '<a class="past-event-card" href="' + cfl.eventUrl(ev.event_id) + '">' +
       '<div class="past-event-eyebrow">' + cfl.escapeHtml(cfl.formatDate(ev.event_date)) + '</div>' +
       '<div class="past-event-name">' + cfl.escapeHtml(ev.event_name) + '</div>' +
-      mainHtml +
-      modelsHtml +
+      mainHtml + modelsHtml +
       '<div class="past-event-cta">View card →</div>' +
       '</a>';
   }).join('');
 
-  section.hidden = false;
+  grid.hidden = false;
 }
 
-// Kick off homepage data load (parallel to next-event loader).
-// Wrap in catch so a hung/blocked Supabase request can't leave the hero
-// model panel in a perpetual "Loading models..." state. This has been
-// observed in browsers with strict tracking prevention (Edge, Brave) or
-// adblockers that silently drop requests to *.supabase.co — the fetch
-// Promise never resolves AND never rejects, so the await hangs forever
-// unless something else aborts it.
 loadHomepageStats().catch(err => {
   console.warn('[home] homepage stats load failed', err);
   const heroList = document.getElementById('heroModelList');
@@ -1624,528 +565,310 @@ setTimeout(() => {
 }, 15000);
 
 // =============================================================================
-// LOAD: next event + its fights + the fighters in those fights
+// NEXT CARD — event selection (preserved), lean fight-card render
 // =============================================================================
+const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5'];
+let _cardioMap = null;
+let _oddsMap = null;
+let _leanState = null;   // { fights, fighterMap, picksByFight, eventId }
 
 async function load() {
   const sb = window.cflSupabase;
-
-  // Order of preference:
-  //   1. An event happening "now-ish" — event_date is today OR yesterday (UTC),
-  //      regardless of is_upcoming. The scraper flips is_upcoming -> false
-  //      partway through fight night once results start landing, which used
-  //      to bump the homepage to NEXT week's card mid-event. Filtering by
-  //      date instead of is_upcoming pins us to the right card for the full
-  //      duration of fight night plus the recap window.
-  //   2. Next upcoming event (is_upcoming = true, event_date strictly future).
-  //   3. Most recent past event (only when there's literally nothing else).
   const now = new Date();
-  const todayStr     = now.toISOString().slice(0, 10);
+  const todayStr = now.toISOString().slice(0, 10);
   const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
 
   let event = null;
-  let phase = 'upcoming';   // 'happening' | 'upcoming' | 'fallback'
+  let phase = 'upcoming';
 
-  // (1) happening today or last night
   {
     const { data, error } = await sb
-      .from('events')
-      .select('id, name, event_date, location, ufc_url')
-      .gte('event_date', yesterdayStr)
-      .lte('event_date', todayStr)
-      .order('event_date', { ascending: false })
-      .limit(1);
-    if (error) {
-      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + error.message);
-      return;
-    }
-    if (data && data[0]) {
-      event = data[0];
-      phase = 'happening';
-    }
+      .from('events').select('id, name, event_date, location, ufc_url')
+      .gte('event_date', yesterdayStr).lte('event_date', todayStr)
+      .order('event_date', { ascending: false }).limit(1);
+    if (error) { showCardError('Failed to load events: ' + error.message); return; }
+    if (data && data[0]) { event = data[0]; phase = 'happening'; }
   }
-
-  // (2) next upcoming
   if (!event) {
     const { data, error } = await sb
-      .from('events')
-      .select('id, name, event_date, location, ufc_url')
-      .eq('is_upcoming', true)
-      .gt('event_date', todayStr)
-      .order('event_date', { ascending: true })
-      .limit(1);
-    if (error) {
-      document.getElementById('countdownBar').innerHTML = cfl.errorHtml('Failed to load events: ' + error.message);
-      return;
-    }
-    if (data && data[0]) {
-      event = data[0];
-      phase = 'upcoming';
-    }
+      .from('events').select('id, name, event_date, location, ufc_url')
+      .eq('is_upcoming', true).gt('event_date', todayStr)
+      .order('event_date', { ascending: true }).limit(1);
+    if (error) { showCardError('Failed to load events: ' + error.message); return; }
+    if (data && data[0]) { event = data[0]; phase = 'upcoming'; }
   }
-
-  // (3) most recent past
   if (!event) {
     const { data } = await sb
-      .from('events')
-      .select('id, name, event_date, location, ufc_url')
-      .eq('is_upcoming', false)
-      .order('event_date', { ascending: false })
-      .limit(1);
-    if (data && data[0]) {
-      event = data[0];
-      phase = 'fallback';
-    }
+      .from('events').select('id, name, event_date, location, ufc_url')
+      .eq('is_upcoming', false).order('event_date', { ascending: false }).limit(1);
+    if (data && data[0]) { event = data[0]; phase = 'fallback'; }
   }
+  if (!event) { showCardError('No events found in the database.'); return; }
 
-  if (!event) {
-    document.getElementById('countdownBar').innerHTML = cfl.errorHtml('No events found in the database.');
-    return;
-  }
-
-  renderCountdown(event, phase);
+  renderCardHead(event, phase);
   await loadFights(event);
-  loadStatOfDay(event);
 }
 
-function renderCountdown(event, phase) {
+function showCardError(msg) {
+  const list = document.getElementById('fightsList');
+  if (list) list.innerHTML = '<div class="load-err">' + cfl.escapeHtml(msg) + '</div>';
+}
+
+function renderCardHead(event, phase) {
+  const el = document.getElementById('cardHead');
+  if (!el) return;
   const days = cfl.daysUntil(event.event_date);
-  let pillContent;
-  let eyebrow;
-
-  if (phase === 'happening') {
-    eyebrow = days === -1 ? 'Last night' : 'Live now';
-    pillContent = days === -1
-      ? '<span>Last night</span>'
-      : '<span>Tonight</span>';
-  } else if (phase === 'fallback') {
-    eyebrow = 'Most recent event';
-    pillContent = `<span>Most recent</span><span class="num">${cfl.formatDateShort(event.event_date)}</span>`;
-  } else {
-    // upcoming
-    eyebrow = 'Next event';
-    if (days === 0)      pillContent = '<span>Tonight</span>';
-    else if (days === 1) pillContent = '<span>Tomorrow</span>';
-    else if (days < 0)   pillContent = '<span>Result pending</span>';
-    else                 pillContent = `<span>In</span><span class="num">${days}</span><span>day${days === 1 ? '' : 's'}</span>`;
-  }
-
-  document.getElementById('countdownBar').innerHTML = `
-    <div class="countdown-eyebrow">${eyebrow}</div>
-    <div class="countdown-event-name">${cfl.escapeHtml(event.name)}</div>
-    <div class="countdown-meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
-    <div class="countdown-pill">${pillContent}</div>
+  let live;
+  if (phase === 'happening') live = days === -1 ? 'Last night' : 'Live tonight';
+  else if (phase === 'fallback') live = 'Most recent card';
+  else if (days === 0) live = 'Tonight';
+  else if (days === 1) live = 'Tomorrow';
+  else if (days > 1) live = `In ${days} days`;
+  else live = 'Next card';
+  el.innerHTML = `
+    <div class="eyebrow-live"><span class="dot"></span> ${cfl.escapeHtml(live)}</div>
+    <h2>${cfl.escapeHtml(event.name)}</h2>
+    <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
   `;
 }
 
 async function loadFights(event) {
   const list = document.getElementById('fightsList');
-  list.innerHTML = cfl.loadingHtml('Loading card…');
+  // Skeleton loaders (P4) — never leave raw "Loading…" text as the main UI.
+  list.innerHTML = Array.from({ length: 4 }).map(() =>
+    '<div class="skel-card"><div class="skel" style="height:14px;width:40%"></div>' +
+    '<div class="skel" style="height:60px;margin-top:16px"></div>' +
+    '<div class="skel" style="height:44px;margin-top:14px"></div>' +
+    '<div class="skel" style="height:44px;margin-top:14px"></div></div>'
+  ).join('');
   const sb = window.cflSupabase;
 
   const { data: fights, error } = await sb
-    .from('fights')
-    .select('*')
+    .from('fights').select('*')
     .eq('event_id', event.id)
     .order('is_main_event', { ascending: false })
     .order('id', { ascending: true });
-
-  if (error) {
-    list.innerHTML = cfl.errorHtml('Failed to load fights: ' + error.message);
-    return;
-  }
-
+  if (error) { list.innerHTML = '<div class="load-err">Couldn\'t load the card. Try refreshing.</div>'; return; }
   if (!fights || fights.length === 0) {
-    list.innerHTML = '<div class="no-results">No fights listed for this event yet.</div>';
-    document.getElementById('cardCount').textContent = '';
+    list.innerHTML = '<div class="load-err">No fights listed for this event yet.</div>';
     return;
   }
 
-  document.getElementById('cardCount').textContent = `${fights.length} fight${fights.length === 1 ? '' : 's'}`;
-
-  // Collect all fighter ids referenced
   const fighterIds = new Set();
-  fights.forEach(f => {
-    if (f.fighter_a_id) fighterIds.add(f.fighter_a_id);
-    if (f.fighter_b_id) fighterIds.add(f.fighter_b_id);
-  });
+  fights.forEach(f => { if (f.fighter_a_id) fighterIds.add(f.fighter_a_id); if (f.fighter_b_id) fighterIds.add(f.fighter_b_id); });
 
-  // Bulk-fetch all those fighters in one query
   const { data: fighters, error: fErr } = await sb
     .from('fighters')
-    .select('id, name, nickname, division, stance, age, height_in, reach_in, ' +
-            'wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, ' +
-            'slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, sub_avg, last_5, last_fight_date')
+    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, slpm, td_avg, td_acc, td_def')
     .in('id', Array.from(fighterIds));
-
-  if (fErr) {
-    list.innerHTML = cfl.errorHtml('Failed to load fighter details: ' + fErr.message);
-    return;
-  }
+  if (fErr) { list.innerHTML = '<div class="load-err">Couldn\'t load fighter details. Try refreshing.</div>'; return; }
 
   const fighterMap = {};
   fighters.forEach(f => { fighterMap[f.id] = f; });
 
-  // streakMap is no longer consumed by edges.js (streak/loss_streak/post_loss
-  // edges were removed). Pass an empty object to preserve renderFight's
-  // signature without firing the v_fighter_recent_form view query.
-  const streakMap = {};
-
-  // Fetch cardio, style, and per-fighter finish-rate data for everyone on
-  // the card. Reset all three caches so a new event load doesn't reuse the
-  // previous card's fighter set.
   _cardioMap = null;
-  _styleMap  = null;
-  _finishRateMap = null;
   _oddsMap = null;
   const fightIds = fights.map(f => f.id);
-  const [, , , , predsR, namesR] = await Promise.all([
+  const [, , predsR] = await Promise.all([
     loadCardioMap(fighterIds),
-    loadStyleMap(fighterIds),
-    loadFinishRateMap(fighterIds),
-    // Book moneyline odds — surfaced under each fighter's name as raw market
-    // info, NOT compared to the model. Value-vs-market analysis lives on a
-    // separate page so the Next Event card stays focused on the moneyline pick.
     loadOddsMap(event.id),
-    // Trained-model predictions for the four production models we want on the
-    // homepage. Filtered server-side so we don't pull picks from experimental
-    // or deprecated model versions that exist in the table.
     fightIds.length
       ? sb.from('model_predictions')
-          .select('model_version, fight_id, fighter_id, model_p, won, outcome_known')
+          .select('model_version, fight_id, fighter_id, model_p')
           .in('fight_id', fightIds)
           .in('model_version', HP_VISIBLE_MODELS)
       : Promise.resolve({ data: [] }),
-    // Friendly model names for the dropdown label, from model_versions table.
-    sb.from('model_versions').select('id, name').in('id', HP_VISIBLE_MODELS),
   ]);
 
-  const modelNames = {};
-  if (!namesR.error) {
-    (namesR.data || []).forEach(m => { modelNames[m.id] = m.name; });
-  } else {
-    console.warn('Model names not available:', namesR.error.message);
-  }
-
-  // Build picksByFight[fight_id][model_version] = { fighter_id, model_p, won,
-  // outcome_known }. Only counts picks where model_p > 0.5 (the model's "side"
-  // call); ties at 0.5 are excluded.
   const picksByFight = {};
   if (!predsR.error) {
     (predsR.data || []).forEach(p => {
       if (p.model_p == null || +p.model_p <= 0.5) return;
       const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
-      slot[p.model_version] = {
-        fighter_id: p.fighter_id,
-        model_p: +p.model_p,
-        won: p.won,
-        outcome_known: p.outcome_known,
-      };
+      slot[p.model_version] = { fighter_id: p.fighter_id, model_p: +p.model_p };
     });
   } else {
     console.warn('Trained model predictions not available:', predsR.error.message);
   }
 
-  // Stash the inputs renderFight needs so the model selector can re-render
-  // the whole card without re-querying Supabase when the visitor swaps modes.
-  _hpRenderState = { fights, fighterMap, streakMap, eventDate: event.event_date, picksByFight, modelNames };
-
-  // Build the model-selector dropdown options from the actual model_versions
-  // returned by Supabase (so the labels reflect whatever the user named each
-  // version) plus a Consensus option at the top.
-  hpPopulateModelDropdown(modelNames);
-
-  list.innerHTML = fights.map(fight =>
-    renderFight(fight, fighterMap, streakMap, true, event.event_date, _hpModelMode, picksByFight)
-  ).join('');
-
-  // Re-render the card list when the model selector changes. Idempotent —
-  // the listener is removed and re-added on every loadFights so swapping
-  // events doesn't stack handlers.
-  const sel = document.getElementById('hpModelSelect');
-  if (sel) {
-    sel.value = _hpModelMode;
-    sel.onchange = (e) => {
-      _hpModelMode = e.target.value;
-      hpRerenderFights();
-    };
-  }
+  _leanState = { fights, fighterMap, picksByFight, eventId: event.id };
+  renderLeanCards('order');
+  wireSort();
 }
 
-function hpPopulateModelDropdown(modelNames) {
-  const sel = document.getElementById('hpModelSelect');
-  if (!sel) return;
-  const opts = ['<option value="consensus">Consensus (all 4 models)</option>'];
-  HP_VISIBLE_MODELS.forEach(mv => {
-    const name = modelNames && modelNames[mv];
-    const label = name
-      ? `${mv.toUpperCase()} · ${name}`
-      : `${mv.toUpperCase()}`;
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(label)}</option>`);
-  });
-  sel.innerHTML = opts.join('');
-  sel.value = _hpModelMode;
-}
+// Cardio tier ranking for edge comparison.
+const CARDIO_RANK = { tireless: 5, steady: 4, tapers: 3, fades: 2, collapses: 1 };
 
-function hpRerenderFights() {
-  if (!_hpRenderState) return;
+function renderLeanCards(sortKey) {
+  if (!_leanState) return;
   const list = document.getElementById('fightsList');
-  if (!list) return;
-  const s = _hpRenderState;
-  list.innerHTML = s.fights.map(fight =>
-    renderFight(fight, s.fighterMap, s.streakMap, true, s.eventDate, _hpModelMode, s.picksByFight)
-  ).join('');
+  const { fights, fighterMap, picksByFight, eventId } = _leanState;
+
+  // Build a render model per fight so we can sort by computed fields.
+  const cards = fights.map((fight, idx) => buildFightModel(fight, idx, fighterMap, picksByFight, eventId))
+    .filter(Boolean);
+
+  const sorters = {
+    order: (a, b) => a.order - b.order,
+    conf:  (a, b) => b.confidence - a.confidence,
+    value: (a, b) => b.value - a.value,
+  };
+  cards.sort(sorters[sortKey] || sorters.order);
+
+  list.innerHTML = cards.map(c => c.html).join('');
 }
 
-function renderFight(fight, fmap, streakMap, isTopFight, eventDate, modelMode, picksByFight) {
+function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
+  if (!a || !b) return null;
 
-  if (!a || !b) {
-    return `<div class="fight-card"><div class="fight-card-header">Fight data incomplete</div></div>`;
-  }
+  const fightPicks = (picksByFight || {})[fight.id];
+  const pick = getConsensusPick(fightPicks, a, b);   // {picked, opponent, pct, voteCount, totalVotes} | null
 
-  const tags = [];
-  let cardClass = 'fight-card';
-  if (fight.is_title_fight) {
-    tags.push('<span class="badge title">Title</span>');
-    cardClass += ' title';
-  }
-  if (fight.is_main_event) {
-    tags.push('<span class="badge">Main event</span>');
-    if (!fight.is_title_fight) cardClass += ' main';
-  }
+  // Card-position label
+  let wt = fight.weight_class || 'Bout';
+  if (fight.is_main_event) wt = 'Main event · ' + wt;
+  else if (fight.is_title_fight) wt = 'Title · ' + wt;
 
-  const weight = fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : '';
+  const pickedIsA = pick && pick.picked.id === a.id;
+  const confidence = pick ? pick.pct : 0;
 
-  const edgePanel = isTopFight ? renderEdgePanel(a, b, fight, streakMap || {}, eventDate, modelMode, picksByFight) : '';
-  const trainedPicks = renderTrainedPicks(fight, fmap, (picksByFight || {})[fight.id]);
+  // Confidence badge
+  let badge;
+  if (!pick) badge = '<span class="cbadge pending">Awaiting model</span>';
+  else if (confidence >= 65) badge = '<span class="cbadge high">High confidence</span>';
+  else if (confidence >= 55) badge = '<span class="cbadge med">Medium confidence</span>';
+  else badge = '<span class="cbadge low">Low confidence · lean</span>';
+
+  // Value vs market
+  let value = -999, edgeHtml = '';
   const oddsRow = _oddsMap && _oddsMap[fight.id];
-
-  return `
-    <div class="${cardClass}">
-      <div class="fight-card-header">
-        ${tags.join(' ')}
-        ${weight}
-      </div>
-      <div class="fight-body">
-        ${renderFighterSide(a, 'left', fight.weight_class, oddsRow ? oddsRow.american_odds_a : null)}
-        <div class="fight-vs">
-          VS
-          <a class="compare" href="${cfl.h2hUrl(a.id, b.id)}">Compare →</a>
-        </div>
-        ${renderFighterSide(b, 'right', fight.weight_class, oddsRow ? oddsRow.american_odds_b : null)}
-      </div>
-      ${renderQuickStats(a, b, fight.weight_class)}
-      ${edgePanel}
-      ${trainedPicks}
-    </div>
-  `;
-}
-
-// Trained-model picks pill row. One pill per visible model_version, showing
-// the model's picked fighter and confidence. For past fights with a graded
-// outcome the pill turns green (correct) or red (wrong). Skips silently when
-// no picks are available for this fight.
-function renderTrainedPicks(fight, fmap, fightPicks) {
-  if (!fightPicks) return '';
-  // Render in the canonical order (v1 → v4) regardless of how Supabase returned
-  // them. Versions that have no pick for this fight are dropped silently.
-  const pills = HP_VISIBLE_MODELS.map(mv => {
-    const pick = fightPicks[mv];
-    if (!pick) return '';
-    const picked = fmap[pick.fighter_id];
-    if (!picked) return '';
-    const pct = (pick.model_p * 100).toFixed(0);
-    let cls = '';
-    if (pick.outcome_known) {
-      if (pick.won === true)       cls = 'correct';
-      else if (pick.won === false) cls = 'wrong';
+  if (pick && oddsRow) {
+    const impl = pickedIsA ? oddsRow.implied_prob_a : oddsRow.implied_prob_b;
+    if (impl != null) {
+      value = confidence - (+impl * 100);
+      if (value > 15) {
+        // Implausibly large gap — almost always stale or mismatched odds, not a
+        // real edge. Suppress rather than surface a tout-y number.
+        edgeHtml = '';
+        value = 0;
+      } else if (value >= 5) {
+        edgeHtml = `<div class="edge pos">+${value.toFixed(0)}% vs market</div>`;
+        badge = '<span class="cbadge value">✦ Value alert</span>';
+      } else if (value >= 1) {
+        edgeHtml = `<div class="edge pos">+${value.toFixed(0)}% vs market</div>`;
+      } else {
+        edgeHtml = `<div class="edge flat">No edge — line's fair</div>`;
+      }
     }
-    return `
-      <span class="hp-trained-pill ${cls}">
-        <span class="tp-mv">${cfl.escapeHtml(mv.toUpperCase())}</span>
-        <span>${cfl.escapeHtml(picked.name)}</span>
-        <span class="tp-pct">${pct}%</span>
-      </span>`;
-  }).filter(Boolean).join('');
-  if (!pills) return '';
-  return `<div class="hp-trained-picks"><span class="tp-label">Trained models</span>${pills}</div>`;
-}
-
-function renderFighterSide(f, side, weightClass, americanOdds) {
-  const w = f.wins ?? 0;
-  const l = f.losses ?? 0;
-  const d = f.draws ?? 0;
-  const recordStr = (w + l + d) > 0
-    ? `${w}-${l}${d ? '-' + d : ''}`
-    : '0-0';
-  const recordLabel = (w + l + d) > 0 ? 'pro' : '';
-  // Style: prefer v_fighter_style lookup (most accurate), fall back to JS
-  // classifier when the fighter has no row-level data (UFC debutants etc.)
-  const style = styleFor(f, weightClass);
-  const styleLabel = {
-    striker: 'Striker',
-    grappler: 'Grappler',
-    hybrid: 'Hybrid',
-    well_rounded: 'Well-rounded',
-    low_volume: 'Low volume',
-    unknown: ''
-  }[style] || '';
-
-  // Moneyline odds — raw book price, no model comparison. Favorites get a
-  // subtle red tint to mirror sportsbook conventions.
-  let oddsHtml = '';
-  if (americanOdds != null) {
-    const oddsStr = americanOdds > 0 ? `+${americanOdds}` : String(americanOdds);
-    const fav = americanOdds < 0 ? ' fav' : '';
-    oddsHtml = `<div class="fighter-odds${fav}">${oddsStr}</div>`;
   }
+  if (value === -999) value = pick ? -100 : -1000;  // sink no-odds / no-pick fights in value sort
 
-  return `
-    <a class="fight-fighter ${side}" href="${cfl.fighterUrl(f.id)}">
-      <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(f.name))}</div>
-      <div class="meta-block">
-        <div class="name">${cfl.escapeHtml(f.name)}</div>
-        ${f.nickname ? `<div class="nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
-        <div class="record"><strong>${recordStr}</strong>${recordLabel ? ' ' + recordLabel : ''}</div>
-        ${styleLabel ? `<div class="style-chip style-${style}">${styleLabel}</div>` : ''}
-        ${oddsHtml}
-      </div>
-    </a>
-  `;
+  // Edge bullets — advantages the picked fighter holds over the opponent
+  const bulletsArr = pick ? buildEdgeBullets(pick.picked, pick.opponent, fight.weight_class) : [];
+  const bulletsHtml = bulletsArr.length
+    ? '<ul class="edges">' + bulletsArr.slice(0, 3).map(t =>
+        '<li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>'
+    : (pick ? '<div class="fight-note">Model favors ' + cfl.escapeHtml(pick.picked.name) + ' on aggregate signals.</div>' : '');
+
+  const cf = confidence >= 65 ? '' : (confidence >= 55 ? ' med' : ' low');
+  const pickbar = pick ? `
+    <div class="pickbar">
+      <div><div class="lab">Model pick</div><div class="nm">${cfl.escapeHtml(pick.picked.name)}</div></div>
+      <div class="pb-right"><div class="cf${cf}">${Math.round(confidence)}%</div>${edgeHtml}</div>
+    </div>` : `
+    <div class="pickbar"><div><div class="lab">Model pick</div><div class="nm">Not scored yet</div></div></div>`;
+
+  const sideA = fighterSideHtml(a, pick && pickedIsA);
+  const sideB = fighterSideHtml(b, pick && !pickedIsA);
+
+  const html = `
+    <div class="fight" data-fid="${fight.id}">
+      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badge}</div>
+      <div class="matchup">${sideA}<div class="vs">VS</div>${sideB}</div>
+      ${pickbar}
+      ${bulletsHtml}
+      <a href="${cfl.eventUrl(eventId)}" class="btn btn-ghost btn-block">View matchup</a>
+    </div>`;
+
+  return { order: idx, confidence, value, html };
 }
 
-// =============================================================================
-// EDGE LOGIC — see edges.js for all factor functions and verdict computation.
-// This section has thin adapters that delegate to the cflEdges module so the
-// rest of the page can keep its existing call patterns. Single source of
-// truth for the math: edges.js (also imported by the snapshotter).
-// =============================================================================
+function fighterSideHtml(f, isPick) {
+  const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
+  const rec = (w + l + d) > 0 ? `${w}-${l}${d ? '-' + d : '-0'}` : '0-0';
+  return `
+    <a class="side ${isPick ? 'pick' : ''}" href="${cfl.fighterUrl(f.id)}">
+      <div class="ava">${cfl.escapeHtml(cfl.initials(f.name))}</div>
+      <div class="nm">${cfl.escapeHtml(f.name)}</div>
+      <div class="rec">${rec}</div>
+    </a>`;
+}
 
-function classifyStyle(f)   { return cflEdges.classifyStyle(f); }
-function computeEdges(a, b, streakMap, fightWeightClass, eventDate) {
-  return cflEdges.computeEdges(a, b, {
-    streakMap,
-    cardioMap: _cardioMap,
-    fightWeightClass,
-    eventDate,
+// Build human-readable advantages the picked fighter holds. Ordered by how much
+// bettors weight them; caller takes the top 3.
+function buildEdgeBullets(picked, opp, weightClass) {
+  const out = [];
+  // Cardio tier
+  const cp = cardioFor(picked.id, weightClass);
+  const co = cardioFor(opp.id, weightClass);
+  if (cp && co && cp.tier_word && co.tier_word) {
+    const rp = CARDIO_RANK[cp.tier_word] || 0, ro = CARDIO_RANK[co.tier_word] || 0;
+    if (rp > ro) {
+      const oppWord = co.tier_word;
+      out.push((oppWord === 'fades' || oppWord === 'collapses' || oppWord === 'tapers')
+        ? `Stronger late-round cardio — ${opp.name} ${oppWord}`
+        : 'Stronger late-round cardio score');
+    }
+  }
+  // Takedown defense
+  if (picked.td_def != null && opp.td_def != null && picked.td_def - opp.td_def >= 8) {
+    out.push(`Stronger takedown defense (${picked.td_def}% vs ${opp.td_def}%)`);
+  }
+  // Grappling offense vs weak defense
+  if (picked.td_avg != null && opp.td_def != null && picked.td_avg >= 2.0 && opp.td_def < 65) {
+    out.push(`Grappling edge vs weak takedown defense (${opp.td_def}%)`);
+  }
+  // Age
+  if (picked.age != null && opp.age != null && opp.age - picked.age >= 3) {
+    out.push(`Younger by ${opp.age - picked.age} years`);
+  }
+  // Reach
+  if (picked.reach_in != null && opp.reach_in != null && picked.reach_in - opp.reach_in >= 2) {
+    out.push(`Reach edge (+${picked.reach_in - opp.reach_in}")`);
+  }
+  // Striking output
+  if (picked.slpm != null && opp.slpm != null && (picked.slpm - opp.slpm) >= 1) {
+    out.push(`Higher striking output (${Number(picked.slpm).toFixed(1)} vs ${Number(opp.slpm).toFixed(1)}/min)`);
+  }
+  // Takedown accuracy
+  if (picked.td_acc != null && opp.td_acc != null && picked.td_acc - opp.td_acc >= 12) {
+    out.push(`Better takedown accuracy (${picked.td_acc}% vs ${opp.td_acc}%)`);
+  }
+  return out;
+}
+
+function wireSort() {
+  const seg = document.getElementById('sortSeg');
+  const hint = document.getElementById('sortHint');
+  if (!seg || seg._wired) { return; }
+  seg._wired = true;
+  const hints = {
+    order: 'Main event first, top of the card down.',
+    conf: 'Most confident picks first.',
+    value: 'Biggest edge over the market first.',
+  };
+  seg.addEventListener('click', (e) => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    [].forEach.call(seg.querySelectorAll('button'), b => b.classList.toggle('active', b === btn));
+    const key = btn.dataset.sort;
+    renderLeanCards(key);
+    if (hint) hint.textContent = hints[key] || '';
   });
 }
 
-function renderEdgePanel(a, b, fight, streakMap, eventDate, modelMode, picksByFight) {
-  const fightWeightClass = fight.weight_class;
-
-  // Verdict comes from the SELECTED model — either consensus across trained
-  // models, or a single named model (V1..V4). The Next Event card is about
-  // surfacing model predictions, so no heuristic edge-factor breakdown here.
-  const fightPicks = (picksByFight || {})[fight.id];
-  let pickResult = null;
-  let verdictLabel = 'Consensus picks';
-  if (modelMode === 'consensus') {
-    pickResult = getConsensusPick(fightPicks, a, b);
-    if (pickResult) {
-      verdictLabel = `Consensus (${pickResult.voteCount}/${pickResult.totalVotes} models)`;
-    }
-  } else if (HP_VISIBLE_MODELS.indexOf(modelMode) !== -1) {
-    pickResult = getTrainedPick(modelMode, fightPicks, a, b);
-    const mname = _hpRenderState && _hpRenderState.modelNames
-      ? _hpRenderState.modelNames[modelMode] : null;
-    verdictLabel = mname
-      ? `${modelMode.toUpperCase()} · ${mname}`
-      : `${modelMode.toUpperCase()} picks`;
-  }
-
-  let verdictName, verdictPct, verdictClass;
-  let picked = null;
-  if (pickResult) {
-    picked = pickResult.picked;
-    verdictName = pickResult.picked.name;
-    verdictPct = pickResult.pct;
-    verdictClass = '';
-  } else {
-    verdictName = 'No prediction yet';
-    verdictPct = 0;
-    verdictClass = 'even';
-  }
-
-  // Distance call — secondary row below the verdict. Short-circuits if
-  // distanceEdges.js hasn't loaded yet (e.g. mid-deploy cache).
-  let distanceHtml = '';
-  if (window.cflDistanceEdges) {
-    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, {
-      cardioMap: _cardioMap,
-      finishRateMap: _finishRateMap,
-    });
-    const expectsDistance = distanceProb >= 0.50;
-    const callText = expectsDistance ? 'Goes the distance' : 'Ends early';
-    const callPct  = Math.round((expectsDistance ? distanceProb : 1 - distanceProb) * 100);
-    distanceHtml = `
-      <div class="distance-summary">
-        <div class="distance-label">Distance</div>
-        <div class="distance-call">${callText}</div>
-        <div class="distance-pct">${callPct}%</div>
-      </div>
-    `;
-  }
-
-  return `
-    <div class="edge-panel">
-      <div class="edge-summary">
-        <div class="verdict-label">${cfl.escapeHtml(verdictLabel)}</div>
-        <div class="verdict-name ${verdictClass}">${cfl.escapeHtml(verdictName)}</div>
-        <div class="verdict-pct ${verdictClass}">${pickResult ? Math.round(verdictPct) + '<span class="small">%</span>' : ''}</div>
-      </div>
-      ${distanceHtml}
-    </div>
-  `;
-}
-
-// =============================================================================
-// COMPARISON-BAR STATS — 3 rows per fight
-//
-// Each row computes magnitudes for fighter A and B, picks a winner, and renders
-// two bar segments diverging from the centerline label. The leader's bar fills
-// to the outer edge; the trailing fighter's bar fills proportionally to their
-// fraction of the leader's value.
-//
-// Stats shown (in priority order):
-//   1. Strikes per minute (SLpM)  — pace differential
-//   2. Takedown defense (%)        — striker-vs-grappler control
-//   3. Cardio composite             — late-round sustain (from cardioMap)
-// =============================================================================
-
-// Cardio data lookup — fighter_id -> { byWc: {wc -> entry}, career: entry }
-// Each entry has {score, tier_word, confidence, r3p_min, fight_count,
-// sig_apm_pct, sig_lpm_pct, td_pct} from v_fighter_consistency.
-//
-// At lookup time (renderQuickStats / cardioEdge) the caller passes the fight's
-// weight_class. If we have data at that weight class, use it. Otherwise fall
-// back to the CAREER row. This handles fighters moving up/down weight classes.
-let _cardioMap = null;
-let _styleMap  = null;
-let _finishRateMap = null;
-let _oddsMap = null;
-
-// Homepage model selector state. _hpModelMode picks which model drives the
-// "Data favors X" verdict on each fight: 'consensus' (majority vote across
-// the trained models) or one of the HP_VISIBLE_MODELS keys ('v1' | 'v2' | ...).
-// The per-edge breakdown above the verdict always uses the heuristic edges,
-// regardless of selector — the selector swaps the winner pick only.
-let _hpModelMode = 'consensus';
-let _hpRenderState = null;
-
-// Which trained model_versions to surface on the homepage Next Event card.
-// Predictions for other versions in the model_predictions table are filtered
-// out server-side. Keep this list in sync with the lab.html tab if/when new
-// production models ship.
-const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5'];
-
-// Consensus pick across the visible trained models. Majority vote — if more
-// models pick fighter A than B, A is the consensus pick; confidence is the
-// average model_p of the models that voted for the majority side. Ties go
-// to whichever side has the higher average confidence. Returns null if no
-// model has a pick for this fight.
+// Consensus pick across visible trained models (preserved logic).
 function getConsensusPick(fightPicks, a, b) {
   if (!fightPicks) return null;
   let aVotes = 0, bVotes = 0, aPctSum = 0, bPctSum = 0;
@@ -2165,60 +888,6 @@ function getConsensusPick(fightPicks, a, b) {
   return { picked, opponent, pct, voteCount: Math.max(aVotes, bVotes), totalVotes: aVotes + bVotes };
 }
 
-// Single-model pick lookup. Returns null if the model didn't write a pick
-// for this fight (which can happen if it's a brand-new event not yet scored
-// by that version).
-function getTrainedPick(modelKey, fightPicks, a, b) {
-  if (!fightPicks) return null;
-  const pick = fightPicks[modelKey];
-  if (!pick) return null;
-  const picked = pick.fighter_id === a.id ? a : (pick.fighter_id === b.id ? b : null);
-  if (!picked) return null;
-  const opponent = picked === a ? b : a;
-  return { picked, opponent, pct: pick.model_p * 100 };
-}
-
-// Method-of-victory inference for the homepage Next Event card. Splits the
-// picked fighter's winner probability across KO / SUB / DEC using career
-// finish rates as a base, then nudges by matchup signals. Returns
-// { ko, sub, dec } that sum to 1. Mirrors the same logic in event.html.
-function hpComputeMov(picked, opponent, fightWeightClass) {
-  const fr = _finishRateMap && _finishRateMap[picked.id];
-  let ko  = fr && fr.ko_tko_rate   != null ? +fr.ko_tko_rate   : 0.30;
-  let sub = fr && fr.sub_rate      != null ? +fr.sub_rate      : 0.15;
-  let dec = fr && fr.decision_rate != null ? +fr.decision_rate : 0.55;
-  // Opponent's cardio fading/collapsing → boost KO (gas tank fails late).
-  if (window.cflEdges && _cardioMap) {
-    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, _cardioMap);
-    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
-      ko += 0.10;
-    }
-  }
-  // Weak opponent td_def + picked has real grappling output → boost SUB.
-  if (opponent.td_def != null && opponent.td_def < 60
-      && picked.td_avg != null && picked.td_avg >= 2.0) {
-    sub += 0.10;
-  }
-  const total = ko + sub + dec;
-  if (total <= 0) return { ko: 0.30, sub: 0.15, dec: 0.55 };
-  return { ko: ko / total, sub: sub / total, dec: dec / total };
-}
-
-function hpRenderMovPills(mov) {
-  const items = [
-    { key: 'ko',  label: 'KO',  pct: mov.ko  * 100 },
-    { key: 'sub', label: 'SUB', pct: mov.sub * 100 },
-    { key: 'dec', label: 'DEC', pct: mov.dec * 100 },
-  ];
-  const leader = items.reduce((max, it) => it.pct > max.pct ? it : max, items[0]);
-  return `
-    <div class="hp-mov-pills">
-      <span class="mov-label">Method</span>
-      ${items.map(it => `<span class="hp-mov-pill ${it.key === leader.key ? 'lead' : ''}"><span class="mov-kind">${it.label}</span><span>${it.pct.toFixed(0)}%</span></span>`).join('')}
-    </div>
-  `;
-}
-
 async function loadOddsMap(eventId) {
   if (_oddsMap !== null) return _oddsMap;
   const sb = window.cflSupabase;
@@ -2228,35 +897,10 @@ async function loadOddsMap(eventId) {
       .from('v_fight_odds_consensus')
       .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b')
       .eq('event_id', eventId);
-    if (error) {
-      console.warn('Market odds not available:', error.message);
-      return _oddsMap;
-    }
+    if (error) { console.warn('Market odds not available:', error.message); return _oddsMap; }
     (data || []).forEach(r => { _oddsMap[r.fight_id] = r; });
-  } catch (e) {
-    console.warn('Market odds not available:', e.message);
-  }
+  } catch (e) { console.warn('Market odds not available:', e.message); }
   return _oddsMap;
-}
-
-async function loadFinishRateMap(fighterIds) {
-  if (_finishRateMap !== null) return _finishRateMap;
-  const sb = window.cflSupabase;
-  _finishRateMap = {};
-  try {
-    const { data, error } = await sb
-      .from('v_fighter_finish_rate')
-      .select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate')
-      .in('fighter_id', Array.from(fighterIds));
-    if (error) {
-      console.warn('Finish-rate data not available:', error.message);
-      return _finishRateMap;
-    }
-    (data || []).forEach(r => { _finishRateMap[r.fighter_id] = r; });
-  } catch (e) {
-    console.warn('Finish-rate data not available:', e.message);
-  }
-  return _finishRateMap;
 }
 
 async function loadCardioMap(fighterIds) {
@@ -2264,449 +908,78 @@ async function loadCardioMap(fighterIds) {
   const sb = window.cflSupabase;
   _cardioMap = {};
   try {
-    // Read from v_fighter_consistency. Each fighter has rows for each weight
-    // class they fought at, plus a 'CAREER' row with the cross-weight aggregate.
     const { data, error } = await sb
       .from('v_fighter_consistency')
-      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier, r3p_minutes, recent_fights, sig_apm_ratio_pct, sig_lpm_ratio_pct, grapp_ratio_pct')
+      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier')
       .in('fighter_id', Array.from(fighterIds));
-    if (error) {
-      console.warn('Cardio data not available:', error.message);
-      return _cardioMap;
-    }
+    if (error) { console.warn('Cardio data not available:', error.message); return _cardioMap; }
     (data || []).forEach(r => {
       const slot = _cardioMap[r.fighter_id] || (_cardioMap[r.fighter_id] = { byWc: {}, career: null });
-      const entry = {
-        score: r.consistency_score,
-        tier_word: r.cardio_tier,           // 'tireless' / 'steady' / 'tapers' / 'fades' / 'collapses'
-        confidence: r.confidence_tier,       // 'high' / 'limited'
-        r3p_min: r.r3p_minutes,
-        fight_count: r.recent_fights,
-        sig_apm_pct: r.sig_apm_ratio_pct,
-        sig_lpm_pct: r.sig_lpm_ratio_pct,
-        td_pct: r.grapp_ratio_pct,
-      };
-      if (r.weight_class === 'CAREER') {
-        slot.career = entry;
-      } else {
-        slot.byWc[r.weight_class] = entry;
-      }
+      const entry = { score: r.consistency_score, tier_word: r.cardio_tier, confidence: r.confidence_tier };
+      if (r.weight_class === 'CAREER') slot.career = entry;
+      else slot.byWc[r.weight_class] = entry;
     });
-  } catch (e) {
-    console.warn('Cardio data not available:', e.message);
-  }
+  } catch (e) { console.warn('Cardio data not available:', e.message); }
   return _cardioMap;
 }
 
-// Look up cardio for a fighter at a specific weight class. Prefer weight-class
-// data when it exists with a real tier_word; fall back to CAREER otherwise.
-// Returns null when the fighter has no usable data anywhere.
 function cardioFor(fighterId, weightClass) {
   if (!_cardioMap) return null;
   const slot = _cardioMap[fighterId];
   if (!slot) return null;
-  // Prefer weight-class-specific data when it has a tier
   if (weightClass && slot.byWc[weightClass] && slot.byWc[weightClass].tier_word) {
     return { ...slot.byWc[weightClass], source: 'weight_class' };
   }
-  // Fall back to career
-  if (slot.career && slot.career.tier_word) {
-    return { ...slot.career, source: 'career' };
-  }
+  if (slot.career && slot.career.tier_word) return { ...slot.career, source: 'career' };
   return null;
 }
 
-// Style data lookup. v_fighter_style returns 'grappler' | 'striker' | 'hybrid'
-// per (fighter, weight_class), with a CAREER fallback row. Same lookup
-// pattern as cardio: prefer weight-class match, fall back to career.
-//
-// This view is the source of truth for fighter style on the homepage. The JS
-// classifier in cflEdges.classifyStyle is only used as a last-resort fallback
-// when the view query fails or has no data for a fighter (e.g. a UFC debutant
-// with zero round-level history).
-async function loadStyleMap(fighterIds) {
-  if (_styleMap !== null) return _styleMap;
-  const sb = window.cflSupabase;
-  _styleMap = {};
-  try {
-    const { data, error } = await sb
-      .from('v_fighter_style')
-      .select('fighter_id, weight_class, style, sample_fights, confidence')
-      .in('fighter_id', Array.from(fighterIds));
-    if (error) {
-      console.warn('Style data not available:', error.message);
-      return _styleMap;
-    }
-    (data || []).forEach(r => {
-      const slot = _styleMap[r.fighter_id] || (_styleMap[r.fighter_id] = { byWc: {}, career: null });
-      const entry = { style: r.style, sample_fights: r.sample_fights, confidence: r.confidence };
-      if (r.weight_class === 'CAREER') {
-        slot.career = entry;
-      } else {
-        slot.byWc[r.weight_class] = entry;
-      }
-    });
-  } catch (e) {
-    console.warn('Style data not available:', e.message);
-  }
-  return _styleMap;
-}
-
-// Look up style for a fighter at a specific weight class. Prefer weight-class
-// data when present, fall back to CAREER, fall back to JS classifier when the
-// fighter has no row-level data at all.
-function styleFor(fighter, weightClass) {
-  if (_styleMap) {
-    const slot = _styleMap[fighter.id];
-    if (slot) {
-      if (weightClass && slot.byWc[weightClass] && slot.byWc[weightClass].style) {
-        return slot.byWc[weightClass].style;
-      }
-      if (slot.career && slot.career.style) {
-        return slot.career.style;
-      }
-    }
-  }
-  // Last-resort fallback to the JS classifier (career averages from fighters table)
-  return cflEdges.classifyStyle(fighter);
-}
-
-// One bar row. Pass the raw values for both fighters and a label.
-// `higherIsBetter` controls who the green winner is (false for things like age).
-// `format` turns the raw value into the displayed string (e.g. v => v + '%').
-function statBarRow(label, va, vb, format, higherIsBetter, opts) {
-  opts = opts || {};
-  const noData = (va == null && vb == null);
-  if (noData) return ''; // skip entirely — don't show empty rows
-  const fa = va != null ? format(va) : '—';
-  const fb = vb != null ? format(vb) : '—';
-  // Determine winner. higherIsBetter=null means neutral — neither side wins
-  // (used for height/weight where the "advantage" depends on style, not magnitude).
-  let aWins = false, bWins = false;
-  if (higherIsBetter !== null && va != null && vb != null && va !== vb) {
-    aWins = higherIsBetter ? va > vb : va < vb;
-    bWins = !aWins;
-  }
-  // Bar widths: leader fills 100%, trailer fills proportionally
-  const maxAbs = Math.max(Math.abs(va ?? 0), Math.abs(vb ?? 0)) || 1;
-  const aPct = va != null ? Math.min(100, (Math.abs(va) / maxAbs) * 100) : 0;
-  const bPct = vb != null ? Math.min(100, (Math.abs(vb) / maxAbs) * 100) : 0;
-  // Tier tag for cardio rows (small amber pill on low-confidence)
-  const aTier = opts.aTier && opts.aTier === 'low' ? '<span class="fstat-tier-tag">limited</span>' : '';
-  const bTier = opts.bTier && opts.bTier === 'low' ? '<span class="fstat-tier-tag">limited</span>' : '';
-  // Label can optionally link out (e.g. cardio score label -> cardio methodology page)
-  const labelInner = opts.labelHref
-    ? `<a href="${opts.labelHref}" class="fstat-label-link" title="How this is calculated">${label}</a>`
-    : label;
-  return `
-    <div class="fstat-row">
-      <div class="fstat-side left">
-        <div class="fstat-bar"><div class="fstat-fill ${aWins ? 'winner' : ''}" style="width:${aPct}%"></div></div>
-        <div class="fstat-val ${aWins ? 'winner' : ''}">${fa}</div>
-        ${aTier}
-      </div>
-      <div class="fstat-label">${labelInner}</div>
-      <div class="fstat-side right">
-        <div class="fstat-bar"><div class="fstat-fill ${bWins ? 'winner' : ''}" style="width:${bPct}%"></div></div>
-        <div class="fstat-val ${bWins ? 'winner' : ''}">${fb}</div>
-        ${bTier}
-      </div>
-    </div>
-  `;
-}
-
-// Text-comparison row for non-numeric stats (stance). Highlights the
-// statistically-favored side when known (southpaw in mixed bouts), neutral
-// when both fighters share the same value or value is missing.
-function statTextRow(label, va, vb, opts) {
-  opts = opts || {};
-  if (va == null && vb == null) return '';
-  const fa = va || '—';
-  const fb = vb || '—';
-  // opts.winnerSide: 'a' | 'b' | null — caller determines who's favored
-  const aWins = opts.winnerSide === 'a';
-  const bWins = opts.winnerSide === 'b';
-  return `
-    <div class="fstat-row">
-      <div class="fstat-side left">
-        <div class="fstat-bar"><div class="fstat-fill ${aWins ? 'winner' : ''}" style="width:100%"></div></div>
-        <div class="fstat-val ${aWins ? 'winner' : ''}">${cfl.escapeHtml(fa)}</div>
-      </div>
-      <div class="fstat-label">${label}</div>
-      <div class="fstat-side right">
-        <div class="fstat-bar"><div class="fstat-fill ${bWins ? 'winner' : ''}" style="width:100%"></div></div>
-        <div class="fstat-val ${bWins ? 'winner' : ''}">${cfl.escapeHtml(fb)}</div>
-      </div>
-    </div>
-  `;
-}
-
-// Determine the favored stance side. Per our southpaw_winrate analysis,
-// southpaw beats orthodox at ~51.5% in mixed-stance fights. Same-stance
-// matchups have no edge (return null).
-function stanceWinnerSide(stanceA, stanceB) {
-  if (!stanceA || !stanceB || stanceA === stanceB) return null;
-  if (stanceA === 'Southpaw' && stanceB === 'Orthodox') return 'a';
-  if (stanceB === 'Southpaw' && stanceA === 'Orthodox') return 'b';
-  return null; // switch stance or unknown matchup combos = neutral
-}
-
-// Format weight class as a clean number+lbs string. The fight's weight_class
-// is the contracted limit (e.g. 'Welterweight' = 170). Both fighters always
-// share this, so the row is purely visual symmetry, not a comparison signal.
-function formatWeightClass(wc) {
-  const map = {
-    'Strawweight': '115 lbs',
-    'Flyweight': '125 lbs',
-    'Bantamweight': '135 lbs',
-    'Featherweight': '145 lbs',
-    'Lightweight': '155 lbs',
-    'Welterweight': '170 lbs',
-    'Middleweight': '185 lbs',
-    'Light Heavyweight': '205 lbs',
-    'Heavyweight': '265 lbs',
-    'Catch Weight': 'Catch',
-    "Women's Strawweight": '115 lbs',
-    "Women's Flyweight": '125 lbs',
-    "Women's Bantamweight": '135 lbs',
-    "Women's Featherweight": '145 lbs',
-  };
-  return map[wc] || wc || '—';
-}
-
-function renderQuickStats(a, b, fightWeightClass) {
-  const cardioA = cardioFor(a.id, fightWeightClass);
-  const cardioB = cardioFor(b.id, fightWeightClass);
-
-  // ====================================================================
-  // PHYSICALS BLOCK — Tape of the tape, UFC-broadcast convention.
-  // Five rows: Age, Height, Weight, Reach, Stance.
-  // - Age: younger highlighted green (we already use this as an edge factor)
-  // - Height: neutral (taller has range advantage but worse TD def — wash)
-  // - Weight: neutral (both fighters always at the contracted limit)
-  // - Reach: longer highlighted green (52% edge factor at 2"+ gap)
-  // - Stance: southpaw highlighted in mixed-stance bouts (51.5% edge)
-  // ====================================================================
-  const physRows = [
-    statBarRow('Age', a.age, b.age, v => v + '', false),                     // lower=better
-    statBarRow('Height', a.height_in, b.height_in, cfl.formatHeight, null),  // neutral
-    statTextRow('Weight', formatWeightClass(fightWeightClass), formatWeightClass(fightWeightClass), { winnerSide: null }),
-    statBarRow('Reach', a.reach_in, b.reach_in, cfl.formatReach, true),      // longer=better
-    statTextRow('Stance', a.stance, b.stance, { winnerSide: stanceWinnerSide(a.stance, b.stance) }),
-  ].filter(Boolean);
-
-  // ====================================================================
-  // PERFORMANCE BLOCK — derived stats from fight history.
-  // Order: striking volume → grappling volume → grappling efficiency
-  // (offense) → grappling efficiency (defense) → late-fight sustain.
-  // ====================================================================
-  const perfRows = [
-    statBarRow('Strikes / min', a.slpm, b.slpm, v => Number(v).toFixed(1), true),
-    statBarRow('Takedowns / 15', a.td_avg, b.td_avg, v => Number(v).toFixed(1), true),
-    statBarRow('Takedown accuracy', a.td_acc, b.td_acc, v => v + '%', true),
-    statBarRow('Takedown defense', a.td_def, b.td_def, v => v + '%', true),
-  ];
-
-  // Cardio row uses a custom renderer because the primary value is a TIER WORD
-  // (Tireless / Steady / Tapers / Fades / Collapses) with the numeric score
-  // shown muted beneath it. This is what bettors actually read.
-  if (cardioA || cardioB) {
-    perfRows.push(renderCardioRow(cardioA, cardioB));
-  }
-
-  const physHtml = physRows.length
-    ? `<div class="fstat-section physicals">${physRows.join('')}</div>`
-    : '';
-  const perfPopulated = perfRows.filter(Boolean);
-  const perfHtml = perfPopulated.length
-    ? `<div class="fstat-section performance">${perfPopulated.join('')}</div>`
-    : '';
-
-  if (!physHtml && !perfHtml) return '';
-  return `<div class="fight-stats">${physHtml}${perfHtml}</div>`;
-}
-
-// Custom cardio row: shows tier word as primary, score as secondary.
-// Bar length scales with score relative to the higher of the two; winner
-// (higher score) is highlighted green. "Limited" tag appears if the
-// confidence is limited OR we fell back to career data.
-function renderCardioRow(ca, cb) {
-  const sa = ca ? (ca.score || 0) : null;
-  const sb = cb ? (cb.score || 0) : null;
-  if (sa == null && sb == null) return '';
-
-  // Tier word, capitalized
-  const cap = w => w ? (w.charAt(0).toUpperCase() + w.slice(1)) : '—';
-  const wordA = ca ? cap(ca.tier_word) : '—';
-  const wordB = cb ? cap(cb.tier_word) : '—';
-  const scoreA = sa != null ? Math.round(sa) : '—';
-  const scoreB = sb != null ? Math.round(sb) : '—';
-
-  // Winner = higher score
-  let aWins = false, bWins = false;
-  if (sa != null && sb != null && sa !== sb) {
-    aWins = sa > sb;
-    bWins = !aWins;
-  }
-
-  // Bar widths proportional to the higher score
-  const maxAbs = Math.max(Math.abs(sa ?? 0), Math.abs(sb ?? 0)) || 1;
-  const aPct = sa != null ? Math.min(100, (Math.abs(sa) / maxAbs) * 100) : 0;
-  const bPct = sb != null ? Math.min(100, (Math.abs(sb) / maxAbs) * 100) : 0;
-
-  // Limited tag if confidence is limited or using career fallback
-  const aLimited = ca && (ca.confidence === 'limited' || ca.source === 'career');
-  const bLimited = cb && (cb.confidence === 'limited' || cb.source === 'career');
-  const aTag = aLimited ? '<span class="fstat-tier-tag">limited</span>' : '';
-  const bTag = bLimited ? '<span class="fstat-tier-tag">limited</span>' : '';
-
-  return `
-    <div class="fstat-row cardio-row">
-      <div class="fstat-side left">
-        <div class="fstat-bar"><div class="fstat-fill ${aWins ? 'winner' : ''}" style="width:${aPct}%"></div></div>
-        <div class="cardio-stack">
-          <div class="cardio-tier-word ${aWins ? 'winner' : ''}">${wordA}</div>
-          <div class="cardio-score-small">${scoreA}</div>
-        </div>
-        ${aTag}
-      </div>
-      <div class="fstat-label">
-        <a href="cardio.html" class="fstat-label-link" title="How this is calculated">Cardio</a>
-      </div>
-      <div class="fstat-side right">
-        <div class="fstat-bar"><div class="fstat-fill ${bWins ? 'winner' : ''}" style="width:${bPct}%"></div></div>
-        <div class="cardio-stack">
-          <div class="cardio-tier-word ${bWins ? 'winner' : ''}">${wordB}</div>
-          <div class="cardio-score-small">${scoreB}</div>
-        </div>
-        ${bTag}
-      </div>
-    </div>
-  `;
-}
-
-async function loadStatOfDay(event) {
-  const strip = document.getElementById('statStrip');
-  const sb = window.cflSupabase;
-  // 'estimated' reads pg_class.reltuples in microseconds; 'exact' would force
-  // a full table scan on every page load (slow, anon-cold especially). Both
-  // queries are independent so we run them in parallel.
-  const [{ count: fightsCount }, { count: fightersCount }] = await Promise.all([
-    sb.from('fights').select('id', { count: 'estimated', head: true }),
-    sb.from('fighters').select('id', { count: 'estimated', head: true }),
-  ]);
-  strip.innerHTML = `
-    <div class="stat-of-day">
-      <div class="lbl">Card breakdown</div>
-      <div class="big" id="cardBreakdown">—</div>
-      <div class="sub">on this card</div>
-    </div>
-    <div class="stat-of-day">
-      <div class="lbl">Database</div>
-      <div class="big">${(fightersCount || 0).toLocaleString()} fighters</div>
-      <div class="sub">${(fightsCount || 0).toLocaleString()} fights tracked</div>
-    </div>
-    <div class="stat-of-day">
-      <div class="lbl">Stat of the day</div>
-      <div class="big" id="statOfDay">Loading…</div>
-      <div class="sub" id="statOfDaySub">&nbsp;</div>
-    </div>
-  `;
-  setTimeout(async () => {
-    const { data: cardFights } = await sb.from('fights').select('weight_class, is_title_fight').eq('event_id', event.id);
-    if (cardFights) {
-      const titles = cardFights.filter(f => f.is_title_fight).length;
-      document.getElementById('cardBreakdown').innerHTML =
-        `${cardFights.length} fights<span class="sec">${titles} title</span>`;
-    }
-  }, 100);
-  loadDailyStat();
-}
-
-async function loadDailyStat() {
-  const dayOfYear = Math.floor((new Date() - new Date(new Date().getFullYear(), 0, 0)) / 86400000);
-  const stats = [
-    { label: 'Younger fighters win', fallback: { big: '54%', sub: 'of UFC fights since 2010 (sample)' } },
-    { label: 'Southpaw vs orthodox', fallback: { big: '52%', sub: 'southpaws beat orthodox in our sample' } },
-    { label: 'Most KO wins (UFC)', fallback: { big: 'Coming soon', sub: 'awaiting per-fight stats' } }
-  ];
-  const pick = stats[dayOfYear % stats.length];
-  const out = pick.fallback;
-  document.getElementById('statOfDay').textContent = out.big;
-  document.getElementById('statOfDaySub').textContent = out.sub;
-  document.querySelector('#statStrip .stat-of-day:nth-child(3) .lbl').textContent = pick.label;
-}
-
 // =============================================================================
-// AUTH STATE — re-render fights when tier changes
-// If a user signs in/out while looking at the page, the edge display gating
-// should update without a full reload. We hold a reference to the current
-// event in __currentEvent and re-call loadFights when auth state changes.
+// AUTH STATE + beta banner (preserved)
 // =============================================================================
 let __currentEvent = null;
 let __currentTier = null;
 
 (function patchLoadFights() {
-  const _origLoadFights = loadFights;
-  loadFights = async function (event) {
-    __currentEvent = event;
-    return _origLoadFights(event);
-  };
+  const _orig = loadFights;
+  loadFights = async function (event) { __currentEvent = event; return _orig(event); };
 })();
 
 if (window.cflAuth) {
   cflAuth.onAuthChange(() => {
     const newTier = cflAuth.isPremium() ? 'premium' : 'free';
     if (__currentTier !== null && __currentTier !== newTier && __currentEvent) {
-      // Tier changed mid-session — re-render fights
       loadFights(__currentEvent);
     }
     __currentTier = newTier;
-    // Update beta banner visibility on auth change
     updateBetaBanner();
   });
 }
 
-// Beta banner — show to logged-out users only; respect their previous dismissal.
-// Persists dismissal in localStorage so they don't see it again on every visit.
 const BETA_BANNER_KEY = 'cfl_beta_banner_dismissed_v1';
 function updateBetaBanner() {
   const banner = document.getElementById('betaBanner');
   if (!banner) return;
   const dismissed = (() => { try { return localStorage.getItem(BETA_BANNER_KEY) === '1'; } catch (e) { return false; } })();
   const signedIn = !!(window.cflAuth && window.cflAuth.isSignedIn && window.cflAuth.isSignedIn());
-  if (!dismissed && !signedIn) {
-    banner.classList.add('show');
-  } else {
-    banner.classList.remove('show');
-  }
+  if (!dismissed && !signedIn) banner.classList.add('show');
+  else banner.classList.remove('show');
 }
 document.getElementById('betaBannerDismiss')?.addEventListener('click', () => {
   try { localStorage.setItem(BETA_BANNER_KEY, '1'); } catch (e) {}
   document.getElementById('betaBanner')?.classList.remove('show');
 });
-// Initial paint — runs once on page load. We wait for cflAuth to settle so
-// we don't flash the banner at a user who's already signed in.
-if (window.cflAuth && window.cflAuth.ready) {
-  window.cflAuth.ready().then(updateBetaBanner);
-} else {
-  updateBetaBanner();
-}
+if (window.cflAuth && window.cflAuth.ready) window.cflAuth.ready().then(updateBetaBanner);
+else updateBetaBanner();
 
 load().catch(err => {
   console.warn('[home] next-event load failed', err);
-  const cb = document.getElementById('countdownBar');
-  if (cb && cb.querySelector('.loading-spinner')) {
-    cb.innerHTML = cfl.errorHtml('Failed to load next event: ' + (err && err.message ? err.message : err) + '. Try refreshing.');
-  }
+  showCardError("Couldn't load the next card. Try refreshing.");
 });
-// Safety net: if a request silently hangs (tracking-prevention/adblocker
-// dropping *.supabase.co without rejecting the fetch), replace the
-// "Loading next event…" spinner with an actionable error.
 setTimeout(() => {
-  const cb = document.getElementById('countdownBar');
-  if (cb && cb.querySelector('.loading-spinner')) {
-    cb.innerHTML = cfl.errorHtml("Couldn't reach the database. If you use a tracking-prevention extension or strict browser privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.");
+  const list = document.getElementById('fightsList');
+  if (list && list.querySelector('.skel-card')) {
+    showCardError("Couldn't reach the database. If you use a tracking-prevention extension or strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.");
   }
 }, 15000);
 </script>
