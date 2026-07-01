@@ -487,11 +487,48 @@
     color: var(--text-3);
   }
 
+  /* Net-effect waterfall — visual of how the verdict was built from a 50/50
+     coin flip, each edge factor pushing the pick's win probability up (green)
+     or down (red), ending at the final verdict (blue). */
+  .wf { margin-bottom: 12px; }
+  .wf-legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    font: 500 10px 'Inter', sans-serif; color: var(--text-3);
+    margin-bottom: 10px;
+  }
+  .wf-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .wf-dot { width: 9px; height: 9px; border-radius: 2px; }
+  .wf-chart { display: flex; }
+  .wf-axis { width: 26px; flex-shrink: 0; position: relative; }
+  .wf-axis span {
+    position: absolute; right: 5px; transform: translateY(-50%);
+    font: 500 10px 'Inter', sans-serif; color: var(--text-3);
+  }
+  .wf-plot { flex: 1; position: relative; border-bottom: 1px solid var(--border-2); }
+  .wf-grid { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border); }
+  .wf-base { position: absolute; left: 0; right: 0; border-top: 1px dashed var(--border-2); }
+  .wf-bar {
+    position: absolute; border-radius: 3px;
+    display: flex; align-items: center; justify-content: center;
+    font: 700 11px 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
+    color: #fff; overflow: hidden;
+  }
+  .wf-x { display: flex; margin-top: 6px; padding-left: 26px; }
+  .wf-x > div { flex: 1; text-align: center; padding: 0 2px; }
+  .wf-xf {
+    font: 800 9px 'Inter', sans-serif; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--text-2);
+  }
+  .wf-xc { font: 600 10px 'Inter', sans-serif; margin-top: 2px; }
+  .wf-cap { font: italic 500 10px 'Inter', sans-serif; color: var(--text-3); margin-top: 8px; }
+
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
     .event-hero h1 { font-size: 26px; }
     .fight-body { gap: 8px; padding: 14px 12px; }
     .fight-fighter .name { font-size: 16px; }
+    .wf-xf { font-size: 8px; }
+    .wf-xc { font-size: 9px; }
   }
 </style>
 </head>
@@ -510,7 +547,7 @@
 
 <script src="_shared.js?v=navfix1"></script>
 <script src="_auth.js"></script>
-<script src="edges.js"></script>
+<script src="edges.js?v=steps1"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -970,6 +1007,8 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
   // can render the same edges without recomputing.
   let edges = [];
   let aProb = 0.5;
+  let steps = [];
+  let capped = false;
   let picked = null;
   let opponent = null;
   if (window.cflEdges) {
@@ -982,6 +1021,8 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
     });
     edges = r.edges;
     aProb = r.aProb;
+    steps = r.steps || [];
+    capped = !!r.capped;
 
     if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
       html += '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
@@ -1069,6 +1110,9 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
   // plain-text gloss on the method-of-victory split. Collapsed by default
   // so visitors who just want the call aren't buried in detail.
   if (window.cflEdges) {
+    const waterfall = (picked && steps.length)
+      ? renderVerdictWaterfall(steps, aProb > 0.5, (aProb > 0.5 ? aProb : 1 - aProb) * 100, capped, picked.name)
+      : '';
     const whyRows = edges.length
       ? edges.map(renderWhyRow).join('')
       : '<div class="why-none">No clear edges in this matchup — coin flip on paper.</div>';
@@ -1079,6 +1123,7 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
       <details class="fight-why">
         <summary>Why this pick?</summary>
         <div class="why-body">
+          ${waterfall}
           ${whyRows}
           ${movExplanation}
         </div>
@@ -1096,6 +1141,86 @@ function renderWhyRow(edge) {
       <span class="why-factor">${factorLabel}</span>
       <span class="why-pct">${edge.pct.toFixed(0)}%</span>
       <span><span class="why-fighter">${cfl.escapeHtml(edge.fighterName)}</span> ${cfl.escapeHtml(edge.desc)}</span>
+    </div>`;
+}
+
+// Draws the net-effect waterfall: a 50/50 coin flip, then each edge factor
+// pushing the picked fighter's win probability up (green) or down (red),
+// ending at the final verdict (blue). Driven by the `steps` array edges.js
+// returns so the Bayesian math stays in one place.
+function renderVerdictWaterfall(steps, pickIsA, finalPickPct, capped, pickedName) {
+  const PLOT = 150;
+  const lastName = n => { const t = String(n || '').trim().split(/\s+/); return t[t.length - 1] || n; };
+  const factorLabel = f => f === 'td_def' ? 'TD Def' : f.charAt(0).toUpperCase() + f.slice(1);
+
+  // Running pick-side win % after each step (A-prob -> pick-prob), bookended by
+  // the 50% coin flip and the final (capped) verdict.
+  const toPick = v => (pickIsA ? v : 1 - v) * 100;
+  const vals = [50];
+  steps.forEach(s => vals.push(toPick(s.aProbAfter)));
+  vals.push(finalPickPct);
+
+  // Auto-scale the axis around the values so small moves stay visible.
+  const lo = Math.min(50, Math.min.apply(null, vals));
+  const hi = Math.max.apply(null, vals);
+  const vMin = Math.max(0, Math.floor(lo) - 6);
+  let vMax = Math.min(100, Math.ceil(hi) + 6);
+  if (vMax - vMin < 24) vMax = Math.min(100, vMin + 24);
+  const span = vMax - vMin;
+  const y = v => PLOT * (vMax - v) / span;
+
+  const nCols = steps.length + 2;
+  const colW = 100 / nCols;
+  const barW = Math.min(13, colW * 0.5);
+  const barLeft = i => (i + 0.5) * colW - barW / 2;
+  const bar = (i, top, h, bg, label) =>
+    `<div class="wf-bar" style="left:${barLeft(i).toFixed(2)}%;width:${barW.toFixed(2)}%;top:${top.toFixed(1)}px;height:${Math.max(h, 3).toFixed(1)}px;background:${bg};">${label}</div>`;
+
+  let grid = '';
+  for (let g = Math.ceil(vMin / 10) * 10; g <= vMax; g += 10) {
+    grid += `<div class="wf-grid" style="top:${y(g).toFixed(1)}px;"></div>`;
+  }
+  grid += `<div class="wf-base" style="top:${y(50).toFixed(1)}px;"></div>`;
+
+  const axis = `<span style="top:${y(vMax).toFixed(1)}px;">${Math.round(vMax)}</span>`
+             + `<span style="top:${y(50).toFixed(1)}px;">50</span>`
+             + `<span style="top:${y(vMin).toFixed(1)}px;">${Math.round(vMin)}</span>`;
+
+  let bars = bar(0, y(50), PLOT - y(50), '#4b5563', '50%');
+  let xcells = `<div><div class="wf-xf">Coin flip</div><div class="wf-xc" style="color:var(--text-3);">even</div></div>`;
+
+  for (let i = 0; i < steps.length; i++) {
+    const from = vals[i], to = vals[i + 1];
+    const up = to >= from;
+    const color = up ? 'var(--green)' : 'var(--red)';
+    const delta = to - from;
+    const lbl = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
+    bars += bar(i + 1, y(Math.max(from, to)), Math.abs(y(from) - y(to)), color, lbl);
+    xcells += `<div><div class="wf-xf">${factorLabel(steps[i].factor)}</div>`
+            + `<div class="wf-xc" style="color:${color};">${cfl.escapeHtml(lastName(steps[i].fighterName))}</div></div>`;
+  }
+
+  const vi = nCols - 1;
+  bars += bar(vi, y(finalPickPct), PLOT - y(finalPickPct), 'var(--blue)', finalPickPct.toFixed(1) + '%');
+  xcells += `<div><div class="wf-xf">Verdict</div><div class="wf-xc" style="color:var(--blue);">${cfl.escapeHtml(lastName(pickedName))}</div></div>`;
+
+  const capNote = capped
+    ? '<div class="wf-cap">Capped to avoid over-confidence from stacked edges.</div>'
+    : '';
+
+  return `
+    <div class="wf">
+      <div class="wf-legend">
+        <span><span class="wf-dot" style="background:var(--green);"></span>helps the pick</span>
+        <span><span class="wf-dot" style="background:var(--red);"></span>helps the opponent</span>
+        <span><span class="wf-dot" style="background:var(--blue);"></span>final verdict</span>
+      </div>
+      <div class="wf-chart">
+        <div class="wf-axis" style="height:${PLOT}px;">${axis}</div>
+        <div class="wf-plot" style="height:${PLOT}px;">${grid}${bars}</div>
+      </div>
+      <div class="wf-x">${xcells}</div>
+      ${capNote}
     </div>`;
 }
 

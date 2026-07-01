@@ -251,20 +251,32 @@
       pass(tdDefEdge(a, b)),
     ].filter(Boolean);
 
-    // Bayesian combination of edges.
+    // Bayesian combination of edges. `steps` records the running fighter-A
+    // probability after each edge (pre-cap) so callers can draw a waterfall of
+    // how the verdict was built without re-deriving the math.
     let aProb = 0.5;
+    const steps = [];
     for (let i = 0; i < edges.length; i++) {
       const e = edges[i];
       const factor = e.favors === 'a' ? (e.pct / 100) : (1 - e.pct / 100);
       aProb = (aProb * factor) / (aProb * factor + (1 - aProb) * (1 - factor));
+      steps.push({
+        factor: e.factor,
+        favors: e.favors,
+        pct: e.pct,
+        fighterName: e.fighterName,
+        aProbAfter: aProb,
+      });
     }
     // Cap to prevent stacked-edges runaway.
     const strongest = edges.length ? Math.max.apply(null, edges.map(function (e) { return e.pct; })) / 100 : 0.5;
     const cap = Math.min(0.78, strongest + 0.06);
+    const uncappedAProb = aProb;
     if (aProb > cap) aProb = cap;
     if (aProb < 1 - cap) aProb = 1 - cap;
+    const capped = aProb !== uncappedAProb;
 
-    return { edges, aProb };
+    return { edges, aProb, steps, capped };
   }
 
   // =========================================================================
