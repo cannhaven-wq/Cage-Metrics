@@ -115,6 +115,31 @@
     color: var(--text-3);
     margin-top: 2px;
   }
+  .model-card .track-rec {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--text-2);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .model-card .track-rec strong {
+    color: #fff;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 16px;
+    letter-spacing: 0.5px;
+    margin: 0 2px;
+  }
+  .model-card .track-rec .tr-acc { color: var(--green); font-weight: 700; }
+  .model-card .track-rec .tr-note {
+    display: block;
+    margin-top: 3px;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: none;
+    letter-spacing: 0;
+  }
   .model-card .more {
     display: inline-block;
     margin-top: 14px;
@@ -885,18 +910,36 @@ cfl.renderFooter();
   }
 
   // ---- model cards ----
+  // Models train on fights through 2022 and are evaluated on the 2023+ hold-out.
+  // Pre-2023 rows (e.g. v5's backfilled point-in-time picks) are IN-SAMPLE — the
+  // model saw those outcomes during training — so counting them inflates ROI and
+  // the record. Every betting / track-record stat is restricted to the hold-out.
+  const HOLDOUT_START = '2023-01-01';
+  const isHoldout = r => r.outcome_known && (r.event_date || '') >= HOLDOUT_START;
+
   function roiAt(rows, edge) {
-    const bets = rows.filter(r => r.outcome_known && r.edge != null && r.edge > edge && r.opener_american_odds != null);
+    const bets = rows.filter(r => isHoldout(r) && r.edge != null && r.edge > edge && r.opener_american_odds != null);
     if (!bets.length) return { bets: 0, wins: 0, win_pct: 0, roi: 0, pnl: 0 };
     const wins = bets.filter(b => b.won).length;
     const pnl = bets.reduce((s, b) => s + (parseFloat(b.pnl_usd) || 0), 0);
     return { bets: bets.length, wins, win_pct: 100 * wins / bets.length, roi: pnl / (bets.length * 100) * 100, pnl };
   }
 
+  // Straight-up pick record on the hold-out: the model's pick is the >50% side of
+  // each graded fight. This is the honest track record across every graded hold-out
+  // fight — independent of the edge/betting filter above.
+  function pickRecord(rows) {
+    const picks = rows.filter(r => isHoldout(r) && r.model_p != null && r.model_p > 0.5);
+    const wins = picks.filter(r => r.won).length;
+    const n = picks.length;
+    return { n, wins, losses: n - wins, acc: n ? 100 * wins / n : 0 };
+  }
+
   const grid = document.getElementById('modelGrid');
   grid.innerHTML = models.map(m => {
     const headline = roiAt(byModel[m.id] || [], 0.05);
     const roiClass = headline.roi > 0 ? 'pos' : (headline.roi < 0 ? 'neg' : '');
+    const rec = pickRecord(byModel[m.id] || []);
     return `
       <div class="model-card" data-vid="${m.id}">
         <div class="head">
@@ -921,6 +964,7 @@ cfl.renderFooter();
             <div class="sub">${headline.bets} bets</div>
           </div>
         </div>
+        ${rec.n ? `<div class="track-rec">Track record <strong>${rec.wins}–${rec.losses}</strong> <span class="tr-acc">${rec.acc.toFixed(1)}%</span> <span class="tr-note">across ${rec.n.toLocaleString()} graded fights · 2023+ hold-out, never trained on</span></div>` : ''}
       </div>
     `;
   }).join('');
