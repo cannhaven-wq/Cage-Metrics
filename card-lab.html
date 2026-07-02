@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>Card Lab — Work the Next UFC Card in Minutes | Cannon Fight Lab</title>
+<meta name="description" content="Every fight on the next UFC card ranked by model edge, confidence, and underdog value. Model probability vs the betting line, the factors behind each pick, and the red flags — one screen.">
+<meta name="keywords" content="UFC card analysis, UFC betting edges, UFC model picks, MMA value bets, UFC card analyzer">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/card-lab.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="Card Lab — Work the Next UFC Card in Minutes">
+<meta property="og:description" content="Every fight ranked by model edge, confidence, and dog value. Model vs market on one screen.">
+<meta property="og:url" content="https://cannonfightlab.com/card-lab.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Card Lab — Work the Next UFC Card in Minutes">
+<meta name="twitter:description" content="Every fight ranked by model edge, confidence, and dog value. Model vs market on one screen.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<meta name="theme-color" content="#08090b">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rd3">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+/* =====================================================================
+   CARD LAB — dense, one-screen card workspace. Scoped under #cardlab.
+   ===================================================================== */
+#cardlab { max-width: 1200px; margin: 0 auto; padding: 0 28px 40px; }
+#cardlab .glow-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 15% -5%, rgba(255,59,71,.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(74,155,232,.06), transparent 55%); }
+
+/* Header */
+#cardlab .head { padding: 30px 0 14px; display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+#cardlab .eyebrow-live { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--red); display: inline-flex; align-items: center; gap: 7px; }
+#cardlab .eyebrow-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
+#cardlab .head h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 36px; color: #fff; line-height: 1.05; margin-top: 6px; }
+#cardlab .head .meta { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+#cardlab .head .meta a { color: var(--red); font-weight: 600; }
+
+/* Summary strip */
+#cardlab .sum { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 10px 0 16px; }
+#cardlab .sum .cell { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+#cardlab .sum .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#cardlab .sum .v.green { color: var(--green); }
+#cardlab .sum .l { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-top: 3px; }
+
+/* Controls */
+#cardlab .controls { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; position: sticky; top: 60px; z-index: 20;
+  background: rgba(8,9,11,.88); backdrop-filter: blur(10px); padding: 10px 0; border-bottom: 1px solid var(--line); }
+#cardlab .fl-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
+#cardlab .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; flex-wrap: wrap; }
+#cardlab .seg button { font-family: 'Space Grotesk', sans-serif; font-size: 12px; font-weight: 600; color: var(--text-2); background: transparent; border: 0; padding: 6px 12px; border-radius: 8px; cursor: pointer; transition: .15s; }
+#cardlab .seg button:hover { color: #fff; }
+#cardlab .seg button.active { background: var(--red); color: #fff; }
+#cardlab .chk { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-2); cursor: pointer; user-select: none; }
+#cardlab .chk input { accent-color: var(--red); width: 15px; height: 15px; cursor: pointer; }
+#cardlab .model-filter { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
+#cardlab .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; font: 600 12px 'Space Grotesk', sans-serif; cursor: pointer; }
+
+/* Fight rows */
+#cardlab .rows { display: flex; flex-direction: column; gap: 10px; }
+#cardlab .row { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; transition: border-color .15s; }
+#cardlab .row:hover { border-color: var(--line-2); }
+#cardlab .row-main { display: grid; grid-template-columns: minmax(210px, 1.4fr) auto repeat(3, 74px) 120px 34px; gap: 12px; align-items: center; padding: 12px 16px; cursor: pointer; }
+#cardlab .bout { min-width: 0; }
+#cardlab .bout .wt { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+#cardlab .bout .names { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: var(--text-2); line-height: 1.25; margin-top: 2px; }
+#cardlab .bout .names .pk { color: #fff; border-bottom: 2px solid var(--green); }
+#cardlab .pickcell { text-align: left; min-width: 120px; }
+#cardlab .pickcell .lab { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#cardlab .pickcell .nm { font-size: 13px; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px; }
+#cardlab .stat { text-align: center; }
+#cardlab .stat .t { font-size: 9px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#cardlab .stat .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 20px; color: var(--text); line-height: 1.15; font-variant-numeric: tabular-nums; }
+#cardlab .stat .n.green { color: var(--green); }
+#cardlab .stat .n.amber { color: var(--amber); }
+#cardlab .stat .n.mut { color: var(--text-3); }
+#cardlab .confwrap { display: flex; flex-direction: column; gap: 4px; }
+#cardlab .conf-meter { height: 6px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
+#cardlab .conf-meter > i { display: block; height: 100%; border-radius: 4px; }
+#cardlab .conf-meter.high > i { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+#cardlab .conf-meter.med > i { background: var(--amber); }
+#cardlab .conf-meter.low > i { background: var(--text-3); }
+#cardlab .conf-word { font-size: 10px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; font-weight: 700; }
+#cardlab .caret { color: var(--text-3); font-size: 12px; text-align: center; transition: transform .15s; }
+#cardlab .row.open .caret { transform: rotate(90deg); }
+
+#cardlab .lbadge { display: inline-flex; align-items: center; gap: 4px; font-size: 9px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; padding: 2px 7px; border-radius: 5px; white-space: nowrap; }
+#cardlab .lbadge.value { border: 1px solid var(--green); color: var(--green); }
+#cardlab .lbadge.dog { background: rgba(255,181,71,.14); color: var(--amber); }
+#cardlab .lbadge.main { background: var(--bg-3); color: var(--text-2); }
+#cardlab .lbadge.thin { background: var(--bg-3); color: var(--text-3); }
+
+/* Expanded detail */
+#cardlab .row-detail { display: none; border-top: 1px solid var(--line); padding: 14px 16px; }
+#cardlab .row.open .row-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+#cardlab .det h4 { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 8px; }
+#cardlab .det.likes h4 { color: var(--green); }
+#cardlab .det.flags h4 { color: var(--amber); }
+#cardlab .det ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+#cardlab .det li { display: flex; gap: 8px; font-size: 12.5px; color: var(--text-2); line-height: 1.45; align-items: flex-start; }
+#cardlab .det.likes li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+#cardlab .det.flags li::before { content: '⚠'; color: var(--amber); font-size: 11px; flex-shrink: 0; margin-top: 1px; }
+#cardlab .det .none { font-size: 12.5px; color: var(--text-3); }
+#cardlab .det-links { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
+#cardlab .det-links a { font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 12px; transition: .15s; }
+#cardlab .det-links a:hover { color: #fff; border-color: #3a424e; }
+
+/* Locked (teaser) detail for signed-out visitors */
+#cardlab .row-detail.locked { position: relative; }
+#cardlab .row-detail.locked .det { filter: blur(5px); pointer-events: none; user-select: none; }
+#cardlab .lock-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; padding: 14px; }
+#cardlab .lock-overlay .t { font-size: 13px; font-weight: 600; color: #fff; }
+#cardlab .lock-overlay .s { font-size: 11.5px; color: var(--text-2); max-width: 420px; line-height: 1.45; }
+#cardlab .lock-overlay a { margin-top: 4px; }
+
+/* Parlay strip */
+#cardlab .parlay-strip { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 18px; margin-top: 18px; }
+#cardlab .parlay-strip .tx { font-size: 13px; color: var(--text-2); }
+#cardlab .parlay-strip .tx strong { color: #fff; }
+
+/* Bankroll warning */
+#cardlab .bankroll { display: flex; gap: 12px; align-items: flex-start; background: rgba(255,181,71,.05); border: 1px solid rgba(255,181,71,.2);
+  border-radius: 12px; padding: 14px 16px; margin-top: 14px; }
+#cardlab .bankroll svg { width: 18px; height: 18px; stroke: var(--amber); fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 2px; }
+#cardlab .bankroll .tx { font-size: 12.5px; color: var(--text-2); line-height: 1.55; }
+#cardlab .bankroll .tx strong { color: var(--text); }
+
+/* Buttons */
+#cardlab .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600; font-size: 13px; cursor: pointer; border-radius: 10px; padding: 10px 16px; border: 1px solid transparent; transition: .15s; white-space: nowrap; }
+#cardlab .btn-primary { background: var(--red); color: #fff; }
+#cardlab .btn-primary:hover { background: var(--red-2); }
+#cardlab .btn-ghost { background: var(--bg-2); border-color: var(--line-2); color: var(--text); }
+#cardlab .btn-ghost:hover { background: var(--bg-3); }
+
+#cardlab .load-err { text-align: center; padding: 50px 20px; color: var(--text-3); font-size: 14px; }
+#cardlab .skel-row { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; height: 66px; }
+#cardlab .skel { background: linear-gradient(100deg, var(--bg-2) 30%, var(--bg-3) 50%, var(--bg-2) 70%); background-size: 200% 100%; animation: sk 1.3s infinite; border-radius: 6px; }
+@keyframes sk { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* Sticky mobile CTA */
+.cl-sticky-cta { display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 90;
+  background: rgba(10,12,15,.94); backdrop-filter: blur(12px); border-top: 1px solid var(--line-2);
+  padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); align-items: center; gap: 10px; }
+.cl-sticky-cta .tx { font-size: 12px; color: var(--text-2); line-height: 1.35; flex: 1; min-width: 0; }
+.cl-sticky-cta .tx strong { color: #fff; display: block; font-size: 12.5px; }
+.cl-sticky-cta a { background: var(--red); color: #fff; font: 600 12.5px 'Space Grotesk', sans-serif; padding: 9px 14px; border-radius: 9px; white-space: nowrap; }
+.cl-sticky-cta button { background: none; border: none; color: var(--text-3); font-size: 18px; cursor: pointer; padding: 2px 6px; line-height: 1; }
+@media (max-width: 900px) { .cl-sticky-cta.show { display: flex; } }
+
+#cardlab .fineprint { font-size: 11.5px; color: var(--text-3); line-height: 1.55; margin-top: 20px; }
+
+@media (max-width: 900px) {
+  #cardlab { padding: 0 16px 90px; }
+  #cardlab .sum { grid-template-columns: repeat(2, 1fr); }
+  #cardlab .row-main { grid-template-columns: 1fr auto; grid-template-areas: "bout caret" "pick pick" "stats stats" "conf conf"; row-gap: 10px; }
+  #cardlab .bout { grid-area: bout; }
+  #cardlab .caret { grid-area: caret; }
+  #cardlab .pickcell { grid-area: pick; }
+  #cardlab .row-stats { grid-area: stats; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  #cardlab .confwrap { grid-area: conf; }
+  #cardlab .row.open .row-detail { grid-template-columns: 1fr; }
+  #cardlab .controls { top: 59px; }
+  #cardlab .model-filter { margin-left: 0; }
+}
+@media (min-width: 901px) {
+  #cardlab .row-stats { display: contents; }
+}
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+<div class="glow-bg" aria-hidden="true"></div>
+
+<main id="cardlab">
+
+  <div class="head">
+    <div id="clHead">
+      <div class="eyebrow-live"><span class="dot"></span> Loading…</div>
+      <h1>Card Lab</h1>
+      <div class="meta">One screen to work the whole card — model vs market on every fight.</div>
+    </div>
+    <a class="btn btn-ghost" href="track-record.html">See verified track record →</a>
+  </div>
+
+  <div class="sum" id="clSummary" hidden></div>
+
+  <div class="controls">
+    <span class="fl-label">Sort</span>
+    <div class="seg" id="clSort">
+      <button data-sort="edge" class="active">Highest edge</button>
+      <button data-sort="conf">Confidence</button>
+      <button data-sort="dog">Dog value</button>
+      <button data-sort="order">Card order</button>
+    </div>
+    <label class="chk"><input type="checkbox" id="clHideThin"> Hide thin leans (&lt;55%)</label>
+    <div class="model-filter">
+      <span class="fl-label">Model</span>
+      <select id="clModelSelect"><option value="consensus">Consensus (all models)</option></select>
+    </div>
+  </div>
+
+  <div class="rows" id="clRows">
+    <div class="skel-row skel"></div><div class="skel-row skel"></div><div class="skel-row skel"></div>
+    <div class="skel-row skel"></div><div class="skel-row skel"></div>
+  </div>
+
+  <div class="parlay-strip" id="clParlayStrip" hidden>
+    <div class="tx" id="clParlayText"></div>
+    <a class="btn btn-primary" href="parlay.html">Stack them in the Parlay Builder →</a>
+  </div>
+
+  <div class="bankroll">
+    <svg viewBox="0 0 24 24"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/></svg>
+    <div class="tx"><strong>Model probability does not guarantee profit.</strong> A 65% pick loses about one time in three, and a positive edge only pays off across many bets. Never bet money you can't lose, size bets to a small fixed share of your bankroll, and treat everything on this page as model output — not betting advice. Where the model has been wrong is documented in the <a href="track-record.html" style="color:var(--amber);font-weight:600">track record</a>.</div>
+  </div>
+
+  <p class="fineprint">Market prices are a vig-removed consensus across sportsbooks and refresh throughout fight week. Edge = model probability minus market implied probability; small edges are noise. 21+ only.</p>
+
+  <div class="cfl-email-capture" data-source="card-lab" data-headline="Get the next card's model update." data-sub="Every upcoming UFC card with the model's picks and edges, in your inbox before fight night." style="margin-top:24px"></div>
+  <div class="cfl-funnel-cta" data-source="card-lab" data-headline="Free during beta — full card analysis unlocked." data-sub="Create a free account to see every factor, red flag, and edge on every fight. No card required."></div>
+
+</main>
+
+<!-- Sticky mobile CTA (signed-out only) -->
+<div class="cl-sticky-cta" id="clStickyCta">
+  <div class="tx"><strong>Unlock full card analysis</strong>Free during beta — every factor and edge.</div>
+  <a href="signup.html?src=card-lab-sticky">Create free account</a>
+  <button id="clStickyDismiss" aria-label="Dismiss">&times;</button>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rd3"></script>
+<script src="_auth.js"></script>
+<script src="edges.js?v=steps1"></script>
+<script src="fight-insights.js?v=1"></script>
+<script>
+cfl.renderNav('cardlab');
+cfl.renderFooter();
+
+// =============================================================================
+// CARD LAB — the one-screen card workspace.
+// Same data spine as the homepage (fights + model_predictions + consensus
+// odds + cardio), rendered dense and sortable. Pick-explanation logic comes
+// from fight-insights.js (shared with the homepage).
+// =============================================================================
+const CL_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
+let _state = null;        // { event, fights, fighterMap, picksByFight, modelNames }
+let _cardioMap = null;
+let _oddsMap = null;
+let _baseRates = null;
+let _sortKey = 'edge';
+let _hideThin = false;
+let _modelMode = 'consensus';
+let _openFid = null;
+let _signedIn = false;
+
+const $ = id => document.getElementById(id);
+
+// ---- Event selection (same rules as the homepage) ----
+async function load() {
+  const sb = window.cflSupabase;
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+
+  let event = null, phase = 'upcoming';
+  {
+    const { data } = await sb.from('events').select('id, name, event_date, location')
+      .gte('event_date', yesterdayStr).lte('event_date', todayStr)
+      .order('event_date', { ascending: false }).limit(1);
+    if (data && data[0]) { event = data[0]; phase = 'happening'; }
+  }
+  if (!event) {
+    const { data } = await sb.from('events').select('id, name, event_date, location')
+      .eq('is_upcoming', true).gt('event_date', todayStr)
+      .order('event_date', { ascending: true }).limit(1);
+    if (data && data[0]) { event = data[0]; phase = 'upcoming'; }
+  }
+  if (!event) {
+    const { data } = await sb.from('events').select('id, name, event_date, location')
+      .eq('is_upcoming', false).order('event_date', { ascending: false }).limit(1);
+    if (data && data[0]) { event = data[0]; phase = 'fallback'; }
+  }
+  if (!event) { showErr('No events found in the database.'); return; }
+
+  renderHead(event, phase);
+
+  const { data: fights, error } = await sb.from('fights').select('*')
+    .eq('event_id', event.id)
+    .order('is_main_event', { ascending: false })
+    .order('id', { ascending: true });
+  if (error || !fights || !fights.length) { showErr('No fights listed for this card yet — check back soon.'); return; }
+
+  const fighterIds = new Set();
+  fights.forEach(f => { if (f.fighter_a_id) fighterIds.add(f.fighter_a_id); if (f.fighter_b_id) fighterIds.add(f.fighter_b_id); });
+  const fightIds = fights.map(f => f.id);
+
+  const [fightersR, oddsDone, cardioDone, ratesDone, predsR, namesR] = await Promise.all([
+    sb.from('fighters').select('id, name, age, height_in, reach_in, wins, losses, draws, slpm, td_avg, td_acc, td_def').in('id', Array.from(fighterIds)),
+    loadOddsMap(event.id),
+    loadCardioMap(fighterIds),
+    loadBaseRates(),
+    sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', CL_MODELS),
+    sb.from('model_versions').select('id, name').in('id', CL_MODELS),
+  ]);
+  if (fightersR.error) { showErr("Couldn't load fighter details. Try refreshing."); return; }
+
+  const fighterMap = {};
+  (fightersR.data || []).forEach(f => { fighterMap[f.id] = f; });
+
+  const picksByFight = {};
+  if (!predsR.error) (predsR.data || []).forEach(p => {
+    if (p.model_p == null || +p.model_p <= 0.5) return;
+    const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
+    slot[p.model_version] = { fighter_id: p.fighter_id, model_p: +p.model_p };
+  });
+
+  const modelNames = {};
+  if (!namesR.error) (namesR.data || []).forEach(m => { modelNames[m.id] = m.name; });
+
+  _state = { event, fights, fighterMap, picksByFight, modelNames };
+  populateModelSelect(modelNames);
+  render();
+}
+
+function showErr(msg) { $('clRows').innerHTML = '<div class="load-err">' + cfl.escapeHtml(msg) + '</div>'; }
+
+function renderHead(event, phase) {
+  const days = cfl.daysUntil(event.event_date);
+  let live;
+  if (phase === 'happening') live = days === -1 ? 'Last night' : 'Live tonight';
+  else if (phase === 'fallback') live = 'Most recent card';
+  else if (days === 0) live = 'Tonight';
+  else if (days === 1) live = 'Tomorrow';
+  else if (days > 1) live = `In ${days} days`;
+  else live = 'Next card';
+  $('clHead').innerHTML = `
+    <div class="eyebrow-live"><span class="dot"></span> ${cfl.escapeHtml(live)}</div>
+    <h1>${cfl.escapeHtml(event.name)}</h1>
+    <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))} · ${cfl.escapeHtml(event.location || 'Location TBD')} · <a href="${cfl.eventUrl(event.id)}">full event page →</a></div>`;
+}
+
+// ---- Data maps ----
+async function loadOddsMap(eventId) {
+  const sb = window.cflSupabase;
+  _oddsMap = {};
+  try {
+    const { data, error } = await sb.from('v_fight_odds_consensus')
+      .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b')
+      .eq('event_id', eventId);
+    if (!error) (data || []).forEach(r => { _oddsMap[r.fight_id] = r; });
+  } catch (e) { console.warn('Market odds not available:', e.message); }
+  return _oddsMap;
+}
+
+async function loadCardioMap(fighterIds) {
+  const sb = window.cflSupabase;
+  _cardioMap = {};
+  try {
+    const { data, error } = await sb.from('v_fighter_consistency')
+      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier')
+      .in('fighter_id', Array.from(fighterIds));
+    if (!error) (data || []).forEach(r => {
+      const slot = _cardioMap[r.fighter_id] || (_cardioMap[r.fighter_id] = { byWc: {}, career: null });
+      const entry = { score: r.consistency_score, tier_word: r.cardio_tier, confidence: r.confidence_tier };
+      if (r.weight_class === 'CAREER') slot.career = entry;
+      else slot.byWc[r.weight_class] = entry;
+    });
+  } catch (e) { console.warn('Cardio data not available:', e.message); }
+  return _cardioMap;
+}
+
+async function loadBaseRates() {
+  const sb = window.cflSupabase;
+  _baseRates = {};
+  try {
+    const [ageR, reachR] = await Promise.all([
+      sb.from('v_younger_fighter_winrate').select('*').single(),
+      sb.from('v_reach_advantage_winrate').select('*').single(),
+    ]);
+    if (!ageR.error && ageR.data) _baseRates.younger = ageR.data;
+    if (!reachR.error && reachR.data) _baseRates.reach = reachR.data;
+  } catch (e) { console.warn('Base rates not available:', e.message); }
+  return _baseRates;
+}
+
+// ---- Picks ----
+function pickForFight(fightPicks, a, b) {
+  if (!fightPicks) return null;
+  if (_modelMode !== 'consensus') {
+    const p = fightPicks[_modelMode];
+    if (!p) return null;
+    const picked = p.fighter_id === a.id ? a : (p.fighter_id === b.id ? b : null);
+    if (!picked) return null;
+    return { picked, opponent: picked === a ? b : a, pct: p.model_p * 100 };
+  }
+  let aVotes = 0, bVotes = 0, aSum = 0, bSum = 0;
+  CL_MODELS.forEach(mv => {
+    const p = fightPicks[mv];
+    if (!p) return;
+    if (p.fighter_id === a.id) { aVotes++; aSum += p.model_p; }
+    else if (p.fighter_id === b.id) { bVotes++; bSum += p.model_p; }
+  });
+  if (aVotes + bVotes === 0) return null;
+  if (aVotes > bVotes || (aVotes === bVotes && aSum / aVotes >= bSum / bVotes)) {
+    return { picked: a, opponent: b, pct: (aSum / aVotes) * 100, votes: aVotes, total: aVotes + bVotes };
+  }
+  return { picked: b, opponent: a, pct: (bSum / bVotes) * 100, votes: bVotes, total: aVotes + bVotes };
+}
+
+function populateModelSelect(modelNames) {
+  const sel = $('clModelSelect');
+  const opts = ['<option value="consensus">Consensus (all models)</option>'];
+  CL_MODELS.forEach(mv => {
+    const nm = modelNames && modelNames[mv];
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(mv.toUpperCase() + (nm ? ' · ' + nm : ''))}</option>`);
+  });
+  sel.innerHTML = opts.join('');
+  sel.value = _modelMode;
+}
+
+// ---- Build per-fight view models ----
+function buildRows() {
+  const { fights, fighterMap, picksByFight } = _state;
+  return fights.map((fight, idx) => {
+    const a = fighterMap[fight.fighter_a_id], b = fighterMap[fight.fighter_b_id];
+    if (!a || !b) return null;
+    const pick = pickForFight(picksByFight[fight.id], a, b);
+    const oddsRow = _oddsMap && _oddsMap[fight.id];
+
+    let marketPct = null, edge = null, isDog = false;
+    if (pick && oddsRow) {
+      const impl = pick.picked.id === a.id ? oddsRow.implied_prob_a : oddsRow.implied_prob_b;
+      if (impl != null) {
+        marketPct = +impl * 100;
+        edge = pick.pct - marketPct;
+        if (edge > 15) { marketPct = null; edge = null; }   // stale-odds guard
+        else isDog = marketPct < 50;
+      }
+    }
+    const conf = pick ? pick.pct : 0;
+    return { fight, a, b, pick, marketPct, edge, isDog, conf, order: idx };
+  }).filter(Boolean);
+}
+
+function sortRows(rows) {
+  const sorters = {
+    order: (x, y) => x.order - y.order,
+    conf:  (x, y) => y.conf - x.conf,
+    edge:  (x, y) => (y.edge ?? -999) - (x.edge ?? -999) || y.conf - x.conf,
+    dog:   (x, y) => ((y.isDog ? y.edge : -999) ?? -999) - ((x.isDog ? x.edge : -999) ?? -999) || y.conf - x.conf,
+  };
+  return rows.slice().sort(sorters[_sortKey] || sorters.edge);
+}
+
+// ---- Render ----
+function render() {
+  if (!_state) return;
+  let rows = buildRows();
+
+  // Summary strip (always across the full card, unfiltered)
+  const picked = rows.filter(r => r.pick);
+  const valueEdges = rows.filter(r => r.edge != null && r.edge >= 3);
+  const dogs = rows.filter(r => r.isDog && r.edge != null && r.edge >= 1);
+  const best = rows.reduce((m, r) => (r.edge != null && (m == null || r.edge > m.edge)) ? r : m, null);
+  $('clSummary').innerHTML = [
+    { v: rows.length, l: 'fights on the card' },
+    { v: picked.length, l: 'model picks locked' },
+    { v: valueEdges.length, l: 'edges ≥ 3% vs market', cls: valueEdges.length ? 'green' : '' },
+    best && best.edge >= 1
+      ? { v: '+' + best.edge.toFixed(0) + '%', l: 'best edge · ' + window.cflInsights.lastName(best.pick.picked.name), cls: 'green' }
+      : { v: '—', l: 'no market edge yet' },
+  ].map(c => `<div class="cell"><div class="v ${c.cls || ''}">${c.v}</div><div class="l">${cfl.escapeHtml(String(c.l))}</div></div>`).join('');
+  $('clSummary').hidden = false;
+
+  if (_hideThin) rows = rows.filter(r => r.conf >= 55);
+  rows = sortRows(rows);
+
+  $('clRows').innerHTML = rows.length
+    ? rows.map((r, i) => rowHtml(r, i)).join('')
+    : '<div class="load-err">Every pick on this card is a thin lean — uncheck the filter to see them.</div>';
+
+  // Parlay strip
+  if (valueEdges.length >= 2) {
+    $('clParlayText').innerHTML = `<strong>${valueEdges.length} picks</strong> on this card carry a 3%+ edge over the market — the raw material for a disciplined parlay. Small stakes: parlays multiply variance as fast as payouts.`;
+    $('clParlayStrip').hidden = false;
+  } else {
+    $('clParlayStrip').hidden = true;
+  }
+
+  wireRows();
+}
+
+function rowHtml(r, visIdx) {
+  const { fight, a, b, pick } = r;
+  let wt = fight.weight_class || 'Bout';
+  const badges = [];
+  if (fight.is_main_event) badges.push('<span class="lbadge main">Main event</span>');
+  else if (fight.is_title_fight) badges.push('<span class="lbadge main">Title</span>');
+  if (r.edge != null && r.edge >= 5) badges.push('<span class="lbadge value">✦ Value</span>');
+  if (r.isDog && pick) badges.push('<span class="lbadge dog">Dog pick</span>');
+  if (pick && r.conf < 55) badges.push('<span class="lbadge thin">Thin lean</span>');
+
+  const nameHtml = (f, isPick) => `<span class="${isPick ? 'pk' : ''}">${cfl.escapeHtml(f.name)}</span>`;
+  const pickedIsA = pick && pick.picked.id === a.id;
+
+  const stat = (t, n, cls) => `<div class="stat"><div class="t">${t}</div><div class="n ${cls || ''}">${n}</div></div>`;
+  const modelCell = pick ? stat('Model', Math.round(r.conf) + '%') : stat('Model', '—', 'mut');
+  const marketCell = r.marketPct != null ? stat('Market', Math.round(r.marketPct) + '%') : stat('Market', '—', 'mut');
+  let edgeCell;
+  if (r.edge == null) edgeCell = stat('Edge', '—', 'mut');
+  else if (r.edge >= 1) edgeCell = stat('Edge', '+' + r.edge.toFixed(0) + '%', 'green');
+  else edgeCell = stat('Edge', r.edge.toFixed(0) + '%', 'mut');
+
+  const confCls = r.conf >= 65 ? 'high' : (r.conf >= 55 ? 'med' : 'low');
+  const confWord = pick ? (r.conf >= 65 ? 'High confidence' : (r.conf >= 55 ? 'Medium' : 'Lean')) : 'Awaiting model';
+  const confMeter = `<div class="confwrap">
+    <div class="conf-meter ${confCls}"><i style="width:${Math.min(100, Math.max(4, (r.conf - 40) * 2.2)).toFixed(0)}%"></i></div>
+    <div class="conf-word">${confWord}${pick && pick.votes ? ` · ${pick.votes}/${pick.total} models` : ''}</div>
+  </div>`;
+
+  // Detail: factors + flags (shared logic), teaser-locked for signed-out
+  // visitors beyond the top 2 rows currently shown.
+  const ctx = { cardioMap: _cardioMap, weightClass: fight.weight_class, baseRates: _baseRates };
+  let detail = '';
+  if (pick) {
+    const bullets = window.cflInsights.buildEdgeBullets(pick.picked, pick.opponent, ctx).slice(0, 3);
+    const flags = window.cflInsights.buildRedFlags(pick.picked, pick.opponent, ctx, r.marketPct, r.conf).slice(0, 2);
+    const locked = !_signedIn && visIdx >= 2;
+    detail = `<div class="row-detail ${locked ? 'locked' : ''}">
+      <div class="det likes"><h4>Why the model likes ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
+        ${bullets.length ? '<ul>' + bullets.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No single dominant factor — the pick rests on the model\'s broader stat weighting.</div>'}
+      </div>
+      <div class="det flags"><h4>Why the model might be wrong</h4>
+        <ul>${flags.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('')}</ul>
+      </div>
+      ${locked ? `<div class="lock-overlay">
+          <div class="t">Full analysis is free — it just needs an account</div>
+          <div class="s">A free account unlocks every factor, red flag, and edge on every fight. Free during beta, no card required.</div>
+          <a class="btn btn-primary" href="signup.html?src=card-lab-lock">Unlock full card analysis</a>
+        </div>` : `<div class="det-links">
+          <a href="${cfl.eventUrl(_state.event.id)}">Full matchup breakdown →</a>
+          <a href="${cfl.h2hUrl(a.id, b.id)}">Head-to-head stats</a>
+          <a href="parlay.html">Add to a parlay</a>
+        </div>`}
+    </div>`;
+  }
+
+  return `<div class="row" data-fid="${fight.id}">
+    <div class="row-main" role="button" tabindex="0" aria-expanded="false">
+      <div class="bout">
+        <div class="wt">${cfl.escapeHtml(wt)} ${badges.join(' ')}</div>
+        <div class="names">${nameHtml(a, pickedIsA)} <span style="color:var(--text-3)">vs</span> ${nameHtml(b, pick && !pickedIsA)}</div>
+      </div>
+      <div class="pickcell"><div class="lab">Model pick</div><div class="nm">${pick ? cfl.escapeHtml(pick.picked.name) : 'Not scored yet'}</div></div>
+      <div class="row-stats">${modelCell}${marketCell}${edgeCell}</div>
+      ${confMeter}
+      <div class="caret">▶</div>
+    </div>
+    ${detail}
+  </div>`;
+}
+
+function wireRows() {
+  document.querySelectorAll('#cardlab .row-main').forEach(el => {
+    el.addEventListener('click', () => {
+      const row = el.closest('.row');
+      const wasOpen = row.classList.contains('open');
+      document.querySelectorAll('#cardlab .row.open').forEach(o => o.classList.remove('open'));
+      if (!wasOpen && row.querySelector('.row-detail')) {
+        row.classList.add('open');
+        _openFid = row.dataset.fid;
+      } else {
+        _openFid = null;
+      }
+      el.setAttribute('aria-expanded', row.classList.contains('open') ? 'true' : 'false');
+    });
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+  });
+  if (_openFid) {
+    const row = document.querySelector(`#cardlab .row[data-fid="${_openFid}"]`);
+    if (row && row.querySelector('.row-detail')) row.classList.add('open');
+  }
+}
+
+// ---- Controls ----
+$('clSort').addEventListener('click', e => {
+  const btn = e.target.closest('button'); if (!btn) return;
+  document.querySelectorAll('#clSort button').forEach(b => b.classList.toggle('active', b === btn));
+  _sortKey = btn.dataset.sort;
+  render();
+});
+$('clHideThin').addEventListener('change', e => { _hideThin = e.target.checked; render(); });
+$('clModelSelect').addEventListener('change', e => { _modelMode = e.target.value; render(); });
+
+// ---- Auth state: unlock details + sticky CTA ----
+const STICKY_KEY = 'cfl_cardlab_sticky_dismissed_v1';
+function updateAuthUi() {
+  _signedIn = !!(window.cflAuth && window.cflAuth.isSignedIn && window.cflAuth.isSignedIn());
+  const dismissed = (() => { try { return sessionStorage.getItem(STICKY_KEY) === '1'; } catch (e) { return false; } })();
+  $('clStickyCta').classList.toggle('show', !_signedIn && !dismissed);
+  if (_state) render();
+}
+$('clStickyDismiss').addEventListener('click', () => {
+  try { sessionStorage.setItem(STICKY_KEY, '1'); } catch (e) {}
+  $('clStickyCta').classList.remove('show');
+});
+if (window.cflAuth) {
+  cflAuth.onAuthChange(updateAuthUi);
+  if (cflAuth.ready) cflAuth.ready().then(updateAuthUi);
+}
+
+load().catch(err => {
+  console.warn('[cardlab] load failed', err);
+  showErr("Couldn't load the card. If you use a tracking-prevention extension or strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.");
+});
+setTimeout(() => {
+  if (document.querySelector('#clRows .skel-row')) {
+    showErr("Couldn't reach the database. Check ad blocker / tracking prevention and refresh.");
+  }
+}, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>Verified UFC Model Track Record — Cannon Fight Lab</title>
+<meta name="description" content="Every CFL model pick graded in public: accuracy by year, calibration, favorites vs underdogs, and ROI on flat $100 bets. Picks are locked before events and never edited.">
+<meta name="keywords" content="UFC prediction track record, verified UFC model accuracy, MMA betting model ROI, UFC model calibration">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/track-record.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
+<meta property="og:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too. Locked before events, never edited after.">
+<meta property="og:url" content="https://cannonfightlab.com/track-record.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
+<meta name="twitter:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<meta name="theme-color" content="#08090b">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rd3">
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+/* =====================================================================
+   PROOF CENTER — scoped under #proof. Uses shared design tokens.
+   ===================================================================== */
+#proof { max-width: 1200px; margin: 0 auto; padding: 0 28px 40px; }
+#proof .glow-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1200px 600px at 15% -5%, rgba(255,59,71,.10), transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, rgba(74,155,232,.06), transparent 55%); }
+
+#proof .page-head { padding: 44px 0 10px; max-width: 860px; }
+#proof .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 14px; }
+#proof .eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--red); }
+#proof h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 46px; line-height: 1.05; color: #fff; }
+#proof .lede { color: var(--text-2); font-size: 15.5px; line-height: 1.6; margin-top: 14px; }
+#proof .lede strong { color: var(--text); }
+#proof .updated { font-size: 12px; color: var(--text-3); margin-top: 10px; }
+
+/* Lock pledge */
+#proof .pledge { display: flex; gap: 12px; align-items: flex-start; background: var(--bg-1); border: 1px solid var(--line);
+  border-left: 3px solid var(--green); border-radius: 12px; padding: 14px 16px; margin: 22px 0 6px; max-width: 860px; }
+#proof .pledge svg { width: 18px; height: 18px; stroke: var(--green); fill: none; stroke-width: 2; flex-shrink: 0; margin-top: 2px; }
+#proof .pledge .tx { font-size: 13px; color: var(--text-2); line-height: 1.55; }
+#proof .pledge .tx strong { color: var(--text); }
+
+/* Section scaffolding */
+#proof .section { padding: 26px 0 8px; }
+#proof .sec-head h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; color: #fff; }
+#proof .sec-head .sub { font-size: 13px; color: var(--text-3); margin-top: 3px; max-width: 760px; line-height: 1.5; }
+
+/* Model tabs */
+#proof .model-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 22px 0 4px; }
+#proof .model-tabs button { font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--text-2);
+  background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: .15s; }
+#proof .model-tabs button:hover { color: #fff; border-color: var(--line-2); }
+#proof .model-tabs button.active { background: var(--red); border-color: var(--red); color: #fff; }
+#proof .window-note { font-size: 12px; color: var(--text-3); margin: 8px 0 14px; line-height: 1.5; }
+#proof .window-note strong { color: var(--text-2); }
+
+/* KPI strip */
+#proof .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+#proof .kpi { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+#proof .kpi .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#proof .kpi .v.good { color: var(--green); }
+#proof .kpi .v.bad { color: var(--red); }
+#proof .kpi .l { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-top: 4px; }
+#proof .kpi .d { font-size: 11.5px; color: var(--text-2); margin-top: 4px; line-height: 1.4; }
+
+/* Panels + tables */
+#proof .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+#proof .panel { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
+#proof .panel h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 4px; }
+#proof .panel .ps { font-size: 12px; color: var(--text-3); line-height: 1.5; margin-bottom: 14px; }
+#proof table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+#proof th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#proof td { padding: 7px 8px; border-bottom: 1px solid var(--line); color: var(--text-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#proof tr:last-child td { border-bottom: none; }
+#proof td.num, #proof th.num { text-align: right; }
+#proof td .pos { color: var(--green); font-weight: 600; }
+#proof td .neg { color: var(--red); font-weight: 600; }
+#proof td .mut { color: var(--text-3); }
+
+/* Bar rows (by-year, buckets) */
+#proof .bar-row { display: grid; grid-template-columns: 64px 1fr 118px; align-items: center; gap: 10px; padding: 6px 0; }
+#proof .bar-row .yl { font-size: 12.5px; color: var(--text-2); font-weight: 600; font-variant-numeric: tabular-nums; }
+#proof .bar-track { height: 9px; background: var(--bg-3); border-radius: 5px; overflow: hidden; position: relative; }
+#proof .bar-track > i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+#proof .bar-track > .mark { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--text-3); }
+#proof .bar-row .yv { font-size: 12px; color: var(--text-2); text-align: right; font-variant-numeric: tabular-nums; }
+#proof .bar-row .yv strong { color: #fff; font-size: 13px; }
+
+/* Calibration chart */
+#proof .cal-row { display: grid; grid-template-columns: 76px 1fr 150px; align-items: center; gap: 10px; padding: 7px 0; }
+#proof .cal-row .cl { font-size: 12px; color: var(--text-2); font-weight: 600; }
+#proof .cal-bars { display: flex; flex-direction: column; gap: 3px; }
+#proof .cal-bars .t { height: 7px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
+#proof .cal-bars .t > i { display: block; height: 100%; border-radius: 4px; }
+#proof .cal-bars .t.pred > i { background: var(--text-3); }
+#proof .cal-bars .t.act > i { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+#proof .cal-row .cv { font-size: 11.5px; color: var(--text-3); text-align: right; font-variant-numeric: tabular-nums; line-height: 1.4; }
+#proof .cal-row .cv strong { color: var(--text); }
+#proof .cal-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text-3); margin-bottom: 10px; }
+#proof .cal-legend i { display: inline-block; width: 14px; height: 7px; border-radius: 4px; margin-right: 5px; vertical-align: middle; }
+#proof .cal-legend .lp i { background: var(--text-3); }
+#proof .cal-legend .la i { background: var(--green); }
+
+/* Fav vs dog cards */
+#proof .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#proof .split .cell { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+#proof .split .cell .t { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+#proof .split .cell .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; }
+#proof .split .cell .d { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
+
+/* Misses */
+#proof .miss-note { font-size: 12.5px; color: var(--text-2); line-height: 1.55; margin-bottom: 12px; max-width: 760px; }
+
+/* Honesty box */
+#proof .honesty { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-top: 16px; }
+#proof .honesty h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px; }
+#proof .honesty ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+#proof .honesty li { display: flex; gap: 9px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+#proof .honesty li::before { content: '—'; color: var(--red); flex-shrink: 0; }
+#proof .honesty strong { color: var(--text); }
+
+/* CTA band */
+#proof .cta-band { background: linear-gradient(120deg, rgba(255,59,71,.10), rgba(74,155,232,.06)); border: 1px solid var(--line);
+  border-radius: 16px; padding: 26px; margin-top: 30px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+#proof .cta-band .tx strong { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: #fff; }
+#proof .cta-band .tx span { font-size: 13px; color: var(--text-2); }
+#proof .cta-band .acts { display: flex; gap: 10px; flex-wrap: wrap; }
+#proof .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: 'Space Grotesk', sans-serif;
+  font-weight: 600; font-size: 13.5px; cursor: pointer; border-radius: 10px; padding: 11px 18px; border: 1px solid transparent; transition: .15s; white-space: nowrap; }
+#proof .btn-primary { background: var(--red); color: #fff; }
+#proof .btn-primary:hover { background: var(--red-2); }
+#proof .btn-ghost { background: var(--bg-2); border-color: var(--line-2); color: var(--text); }
+#proof .btn-ghost:hover { background: var(--bg-3); }
+
+#proof .loading-wrap { padding: 60px 0; text-align: center; color: var(--text-3); font-size: 14px; }
+#proof .fineprint { font-size: 11.5px; color: var(--text-3); line-height: 1.55; margin-top: 26px; max-width: 860px; }
+
+@media (max-width: 900px) {
+  #proof h1 { font-size: 36px; }
+  #proof .kpis { grid-template-columns: repeat(2, 1fr); }
+  #proof .grid-2 { grid-template-columns: 1fr; }
+  #proof td, #proof th { white-space: normal; }
+}
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+<div class="glow-bg" aria-hidden="true"></div>
+
+<main id="proof">
+
+  <div class="page-head">
+    <div class="eyebrow">Proof Center</div>
+    <h1>Every pick, graded in public.</h1>
+    <p class="lede">This page is computed live from the same database our picks are written to — nothing on it is typed in by hand. Accuracy alone is not enough, so we also show <strong>calibration</strong> (were the probabilities honest?) and <strong>value</strong> (would betting the picks have made money?). We show the misses too.</p>
+    <div class="updated" id="lastUpdated">Loading latest data…</div>
+    <div class="pledge">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <div class="tx"><strong>Picks are locked before events and never edited after.</strong> Every model pick is written to the database ahead of fight night with its probability and the opening line at the time. Results are graded in afterward — the pick itself is insert-only and can't be revised.</div>
+    </div>
+  </div>
+
+  <!-- Model selector -->
+  <div class="model-tabs" id="modelTabs"></div>
+  <div class="window-note" id="windowNote"></div>
+
+  <div class="loading-wrap" id="proofLoading">Crunching the full pick history…</div>
+
+  <div id="proofBody" hidden>
+
+    <!-- KPI strip -->
+    <div class="kpis" id="kpiStrip"></div>
+
+    <!-- By-year + calibration -->
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Accuracy by year</h3>
+        <div class="ps">Straight-up picks (the side the model gave over 50%), grouped by the year the fight happened. The gray tick marks 50% — a coin flip.</div>
+        <div id="byYear"></div>
+      </div>
+      <div class="panel">
+        <h3>Calibration — did the probabilities tell the truth?</h3>
+        <div class="ps">When the model says 65%, those picks should win about 65% of the time. Gray bar = what the model predicted on average, green bar = what actually happened.</div>
+        <div class="cal-legend"><span class="lp"><i></i>Predicted</span><span class="la"><i></i>Actual</span></div>
+        <div id="calChart"></div>
+      </div>
+    </div>
+
+    <!-- Fav/dog + ROI -->
+    <div class="grid-2">
+      <div class="panel">
+        <h3>Favorites vs underdogs</h3>
+        <div class="ps">Split by the opening betting line. Beating the market on underdogs is where the money is — favorites winning often is expected.</div>
+        <div class="split" id="favDog"></div>
+      </div>
+      <div class="panel">
+        <h3>Return on investment — flat $100 per pick</h3>
+        <div class="ps">What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.</div>
+        <div id="roiTable"></div>
+      </div>
+    </div>
+
+    <!-- Misses -->
+    <div class="section">
+      <div class="sec-head"><h2>Where the model has been wrong</h2>
+        <div class="sub">The most recent graded misses, with the price we recorded at pick time. A model that only shows winners is selling something.</div></div>
+      <div class="panel" style="margin-top:14px"><div id="missTable"></div></div>
+    </div>
+
+    <!-- All models comparison -->
+    <div class="section">
+      <div class="sec-head"><h2>All models, same test</h2>
+        <div class="sub">Every model measured on the identical out-of-sample window — fights from Jan 1, 2025 onward that none of them trained on. Apples to apples.</div></div>
+      <div class="panel" style="margin-top:14px"><div id="allModels"></div></div>
+    </div>
+
+    <!-- CLV -->
+    <div class="section">
+      <div class="sec-head"><h2>Closing line value</h2>
+        <div class="sub">The sharpest test of a betting model: do our picks beat the price the market closes at?</div></div>
+      <div class="panel" style="margin-top:14px">
+        <div class="ps" style="margin-bottom:0">We started capturing closing lines from a 7+ book consensus in June 2026. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">CLV numbers will be published here once 100+ locked picks have both an opening and a closing line on record.</strong> Until then, judge us on the graded record above.</div>
+      </div>
+    </div>
+
+    <!-- Honesty box -->
+    <div class="honesty">
+      <h3>How to read this honestly</h3>
+      <ul>
+        <li><strong>Accuracy alone is not enough.</strong> Picking favorites gets you to ~65% for free. Calibration and value against the line are the real tests — that's why they're on this page.</li>
+        <li><span id="lockedSplitNote">Loading pick provenance…</span></li>
+        <li><strong>Model output, not guarantees.</strong> A 70% pick loses 3 times out of 10. Nothing here is betting advice.</li>
+        <li><strong>Samples matter.</strong> Anything under ~100 picks in a bucket is noise. We show the counts so you can discount accordingly.</li>
+      </ul>
+    </div>
+
+    <!-- CTA band -->
+    <div class="cta-band">
+      <div class="tx"><strong>The record is the pitch.</strong><span>Put the model to work on the next card — every pick, edge, and price in one place.</span></div>
+      <div class="acts">
+        <a class="btn btn-primary" href="card-lab.html">Analyze the next card →</a>
+        <a class="btn btn-ghost" href="signup.html?src=track-record">Create free account</a>
+      </div>
+    </div>
+
+    <p class="fineprint">Model probabilities are statistical estimates, not guarantees. Historical performance does not predict future results. Cannon Fight Lab is an analytics publication, not a sportsbook, and nothing on this page is betting advice. 21+ only.</p>
+
+  </div>
+
+  <div class="cfl-email-capture" data-source="track-record" data-headline="Get the next card's model update." data-sub="Every upcoming UFC card with the model's picks and edges, in your inbox before fight night." style="margin-top:28px"></div>
+
+</main>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rd3"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('track');
+cfl.renderFooter();
+
+// =============================================================================
+// PROOF CENTER
+// Everything on this page is computed client-side from model_predictions —
+// the same insert-only table picks are locked into. Per-model stats are gated
+// to that model's own out-of-sample window (model_versions.test_start_date)
+// so no model is ever graded on fights it trained on.
+// =============================================================================
+const SHARED_HOLDOUT = '2025-01-01';   // apples-to-apples window for the comparison table
+const DEFAULT_MODEL = 'v5';
+const MODEL_ORDER = ['v5', 'v6', 'v4', 'v3', 'v2', 'v1'];
+
+let _models = [];        // model_versions rows
+let _rows = [];          // graded model_predictions rows
+let _activeModel = DEFAULT_MODEL;
+
+const $ = id => document.getElementById(id);
+const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
+const usd = x => (x < 0 ? '-$' : '+$') + Math.abs(Math.round(x)).toLocaleString();
+
+async function loadProof() {
+  const sb = window.cflSupabase;
+  const [{ data: models, error: mErr }, rows] = await Promise.all([
+    sb.from('model_versions').select('id, name, test_start_date, test_brier').order('id'),
+    cfl.fetchAll(() => sb.from('model_predictions')
+      .select('model_version, fight_id, fighter_id, event_date, model_p, opener_implied_p, opener_american_odds, edge, would_bet, won, pnl_usd, created_at')
+      .eq('outcome_known', true)
+      .order('id', { ascending: true })),
+  ]);
+  if (mErr) throw mErr;
+  _models = (models || []).filter(m => MODEL_ORDER.includes(m.id))
+    .sort((a, b) => MODEL_ORDER.indexOf(a.id) - MODEL_ORDER.indexOf(b.id));
+  _rows = rows || [];
+  if (!_models.length || !_rows.length) throw new Error('no data');
+
+  renderTabs();
+  renderAll();
+  renderAllModelsTable();
+  await renderMisses();
+
+  $('proofLoading').hidden = true;
+  $('proofBody').hidden = false;
+}
+
+function modelById(id) { return _models.find(m => m.id === id); }
+
+// A model's graded, out-of-sample pick rows: one row per fight — the side the
+// model gave >50%. (The table also stores value bets on the <50% side; those
+// count in the ROI/edge tables below, not in straight-up accuracy.)
+function pickRows(modelId) {
+  const m = modelById(modelId);
+  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  return _rows.filter(r => r.model_version === modelId && r.event_date >= start && Number(r.model_p) > 0.5);
+}
+function allOOSRows(modelId) {
+  const m = modelById(modelId);
+  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  return _rows.filter(r => r.model_version === modelId && r.event_date >= start);
+}
+
+// P&L of a $100 flat bet at the recorded opening line.
+function flatPnl(r) {
+  if (r.pnl_usd != null) return Number(r.pnl_usd);
+  const odds = Number(r.opener_american_odds);
+  if (!odds) return null;
+  if (r.won !== true) return -100;
+  return odds > 0 ? odds : 100 * 100 / Math.abs(odds);
+}
+
+function renderTabs() {
+  $('modelTabs').innerHTML = _models.map(m =>
+    `<button data-m="${m.id}" class="${m.id === _activeModel ? 'active' : ''}">${cfl.escapeHtml(m.id.toUpperCase())}${m.id === DEFAULT_MODEL ? ' · flagship' : ''}</button>`
+  ).join('');
+  $('modelTabs').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    _activeModel = btn.dataset.m;
+    document.querySelectorAll('#modelTabs button').forEach(b => b.classList.toggle('active', b === btn));
+    renderAll();
+    renderMisses();
+  });
+}
+
+function renderAll() {
+  const m = modelById(_activeModel);
+  const picks = pickRows(_activeModel);
+  const oos = allOOSRows(_activeModel);
+
+  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  $('windowNote').innerHTML =
+    `<strong>${cfl.escapeHtml(m ? m.name : _activeModel)}</strong> — graded on fights from ` +
+    `<strong>${cfl.escapeHtml(cfl.formatDate(start))}</strong> onward only: its out-of-sample window, fights it never trained on. ` +
+    `Widening that window would quietly mix in training data and inflate the numbers, so we don't.`;
+
+  // ---- KPIs ----
+  const n = picks.length;
+  const hits = picks.filter(r => r.won === true).length;
+  const acc = n ? hits / n : 0;
+  const brier = n ? picks.reduce((s, r) => s + Math.pow(Number(r.model_p) - (r.won === true ? 1 : 0), 2), 0) / n : null;
+
+  const bets = oos.filter(r => r.would_bet === true);
+  const betPnl = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+  const betRoi = bets.length ? betPnl / (bets.length * 100) : null;
+
+  const latest = _rows.reduce((mx, r) => r.event_date > mx ? r.event_date : mx, '');
+  $('lastUpdated').textContent = 'Last updated: ' + cfl.formatDate(latest) + ' (most recent graded event) · recomputed live on every page load';
+
+  $('kpiStrip').innerHTML = [
+    { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
+    { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'out-of-sample only' },
+    { v: n.toLocaleString(), cls: '', l: 'Fights graded', d: `since ${start.slice(0, 4)}` },
+    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.22 ? 'good' : '', l: 'Brier score', d: 'lower is better · 0.250 = coin flip' },
+    { v: betRoi != null ? (betRoi >= 0 ? '+' : '') + pct(betRoi) : '—', cls: betRoi > 0 ? 'good' : (betRoi < 0 ? 'bad' : ''), l: 'ROI on flagged bets', d: bets.length ? `${usd(betPnl)} on ${bets.length} bets, $100 flat` : 'no flagged bets in window' },
+    { v: usd(betPnl), cls: betPnl > 0 ? 'good' : (betPnl < 0 ? 'bad' : ''), l: 'Profit / loss', d: 'flat $100 at the opening line' },
+  ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  // ---- By year ----
+  const byYear = {};
+  picks.forEach(r => {
+    const y = r.event_date.slice(0, 4);
+    const s = byYear[y] || (byYear[y] = { n: 0, w: 0 });
+    s.n++; if (r.won === true) s.w++;
+  });
+  $('byYear').innerHTML = Object.keys(byYear).sort().map(y => {
+    const s = byYear[y]; const a = s.w / s.n;
+    return `<div class="bar-row">
+      <div class="yl">${y}</div>
+      <div class="bar-track"><i style="width:${Math.min(100, a * 100).toFixed(1)}%"></i><span class="mark" style="left:50%"></span></div>
+      <div class="yv"><strong>${pct(a, 1)}</strong> · ${s.w}/${s.n}</div>
+    </div>`;
+  }).join('') || '<div class="ps">No graded picks in this window yet.</div>';
+
+  // ---- Calibration buckets ----
+  const buckets = [[0.5, 0.55], [0.55, 0.6], [0.6, 0.65], [0.65, 0.7], [0.7, 1.01]];
+  $('calChart').innerHTML = buckets.map(([lo, hi]) => {
+    const rows = picks.filter(r => Number(r.model_p) >= lo && Number(r.model_p) < hi);
+    if (!rows.length) return '';
+    const predAvg = rows.reduce((s, r) => s + Number(r.model_p), 0) / rows.length;
+    const act = rows.filter(r => r.won === true).length / rows.length;
+    const label = hi > 1 ? '70%+' : `${Math.round(lo * 100)}–${Math.round(hi * 100)}%`;
+    return `<div class="cal-row">
+      <div class="cl">${label}</div>
+      <div class="cal-bars">
+        <div class="t pred"><i style="width:${(predAvg * 100).toFixed(1)}%"></i></div>
+        <div class="t act"><i style="width:${Math.min(100, act * 100).toFixed(1)}%"></i></div>
+      </div>
+      <div class="cv">said <strong>${pct(predAvg, 0)}</strong> · won <strong>${pct(act, 0)}</strong> · n=${rows.length}</div>
+    </div>`;
+  }).join('') || '<div class="ps">Not enough graded picks yet.</div>';
+
+  // ---- Favorites vs underdogs ----
+  const withLine = picks.filter(r => r.opener_implied_p != null);
+  const favs = withLine.filter(r => Number(r.opener_implied_p) >= 0.5);
+  const dogs = withLine.filter(r => Number(r.opener_implied_p) < 0.5);
+  const cell = (t, rows) => {
+    if (!rows.length) return `<div class="cell"><div class="t">${t}</div><div class="v">—</div><div class="d">no picks</div></div>`;
+    const w = rows.filter(r => r.won === true).length;
+    const p = rows.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+    return `<div class="cell"><div class="t">${t}</div><div class="v">${pct(w / rows.length, 1)}</div>
+      <div class="d">${w}–${rows.length - w} · ${usd(p)} at $100 flat</div></div>`;
+  };
+  $('favDog').innerHTML = cell('Picked the favorite', favs) + cell('Picked the underdog', dogs);
+
+  // ---- ROI by edge threshold ----
+  const edged = oos.filter(r => r.edge != null && r.opener_american_odds != null);
+  const thresholds = [0.03, 0.05, 0.07, 0.10];
+  const roiRows = thresholds.map(t => {
+    const rows = edged.filter(r => Number(r.edge) >= t);
+    if (!rows.length) return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td><td class="num mut" colspan="4">no qualifying picks</td></tr>`;
+    const w = rows.filter(r => r.won === true).length;
+    const p = rows.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+    const roi = p / (rows.length * 100);
+    return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td>
+      <td class="num">${rows.length}</td>
+      <td class="num">${w}–${rows.length - w}</td>
+      <td class="num"><span class="${p >= 0 ? 'pos' : 'neg'}">${usd(p)}</span></td>
+      <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
+  }).join('');
+  $('roiTable').innerHTML = `<table>
+    <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
+    <tbody>${roiRows}</tbody></table>`;
+
+  // ---- Locked vs walk-forward provenance ----
+  const locked = picks.filter(r => r.created_at && r.created_at.slice(0, 10) <= r.event_date);
+  const sim = picks.length - locked.length;
+  $('lockedSplitNote').innerHTML =
+    `<strong>Two kinds of graded picks.</strong> ${locked.length.toLocaleString()} picks in this window were locked live before fight night. ` +
+    (sim > 0
+      ? `The other ${sim.toLocaleString()} are point-in-time walk-forward replays — the model shown only data available before each fight, then graded. Same discipline, but simulated; we label it because the difference matters.`
+      : `Every pick in this window was locked live.`);
+}
+
+// ---- All-models comparison on the shared 2025+ window ----
+function renderAllModelsTable() {
+  const rows = _models.map(m => {
+    const picks = _rows.filter(r => r.model_version === m.id && r.event_date >= SHARED_HOLDOUT && Number(r.model_p) > 0.5);
+    if (!picks.length) return '';
+    const w = picks.filter(r => r.won === true).length;
+    const brier = picks.reduce((s, r) => s + Math.pow(Number(r.model_p) - (r.won === true ? 1 : 0), 2), 0) / picks.length;
+    const bets = _rows.filter(r => r.model_version === m.id && r.event_date >= SHARED_HOLDOUT && r.would_bet === true);
+    const p = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+    const roi = bets.length ? p / (bets.length * 100) : null;
+    const acc = w / picks.length;
+    return `<tr>
+      <td><strong style="color:var(--text)">${cfl.escapeHtml(m.id.toUpperCase())}</strong> <span class="mut">${cfl.escapeHtml(m.name || '')}</span></td>
+      <td class="num">${picks.length}</td>
+      <td class="num"><span class="${acc >= 0.6 ? 'pos' : ''}">${pct(acc, 1)}</span></td>
+      <td class="num">${brier.toFixed(3)}</td>
+      <td class="num">${roi != null ? `<span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span>` : '<span class="mut">—</span>'}</td>
+    </tr>`;
+  }).join('');
+  $('allModels').innerHTML = `<table>
+    <thead><tr><th>Model</th><th class="num">Picks</th><th class="num">Accuracy</th><th class="num">Brier</th><th class="num">ROI (flagged bets)</th></tr></thead>
+    <tbody>${rows}</tbody></table>`;
+}
+
+// ---- Recent misses (with matchup names) ----
+async function renderMisses() {
+  const el = $('missTable');
+  el.innerHTML = '<div class="ps">Loading recent misses…</div>';
+  const misses = pickRows(_activeModel)
+    .filter(r => r.won === false)
+    .sort((a, b) => b.event_date.localeCompare(a.event_date))
+    .slice(0, 10);
+  if (!misses.length) { el.innerHTML = '<div class="ps">No graded misses in this window yet.</div>'; return; }
+
+  // Names for the ten fights involved
+  const sb = window.cflSupabase;
+  const fightIds = [...new Set(misses.map(r => r.fight_id).filter(Boolean))];
+  let fightMap = {};
+  if (fightIds.length) {
+    try {
+      const { data } = await sb.from('fights')
+        .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name')
+        .in('id', fightIds);
+      (data || []).forEach(f => { fightMap[f.id] = f; });
+    } catch (e) { /* names are progressive enhancement */ }
+  }
+
+  el.innerHTML = `<table>
+    <thead><tr><th>Date</th><th>Fight</th><th>Our pick</th><th class="num">Model said</th><th class="num">Open line</th><th class="num">$100 flat</th></tr></thead>
+    <tbody>` + misses.map(r => {
+      const f = fightMap[r.fight_id];
+      const matchup = f ? `${f.fighter_a_name} vs ${f.fighter_b_name}` : 'Fight #' + r.fight_id;
+      const pick = f ? (r.fighter_id === f.fighter_a_id ? f.fighter_a_name : f.fighter_b_name) : '—';
+      const odds = r.opener_american_odds != null ? (r.opener_american_odds > 0 ? '+' : '') + r.opener_american_odds : '—';
+      const p = flatPnl(r);
+      return `<tr>
+        <td>${cfl.escapeHtml(cfl.formatDateShort(r.event_date))} ${r.event_date.slice(0, 4)}</td>
+        <td>${cfl.escapeHtml(matchup)}</td>
+        <td>${cfl.escapeHtml(pick)} <span class="neg">✗</span></td>
+        <td class="num">${pct(Number(r.model_p), 0)}</td>
+        <td class="num">${cfl.escapeHtml(String(odds))}</td>
+        <td class="num"><span class="neg">${p != null ? usd(p) : '—'}</span></td>
+      </tr>`;
+    }).join('') + '</tbody></table>';
+}
+
+loadProof().catch(err => {
+  console.warn('[proof] load failed', err);
+  $('proofLoading').textContent = "Couldn't load the track record. If you use a tracking-prevention extension or strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.";
+});
+</script>
+</body>
+</html>

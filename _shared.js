@@ -113,20 +113,24 @@
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
-        <a class="cfl-nav-cta-link ${active === 'picks' ? 'active' : ''}" href="picks.html">Picks</a>
+        <a class="cfl-nav-cta-link ${active === 'cardlab' ? 'active' : ''}" href="card-lab.html">Card Lab</a>
+        <a href="picks.html" ${active === 'picks' ? 'class="active"' : ''}>Picks</a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
           <span class="full">Next Card</span><span class="short">Card</span>
         </a>
+        <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
+          <span class="full">Track Record</span><span class="short">Record</span>
+        </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','mybook'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','mybook','predictor'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
           <div class="cfl-nav-menu-panel">
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stat Finder</a>
+            <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>Model Lab</a>
             <a href="mybook.html" ${active === 'mybook' ? 'class="active"' : ''} data-auth-only="true" style="display:none">My Book</a>
           </div>
         </div>
-        <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>Lab</a>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>

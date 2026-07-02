@@ -28,7 +28,10 @@ The site itself is plain static HTML/CSS/JS — no bundler, no test suite. There
 
 ### Page model
 
-Every page is its own standalone HTML file at the repo root (`index.html`, `fighter.html`, `h2h.html`, `parlay.html`, `stats.html`, `cardio.html`, `event.html`, `fighters.html`, `pricing.html`, `account.html`, `login.html`, `signup.html`, `reset.html`, `about.html`, `contact.html`, `disclaimer.html`). Shared chrome (nav, footer) is rendered by JS into `<nav class="cfl-nav">` and `<footer class="cfl-footer">` placeholders.
+Every page is its own standalone HTML file at the repo root (`index.html`, `card-lab.html`, `track-record.html`, `fighter.html`, `h2h.html`, `parlay.html`, `stats.html`, `cardio.html`, `event.html`, `fighters.html`, `pricing.html`, `account.html`, `login.html`, `signup.html`, `reset.html`, `about.html`, `contact.html`, `disclaimer.html`). Shared chrome (nav, footer) is rendered by JS into `<nav class="cfl-nav">` and `<footer class="cfl-footer">` placeholders.
+
+- **`card-lab.html`** is the primary product surface (nav pill CTA): the full upcoming card ranked by edge / confidence / dog value, with expandable per-fight factor + red-flag detail. Signed-out visitors get the detail blurred beyond the top 2 rows (conversion teaser) — the data itself is still RLS-public; the blur is presentation only.
+- **`track-record.html`** ("Proof Center") computes accuracy / calibration / ROI / fav-dog splits live from `model_predictions`, gating each model to its own `model_versions.test_start_date` out-of-sample window. **Never widen a model's window past its `test_start_date`** — that re-leaks training data (same rule as predictor.html's shared 2025+ window).
 
 ### Script load order (load-bearing)
 
@@ -93,10 +96,12 @@ Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
 `edges.js` is the single source of truth for fight verdicts and edge factors. It's used by both this site (homepage `index.html`) and the cfl-snapshotter Node service. Any change here affects both. The `ctx` shape and edge-object shape are documented at the top of the file.
 
+`fight-insights.js` is the companion single source of truth for the human-readable "why" behind a pick — `buildEdgeBullets` (why the model likes it) and `buildRedFlags` (why it might be wrong) — shared by `index.html` and `card-lab.html`. Edit it, not the pages, or the two will drift.
+
 ### Cardio / consistency view (`v_fighter_consistency`)
 
 - Live DB is on **v6**. The `v_fighter_consistency.sql` file in this repo is the older **v5** definition — the live view in production includes the v6 renames (`td_ratio_pct` → `grapp_ratio_pct`, `td_active` → `grapp_active`) and the broader wrestler trigger (`td_landed/round >= 0.5 OR ctrl_seconds/round >= 45`). The grappling cardio metric is the R3+/R1 ratio of `(td_landed × 60 + ctrl_seconds)` per round, capped by `dim_cap`.
-- Per fighter the view emits one row per weight class plus a `'CAREER'` row. Frontend reads weight-class data first (when present and tier-tagged) and falls back to `CAREER`. See `loadCardioMap` / `cardioFor` in `index.html`.
+- Per fighter the view emits one row per weight class plus a `'CAREER'` row. Frontend reads weight-class data first (when present and tier-tagged) and falls back to `CAREER`. See `loadCardioMap` in `index.html` / `card-lab.html` and `cardioFor` in `fight-insights.js`.
 - Tiers: `tireless` / `steady` / `tapers` / `fades` / `collapses`. Confidence: `high` / `limited`.
 - **Before shipping any rename in a SQL view, grep the entire repo for the old column names.** `grapp_ratio_pct` is referenced in `index.html`; column-not-found errors silently break `loadFights`, which cascades into broken nav rendering.
 

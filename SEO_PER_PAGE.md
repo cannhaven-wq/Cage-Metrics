@@ -12,6 +12,26 @@ values in the `<head>` (everything else stays identical).
 <meta property="og:title" content="Cannon Fight Lab — UFC Fight Predictions & Analytics">
 ```
 
+## card-lab.html (Card Lab — primary product page)
+```
+<title>Card Lab — Work the Next UFC Card in Minutes | Cannon Fight Lab</title>
+<meta name="description" content="Every fight on the next UFC card ranked by model edge, confidence, and underdog value. Model probability vs the betting line, the factors behind each pick, and the red flags — one screen.">
+<link rel="canonical" href="https://cannonfightlab.com/card-lab.html">
+<meta property="og:url" content="https://cannonfightlab.com/card-lab.html">
+<meta property="og:title" content="Card Lab — Work the Next UFC Card in Minutes">
+<meta property="og:description" content="Every fight ranked by model edge, confidence, and dog value. Model vs market on one screen.">
+```
+
+## track-record.html (Proof Center)
+```
+<title>Verified UFC Model Track Record — Cannon Fight Lab</title>
+<meta name="description" content="Every CFL model pick graded in public: accuracy by year, calibration, favorites vs underdogs, and ROI on flat $100 bets. Picks are locked before events and never edited.">
+<link rel="canonical" href="https://cannonfightlab.com/track-record.html">
+<meta property="og:url" content="https://cannonfightlab.com/track-record.html">
+<meta property="og:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
+<meta property="og:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too. Locked before events, never edited after.">
+```
+
 ## cardio.html
 ```
 <title>UFC Fighter Cardio Scores — Who Fades in the Late Rounds | Cannon Fight Lab</title>
