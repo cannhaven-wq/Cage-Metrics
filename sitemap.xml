@@ -1066,13 +1066,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-nicolau-vs-perez-203.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/e/ufc-300-pereira-vs-hill-204.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -1353,6 +1346,69 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-nicolau-vs-perez-203.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-rodriguez-vs-lemos-265.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-kattar-vs-allen-266.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-280-oliveira-vs-makhachev-267.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-grasso-vs-araujo-268.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-dern-vs-yan-269.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-279-diaz-vs-ferguson-271.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-gane-vs-tuivasa-272.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-278-usman-vs-edwards-273.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-dern-vs-hill-243.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -1438,69 +1494,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/e/ufc-281-adesanya-vs-pereira-264.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-280-oliveira-vs-makhachev-267.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-grasso-vs-araujo-268.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-dern-vs-yan-269.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-279-diaz-vs-ferguson-271.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-gane-vs-tuivasa-272.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-278-usman-vs-edwards-273.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-rodriguez-vs-lemos-265.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-kattar-vs-allen-266.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-285-jones-vs-gane-253.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -1794,35 +1787,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-267-blachowicz-vs-teixeira-308.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-costa-vs-vettori-309.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-266-volkanovski-vs-ortega-313.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-smith-vs-spann-314.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-brunson-vs-till-315.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-285-jones-vs-gane-253.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -1899,7 +1864,35 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-cannonier-vs-gastelum-317.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-267-blachowicz-vs-teixeira-308.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-costa-vs-vettori-309.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-266-volkanovski-vs-ortega-313.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-smith-vs-spann-314.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-brunson-vs-till-315.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -2186,7 +2179,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-251-usman-vs-masvidal-369.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-cannonier-vs-gastelum-317.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -2473,7 +2466,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-dos-anjos-vs-lee-412.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-251-usman-vs-masvidal-369.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -2754,6 +2747,13 @@
 
   <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-gustafsson-vs-smith-411.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-dos-anjos-vs-lee-412.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5700,14 +5700,14 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-barboza-vs-murphy-200.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-barboza-vs-murphy-200.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-usman-vs-buckley-155.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5728,20 +5728,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-ladd-vs-dumont-310.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-ortega-vs-the-korean-zombie-354.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-whittaker-vs-till-366.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -5750,13 +5736,6 @@
 
   <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-hermansson-vs-cannonier-396.html</loc>
-    <lastmod>2026-07-02</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-moicano-vs-the-korean-zombie-409.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5917,7 +5896,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-holloway-vs-the-korean-zombie-230.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-pavlovich-vs-blaydes-247.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -5931,6 +5910,20 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-blaydes-vs-aspinall-277.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-ladd-vs-dumont-310.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-fiziev-vs-torres-2510.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
@@ -5938,14 +5931,21 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-pavlovich-vs-blaydes-247.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-moicano-vs-the-korean-zombie-409.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-blaydes-vs-aspinall-277.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-holloway-vs-the-korean-zombie-230.html</loc>
+    <lastmod>2026-07-02</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-ortega-vs-the-korean-zombie-354.html</loc>
     <lastmod>2026-07-02</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
