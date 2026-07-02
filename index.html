@@ -478,7 +478,7 @@
 <script src="_shared.js?v=rd3"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=1"></script>
+<script src="fight-insights.js?v=2"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -883,41 +883,12 @@ function getTrainedPick(modelKey, fightPicks, a, b) {
   return { picked, opponent, pct: p.model_p * 100 };
 }
 
-// Input-weights "box graph" — the transparent, rules-based edge factors behind
-// the pick (Record / Cardio / Takedown D), each sized by its weight. Green when
-// a factor supports the model's pick, amber when it cuts against it. Visible to
-// everyone. Delegates the math to edges.js (single source of truth).
+// Input-weights "box graph" — shared renderer in fight-insights.js (delegates
+// the math to edges.js). This page wraps it in a collapsible <details>.
 function renderWeights(a, b, fight, pick) {
-  if (!(window.cflEdges && window.cflEdges.computeEdges)) return '';
-  let v;
-  try {
-    v = window.cflEdges.computeEdges(a, b, { cardioMap: _cardioMap, fightWeightClass: fight.weight_class });
-  } catch (e) { return ''; }
-  const LABEL = { record: 'Record', cardio: 'Cardio', td_def: 'Takedown D' };
-  let net;
-  if (v.edges.length) {
-    const aFav = v.aProb >= 0.5;
-    const who = aFav ? a : b;
-    const pctNet = Math.round((aFav ? v.aProb : 1 - v.aProb) * 100);
-    net = `Edge lean: ${cfl.escapeHtml(lastName(who.name))} ${pctNet}%`;
-  } else {
-    net = 'No strong edges';
-  }
-  const rows = v.edges.map(e => {
-    const fav = e.favors === 'a' ? a : b;
-    const supports = pick && fav.id === pick.picked.id;
-    const cls = pick ? (supports ? 'support' : 'against') : '';
-    const w = Math.max(6, Math.min(100, ((e.pct - 50) / 22) * 100));
-    return `<div class="wt-row ${cls}">
-      <div class="wt-label">${LABEL[e.factor] || e.factor}</div>
-      <div class="wt-track"><i style="width:${w.toFixed(0)}%"></i></div>
-      <div class="wt-pct">${e.pct.toFixed(0)}% ${cfl.escapeHtml(lastName(fav.name))}</div>
-    </div>`;
-  }).join('');
-  const body = v.edges.length
-    ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs every model sees. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
-    : `<div class="wt-empty">No strong edge on record, cardio, or takedown defense here — the pick leans on the model's broader stat weighting.</div>`;
-  return `<details class="weights"><summary><span class="lbl">Input weights</span><span class="wt-net">${net}</span></summary><div class="wt-body">${body}</div></details>`;
+  const w = window.cflInsights.inputWeights(a, b, { cardioMap: _cardioMap, weightClass: fight.weight_class }, pick);
+  if (!w) return '';
+  return `<details class="weights"><summary><span class="lbl">Input weights</span><span class="wt-net">${w.net}</span></summary><div class="wt-body">${w.body}</div></details>`;
 }
 
 function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }

@@ -123,7 +123,56 @@
     return flags;
   }
 
-  const api = { CARDIO_RANK, lastName, cardioFor, buildEdgeBullets, buildRedFlags };
+  function esc(s) {
+    if (s == null) return '';
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  // Input-weights "box graph" — the transparent, rules-based factors behind a
+  // pick (Record / Cardio / Takedown D), each bar sized by its weight. Green
+  // when a factor supports the model's pick, amber when it cuts against it.
+  // Delegates the math to edges.js (single source of truth). Returns
+  // { net, body, hasEdges } HTML strings built on the .wt-* classes — pages
+  // supply their own wrapper element and scoped CSS. Null when edges.js isn't
+  // loaded or the computation fails.
+  function inputWeights(a, b, ctx, pick) {
+    ctx = ctx || {};
+    const ce = (typeof window !== 'undefined' && window.cflEdges && window.cflEdges.computeEdges) ? window.cflEdges.computeEdges : null;
+    if (!ce) return null;
+    let v;
+    try {
+      v = ce(a, b, { cardioMap: ctx.cardioMap, fightWeightClass: ctx.weightClass });
+    } catch (e) { return null; }
+    const LABEL = { record: 'Record', cardio: 'Cardio', td_def: 'Takedown D' };
+    let net;
+    if (v.edges.length) {
+      const aFav = v.aProb >= 0.5;
+      const who = aFav ? a : b;
+      const pctNet = Math.round((aFav ? v.aProb : 1 - v.aProb) * 100);
+      net = `Edge lean: ${esc(lastName(who.name))} ${pctNet}%`;
+    } else {
+      net = 'No strong edges';
+    }
+    const rows = v.edges.map(e => {
+      const fav = e.favors === 'a' ? a : b;
+      const supports = pick && fav.id === pick.picked.id;
+      const cls = pick ? (supports ? 'support' : 'against') : '';
+      const w = Math.max(6, Math.min(100, ((e.pct - 50) / 22) * 100));
+      return `<div class="wt-row ${cls}">
+        <div class="wt-label">${LABEL[e.factor] || esc(e.factor)}</div>
+        <div class="wt-track"><i style="width:${w.toFixed(0)}%"></i></div>
+        <div class="wt-pct">${e.pct.toFixed(0)}% ${esc(lastName(fav.name))}</div>
+      </div>`;
+    }).join('');
+    const body = v.edges.length
+      ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs every model sees. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
+      : `<div class="wt-empty">No strong edge on record, cardio, or takedown defense here — the pick leans on the model's broader stat weighting.</div>`;
+    return { net, body, hasEdges: v.edges.length > 0 };
+  }
+
+  const api = { CARDIO_RANK, lastName, cardioFor, buildEdgeBullets, buildRedFlags, inputWeights };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.cflInsights = api;
 })();

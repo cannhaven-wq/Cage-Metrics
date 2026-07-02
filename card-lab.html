@@ -121,6 +121,21 @@
 #cardlab .det.likes li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
 #cardlab .det.flags li::before { content: '⚠'; color: var(--amber); font-size: 11px; flex-shrink: 0; margin-top: 1px; }
 #cardlab .det .none { font-size: 12.5px; color: var(--text-3); }
+/* Input-weights box graph (markup from fight-insights.js inputWeights) */
+#cardlab .det.wts { grid-column: 1 / -1; border-top: 1px solid var(--line); padding-top: 12px; }
+#cardlab .det.wts h4 { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+#cardlab .wt-net { color: var(--text-3); font-weight: 600; font-size: 11px; text-transform: none; letter-spacing: 0; }
+#cardlab .wt-note { font-size: 11px; color: var(--text-3); line-height: 1.4; margin-bottom: 10px; }
+#cardlab .wt-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; margin-bottom: 8px; }
+#cardlab .wt-row:last-child { margin-bottom: 0; }
+#cardlab .wt-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
+#cardlab .wt-track { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
+#cardlab .wt-track > i { display: block; height: 100%; border-radius: 4px; background: var(--text-3); }
+#cardlab .wt-row.support .wt-track > i { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
+#cardlab .wt-row.against .wt-track > i { background: var(--amber); }
+#cardlab .wt-pct { font-family: 'Barlow Condensed', sans-serif; font-size: 12px; font-weight: 700; color: var(--text-2); white-space: nowrap; }
+#cardlab .wt-empty { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+
 #cardlab .det-links { grid-column: 1 / -1; display: flex; gap: 10px; flex-wrap: wrap; padding-top: 4px; }
 #cardlab .det-links a { font-size: 12px; font-weight: 600; color: var(--text-2); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 12px; transition: .15s; }
 #cardlab .det-links a:hover { color: #fff; border-color: #3a424e; }
@@ -256,7 +271,7 @@
 <script src="_shared.js?v=rd3"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=1"></script>
+<script src="fight-insights.js?v=2"></script>
 <script>
 cfl.renderNav('cardlab');
 cfl.renderFooter();
@@ -550,6 +565,10 @@ function rowHtml(r, visIdx) {
   if (pick) {
     const bullets = window.cflInsights.buildEdgeBullets(pick.picked, pick.opponent, ctx).slice(0, 3);
     const flags = window.cflInsights.buildRedFlags(pick.picked, pick.opponent, ctx, r.marketPct, r.conf).slice(0, 2);
+    const wts = window.cflInsights.inputWeights(a, b, { cardioMap: _cardioMap, weightClass: fight.weight_class }, pick);
+    const weightsBlock = wts
+      ? `<div class="det wts"><h4><span>Input weights — what's pushing this pick</span><span class="wt-net">${wts.net}</span></h4>${wts.body}</div>`
+      : '';
     const locked = !_signedIn && visIdx >= 2;
     detail = `<div class="row-detail ${locked ? 'locked' : ''}">
       <div class="det likes"><h4>Why the model likes ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
@@ -558,6 +577,7 @@ function rowHtml(r, visIdx) {
       <div class="det flags"><h4>Why the model might be wrong</h4>
         <ul>${flags.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('')}</ul>
       </div>
+      ${weightsBlock}
       ${locked ? `<div class="lock-overlay">
           <div class="t">Full analysis is free — it just needs an account</div>
           <div class="s">A free account unlocks every factor, red flag, and edge on every fight. Free during beta, no card required.</div>
