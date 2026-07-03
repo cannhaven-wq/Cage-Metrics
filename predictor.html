@@ -9,7 +9,7 @@
 <meta name="robots" content="noindex">
 <link rel="canonical" href="https://cannonfightlab.com/predictor.html">
 
-<meta name="theme-color" content="#0a0a0a">
+<meta name="theme-color" content="#08090b">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -252,21 +252,21 @@
     margin-right: 5px;
   }
   .ind-premium         { background: rgba(168, 85, 247, 0.16); color: #d8b4fe; border: 1px solid rgba(168, 85, 247, 0.45); }
-  .ind-premium .dot    { background: #c084fc; box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
+  .ind-premium .dot    { background: var(--violet); box-shadow: 0 0 6px rgba(192, 132, 252, 0.7); }
   .ind-clv_agree       { background: rgba(20, 184, 166, 0.16); color: #5eead4; border: 1px solid rgba(20, 184, 166, 0.45); }
-  .ind-clv_agree .dot  { background: #2dd4bf; box-shadow: 0 0 6px rgba(45, 212, 191, 0.55); }
+  .ind-clv_agree .dot  { background: var(--teal); box-shadow: 0 0 6px rgba(45, 212, 191, 0.55); }
   .ind-high_conviction { background: rgba(34, 197, 94, 0.16);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.45);  }
   .ind-high_conviction .dot { background: #4ade80; }
   .ind-young_dog       { background: rgba(56, 189, 248, 0.16); color: #7dd3fc; border: 1px solid rgba(56, 189, 248, 0.45); }
-  .ind-young_dog .dot  { background: #38bdf8; }
+  .ind-young_dog .dot  { background: var(--blue); }
   .ind-balanced        { background: rgba(234, 179, 8, 0.16);  color: #fde68a; border: 1px solid rgba(234, 179, 8, 0.45);  }
-  .ind-balanced .dot   { background: #facc15; }
+  .ind-balanced .dot   { background: var(--amber); }
   .ind-avoid_sub_loss  { background: rgba(239, 68, 68, 0.14);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.40);  }
-  .ind-avoid_sub_loss .dot { background: #f87171; }
+  .ind-avoid_sub_loss .dot { background: var(--red); }
   .ind-stance_avoid    { background: rgba(251, 146, 60, 0.14); color: #fdba74; border: 1px solid rgba(251, 146, 60, 0.40); }
   .ind-stance_avoid .dot   { background: #fb923c; }
   .ind-clv_fade        { background: rgba(220, 38, 38, 0.16);  color: #fecaca; border: 1px solid rgba(220, 38, 38, 0.50);  }
-  .ind-clv_fade .dot       { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
+  .ind-clv_fade .dot       { background: var(--red); box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
 
   /* A row of chips clustered together under a pick */
   .indicator-row {
@@ -358,7 +358,7 @@
     font-variant-numeric: tabular-nums;
   }
   .upcoming-event .ev-meta .sep { margin: 0 6px; color: var(--border-2); }
-  .upcoming-event .ev-meta .flagged { color: #c084fc; font-weight: 700; }
+  .upcoming-event .ev-meta .flagged { color: var(--violet); font-weight: 700; }
   .upcoming-event .ev-empty {
     padding: 10px 14px;
     font-size: 12px;
@@ -434,12 +434,12 @@
     gap: 4px;
     margin-top: 6px;
   }
-  .upcoming-fight.has-premium      { border-left: 3px solid #c084fc; }
-  .upcoming-fight.has-clv          { border-left: 3px solid #2dd4bf; }
+  .upcoming-fight.has-premium      { border-left: 3px solid var(--violet); }
+  .upcoming-fight.has-clv          { border-left: 3px solid var(--teal); }
   .upcoming-fight.has-conviction   { border-left: 3px solid #4ade80; }
-  .upcoming-fight.has-young        { border-left: 3px solid #38bdf8; }
-  .upcoming-fight.has-balanced     { border-left: 3px solid #facc15; }
-  .upcoming-fight.has-avoid        { opacity: 0.62; border-left: 3px solid #ef4444; }
+  .upcoming-fight.has-young        { border-left: 3px solid var(--blue); }
+  .upcoming-fight.has-balanced     { border-left: 3px solid var(--amber); }
+  .upcoming-fight.has-avoid        { opacity: 0.62; border-left: 3px solid var(--red); }
 
   .upcoming-fight .head .consensus-badge {
     display: inline-block;

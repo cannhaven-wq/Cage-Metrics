@@ -12,6 +12,11 @@
   --green-dim: #1f5f3c;
   --blue: #4a9be8;
   --amber: #ffb547;
+  /* Categorical accents for indicator dots on picks/predictor (premium, CLV).
+     These two carry meaning no brand color does; kept distinct + tokenized so
+     the tool pages stop hardcoding Tailwind-default hexes. */
+  --violet: #c084fc;
+  --teal: #2dd4bf;
   /* Neutral ramp — warmer near-black with more elevation steps. Old names
      (--bg-2/3/4, --border, --border-2) kept so un-migrated pages don't break;
      --bg-1/--line/--line-2 are the new aliases the redesigned components use. */
