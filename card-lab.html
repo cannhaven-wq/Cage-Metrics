@@ -271,7 +271,7 @@
 <script src="_shared.js?v=rd3"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=2"></script>
+<script src="fight-insights.js?v=3"></script>
 <script>
 cfl.renderNav('cardlab');
 cfl.renderFooter();
@@ -575,7 +575,7 @@ function rowHtml(r, visIdx) {
         ${bullets.length ? '<ul>' + bullets.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No single dominant factor — the pick rests on the model\'s broader stat weighting.</div>'}
       </div>
       <div class="det flags"><h4>Why the model might be wrong</h4>
-        <ul>${flags.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('')}</ul>
+        ${flags.length ? '<ul>' + flags.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No structural red flag on this matchup.</div>'}
       </div>
       ${weightsBlock}
       ${locked ? `<div class="lock-overlay">

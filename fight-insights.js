@@ -116,10 +116,8 @@
     if (confidence < 55) {
       flags.push(`This is a thin lean, not a conviction pick — the model barely separates these two.`);
     }
-    // Never pretend certainty
-    if (!flags.length) {
-      flags.push(`No structural red flag — the main risk is plain variance. Even ${Math.round(confidence)}% picks lose ${Math.round(100 - confidence)} times out of 100.`);
-    }
+    // Structural flags only. The plain-variance point is made once at the
+    // page level (card-lab intro note / edges calibration explainer).
     return flags;
   }
 
