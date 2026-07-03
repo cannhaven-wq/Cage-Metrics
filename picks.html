@@ -636,7 +636,13 @@ cfl.renderFooter();
   );
 
   // ---- Track record: consensus picks (2+ models would_bet same side), graded only ----
-  const consensusGraded = computeConsensusPicks(allPreds.filter(r => r.outcome_known));
+  // Gate to the shared out-of-sample window (2025+) before forming the public track
+  // record. Without this, in-sample pre-2025 picks leak into the headline win%/ROI and
+  // inflate them (same rule as predictor.html HOLDOUT_START / track-record.html 2025+).
+  const HOLDOUT_START = '2025-01-01';
+  const consensusGraded = computeConsensusPicks(
+    allPreds.filter(r => r.outcome_known && r.event_date >= HOLDOUT_START)
+  );
   const totalBets = consensusGraded.length;
   const wins = consensusGraded.filter(p => p.won).length;
   const pnl = consensusGraded.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);

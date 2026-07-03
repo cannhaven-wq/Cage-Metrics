@@ -229,7 +229,7 @@
 <div class="lab-header">
   <div class="label">Internal · not for distribution</div>
   <h1>Lab — Backtest Dashboard</h1>
-  <p>Flat-stake backtest of every model on the 2023+ hold-out, against the BFO consensus opener. Adjust stake size and minimum edge to see how the bankroll curve changes. Forward ROI projections include a ±1σ confidence band based on sample variance.</p>
+  <p>Flat-stake backtest of every model on its own out-of-sample hold-out (each model is graded only on fights after its training window closed), against the BFO consensus opener. Adjust stake size and minimum edge to see how the bankroll curve changes. Forward ROI projections include a ±1σ confidence band based on sample variance.</p>
 </div>
 
 <div class="toolbar">
@@ -303,7 +303,12 @@ cfl.renderFooter();
       if (data.length < page) break;
       from += page;
     }
-    byModel[m.id] = all;
+    // Gate each model to its own out-of-sample window (mirrors track-record.html /
+    // predictor.html). Grading a model on fights before its test_start_date re-leaks
+    // in-sample training data and inflates ROI/win%. Never widen past test_start_date.
+    byModel[m.id] = m.test_start_date
+      ? all.filter(r => (r.event_date || '') >= m.test_start_date)
+      : all;
   }
 
   function payoutOnWin(american) {

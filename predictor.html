@@ -958,7 +958,7 @@ cfl.renderFooter();
           <div>
             <div class="lbl">accuracy</div>
             <div class="val">${(rec.n ? rec.acc : (m.test_accuracy ?? 0) * 100).toFixed(1)}%</div>
-            <div class="sub">out-of-sample, 2025+</div>
+            <div class="sub">${rec.n ? 'out-of-sample, 2025+' : "model's own test set"}</div>
           </div>
           <div>
             <div class="lbl">ROI @ 5%</div>

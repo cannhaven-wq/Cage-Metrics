@@ -26,7 +26,7 @@
   --line-2: #2b313b;
   --text: #f4f6f8;
   --text-2: #a0a8b4;
-  --text-3: #6b7480;
+  --text-3: #7d8794;  /* was #6b7480 — failed WCAG AA (~3.7:1); #7d8794 clears 4.5:1 */
   --radius: 14px;
   --shadow: 0 8px 30px rgba(0,0,0,.45);
 }

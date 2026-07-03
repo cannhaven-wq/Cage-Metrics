@@ -713,7 +713,7 @@ function renderModelInfo() {
     <span class="name">${cfl.escapeHtml(mv.id)} — ${cfl.escapeHtml(mv.name || '')}</span>
     ${cfl.escapeHtml(desc.length > 240 ? desc.slice(0, 240) + '…' : desc)}
     <span class="stats">
-      <span>Test acc <strong>${acc}</strong></span>
+      <span>Test-set acc <strong>${acc}</strong></span>
       <span>Log-loss <strong>${ll}</strong></span>
     </span>
   `;

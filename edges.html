@@ -460,9 +460,13 @@
 
   <!-- ============== What we measured ============== -->
   <div class="section">
-    <div class="section-eyebrow"><span class="dot"></span>Track record</div>
+    <div class="section-eyebrow"><span class="dot"></span>Historical backtest</div>
     <h2>What we measured against the full UFC history</h2>
     <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database. Headline numbers from the most recent run (post May 17 rebuild):</p>
+    <div class="caveat" style="margin:14px 0">
+      <div class="caveat-title">Read these as an illustrative backtest, not a track record</div>
+      <p>This backtest scores each fight using the fighters' <em>current</em> career averages, so it carries a known hindsight bias and runs partly over data the edges were tuned on — real fair-replay accuracy is lower (see "Honest limitations" below). For the model's true locked-before-the-event, out-of-sample record, see the <a href="track-record.html">Proof Center</a>.</p>
+    </div>
     <div class="formula">
       <div class="formula-title">Overall accuracy</div>
       <div class="formula-eq">
@@ -481,10 +485,10 @@
         <tr><td class="band">60–65%</td><td class="actual">72.7%</td><td>1,676</td></tr>
         <tr><td class="band">65–70%</td><td class="actual">81.6%</td><td>1,008</td></tr>
         <tr><td class="band">70–75%</td><td class="actual">92.7%</td><td>399</td></tr>
-        <tr><td class="band">75%+</td><td class="actual">100.0%</td><td>6</td></tr>
+        <tr><td class="band">75%+</td><td class="actual" style="color:var(--text-3)">n/a</td><td>6 — sample too small to read</td></tr>
       </tbody>
     </table>
-    <p>Every confidence band lands inside or above its predicted range. High-confidence verdicts (70%+) are <em>under-stated</em> — when the model says it's confident, history says listen.</p>
+    <p>In this backtest, most confidence bands land inside or above their predicted range. Treat the highest bands with caution — they carry small samples and the same hindsight bias noted above, so they overstate real-world performance. The honest, out-of-sample calibration lives in the <a href="track-record.html">Proof Center</a>.</p>
   </div>
 
   <!-- ============== How we keep tuning it ============== -->

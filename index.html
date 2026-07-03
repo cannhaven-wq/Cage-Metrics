@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>Cannon Fight Lab — 70% Accurate UFC Predictions & Fighter Analytics</title>
-<meta name="description" content="70% accurate UFC fight predictions, tied for most accurate public model on the internet. Verified on 368 graded 2025 fights. Fighter cardio scores, model picks, edge factors, and a transparent locked-pick track record.">
+<meta name="description" content="70% accurate UFC fight predictions, verified out-of-sample on 2025+ graded fights. Fighter cardio scores, model picks, edge factors, and a transparent locked-pick track record.">
 <meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, accurate UFC picks">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="Cannon Fight Lab — 70% Accurate UFC Predictions">
-<meta property="og:description" content="70% accurate UFC fight predictions, verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Transparent verdicts, cardio scores, edge factors.">
+<meta property="og:description" content="70% accurate UFC fight predictions, verified out-of-sample on 2025+ graded fights. Transparent verdicts, cardio scores, edge factors.">
 <meta property="og:url" content="https://cannonfightlab.com/">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -27,7 +27,7 @@
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Cannon Fight Lab — 70% Accurate UFC Predictions">
-<meta name="twitter:description" content="70% accurate UFC predictions verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Cardio scores, model picks, edge factors.">
+<meta name="twitter:description" content="70% accurate UFC predictions verified out-of-sample on 2025+ graded fights. Cardio scores, model picks, edge factors.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -409,7 +409,7 @@
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
     <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded, none edited after the event. We show the misses too.</div></div><a href="track-record.html">See the full verified record →</a></div>
-    <p class="track-note">Every pick is locked before the event and never retroactively adjusted. Our flagship model (v5) hits <strong>70.0%</strong> on 368 graded 2025 UFC fights — tied with the most accurate public UFC prediction model on the internet, on a 50%+ larger verified test sample. Accuracy alone isn't the whole story, so the <a href="track-record.html">Proof Center</a> also shows calibration, favorites vs underdogs, and what flat $100 bets would have returned — including where the model has been wrong.</p>
+    <p class="track-note">Every pick is locked before the event and never retroactively adjusted. Our flagship model (v5) hits <strong id="taAccuracy">70.0%</strong> on <span id="taSample">368</span> graded 2025+ UFC fights, out of sample. Accuracy alone isn't the whole story, so the <a href="track-record.html">Proof Center</a> also shows calibration, favorites vs underdogs, and what flat $100 bets would have returned — including where the model has been wrong.</p>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
@@ -445,8 +445,8 @@
     <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
     <div class="trust" style="margin-top:14px">
       <div class="trust-grid">
-        <div class="trust-item"><div class="n">368</div><div class="l">graded 2025 fights</div></div>
-        <div class="trust-item"><div class="n">70.0<span class="u">%</span></div><div class="l">model accuracy</div></div>
+        <div class="trust-item"><div class="n" id="tgSample">368</div><div class="l">graded 2025+ fights</div></div>
+        <div class="trust-item"><div class="n"><span id="tgAccuracy">70.0</span><span class="u">%</span></div><div class="l">model accuracy</div></div>
         <div class="trust-item"><div class="n">Locked</div><div class="l">picks set before events</div></div>
         <div class="trust-item"><div class="n">Zero</div><div class="l">retroactive edits</div></div>
         <div class="trust-item"><div class="n">8,000<span class="u">+</span></div><div class="l">historical fights backtested</div></div>
@@ -506,8 +506,17 @@ async function loadHeroProof() {
     const n = (rows || []).length;
     const hits = (rows || []).filter(r => r.won === true).length;
     if (n >= 50) {
-      document.getElementById('hpAccuracy').textContent = ((hits / n) * 100).toFixed(1) + '%';
-      document.getElementById('hpSample').textContent = n.toLocaleString();
+      const accPct = ((hits / n) * 100).toFixed(1);
+      const sampleStr = n.toLocaleString();
+      const setText = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      setText('hpAccuracy', accPct + '%');
+      setText('hpSample', sampleStr);
+      // Keep the static track-record twins in sync so they never drift stale (H4):
+      // the paragraph note and the "Why trust it?" grid both read from this fetch.
+      setText('taAccuracy', accPct + '%');
+      setText('taSample', sampleStr);
+      setText('tgAccuracy', accPct);
+      setText('tgSample', sampleStr);
     }
   } catch (err) { console.warn('[home] hero proof fetch failed', err); }
 }
