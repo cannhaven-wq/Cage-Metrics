@@ -556,7 +556,7 @@ function metricoolCaption(piece, event) {
     case 'whatif-finisher': hook = `${img.fa} ${img.big} over ${img.fb}, and they finish at an elite clip. Should "rarely needs the judges" weigh heavier?`; break;
     default: hook = `${S}: ${img.fa} ${img.big}${img.fb ? ` over ${img.fb}` : ''} — our model's read.`;
   }
-  return `${hook}\n\nFull card breakdown — link in bio 🔗\n\n${hashtags(event.name, img.fa, img.fb)}`;
+  return `${hook}\n\nFull card breakdown — link in bio 🔗\n\n${hashtags(event.name, ...[img.fa, img.fb].filter(Boolean))}`;
 }
 
 function bestImage(piece, keys) {
