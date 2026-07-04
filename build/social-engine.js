@@ -539,6 +539,57 @@ function buildQueue(batches) {
   return queue;
 }
 
+// -------------------------------------------------------- Metricool export ---
+// One-file bulk import for Instagram + TikTok (which can't be auto-posted). Each
+// row = date/time/platform + a clean caption + a PUBLIC image URL (images are
+// deployed on the site) + the card link. Import into Metricool's planner, review,
+// and it auto-publishes on the times you set.
+function metricoolCaption(piece, event) {
+  const img = piece.image || {};
+  const S = shortName(event.name);
+  let hook;
+  switch (piece.id) {
+    case 'sensor-main': hook = `${S}: our model reads ${img.fa} ${img.big} over ${img.fb} — but the matchup has a wrinkle worth seeing.`; break;
+    case 'poll-main': hook = `${S} main event — our model: ${img.fa} ${img.big}. Where does this one actually get decided?`; break;
+    case 'cardio-flagged': hook = `Cardio check, ${S}: several model favorites our data quietly flags as late-faders. Who still holds up in round 3?`; break;
+    case 'coinflip-lead': hook = `Coin-Flip Corner 🪙 ${img.fa} vs ${img.fb} — our model has it just ${img.big}. A coin flip in a lab coat.`; break;
+    case 'whatif-finisher': hook = `${img.fa} ${img.big} over ${img.fb}, and they finish at an elite clip. Should "rarely needs the judges" weigh heavier?`; break;
+    default: hook = `${S}: ${img.fa} ${img.big}${img.fb ? ` over ${img.fb}` : ''} — our model's read.`;
+  }
+  return `${hook}\n\nFull card breakdown — link in bio 🔗\n\n${hashtags(event.name, img.fa, img.fb)}`;
+}
+
+function bestImage(piece, keys) {
+  const ims = piece.images || [];
+  for (const k of keys) { const m = ims.find(i => i.key === k); if (m) return m; }
+  return ims[0] || null;
+}
+
+function buildMetricoolRows(batches) {
+  const rows = [];
+  for (const { event, pieces } of batches) {
+    const cardUrl = `${SITE}/card/${cardSlug(event.name, event.id)}.html`;
+    const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
+    let day = 0;
+    for (const p of picks) {
+      const cap = metricoolCaption(p, event);
+      const ig = bestImage(p, ['ig_portrait', 'square']);
+      const tt = bestImage(p, ['story', 'square']);
+      if (ig) rows.push({ date: isoOffset(event.event_date, -6 + day), time: '18:00', platform: 'Instagram', caption: cap, image: `${SITE}/social/${ig.rel}`, card: cardUrl });
+      if (tt) rows.push({ date: isoOffset(event.event_date, -5 + day), time: '12:00', platform: 'TikTok', caption: cap, image: `${SITE}/social/${tt.rel}`, card: cardUrl });
+      day = (day + 1) % 5;
+    }
+  }
+  return rows;
+}
+
+function renderMetricoolCsv(rows) {
+  const header = ['date', 'time', 'platform', 'caption', 'image_url', 'card_url'];
+  const esc = c => /[",\n]/.test(String(c)) ? `"${String(c).replace(/"/g, '""')}"` : String(c);
+  return [header, ...rows.map(r => [r.date, r.time, r.platform, r.caption, r.image, r.card])]
+    .map(r => r.map(esc).join(',')).join('\n') + '\n';
+}
+
 // --------------------------------------------------------------- assembly ---
 
 function buildPieces(event, rows) {
@@ -882,6 +933,11 @@ async function main() {
   const queue = buildQueue(batches);
   writeIfChanged(path.join(SOCIAL_DIR, 'queue.json'), JSON.stringify(queue, null, 2) + '\n');
   console.log(`Queue: ${queue.length} X posts → social/queue.json`);
+
+  // Metricool bulk-import CSV for Instagram + TikTok (public image URLs).
+  const mrows = buildMetricoolRows(batches);
+  writeIfChanged(path.join(SOCIAL_DIR, 'metricool.csv'), renderMetricoolCsv(mrows));
+  console.log(`Metricool: ${mrows.length} IG/TikTok rows → social/metricool.csv`);
 
   // The access layer: one self-contained page to browse + copy everything.
   const generatedISO = new Date().toISOString();
