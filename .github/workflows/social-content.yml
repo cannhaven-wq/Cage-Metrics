@@ -1,0 +1,57 @@
+name: Generate social content batches
+
+# Regenerates /social/<event>/batch.md + schedule.csv + finished post images
+# (/social/<event>/img/*.png) for every upcoming card from the live model state.
+# This is a GENERATOR — it never posts to any account and needs no secrets. A
+# human reviews each batch before scheduling.
+#
+# Images are rendered by driving the Chrome that ships preinstalled on the
+# ubuntu runner (build/post-cards.js auto-detects it). If no browser is found
+# the engine still emits copy and skips images.
+#
+# Manual-only on purpose (workflow_dispatch, no cron): the batches are drafts
+# meant to be reviewed/edited, so we only regenerate on explicit request to
+# avoid clobbering hand-tuned copy. Run it from the Actions tab when a new card
+# lands or the model updates.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: social-content
+  cancel-in-progress: false
+
+jobs:
+  social-content:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Generate batches
+        working-directory: build
+        run: npm run social-engine
+
+      - name: Commit changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add social/
+          if git diff --staged --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: regenerate social content batches [skip ci]"
+            git push
+          fi

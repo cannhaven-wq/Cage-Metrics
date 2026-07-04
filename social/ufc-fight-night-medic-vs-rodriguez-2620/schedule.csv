@@ -1,0 +1,12 @@
+date,time_local,platform,pillar,piece_id,tag,src_link,status
+2026-07-26,09:00,X,P1-SensorRead,sensor-main,X-POST,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-26,18:30,TikTok,P1-SensorRead,sensor-main-reel,TIKTOK-REEL,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=tiktok,draft
+2026-07-27,09:00,X,P2-Cardio,cardio-flagged,X-POST,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-27,18:30,Instagram,P2-Cardio,cardio-carousel,IG-REEL,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=ig,draft
+2026-07-28,09:00,Reddit (r/MMA),P2-Cardio,cardio-reddit,REDDIT-POST,value-post-no-link,draft
+2026-07-28,18:30,X,P3-CoinFlip,coinflip-lead,X-POST,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-29,09:00,TikTok,P3-CoinFlip,coinflip-reel,TIKTOK-REEL,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=tiktok,draft
+2026-07-29,18:30,X,P4-WhatIf,whatif-finisher,X-POST,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-30,09:00,X / Reel,P4-WhatIf,whatif-intel-slot,BONUS,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-30,18:30,X,P1-SensorRead,poll-main,X-POST,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x,draft
+2026-07-31,09:00,TikTok / Reel,Awareness,teaser-loop,BONUS,https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=tiktok,draft

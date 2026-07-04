@@ -22,6 +22,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { slugify } = require('./slug');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -158,7 +159,41 @@ function oauth1Header({ url, method, params, consumer, token }) {
   return header;
 }
 
-async function postToX(tweetText) {
+// Upload one image to X (v1.1 media endpoint) and return its media_id_string,
+// or null on any problem. Multipart bodies aren't part of the OAuth1 signature,
+// so the same header helper works. Failure here is non-fatal — the caller falls
+// back to a text-only tweet.
+async function uploadMediaToX(imagePath, creds) {
+  try {
+    if (!imagePath || !fs.existsSync(imagePath)) return null;
+    if (typeof FormData === 'undefined' || typeof Blob === 'undefined') {
+      console.log('[x] FormData/Blob unavailable (old Node) → text-only.');
+      return null;
+    }
+    const url = 'https://upload.twitter.com/1.1/media/upload.json';
+    const auth = oauth1Header({
+      url, method: 'POST', params: {},
+      consumer: { key: creds.key, secret: creds.secret },
+      token: { key: creds.accessToken, secret: creds.accessSecret }
+    });
+    const buf = fs.readFileSync(imagePath);
+    const form = new FormData();
+    form.append('media', new Blob([buf]), path.basename(imagePath));
+    const res = await fetch(url, { method: 'POST', headers: { Authorization: auth }, body: form });
+    if (!res.ok) {
+      console.error('[x] media upload failed:', res.status, (await res.text()).slice(0, 200));
+      return null;
+    }
+    const j = await res.json();
+    console.log('[x] media uploaded:', j.media_id_string, `(${path.basename(imagePath)})`);
+    return j.media_id_string;
+  } catch (e) {
+    console.error('[x] media upload error:', e.message);
+    return null;
+  }
+}
+
+async function postToX(tweetText, imagePath) {
   const key = process.env.X_API_KEY;
   const secret = process.env.X_API_SECRET;
   const accessToken = process.env.X_ACCESS_TOKEN;
@@ -168,19 +203,22 @@ async function postToX(tweetText) {
     return { skipped: true };
   }
   if (DRY_RUN) {
-    console.log('[x] dry-run, would post:\n---\n' + tweetText + '\n---');
+    console.log(`[x] dry-run, would post${imagePath ? ` (with image ${path.basename(imagePath)})` : ''}:\n---\n` + tweetText + '\n---');
     return { dryRun: true };
   }
+  const creds = { key, secret, accessToken, accessSecret };
+  const mediaId = imagePath ? await uploadMediaToX(imagePath, creds) : null;
   const url = 'https://api.twitter.com/2/tweets';
   const auth = oauth1Header({
     url, method: 'POST', params: {},
     consumer: { key, secret },
     token: { key: accessToken, secret: accessSecret }
   });
+  const payload = mediaId ? { text: tweetText, media: { media_ids: [mediaId] } } : { text: tweetText };
   const res = await fetch(url, {
     method: 'POST',
     headers: { Authorization: auth, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text: tweetText })
+    body: JSON.stringify(payload)
   });
   if (!res.ok) {
     const body = await res.text();
@@ -285,8 +323,17 @@ async function postToReddit(title, selftext) {
     console.log(`[social] posting for event ${event.id}: ${event.name}`);
     console.log(`[social] tweet length: ${post.tweet.length}`);
 
+    // Attach the engine's rendered main-event card if it's been generated
+    // (run social-engine.js first). Prefer landscape for X; fall back to square.
+    const imgDir = path.join(ROOT, 'social', `${slugify(event.name)}-${event.id}`, 'img');
+    const imgCandidates = ['poll-main__x_land.png', 'sensor-main__x_land.png', 'poll-main__square.png', 'sensor-main__square.png'];
+    let imagePath = null;
+    for (const c of imgCandidates) { const p = path.join(imgDir, c); if (fs.existsSync(p)) { imagePath = p; break; } }
+    if (imagePath) console.log(`[social] attaching image: ${path.relative(ROOT, imagePath)}`);
+    else console.log('[social] no rendered image found (run social-engine.js) → text-only.');
+
     const [xRes, rRes] = await Promise.all([
-      postToX(post.tweet),
+      postToX(post.tweet, imagePath),
       postToReddit(post.redditTitle, post.redditBody)
     ]);
 
