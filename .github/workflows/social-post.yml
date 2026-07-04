@@ -11,7 +11,7 @@ name: Social auto-poster
 
 on:
   schedule:
-    - cron: '0 17 * * 3'   # Wednesdays 17:00 UTC
+    - cron: '0 17 * * 1,3,5'   # Mon/Wed/Fri 17:00 UTC — drips one engine piece per run
   workflow_dispatch:
     inputs:
       force:
@@ -45,6 +45,12 @@ jobs:
       - name: Install deps
         working-directory: build
         run: npm install --no-audit --no-fund
+
+      # Regenerate copy + images + queue.json from live model data so the poster
+      # always has fresh content. Uses the Chrome preinstalled on the runner.
+      - name: Generate content engine batch
+        working-directory: build
+        run: npm run social-engine
 
       - name: Post to socials
         working-directory: build

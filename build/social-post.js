@@ -295,54 +295,79 @@ async function postToReddit(title, selftext) {
 // -------------------- main --------------------
 (async () => {
   try {
+    fs.mkdirSync(STATE_DIR, { recursive: true });
+
+    // Primary path: post the next un-posted CONTENT-ENGINE piece from the queue
+    // (rich, on-brand, image + ?src=x card link). The engine writes social/queue.json.
+    const QUEUE = path.join(ROOT, 'social', 'queue.json');
+    let queue = [];
+    try { queue = JSON.parse(fs.readFileSync(QUEUE, 'utf8')); } catch (_) {}
+
+    if (queue.length) {
+      const today = todayUTC();
+      const POSTED = path.join(STATE_DIR, 'posted-pieces.json');
+      let posted = [];
+      try { posted = JSON.parse(fs.readFileSync(POSTED, 'utf8')); } catch (_) {}
+      const keyOf = e => `${e.eventId}::${e.pieceId}`;
+
+      // Only cards that haven't happened yet; oldest card first, so we drip a
+      // card's pieces across the days leading up to it.
+      const pool = queue.filter(e => !e.eventDate || e.eventDate >= today);
+      let pick = pool.find(e => !posted.includes(keyOf(e)));
+      if (!pick && FORCE) pick = pool[0] || queue[0];
+      if (!pick) {
+        console.log('[social] no new engine piece to post (all queued pieces already posted). FORCE_POST=1 to repost.');
+        return;
+      }
+
+      const imageAbs = pick.image ? path.join(ROOT, pick.image) : null;
+      const haveImage = imageAbs && fs.existsSync(imageAbs);
+      console.log(`[social] posting engine piece ${keyOf(pick)} (${pick.pillar}) for "${pick.eventName}"`);
+      console.log(`[social] tweet (${pick.tweet.length} chars):\n${pick.tweet}`);
+      console.log(haveImage ? `[social] image: ${pick.image}` : '[social] no image file → text-only.');
+
+      // Reddit gets the same content as a profile self-post (no subreddit spam).
+      const redditTitle = `${pick.eventName} — our model's read`;
+      const [xRes, rRes] = await Promise.all([
+        postToX(pick.tweet, haveImage ? imageAbs : null),
+        postToReddit(redditTitle, pick.tweet),
+      ]);
+
+      const ok = xRes.ok || rRes.ok || xRes.dryRun || rRes.dryRun;
+      if (ok && !DRY_RUN) {
+        if (!posted.includes(keyOf(pick))) posted.push(keyOf(pick));
+        fs.writeFileSync(POSTED, JSON.stringify(posted, null, 2) + '\n');
+        console.log(`[social] marked posted: ${keyOf(pick)}`);
+      }
+      console.log('[social] done. x=' + JSON.stringify(xRes) + ' reddit=' + JSON.stringify(rRes));
+      return;
+    }
+
+    // ---- Fallback: legacy per-card summary (only if no queue.json exists) ----
+    console.log('[social] no queue.json — falling back to legacy card summary.');
     const t = todayUTC();
     const { data: events } = await sb
-      .from('events')
-      .select('id, name, event_date, location')
-      .eq('is_upcoming', true)
-      .gte('event_date', t)
-      .order('event_date', { ascending: true })
-      .limit(1);
+      .from('events').select('id, name, event_date, location')
+      .eq('is_upcoming', true).gte('event_date', t)
+      .order('event_date', { ascending: true }).limit(1);
     const event = events && events[0];
     if (!event) { console.log('[social] no upcoming events.'); return; }
 
-    fs.mkdirSync(STATE_DIR, { recursive: true });
     let lastPosted = '';
     try { lastPosted = fs.readFileSync(MARKER, 'utf8').trim(); } catch (_) {}
     if (!FORCE && lastPosted === String(event.id)) {
       console.log(`[social] event ${event.id} already posted (marker matches). use FORCE_POST=1 to re-post.`);
       return;
     }
-
     const post = await buildPost(event);
-    if (!post) {
-      console.log('[social] no verdicts yet for this card — skipping.');
-      return;
-    }
-
-    console.log(`[social] posting for event ${event.id}: ${event.name}`);
-    console.log(`[social] tweet length: ${post.tweet.length}`);
-
-    // Attach the engine's rendered main-event card if it's been generated
-    // (run social-engine.js first). Prefer landscape for X; fall back to square.
-    const imgDir = path.join(ROOT, 'social', `${slugify(event.name)}-${event.id}`, 'img');
-    const imgCandidates = ['poll-main__x_land.png', 'sensor-main__x_land.png', 'poll-main__square.png', 'sensor-main__square.png'];
-    let imagePath = null;
-    for (const c of imgCandidates) { const p = path.join(imgDir, c); if (fs.existsSync(p)) { imagePath = p; break; } }
-    if (imagePath) console.log(`[social] attaching image: ${path.relative(ROOT, imagePath)}`);
-    else console.log('[social] no rendered image found (run social-engine.js) → text-only.');
-
+    if (!post) { console.log('[social] no verdicts yet for this card — skipping.'); return; }
     const [xRes, rRes] = await Promise.all([
-      postToX(post.tweet, imagePath),
+      postToX(post.tweet),
       postToReddit(post.redditTitle, post.redditBody)
     ]);
-
     const anySucceeded = xRes.ok || rRes.ok || xRes.dryRun || rRes.dryRun;
-    if (anySucceeded && !DRY_RUN) {
-      fs.writeFileSync(MARKER, String(event.id) + '\n');
-      console.log(`[social] marker updated → ${event.id}`);
-    }
-    console.log('[social] done. x=' + JSON.stringify(xRes) + ' reddit=' + JSON.stringify(rRes));
+    if (anySucceeded && !DRY_RUN) { fs.writeFileSync(MARKER, String(event.id) + '\n'); }
+    console.log('[social] done (legacy). x=' + JSON.stringify(xRes) + ' reddit=' + JSON.stringify(rRes));
   } catch (err) {
     console.error('[social] failed:', err);
     process.exit(1);
