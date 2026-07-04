@@ -1,0 +1,7 @@
+date,time_local,platform,pillar,piece_id,tag,src_link,status
+2026-08-16,09:00,X,P1-SensorRead,sensor-main,X-POST,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x,draft
+2026-08-16,18:30,TikTok,P1-SensorRead,sensor-main-reel,TIKTOK-REEL,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=tiktok,draft
+2026-08-17,09:00,X,P4-WhatIf,whatif-finisher,X-POST,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x,draft
+2026-08-17,18:30,X / Reel,P4-WhatIf,whatif-intel-slot,BONUS,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x,draft
+2026-08-18,09:00,X,P1-SensorRead,poll-main,X-POST,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x,draft
+2026-08-18,18:30,TikTok / Reel,Awareness,teaser-loop,BONUS,https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=tiktok,draft

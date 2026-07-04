@@ -199,3 +199,53 @@ TITLE: ...
 If a platform's secrets are missing it logs `[<platform>] secrets missing
 → skipping` instead. Once both look right, flip `dry_run` off for the
 real post (or just wait for the cron).
+
+---
+
+## Images on the tweet (automatic)
+
+The auto-poster now attaches the **main-event card image** to the X post when
+one exists in the repo. It looks in `social/<card>/img/` for
+`poll-main__x_land.png` (landscape) and falls back to the square, then to
+**text-only** if none is found or your API tier blocks media upload.
+
+So to get images on the auto-tweets: run the **content engine** whenever a new
+card lands (Actions → *Generate social content batches* → Run, or locally
+`cd build && npm run social-engine`). That renders + commits the images; the
+next Wednesday poster picks them up. No image → still posts, just text-only.
+
+---
+
+## Instagram + TikTok — the assisted workflow (you post from your phone)
+
+These **can't be auto-posted** — Instagram and TikTok only allow API publishing
+through a reviewed *business app*, which isn't worth the lift yet. So they run on
+a fast manual loop off the same generated content:
+
+**One-time:** get the images to your phone. Easiest is to let the repo's
+`social/` folder sync via OneDrive, or after generating just copy the images you
+want into a phone-synced folder / your camera roll. Once they're in Photos,
+posting takes seconds.
+
+**Each week (~5–10 min):**
+1. Run the content engine (Actions button or `cd build && npm run social-engine`).
+2. Open **`social/dashboard.html`**. Set the **platform filter → Instagram** (or **TikTok**).
+3. For each post you like, click **Approve** (card turns green). **Skip** the rest.
+4. Switch the top filter to **Approved**, then for each:
+   - Click the image thumbnail → it downloads. Get it onto your phone (synced folder / camera roll).
+   - Click **⧉ Copy caption** — caption + hashtags are now on your clipboard.
+   - Open the Instagram / TikTok app, make the post, choose the image, paste the caption, post.
+   - Back on the dashboard, hit **Mark posted**. The progress bar at the top tracks what's left.
+
+> **TikTok is video-first.** The 9:16 image works as a photo post or static reel;
+> for reach, drop it into a 5–10s CapCut clip with the hook text on screen (the
+> engine gives you the hook in each reel piece's **Visual** line).
+
+## The whole loop at a glance
+
+```
+run content engine  →  copy + branded images generated (and committed)
+        │
+        ├─ X + Reddit:        weekly Action posts automatically (once keys are set)
+        └─ Instagram/TikTok:  dashboard → Approve → copy caption + image → post in app → Mark posted
+```

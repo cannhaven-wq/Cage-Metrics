@@ -1,0 +1,13 @@
+date,time_local,platform,pillar,piece_id,tag,src_link,status
+2026-07-05,09:00,X,P1-SensorRead,sensor-main,X-POST,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-05,18:30,TikTok,P1-SensorRead,sensor-main-reel,TIKTOK-REEL,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=tiktok,draft
+2026-07-06,09:00,X,P2-Cardio,cardio-flagged,X-POST,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-06,18:30,Instagram,P2-Cardio,cardio-carousel,IG-REEL,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=ig,draft
+2026-07-07,09:00,Reddit (r/MMA),P2-Cardio,cardio-reddit,REDDIT-POST,value-post-no-link,draft
+2026-07-07,18:30,X,P3-CoinFlip,coinflip-lead,X-POST,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-08,09:00,TikTok,P3-CoinFlip,coinflip-reel,TIKTOK-REEL,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=tiktok,draft
+2026-07-08,18:30,Reddit (r/ufc),P3-CoinFlip,coinflip-reddit,REDDIT-POST,value-post-no-link,draft
+2026-07-09,09:00,X,P4-WhatIf,whatif-finisher,X-POST,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-09,18:30,X / Reel,P4-WhatIf,whatif-intel-slot,BONUS,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-10,09:00,X,P1-SensorRead,poll-main,X-POST,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x,draft
+2026-07-10,18:30,TikTok / Reel,Awareness,teaser-loop,BONUS,https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=tiktok,draft

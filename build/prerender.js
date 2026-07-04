@@ -14,6 +14,7 @@ const { createClient } = require('@supabase/supabase-js');
 const { slugify } = require('./slug');
 const { fighterStub, eventStub } = require('./templates');
 const { matchupPreview, previewSlug } = require('./preview-templates');
+const { eventPreview, cardSlug, consensusPick, cardOrder } = require('./event-preview-templates');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -23,6 +24,7 @@ const ROOT = path.resolve(__dirname, '..');
 const FIGHTERS_DIR = path.join(ROOT, 'f');
 const EVENTS_DIR = path.join(ROOT, 'e');
 const PREVIEW_DIR = path.join(ROOT, 'preview');
+const CARD_DIR = path.join(ROOT, 'card');
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -162,9 +164,11 @@ async function prerenderMatchupPreviews() {
   if (!upcomingEvents.length) {
     // Still want to prune any stale files from a previous run.
     ensureDir(PREVIEW_DIR);
+    ensureDir(CARD_DIR);
     const removed = pruneStaleStubs(PREVIEW_DIR, new Set());
-    console.log(`Matchup previews: 0 written, ${removed} pruned.`);
-    return [];
+    const removedCards = pruneStaleStubs(CARD_DIR, new Set());
+    console.log(`Matchup previews: 0 written, ${removed} pruned. Card pages: 0 written, ${removedCards} pruned.`);
+    return { previewUrls: [], cardUrls: [] };
   }
 
   const eventIds = upcomingEvents.map(e => e.id);
@@ -182,9 +186,11 @@ async function prerenderMatchupPreviews() {
   const fightIds   = fights.map(f => f.id).filter(Boolean);
   if (!fightIds.length) {
     ensureDir(PREVIEW_DIR);
+    ensureDir(CARD_DIR);
     const removed = pruneStaleStubs(PREVIEW_DIR, new Set());
-    console.log(`Matchup previews: 0 written, ${removed} pruned.`);
-    return [];
+    const removedCards = pruneStaleStubs(CARD_DIR, new Set());
+    console.log(`Matchup previews: 0 written, ${removed} pruned. Card pages: 0 written, ${removedCards} pruned.`);
+    return { previewUrls: [], cardUrls: [] };
   }
 
   // Best-effort joins. Any view that doesn't exist or errors out is treated
@@ -231,6 +237,10 @@ async function prerenderMatchupPreviews() {
   let written = 0;
   let skipped = 0;
 
+  // Rows accumulated per event for the event-level card pages. Each row reuses
+  // the same fighter/pick data already assembled for the per-fight preview.
+  const rowsByEvent = {};
+
   for (const fight of fights) {
     if (!fight.id || !fight.fighter_a_id || !fight.fighter_b_id) { skipped++; continue; }
     const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name };
@@ -242,12 +252,13 @@ async function prerenderMatchupPreviews() {
     const filename = `${slug}.html`;
     keep.add(filename);
 
+    const picks = picksByFight[fight.id] || [];
     const html = matchupPreview({
       fight,
       fighterA: a,
       fighterB: b,
       event,
-      picks: picksByFight[fight.id] || [],
+      picks,
       cardioA: cardioMap[a.id] || null,
       cardioB: cardioMap[b.id] || null,
       finishA: finishMap[a.id] || null,
@@ -256,11 +267,46 @@ async function prerenderMatchupPreviews() {
 
     if (writeIfChanged(path.join(PREVIEW_DIR, filename), html)) written++;
     urls.push(`/preview/${filename}`);
+
+    if (event) {
+      if (!rowsByEvent[event.id]) rowsByEvent[event.id] = [];
+      rowsByEvent[event.id].push({
+        fight,
+        fighterA: a,
+        fighterB: b,
+        slug,
+        pick: consensusPick(picks, a, b)
+      });
+    }
   }
 
   const removed = pruneStaleStubs(PREVIEW_DIR, keep);
   console.log(`Matchup previews: ${written} written, ${removed} pruned, ${skipped} skipped, ${urls.length} total.`);
-  return urls;
+
+  // ---- event-level card-prediction pages ----
+  ensureDir(CARD_DIR);
+  const cardKeep = new Set();
+  const cardUrls = [];
+  let cardsWritten = 0;
+
+  for (const ev of upcomingEvents) {
+    const rows = (rowsByEvent[ev.id] || []).slice().sort((x, y) => cardOrder(x.fight, y.fight));
+    if (!rows.length) continue;
+    const filename = `${cardSlug(ev.name, ev.id)}.html`;
+    cardKeep.add(filename);
+    const html = eventPreview({
+      event: ev,
+      rows,
+      previewSlugFor: r => r.slug
+    });
+    if (writeIfChanged(path.join(CARD_DIR, filename), html)) cardsWritten++;
+    cardUrls.push(`/card/${filename}`);
+  }
+
+  const cardsRemoved = pruneStaleStubs(CARD_DIR, cardKeep);
+  console.log(`Card pages: ${cardsWritten} written, ${cardsRemoved} pruned, ${cardUrls.length} total.`);
+
+  return { previewUrls: urls, cardUrls };
 }
 
 // RSS feed of upcoming events. Aggregators (Feedly, IFTTT, Zapier triggers,
@@ -318,7 +364,7 @@ function escapeXml(s) {
 // Sitemap entries: static site pages + every fighter/event stub + every
 // matchup preview. Big sites eventually want a sitemap index; for now a
 // single sitemap is well under Google's 50k-URL limit.
-function regenerateSitemap(fighterUrls, eventUrls, previewUrls) {
+function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
   const today = new Date().toISOString().slice(0, 10);
 
   const staticPages = [
@@ -356,6 +402,9 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls) {
   }
 
   for (const p of staticPages) pushUrl(p.loc, p.priority, p.changefreq);
+  // Event-level card pages are the highest-intent content we publish — they
+  // aggregate a whole card's verdicts and target "ufc NNN predictions" queries.
+  for (const u of (cardUrls || [])) pushUrl(u, '0.9', 'daily');
   // Matchup previews ride higher than fighter/event stubs — they're real
   // content pages (no redirect) and target high-intent commercial queries.
   for (const u of previewUrls) pushUrl(u, '0.8', 'daily');
@@ -366,7 +415,7 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls) {
   lines.push('');
 
   fs.writeFileSync(path.join(ROOT, 'sitemap.xml'), lines.join('\n'));
-  const total = staticPages.length + previewUrls.length + eventUrls.length + fighterUrls.length;
+  const total = staticPages.length + (cardUrls || []).length + previewUrls.length + eventUrls.length + fighterUrls.length;
   console.log(`Sitemap: ${total} URLs.`);
 }
 
@@ -374,7 +423,7 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls) {
   try {
     const fighterUrls = await prerenderFighters();
     const eventUrls = await prerenderEvents();
-    const previewUrls = await prerenderMatchupPreviews();
+    const { previewUrls, cardUrls } = await prerenderMatchupPreviews();
 
     // RSS only emits upcoming events. We've already fetched them inside
     // prerenderMatchupPreviews but didn't keep the array around — re-fetching
@@ -386,7 +435,7 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls) {
       .order('event_date', { ascending: true });
     regenerateRssFeed(upcomingForRss || []);
 
-    regenerateSitemap(fighterUrls, eventUrls, previewUrls);
+    regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls);
     console.log('Done.');
   } catch (err) {
     console.error('Prerender failed:', err);
