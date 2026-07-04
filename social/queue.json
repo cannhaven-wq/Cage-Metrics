@@ -1,0 +1,212 @@
+[
+  {
+    "eventId": 117,
+    "eventName": "UFC 329: McGregor vs. Holloway 2",
+    "eventDate": "2026-07-11",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC 329: our model reads MCGREGOR 69% over HOLLOWAY — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x\n#UFC329",
+    "image": "social/ufc-329-mcgregor-vs-holloway-2-117/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html"
+  },
+  {
+    "eventId": 117,
+    "eventName": "UFC 329: McGregor vs. Holloway 2",
+    "eventDate": "2026-07-11",
+    "pieceId": "cardio-flagged",
+    "pillar": "P2-Cardio",
+    "tweet": "Cardio check, UFC 329: several model favorites our data quietly flags as late-faders 🫁 Who still holds up in round 3?\n\nhttps://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x\n#UFC329",
+    "image": "social/ufc-329-mcgregor-vs-holloway-2-117/img/cardio-flagged__square.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html"
+  },
+  {
+    "eventId": 117,
+    "eventName": "UFC 329: McGregor vs. Holloway 2",
+    "eventDate": "2026-07-11",
+    "pieceId": "coinflip-lead",
+    "pillar": "P3-CoinFlip",
+    "tweet": "Coin-Flip Corner 🪙 GARBRANDT vs YANEZ — our model has it just 55%. A coin flip in a lab coat. Who cracks first?\n\nhttps://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x\n#UFC329",
+    "image": "social/ufc-329-mcgregor-vs-holloway-2-117/img/coinflip-lead__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html"
+  },
+  {
+    "eventId": 117,
+    "eventName": "UFC 329: McGregor vs. Holloway 2",
+    "eventDate": "2026-07-11",
+    "pieceId": "whatif-finisher",
+    "pillar": "P4-WhatIf",
+    "tweet": "MCKINNEY 54% over GREEN, and they finish at an elite clip. Should \"rarely needs the judges\" weigh heavier? Genuinely asking.\n\nhttps://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x\n#UFC329",
+    "image": "social/ufc-329-mcgregor-vs-holloway-2-117/img/whatif-finisher__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html"
+  },
+  {
+    "eventId": 117,
+    "eventName": "UFC 329: McGregor vs. Holloway 2",
+    "eventDate": "2026-07-11",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC 329 main event — our model: MCGREGOR 69%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html?src=x\n#UFC329",
+    "image": "social/ufc-329-mcgregor-vs-holloway-2-117/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-329-mcgregor-vs-holloway-2-117.html"
+  },
+  {
+    "eventId": 2563,
+    "eventName": "UFC Fight Night: Du Plessis vs. Usman",
+    "eventDate": "2026-07-18",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Du Plessis vs. Usman: our model reads TAVARES 81% over BARRIAULT — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-du-plessis-vs-usman-2563/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html"
+  },
+  {
+    "eventId": 2563,
+    "eventName": "UFC Fight Night: Du Plessis vs. Usman",
+    "eventDate": "2026-07-18",
+    "pieceId": "coinflip-lead",
+    "pillar": "P3-CoinFlip",
+    "tweet": "Coin-Flip Corner 🪙 SMITH vs HOLLAND — our model has it just 53%. A coin flip in a lab coat. Who cracks first?\n\nhttps://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-du-plessis-vs-usman-2563/img/coinflip-lead__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html"
+  },
+  {
+    "eventId": 2563,
+    "eventName": "UFC Fight Night: Du Plessis vs. Usman",
+    "eventDate": "2026-07-18",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Du Plessis vs. Usman main event — our model: TAVARES 81%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-du-plessis-vs-usman-2563/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-du-plessis-vs-usman-2563.html"
+  },
+  {
+    "eventId": 2619,
+    "eventName": "UFC Fight Night: Ankalaev vs. Rountree Jr",
+    "eventDate": "2026-07-25",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Ankalaev vs. Rountree Jr: our model reads ANKALAEV 82% over JR. — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-ankalaev-vs-rountree-jr-2619/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html"
+  },
+  {
+    "eventId": 2619,
+    "eventName": "UFC Fight Night: Ankalaev vs. Rountree Jr",
+    "eventDate": "2026-07-25",
+    "pieceId": "whatif-finisher",
+    "pillar": "P4-WhatIf",
+    "tweet": "BONFIM 61% over SOLA, and they finish at an elite clip. Should \"rarely needs the judges\" weigh heavier? Genuinely asking.\n\nhttps://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-ankalaev-vs-rountree-jr-2619/img/whatif-finisher__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html"
+  },
+  {
+    "eventId": 2619,
+    "eventName": "UFC Fight Night: Ankalaev vs. Rountree Jr",
+    "eventDate": "2026-07-25",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Ankalaev vs. Rountree Jr main event — our model: ANKALAEV 82%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-ankalaev-vs-rountree-jr-2619/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-ankalaev-vs-rountree-jr-2619.html"
+  },
+  {
+    "eventId": 2620,
+    "eventName": "UFC Fight Night: Medic vs. Rodriguez",
+    "eventDate": "2026-08-01",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Medic vs. Rodriguez: our model reads MEDIC 84% over RODRIGUEZ — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-medic-vs-rodriguez-2620/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html"
+  },
+  {
+    "eventId": 2620,
+    "eventName": "UFC Fight Night: Medic vs. Rodriguez",
+    "eventDate": "2026-08-01",
+    "pieceId": "cardio-flagged",
+    "pillar": "P2-Cardio",
+    "tweet": "Cardio check, UFC Fight Night: Medic vs. Rodriguez: several model favorites our data quietly flags as late-faders 🫁 Who still holds up in round 3?\n\nhttps://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-medic-vs-rodriguez-2620/img/cardio-flagged__square.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html"
+  },
+  {
+    "eventId": 2620,
+    "eventName": "UFC Fight Night: Medic vs. Rodriguez",
+    "eventDate": "2026-08-01",
+    "pieceId": "coinflip-lead",
+    "pillar": "P3-CoinFlip",
+    "tweet": "Coin-Flip Corner 🪙 GUSKOV vs BLACHOWICZ — our model has it just 53%. A coin flip in a lab coat. Who cracks first?\n\nhttps://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-medic-vs-rodriguez-2620/img/coinflip-lead__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html"
+  },
+  {
+    "eventId": 2620,
+    "eventName": "UFC Fight Night: Medic vs. Rodriguez",
+    "eventDate": "2026-08-01",
+    "pieceId": "whatif-finisher",
+    "pillar": "P4-WhatIf",
+    "tweet": "MEDIC 84% over RODRIGUEZ, and they finish at an elite clip. Should \"rarely needs the judges\" weigh heavier? Genuinely asking.\n\nhttps://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-medic-vs-rodriguez-2620/img/whatif-finisher__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html"
+  },
+  {
+    "eventId": 2620,
+    "eventName": "UFC Fight Night: Medic vs. Rodriguez",
+    "eventDate": "2026-08-01",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Medic vs. Rodriguez main event — our model: MEDIC 84%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-medic-vs-rodriguez-2620/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-medic-vs-rodriguez-2620.html"
+  },
+  {
+    "eventId": 118,
+    "eventName": "UFC 330: Makhachev vs. Machado Garry",
+    "eventDate": "2026-08-15",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC 330: our model reads MAKHACHEV 86% over GARRY — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-330-makhachev-vs-machado-garry-118.html?src=x\n#UFC330",
+    "image": "social/ufc-330-makhachev-vs-machado-garry-118/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-330-makhachev-vs-machado-garry-118.html"
+  },
+  {
+    "eventId": 118,
+    "eventName": "UFC 330: Makhachev vs. Machado Garry",
+    "eventDate": "2026-08-15",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC 330 main event — our model: MAKHACHEV 86%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-330-makhachev-vs-machado-garry-118.html?src=x\n#UFC330",
+    "image": "social/ufc-330-makhachev-vs-machado-garry-118/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-330-makhachev-vs-machado-garry-118.html"
+  },
+  {
+    "eventId": 2626,
+    "eventName": "UFC Fight Night: Hernandez vs. Rodrigues",
+    "eventDate": "2026-08-22",
+    "pieceId": "sensor-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Hernandez vs. Rodrigues: our model reads HERNANDEZ 89% over RODRIGUES — but the matchup has a wrinkle worth seeing. Full breakdown 🧵\n\nhttps://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-hernandez-vs-rodrigues-2626/img/sensor-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html"
+  },
+  {
+    "eventId": 2626,
+    "eventName": "UFC Fight Night: Hernandez vs. Rodrigues",
+    "eventDate": "2026-08-22",
+    "pieceId": "whatif-finisher",
+    "pillar": "P4-WhatIf",
+    "tweet": "HERNANDEZ 89% over RODRIGUES, and they finish at an elite clip. Should \"rarely needs the judges\" weigh heavier? Genuinely asking.\n\nhttps://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-hernandez-vs-rodrigues-2626/img/whatif-finisher__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html"
+  },
+  {
+    "eventId": 2626,
+    "eventName": "UFC Fight Night: Hernandez vs. Rodrigues",
+    "eventDate": "2026-08-22",
+    "pieceId": "poll-main",
+    "pillar": "P1-SensorRead",
+    "tweet": "UFC Fight Night: Hernandez vs. Rodrigues main event — our model: HERNANDEZ 89%. Where does this one actually get decided? 👇\n\nhttps://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html?src=x\n#UFCFightNight",
+    "image": "social/ufc-fight-night-hernandez-vs-rodrigues-2626/img/poll-main__x_land.png",
+    "cardUrl": "https://cannonfightlab.com/card/ufc-fight-night-hernandez-vs-rodrigues-2626.html"
+  }
+]

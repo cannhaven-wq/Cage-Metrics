@@ -479,6 +479,66 @@ Where does this fight actually get decided? 👇`,
   return pieces;
 }
 
+// ----------------------------------------------------------- auto-post ---
+// A concise (≤280-char) single tweet for the auto-poster, built from a piece's
+// structured image spec + a ?src=x link to the card page. Drives traffic; the
+// long thread copy stays for manual/dashboard use.
+function tweetify(body, url, tag) {
+  const tail = `\n\n${url}${tag ? '\n' + tag : ''}`;
+  const room = 278 - tail.length;
+  const b = body.length > room ? body.slice(0, room - 1).trimEnd() + '…' : body;
+  return b + tail;
+}
+
+function tweetFor(piece, event) {
+  const img = piece.image || {};
+  const url = pieceCardLink(event, 'x');
+  const tag = eventHashtag(event.name);
+  const S = shortName(event.name);
+  let body;
+  switch (piece.id) {
+    case 'sensor-main':
+      body = `${S}: our model reads ${img.fa} ${img.big} over ${img.fb} — but the matchup has a wrinkle worth seeing. Full breakdown 🧵`; break;
+    case 'poll-main':
+      body = `${S} main event — our model: ${img.fa} ${img.big}. Where does this one actually get decided? 👇`; break;
+    case 'cardio-flagged':
+      body = `Cardio check, ${S}: several model favorites our data quietly flags as late-faders 🫁 Who still holds up in round 3?`; break;
+    case 'coinflip-lead':
+      body = `Coin-Flip Corner 🪙 ${img.fa} vs ${img.fb} — our model has it just ${img.big}. A coin flip in a lab coat. Who cracks first?`; break;
+    case 'whatif-finisher':
+      body = `${img.fa} ${img.big} over ${img.fb}, and they finish at an elite clip. Should "rarely needs the judges" weigh heavier? Genuinely asking.`; break;
+    default:
+      body = `${S}: ${img.fa} ${img.big}${img.fb ? ` over ${img.fb}` : ''} — our model's read, every factor shown.`;
+  }
+  return tweetify(body, url, tag);
+}
+
+// The X auto-post queue: one entry per X-eligible piece (has an image), newest
+// card first, with a ready tweet + the image + the card link. social-post.js
+// posts the next un-posted entry each run.
+function buildQueue(batches) {
+  const queue = [];
+  for (const { event, pieces } of batches) {
+    for (const p of pieces) {
+      if (p.platform !== 'X' || !p.image) continue;
+      const ims = p.images || [];
+      const im = ims.find(i => i.key === 'x_land') || ims.find(i => i.key === 'square') || ims[0];
+      queue.push({
+        eventId: event.id,
+        eventName: event.name,
+        eventDate: event.event_date,
+        pieceId: p.id,
+        pillar: p.pillar,
+        tweet: tweetFor(p, event),
+        image: im ? 'social/' + im.rel : null,
+        cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
+      });
+    }
+  }
+  queue.sort((a, b) => (a.eventDate < b.eventDate ? -1 : a.eventDate > b.eventDate ? 1 : 0));
+  return queue;
+}
+
 // --------------------------------------------------------------- assembly ---
 
 function buildPieces(event, rows) {
@@ -817,6 +877,11 @@ async function main() {
 
   index.push('', `_${totalPieces} pieces + ${totalImages} images across ${batches.length} cards. Betting-free, hype-free, real model data only._`, '');
   writeIfChanged(path.join(SOCIAL_DIR, 'index.md'), index.join('\n'));
+
+  // Auto-post queue for social-post.js: X-eligible pieces (tweet + image + link).
+  const queue = buildQueue(batches);
+  writeIfChanged(path.join(SOCIAL_DIR, 'queue.json'), JSON.stringify(queue, null, 2) + '\n');
+  console.log(`Queue: ${queue.length} X posts → social/queue.json`);
 
   // The access layer: one self-contained page to browse + copy everything.
   const generatedISO = new Date().toISOString();
