@@ -12,10 +12,12 @@ const ROOT = path.resolve(__dirname, '..');
 const DATA = path.join(ROOT, 'social', 'posts-data.json');
 
 function desktopDir() {
+  // Prefer the OneDrive-redirected Desktop (the one that actually shows on screen
+  // when OneDrive backup is on) before the plain profile Desktop.
   const candidates = [
-    path.join(os.homedir(), 'Desktop'),
     path.join(os.homedir(), 'OneDrive', 'Desktop'),
     path.join(os.homedir(), 'OneDrive - Personal', 'Desktop'),
+    path.join(os.homedir(), 'Desktop'),
   ];
   for (const c of candidates) { try { if (fs.statSync(c).isDirectory()) return c; } catch (_) {} }
   return os.homedir();
