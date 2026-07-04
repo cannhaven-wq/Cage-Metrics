@@ -590,6 +590,46 @@ function renderMetricoolCsv(rows) {
     .map(r => r.map(esc).join(',')).join('\n') + '\n';
 }
 
+// The dead-simple weekly load sheet: the SOONEST upcoming card's IG/TikTok posts
+// in posting order — open it, copy each caption top-to-bottom into Metricool.
+function buildNextPostsMd(batches) {
+  const today = new Date().toISOString().slice(0, 10);
+  const b = batches.filter(x => x.event.event_date >= today)[0] || batches[0];
+  if (!b) return '# No upcoming cards.\n';
+  const { event, pieces } = b;
+  const slug = `${slugify(event.name)}-${event.id}`;
+  const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
+  const out = [];
+  out.push(`# 📲 Post these to Instagram + TikTok`);
+  out.push('');
+  out.push(`## ${event.name} — ${formatLongDate(event.event_date)}`);
+  out.push('');
+  out.push(`**${picks.length} posts.** Images are in \`social/${slug}/img/\`.`);
+  out.push('');
+  out.push(`For each one: Metricool → **+ Create post** → tick **Instagram + TikTok** → paste the caption → attach the image → set the time → **Schedule**. Then do the next.`);
+  out.push('');
+  picks.forEach((p, i) => {
+    const im = bestImage(p, ['square', 'ig_portrait', 'story']);
+    const file = im ? im.rel.split('/').pop() : '(none)';
+    const when = `${shortDate(isoOffset(event.event_date, -6 + i))}, 6:00 PM`;
+    out.push('---');
+    out.push('');
+    out.push(`### Post ${i + 1}  ·  ${when}`);
+    out.push(`🖼️ **Attach image:** \`${file}\`  ·  [open/download](${SITE}/social/${im ? im.rel : ''})`);
+    out.push('');
+    out.push('**Caption (copy everything in the box):**');
+    out.push('```');
+    out.push(metricoolCaption(p, event));
+    out.push('```');
+    out.push('');
+  });
+  out.push('---');
+  out.push('');
+  out.push(`_That's the whole card. X posts itself — this is only for Instagram + TikTok._`);
+  out.push('');
+  return out.join('\n');
+}
+
 // --------------------------------------------------------------- assembly ---
 
 function buildPieces(event, rows) {
@@ -938,6 +978,10 @@ async function main() {
   const mrows = buildMetricoolRows(batches);
   writeIfChanged(path.join(SOCIAL_DIR, 'metricool.csv'), renderMetricoolCsv(mrows));
   console.log(`Metricool: ${mrows.length} IG/TikTok rows → social/metricool.csv`);
+
+  // The simple weekly load sheet for the soonest card.
+  writeIfChanged(path.join(SOCIAL_DIR, 'NEXT-POSTS.md'), buildNextPostsMd(batches));
+  console.log('Load sheet → social/NEXT-POSTS.md');
 
   // The access layer: one self-contained page to browse + copy everything.
   const generatedISO = new Date().toISOString();
