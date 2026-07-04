@@ -590,6 +590,29 @@ function renderMetricoolCsv(rows) {
     .map(r => r.map(esc).join(',')).join('\n') + '\n';
 }
 
+// Structured post data for the local Desktop posting app (build/make-posting-app.js).
+// Per card: an X item (auto-posted) + an Instagram+TikTok item per visual piece,
+// each with its caption and image path.
+function buildPostsData(batches) {
+  return batches.map(({ event, pieces }) => {
+    const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
+    const posts = [];
+    picks.forEach((p, i) => {
+      const xImg = bestImage(p, ['x_land', 'square']);
+      const sqImg = bestImage(p, ['square', 'ig_portrait', 'story']);
+      const when = `${shortDate(isoOffset(event.event_date, -6 + i))}, 6:00 PM`;
+      posts.push({ platform: 'X', pillar: p.pillar, caption: tweetFor(p, event), image: xImg ? 'social/' + xImg.rel : null, when: 'auto — posts itself' });
+      posts.push({ platform: 'Instagram + TikTok', pillar: p.pillar, caption: metricoolCaption(p, event), image: sqImg ? 'social/' + sqImg.rel : null, when });
+    });
+    return {
+      card: event.name,
+      dateLabel: formatLongDate(event.event_date),
+      cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
+      posts,
+    };
+  }).filter(c => c.posts.length);
+}
+
 // The dead-simple weekly load sheet: the SOONEST upcoming card's IG/TikTok posts
 // in posting order — open it, copy each caption top-to-bottom into Metricool.
 function buildNextPostsMd(batches) {
@@ -982,6 +1005,10 @@ async function main() {
   // The simple weekly load sheet for the soonest card.
   writeIfChanged(path.join(SOCIAL_DIR, 'NEXT-POSTS.md'), buildNextPostsMd(batches));
   console.log('Load sheet → social/NEXT-POSTS.md');
+
+  // Structured data for the local Desktop posting app.
+  writeIfChanged(path.join(SOCIAL_DIR, 'posts-data.json'), JSON.stringify(buildPostsData(batches), null, 2) + '\n');
+  console.log('Posting-app data → social/posts-data.json');
 
   // The access layer: one self-contained page to browse + copy everything.
   const generatedISO = new Date().toISOString();
