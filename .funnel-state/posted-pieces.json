@@ -1,4 +1,5 @@
 [
   "117::sensor-main",
-  "117::cardio-flagged"
+  "117::cardio-flagged",
+  "117::coinflip-lead"
 ]
