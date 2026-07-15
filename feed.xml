@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 14 Jul 2026 19:04:50 GMT</lastBuildDate>
+  <lastBuildDate>Wed, 15 Jul 2026 01:40:25 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC 329: McGregor vs. Holloway 2</title>
-    <link>https://cannonfightlab.com/event.html?id=117</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=117</guid>
-    <pubDate>Sat, 11 Jul 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 329: McGregor vs. Holloway 2 card — Las Vegas, Nevada, USA.</description>
-  </item>
   <item>
     <title>UFC Fight Night: Du Plessis vs. Usman</title>
     <link>https://cannonfightlab.com/event.html?id=2563</link>
@@ -37,6 +30,13 @@
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Medic vs. Rodriguez card — Belgrade, Vojvodina, Serbia.</description>
   </item>
   <item>
+    <title>UFC Fight Night: Gamrot vs. Salkilld</title>
+    <link>https://cannonfightlab.com/event.html?id=4221</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4221</guid>
+    <pubDate>Sat, 08 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Gamrot vs. Salkilld card — Las Vegas, Nevada, USA.</description>
+  </item>
+  <item>
     <title>UFC 330: Makhachev vs. Machado Garry</title>
     <link>https://cannonfightlab.com/event.html?id=118</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=118</guid>
@@ -49,6 +49,20 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2626</guid>
     <pubDate>Sat, 22 Aug 2026 00:00:00 GMT</pubDate>
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Hernandez vs. Rodrigues card — Sacramento, California, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Nurmagomedov vs. Song</title>
+    <link>https://cannonfightlab.com/event.html?id=4224</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4224</guid>
+    <pubDate>Sat, 29 Aug 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Nurmagomedov vs. Song card — Shanghai, China.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night</title>
+    <link>https://cannonfightlab.com/event.html?id=4225</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4225</guid>
+    <pubDate>Sat, 05 Sep 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night card — Paris, Ile-de-France, France.</description>
   </item>
 
 </channel>
