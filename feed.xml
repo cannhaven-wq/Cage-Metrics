@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Wed, 15 Jul 2026 18:57:08 GMT</lastBuildDate>
+  <lastBuildDate>Thu, 16 Jul 2026 01:50:09 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Du Plessis vs. Usman</title>
@@ -16,11 +16,11 @@
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Du Plessis vs. Usman card — Oklahoma City, Oklahoma, USA.</description>
   </item>
   <item>
-    <title>UFC Fight Night: Ankalaev vs. Rountree Jr</title>
+    <title>UFC Fight Night: Ankalaev vs. Guskov</title>
     <link>https://cannonfightlab.com/event.html?id=2619</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2619</guid>
     <pubDate>Sat, 25 Jul 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Ankalaev vs. Rountree Jr card — Abu Dhabi, Abu Dhabi, United Arab Emirates.</description>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Ankalaev vs. Guskov card — Abu Dhabi, Abu Dhabi, United Arab Emirates.</description>
   </item>
   <item>
     <title>UFC Fight Night: Medic vs. Rodriguez</title>
