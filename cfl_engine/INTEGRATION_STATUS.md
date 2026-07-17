@@ -49,24 +49,42 @@ resume without re-deriving anything.
      its own strictly-before-date iron rule: history filter + per-date Elo
      update batching. Both changes make the model see LESS, never more.
 
-## In flight
+- [x] **Tasks 3+4 final: AUDIT GATE PASSED** (2026-07-16). PIT = 0/200 sampled AND
+  0/17,544 exhaustive (`pit_diagnose.py`). No too-good flags. OOS 61.4% acc /
+  0.651 LL; market 68.0% / 0.598; blend 68.4% / 0.594 (beats market by 0.004 —
+  under the 0.015 leak line). ECE 0.019. Synthetic re-passed after engine fixes.
+  No-bet segments (worst model-vs-market Brier): Catch Weight, debut_involved,
+  Light Heavyweight, Strawweight. Committed as 939d0a3.
+- [x] **Task 5: benchmark** — `cfl_engine/benchmark_prod.py` + `benchmark_report.md`.
+  v1/v2/v3 recomputed = site claims (validates scorer). v5 = 70.8% acc → RED FLAG
+  confirmed (it trains on the closing line; that's the market's number, can't run
+  live). v6 67.7% (test window overlaps training). Every prod model loses to the
+  close on log-loss on shared fights. Engine is the honest yardstick.
+- [x] **Task 6: wiring** — `model_picks_edges_migration.sql` (repo root; Reed runs
+  in SQL Editor) + `cfl_engine/publish_backtest.py` (dry-run validated: 3232 picks,
+  638 edges, corner back-mapping proven on flipped cases, fold 0 excluded by
+  construction). `--execute` deletes+reloads source='backtest' only; never touches
+  source='live' (insert-only pick locking).
+- [x] **Task 7: serving + CLV** — `cfl_engine/predict_upcoming.py` (71 picks / 8
+  upcoming events, 9 edges in dry-run; consensus read from v_fight_odds_consensus
+  VIEW — the snapshot TABLE is stale since May, do not use) +
+  `cfl_engine/settle_clv.py` (fills closing_odds, clv_pp, clv_beat post-event;
+  positive clv_pp = beat the close). Publish clip [0.05, 0.95] applied UPSTREAM of
+  the blend (isotonic tail artifact was flagging a fake 21-point edge).
 
-- [ ] Re-run chain (background): synthetic smoke + real pipeline + exhaustive
-  PIT diagnose. Expect PIT = 0 everywhere now.
-- [ ] Explore agent mapping repo (model_predictions/model_versions usage, odds
-  pipeline, picks publishing, benchmark files for handoff task 5).
+## For Reed (the only human steps left)
 
-## Next (in order, per handoff)
-
-3. **AUDIT GATE** — read `out_real/report.md`. RED FLAG = OOS acc >70% or model beats
-   vig-free close by >0.015 log-loss → find leak in data path, fix, rerun. Never weaken checks.
-4. Benchmark existing prod model (`model_predictions`/`model_versions` in Supabase)
-   with `audit.metric_block` on same fights; if old numbers beat red-flag thresholds,
-   call it out as old-backtest leakage.
-5. Create `model_picks` + `model_edges` tables (check `SUPABASE_DB_URL` for direct psql
-   DDL; else SQL Editor file for Reed). Load calibrated folds only; fold 0 never exposed.
-6. CLV capture: odds_at_publish snapshot + post-event closing fill + clv_beat. No new
-   ufcstats scraping surface.
+1. Supabase SQL Editor: run `model_picks_edges_migration.sql`, then
+   `dead_booking_cleanup.sql`.
+2. `PYTHONPATH=cfl_engine python cfl_engine/publish_backtest.py --execute` (once).
+3. Per event week: `predict_upcoming.py --execute` after odds land;
+   `settle_clv.py --execute` the day after each card.
+4. Upstream hygiene flagged: (a) fight_odds_consensus_snapshot table not being
+   refreshed since May — either fix its writer or drop it (serving now uses the
+   view); (b) upcoming cards contain stale double-bookings (e.g. Ankalaev booked
+   vs both Rountree and Guskov; Umar Nurmagomedov on two cards) — event scraper
+   should kill dead future bookings; (c) Railway Weekly Scraper cron still needs
+   re-adding (separate incident doc).
 
 ## Key facts for whoever resumes
 
