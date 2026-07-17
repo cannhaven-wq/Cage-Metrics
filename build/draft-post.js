@@ -63,6 +63,14 @@ function formatLongDate(isoDate) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+// Plain-English agreement label for the two public models (Value + Fight IQ).
+// Handles the one-model case too (a fight only one model has graded).
+function modelAgreementLabel(agree, total) {
+  if (total <= 1) return '1 model';
+  if (agree === total) return total === 2 ? 'both models' : `all ${total} models`;
+  return `${agree} of ${total} models`;
+}
+
 async function main() {
   const { event, phase } = await findEvent();
 
@@ -83,7 +91,9 @@ async function main() {
 
   const [fightersR, predsR, cardioR, finishR] = await Promise.all([
     sb.from('fighters').select('id, name, nickname').in('id', fighterIds),
-    sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds),
+    // Public models only ('v6' Value, 'v3' Fight IQ). Node script — window.cfl
+    // doesn't exist here; source of truth is cfl.PUBLIC_MODELS in _shared.js.
+    sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', ['v6', 'v3']),
     sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds),
     sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds),
   ]);
@@ -163,6 +173,7 @@ async function main() {
       pickName: winner.name,
       pct: Math.round(avgP * 100),
       agree, total,
+      agreeLabel: modelAgreementLabel(agree, total),
       note,
     });
   }
@@ -175,7 +186,7 @@ async function main() {
   const dateLabel = formatLongDate(event.event_date);
   const eventUrl  = `${SITE}/event.html?id=${event.id}`;
   const picksUrl  = `${SITE}/picks.html`;
-  const trackUrl  = `${SITE}/predictor.html`;
+  const trackUrl  = `${SITE}/track-record.html`;
 
   // ----- Reddit markdown -----
   const r = [];
@@ -188,7 +199,7 @@ async function main() {
   r.push(`| Fight | Model pick | Confidence | Note |`);
   r.push(`|---|---|---|---|`);
   for (const l of lines) {
-    r.push(`| ${escMd(l.aName)} vs ${escMd(l.bName)}${l.flag} | **${escMd(l.pickName)}** | ${l.pct}% (${l.agree}/${l.total} models agree) | ${escMd(l.note)} |`);
+    r.push(`| ${escMd(l.aName)} vs ${escMd(l.bName)}${l.flag} | **${escMd(l.pickName)}** | ${l.pct}% (${l.agreeLabel}) | ${escMd(l.note)} |`);
   }
   r.push('');
   r.push(`Per-fight breakdown with the edge factors that drove each verdict: ${eventUrl}`);
@@ -208,7 +219,7 @@ async function main() {
   );
   for (const l of lines) {
     let tweet = `${l.aName} vs ${l.bName}${l.flag}\n` +
-                `→ ${l.pickName} (${l.pct}%, ${l.agree}/${l.total} models)`;
+                `→ ${l.pickName} (${l.pct}%, ${l.agreeLabel})`;
     if (l.note) tweet += `\n${l.note}`;
     tweets.push(tweet);
   }

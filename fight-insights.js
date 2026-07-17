@@ -8,7 +8,9 @@
      {
        cardioMap:   { [fighter_id]: { byWc: { [weightClass]: {tier_word, confidence} }, career: {...} } },
        weightClass: 'Welterweight' | null,
-       baseRates:   { younger: {younger_winrate, sample_size}, reach: {longer_reach_winrate} }
+       baseRates:   { younger: {younger_winrate, sample_size} }
+       (age is the only factor whose raw base rate we anchor to — it's the
+       only one that survives controlling for the betting line; see stats.html)
      }
    ========================================================================== */
 (function () {
@@ -66,14 +68,11 @@
       }
       out.push(`Younger by ${opp.age - picked.age} years${suffix}`);
     }
-    // Reach
+    // Reach — no win-rate suffix on purpose: the raw historical rate looks
+    // predictive but collapses to a coin flip once you control for the
+    // betting line (documented in the Factor Lab on stats.html).
     if (picked.reach_in != null && opp.reach_in != null && picked.reach_in - opp.reach_in >= 2) {
-      let suffix = '';
-      const br = baseRates.reach;
-      if (br && br.longer_reach_winrate != null) {
-        suffix = ` — longer reach wins ${(br.longer_reach_winrate * 100).toFixed(0)}% historically`;
-      }
-      out.push(`Reach edge (+${picked.reach_in - opp.reach_in}")${suffix}`);
+      out.push(`Reach edge (+${picked.reach_in - opp.reach_in}")`);
     }
     // Striking output
     if (picked.slpm != null && opp.slpm != null && (picked.slpm - opp.slpm) >= 1) {
@@ -165,7 +164,7 @@
       </div>`;
     }).join('');
     const body = v.edges.length
-      ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs every model sees. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
+      ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs the models see. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
       : `<div class="wt-empty">No strong edge on record, cardio, or takedown defense here — the pick leans on the model's broader stat weighting.</div>`;
     return { net, body, hasEdges: v.edges.length > 0 };
   }

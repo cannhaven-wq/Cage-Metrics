@@ -5,11 +5,11 @@ values in the `<head>` (everything else stays identical).
 
 ## index.html (homepage)
 ```
-<title>Cannon Fight Lab — UFC Fight Predictions, Cardio Stats & Analytics</title>
-<meta name="description" content="Calibrated UFC fight predictions backed by 8,000+ historical fights. See model verdicts, fighter cardio scores, head-to-head matchups, and a transparent prediction track record.">
+<title>Cannon Fight Lab — UFC Fight Picks Locked and Graded in Public</title>
+<meta name="description" content="Two honest UFC models: Fight IQ picks fights from tape alone, Value hunts prices worth taking. Every pick locked before the bell, graded in public, misses shown. Built on 8,853 analyzed fights.">
 <link rel="canonical" href="https://cannonfightlab.com/">
 <meta property="og:url" content="https://cannonfightlab.com/">
-<meta property="og:title" content="Cannon Fight Lab — UFC Fight Predictions & Analytics">
+<meta property="og:title" content="Cannon Fight Lab — UFC Picks Locked & Graded in Public">
 ```
 
 ## card-lab.html (Card Lab — primary product page)
@@ -24,12 +24,12 @@ values in the `<head>` (everything else stays identical).
 
 ## track-record.html (Proof Center)
 ```
-<title>Verified UFC Model Track Record — Cannon Fight Lab</title>
-<meta name="description" content="Every CFL model pick graded in public: accuracy by year, calibration, favorites vs underdogs, and ROI on flat $100 bets. Picks are locked before events and never edited.">
+<title>UFC Model Track Record — Every Pick Graded in Public | Cannon Fight Lab</title>
+<meta name="description" content="Every CFL pick locked before the event and graded after — wins, losses, and dollar returns at real prices. Backtest results are labeled simulated; the live record starts July 2026.">
 <link rel="canonical" href="https://cannonfightlab.com/track-record.html">
 <meta property="og:url" content="https://cannonfightlab.com/track-record.html">
-<meta property="og:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
-<meta property="og:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too. Locked before events, never edited after.">
+<meta property="og:title" content="UFC Model Track Record — Every Pick Graded in Public">
+<meta property="og:description" content="Every pick locked, graded, never edited — misses included. Simulated results labeled simulated; live record since July 2026.">
 ```
 
 ## cardio.html
@@ -42,14 +42,14 @@ values in the `<head>` (everything else stays identical).
 <meta property="og:description" content="Which UFC fighters fade late and which ones don't. Data-backed cardio scores for every fighter.">
 ```
 
-## stats.html (Stat Finder)
+## stats.html (The Factor Lab)
 ```
-<title>UFC Stat Finder — Data-Backed MMA Betting Insights | Cannon Fight Lab</title>
-<meta name="description" content="Searchable UFC betting insights: finish rate by division, ring rust effect after a loss, southpaw advantage, age edge calibration. All backed by 8,000+ fights.">
+<title>The Factor Lab — Which UFC Stats Actually Predict Fights | Cannon Fight Lab</title>
+<meta name="description" content="Which fighter stats predict UFC fights and which just repeat the betting line. Age is the only factor that holds up once the market is even — tested across 8,853 fights. Free.">
 <link rel="canonical" href="https://cannonfightlab.com/stats.html">
 <meta property="og:url" content="https://cannonfightlab.com/stats.html">
-<meta property="og:title" content="UFC Stat Finder — Cannon Fight Lab">
-<meta property="og:description" content="Data-backed UFC betting insights, searchable. Real numbers across thousands of fights.">
+<meta property="og:title" content="The Factor Lab — Which UFC Stats Actually Predict Fights">
+<meta property="og:description" content="Most stats just repeat the betting line. See which ones actually predict fights, tested across 8,853 fights.">
 ```
 
 ## h2h.html (Head-to-head)

@@ -5,13 +5,13 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Pricing — Cannon Fight Lab</title>
-<meta name="description" content="Cannon Fight Lab pricing. Free tier with verdict and top edges. Premium tier with full edge factors, detailed analytics, and early access launching soon.">
+<meta name="description" content="Cannon Fight Lab pricing. Free tier: the Factor Lab, Fight IQ picks, and the public track record. Premium (free during beta): full Card Lab detail, Value-model picks with edge and stake, and bet tracking.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://cannonfightlab.com/pricing.html">
 
 <meta property="og:type" content="website">
 <meta property="og:title" content="Pricing — Cannon Fight Lab">
-<meta property="og:description" content="Free and Premium plans for Cannon Fight Lab UFC analytics.">
+<meta property="og:description" content="Free and Premium plans for Cannon Fight Lab UFC analytics. Premium is free during beta.">
 <meta property="og:url" content="https://cannonfightlab.com/pricing.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta name="theme-color" content="#0a0a0a">
@@ -29,31 +29,37 @@
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 
 <style>
-  /* Waitlist form on premium card */
-  .waitlist-form {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
+  /* Proof strip below the tier grid */
+  .proof-strip {
+    max-width: 720px;
+    margin: 36px auto 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 22px;
+    font-size: 14px;
+    color: var(--text-2);
+    line-height: 1.65;
+    text-align: center;
   }
-  .waitlist-form input {
-    flex: 1;
-    background: var(--bg-3);
-    border: 1px solid var(--border-2);
-    border-radius: 6px;
-    padding: 10px 12px;
+  .proof-strip strong { color: var(--text); }
+  .proof-strip a { color: var(--red); text-decoration: none; font-weight: 600; }
+  .proof-strip a:hover { text-decoration: underline; }
+
+  /* Honesty box near the CTAs */
+  .honesty-box {
+    max-width: 720px;
+    margin: 16px auto 0;
+    border: 1px dashed var(--border-2);
+    border-radius: 12px;
+    padding: 16px 22px;
     font-size: 13px;
-    color: var(--text);
-    font-family: 'Inter', sans-serif;
-    outline: none;
+    color: var(--text-3);
+    line-height: 1.65;
+    text-align: center;
   }
-  .waitlist-form input:focus { border-color: var(--red); }
-  .waitlist-form .btn { padding: 10px 16px; font-size: 13px; }
-  .waitlist-msg {
-    margin-top: 10px;
-    font-size: 12px;
-  }
-  .waitlist-msg.success { color: var(--green); }
-  .waitlist-msg.error { color: var(--red); }
+  .honesty-box strong { color: var(--text-2); }
+  .honesty-box a { color: var(--text-2); text-decoration: underline; }
 </style>
 </head>
 <body>
@@ -61,11 +67,12 @@
 <nav class="cfl-nav"></nav>
 
 <div class="pricing-page">
-  <h1>Built for the bettor, priced for the regular.</h1>
+  <h1>Most of it is free. All of it is honest.</h1>
   <p class="lede">
-    Free tier gives you verdicts and the strongest edges driving each fight.
-    Premium unlocks the full picture — every edge factor, detailed cardio analysis,
-    and historical performance tracking.
+    Three products, one public record. The Factor Lab shows which stats actually
+    predict fights. Fight IQ picks winners from tape alone — it never sees a betting
+    line. The Value model hunts mispriced favorites. Free gets you the first two.
+    Premium adds the money tools.
   </p>
 
   <div class="pricing-grid">
@@ -79,16 +86,15 @@
         <span class="period">/ forever</span>
       </div>
       <ul class="pricing-features">
-        <li>Next event card with verdicts</li>
-        <li>Top 2 edge factors per fight</li>
-        <li>Cardio score tier (Elite / Strong / Faders)</li>
-        <li>Head-to-head comparison tool</li>
-        <li>Fighter database access</li>
-        <li>Public track record + audit history</li>
-        <li class="muted">All edge factors per fight</li>
-        <li class="muted">Detailed cardio breakdowns</li>
-        <li class="muted">Recent form analysis</li>
-        <li class="muted">Pre-card brief by email</li>
+        <li><strong>The Factor Lab</strong> — full access. Which stats predict fights, and which just repeat the betting line</li>
+        <li><strong>Fight IQ picks</strong> for every card — the tape-only model</li>
+        <li><strong>Card Lab</strong> — top 2 fights on every card</li>
+        <li><strong>Proof Center</strong> — every graded pick, hits and misses</li>
+        <li><strong>Weekly digest</strong> by email</li>
+        <li class="muted">Full Card Lab detail on every fight</li>
+        <li class="muted">Value-model picks with edge + stake</li>
+        <li class="muted">Pick-lock email before each card</li>
+        <li class="muted">My Book bet tracking</li>
       </ul>
       <a href="/signup.html" class="btn ghost" id="freeCta" style="display:block; text-align:center;">Create free account</a>
     </div>
@@ -96,42 +102,55 @@
     <!-- PREMIUM TIER -->
     <div class="pricing-tier premium">
       <div class="pricing-tier-name">Premium</div>
-      <div class="pricing-tier-tagline">For serious bettors.</div>
+      <div class="pricing-tier-tagline">The money tools.</div>
       <div class="pricing-tier-price coming-soon">Free during beta</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-bottom: 4px;">
+        Founding accounts keep early-supporter pricing when billing starts.
+      </div>
       <ul class="pricing-features">
         <li>Everything in Free, plus:</li>
-        <li><strong>All 9 edge factors</strong> per fight</li>
-        <li><strong>Edge confidence percentages</strong></li>
-        <li><strong>Detailed cardio breakdowns</strong> (R3+ minutes, output ratios)</li>
-        <li><strong>Recent form deep-dive</strong> on every fighter</li>
-        <li><strong>Pre-card brief</strong> emailed Friday before each event</li>
-        <li><strong>Pick tracking dashboard</strong> with personal ROI</li>
-        <li><strong>Style classifier reasoning</strong></li>
-        <li><strong>No ads, ever</strong></li>
-        <li><strong>Early access</strong> to new features</li>
+        <li><strong>Full Card Lab detail</strong> on every fight, not just the top 2</li>
+        <li><strong>Value-model picks</strong> with the edge and a suggested flat stake</li>
+        <li><strong>Pick-lock email</strong> before each card — picks locked before the fights, on the record</li>
+        <li><strong>My Book</strong> — track your own bets against the model's</li>
       </ul>
       <a href="/signup.html" class="btn" id="premiumCta" style="display:block; text-align:center;">Create account → Get premium free</a>
       <div style="font-size: 11px; color: var(--text-3); margin-top: 10px; text-align: center; line-height: 1.5;">
-        Free for everyone during beta. We'll give plenty of notice before paid launches.
+        Free for everyone during beta. We'll give plenty of notice before billing starts.
       </div>
     </div>
 
+  </div>
+
+  <div class="proof-strip">
+    <strong>Value model, graded in public:</strong> 66-21 on simulated flat $100 bets since
+    Jan 2025, +12.7% at closing prices (as of July 15, 2026). Live record started July 2026. Every miss shown.
+    <a href="/track-record.html">See the full record →</a>
+  </div>
+
+  <div class="honesty-box">
+    <strong>No live-profit claims.</strong> The simulated record is a point-in-time replay
+    on fights the model never trained on. If you want to bet real money, start by
+    <a href="/track-record.html">reading the misses</a>.
   </div>
 
   <div style="max-width: 720px; margin: 60px auto 0; text-align: center;">
     <h2 style="font-family: 'Barlow Condensed', sans-serif; font-size: 28px; font-weight: 800; color: var(--text); margin: 0 0 12px">FAQ</h2>
     <div style="text-align: left; color: var(--text-2); font-size: 14px; line-height: 1.7;">
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">How do I get Premium right now?</strong><br>
-      Just create a free account. Premium features are unlocked for every account holder during beta — no card, no trial timer. When paid pricing launches, we'll give plenty of notice and grandfather early users where we can.</p>
+      Create a free account. Premium features are unlocked for every account holder during beta — no card, no trial timer. When billing starts, founding accounts keep early-supporter pricing.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">When does paid Premium launch?</strong><br>
-      No firm date. We're keeping Premium free during beta to build a track record across multiple events first. Expect 1-3 months minimum.</p>
+      No firm date. The live betting record only started in July 2026, and we want it long enough to judge before we ask anyone to pay. Expect months, not weeks.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">Will the free tier ever go away?</strong><br>
-      No. The free tier is permanent. We may add features to it over time but the core data stays free.</p>
+      No. The Factor Lab, Fight IQ picks, and the Proof Center stay free. The whole point is a record you can check without paying us.</p>
 
-      <p style="margin-bottom: 18px"><strong style="color: var(--text)">Why charge at all eventually?</strong><br>
-      Future paid Premium funds closing-odds integration, expanded coverage (Bellator, PFL), and the pre-card brief. You'd be paying for the synthesis layer — calibrated edge factors and detailed analysis — not for predictions of unknowable future events.</p>
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">What am I paying for eventually?</strong><br>
+      The money tools: the Value model's picks with the edge and stake attached, the pick-lock email before each card, full Card Lab detail, and My Book. The analysis of what happened stays free — you'd be paying for what we think happens next, priced.</p>
+
+      <p style="margin-bottom: 18px"><strong style="color: var(--text)">Is the betting record real money?</strong><br>
+      Not yet. The 66-21 record is a simulated replay: flat $100 bets on fights the model had never seen, priced at the odds available at the time. The live, real-time record started July 2026 and is 0-1 so far — the first settled bet lost, and it's shown like everything else. Both are on the <a href="/track-record.html" style="color: var(--red)">Proof Center</a>, misses included.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">Can I get a refund (when paid launches)?</strong><br>
       Yes. A no-questions-asked refund policy will apply in the first 7 days. Specific terms will be on the checkout page.</p>
@@ -142,7 +161,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('pricing');

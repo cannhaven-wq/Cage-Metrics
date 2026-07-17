@@ -217,7 +217,7 @@
       <h1>Card Lab</h1>
       <div class="meta">One screen to work the whole card — model vs market on every fight.</div>
     </div>
-    <a class="btn btn-ghost" href="track-record.html">See verified track record →</a>
+    <a class="btn btn-ghost" href="track-record.html">See the graded record — simulated labeled as simulated, misses included →</a>
   </div>
 
   <div class="sum" id="clSummary" hidden></div>
@@ -233,7 +233,7 @@
     <label class="chk"><input type="checkbox" id="clHideThin"> Hide thin leans (&lt;55%)</label>
     <div class="model-filter">
       <span class="fl-label">Model</span>
-      <select id="clModelSelect"><option value="consensus">Consensus (all models)</option></select>
+      <select id="clModelSelect"><option value="v6">Value — beats the opener (v6)</option></select>
     </div>
   </div>
 
@@ -268,10 +268,10 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=3"></script>
+<script src="fight-insights.js?v=4"></script>
 <script>
 cfl.renderNav('cardlab');
 cfl.renderFooter();
@@ -282,14 +282,14 @@ cfl.renderFooter();
 // odds + cardio), rendered dense and sortable. Pick-explanation logic comes
 // from fight-insights.js (shared with the homepage).
 // =============================================================================
-const CL_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
+const CL_MODELS = cfl.PUBLIC_MODELS;   // ['v6','v3'] — the only public models
 let _state = null;        // { event, fights, fighterMap, picksByFight, modelNames }
 let _cardioMap = null;
 let _oddsMap = null;
 let _baseRates = null;
 let _sortKey = 'edge';
 let _hideThin = false;
-let _modelMode = 'consensus';
+let _modelMode = 'v6';
 let _openFid = null;
 let _signedIn = false;
 
@@ -413,12 +413,12 @@ async function loadBaseRates() {
   const sb = window.cflSupabase;
   _baseRates = {};
   try {
-    const [ageR, reachR] = await Promise.all([
-      sb.from('v_younger_fighter_winrate').select('*').single(),
-      sb.from('v_reach_advantage_winrate').select('*').single(),
-    ]);
+    // Age is the only base rate we anchor bullets to — it's the one factor
+    // that survives market control (see the Factor Lab on stats.html). Reach
+    // collapses to a coin flip once the line is controlled for, so we no
+    // longer fetch or show its raw win rate here.
+    const ageR = await sb.from('v_younger_fighter_winrate').select('*').single();
     if (!ageR.error && ageR.data) _baseRates.younger = ageR.data;
-    if (!reachR.error && reachR.data) _baseRates.reach = reachR.data;
   } catch (e) { console.warn('Base rates not available:', e.message); }
   return _baseRates;
 }
@@ -449,12 +449,19 @@ function pickForFight(fightPicks, a, b) {
 
 function populateModelSelect(modelNames) {
   const sel = $('clModelSelect');
-  const opts = ['<option value="consensus">Consensus (all models)</option>'];
+  const picksByFight = (_state && _state.picksByFight) || {};
+  const hasRows = mv => Object.values(picksByFight).some(slot => slot[mv]);
+  const opts = [];
   CL_MODELS.forEach(mv => {
-    const nm = modelNames && modelNames[mv];
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(mv.toUpperCase() + (nm ? ' · ' + nm : ''))}</option>`);
+    const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ')')}</option>`);
   });
+  // "Both models" only makes sense when both public models actually scored
+  // fights on this card.
+  const bothHaveRows = CL_MODELS.length > 1 && CL_MODELS.every(hasRows);
+  if (bothHaveRows) opts.push('<option value="consensus">Both models</option>');
   sel.innerHTML = opts.join('');
+  if (_modelMode === 'consensus' && !bothHaveRows) _modelMode = 'v6';
   sel.value = _modelMode;
 }
 
@@ -521,7 +528,7 @@ function render() {
 
   // Parlay strip
   if (valueEdges.length >= 2) {
-    $('clParlayText').innerHTML = `<strong>${valueEdges.length} picks</strong> on this card carry a 3%+ edge over the market — the raw material for a disciplined parlay. Small stakes: parlays multiply variance as fast as payouts.`;
+    $('clParlayText').innerHTML = `<strong>${valueEdges.length} picks</strong> on this card carry a 3%+ edge over the market — the raw material for a disciplined parlay. Small stakes: parlays multiply variance as fast as payouts. The 3%-edge rule's graded record is simulated (+12.7% at closing prices as of July 2026); the live record starts July 2026.`;
     $('clParlayStrip').hidden = false;
   } else {
     $('clParlayStrip').hidden = true;

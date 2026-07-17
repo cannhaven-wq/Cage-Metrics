@@ -1,0 +1,691 @@
+{
+  "generated_at": "2026-07-15T01:20:40.396Z",
+  "dataset": {
+    "fights_scored": 8619,
+    "market_even_cohort": 850,
+    "first_event": "1994-03-11",
+    "last_event": "2026-08-29"
+  },
+  "rules": {
+    "min_sample": 100,
+    "even_band_american": 140,
+    "min_prior_fights": 3
+  },
+  "factors": [
+    {
+      "id": "age",
+      "label": "Age",
+      "question": "Does the younger fighter win?",
+      "basis": "physical",
+      "note": "Age at the moment of the fight, from date of birth. Nothing here can be contaminated by later results.",
+      "verdict": "real",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 8492,
+            "wins": 4838,
+            "pct": 57,
+            "ci_lo": 55.9,
+            "ci_hi": 58
+          },
+          "even": {
+            "n": 849,
+            "wins": 482,
+            "pct": 56.8,
+            "ci_lo": 53.4,
+            "ci_hi": 60.1
+          },
+          "verdict": "real"
+        },
+        {
+          "label": "1–2 years younger",
+          "all": {
+            "n": 2513,
+            "wins": 1311,
+            "pct": 52.2,
+            "ci_lo": 50.2,
+            "ci_hi": 54.1
+          },
+          "even": {
+            "n": 254,
+            "wins": 134,
+            "pct": 52.8,
+            "ci_lo": 46.6,
+            "ci_hi": 58.8
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "3–4 years younger",
+          "all": {
+            "n": 2183,
+            "wins": 1231,
+            "pct": 56.4,
+            "ci_lo": 54.3,
+            "ci_hi": 58.5
+          },
+          "even": {
+            "n": 232,
+            "wins": 135,
+            "pct": 58.2,
+            "ci_lo": 51.8,
+            "ci_hi": 64.4
+          },
+          "verdict": "real"
+        },
+        {
+          "label": "5–6 years younger",
+          "all": {
+            "n": 1629,
+            "wins": 917,
+            "pct": 56.3,
+            "ci_lo": 53.9,
+            "ci_hi": 58.7
+          },
+          "even": {
+            "n": 154,
+            "wins": 92,
+            "pct": 59.7,
+            "ci_lo": 51.8,
+            "ci_hi": 67.2
+          },
+          "verdict": "real"
+        },
+        {
+          "label": "7–9 years younger",
+          "all": {
+            "n": 1410,
+            "wins": 867,
+            "pct": 61.5,
+            "ci_lo": 58.9,
+            "ci_hi": 64
+          },
+          "even": {
+            "n": 150,
+            "wins": 88,
+            "pct": 58.7,
+            "ci_lo": 50.7,
+            "ci_hi": 66.2
+          },
+          "verdict": "real"
+        },
+        {
+          "label": "10+ years younger",
+          "all": {
+            "n": 757,
+            "wins": 512,
+            "pct": 67.6,
+            "ci_lo": 64.2,
+            "ci_hi": 70.9
+          },
+          "even": {
+            "n": 59,
+            "wins": 33,
+            "pct": 55.9,
+            "ci_lo": 43.3,
+            "ci_hi": 67.8
+          },
+          "verdict": "unproven"
+        }
+      ]
+    },
+    {
+      "id": "reach",
+      "label": "Reach",
+      "question": "Does the longer fighter win?",
+      "basis": "physical",
+      "note": "Reach in inches off the tale of the tape. Fixed for a fighter's career.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 6588,
+            "wins": 3423,
+            "pct": 52,
+            "ci_lo": 50.8,
+            "ci_hi": 53.2
+          },
+          "even": {
+            "n": 695,
+            "wins": 365,
+            "pct": 52.5,
+            "ci_lo": 48.8,
+            "ci_hi": 56.2
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "1 inch longer",
+          "all": {
+            "n": 1801,
+            "wins": 899,
+            "pct": 49.9,
+            "ci_lo": 47.6,
+            "ci_hi": 52.2
+          },
+          "even": {
+            "n": 185,
+            "wins": 98,
+            "pct": 53,
+            "ci_lo": 45.8,
+            "ci_hi": 60
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "2–3 inches longer",
+          "all": {
+            "n": 2750,
+            "wins": 1396,
+            "pct": 50.8,
+            "ci_lo": 48.9,
+            "ci_hi": 52.6
+          },
+          "even": {
+            "n": 284,
+            "wins": 142,
+            "pct": 50,
+            "ci_lo": 44.2,
+            "ci_hi": 55.8
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "4–5 inches longer",
+          "all": {
+            "n": 1327,
+            "wins": 712,
+            "pct": 53.7,
+            "ci_lo": 51,
+            "ci_hi": 56.3
+          },
+          "even": {
+            "n": 151,
+            "wins": 82,
+            "pct": 54.3,
+            "ci_lo": 46.4,
+            "ci_hi": 62
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "6+ inches longer",
+          "all": {
+            "n": 710,
+            "wins": 416,
+            "pct": 58.6,
+            "ci_lo": 54.9,
+            "ci_hi": 62.2
+          },
+          "even": {
+            "n": 75,
+            "wins": 43,
+            "pct": 57.3,
+            "ci_lo": 46.1,
+            "ci_hi": 67.9
+          },
+          "verdict": "unproven"
+        }
+      ]
+    },
+    {
+      "id": "height",
+      "label": "Height",
+      "question": "Does the taller fighter win?",
+      "basis": "physical",
+      "note": "Height in inches off the tale of the tape.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 7121,
+            "wins": 3714,
+            "pct": 52.2,
+            "ci_lo": 51,
+            "ci_hi": 53.3
+          },
+          "even": {
+            "n": 680,
+            "wins": 345,
+            "pct": 50.7,
+            "ci_lo": 47,
+            "ci_hi": 54.5
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "1–2 inches taller",
+          "all": {
+            "n": 4484,
+            "wins": 2306,
+            "pct": 51.4,
+            "ci_lo": 50,
+            "ci_hi": 52.9
+          },
+          "even": {
+            "n": 444,
+            "wins": 227,
+            "pct": 51.1,
+            "ci_lo": 46.5,
+            "ci_hi": 55.7
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "3–4 inches taller",
+          "all": {
+            "n": 1987,
+            "wins": 1067,
+            "pct": 53.7,
+            "ci_lo": 51.5,
+            "ci_hi": 55.9
+          },
+          "even": {
+            "n": 191,
+            "wins": 97,
+            "pct": 50.8,
+            "ci_lo": 43.7,
+            "ci_hi": 57.8
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "5+ inches taller",
+          "all": {
+            "n": 650,
+            "wins": 341,
+            "pct": 52.5,
+            "ci_lo": 48.6,
+            "ci_hi": 56.3
+          },
+          "even": {
+            "n": 45,
+            "wins": 21,
+            "pct": 46.7,
+            "ci_lo": 32.9,
+            "ci_hi": 60.9
+          },
+          "verdict": "unproven"
+        }
+      ]
+    },
+    {
+      "id": "southpaw_reach",
+      "label": "Southpaw + reach",
+      "question": "Does the southpaw with the longer reach beat the orthodox fighter?",
+      "basis": "physical",
+      "note": "Exactly one southpaw, facing an orthodox fighter, holding a reach edge. Single cohort — no gap buckets.",
+      "verdict": "unproven",
+      "buckets": [
+        {
+          "label": "When it fires",
+          "all": {
+            "n": 668,
+            "wins": 380,
+            "pct": 56.9,
+            "ci_lo": 53.1,
+            "ci_hi": 60.6
+          },
+          "even": {
+            "n": 75,
+            "wins": 37,
+            "pct": 49.3,
+            "ci_lo": 38.3,
+            "ci_hi": 60.4
+          },
+          "verdict": "unproven"
+        }
+      ]
+    },
+    {
+      "id": "ufc_record",
+      "label": "UFC record",
+      "question": "Does the fighter with the better UFC record win?",
+      "basis": "point-in-time",
+      "note": "Win rate over UFC fights that had already happened, Laplace-smoothed. Rebuilt fight by fight — never the career total off the fighters table, which contains the result being scored.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 1828,
+            "wins": 1132,
+            "pct": 61.9,
+            "ci_lo": 59.7,
+            "ci_hi": 64.1
+          },
+          "even": {
+            "n": 169,
+            "wins": 96,
+            "pct": 56.8,
+            "ci_lo": 49.3,
+            "ci_hi": 64
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "8–15 point edge",
+          "all": {
+            "n": 1105,
+            "wins": 671,
+            "pct": 60.7,
+            "ci_lo": 57.8,
+            "ci_hi": 63.6
+          },
+          "even": {
+            "n": 120,
+            "wins": 65,
+            "pct": 54.2,
+            "ci_lo": 45.3,
+            "ci_hi": 62.8
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "15–25 point edge",
+          "all": {
+            "n": 622,
+            "wins": 387,
+            "pct": 62.2,
+            "ci_lo": 58.3,
+            "ci_hi": 65.9
+          },
+          "even": {
+            "n": 46,
+            "wins": 29,
+            "pct": 63,
+            "ci_lo": 48.6,
+            "ci_hi": 75.5
+          },
+          "verdict": "unproven"
+        },
+        {
+          "label": "25–40 point edge",
+          "all": {
+            "n": 97,
+            "wins": 71,
+            "pct": 73.2,
+            "ci_lo": 63.6,
+            "ci_hi": 81
+          },
+          "even": {
+            "n": 3,
+            "wins": 2,
+            "pct": 66.7,
+            "ci_lo": 20.8,
+            "ci_hi": 93.9
+          },
+          "verdict": "insufficient"
+        },
+        {
+          "label": "40+ point edge",
+          "all": {
+            "n": 4,
+            "wins": 3,
+            "pct": 75,
+            "ci_lo": 30.1,
+            "ci_hi": 95.4
+          },
+          "even": null,
+          "verdict": "insufficient"
+        }
+      ]
+    },
+    {
+      "id": "td_def",
+      "label": "Takedown defence",
+      "question": "Does the fighter with better takedown defence win?",
+      "basis": "point-in-time",
+      "note": "Takedowns stuffed as a share of takedowns faced, over prior fights only.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 2577,
+            "wins": 1409,
+            "pct": 54.7,
+            "ci_lo": 52.7,
+            "ci_hi": 56.6
+          },
+          "even": {
+            "n": 294,
+            "wins": 143,
+            "pct": 48.6,
+            "ci_lo": 43,
+            "ci_hi": 54.3
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "10–20 point edge",
+          "all": {
+            "n": 1028,
+            "wins": 546,
+            "pct": 53.1,
+            "ci_lo": 50.1,
+            "ci_hi": 56.1
+          },
+          "even": {
+            "n": 111,
+            "wins": 57,
+            "pct": 51.4,
+            "ci_lo": 42.2,
+            "ci_hi": 60.4
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "20–30 point edge",
+          "all": {
+            "n": 718,
+            "wins": 399,
+            "pct": 55.6,
+            "ci_lo": 51.9,
+            "ci_hi": 59.2
+          },
+          "even": {
+            "n": 83,
+            "wins": 42,
+            "pct": 50.6,
+            "ci_lo": 40.1,
+            "ci_hi": 61.1
+          },
+          "verdict": "unproven"
+        },
+        {
+          "label": "30+ point edge",
+          "all": {
+            "n": 831,
+            "wins": 464,
+            "pct": 55.8,
+            "ci_lo": 52.4,
+            "ci_hi": 59.2
+          },
+          "even": {
+            "n": 100,
+            "wins": 44,
+            "pct": 44,
+            "ci_lo": 34.7,
+            "ci_hi": 53.8
+          },
+          "verdict": "proxy"
+        }
+      ]
+    },
+    {
+      "id": "strike_volume",
+      "label": "Striking volume",
+      "question": "Does the busier striker win?",
+      "basis": "point-in-time",
+      "note": "Significant strikes landed per minute over prior fights only.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 2866,
+            "wins": 1541,
+            "pct": 53.8,
+            "ci_lo": 51.9,
+            "ci_hi": 55.6
+          },
+          "even": {
+            "n": 319,
+            "wins": 144,
+            "pct": 45.1,
+            "ci_lo": 39.8,
+            "ci_hi": 50.6
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "0.5–1.5 more per minute",
+          "all": {
+            "n": 1549,
+            "wins": 810,
+            "pct": 52.3,
+            "ci_lo": 49.8,
+            "ci_hi": 54.8
+          },
+          "even": {
+            "n": 165,
+            "wins": 78,
+            "pct": 47.3,
+            "ci_lo": 39.8,
+            "ci_hi": 54.9
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "1.5–3 more per minute",
+          "all": {
+            "n": 1035,
+            "wins": 583,
+            "pct": 56.3,
+            "ci_lo": 53.3,
+            "ci_hi": 59.3
+          },
+          "even": {
+            "n": 126,
+            "wins": 56,
+            "pct": 44.4,
+            "ci_lo": 36.1,
+            "ci_hi": 53.2
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "3+ more per minute",
+          "all": {
+            "n": 282,
+            "wins": 148,
+            "pct": 52.5,
+            "ci_lo": 46.7,
+            "ci_hi": 58.2
+          },
+          "even": {
+            "n": 28,
+            "wins": 10,
+            "pct": 35.7,
+            "ci_lo": 20.7,
+            "ci_hi": 54.2
+          },
+          "verdict": "unproven"
+        }
+      ]
+    },
+    {
+      "id": "finish_rate",
+      "label": "Finishing rate",
+      "question": "Does the fighter who finishes more often win?",
+      "basis": "point-in-time",
+      "note": "Share of prior UFC wins that came by KO/TKO or submission.",
+      "verdict": "proxy",
+      "buckets": [
+        {
+          "label": "Any gap (all fights it fires on)",
+          "headline": true,
+          "all": {
+            "n": 1544,
+            "wins": 779,
+            "pct": 50.5,
+            "ci_lo": 48,
+            "ci_hi": 52.9
+          },
+          "even": {
+            "n": 179,
+            "wins": 89,
+            "pct": 49.7,
+            "ci_lo": 42.5,
+            "ci_hi": 57
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "20–40 point edge",
+          "all": {
+            "n": 923,
+            "wins": 452,
+            "pct": 49,
+            "ci_lo": 45.8,
+            "ci_hi": 52.2
+          },
+          "even": {
+            "n": 100,
+            "wins": 51,
+            "pct": 51,
+            "ci_lo": 41.3,
+            "ci_hi": 60.6
+          },
+          "verdict": "proxy"
+        },
+        {
+          "label": "40–60 point edge",
+          "all": {
+            "n": 421,
+            "wins": 215,
+            "pct": 51.1,
+            "ci_lo": 46.3,
+            "ci_hi": 55.8
+          },
+          "even": {
+            "n": 59,
+            "wins": 28,
+            "pct": 47.5,
+            "ci_lo": 35.3,
+            "ci_hi": 60
+          },
+          "verdict": "unproven"
+        },
+        {
+          "label": "60+ point edge",
+          "all": {
+            "n": 200,
+            "wins": 112,
+            "pct": 56,
+            "ci_lo": 49.1,
+            "ci_hi": 62.7
+          },
+          "even": {
+            "n": 20,
+            "wins": 10,
+            "pct": 50,
+            "ci_lo": 29.9,
+            "ci_hi": 70.1
+          },
+          "verdict": "unproven"
+        }
+      ]
+    }
+  ]
+}

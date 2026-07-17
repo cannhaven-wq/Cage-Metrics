@@ -32,6 +32,14 @@ function previewSlug(aName, bName, fightId) {
   return `${slugify(aName)}-vs-${slugify(bName)}-${fightId}`;
 }
 
+// Plain-English agreement label for the two public models (Value + Fight IQ).
+// Handles the one-model case too (a fight only one model has graded).
+function modelAgreementLabel(agree, total) {
+  if (total <= 1) return '1 model';
+  if (agree === total) return total === 2 ? 'both models agree' : `all ${total} models agree`;
+  return `${agree} of ${total} models agree`;
+}
+
 // Render one preview page for a single fight. All params are optional except
 // `fight`, `fighterA`, `fighterB`. Missing fields fall back to neutral copy
 // so the page always renders something (no NaN%, no "null fights" etc.).
@@ -74,8 +82,9 @@ function matchupPreview({
     const pct = Math.round(avgP * 100);
     const agree = sortedSides[0][1];
     const total = validPicks.length;
-    verdictLine = `<strong>${escapeHtml(winner.name)}</strong> · ${pct}% confidence · ${agree}/${total} models agree`;
-    descVerdict = `Model verdict: ${winner.name} (${pct}%, ${agree}/${total} models). `;
+    const agreeLabel = modelAgreementLabel(agree, total);
+    verdictLine = `<strong>${escapeHtml(winner.name)}</strong> · ${pct}% confidence · ${agreeLabel}`;
+    descVerdict = `Model verdict: ${winner.name} (${pct}%, ${agreeLabel}). `;
   } else {
     verdictLine = `Verdict pending — model picks publish closer to fight night.`;
   }
@@ -149,7 +158,7 @@ function matchupPreview({
       'name': `Who wins ${fighterA.name} vs ${fighterB.name}?`,
       'acceptedAnswer': {
         '@type': 'Answer',
-        'text': `Cannon Fight Lab's model picks ${winnerName}. The verdict is generated from cardio score, takedown defense, and record-based factors validated against 8,000+ historical UFC fights.`
+        'text': `Cannon Fight Lab's models pick ${winnerName}. CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
       }
     }]
   } : null;

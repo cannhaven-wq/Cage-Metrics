@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Picks — Cannon Fight Lab</title>
-<meta name="description" content="This week's UFC moneyline picks from the Cannon Fight Lab models — the consensus bets the multi-model predictor flags as value, sized for your bankroll.">
+<meta name="description" content="This week's UFC picks from the CFL Value model — the fights where the model says the price is wrong, sized with Kelly stake math. Picks lock at first write. Most fights get no pick.">
 <link rel="canonical" href="https://cannonfightlab.com/picks.html">
 
 <meta name="theme-color" content="#0a0a0a">
@@ -51,6 +51,14 @@
   }
   .picks-hero .event strong { color: #fff; font-weight: 700; }
   .picks-hero .event .sep { margin: 0 8px; color: var(--text-3); }
+  .picks-hero .hero-note {
+    max-width: 740px;
+    margin: 16px auto 0;
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.65;
+  }
+  .picks-hero .hero-note strong { color: #fff; }
 
   /* -------- Track record strip -------- */
   .record-strip {
@@ -289,6 +297,22 @@
   }
   .pick-card .rationale .edge.neg { color: var(--red); }
 
+  /* -------- Fight IQ corroboration chip -------- */
+  .tape-chip {
+    display: inline-flex;
+    align-items: center;
+    font-family: 'Barlow Condensed', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+    letter-spacing: 0.06em;
+    line-height: 1.4;
+    white-space: nowrap;
+  }
+  .tape-chip.agree    { background: rgba(34, 197, 94, 0.14);  color: #86efac; border: 1px solid rgba(34, 197, 94, 0.40); }
+  .tape-chip.disagree { background: rgba(239, 68, 68, 0.12);  color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
+
   /* -------- Indicator chips (admin only; same look as predictor) -------- */
   .cfl-ind {
     display: inline-flex;
@@ -326,7 +350,7 @@
   .ind-clv_fade        { background: rgba(220, 38, 38, 0.16);  color: #fecaca; border: 1px solid rgba(220, 38, 38, 0.50);  }
   .ind-clv_fade .dot       { background: #ef4444; box-shadow: 0 0 5px rgba(239, 68, 68, 0.6); }
 
-  /* -------- Watch list (non-consensus fights) -------- */
+  /* -------- Watch list (fights with no pick) -------- */
   .watch-list {
     margin-top: 26px;
   }
@@ -350,7 +374,6 @@
   .watch-list .wl-row .matchup-line { color: var(--text-2); }
   .watch-list .wl-row .matchup-line .vs { color: var(--text-3); margin: 0 6px; }
   .watch-list .wl-row .note { color: var(--text-3); font-size: 11px; }
-  .watch-list .wl-row.has-single-bet .note { color: var(--amber); }
 
   /* -------- "Top pick" hero card (sits between record strip & list) -------- */
   .top-pick-wrap {
@@ -478,6 +501,7 @@
   }
   .top-pick .rationale .agree strong { color: #fff; }
   .top-pick .rationale .edge { color: var(--green); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .top-pick .rationale .edge.neg { color: var(--red); }
 
   /* -------- Empty / loading states -------- */
   .empty-state {
@@ -530,9 +554,15 @@
 <nav class="cfl-nav"></nav>
 
 <div class="picks-hero">
-  <div class="eyebrow">Model signals · research only</div>
+  <div class="eyebrow">The Value model · research only</div>
   <h1 id="picksHeroTitle">Loading this week's card…</h1>
   <div class="event" id="picksHeroEvent"></div>
+  <p class="hero-note">
+    Everything on this page comes from one model: <strong>Value</strong>, which hunts fights where the price is wrong.
+    Every pick is <strong>locked the moment it's first written</strong> — we never quietly re-price one.
+    Most fights get <strong>no pick</strong>: "no edge" is an answer, not a failure.
+    The record below is <strong>simulated</strong> on fights the model never trained on; the <strong>live record started July 2026</strong> and is 0-1 so far — the first settled bet lost, and it counts.
+  </p>
 </div>
 
 <div class="record-strip" id="recordStrip"></div>
@@ -566,15 +596,15 @@
   </div>
 
   <div class="picks-caveat">
-    <strong>This page is research, not advice.</strong> We run multiple models on every UFC fight. When 2+ models independently say the same fighter is mispriced by the opening line, we show it here along with the <strong>Kelly stake math</strong> — the formula that calculates an "optimal" stake size given a probability and a price. The number is what Kelly returns; whether you bet anything, and how much, is your call.<br><br>
-    The <strong>edge</strong> number is the gap between our model's win probability and what the market price implies. Bigger gap = the model thinks the market is more wrong. Track record above is from real graded picks at the consensus level. Real-world ROI is usually 30–60% lower than backtest once you account for slippage and book limits. <a href="predictor.html">Lab view</a> has the full breakdown if you want the receipts.<br><br>
+    <strong>This page is research, not advice.</strong> One model drives this page: <strong>Value</strong>. It prices every UFC fight on its own, then compares its number to the market. When its win probability beats the price by enough, the fight shows up here with the <strong>Kelly stake math</strong> — the formula that calculates an "optimal" stake size given a probability and a price. The number is what Kelly returns; whether you bet anything, and how much, is your call. A second model, <strong>Fight IQ</strong>, never sees a betting line — its chip on each pick tells you whether a pure tape read lands on the same fighter.<br><br>
+    The <strong>edge</strong> number is the gap between the model's win probability and what the price implies, measured against the best current price we track (opening line if no live price yet). Bigger gap = the model thinks the market is more wrong. The track record above is <strong>simulated</strong>: the model was frozen, then graded only on fights after its training cutoff — fights it had never seen. The live record started July 2026 and is 0-1 so far — the first settled bet lost. Simulated and live are labeled separately and always will be. Expect real-world results to run below simulation once slippage and book limits bite. <a href="track-record.html">The Proof Center</a> has the full breakdown if you want the receipts.<br><br>
     <strong>Not a tout service. Not financial advice. Don't bet money you can't afford to lose. If gambling is a problem, call 1-800-GAMBLER.</strong>
   </div>
 </div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('picks');
@@ -585,7 +615,14 @@ cfl.renderFooter();
   const escapeHtml = window.cfl.escapeHtml || (s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
   const fmtOdds = n => (n > 0 ? `+${n}` : `${n}`);
 
+  // The two public models. Value (v6) is the only model that generates picks,
+  // stakes, and P&L on this page. Fight IQ (v3) never sees a betting line and
+  // appears only as a corroboration chip on each pick.
+  const VALUE_ID = 'v6';
+  const TAPE_ID = 'v3';
+
   // ---- Indicator metadata (admin-only chips on cards) ----
+  // Names only — this page computes no indicator-level ROI, so it shows none.
   const INDICATOR_LABEL = {
     PREMIUM: 'PREMIUM', CLV_AGREE: 'CLV AGREE',
     HIGH_CONVICTION: 'HIGH CONVICTION', YOUNG_DOG: 'YOUNG DOG', BALANCED: 'BALANCED',
@@ -596,16 +633,16 @@ cfl.renderFooter();
     STANCE_AVOID: -40, AVOID_SUB_LOSS: -50, CLV_FADE: -70,
   };
   const INDICATOR_TITLE = {
-    PREMIUM: 'Edge ≥ 0.20 · younger dog · coming off W (+63.5% backtest ROI)',
-    CLV_AGREE: 'Closing line moved ≥+2% toward pick — sharp money agreed (+28% historical ROI)',
-    HIGH_CONVICTION: 'Edge ≥ 0.20 (+18.6% backtest ROI)',
-    YOUNG_DOG: 'Edge ≥ 0.20 · younger dog (+47.8% backtest ROI)',
-    BALANCED: 'Edge ≥ 0.15 · ≤+250 · younger (+28.6% backtest ROI)',
-    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite (−35.5% ROI)',
-    AVOID_SUB_LOSS: 'Anti-filter — dog coming off a submission loss (−35% ROI)',
-    CLV_FADE: 'Anti-filter — closing line moved against pick (−44% ROI)',
+    PREMIUM: 'Edge ≥ 0.20 · younger dog · coming off a win',
+    CLV_AGREE: 'Closing line moved toward the pick — sharp money agreed',
+    HIGH_CONVICTION: 'Edge ≥ 0.20',
+    YOUNG_DOG: 'Edge ≥ 0.20 · younger dog',
+    BALANCED: 'Edge ≥ 0.15 · ≤+250 · younger',
+    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite',
+    AVOID_SUB_LOSS: 'Anti-filter — dog coming off a submission loss',
+    CLV_FADE: 'Anti-filter — closing line moved against the pick',
   };
-  // Indicators that disqualify a pick from the consensus block on this page.
+  // Indicators that disqualify a pick from the pick cards on this page.
   // Picks with any of these firing get demoted to the watch list with the
   // reason shown — see renderEvents.
   const ANTI_FILTERS = new Set(['STANCE_AVOID', 'AVOID_SUB_LOSS', 'CLV_FADE']);
@@ -619,11 +656,12 @@ cfl.renderFooter();
     }
   } catch {}
 
-  // ---- Pull predictions across all models ----
+  // ---- Pull predictions for the public models only ----
   // We want both graded (for track record) and upcoming (for picks).
-  const { data: models, error: mErr } = await sb.from('model_versions').select('id,name').order('id');
-  if (mErr || !models?.length) {
-    document.getElementById('picksList').innerHTML = `<div class="empty-state">No models trained yet. Check back after the next training run.</div>`;
+  const { data: modelRows, error: mErr } = await sb.from('model_versions').select('id,name,test_start_date').order('id');
+  const models = (modelRows || []).filter(m => (cfl.PUBLIC_MODELS || []).includes(m.id));
+  if (mErr || !models.length || !models.some(m => m.id === VALUE_ID)) {
+    document.getElementById('picksList').innerHTML = `<div class="empty-state">The Value model isn't trained yet. Check back after the next training run.</div>`;
     return;
   }
   const versionIds = models.map(m => m.id);
@@ -635,16 +673,24 @@ cfl.renderFooter();
       .order('event_date', { ascending: false })
   );
 
-  // ---- Track record: consensus picks (2+ models would_bet same side), graded only ----
-  const consensusGraded = computeConsensusPicks(allPreds.filter(r => r.outcome_known));
-  const totalBets = consensusGraded.length;
-  const wins = consensusGraded.filter(p => p.won).length;
-  const pnl = consensusGraded.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
+  // ---- Track record: Value model only, honest out-of-sample window ----
+  // cfl.modelWindowStart returns the LATER of the DB test_start_date and the
+  // day after the model's training cutoff, so a stale DB row can never widen
+  // the window back into training data.
+  const v6Meta = models.find(m => m.id === VALUE_ID);
+  const windowStart = cfl.modelWindowStart(VALUE_ID, (v6Meta && v6Meta.test_start_date) || '2025-01-01');
+  const graded = allPreds.filter(r =>
+    r.model_version === VALUE_ID && r.would_bet && r.outcome_known &&
+    (!windowStart || (r.event_date && r.event_date >= windowStart))
+  );
+  const totalBets = graded.length;
+  const wins = graded.filter(p => p.won).length;
+  const pnl = graded.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
   const roi = totalBets ? (100 * pnl / (totalBets * 100)) : 0;
 
   // Recent (last 60 days) for "trending" KPI
   const cutoff = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
-  const recent = consensusGraded.filter(p => p.event_date >= cutoff);
+  const recent = graded.filter(p => p.event_date >= cutoff);
   const recentWins = recent.filter(p => p.won).length;
   const recentPnl = recent.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
   const recentRoi = recent.length ? (100 * recentPnl / (recent.length * 100)) : 0;
@@ -675,14 +721,37 @@ cfl.renderFooter();
     return tags[0] || null;
   }
 
-  // ---- Find the next upcoming event(s) with picks ----
+  // ---- Find the next upcoming event(s) ----
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = allPreds.filter(p => !p.outcome_known && p.event_date >= today);
   if (!upcoming.length) {
     document.getElementById('picksHeroTitle').textContent = 'No upcoming picks yet';
     document.getElementById('picksHeroEvent').textContent = 'Predictions populate after the next training run.';
-    document.getElementById('picksList').innerHTML = `<div class="empty-state">No upcoming picks available. The models retrain after each event; check back in a few hours.</div>`;
+    document.getElementById('picksList').innerHTML = `<div class="empty-state">No upcoming fights scored yet. The model scores each card once matchups and opening lines land; check back in a few hours.</div>`;
     return;
+  }
+
+  // Fight IQ (tape-only) rows for the corroboration chip, keyed by fight.
+  const tapeByFight = {};
+  for (const r of upcoming) {
+    if (r.model_version === TAPE_ID) {
+      (tapeByFight[r.fight_id] = tapeByFight[r.fight_id] || []).push(r);
+    }
+  }
+  // Returns true (tape agrees), false (tape disagrees), or null (no tape read).
+  function tapeVerdict(fightId, pickedFighterId) {
+    const rows = tapeByFight[fightId] || [];
+    if (!rows.length) return null;
+    const same = rows.find(r => r.fighter_id === pickedFighterId && r.model_p != null);
+    if (same) return same.model_p >= 0.5;
+    const other = rows.find(r => r.fighter_id !== pickedFighterId && r.model_p != null);
+    if (other) return other.model_p < 0.5;
+    return null;
+  }
+  function tapeChipHtml(tape) {
+    if (tape === true) return `<span class="tape-chip agree" title="Fight IQ — our tape-only model, which never sees a betting line — independently favors the same fighter.">Tape agrees ✓</span>`;
+    if (tape === false) return `<span class="tape-chip disagree" title="Fight IQ — our tape-only model, which never sees a betting line — leans the other way on this one.">Tape disagrees ✕</span>`;
+    return '';
   }
 
   // Resolve fight + fighter + event names + LIVE consensus odds. The picks
@@ -738,12 +807,12 @@ cfl.renderFooter();
     const date = formatDate(heroEv.event_date);
     const loc = heroEv.location ? `<span class="sep">·</span>${escapeHtml(heroEv.location)}` : '';
     const eventFights = Object.values(events[0].fights);
-    const eventConsensus = countConsensusForEvent(eventFights);
-    const consensusFrag = eventConsensus > 0
-      ? `<span class="sep">·</span><strong>${eventConsensus} consensus pick${eventConsensus === 1 ? '' : 's'}</strong>`
-      : `<span class="sep">·</span>no consensus picks this card`;
+    const nPicks = countPicksForEvent(eventFights);
+    const picksFrag = nPicks > 0
+      ? `<span class="sep">·</span><strong>${nPicks} pick${nPicks === 1 ? '' : 's'}</strong>`
+      : `<span class="sep">·</span>no picks — the model found no edge on this card`;
     document.getElementById('picksHeroEvent').innerHTML =
-      `<strong>${escapeHtml(date)}</strong>${loc}${consensusFrag}`;
+      `<strong>${escapeHtml(date)}</strong>${loc}${picksFrag}`;
   }
 
   // ---- Render ----
@@ -752,40 +821,37 @@ cfl.renderFooter();
 
   // ====================== helpers ======================
 
-  function computeConsensusPicks(rows) {
-    // Group by fight_id+side; require would_bet=true on 2+ different models for same side.
-    const byFightSide = {};
-    for (const r of rows) {
-      if (!r.would_bet) continue;
-      const k = `${r.fight_id}|${r.side}`;
-      (byFightSide[k] = byFightSide[k] || []).push(r);
+  // The single source of truth for what this page calls a pick: the Value
+  // model's would_bet row for a fight. Everything downstream (stake, edge,
+  // P&L framing) comes from that one row. Fight IQ only corroborates.
+  function computePick(f) {
+    const v6Rows = f.rows.filter(r => r.model_version === VALUE_ID);
+    const betRows = v6Rows.filter(r => r.would_bet);
+    if (!betRows.length) {
+      return { fight: f, scored: v6Rows.length > 0, pick: null };
     }
-    const out = [];
-    for (const k in byFightSide) {
-      const arr = byFightSide[k];
-      const models = new Set(arr.map(r => r.model_version));
-      if (models.size < 2) continue;
-      // Use the first row's outcome (they all share fight_id and same outcome)
-      const r0 = arr[0];
-      out.push({
-        fight_id: r0.fight_id,
-        fighter_id: r0.fighter_id,
-        side: r0.side,
-        event_date: r0.event_date,
-        won: r0.won,
-        pnl_usd: r0.pnl_usd,
-        models: [...models].sort(),
-      });
-    }
-    return out;
+    const r = betRows.reduce((a, b) => (((b.edge || 0) > (a.edge || 0)) ? b : a));
+    const cm = currentMarket(f.fight_id, r.side);
+    const displayOdds = cm.american ?? r.opener_american_odds;
+    const marketP = cm.implied ?? r.opener_implied_p;
+    const edge = marketP != null ? (r.model_p - marketP) : (r.edge || 0);
+    const allInds = fightSideIndicators(f.fight_id, r.fighter_id);
+    const antiFilters = allInds.filter(t => ANTI_FILTERS.has(t));
+    const top = topIndicator(f.fight_id, r.fighter_id);
+    const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
+    return {
+      fight: f, scored: true, pick: r,
+      pickedFighter: r.fighter_id, side: r.side, modelP: r.model_p,
+      displayOdds, marketP, edge,
+      tape: tapeVerdict(f.fight_id, r.fighter_id),
+      top, pri, antiFilters,
+    };
   }
 
-  function countConsensusForEvent(eventFights) {
+  function countPicksForEvent(eventFights) {
     let n = 0;
     for (const f of eventFights) {
-      const votes = { A: new Set(), B: new Set() };
-      f.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
-      if (votes.A.size >= 2 || votes.B.size >= 2) n++;
+      if (f.rows.some(r => r.model_version === VALUE_ID && r.would_bet)) n++;
     }
     return n;
   }
@@ -793,6 +859,8 @@ cfl.renderFooter();
   function decimalOdds(american) {
     return american < 0 ? 1 + (100 / Math.abs(american)) : 1 + (american / 100);
   }
+  // Kelly runs on the Value model's own win probability — never an average
+  // with Fight IQ, which exists to corroborate, not to size bets.
   function kellyStake(modelP, american, bankroll, frac, maxFrac) {
     if (modelP == null || modelP <= 0 || modelP >= 1) return 0;
     const d = decimalOdds(american);
@@ -815,14 +883,14 @@ cfl.renderFooter();
     const recentRoiClass = recentRoi > 0 ? 'pos' : (recentRoi < 0 ? 'neg' : '');
     el.innerHTML = `
       <div class="kpi">
-        <div class="lbl">Total picks</div>
+        <div class="lbl">Graded picks — never-seen fights</div>
         <div class="val">${totalBets.toLocaleString()}</div>
-        <div class="sub">${wins} wins · ${(100*wins/Math.max(totalBets,1)).toFixed(1)}% hit</div>
+        <div class="sub">${wins} wins · ${(100*wins/Math.max(totalBets,1)).toFixed(1)}% correct (simulated · live record since Jul 2026)</div>
       </div>
       <div class="kpi">
-        <div class="lbl">All-time ROI</div>
+        <div class="lbl">Return on $100 flat stakes</div>
         <div class="val ${roiClass}">${roi >= 0 ? '+' : ''}${roi.toFixed(1)}%</div>
-        <div class="sub">on $100 flat stakes</div>
+        <div class="sub">${pnl >= 0 ? '+' : '−'}$${Math.abs(Math.round(pnl)).toLocaleString()} at the locked price</div>
       </div>
       <div class="kpi">
         <div class="lbl">Last 60 days</div>
@@ -830,64 +898,46 @@ cfl.renderFooter();
         <div class="sub">${recentWins} wins</div>
       </div>
       <div class="kpi">
-        <div class="lbl">Recent ROI</div>
+        <div class="lbl">Recent return</div>
         <div class="val ${recentRoiClass}">${recent ? (recentRoi >= 0 ? '+' : '') + recentRoi.toFixed(1) + '%' : '—'}</div>
         <div class="sub">last 60 days</div>
       </div>
     `;
   }
 
-  // -------- Top Pick (the "lock of the card") --------
-  // Picks the highest-priority consensus pick on the SOONEST upcoming event,
-  // skipping any with an anti-filter firing. Renders a big hero card.
+  // -------- Top Pick (the strongest edge on the soonest card) --------
+  // Highest-priority (admins see indicator tiers; everyone else gets highest
+  // edge) Value-model pick on the SOONEST upcoming event, skipping any with
+  // an anti-filter firing. Renders a big hero card.
   function renderTopPick(events, bankroll, kFrac, maxFrac) {
     const wrap = document.getElementById('topPickWrap');
     if (!wrap) return;
     if (!events || !events.length) { wrap.innerHTML = ''; return; }
     const ev = events[0];
     let best = null;
-    let bestPri = -Infinity;
     for (const fr of Object.values(ev.fights)) {
-      const votes = { A: new Set(), B: new Set() };
-      fr.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
-      const consensusSide = votes.A.size >= 2 ? 'A' : (votes.B.size >= 2 ? 'B' : null);
-      if (!consensusSide) continue;
-      const consensusRows = fr.rows.filter(r => r.would_bet && r.side === consensusSide);
-      const pickedFighter = consensusRows[0]?.fighter_id;
-      const inds = fightSideIndicators(fr.fight_id, pickedFighter);
-      if (inds.some(t => ANTI_FILTERS.has(t))) continue;
-      const top = topIndicator(fr.fight_id, pickedFighter);
-      const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 30;
-      if (pri > bestPri) {
-        bestPri = pri;
-        best = { ev, fr, consensusSide, consensusRows, pickedFighter, top, inds };
-      }
+      const x = computePick(fr);
+      if (!x.pick || x.antiFilters.length) continue;
+      if (!best || x.pri > best.pri || (x.pri === best.pri && x.edge > best.edge)) best = x;
     }
     if (!best) { wrap.innerHTML = ''; return; }
-    const f = fightMap[best.fr.fight_id] || {};
+    const f = fightMap[best.fight.fight_id] || {};
     const pickName = fighterMap[best.pickedFighter] || `Fighter ${best.pickedFighter}`;
     const oppName = (f.fighter_a_id === best.pickedFighter) ? f.fighter_b_name : f.fighter_a_name;
-    const cm = currentMarket(best.fr.fight_id, best.consensusSide);
-    const displayOdds = cm.american ?? best.consensusRows[0]?.opener_american_odds;
-    const marketP     = cm.implied  ?? best.consensusRows[0]?.opener_implied_p;
-    const avgModelP = best.consensusRows.reduce((s, r) => s + r.model_p, 0) / best.consensusRows.length;
-    const avgEdge   = marketP != null
-      ? (avgModelP - marketP)
-      : (best.consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / best.consensusRows.length);
-    const stake     = displayOdds ? kellyStake(avgModelP, displayOdds, bankroll, kFrac, maxFrac) : 0;
+    const stake     = best.displayOdds ? kellyStake(best.modelP, best.displayOdds, bankroll, kFrac, maxFrac) : 0;
     const stakeStr  = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
-    const toWin     = (displayOdds && stake > 0)
-      ? Math.round(displayOdds < 0 ? stake * (100 / Math.abs(displayOdds)) : stake * (displayOdds / 100))
+    const toWin     = (best.displayOdds && stake > 0)
+      ? Math.round(best.displayOdds < 0 ? stake * (100 / Math.abs(best.displayOdds)) : stake * (best.displayOdds / 100))
       : 0;
     const indChip = (isAdmin && best.top && (INDICATOR_PRIORITY[best.top] ?? 0) > 0)
       ? `<span class="cfl-ind ind-${best.top.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[best.top] || best.top)}"><span class="dot"></span>${INDICATOR_LABEL[best.top] || escapeHtml(best.top)}</span>`
       : '';
-    const tagLabel = bestPri >= 100 ? 'STRONGEST SIGNAL · S-TIER'
-                    : bestPri >= 80 ? 'STRONGEST SIGNAL · A-TIER'
-                    : bestPri >= 60 ? 'STRONGEST SIGNAL · B-TIER'
-                    : 'STRONGEST CONSENSUS';
-    const modelsStr = best.consensusRows.map(r => r.model_version).sort().join(' + ');
-    const evDate = formatDate(best.ev.event?.event_date || '');
+    const tagLabel = best.pri >= 100 ? 'STRONGEST SIGNAL · S-TIER'
+                    : best.pri >= 80 ? 'STRONGEST SIGNAL · A-TIER'
+                    : best.pri >= 60 ? 'STRONGEST SIGNAL · B-TIER'
+                    : 'STRONGEST EDGE ON THE CARD';
+    const evDate = formatDate(best.ev?.event?.event_date || ev.event?.event_date || '');
+    const edgeSign = best.edge >= 0 ? '+' : '';
 
     wrap.innerHTML = `
       <div class="top-pick">
@@ -897,10 +947,10 @@ cfl.renderFooter();
           <div>
             <div class="name">${escapeHtml(pickName)}</div>
             <div class="meta">
-              <span class="odds-pill">${displayOdds != null ? fmtOdds(displayOdds) : '—'}</span>
-              <span>Our take <strong style="color:#fff;">${(avgModelP*100).toFixed(0)}%</strong></span>
-              <span>Market <strong style="color:#fff;">${marketP != null ? (marketP*100).toFixed(0)+'%' : '—'}</strong></span>
-              <span class="edge" style="color:var(--green); font-weight:700;">+${(avgEdge*100).toFixed(1)}% edge</span>
+              <span class="odds-pill">${best.displayOdds != null ? fmtOdds(best.displayOdds) : '—'}</span>
+              <span>Our take <strong style="color:#fff;">${(best.modelP*100).toFixed(0)}%</strong></span>
+              <span>Market <strong style="color:#fff;">${best.marketP != null ? (best.marketP*100).toFixed(0)+'%' : '—'}</strong></span>
+              <span class="edge ${best.edge < 0 ? 'neg' : ''}">${edgeSign}${(best.edge*100).toFixed(1)}% edge</span>
             </div>
           </div>
           <div class="payout">
@@ -910,8 +960,9 @@ cfl.renderFooter();
           </div>
         </div>
         <div class="rationale">
-          <span class="agree"><strong>${modelsStr}</strong> agree</span>
-          <span>${best.consensusRows.length} of 4 models flagged this as a value play.</span>
+          <span class="agree"><strong>Value</strong> model pick</span>
+          ${tapeChipHtml(best.tape)}
+          <span>Locked at first write — never re-priced.</span>
         </div>
       </div>
     `;
@@ -961,49 +1012,20 @@ cfl.renderFooter();
       const evName = ev.event?.name || 'Upcoming card';
       const evLoc = ev.event?.location || '';
 
-      // Compute consensus + priority per fight
-      const fightsWithMeta = evFights.map(f => {
-        const votes = { A: new Set(), B: new Set() };
-        f.rows.forEach(r => { if (r.would_bet) votes[r.side]?.add(r.model_version); });
-        let consensusSide = null;
-        if (votes.A.size >= 2) consensusSide = 'A';
-        else if (votes.B.size >= 2) consensusSide = 'B';
-        return { fight: f, consensusSide, votes };
-      });
-      // Build enriched consensus list, splitting anti-filtered picks into the
-      // demoted set. Each consensus side gets evaluated for any firing anti-
-      // filter; if one fires, the fight gets pushed to the watch list instead
-      // of getting a big pick card.
-      const consensusAll = fightsWithMeta
-        .filter(x => x.consensusSide)
-        .map(x => {
-          const consensusRows = x.fight.rows.filter(r => r.would_bet && r.side === x.consensusSide);
-          const avgModelP = consensusRows.reduce((s, r) => s + r.model_p, 0) / Math.max(consensusRows.length, 1);
-          const pickedFighter = consensusRows[0]?.fighter_id;
-          const cm = currentMarket(x.fight.fight_id, x.consensusSide);
-          const displayOdds = cm.american ?? consensusRows[0]?.opener_american_odds;
-          const marketP     = cm.implied  ?? consensusRows[0]?.opener_implied_p;
-          const avgEdge = marketP != null
-            ? (avgModelP - marketP)
-            : (consensusRows.reduce((s, r) => s + (r.edge || 0), 0) / Math.max(consensusRows.length, 1));
-          const allInds = fightSideIndicators(x.fight.fight_id, pickedFighter);
-          const triggered = allInds.filter(t => ANTI_FILTERS.has(t));
-          const top = topIndicator(x.fight.fight_id, pickedFighter);
-          const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
-          return { ...x, consensusRows, avgEdge, avgModelP, pickedFighter, displayOdds, marketP, top, pri, antiFilters: triggered };
-        });
-      const consensusFights = consensusAll
-        .filter(x => x.antiFilters.length === 0)
-        .sort((a, b) => (b.pri - a.pri) || (b.avgEdge - a.avgEdge));
-      const demotedFights = consensusAll.filter(x => x.antiFilters.length > 0);
-      const watchListRaw = fightsWithMeta.filter(x => !x.consensusSide);
+      // One meta object per fight, all driven by the Value model's rows.
+      const metas = evFights.map(computePick);
+      const pickFights = metas
+        .filter(x => x.pick && x.antiFilters.length === 0)
+        .sort((a, b) => (b.pri - a.pri) || (b.edge - a.edge));
+      const demotedFights = metas.filter(x => x.pick && x.antiFilters.length > 0);
+      const watchListRaw = metas.filter(x => !x.pick);
 
-      const consensusFrags = consensusFights.map(x => renderPickCard(x, bankroll, kFrac, maxFrac, fightMap, fighterMap));
-      const watchFrag = renderWatchList(watchListRaw, demotedFights, fightMap, fighterMap);
+      const pickFrags = pickFights.map(x => renderPickCard(x, bankroll, kFrac, maxFrac));
+      const watchFrag = renderWatchList(watchListRaw, demotedFights);
 
-      const consensusEmpty = consensusFights.length === 0
-        ? `<div class="empty-state">No consensus picks survive the anti-filters on this card. ${demotedFights.length ? 'Demoted picks visible in the watch list.' : 'Shop watch-list below.'}</div>`
-        : consensusFrags.join('');
+      const picksBlock = pickFights.length === 0
+        ? `<div class="empty-state">No picks on this card — the model found no edge at the prices we track. That's an answer, not a glitch.${demotedFights.length ? ' Demoted picks visible in the watch list.' : ''}</div>`
+        : pickFrags.join('');
 
       rendered.push(`
         <div class="event-section">
@@ -1013,10 +1035,10 @@ cfl.renderFooter();
               ${escapeHtml(formatDate(evDate))}
               ${evLoc ? `<span class="sep">·</span>${escapeHtml(evLoc)}` : ''}
               <span class="sep">·</span>${evFights.length} fight${evFights.length === 1 ? '' : 's'}
-              ${consensusFights.length ? `<span class="sep">·</span>${consensusFights.length} consensus` : ''}
+              ${pickFights.length ? `<span class="sep">·</span>${pickFights.length} pick${pickFights.length === 1 ? '' : 's'}` : ''}
             </div>
           </div>
-          ${consensusEmpty}
+          ${picksBlock}
           ${watchFrag}
         </div>
       `);
@@ -1025,11 +1047,11 @@ cfl.renderFooter();
     document.getElementById('picksList').innerHTML = rendered.join('');
   }
 
-  function renderPickCard(x, bankroll, kFrac, maxFrac, fightMap, fighterMap) {
+  function renderPickCard(x, bankroll, kFrac, maxFrac) {
     const f = fightMap[x.fight.fight_id] || {};
     const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
     const pickName = fighterMap[x.pickedFighter] || `Fighter ${x.pickedFighter}`;
-    const stake = x.displayOdds ? kellyStake(x.avgModelP, x.displayOdds, bankroll, kFrac, maxFrac) : 0;
+    const stake = x.displayOdds ? kellyStake(x.modelP, x.displayOdds, bankroll, kFrac, maxFrac) : 0;
     const stakeStr = stake > 0 ? `$${Math.round(stake).toLocaleString()}` : '—';
     const stakePct = bankroll > 0 ? (100 * stake / bankroll).toFixed(1) : '0.0';
     const cardClass = x.top === 'PREMIUM' ? 'premium'
@@ -1043,9 +1065,8 @@ cfl.renderFooter();
     const indFrags = (isAdmin && inds.length)
       ? inds.map(t => `<span class="cfl-ind ind-${t.toLowerCase()}" title="${escapeHtml(INDICATOR_TITLE[t] || t)}"><span class="dot"></span>${INDICATOR_LABEL[t] || escapeHtml(t)}</span>`).join(' ')
       : '';
-    const modelsStr = x.consensusRows.map(r => r.model_version).sort().join(' + ');
-    const edgePct = (x.avgEdge * 100).toFixed(1);
-    const modelProb = (x.avgModelP * 100).toFixed(1);
+    const edgePct = (x.edge * 100).toFixed(1);
+    const modelProb = (x.modelP * 100).toFixed(1);
     const marketProb = x.marketP != null ? (x.marketP * 100).toFixed(1) : '—';
     return `
       <div class="pick-card ${cardClass}">
@@ -1062,18 +1083,22 @@ cfl.renderFooter();
           </div>
         </div>
         <div class="rationale">
-          <span class="agree"><strong>${modelsStr}</strong> agree</span>
-          <span>Our take <strong style="color:#fff;">${modelProb}%</strong> · Market <strong style="color:#fff;">${marketProb}%</strong> · <span class="edge ${x.avgEdge < 0 ? 'neg' : ''}">${x.avgEdge >= 0 ? '+' : ''}${edgePct}% edge</span></span>
+          <span class="agree"><strong>Value</strong> pick</span>
+          <span>Our take <strong style="color:#fff;">${modelProb}%</strong> · Market <strong style="color:#fff;">${marketProb}%</strong> · ${x.edge >= 0
+            ? `<span class="edge">+${edgePct}% edge</span>`
+            : `<span class="edge neg">line moved — edge gone at today's price (${edgePct}%)</span>`}</span>
+          ${tapeChipHtml(x.tape)}
           ${indFrags}
         </div>
+        ${x.edge < 0 ? `<div class="rationale" style="margin-top:4px;"><span style="color:var(--text-3);font-size:12px;">This pick was locked when the price offered an edge. The market has since moved past our number — the record grades it at the locked price, but there's no value left at today's line.</span></div>` : ''}
       </div>
     `;
   }
 
-  function renderWatchList(watchList, demoted, fightMap, fighterMap) {
+  function renderWatchList(watchList, demoted) {
     if (!watchList.length && !demoted.length) return '';
 
-    // Demoted consensus picks (anti-filter fired)
+    // Demoted picks (anti-filter fired; admin-only signal)
     const demotedRows = demoted.map(x => {
       const f = fightMap[x.fight.fight_id] || {};
       const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
@@ -1089,21 +1114,15 @@ cfl.renderFooter();
       `;
     }).join('');
 
-    // Non-consensus fights
+    // Fights with no pick — "no edge" is an answer.
     const watchRows = watchList.map(x => {
       const f = fightMap[x.fight.fight_id] || {};
       const matchup = `${escapeHtml(f.fighter_a_name || '?')}<span class="vs">vs</span>${escapeHtml(f.fighter_b_name || '?')}`;
-      const singleBets = x.fight.rows.filter(r => r.would_bet);
-      const hasSingle = singleBets.length > 0;
-      let note = '<span class="note">no model flagged</span>';
-      if (hasSingle) {
-        const singleSide = singleBets[0].side;
-        const sideName = singleSide === 'A' ? (f.fighter_a_name || '?') : (f.fighter_b_name || '?');
-        const versions = [...new Set(singleBets.map(r => r.model_version))].sort().join(', ');
-        note = `<span class="note">single model: ${escapeHtml(versions)} on <strong style="color:var(--amber);">${escapeHtml(sideName)}</strong></span>`;
-      }
+      const note = x.scored
+        ? '<span class="note">no edge — the price looks fair to the model</span>'
+        : '<span class="note">not scored by the model</span>';
       return `
-        <div class="wl-row ${hasSingle ? 'has-single-bet' : ''}">
+        <div class="wl-row">
           <div class="matchup-line">${matchup}</div>
           ${note}
         </div>
@@ -1114,7 +1133,7 @@ cfl.renderFooter();
       ? `<div class="wl-title" style="color:#f87171;">Filtered out — anti-signal fired on these</div>${demotedRows}`
       : '';
     const watchBlock = watchRows
-      ? `<div class="wl-title" style="margin-top:${demotedRows ? '18px' : '0'};">Other fights on the card — no model consensus</div>${watchRows}`
+      ? `<div class="wl-title" style="margin-top:${demotedRows ? '18px' : '0'};">Other fights on the card — no pick</div>${watchRows}`
       : '';
 
     return `

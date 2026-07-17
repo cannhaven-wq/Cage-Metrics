@@ -47,6 +47,14 @@ function formatLongDate(isoDate) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
+// Plain-English agreement label for the two public models (Value + Fight IQ).
+// Handles the one-model case too (a fight only one model has graded).
+function modelAgreementLabel(agree, total) {
+  if (total <= 1) return '1 model';
+  if (agree === total) return total === 2 ? 'both models' : `all ${total} models`;
+  return `${agree} of ${total} models`;
+}
+
 async function findNextEvent() {
   const t = todayUTC();
   const { data, error } = await sb
@@ -74,7 +82,10 @@ async function buildVerdictLines(event) {
   const [predsR, cardioR] = await Promise.all([
     sb.from('model_predictions')
       .select('model_version, fight_id, fighter_id, model_p')
-      .in('fight_id', fightIds),
+      .in('fight_id', fightIds)
+      // Public models only. Node script — window.cfl doesn't exist here, so
+      // the list is hardcoded. Source of truth: cfl.PUBLIC_MODELS in _shared.js.
+      .in('model_version', ['v6', 'v3']),
     sb.from('v_fighter_consistency')
       .select('fighter_id, weight_class, cardio_tier')
       .in('fighter_id', fighterIds)
@@ -120,6 +131,7 @@ async function buildVerdictLines(event) {
       pct: Math.round(avg * 100),
       agree: sorted[0][1],
       total: versions.length,
+      agreeLabel: modelAgreementLabel(sorted[0][1], versions.length),
       note
     });
   }
@@ -138,7 +150,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
         ${l.flag ? ` <span style="color:#e63946;font-size:11px;font-weight:700;letter-spacing:1px;">[${l.flag}]</span>` : ''}
       </td>
       <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#fff;font-weight:600;">${escHtml(l.pickName)}</td>
-      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#bbb;white-space:nowrap;">${l.pct}% <span style="color:#777;">(${l.agree}/${l.total})</span></td>
+      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#bbb;white-space:nowrap;">${l.pct}% <span style="color:#777;">(${l.agreeLabel})</span></td>
     </tr>
     ${l.note ? `<tr><td colspan="3" style="padding:0 8px 10px;color:#999;font-size:13px;font-style:italic;border-bottom:1px solid #2a2a2a;">↳ ${escHtml(l.note)}</td></tr>` : ''}
   `).join('');
@@ -212,7 +224,7 @@ function renderText({ event, lines, unsubscribeToken }) {
   for (const l of lines) {
     const flag = l.flag ? ` [${l.flag}]` : '';
     out.push(`  ${l.aName} vs ${l.bName}${flag}`);
-    out.push(`    → ${l.pickName} (${l.pct}%, ${l.agree}/${l.total} models)`);
+    out.push(`    → ${l.pickName} (${l.pct}%, ${l.agreeLabel})`);
     if (l.note) out.push(`    ↳ ${l.note}`);
     out.push('');
   }

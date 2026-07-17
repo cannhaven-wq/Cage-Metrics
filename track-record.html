@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>Verified UFC Model Track Record — Cannon Fight Lab</title>
-<meta name="description" content="Every CFL model pick graded in public: accuracy by year, calibration, favorites vs underdogs, and ROI on flat $100 bets. Picks are locked before events and never edited.">
+<meta name="description" content="Every CFL pick graded in public — simulated record labeled as simulated, live record since July 2026, misses included. Accuracy, calibration, and ROI at the opening line.">
 <meta name="keywords" content="UFC prediction track record, verified UFC model accuracy, MMA betting model ROI, UFC model calibration">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -16,12 +16,12 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
-<meta property="og:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too. Locked before events, never edited after.">
+<meta property="og:description" content="Every pick graded in public — simulated record labeled as simulated, live record since July 2026, misses included.">
 <meta property="og:url" content="https://cannonfightlab.com/track-record.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Verified UFC Model Track Record — Cannon Fight Lab">
-<meta name="twitter:description" content="Every pick graded in public — accuracy, calibration, ROI, and the misses too.">
+<meta name="twitter:description" content="Every pick graded in public — simulated record labeled as simulated, live record since July 2026, misses included.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <meta name="theme-color" content="#08090b">
@@ -80,8 +80,17 @@
 #proof .window-note { font-size: 12px; color: var(--text-3); margin: 8px 0 14px; line-height: 1.5; }
 #proof .window-note strong { color: var(--text-2); }
 
+/* Two-state record banner */
+#proof .rec-banner { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+#proof .rec-banner .rb { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+#proof .rec-banner .rb.sim { border-left: 3px solid var(--text-3); }
+#proof .rec-banner .rb.live { border-left: 3px solid var(--green); }
+#proof .rec-banner .rb .t { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
+#proof .rec-banner .rb .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; font-variant-numeric: tabular-nums; }
+#proof .rec-banner .rb .d { font-size: 12px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
+
 /* KPI strip */
-#proof .kpis { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; }
+#proof .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 #proof .kpi { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
 #proof .kpi .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
 #proof .kpi .v.good { color: var(--green); }
@@ -164,6 +173,7 @@
 @media (max-width: 900px) {
   #proof h1 { font-size: 36px; }
   #proof .kpis { grid-template-columns: repeat(2, 1fr); }
+  #proof .rec-banner { grid-template-columns: 1fr; }
   #proof .grid-2 { grid-template-columns: 1fr; }
   #proof td, #proof th { white-space: normal; }
 }
@@ -183,7 +193,7 @@
     <div class="updated" id="lastUpdated">Loading latest data…</div>
     <div class="pledge">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <div class="tx"><strong>Picks are locked before events and never edited after.</strong> Every model pick is written to the database ahead of fight night with its probability and the opening line at the time. Results are graded in afterward — the pick itself is insert-only and can't be revised.</div>
+      <div class="tx"><strong>Two records, clearly labeled.</strong> Since July 2026, every pick is written to the database before fight night with its probability and the opening line — insert-only, never revised. Everything before that is a point-in-time simulation: the model re-run on fights after its training cutoff, priced at the opener. We never present simulated as live.</div>
     </div>
   </div>
 
@@ -194,6 +204,9 @@
   <div class="loading-wrap" id="proofLoading">Crunching the full pick history…</div>
 
   <div id="proofBody" hidden>
+
+    <!-- Two-state record banner -->
+    <div class="rec-banner" id="recBanner"></div>
 
     <!-- KPI strip -->
     <div class="kpis" id="kpiStrip"></div>
@@ -217,12 +230,12 @@
     <div class="grid-2">
       <div class="panel">
         <h3>Favorites vs underdogs</h3>
-        <div class="ps">Split by the opening betting line. Beating the market on underdogs is where the money is — favorites winning often is expected.</div>
+        <div class="ps">Split by the opening betting line, recorded at pick time. Favorites winning often is expected — the underdog column shows what happens when the model disagrees with the market.</div>
         <div class="split" id="favDog"></div>
       </div>
-      <div class="panel">
-        <h3>Return on investment — flat $100 per pick</h3>
-        <div class="ps">What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.</div>
+      <div class="panel" id="roiPanel">
+        <h3 id="roiTitle">Return on investment — flat $100 per pick</h3>
+        <div class="ps" id="roiPs">What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.</div>
         <div id="roiTable"></div>
       </div>
     </div>
@@ -230,14 +243,14 @@
     <!-- Misses -->
     <div class="section">
       <div class="sec-head"><h2>Where the model has been wrong</h2>
-        <div class="sub">The most recent graded misses, with the price we recorded at pick time. A model that only shows winners is selling something.</div></div>
+        <div class="sub">The most recent graded misses, priced at the opening line on record. A model that only shows winners is selling something.</div></div>
       <div class="panel" style="margin-top:14px"><div id="missTable"></div></div>
     </div>
 
     <!-- All models comparison -->
     <div class="section">
-      <div class="sec-head"><h2>All models, same test</h2>
-        <div class="sub">Every model measured on the identical out-of-sample window — fights from Jan 1, 2025 onward that none of them trained on. Apples to apples.</div></div>
+      <div class="sec-head"><h2>Both models, same test</h2>
+        <div class="sub">Our two public models measured on the identical window — fights from Jan 1, 2025 onward, after both models' training cutoffs. Apples to apples.</div></div>
       <div class="panel" style="margin-top:14px"><div id="allModels"></div></div>
     </div>
 
@@ -254,7 +267,7 @@
     <div class="honesty">
       <h3>How to read this honestly</h3>
       <ul>
-        <li><strong>Accuracy alone is not enough.</strong> Picking favorites gets you to ~65% for free. Calibration and value against the line are the real tests — that's why they're on this page.</li>
+        <li><strong>Accuracy alone is not enough.</strong> Betting the closing favorite every time gets you to ≈68% at closing odds — for free. Beating that number is not what we sell. The Value model's claim is price: it finds fights where the opening line is wrong. The Fight IQ model's claim is independence: it gets close to the market without ever seeing a betting line.</li>
         <li><span id="lockedSplitNote">Loading pick provenance…</span></li>
         <li><strong>Model output, not guarantees.</strong> A 70% pick loses 3 times out of 10. Nothing here is betting advice.</li>
         <li><strong>Samples matter.</strong> Anything under ~100 picks in a bucket is noise. We show the counts so you can discount accordingly.</li>
@@ -280,7 +293,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('track');
@@ -290,12 +303,14 @@ cfl.renderFooter();
 // PROOF CENTER
 // Everything on this page is computed client-side from model_predictions —
 // the same insert-only table picks are locked into. Per-model stats are gated
-// to that model's own out-of-sample window (model_versions.test_start_date)
-// so no model is ever graded on fights it trained on.
+// to cfl.modelWindowStart(id, test_start_date): the LATER of the DB's
+// test_start_date and the day after the model's training cutoff, so no model
+// is ever graded on fights it trained on — even if the DB row is wrong.
+// Only cfl.PUBLIC_MODELS appear here; retired models never render.
 // =============================================================================
 const SHARED_HOLDOUT = '2025-01-01';   // apples-to-apples window for the comparison table
-const DEFAULT_MODEL = 'v5';
-const MODEL_ORDER = ['v5', 'v6', 'v4', 'v3', 'v2', 'v1'];
+const DEFAULT_MODEL = 'v6';
+const MODEL_ORDER = ['v6', 'v3'];
 
 let _models = [];        // model_versions rows
 let _rows = [];          // graded model_predictions rows
@@ -315,7 +330,7 @@ async function loadProof() {
       .order('id', { ascending: true })),
   ]);
   if (mErr) throw mErr;
-  _models = (models || []).filter(m => MODEL_ORDER.includes(m.id))
+  _models = (models || []).filter(m => cfl.PUBLIC_MODELS.includes(m.id) && MODEL_ORDER.includes(m.id))
     .sort((a, b) => MODEL_ORDER.indexOf(a.id) - MODEL_ORDER.indexOf(b.id));
   _rows = rows || [];
   if (!_models.length || !_rows.length) throw new Error('no data');
@@ -331,17 +346,23 @@ async function loadProof() {
 
 function modelById(id) { return _models.find(m => m.id === id); }
 
-// A model's graded, out-of-sample pick rows: one row per fight — the side the
+// Honest window start for a model: the later of the DB's test_start_date and
+// the day after its training cutoff (cfl.modelWindowStart). Never trust the
+// DB row alone — a wrong test_start_date must not leak training-era fights.
+function windowStart(modelId) {
+  const m = modelById(modelId);
+  return cfl.modelWindowStart(modelId, m && m.test_start_date) || SHARED_HOLDOUT;
+}
+
+// A model's graded, post-cutoff pick rows: one row per fight — the side the
 // model gave >50%. (The table also stores value bets on the <50% side; those
 // count in the ROI/edge tables below, not in straight-up accuracy.)
 function pickRows(modelId) {
-  const m = modelById(modelId);
-  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  const start = windowStart(modelId);
   return _rows.filter(r => r.model_version === modelId && r.event_date >= start && Number(r.model_p) > 0.5);
 }
 function allOOSRows(modelId) {
-  const m = modelById(modelId);
-  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  const start = windowStart(modelId);
   return _rows.filter(r => r.model_version === modelId && r.event_date >= start);
 }
 
@@ -355,8 +376,9 @@ function flatPnl(r) {
 }
 
 function renderTabs() {
+  const tag = id => (cfl.MODELS[id] && cfl.MODELS[id].money) ? ' · the money model' : ' · never sees odds';
   $('modelTabs').innerHTML = _models.map(m =>
-    `<button data-m="${m.id}" class="${m.id === _activeModel ? 'active' : ''}">${cfl.escapeHtml(m.id.toUpperCase())}${m.id === DEFAULT_MODEL ? ' · flagship' : ''}</button>`
+    `<button data-m="${m.id}" class="${m.id === _activeModel ? 'active' : ''}">${cfl.escapeHtml(cfl.modelName(m.id, m.name))}${tag(m.id)}</button>`
   ).join('');
   $('modelTabs').addEventListener('click', e => {
     const btn = e.target.closest('button'); if (!btn) return;
@@ -371,12 +393,25 @@ function renderAll() {
   const m = modelById(_activeModel);
   const picks = pickRows(_activeModel);
   const oos = allOOSRows(_activeModel);
+  const isMoney = !!(cfl.MODELS[_activeModel] && cfl.MODELS[_activeModel].money);
 
-  const start = (m && m.test_start_date) || SHARED_HOLDOUT;
+  const start = windowStart(_activeModel);
   $('windowNote').innerHTML =
-    `<strong>${cfl.escapeHtml(m ? m.name : _activeModel)}</strong> — graded on fights from ` +
-    `<strong>${cfl.escapeHtml(cfl.formatDate(start))}</strong> onward only: its out-of-sample window, fights it never trained on. ` +
-    `Widening that window would quietly mix in training data and inflate the numbers, so we don't.`;
+    `<strong>${cfl.escapeHtml(cfl.modelName(_activeModel, m && m.name))}</strong> — stats shown only for fights from ` +
+    `<strong>${cfl.escapeHtml(cfl.formatDate(start))}</strong> onward, after the model's training cutoff. ` +
+    `Picks dated before July 2026 are point-in-time simulations: the model re-run on fights it never trained on, priced at the opening line. ` +
+    `The live locked record starts July 2026. Widening the window would mix in training data and inflate the numbers, so we don't.`;
+
+  // ---- Two-state record banner ----
+  const liveRows = picks.filter(r => r.created_at && r.created_at.slice(0, 10) <= r.event_date);
+  const simCount = picks.length - liveRows.length;
+  $('recBanner').innerHTML =
+    `<div class="rb sim"><div class="t">Simulated · ${cfl.escapeHtml(cfl.formatDate(start))} – Jun 2026</div>` +
+    `<div class="n">${simCount.toLocaleString()} picks</div>` +
+    `<div class="d">Every pick generated from point-in-time data the model never trained on, priced at the opening line. A simulation, labeled as one.</div></div>` +
+    `<div class="rb live"><div class="t">Live · Jul 2026 onward</div>` +
+    `<div class="n">${liveRows.length.toLocaleString()} picks</div>` +
+    `<div class="d">Written to the database before the event, insert-only, never edited. This record is just getting started — judge it as it grows.</div></div>`;
 
   // ---- KPIs ----
   const n = picks.length;
@@ -391,14 +426,19 @@ function renderAll() {
   const latest = _rows.reduce((mx, r) => r.event_date > mx ? r.event_date : mx, '');
   $('lastUpdated').textContent = 'Last updated: ' + cfl.formatDate(latest) + ' (most recent graded event) · recomputed live on every page load';
 
-  $('kpiStrip').innerHTML = [
+  const kpis = [
     { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
-    { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'out-of-sample only' },
+    { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'post-training-cutoff only' },
     { v: n.toLocaleString(), cls: '', l: 'Fights graded', d: `since ${start.slice(0, 4)}` },
     { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.22 ? 'good' : '', l: 'Brier score', d: 'lower is better · 0.250 = coin flip' },
-    { v: betRoi != null ? (betRoi >= 0 ? '+' : '') + pct(betRoi) : '—', cls: betRoi > 0 ? 'good' : (betRoi < 0 ? 'bad' : ''), l: 'ROI on flagged bets', d: bets.length ? `${usd(betPnl)} on ${bets.length} bets, $100 flat` : 'no flagged bets in window' },
-    { v: usd(betPnl), cls: betPnl > 0 ? 'good' : (betPnl < 0 ? 'bad' : ''), l: 'Profit / loss', d: 'flat $100 at the opening line' },
-  ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+  ];
+  if (isMoney) {
+    kpis.push(
+      { v: betRoi != null ? (betRoi >= 0 ? '+' : '') + pct(betRoi) : '—', cls: betRoi > 0 ? 'good' : (betRoi < 0 ? 'bad' : ''), l: 'ROI on flagged bets', d: bets.length ? `${usd(betPnl)} on ${bets.length} bets, $100 flat` : 'no flagged bets in window' },
+      { v: usd(betPnl), cls: betPnl > 0 ? 'good' : (betPnl < 0 ? 'bad' : ''), l: 'Profit / loss', d: 'flat $100 at the opening line' },
+    );
+  }
+  $('kpiStrip').innerHTML = kpis.map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
 
   // ---- By year ----
   const byYear = {};
@@ -442,53 +482,67 @@ function renderAll() {
     if (!rows.length) return `<div class="cell"><div class="t">${t}</div><div class="v">—</div><div class="d">no picks</div></div>`;
     const w = rows.filter(r => r.won === true).length;
     const p = rows.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+    const d = isMoney ? `${w}–${rows.length - w} · ${usd(p)} at $100 flat` : `${w}–${rows.length - w}`;
     return `<div class="cell"><div class="t">${t}</div><div class="v">${pct(w / rows.length, 1)}</div>
-      <div class="d">${w}–${rows.length - w} · ${usd(p)} at $100 flat</div></div>`;
+      <div class="d">${d}</div></div>`;
   };
   $('favDog').innerHTML = cell('Picked the favorite', favs) + cell('Picked the underdog', dogs);
 
-  // ---- ROI by edge threshold ----
-  const edged = oos.filter(r => r.edge != null && r.opener_american_odds != null);
-  const thresholds = [0.03, 0.05, 0.07, 0.10];
-  const roiRows = thresholds.map(t => {
-    const rows = edged.filter(r => Number(r.edge) >= t);
-    if (!rows.length) return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td><td class="num mut" colspan="4">no qualifying picks</td></tr>`;
-    const w = rows.filter(r => r.won === true).length;
-    const p = rows.reduce((s, r) => s + (flatPnl(r) || 0), 0);
-    const roi = p / (rows.length * 100);
-    return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td>
-      <td class="num">${rows.length}</td>
-      <td class="num">${w}–${rows.length - w}</td>
-      <td class="num"><span class="${p >= 0 ? 'pos' : 'neg'}">${usd(p)}</span></td>
-      <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
-  }).join('');
-  $('roiTable').innerHTML = `<table>
-    <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
-    <tbody>${roiRows}</tbody></table>`;
+  // ---- ROI by edge threshold (money model only) ----
+  if (isMoney) {
+    $('roiTitle').textContent = 'Return on investment — flat $100 per pick';
+    $('roiPs').textContent = "What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.";
+    const edged = oos.filter(r => r.edge != null && r.opener_american_odds != null);
+    const thresholds = [0.03, 0.05, 0.07, 0.10];
+    const roiRows = thresholds.map(t => {
+      const rows = edged.filter(r => Number(r.edge) >= t);
+      if (!rows.length) return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td><td class="num mut" colspan="4">no qualifying picks</td></tr>`;
+      const w = rows.filter(r => r.won === true).length;
+      const p = rows.reduce((s, r) => s + (flatPnl(r) || 0), 0);
+      const roi = p / (rows.length * 100);
+      return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td>
+        <td class="num">${rows.length}</td>
+        <td class="num">${w}–${rows.length - w}</td>
+        <td class="num"><span class="${p >= 0 ? 'pos' : 'neg'}">${usd(p)}</span></td>
+        <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
+    }).join('');
+    $('roiTable').innerHTML = `<table>
+      <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
+      <tbody>${roiRows}</tbody></table>`;
+  } else {
+    $('roiTitle').textContent = 'Why there is no ROI here';
+    $('roiPs').textContent = "Fight IQ doesn't price bets — it never sees odds. Its job is accuracy and honest probabilities, fully independent of the market. For the betting record, see the Value model tab.";
+    $('roiTable').innerHTML = '';
+  }
 
-  // ---- Locked vs walk-forward provenance ----
-  const locked = picks.filter(r => r.created_at && r.created_at.slice(0, 10) <= r.event_date);
-  const sim = picks.length - locked.length;
+  // ---- Simulated vs live provenance ----
   $('lockedSplitNote').innerHTML =
-    `<strong>Two kinds of graded picks.</strong> ${locked.length.toLocaleString()} picks in this window were locked live before fight night. ` +
-    (sim > 0
-      ? `The other ${sim.toLocaleString()} are point-in-time walk-forward replays — the model shown only data available before each fight, then graded. Same discipline, but simulated; we label it because the difference matters.`
-      : `Every pick in this window was locked live.`);
+    `<strong>Simulated vs live.</strong> ` +
+    (simCount > 0
+      ? `${simCount.toLocaleString()} picks in this window are point-in-time simulations — the model re-run on fights after its training cutoff, shown only data available before each fight, priced at the opening line, then graded. `
+      : ``) +
+    `${liveRows.length.toLocaleString()} picks were locked live: written to the database before fight night, insert-only. ` +
+    `The live record starts July 2026 and is still small — treat the simulated numbers as a simulation, not a live betting history.`;
 }
 
-// ---- All-models comparison on the shared 2025+ window ----
+// ---- Public-models comparison on the shared 2025+ window ----
+// Each model's rows are still floored at its honest window start, so a bad DB
+// test_start_date can never leak training-era fights into this table either.
 function renderAllModelsTable() {
   const rows = _models.map(m => {
-    const picks = _rows.filter(r => r.model_version === m.id && r.event_date >= SHARED_HOLDOUT && Number(r.model_p) > 0.5);
+    const ws = windowStart(m.id);
+    const start = ws > SHARED_HOLDOUT ? ws : SHARED_HOLDOUT;
+    const picks = _rows.filter(r => r.model_version === m.id && r.event_date >= start && Number(r.model_p) > 0.5);
     if (!picks.length) return '';
     const w = picks.filter(r => r.won === true).length;
     const brier = picks.reduce((s, r) => s + Math.pow(Number(r.model_p) - (r.won === true ? 1 : 0), 2), 0) / picks.length;
-    const bets = _rows.filter(r => r.model_version === m.id && r.event_date >= SHARED_HOLDOUT && r.would_bet === true);
+    const isMoney = !!(cfl.MODELS[m.id] && cfl.MODELS[m.id].money);
+    const bets = isMoney ? _rows.filter(r => r.model_version === m.id && r.event_date >= start && r.would_bet === true) : [];
     const p = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
     const roi = bets.length ? p / (bets.length * 100) : null;
     const acc = w / picks.length;
     return `<tr>
-      <td><strong style="color:var(--text)">${cfl.escapeHtml(m.id.toUpperCase())}</strong> <span class="mut">${cfl.escapeHtml(m.name || '')}</span></td>
+      <td><strong style="color:var(--text)">${cfl.escapeHtml(cfl.modelName(m.id, m.name))}</strong></td>
       <td class="num">${picks.length}</td>
       <td class="num"><span class="${acc >= 0.6 ? 'pos' : ''}">${pct(acc, 1)}</span></td>
       <td class="num">${brier.toFixed(3)}</td>

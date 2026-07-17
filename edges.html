@@ -291,6 +291,21 @@
     margin: 0;
   }
 
+  /* Superseded-claim marker — July 2026 audit annotations. */
+  .superseded {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: rgba(255, 167, 38, 0.12);
+    color: #ffa726;
+    border: 1px solid rgba(255, 167, 38, 0.3);
+    margin-bottom: 8px;
+  }
+
   /* Status badge for the factor table — Active vs Retired May 17. */
   .factor-status {
     display: inline-block;
@@ -341,6 +356,16 @@
 
 <div class="page">
 
+  <!-- ============== Model update July 2026 ============== -->
+  <div class="section" id="july-2026-update">
+    <div class="section-eyebrow"><span class="dot"></span>Model update — July 14, 2026</div>
+    <h2>The audit that audited the audit</h2>
+    <p>The May 2026 subset test had a flaw of its own. It scored each factor using fighters' <strong>career-to-date records</strong> — but a fighter's record contains the result of the very fight being predicted. "Record: 75.5% when it fires" was hindsight. Measured the honest way — using only what was knowable <em>before</em> each fight — the record factor drops to <strong>61.9%</strong>.</p>
+    <p>So we re-measured every factor against roughly 8,600 historical fights, two ways: raw, and with the betting market held flat — only fights where both fighters were priced within ±140 at close, so no factor gets credit for simply agreeing with the favourite. The result is blunt. <strong>Only age survives:</strong> 56.8% in market-even fights. Record, reach, takedown defence, and striking volume all collapse to roughly a coin flip once the market is held flat — most of what they "knew" was just repeating the favourite.</p>
+    <p>The live verdict still runs the May 2026 three-factor logic while we rebuild it on point-in-time data. Until that ships, <strong>treat verdict confidence as provisional.</strong></p>
+    <p>The full numbers are in <a href="stats.html" style="color:var(--red)">the Factor Lab</a> — it now recomputes these numbers from the database on every update. Nothing on that page is hardcoded.</p>
+  </div>
+
   <!-- ============== Model update May 2026 ============== -->
   <div class="section" id="may-2026-update">
     <div class="section-eyebrow"><span class="dot"></span>Model update — May 17, 2026</div>
@@ -349,6 +374,7 @@
     <p>Of the ten edge factors, seven sat at <strong>52–57% per-fire accuracy</strong> — close enough to a coin flip that they were behaving like correlated noise in the Bayesian combiner. A 53% factor doesn't add information; it adds confidence theatre. When several stacked on the wrong side of an upset, they outvoted the genuinely predictive signals (Record, Cardio, Takedown Defense — all 60%+ per-fire).</p>
     <p>The verdict now combines only those three. We tested every subset of the ten factors against 8,533 historical fights (<code>research/subset-test.js</code>):</p>
     <div class="formula">
+      <div class="superseded">Superseded July 2026 — measured with hindsight; see update above</div>
       <div class="formula-title">Accuracy by edge subset</div>
       <div class="formula-eq" style="font-size: 14px; line-height: 1.8;">
         All ten edges: <strong>65.8%</strong> on 8,367 predictions<br>
@@ -356,8 +382,9 @@
         Top 3 only (Record, Cardio, TD Defense): <strong>68.4%</strong> ← shipped<br>
         Record alone (when it fires): <strong>75.5%</strong> — strongest single signal
       </div>
+      <div class="formula-note">These subset numbers used career-to-date records — hindsight. The record factor's honest point-in-time number is 61.9%. See the July 14, 2026 update above.</div>
     </div>
-    <p>Calibration improved alongside accuracy. The 70–75% confidence band hit 82.9% accuracy before the change and <strong>92.7%</strong> after. About 20% of fights now show "no edge" rather than a confident pick — those are genuine toss-ups where the prior model was gambling and losing.</p>
+    <p><span class="superseded">Superseded July 2026 — measured with hindsight; see update above</span><br>Calibration improved alongside accuracy. The 70–75% confidence band hit 82.9% accuracy before the change and <strong>92.7%</strong> after. About 20% of fights now show "no edge" rather than a confident pick — those are genuine toss-ups where the prior model was gambling and losing.</p>
     <p>Every pick committed before May 17 reflects the older ten-edge model. We don't retroactively re-grade — the track record is the track record. Cards from May 17 onward use the new three-edge model.</p>
   </div>
 
@@ -462,15 +489,17 @@
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>Track record</div>
     <h2>What we measured against the full UFC history</h2>
-    <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database. Headline numbers from the most recent run (post May 17 rebuild):</p>
+    <p>The validation script in <code>research/validate.js</code> simulates every edge.js verdict against every decided UFC fight in the database. Headline numbers from the May 17 rebuild run:</p>
     <div class="formula">
+      <div class="superseded">Superseded July 2026 — measured with hindsight; see update above</div>
       <div class="formula-title">Overall accuracy</div>
       <div class="formula-eq">
         <strong>68.4%</strong> correct on 6,655 historical predictions
       </div>
       <div class="formula-note">The new model abstains on ~20% of fights (no Record, Cardio, or TD-defense edge fires) rather than guess. The remaining 6,655 are where the model has genuine signal — and on those it lifts <strong>+2.6 percentage points</strong> over the old ten-edge version (65.8% → 68.4%).</div>
     </div>
-    <p>Calibration check: in a well-calibrated model, predictions at confidence X% should win X% of the time. Here's what the most recent validation found:</p>
+    <p>Calibration check: in a well-calibrated model, predictions at confidence X% should win X% of the time. Here's what that May validation found:</p>
+    <div class="superseded">Superseded July 2026 — measured with hindsight; see update above</div>
     <table class="calib-table">
       <thead>
         <tr><th>Predicted confidence</th><th>Actual win rate</th><th>Fights in band</th></tr>
@@ -484,7 +513,7 @@
         <tr><td class="band">75%+</td><td class="actual">100.0%</td><td>6</td></tr>
       </tbody>
     </table>
-    <p>Every confidence band lands inside or above its predicted range. High-confidence verdicts (70%+) are <em>under-stated</em> — when the model says it's confident, history says listen.</p>
+    <p>Every confidence band landed inside or above its predicted range in that run — but the July 14, 2026 audit showed the run itself was flattered by hindsight (career-to-date stats scored against past fights). Treat these bands as an upper bound, not a promise, until the point-in-time rebuild ships.</p>
   </div>
 
   <!-- ============== How we keep tuning it ============== -->
@@ -514,7 +543,7 @@
     <h2>What this model can't do</h2>
     <div class="caveat">
       <div class="caveat-title">Validation uses current career stats on historical fights</div>
-      <p>When we score the model against a 2018 fight, we use the fighters' current career averages — not their stats as they existed in 2018. That introduces a measurable hindsight bias. Year-over-year accuracy in the validation report drifts higher for recent years, confirming the effect. Real fair-replay accuracy is lower than the 66% headline. We flag this prominently in <code>research/results.md</code>.</p>
+      <p>When we score the model against a 2018 fight, we use the fighters' current career averages — not their stats as they existed in 2018. That introduces a measurable hindsight bias. Year-over-year accuracy in the validation report drifts higher for recent years, confirming the effect. Real fair-replay accuracy is lower than the headline numbers above — the July 14, 2026 update at the top of this page quantifies the gap, and the <a href="stats.html" style="color:var(--red)">Factor Lab</a> now measures every factor point-in-time. We flag this prominently in <code>research/results.md</code>.</p>
     </div>
     <div class="caveat">
       <div class="caveat-title">Streak edges were silently broken for months</div>
@@ -526,7 +555,7 @@
     </div>
     <div class="caveat">
       <div class="caveat-title">Past performance is not a guarantee</div>
-      <p>Calibration on 8,000+ historical fights tells you the model's confidence numbers are honest. It does not tell you any individual upcoming fight will go the way the model predicts. Read the verdict alongside the matchup story. Stats for entertainment purposes only. 1-800-GAMBLER.</p>
+      <p>Backtests on 8,000+ historical fights describe the past — and as the July 14, 2026 update shows, even the backtest can flatter itself. Nothing here tells you any individual upcoming fight will go the way the model predicts. Read the verdict alongside the matchup story. Stats for entertainment purposes only. 1-800-GAMBLER.</p>
     </div>
   </div>
 
@@ -534,7 +563,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('');

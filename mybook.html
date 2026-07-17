@@ -200,8 +200,7 @@
     <p class="lede">
       Your private bet log. Pick from this week's consensus picks, log the price
       you actually got at whichever book had the best number, and track your
-      real ROI vs the backtest. Bets settle automatically once the fight is
-      graded.
+      real ROI. Bets settle automatically once the fight is graded.
     </p>
   </div>
 
@@ -252,7 +251,7 @@
   <div class="sec">
     <h2>Log this week's picks</h2>
     <p class="desc">
-      Consensus picks (2+ models agreeing, anti-filters dropped, edge ≥ 10% at the BFO opener)
+      Picks both of our models agree on (edge ≥ 10% at the BFO opener)
       from the next upcoming card. Pick your book, enter the price you got,
       and we'll size the bet at <strong>half-Kelly off your price</strong>
       capped at <strong>5% of bankroll</strong>.
@@ -277,7 +276,7 @@
   <!-- Performance -->
   <div class="sec">
     <h2>Performance</h2>
-    <p class="desc">Live numbers from your actual bets. Compare with the backtest's +20% ROI on dollars at risk for the picks-page methodology.</p>
+    <p class="desc">Live numbers from your actual bets. For context: the Value model's simulated record is +12.7% at closing prices as of July 2026; your book is your own record.</p>
     <div class="perf-grid" id="perfGrid"></div>
   </div>
 
@@ -285,7 +284,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js?v=mybook1"></script>
 <script>
 (async function () {
@@ -435,6 +434,7 @@
     const today = new Date().toISOString().slice(0, 10);
     const { data: preds, error: pErr } = await sb.from('model_predictions')
       .select('model_version,fight_id,fighter_id,side,event_date,model_p,opener_american_odds,opener_implied_p,edge,would_bet,outcome_known')
+      .in('model_version', cfl.PUBLIC_MODELS)
       .eq('outcome_known', false).gte('event_date', today).order('event_date');
     if (pErr) throw pErr;
     if (!preds || preds.length === 0) { weekPicksData = []; return; }
@@ -460,8 +460,10 @@
       const fid = rows[0].fight_id;
       if (seenFight.has(fid)) continue;
       seenFight.add(fid);
-      const v4 = rows.find(r => r.model_version === 'v4');
-      const modelP = v4 ? +v4.model_p : voters.reduce((s, r) => s + +r.model_p, 0) / voters.length;
+      // Prefer the Value model's (v6) probability; fall back to Fight IQ (v3),
+      // then to the mean across voters.
+      const preferred = rows.find(r => r.model_version === 'v6') || rows.find(r => r.model_version === 'v3');
+      const modelP = preferred ? +preferred.model_p : voters.reduce((s, r) => s + +r.model_p, 0) / voters.length;
       picks.push({
         fight_id: rows[0].fight_id,
         fighter_id: rows[0].fighter_id,
@@ -512,6 +514,7 @@
     const fightIds = [...new Set(open.map(b => b.fight_id))];
     const { data: preds, error } = await sb.from('model_predictions')
       .select('fight_id,fighter_id,outcome_known,won')
+      .in('model_version', cfl.PUBLIC_MODELS)
       .eq('outcome_known', true).in('fight_id', fightIds);
     if (error) { console.error(error); return; }
     if (!preds || preds.length === 0) return;
@@ -618,7 +621,7 @@
           </div>
           <div class="meta">
             ${cfl.escapeHtml(p.eventName || p.event_date)} ·
-            <span class="badge">${p.voters.length} of 4 models</span>
+            <span class="badge">${p.voters.length === 2 ? 'both models agree' : `${p.voters.length} of 2 models`}</span>
             opener <span class="open-price">${americanFmt(p.opener)}</span> ·
             opener-edge ${(p.edge * 100).toFixed(1)}% · model says ${(p.model_p * 100).toFixed(1)}%
           </div>
@@ -880,7 +883,7 @@
       <div class="perf-card">
         <div class="lbl">ROI on $ at risk</div>
         <div class="val ${roi > 0 ? 'pos' : roi < 0 ? 'neg' : ''}">${n > 0 ? (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%' : '—'}</div>
-        <div class="sub">backtest: ~+20% at DK</div>
+        <div class="sub">Value model simulated: +12.7% at closing prices</div>
       </div>
       <div class="perf-card">
         <div class="lbl">Avg CLV vs opener</div>

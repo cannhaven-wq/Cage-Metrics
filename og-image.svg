@@ -31,35 +31,36 @@
         fill="#e63946" letter-spacing="3">UFC ANALYTICS PLATFORM</text>
 
   <text x="80" y="230" font-family="Barlow Condensed, sans-serif" font-size="74" font-weight="800"
-        fill="#ffffff" letter-spacing="-1">Calibrated UFC</text>
+        fill="#ffffff" letter-spacing="-1">UFC models that</text>
   <text x="80" y="305" font-family="Barlow Condensed, sans-serif" font-size="74" font-weight="800"
-        fill="#ffffff" letter-spacing="-1">predictions backed</text>
-  <text x="80" y="380" font-family="Barlow Condensed, sans-serif" font-size="74" font-weight="800"
-        fill="#ffffff" letter-spacing="-1">by <tspan fill="#e63946">real data.</tspan></text>
+        fill="#ffffff" letter-spacing="-1">show <tspan fill="#e63946">their work.</tspan></text>
 
   <text x="80" y="450" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="500"
-        fill="#999999">Cardio scores. Head-to-head. Edge factors.</text>
+        fill="#999999">A tape-only predictor. A value model graded in public.</text>
   <text x="80" y="478" font-family="Inter, system-ui, sans-serif" font-size="20" font-weight="500"
-        fill="#999999">Validated against 8,000+ historical UFC fights.</text>
+        fill="#999999">And the Factor Lab: which stats survive the market.</text>
 
   <text x="80" y="585" font-family="Barlow Condensed, sans-serif" font-size="32" font-weight="800"
         fill="#ffffff" letter-spacing="2">CANNON<tspan fill="#e63946">FIGHT</tspan>LAB</text>
 
   <!-- Right: two big stat boxes (replaced 3-box layout) -->
-  <g transform="translate(830, 230)">
-    <!-- Stat 1: 75% accuracy -->
-    <text x="0" y="0" font-family="Barlow Condensed, sans-serif" font-size="130" font-weight="800"
-          fill="#ffffff">75<tspan fill="#e63946" font-size="65">%</tspan></text>
+  <!-- Sized for font fallback: headless renderers may not have Barlow
+       Condensed installed, and the fallback sans is ~30% wider. Keep every
+       right-column line under ~330px at these sizes or it clips at x=1200. -->
+  <g transform="translate(790, 230)">
+    <!-- Stat 1: fights analyzed -->
+    <text x="0" y="0" font-family="Barlow Condensed, sans-serif" font-size="110" font-weight="800"
+          fill="#ffffff">8,853</text>
     <text x="0" y="40" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600"
-          fill="#999999" letter-spacing="2">UFC PERTH ACCURACY</text>
+          fill="#999999" letter-spacing="2">FIGHTS ANALYZED</text>
 
     <!-- Divider -->
     <rect x="0" y="80" width="240" height="1" fill="#2a2a2a"/>
 
-    <!-- Stat 2: 8,000+ -->
-    <text x="0" y="190" font-family="Barlow Condensed, sans-serif" font-size="84" font-weight="800"
-          fill="#ffffff">8,000<tspan fill="#e63946" font-size="42">+</tspan></text>
-    <text x="0" y="226" font-family="Inter, system-ui, sans-serif" font-size="14" font-weight="600"
-          fill="#999999" letter-spacing="2">FIGHTS BACKTESTED</text>
+    <!-- Stat 2: the proof promise -->
+    <text x="0" y="150" font-family="Barlow Condensed, sans-serif" font-size="29" font-weight="800"
+          fill="#ffffff" letter-spacing="1">EVERY PICK <tspan fill="#e63946">LOCKED</tspan></text>
+    <text x="0" y="200" font-family="Barlow Condensed, sans-serif" font-size="29" font-weight="800"
+          fill="#ffffff" letter-spacing="1">EVERY MISS <tspan fill="#e63946">SHOWN</tspan></text>
   </g>
 </svg>

@@ -523,7 +523,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('parlay');
@@ -539,11 +539,17 @@ let fightersById = {};
 let bestPriceByPick = {};
 // (fight_id):(fighter_id) -> [{ model_version, model_p, edge, would_bet }, ...]
 let modelsByPick = {};
-// model_versions rows
+// model_versions rows (public models only — see cfl.PUBLIC_MODELS)
 let modelVersions = [];
-// Which model's lens the slip uses. 'all' = aggregate across all models;
-// any other value (e.g. 'v3', 'v4') filters to just that one.
+// Which model's lens the slip uses. 'all' = both public models together;
+// any other value (e.g. 'v3', 'v6') filters to just that one.
 let selectedModel = 'all';
+
+// Short display name for a model: the part of the registry name before the
+// dash, e.g. "Value" / "Fight IQ". Falls back to the id.
+function modelShortName(id) {
+  return String(cfl.modelName(id) || id).split(' — ')[0];
+}
 
 function fmtAmerican(n) {
   if (n == null || isNaN(n)) return '—';
@@ -627,9 +633,11 @@ async function load() {
       sb.from('model_predictions')
         .select('model_version, fight_id, fighter_id, model_p, edge, would_bet')
         .in('fight_id', allFightIds)
+        .in('model_version', cfl.PUBLIC_MODELS)
         .eq('outcome_known', false),
       sb.from('model_versions')
-        .select('id, name, description, features_summary, test_accuracy, test_log_loss')
+        .select('id, name')
+        .in('id', cfl.PUBLIC_MODELS)
         .order('id'),
       sb.from('odds_books').select('id, name'),
     ]);
@@ -671,14 +679,13 @@ async function load() {
 }
 
 function renderModelStrip() {
-  if (!modelVersions.length) return;
   const strip = document.getElementById('modelStrip');
   if (!strip) return;
   strip.style.display = 'block';
 
   const buttons = document.getElementById('modelButtons');
-  const opts = [{ id: 'all', label: 'All (aggregate)' }]
-    .concat(modelVersions.map(m => ({ id: m.id, label: m.id.toUpperCase() })));
+  const opts = [{ id: 'all', label: 'Both' }]
+    .concat(cfl.PUBLIC_MODELS.map(id => ({ id, label: modelShortName(id) })));
   buttons.innerHTML = opts.map(o =>
     `<button data-mid="${cfl.escapeHtml(o.id)}" class="${o.id === selectedModel ? 'active' : ''}">${cfl.escapeHtml(o.label)}</button>`
   ).join('');
@@ -699,23 +706,17 @@ function renderModelInfo() {
   if (!info) return;
   if (selectedModel === 'all') {
     info.innerHTML = `
-      <span class="name">All — aggregate across all ${modelVersions.length} model versions.</span>
-      The "votes" pill in your slip counts how many models flag the pick, the take and edge are means.
+      <span class="name">Both models.</span>
+      The pill on each slip leg counts how many of our two models flag the pick; the take and edge are averages across both.
     `;
     return;
   }
-  const mv = modelVersions.find(m => m.id === selectedModel);
-  if (!mv) { info.innerHTML = ''; return; }
-  const acc = mv.test_accuracy != null ? (Number(mv.test_accuracy) * 100).toFixed(1) + '%' : '—';
-  const ll = mv.test_log_loss != null ? Number(mv.test_log_loss).toFixed(4) : '—';
-  const desc = mv.description || mv.features_summary || '';
+  const reg = cfl.MODELS[selectedModel];
+  if (!reg) { info.innerHTML = ''; return; }
+  const dbRow = modelVersions.find(m => m.id === selectedModel);
   info.innerHTML = `
-    <span class="name">${cfl.escapeHtml(mv.id)} — ${cfl.escapeHtml(mv.name || '')}</span>
-    ${cfl.escapeHtml(desc.length > 240 ? desc.slice(0, 240) + '…' : desc)}
-    <span class="stats">
-      <span>Test acc <strong>${acc}</strong></span>
-      <span>Log-loss <strong>${ll}</strong></span>
-    </span>
+    <span class="name">${cfl.escapeHtml(cfl.modelName(selectedModel, dbRow && dbRow.name))}</span>
+    ${cfl.escapeHtml(reg.tagline || '')}
   `;
 }
 
@@ -867,21 +868,21 @@ function renderSlip() {
     if (!ms) {
       modelsBlock = `<div class="slip-leg-models muted">no model prediction yet</div>`;
     } else if (ms.avgP == null) {
-      modelsBlock = `<div class="slip-leg-models muted">${cfl.escapeHtml(selectedModel)} didn't score this fight — try "All" or a different model</div>`;
+      modelsBlock = `<div class="slip-leg-models muted">${cfl.escapeHtml(modelShortName(selectedModel))} didn't score this fight — try "Both" or the other model</div>`;
     } else {
       const edgePct = (ms.avgEdge * 100).toFixed(1);
       const edgeCls = ms.avgEdge >= 0.0001 ? 'pos' : (ms.avgEdge <= -0.0001 ? 'neg' : '');
       const edgeSign = ms.avgEdge >= 0 ? '+' : '';
       const voteCls = ms.betCount > 0 ? 'has-bet' : 'no-bet';
       const voteLabel = ms.filtered
-        ? (ms.betCount > 0 ? `${selectedModel} BET` : `${selectedModel} no bet`)
+        ? (ms.betCount > 0 ? `${modelShortName(selectedModel)} BET` : `${modelShortName(selectedModel)} no bet`)
         : `${ms.betCount}/${ms.total} bet`;
       modelsBlock = `
         <div class="slip-leg-models">
           <span class="vote-pill ${voteCls}">${cfl.escapeHtml(voteLabel)}</span>
           <span class="model-stat">${ms.filtered ? 'model' : 'our take'} <strong>${(ms.avgP * 100).toFixed(0)}%</strong></span>
           <span class="model-stat"><span class="edge ${edgeCls}">${edgeSign}${edgePct}%</span> edge</span>
-          ${ms.filtered ? '' : `<span class="model-stat" style="color:var(--text-3); font-size:10px;">${ms.votes.join(' + ')}</span>`}
+          ${ms.filtered ? '' : `<span class="model-stat" style="color:var(--text-3); font-size:10px;">${cfl.escapeHtml(ms.votes.map(modelShortName).join(' + '))}</span>`}
         </div>
       `;
     }

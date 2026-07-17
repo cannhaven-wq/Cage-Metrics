@@ -208,7 +208,9 @@ async function prerenderMatchupPreviews() {
 
   const [fightersData, predsData, cardioData, finishData] = await Promise.all([
     safe(sb.from('fighters').select('id, name, nickname').in('id', fighterIds)),
-    safe(sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds)),
+    // Public models only ('v6' Value, 'v3' Fight IQ). Node script — window.cfl
+    // doesn't exist here; source of truth is cfl.PUBLIC_MODELS in _shared.js.
+    safe(sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', ['v6', 'v3'])),
     safe(sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds)),
     safe(sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)),
   ]);

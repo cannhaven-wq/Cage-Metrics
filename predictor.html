@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Predictor — Cannon Fight Lab</title>
-<meta name="description" content="Experimental UFC fight prediction models. Multiple model versions tracked side-by-side with full backtest history and live picks. Transparent track record vs the BFO consensus opener.">
+<title>Model Lab — Cannon Fight Lab</title>
+<meta name="description" content="How CFL's two public UFC models work — Value, which prices bets against the opening line, and Fight IQ, which never sees a betting line — and the honest windows they're graded on.">
 <meta name="robots" content="noindex">
 <link rel="canonical" href="https://cannonfightlab.com/predictor.html">
 
@@ -322,8 +322,6 @@
     color: var(--text-2);
     line-height: 1.4;
   }
-  .ab-legend-row .roi { color: var(--green); font-variant-numeric: tabular-nums; font-weight: 600; margin-left: auto; padding-left: 8px; }
-  .ab-legend-row.neg .roi { color: var(--red); }
   .ab-legend-row .rule { color: var(--text-3); font-size: 10.5px; }
 
   /* Upcoming event header */
@@ -607,61 +605,53 @@
 
 <div class="lab-banner">
   <strong>Experimental</strong>
-  Active research — multiple model versions tracked side-by-side. Track record is backtested vs the BFO consensus opener. Not picks, not advice.
+  Two public models, graded only on fights after their training cutoffs. Betting results are simulated point-in-time — the live record started July 2026 and is 0-1 so far. Not picks, not advice.
 </div>
 
 <div class="page-hero">
-  <div class="eyebrow">Predictor</div>
-  <h1>Win-probability models, tracked transparently</h1>
-  <p>Each stat is measured only on fights none of the models trained on. Because the models don't share a training cutoff, every number here uses the same fully out-of-sample window — UFC cards from January 2025 onward — so the comparison is apples-to-apples. ROI is computed at the opening line — the realistic price a model would need to beat. Click a model for the full breakdown.</p>
+  <div class="eyebrow">The Model Lab</div>
+  <h1>How CFL's two public models work</h1>
+  <p>The Model Lab — how CFL's two public models work, and the honest windows they're graded on. Value prices bets against the opening line. Fight IQ picks winners from tape alone and never sees a line. Every graded number on this page counts only fights after each model's training cutoff — fights the model never saw — and ROI is computed at the opening line, the realistic price a bettor could actually get. Earlier models (v1, v2, v4, v5) are retired; v5 is retired because it was trained on the closing line, which made its accuracy the market's own number.</p>
 </div>
 
 <div class="page">
   <div id="adminBanner" class="admin-banner">
     <div class="ab-head">
       <span class="ab-tag">Admin view</span>
-      <span class="ab-title">Indicator chips highlight high-ROI patterns on dog picks. Hidden from non-admin users.</span>
+      <span class="ab-title">Indicator chips flag historical patterns on dog picks. Hidden from non-admin users.</span>
     </div>
     <div class="ab-legend">
       <div class="ab-legend-row">
         <span class="cfl-ind ind-premium"><span class="dot"></span>PREMIUM</span>
         <span class="rule">edge≥0.20 · younger · coming off W</span>
-        <span class="roi">+63.5%</span>
       </div>
       <div class="ab-legend-row">
         <span class="cfl-ind ind-clv_agree"><span class="dot"></span>CLV AGREE</span>
         <span class="rule">closer moved ≥+2% prob toward us</span>
-        <span class="roi">+28.1%</span>
       </div>
       <div class="ab-legend-row">
         <span class="cfl-ind ind-high_conviction"><span class="dot"></span>HIGH CONVICTION</span>
         <span class="rule">edge ≥ 0.20</span>
-        <span class="roi">+18.6%</span>
       </div>
       <div class="ab-legend-row">
         <span class="cfl-ind ind-young_dog"><span class="dot"></span>YOUNG DOG</span>
         <span class="rule">edge≥0.20 · younger</span>
-        <span class="roi">+47.8%</span>
       </div>
       <div class="ab-legend-row">
         <span class="cfl-ind ind-balanced"><span class="dot"></span>BALANCED</span>
         <span class="rule">edge≥0.15 · ≤+250 · younger</span>
-        <span class="roi">+28.6%</span>
       </div>
       <div class="ab-legend-row neg">
         <span class="cfl-ind ind-stance_avoid"><span class="dot"></span>STANCE FADE</span>
         <span class="rule">orthodox dog vs southpaw favorite</span>
-        <span class="roi">−35.5%</span>
       </div>
       <div class="ab-legend-row neg">
         <span class="cfl-ind ind-avoid_sub_loss"><span class="dot"></span>AVOID — SUB LOSS</span>
         <span class="rule">dog coming off a submission loss</span>
-        <span class="roi">−35%</span>
       </div>
       <div class="ab-legend-row neg">
         <span class="cfl-ind ind-clv_fade"><span class="dot"></span>CLV FADE</span>
         <span class="rule">closer moved ≥−2% prob (line drifting against us)</span>
-        <span class="roi">−44.2%</span>
       </div>
     </div>
   </div>
@@ -673,14 +663,14 @@
     <div class="howto-body">
 
       <h3>What this is</h3>
-      <p>Each line below is a fight on an upcoming UFC card. For every fight, every model we've trained
-      gives its own predicted win probability for each fighter and compares it to what the betting market is offering.
+      <p>Each line below is a fight on an upcoming UFC card. For every fight, each of CFL's two public models
+      gives its own predicted win probability for each fighter, and we compare that to what the betting market is offering.
       When the model thinks a fighter is meaningfully more likely to win than the market price implies, the row gets
       flagged ★ — that's a candidate bet.</p>
 
       <h3>How to read a row</h3>
       <dl>
-        <dt>Model</dt>     <dd>Which version of our predictor made the pick. v3 is the most advanced; v1 the simplest.</dd>
+        <dt>Model</dt>     <dd>Which model made the pick. Value (v6) prices bets against the opener. Fight IQ (v3) picks winners from tape alone and never sees a betting line.</dd>
         <dt>Pick</dt>      <dd>The fighter the model favors more than the market does.</dd>
         <dt>Opener</dt>    <dd>The American odds that fighter opened at (BFO consensus across multiple sportsbooks).</dd>
         <dt>Op p</dt>      <dd>What the opener implies about that fighter's win probability.</dd>
@@ -693,7 +683,7 @@
       <h3>3-step quick start</h3>
       <ol>
         <li><strong>Set your bankroll.</strong> Type your total betting capital into the Bankroll box. Stake amounts scale automatically.</li>
-        <li><strong>Check "Consensus only."</strong> A consensus pick is when 2+ different model versions independently flag the same fighter. The page hides everything else — these are the highest-confidence bets of the card.</li>
+        <li><strong>Check "Consensus only."</strong> A consensus pick is when both models independently flag the same fighter. The page hides everything else — these are the highest-confidence bets of the card.</li>
         <li><strong>Bet the recommended Stake on the recommended Pick.</strong> We recommend <a href="https://polymarket.com/sports/ufc" target="_blank" rel="noopener">Polymarket</a> for execution (no sportsbook vig, no banning winners).</li>
       </ol>
 
@@ -710,11 +700,13 @@
       The model card stats above show how each threshold performed historically.</p>
 
       <div class="caveat">
-        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. The strongest models
-        show ~+12–15% ROI on the out-of-sample 2025+ window, but real-world ROI is typically 30–60% lower due to liquidity friction
-        and book limits. Confidence intervals on the ROI estimate cross zero — meaning a losing month or two is normal,
-        not a sign the strategy is broken. Never bet money you can't afford to see swing 30–40% down before recovering.
-        Always gamble responsibly. 1-800-GAMBLER.
+        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. Value's betting
+        record is simulated point-in-time, not live: on fights after its December 2024 training cutoff, the shipped rule
+        (favorites with 3+ points of edge, $100 flat bets) has gone 66–21 as of July 15, 2026 — correct on 66 of 87 bets — for +$1,478 at the
+        opening price (+17.0%). Re-priced at closing odds, that drops to +$1,103 (+12.7%). The live record starts
+        July 2026 and is 0-1 so far — the first settled live bet lost. Real-world results also shrink with liquidity friction and book
+        limits, and a losing month or two is normal — not a sign the strategy is broken. Never bet money you can't
+        afford to see swing 30–40% down before recovering. Always gamble responsibly. 1-800-GAMBLER.
       </div>
     </div>
   </details>
@@ -746,7 +738,7 @@
 
   <div class="section-label" style="margin-top: 48px;">How the models compare</div>
   <p style="font-size: 12px; color: var(--text-3); margin: 6px 0 14px; line-height: 1.6;">
-    Every stat is measured on the same fully out-of-sample window — UFC cards from January 2025 onward, which none of the models trained on. Click a row for the full backtest breakdown and recent graded picks.
+    Each model is graded only on fights after its own training cutoff — fights it never saw. Click a model for the full breakdown and recent graded picks.
   </p>
   <div id="modelGrid" class="models-grid"></div>
 
@@ -755,7 +747,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('predictor');
@@ -775,7 +767,9 @@ cfl.renderFooter();
   const escapeHtml = window.cfl.escapeHtml || (s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
   // ---- pull models ----
-  const { data: models, error: mErr } = await sb
+  // Only registry-listed public models ever render. Retired models (v1, v2,
+  // v4, v5) stay in the DB for history but never reach this page.
+  const { data: allModels, error: mErr } = await sb
     .from('model_versions')
     .select('*')
     .order('id');
@@ -784,9 +778,12 @@ cfl.renderFooter();
       `<div class="err-state">Couldn't load models: ${escapeHtml(mErr.message)}</div>`;
     return;
   }
-  if (!models || models.length === 0) {
+  const models = (allModels || [])
+    .filter(m => cfl.PUBLIC_MODELS.includes(m.id))
+    .sort((a, b) => cfl.PUBLIC_MODELS.indexOf(a.id) - cfl.PUBLIC_MODELS.indexOf(b.id));
+  if (models.length === 0) {
     document.getElementById('modelGrid').innerHTML =
-      `<div class="empty-state">No models trained yet. Check back soon.</div>`;
+      `<div class="empty-state">No public models yet. Check back soon.</div>`;
     return;
   }
 
@@ -852,14 +849,14 @@ cfl.renderFooter();
     CLV_FADE: 'CLV FADE',
   };
   const INDICATOR_TITLE = {
-    PREMIUM: 'Edge ≥ 0.20 · picked dog is younger by 2+ yrs · coming off a win  (+63.5% historical ROI)',
-    CLV_AGREE: 'Closing line moved at least +2% prob toward this pick — sharp money agreed  (+28% historical ROI on CLV+ cohort)',
-    HIGH_CONVICTION: 'Edge ≥ 0.20  (+18.6% historical ROI)',
-    YOUNG_DOG: 'Edge ≥ 0.20 · picked dog is younger  (+47.8% historical ROI)',
-    BALANCED: 'Edge ≥ 0.15 · opener ≤ +250 · picked dog is younger  (+28.6% historical ROI, biggest sample)',
-    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite  (−35.5% ROI, 180 hist bets)',
-    AVOID_SUB_LOSS: 'Anti-filter — picked fighter is coming off a submission loss  (−35% ROI)',
-    CLV_FADE: 'Anti-filter — closing line moved against this pick (sharp money disagreed)  (−44% ROI on CLV− cohort)',
+    PREMIUM: 'Edge ≥ 0.20 · picked dog is younger by 2+ yrs · coming off a win',
+    CLV_AGREE: 'Closing line moved at least +2% prob toward this pick — sharp money agreed',
+    HIGH_CONVICTION: 'Edge ≥ 0.20',
+    YOUNG_DOG: 'Edge ≥ 0.20 · picked dog is younger',
+    BALANCED: 'Edge ≥ 0.15 · opener ≤ +250 · picked dog is younger',
+    STANCE_AVOID: 'Anti-filter — orthodox dog vs southpaw favorite',
+    AVOID_SUB_LOSS: 'Anti-filter — picked fighter is coming off a submission loss',
+    CLV_FADE: 'Anti-filter — closing line moved against this pick (sharp money disagreed)',
   };
   // Priority for sort + the strongest-signal badge per fight.
   // Higher = stronger buy; AVOIDs are negative anti-signals.
@@ -910,17 +907,22 @@ cfl.renderFooter();
   }
 
   // ---- model cards ----
-  // Every stat below is measured on the SAME fully out-of-sample window so the
-  // comparison is apples-to-apples. The models don't share a training cutoff
-  // (v1–v4 train through 2022; v5 trains through 2023 and calibrates on 2024),
-  // so the only window that is clean for ALL of them is 2025-onward. Counting
-  // earlier fights — especially v5's backfilled pre-2024 point-in-time picks —
-  // is in-sample and inflates ROI and the record, so it's excluded.
+  // Every graded stat is gated to the model's honest out-of-sample window:
+  // the LATER of the DB row's test_start_date and the day after the model's
+  // training cutoff (cfl.modelWindowStart). That protects against a stale DB
+  // row claiming a window that overlaps training data. HOLDOUT_START stays as
+  // a hard floor so no window ever gets WIDER than what this page has
+  // historically shown — widening a window re-leaks training data into the
+  // "never seen" record.
   const HOLDOUT_START = '2025-01-01';
-  const isHoldout = r => r.outcome_known && (r.event_date || '') >= HOLDOUT_START;
+  function windowStartFor(m) {
+    const ws = cfl.modelWindowStart(m.id, m.test_start_date);
+    return (ws && ws > HOLDOUT_START) ? ws : HOLDOUT_START;
+  }
+  const isHoldout = (r, ws) => r.outcome_known && (r.event_date || '') >= ws;
 
-  function roiAt(rows, edge) {
-    const bets = rows.filter(r => isHoldout(r) && r.edge != null && r.edge > edge && r.opener_american_odds != null);
+  function roiAt(rows, edge, ws) {
+    const bets = rows.filter(r => isHoldout(r, ws) && r.edge != null && r.edge > edge && r.opener_american_odds != null);
     if (!bets.length) return { bets: 0, wins: 0, win_pct: 0, roi: 0, pnl: 0 };
     const wins = bets.filter(b => b.won).length;
     const pnl = bets.reduce((s, b) => s + (parseFloat(b.pnl_usd) || 0), 0);
@@ -930,8 +932,8 @@ cfl.renderFooter();
   // Straight-up pick record on the window: the model's pick is the >50% side of
   // each graded fight. This is the honest track record across every graded
   // out-of-sample fight — independent of the edge/betting filter above.
-  function pickRecord(rows) {
-    const picks = rows.filter(r => isHoldout(r) && r.model_p != null && r.model_p > 0.5);
+  function pickRecord(rows, ws) {
+    const picks = rows.filter(r => isHoldout(r, ws) && r.model_p != null && r.model_p > 0.5);
     const wins = picks.filter(r => r.won).length;
     const n = picks.length;
     return { n, wins, losses: n - wins, acc: n ? 100 * wins / n : 0 };
@@ -939,34 +941,53 @@ cfl.renderFooter();
 
   const grid = document.getElementById('modelGrid');
   grid.innerHTML = models.map(m => {
-    const headline = roiAt(byModel[m.id] || [], 0.05);
-    const roiClass = headline.roi > 0 ? 'pos' : (headline.roi < 0 ? 'neg' : '');
-    const rec = pickRecord(byModel[m.id] || []);
+    const reg = cfl.MODELS[m.id] || {};
+    const ws = windowStartFor(m);
+    const rows = byModel[m.id] || [];
+    const rec = pickRecord(rows, ws);
+    // The DB's precomputed test_accuracy is only trustworthy if it was
+    // measured on the honest window. v6's row still carries a number computed
+    // on a window that overlaps its training data (until the fix SQL runs) —
+    // suppress rather than show a leaked figure.
+    const dbTrusted = !!m.test_start_date && m.test_start_date >= ws;
+    const accStr = rec.n
+      ? rec.acc.toFixed(1) + '%'
+      : (dbTrusted && m.test_accuracy != null ? (m.test_accuracy * 100).toFixed(1) + '%' : '—');
+    const headline = reg.money ? roiAt(rows, 0.05, ws) : null;
+    const roiClass = headline ? (headline.roi > 0 ? 'pos' : (headline.roi < 0 ? 'neg' : '')) : '';
+    const displayName = cfl.modelName(m.id, m.name);
+    const desc = reg.tagline || m.description || '';
     return `
-      <div class="model-card" data-vid="${m.id}">
+      <div class="model-card" data-vid="${escapeHtml(m.id)}">
         <div class="head">
-          <div class="name">${escapeHtml(m.name || '')}</div>
+          <div class="name">${escapeHtml(displayName)}</div>
           <span class="vid">${escapeHtml(m.id)}</span>
         </div>
-        <div class="desc">${escapeHtml((m.description || '').slice(0, 220))}${(m.description||'').length>220?'…':''}</div>
+        <div class="desc">${escapeHtml(desc.slice(0, 220))}${desc.length > 220 ? '…' : ''}</div>
         <div class="stats">
           <div>
-            <div class="lbl">log-loss</div>
-            <div class="val">${(m.test_log_loss ?? 0).toFixed(4)}</div>
-            <div class="sub">random=0.6931</div>
+            <div class="lbl">graded fights</div>
+            <div class="val">${rec.n.toLocaleString()}</div>
+            <div class="sub">since ${ws}</div>
           </div>
           <div>
             <div class="lbl">accuracy</div>
-            <div class="val">${(rec.n ? rec.acc : (m.test_accuracy ?? 0) * 100).toFixed(1)}%</div>
-            <div class="sub">out-of-sample, 2025+</div>
+            <div class="val">${accStr}</div>
+            <div class="sub">picked the winner</div>
           </div>
+          ${headline ? `
           <div>
-            <div class="lbl">ROI @ 5%</div>
+            <div class="lbl">ROI @ 5%+ edge</div>
             <div class="val ${roiClass}">${fmtPct(headline.roi, { signed: true, dp: 2, alreadyPct: true })}</div>
-            <div class="sub">${headline.bets} bets</div>
-          </div>
+            <div class="sub">${headline.bets} bets · simulated</div>
+          </div>` : `
+          <div>
+            <div class="lbl">betting ROI</div>
+            <div class="val">—</div>
+            <div class="sub">never sees odds</div>
+          </div>`}
         </div>
-        ${rec.n ? `<div class="track-rec">Track record <strong>${rec.wins}–${rec.losses}</strong> <span class="tr-acc">${rec.acc.toFixed(1)}%</span> <span class="tr-note">across ${rec.n.toLocaleString()} graded fights since Jan 2025 · fully out-of-sample for every model</span></div>` : ''}
+        ${rec.n ? `<div class="track-rec">Record <strong>${rec.wins}–${rec.losses}</strong> <span class="tr-acc">${rec.acc.toFixed(1)}%</span> <span class="tr-note">across ${rec.n.toLocaleString()} graded fights since ${ws} — all after this model's training cutoff</span></div>` : ''}
       </div>
     `;
   }).join('');

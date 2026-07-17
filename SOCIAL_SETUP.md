@@ -15,8 +15,8 @@ and Reddit, then wiring them into the auto-poster (`build/social-post.js` +
 
 - **Display name:** `Cannon Fight Lab`
 - **Bio (160 chars, fits both):**
-  > Calibrated UFC predictions backed by real data. Cardio scores, edge
-  > factors, public track record. Every pick locked before the bell.
+  > Every pick locked and graded in public. Simulated +12% at closing
+  > prices; live record since July 2026. Misses shown.
   > cannonfightlab.com
 - **Location:** `Tennessee`
 - **Website:** `https://cannonfightlab.com`

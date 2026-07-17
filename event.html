@@ -545,7 +545,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="distanceEdges.js"></script>
@@ -554,6 +554,12 @@ cfl.renderNav('home');
 cfl.renderFooter();
 
 const eventId = parseInt(cfl.getQueryParam('id'), 10);
+
+// Short display name for a public model: the part of the registry name before
+// the dash, e.g. "Value" / "Fight IQ". Falls back to the raw id.
+function modelShortName(id) {
+  return String(cfl.modelName(id) || id).split(' — ')[0];
+}
 
 function setMeta(attr, key, value) {
   let tag = document.querySelector(`meta[${attr}="${key}"]`);
@@ -678,12 +684,13 @@ async function load() {
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
     sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
-    // Trained-model predictions. Used for both the per-event accuracy strip
-    // (past events) and the per-fight pick pills (both past + upcoming). For
-    // upcoming events `won` is null and `outcome_known` is false, but the
-    // pick row (model_p, fighter_id) is still useful — model already ran.
+    // Trained-model predictions — public models only (cfl.PUBLIC_MODELS).
+    // Used for both the per-event accuracy strip (past events) and the
+    // per-fight pick pills (both past + upcoming). For upcoming events `won`
+    // is null and `outcome_known` is false, but the pick row (model_p,
+    // fighter_id) is still useful — model already ran.
     fightIds.length
-      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won, outcome_known').in('fight_id', fightIds)
+      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won, outcome_known').in('fight_id', fightIds).in('model_version', cfl.PUBLIC_MODELS)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -709,10 +716,22 @@ async function load() {
   //   picksByFight[fight_id][model_version] = { fighter_id, model_p, won, outcome_known }
   //   modelAccuracy[model_version] = { n, wins }   ← only for graded picks (past events)
   // A "pick" is the side with model_p > 0.5; ties at 0.5 are excluded.
+  //
+  // Honest-window gate: a model's picks on fights it may have trained on
+  // (event before cfl.modelWindowStart) are hindsight, not predictions —
+  // they never render and never grade publicly. We pass null as the DB
+  // test_start_date on purpose: the registry's training cutoff is the
+  // trusted floor even if the DB row is stale.
   const picksByFight = {};
   const modelAccuracy = {};
+  let windowFiltered = false;
   (predsR.data || []).forEach(p => {
     if (p.model_p == null || +p.model_p <= 0.5) return;
+    const winStart = cfl.modelWindowStart(p.model_version, null);
+    if (winStart && event.event_date && event.event_date < winStart) {
+      windowFiltered = true;
+      return;
+    }
     const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
     slot[p.model_version] = {
       fighter_id: p.fighter_id,
@@ -749,7 +768,7 @@ async function load() {
       <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
     </div>
-    ${renderModelAccuracyStrip(modelAccuracy)}
+    ${renderModelAccuracyStrip(modelAccuracy, windowFiltered)}
     <div class="page">
       ${renderModelSelector()}
       <div id="fightsList">
@@ -876,12 +895,23 @@ function renderMovPills(mov, pickedFighter) {
   ).join('') + `</span>`;
 }
 
-// Past-event-only banner showing each trained model's pick accuracy on this
+// Past-event-only banner showing each public model's pick accuracy on this
 // card. Picks are sides where model_p > 0.5 (ties excluded). Renders nothing
-// for upcoming events or events without graded predictions.
-function renderModelAccuracyStrip(modelAccuracy) {
+// for upcoming events or events without graded predictions. If every graded
+// pick was dropped by the honest-window gate (old card inside the models'
+// training data), we say so instead of showing hindsight numbers.
+function renderModelAccuracyStrip(modelAccuracy, windowFiltered) {
   const versions = Object.keys(modelAccuracy).sort();
-  if (!versions.length) return '';
+  if (!versions.length) {
+    if (windowFiltered) {
+      return `
+        <div class="model-acc-strip">
+          <div class="acc-label">Model accuracy on this card</div>
+          <div style="font: 500 12px 'Inter', sans-serif; color: var(--text-3);">This card predates the models' honest test windows — no graded picks shown.</div>
+        </div>`;
+    }
+    return '';
+  }
   const cells = versions.map(mv => {
     const { n, wins } = modelAccuracy[mv];
     if (!n) return '';
@@ -889,7 +919,7 @@ function renderModelAccuracyStrip(modelAccuracy) {
     const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'ok' : 'bad');
     return `
       <div class="acc-cell">
-        <div class="acc-mv">${cfl.escapeHtml(mv.toUpperCase())}</div>
+        <div class="acc-mv">${cfl.escapeHtml(modelShortName(mv))}</div>
         <div class="acc-rec ${cls}">${wins}/${n}</div>
         <div class="acc-pct ${cls}">${pct.toFixed(0)}%</div>
       </div>`;
@@ -953,9 +983,11 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
 }
 
 // Compact strip of trained-model picks for a single fight. One pill per
-// model (v1..v4). On past fights the pill is colored by ✓/✗ outcome; on
+// public model (cfl.PUBLIC_MODELS — retired models never render). Fights
+// inside a model's training window were already dropped by the honest-window
+// gate upstream. On past fights the pill is colored by ✓/✗ outcome; on
 // upcoming fights it's neutral. Hidden if no model has a pick for this
-// fight (e.g. fight added after the last training run).
+// fight (e.g. fight added after the last model run).
 function renderModelPicks(fight, fmap, fightPicks) {
   if (!fightPicks) return '';
   const versions = Object.keys(fightPicks).sort();
@@ -972,7 +1004,7 @@ function renderModelPicks(fight, fmap, fightPicks) {
     }
     return `
       <span class="model-pick-pill ${cls}">
-        <span class="mp-mv">${cfl.escapeHtml(mv.toUpperCase())}</span>
+        <span class="mp-mv">${cfl.escapeHtml(modelShortName(mv))}</span>
         <span class="mp-name">${cfl.escapeHtml(picked.name)}</span>
         <span class="mp-pct">${pct}%</span><span class="mp-mark">${mark}</span>
       </span>`;

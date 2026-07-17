@@ -30,6 +30,14 @@ function cardSlug(eventName, eventId) {
   return `${slugify(eventName)}-${eventId}`;
 }
 
+// Plain-English agreement label for the two public models (Value + Fight IQ).
+// Handles the one-model case too (a fight only one model has graded).
+function modelAgreementLabel(agree, total) {
+  if (total <= 1) return '1 model';
+  if (agree === total) return total === 2 ? 'both models agree' : `all ${total} models agree`;
+  return `${agree} of ${total} models agree`;
+}
+
 // Consensus verdict for one fight, matching the per-fight preview's rule
 // exactly: only picks with model_p > 0.5 count; the winner is the fighter the
 // most models favour; confidence is the average model_p of the winning models.
@@ -122,7 +130,7 @@ function eventPreview({ event, rows, previewSlugFor }) {
       'name': `Who does Cannon Fight Lab's model pick to win the ${event.name} main event?`,
       'acceptedAnswer': {
         '@type': 'Answer',
-        'text': `The model picks ${mainPick.winnerName} at ${mainPick.pct}% confidence (${mainPick.agree} of ${mainPick.total} models agree). Verdicts are generated from cardio score, takedown defense, and record-based factors validated against 8,000+ historical UFC fights.`
+        'text': `The model picks ${mainPick.winnerName} at ${mainPick.pct}% confidence (${modelAgreementLabel(mainPick.agree, mainPick.total)}). CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
       }
     });
   }
@@ -258,7 +266,7 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   <div class="cfl-card-summary">
     <span class="cfl-card-summary-label">Model read on this card</span>
     ${mainPick
-      ? `Main event: <strong>${escapeHtml(mainPick.winnerName)}</strong> · ${mainPick.pct}% confidence · ${mainPick.agree}/${mainPick.total} models agree. Verdicts published on ${withVerdict} of ${bouts} fights.`
+      ? `Main event: <strong>${escapeHtml(mainPick.winnerName)}</strong> · ${mainPick.pct}% confidence · ${modelAgreementLabel(mainPick.agree, mainPick.total)}. Verdicts published on ${withVerdict} of ${bouts} fights.`
       : `Model verdicts publish closer to fight night. Full ${bouts}-fight card below.`}
   </div>
 

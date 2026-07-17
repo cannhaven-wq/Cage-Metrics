@@ -272,10 +272,11 @@
       <p>All historical fight data on CFL is sourced from the official UFC statistics website, accessed via public HTTP requests at a rate-limited cadence designed to avoid burdening their servers. We collect publicly available facts only — fighter biographical data, fight outcomes, and round-level box-score statistics. We do not collect personal information, do not bypass any authentication or rate limit, and do not republish source HTML.</p>
       <p>The database powering this site currently contains:</p>
       <ul>
-        <li>4,492 fighter profiles covering substantially the full historical UFC roster</li>
-        <li>8,766 completed fights with outcome, method, round, and weight class</li>
-        <li>782 events spanning UFC history through the most recent card</li>
+        <li>4,506 fighter profiles covering substantially the full historical UFC roster</li>
+        <li>8,853 completed fights with outcome, method, round, and weight class</li>
+        <li>788 events spanning UFC history through the most recent card</li>
       </ul>
+      <p class="muted">Counts as of July 14, 2026. New cards are scraped as they happen, so these numbers grow weekly.</p>
       <p class="muted">Fight metadata (who fought whom, who won, by what method, in what round) is complete across the dataset. Per-fight round-by-round statistics (significant strikes, takedowns, control time) are populated for the subset of fights where UFC published them — primarily Zuffa-era events.</p>
     </section>
 
@@ -299,6 +300,7 @@ win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in b
         <li>The sample size (3,309 fights) is large enough to be statistically meaningful</li>
         <li>The pattern is monotonic — larger age gaps produce larger win-rate gaps for the younger fighter, which is what you would expect if the effect is real and not noise</li>
         <li>Age is exogenous — fighters cannot manipulate it, and matchmaking does not systematically pair younger versus older fighters in a way that would confound the result</li>
+        <li>Age is the only factor we measure that survives market control — the younger fighter still wins 56.8% of fights the betting market priced as even. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
       </ul>
 
       <h3>Known caveats</h3>
@@ -330,18 +332,20 @@ win_rate(bucket) = sum(longer_won where reach_gap in bucket) / count(reach_gap i
         <li>Reach is correlated with height and weight class — within a single weight class the effect is smaller than it appears at the cross-divisional level</li>
         <li>Reach matters more for primary strikers than for grappling-first fighters</li>
         <li>Effect decays smoothly with smaller gaps; a 1-inch reach advantage is statistically indistinguishable from no advantage</li>
+        <li>Raw base rate only — reach does not survive market control; in fights the betting market priced as even, it is roughly a coin flip. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
       </ul>
       <a href="#" class="back-to-top">Back to top ↑</a>
     </section>
 
     <section class="method" id="stance">
       <h2>04 &nbsp;Stance matchup win rate</h2>
-      <div class="subhead">Strong signal in one specific matchup, noise elsewhere</div>
+      <div class="subhead">A raw base rate — it does not survive market control</div>
       <p>For every completed UFC fight where both fighters' stances are recorded, we group fights by the specific stance pairing (Orthodox vs Orthodox, Orthodox vs Southpaw, Switch vs Southpaw, etc.) and measure win rates by stance.</p>
 
       <div class="stat-callout">
         <div class="headline">Switch-stance fighters beat Southpaws 58.1% of the time.</div>
         <div class="sample"><strong>Sample:</strong> 191 fights. <strong>Source:</strong> Completed UFC fights between fighters with recorded stances of Switch and Southpaw.</div>
+        <div class="sample" style="margin-top:8px;"><strong>Raw base rate only.</strong> This number does not survive market control — once you hold the betting line flat, the stance advantage collapses to roughly a coin flip. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a>.</div>
       </div>
 
       <h3>Why we report only the matchups with real signal</h3>
@@ -474,6 +478,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
 
       <div class="subhead" style="margin-top: 22px">Model picks: locked before the card</div>
       <p>Each model's pick for a fight is snapshotted before the event and is never edited afterward. The scoreboard you see is the model's real, committed call — wins and losses both counted, with no retroactive tuning.</p>
+      <p>CFL publishes exactly two models: <strong>Fight IQ</strong> (tape only — never sees a betting line) and <strong>Value</strong> (built to beat the opening odds). Older experimental models have been retired and their numbers are no longer shown anywhere on the site.</p>
       <p><strong>One documented exception:</strong> if an infrastructure outage (such as a missing odds feed) stops a model from recording its pick before an event, we reconstruct that pick using only information that existed <em>before</em> the card — the same point-in-time fighter stats and market inputs the model would have seen on fight night. We never alter an input to produce a more favorable result, and we count the outcome, win or loss, exactly as we would a live pick. Reconstructed picks are recorded for accuracy only and are excluded from any betting profit-and-loss figures, since no live line was available to bet.</p>
 
       <p class="muted">Disagreement with a specific number? Spot a methodology error? <a href="contact.html" style="color: var(--red); text-decoration: underline;">Get in touch</a> — we treat substantiation questions as the most important questions a user can ask.</p>
@@ -481,7 +486,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
     </section>
 
     <div class="last-updated">
-      Last updated: July 1, 2026 · Cannon Fight Lab is operated by Reed Cannon. Cannon Fight Lab is not a sportsbook.
+      Last updated: July 14, 2026 · Cannon Fight Lab is operated by Reed Cannon. Cannon Fight Lab is not a sportsbook.
     </div>
 
   </div>
@@ -489,7 +494,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('');

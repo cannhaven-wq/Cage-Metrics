@@ -5,6 +5,7 @@
   "description": "Prerender static stubs for fighter and event pages so social unfurls and crawlers see real per-page SEO content.",
   "scripts": {
     "prerender": "node prerender.js",
+    "factor-rates": "node factor-rates.js",
     "draft-post": "node draft-post.js",
     "send-digest": "node send-digest.js",
     "social-post": "node social-post.js",

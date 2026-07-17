@@ -40,6 +40,19 @@
     margin-bottom: 6px;
   }
   .lab-header p { color: var(--text-2); font-size: 14px; max-width: 740px; }
+  .lab-warning {
+    background: rgba(230,57,70,0.08);
+    border: 1px solid rgba(230,57,70,0.45);
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin: 10px 0 10px;
+    color: var(--text);
+    font-size: 13px;
+    line-height: 1.6;
+    max-width: 740px;
+  }
+  .lab-warning strong { color: var(--red); }
+  .lab-warning a { color: var(--red); text-decoration: underline; }
 
   .toolbar {
     background: var(--bg-2);
@@ -199,19 +212,6 @@
     margin: 22px 0 10px;
   }
 
-  .projection-card {
-    background: var(--bg-3);
-    border: 1px solid var(--border-2);
-    border-radius: 8px;
-    padding: 14px 18px;
-    font-size: 13px;
-    color: var(--text-2);
-    line-height: 1.65;
-  }
-  .projection-card strong { color: #fff; font-weight: 600; }
-  .projection-card .pos { color: var(--green); }
-  .projection-card .neg { color: var(--red); }
-
   .err, .empty {
     padding: 30px;
     text-align: center;
@@ -229,7 +229,10 @@
 <div class="lab-header">
   <div class="label">Internal · not for distribution</div>
   <h1>Lab — Backtest Dashboard</h1>
-  <p>Flat-stake backtest of every model on the 2023+ hold-out, against the BFO consensus opener. Adjust stake size and minimum edge to see how the bankroll curve changes. Forward ROI projections include a ±1σ confidence band based on sample variance.</p>
+  <div class="lab-warning">
+    <strong>Internal sandbox.</strong> These backtests use full-history windows that INCLUDE training data — numbers here are inflated by construction. The honest graded record lives in the <a href="track-record.html">Proof Center</a>.
+  </div>
+  <p>Flat-stake sandbox against the BFO consensus opener. Adjust stake size and minimum edge to see how the bankroll curve changes.</p>
 </div>
 
 <div class="toolbar">
@@ -263,7 +266,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('');
@@ -487,11 +490,6 @@ cfl.renderFooter();
       const path = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p[0].toFixed(1)} ${p[1].toFixed(1)}`).join(' ');
       const zeroY = H - PAD - ((0 - yMin) / yRange) * (H - PAD * 2);
 
-      // projection: 95% confidence band on ROI
-      const ciHalf = 1.96 * s.seRoi;
-      const projLow = s.roi - ciHalf;
-      const projHi  = s.roi + ciHalf;
-
       // year table
       const yearRows = Object.entries(s.byYear).sort(([a],[b])=>a.localeCompare(b)).map(([y, r]) => {
         const roi = r.n ? (r.pnl / (r.n * stake)) * 100 : 0;
@@ -576,24 +574,6 @@ cfl.renderFooter();
                 <tbody>${edgeRows}</tbody>
               </table>
             </div>
-          </div>
-
-          <div class="section-h">Forward projection</div>
-          <div class="projection-card">
-            With ${s.n} historical bets at this filter, mean ROI is
-            <strong class="${s.roi>0?'pos':(s.roi<0?'neg':'')}">${s.roi>=0?'+':''}${s.roi.toFixed(2)}%</strong>
-            with a 95% confidence band of
-            <strong class="${projLow>0?'pos':'neg'}">${projLow>=0?'+':''}${projLow.toFixed(2)}%</strong>
-            to
-            <strong class="${projHi>0?'pos':'neg'}">${projHi>=0?'+':''}${projHi.toFixed(2)}%</strong>.
-            Per-bet std dev <strong class="mono">$${s.stdev.toFixed(2)}</strong>.
-            At ~${(s.n / monthsSpan).toFixed(1)} bets/month, expected monthly P&amp;L is
-            <strong class="${s.roi>0?'pos':'neg'}">${s.roi>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * s.roi / 100).toLocaleString()}</strong>
-            (band:
-            <strong>${projLow>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * projLow / 100).toLocaleString()}</strong>
-            to
-            <strong>${projHi>=0?'+':''}$${Math.round((s.n / monthsSpan) * stake * projHi / 100).toLocaleString()}</strong>).
-            The band is wide because the sample is small — the more bets accumulate, the tighter this gets.
           </div>
 
         </div>

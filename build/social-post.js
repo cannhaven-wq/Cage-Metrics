@@ -55,7 +55,10 @@ async function buildPost(event) {
   const fightIds = fights.map(f => f.id);
   const { data: preds } = await sb.from('model_predictions')
     .select('model_version, fight_id, fighter_id, model_p')
-    .in('fight_id', fightIds);
+    .in('fight_id', fightIds)
+    // Public models only. Node script — window.cfl doesn't exist here, so
+    // the list is hardcoded. Source of truth: cfl.PUBLIC_MODELS in _shared.js.
+    .in('model_version', ['v6', 'v3']);
 
   const picksByFight = {};
   (preds || []).forEach(p => {

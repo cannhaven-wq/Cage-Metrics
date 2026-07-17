@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>UFC Stat Finder — Data-Backed MMA Betting Insights | Cannon Fight Lab</title>
+<title>The Factor Lab — Which UFC Stats Actually Predict Fights | Cannon Fight Lab</title>
 <meta name="description" content="Searchable UFC betting insights: finish rate by division, ring rust effect after a loss, southpaw advantage, age edge calibration. All backed by 8,000+ historical fights.">
 <meta name="keywords" content="UFC stat finder, MMA betting insights, UFC finish rate, UFC southpaw stats, UFC age edge, MMA data">
 <meta name="author" content="Cannon Fight Lab">
@@ -216,6 +216,77 @@
     color: var(--text-2);
     line-height: 1.6;
   }
+
+  /* ---- Factor lab ---- */
+  .lab-intro {
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.7;
+    max-width: 760px;
+    margin: 0 0 14px;
+  }
+  .lab-intro strong { color: var(--text-1); }
+  .lab-table-wrap { overflow-x: auto; margin-top: 22px; }
+  .lab-table { min-width: 640px; }
+  .lab-table th.num, .lab-table td.num { text-align: right; }
+  .lab-loading { color: var(--text-3); text-align: center; padding: 28px 0; }
+
+  .lab-factor { font-weight: 700; font-size: 15px; }
+  .lab-question { font-size: 12px; color: var(--text-3); margin-top: 3px; }
+  .lab-basis {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    margin-left: 8px;
+    vertical-align: middle;
+    background: var(--bg-4);
+    color: var(--text-3);
+  }
+  .lab-rate { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 16px; }
+  .lab-ci { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .lab-rate.dead { color: var(--text-3); }
+  .lab-rate.live { color: var(--green); }
+
+  .lab-badge {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 5px;
+    white-space: nowrap;
+  }
+  .lab-badge.real { background: rgba(46, 160, 67, 0.15); color: var(--green); }
+  .lab-badge.proxy { background: rgba(180, 180, 180, 0.1); color: var(--text-3); }
+  .lab-badge.inverted { background: rgba(210, 153, 34, 0.15); color: #d29922; }
+  .lab-badge.unproven, .lab-badge.insufficient { background: var(--bg-4); color: var(--text-3); }
+  .lab-verdict-note { font-size: 11px; color: var(--text-3); margin-top: 4px; max-width: 210px; line-height: 1.45; }
+
+  .lab-row-sub td {
+    background: var(--bg-1);
+    font-size: 13px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+  .lab-row-sub .lab-rate { font-size: 13px; font-weight: 600; }
+  .lab-row-sub .lab-bucket { padding-left: 18px; color: var(--text-2); }
+  .lab-toggle {
+    background: none;
+    border: none;
+    color: var(--red);
+    font: inherit;
+    font-size: 11px;
+    cursor: pointer;
+    padding: 4px 0 0;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .lab-toggle:hover { text-decoration: underline; }
+  .lab-foot { font-size: 12px; color: var(--text-3); margin-top: 14px; line-height: 1.6; }
 </style>
 </head>
 <body>
@@ -223,12 +294,44 @@
 <nav class="cfl-nav"></nav>
 
 <div class="page-hero">
-  <div class="eyebrow">Edges & insights</div>
-  <h1>UFC Stat Finder</h1>
-  <p>Real patterns from every UFC fight in our database. The kind of edges most bettors don't bother to compute.</p>
+  <div class="eyebrow">Historical analysis</div>
+  <h1>The Factor Lab</h1>
+  <p>Which stats actually predict fights — and which just repeat the betting line. Every number computed live from the full UFC history, with the sample size attached.</p>
 </div>
 
 <div class="page">
+  <h2 class="section-h">Does it survive the market?</h2>
+  <p class="lab-intro">
+    Every factor below is scored against <strong id="lab-n">—</strong> UFC fights. The first column is how
+    often the fighter it favours actually won. The second column is the one that matters: the same rate
+    across only the fights the betting market priced as a coin flip &mdash; both men inside
+    &plusmn;140 at close. Hold the market flat, and see what the factor still knows.
+  </p>
+  <p class="lab-intro">
+    A factor that looks strong in column one and collapses in column two isn't telling you about the fight.
+    It's telling you who the favourite was, which you could already read off the odds for free. Every stat
+    here is rebuilt from fights that had already happened when the fight being scored took place &mdash; a
+    fighter's career record contains the result we're trying to predict, so we never use it.
+    Nothing is shown below <strong id="lab-floor">100</strong> fights.
+  </p>
+
+  <div class="lab-table-wrap">
+    <table class="div-table lab-table" id="labTable">
+      <thead>
+        <tr>
+          <th>Factor</th>
+          <th class="num">Raw win rate</th>
+          <th class="num">Market held flat</th>
+          <th>Verdict</th>
+        </tr>
+      </thead>
+      <tbody id="labBody">
+        <tr><td colspan="4" class="lab-loading">Loading…</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="lab-foot" id="lab-foot"></p>
+
   <h2 class="section-h">Headline edges</h2>
   <div class="insights-grid">
 
@@ -317,6 +420,7 @@ const sb = window.cflSupabase;
 
 async function loadAll() {
   await Promise.all([
+    loadFactorLab(),
     loadYounger(),
     loadSouthpaw(),
     loadReach(),
@@ -324,6 +428,106 @@ async function loadAll() {
     loadMainEvent(),
     loadDivisions(),
   ]);
+}
+
+// ---------------------------------------------------------------------------
+// Factor lab — reads factor-rates.json, regenerated by build/factor-rates.js.
+// Verdicts are computed there, not here; this only renders them.
+// ---------------------------------------------------------------------------
+
+const VERDICT_COPY = {
+  real: 'Survives. Still beats a coin flip when the market says the fight is even.',
+  proxy: 'Reads the favourite. Once the market is level, it stops knowing anything.',
+  inverted: 'Backwards. The fighter it favours loses more often than not in even fights.',
+  unproven: 'Too few evenly-priced fights to judge either way.',
+  insufficient: 'Below our sample floor. We won\'t put a number on it.',
+};
+
+const VERDICT_LABEL = {
+  real: 'Real edge',
+  proxy: 'Market proxy',
+  inverted: 'Inverted',
+  unproven: 'Unproven',
+  insufficient: 'Too few fights',
+};
+
+function labRate(r, opts) {
+  opts = opts || {};
+  if (!r || (opts.floor && r.n < opts.floor)) {
+    return '<div class="lab-rate dead">—</div><div class="lab-ci">'
+      + (r ? `only ${r.n} fights` : 'no sample') + '</div>';
+  }
+  const live = opts.live && r.ci_lo > 50;
+  return `<div class="lab-rate ${live ? 'live' : ''}">${r.pct.toFixed(1)}%</div>`
+    + `<div class="lab-ci">${r.ci_lo.toFixed(1)}–${r.ci_hi.toFixed(1)} · ${r.n.toLocaleString()} fights</div>`;
+}
+
+async function loadFactorLab() {
+  const body = document.getElementById('labBody');
+  let d;
+  try {
+    const res = await fetch('factor-rates.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error(res.status);
+    d = await res.json();
+  } catch (e) {
+    body.innerHTML = '<tr><td colspan="4" class="lab-loading">Factor rates unavailable right now.</td></tr>';
+    return;
+  }
+
+  const floor = d.rules.min_sample;
+  document.getElementById('lab-n').textContent = d.dataset.fights_scored.toLocaleString();
+  document.getElementById('lab-floor').textContent = floor.toLocaleString();
+
+  const rows = [];
+  d.factors.forEach((f, i) => {
+    const head = f.buckets.find((b) => b.headline) || f.buckets[0];
+    const subs = f.buckets.filter((b) => b !== head);
+    const basis = f.basis === 'physical' ? 'Physical' : 'Point-in-time';
+
+    rows.push(`
+      <tr class="lab-row-head" data-factor="${i}">
+        <td>
+          <div class="lab-factor">${cfl.escapeHtml(f.label)}<span class="lab-basis">${basis}</span></div>
+          <div class="lab-question">${cfl.escapeHtml(f.question)}</div>
+          ${subs.length ? `<button class="lab-toggle" data-toggle="${i}">Show ${subs.length} bands ▾</button>` : ''}
+        </td>
+        <td class="num">${labRate(head.all, { floor })}</td>
+        <td class="num">${labRate(head.even, { floor, live: true })}</td>
+        <td>
+          <span class="lab-badge ${head.verdict}">${VERDICT_LABEL[head.verdict]}</span>
+          <div class="lab-verdict-note">${VERDICT_COPY[head.verdict]}</div>
+        </td>
+      </tr>`);
+
+    subs.forEach((b) => {
+      rows.push(`
+        <tr class="lab-row-sub" data-sub="${i}" hidden>
+          <td class="lab-bucket">${cfl.escapeHtml(b.label)}</td>
+          <td class="num">${labRate(b.all, { floor })}</td>
+          <td class="num">${labRate(b.even, { floor, live: true })}</td>
+          <td><span class="lab-badge ${b.verdict}">${VERDICT_LABEL[b.verdict]}</span></td>
+        </tr>`);
+    });
+  });
+
+  body.innerHTML = rows.join('');
+
+  body.querySelectorAll('[data-toggle]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const i = btn.getAttribute('data-toggle');
+      const subs = body.querySelectorAll(`[data-sub="${i}"]`);
+      const opening = subs[0] && subs[0].hidden;
+      subs.forEach((r) => { r.hidden = !opening; });
+      btn.textContent = opening ? 'Hide bands ▴' : `Show ${subs.length} bands ▾`;
+    });
+  });
+
+  const when = new Date(d.generated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
+  document.getElementById('lab-foot').innerHTML =
+    `Scored across ${d.dataset.fights_scored.toLocaleString()} decided UFC fights `
+    + `(${d.dataset.first_event} to ${d.dataset.last_event}), of which `
+    + `${d.dataset.market_even_cohort.toLocaleString()} were priced within ±${d.rules.even_band_american} at close. `
+    + `Ranges are 95% confidence. Recomputed from the database on ${when} — nothing on this page is hardcoded.`;
 }
 
 async function loadYounger() {

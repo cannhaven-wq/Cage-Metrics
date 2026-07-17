@@ -121,7 +121,10 @@ async function loadCard(event) {
 
   const [fR, pR, cR, finR] = await Promise.all([
     sb.from('fighters').select('id, name, nickname').in('id', fighterIds),
-    sb.from('model_predictions').select('fight_id, fighter_id, model_p').in('fight_id', fightIds),
+    // Public models only — keep in sync with cfl.PUBLIC_MODELS in _shared.js.
+    // v1/v2/v4/v5 are retired; blending them into posted consensus copy would
+    // resurface numbers the site no longer stands behind.
+    sb.from('model_predictions').select('fight_id, fighter_id, model_p').in('model_version', ['v6', 'v3']).in('fight_id', fightIds),
     sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds),
     sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds),
   ]);

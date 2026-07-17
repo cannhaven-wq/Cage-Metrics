@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>Cannon Fight Lab — 70% Accurate UFC Predictions & Fighter Analytics</title>
-<meta name="description" content="70% accurate UFC fight predictions, tied for most accurate public model on the internet. Verified on 368 graded 2025 fights. Fighter cardio scores, model picks, edge factors, and a transparent locked-pick track record.">
+<title>Cannon Fight Lab — UFC Models That Show Their Work</title>
+<meta name="description" content="Two honest models — a tape-only predictor and a value model that beats the opening line (+12% at closing prices, simulated, every pick locked) — plus the Factor Lab: which stats actually predict fights. Every miss shown.">
 <meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, accurate UFC picks">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -15,8 +15,8 @@
 <!-- ===== Open Graph (Facebook, LinkedIn, Discord, iMessage) ===== -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="Cannon Fight Lab — 70% Accurate UFC Predictions">
-<meta property="og:description" content="70% accurate UFC fight predictions, verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Transparent verdicts, cardio scores, edge factors.">
+<meta property="og:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
+<meta property="og:description" content="Two honest models — a tape-only predictor and a value model that beats the opening line (+12% at closing prices, simulated, every pick locked) — plus the Factor Lab: which stats actually predict fights. Every miss shown.">
 <meta property="og:url" content="https://cannonfightlab.com/">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -26,8 +26,8 @@
 
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Cannon Fight Lab — 70% Accurate UFC Predictions">
-<meta name="twitter:description" content="70% accurate UFC predictions verified on 368 graded 2025 fights — tied for most accurate public model on the internet. Cardio scores, model picks, edge factors.">
+<meta name="twitter:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
+<meta name="twitter:description" content="A tape-only predictor and a value model graded against the opening line (+12% at closing prices, simulated) — plus the Factor Lab: which stats actually predict fights. Every miss shown.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -43,7 +43,7 @@
   "name": "Cannon Fight Lab",
   "alternateName": "CFL",
   "url": "https://cannonfightlab.com/",
-  "description": "Calibrated UFC fight predictions and fighter analytics. Verdicts backed by edge factors validated against 8,000+ historical fights.",
+  "description": "UFC fight models that show their work: a tape-only predictor, a value model graded against the opening line, and the Factor Lab — every stat tested against 8,600+ decided fights with the market held flat.",
   "applicationCategory": "SportsApplication",
   "operatingSystem": "Any",
   "creator": {
@@ -253,7 +253,7 @@
 
 /* ===== Why trust ===== */
 #home .trust { background: var(--bg-1); border: 1px solid var(--line); border-radius: 18px; padding: 26px 24px; }
-#home .trust-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 20px; }
+#home .trust-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
 #home .trust-item { text-align: center; position: relative; }
 #home .trust-item + .trust-item::before { content: ''; position: absolute; left: -10px; top: 6px; bottom: 6px; width: 1px; background: var(--line); }
 #home .trust-item .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 30px; color: #fff; line-height: 1; }
@@ -361,14 +361,14 @@
     <div>
       <div class="hp-eyebrow">UFC Betting Analytics</div>
       <h1>Find where the betting<br>line is <span class="hl">wrong.</span></h1>
-      <p class="lede">CFL puts a verified model's probability next to the market's price for every fight on every UFC card — and flags the gaps worth a second look. Model output, not guarantees.</p>
+      <p class="lede">CFL runs two models it can defend — Fight IQ, which never sees a betting line, and Value, which hunts mispriced openers — and shows every graded result, including the misses. The Factor Lab shows which stats survive the market and which just repeat it.</p>
       <div class="hero-cta">
         <a href="card-lab.html" class="btn btn-primary btn-lg">Analyze next card →</a>
         <a href="track-record.html" class="btn btn-ghost btn-lg">See verified track record</a>
       </div>
       <div class="hero-proofline" id="heroProofline">
-        <span class="pf"><b id="hpAccuracy">70.0%</b> straight-up on <b id="hpSample">368</b> graded out-of-sample fights</span>
-        <span class="pf">Picks locked before events · zero edits</span>
+        <span class="pf" id="hpProof"><b>66-21</b> on flat $100 bets since Jan 2025 · <b>+12.7%</b> at closing prices (simulated)</span>
+        <span class="pf">Picks locked at first write · misses shown · live record since July 2026</span>
         <a class="pf link" href="track-record.html">Verify it →</a>
       </div>
     </div>
@@ -396,7 +396,7 @@
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
       <div class="model-filter" style="margin-left:auto">
         <label for="hpModelSelect">Model</label>
-        <select id="hpModelSelect"><option value="consensus">Consensus (all models)</option></select>
+        <select id="hpModelSelect"><option value="consensus">Consensus (both models)</option></select>
       </div>
     </div>
     <div class="fights" id="fightsList"></div>
@@ -408,8 +408,8 @@
 
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
-    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded, none edited after the event. We show the misses too.</div></div><a href="track-record.html">See the full verified record →</a></div>
-    <p class="track-note">Every pick is locked before the event and never retroactively adjusted. Our flagship model (v5) hits <strong>70.0%</strong> on 368 graded 2025 UFC fights — tied with the most accurate public UFC prediction model on the internet, on a 50%+ larger verified test sample. Accuracy alone isn't the whole story, so the <a href="track-record.html">Proof Center</a> also shows calibration, favorites vs underdogs, and what flat $100 bets would have returned — including where the model has been wrong.</p>
+    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded in public, misses included.</div></div><a href="track-record.html">See the full verified record →</a></div>
+    <p class="track-note">Two models, two honest numbers. <strong>Value</strong> — the money model — has been graded on 395 fights that happened after its December 2024 training cutoff: 69.9% of its picks were right. Its betting rule (favorites only, at least 3 points of edge, flat $100 a bet) has gone <strong>66-21</strong> as of July 15, 2026: up <strong>$1,478</strong> at the opening price (+17.0%), still up $1,103 (+12.7%) re-priced at closing odds, and it beat the closing line on 57 of 87 bets. Those results are simulated point-in-time. The live record started July 2026 and is 0-1 so far — the first settled bet lost, and we show it like everything else. <strong>Fight IQ</strong> never sees a betting line and calls <strong>63.6%</strong> of fights right out of sample; just backing the closing favorite gets 68.4%. We publish a number that loses to Vegas because a model within five points of the market without ever looking at the market is a model you can actually trust to be independent of it. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market.</p>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
@@ -423,19 +423,19 @@
       </a>
       <a class="tool" href="parlay.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
-        <h3>Stack only the strongest edges</h3><p>The Parlay Builder pre-fills the best live price across 8+ books and shows the model's verdict on every leg before you stack it.</p><span class="go">Build a parlay →</span>
+        <h3>Stack only the strongest edges</h3><p>The Parlay Builder pre-fills the best available price we track and shows the model's verdict on every leg before you stack it.</p><span class="go">Build a parlay →</span>
       </a>
       <a class="tool" href="cardio.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-        <h3>Spot late-round fade risk</h3><p>Cardio scores show who holds output deep into fights and who falls apart — the edge the books miss most.</p><span class="go">Check cardio scores →</span>
+        <h3>Spot late-round fade risk</h3><p>Cardio scores show who holds output deep into fights and who falls apart — context for every pick, not a betting edge on its own.</p><span class="go">Check cardio scores →</span>
       </a>
       <a class="tool" href="stats.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M6 20v-6"/><path d="M12 20V4"/><path d="M18 20v-9"/></svg></div>
-        <h3>Find historical betting angles fast</h3><p>Situational trends across 8,000+ fights — age gaps, southpaws, reach, finish rates — with real sample sizes attached.</p><span class="go">Open Stat Finder →</span>
+        <h3>The Factor Lab</h3><p>Which stats actually predict fights — and which just repeat the betting line. Live rates, real sample sizes.</p><span class="go">Open the Factor Lab →</span>
       </a>
       <a class="tool" href="predictor.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M9 3h6v4l4 8a4 4 0 0 1-4 6H9a4 4 0 0 1-4-6l4-8V3Z"/><path d="M8 3h8"/></svg></div>
-        <h3>See how the models are built</h3><p>Every model's features, test window, accuracy, and ROI at different edge thresholds — nothing hidden in a black box.</p><span class="go">Open the Model Lab →</span>
+        <h3>See how the models are built</h3><p>Both models' features, honest test windows, accuracy and ROI — nothing hidden.</p><span class="go">Open the Model Lab →</span>
       </a>
     </div>
   </section>
@@ -445,11 +445,10 @@
     <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
     <div class="trust" style="margin-top:14px">
       <div class="trust-grid">
-        <div class="trust-item"><div class="n">368</div><div class="l">graded 2025 fights</div></div>
-        <div class="trust-item"><div class="n">70.0<span class="u">%</span></div><div class="l">model accuracy</div></div>
-        <div class="trust-item"><div class="n">Locked</div><div class="l">picks set before events</div></div>
-        <div class="trust-item"><div class="n">Zero</div><div class="l">retroactive edits</div></div>
-        <div class="trust-item"><div class="n">8,000<span class="u">+</span></div><div class="l">historical fights backtested</div></div>
+        <div class="trust-item"><div class="n">86</div><div class="l">flat-stake bets graded</div></div>
+        <div class="trust-item"><div class="n">+12.7<span class="u">%</span></div><div class="l">at closing prices (simulated)</div></div>
+        <div class="trust-item"><div class="n">8,853</div><div class="l">fights in the database</div></div>
+        <div class="trust-item"><div class="n">Locked</div><div class="l">every pick at first write</div></div>
       </div>
       <div class="trust-foot">Every number is computed live from the pick database — accuracy, calibration, ROI, and the misses. <a href="track-record.html">See the verified track record →</a> · <a href="methodology.html">Read the methodology</a></div>
     </div>
@@ -461,7 +460,7 @@
     <div class="steps" style="margin-top:14px">
       <div class="step"><div class="num">1</div><div class="st">Check the model pick</div><div class="sd">Who the model likes, and by how much.</div></div>
       <div class="step"><div class="num">2</div><div class="st">Review confidence</div><div class="sd">High, medium, or a thin lean worth a second look.</div></div>
-      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the pick — cardio, TDD, age.</div></div>
+      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the pick — age, cardio, takedown defense.</div></div>
       <div class="step"><div class="num">4</div><div class="st">Check sportsbook odds</div><div class="sd">Line up the model's number against the price.</div></div>
       <div class="step"><div class="num">5</div><div class="st">Bet only on value</div><div class="sd">When the price gives an edge — never on hype.</div></div>
     </div>
@@ -475,10 +474,10 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd3"></script>
+<script src="_shared.js?v=rd4"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=3"></script>
+<script src="fight-insights.js?v=4"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -491,23 +490,31 @@ async function loadHomepageStats() {
   await Promise.all([loadHeroProof(), loadPastEvents()]);
 }
 
-// Live accuracy for the hero proof line — flagship model only, gated to its
-// out-of-sample window (2025+). The static HTML numbers are the fallback.
+// Live betting record for the hero proof line — Value model (v6) only, gated
+// to its honest never-seen window (cfl.modelWindowStart floors it at the day
+// after the training cutoff even if the DB row's test_start_date is wrong).
+// The static HTML numbers are the fallback. Always labeled "simulated" until
+// live bets exist (live record starts July 2026).
 async function loadHeroProof() {
   const sb = window.cflSupabase;
   try {
+    const windowStart = cfl.modelWindowStart('v6', '2025-01-01');
     const rows = await cfl.fetchAll(() => sb
       .from('model_predictions')
-      .select('model_p, won')
-      .eq('model_version', 'v5')
+      .select('won, pnl_usd')
+      .eq('model_version', 'v6')
+      .eq('would_bet', true)
       .eq('outcome_known', true)
-      .gte('event_date', '2025-01-01')
-      .gt('model_p', 0.5));
-    const n = (rows || []).length;
-    const hits = (rows || []).filter(r => r.won === true).length;
-    if (n >= 50) {
-      document.getElementById('hpAccuracy').textContent = ((hits / n) * 100).toFixed(1) + '%';
-      document.getElementById('hpSample').textContent = n.toLocaleString();
+      .gte('event_date', windowStart));
+    const graded = (rows || []).filter(r => r.won === true || r.won === false);
+    const wins = graded.filter(r => r.won === true).length;
+    const losses = graded.length - wins;
+    if (graded.length >= 20) {
+      const pnl = graded.reduce((s, r) => s + (parseFloat(r.pnl_usd) || 0), 0);
+      const pnlStr = (pnl >= 0 ? '+' : '-') + '$' + Math.abs(Math.round(pnl)).toLocaleString();
+      const el = document.getElementById('hpProof');
+      if (el) el.innerHTML = '<b>' + wins + '-' + losses + '</b> on flat $100 bets · <b>' +
+        pnlStr + '</b> at the opener (simulated)';
     }
   } catch (err) { console.warn('[home] hero proof fetch failed', err); }
 }
@@ -611,7 +618,7 @@ async function loadPastEvents() {
     console.warn('[home] main-event fetch failed', err);
   }
 
-  const MODEL_VERSIONS = ['v1', 'v2', 'v3', 'v5'];
+  const MODEL_VERSIONS = ['v3', 'v6'];   // public models only — see cfl.PUBLIC_MODELS
   const modelStats = {};
   try {
     const eventDates = events.map(e => e.event_date);
@@ -619,6 +626,7 @@ async function loadPastEvents() {
       .from('model_predictions')
       .select('model_version, event_date, model_p, outcome_known, won')
       .in('event_date', eventDates)
+      .in('model_version', MODEL_VERSIONS)
       .eq('outcome_known', true);
     (preds || []).forEach(p => {
       if (Number(p.model_p) <= 0.5) return;
@@ -631,9 +639,10 @@ async function loadPastEvents() {
     console.warn('[home] model predictions fetch failed', err);
   }
 
+  const PE_MODEL_LABELS = { v3: 'Fight IQ', v6: 'Value' };
   function modelRowHtml(eventDate, version) {
     const s = modelStats[eventDate + '::' + version];
-    const labelHtml = '<div class="pe-model-label">' + version + '</div>';
+    const labelHtml = '<div class="pe-model-label">' + cfl.escapeHtml(PE_MODEL_LABELS[version] || version) + '</div>';
     if (!s || s.picks === 0) {
       return labelHtml + '<div class="pe-model-pct na">—</div><div class="pe-model-detail">no picks</div>';
     }
@@ -687,21 +696,19 @@ setTimeout(() => {
 // =============================================================================
 // NEXT CARD — event selection (preserved), lean fight-card render
 // =============================================================================
-const HP_VISIBLE_MODELS = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
+const HP_VISIBLE_MODELS = cfl.PUBLIC_MODELS.slice();   // ['v6','v3'] — retired models never render here
 let _cardioMap = null;
 let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
 let _hpSortKey = 'order';
 let _hpModelMode = 'consensus';
 
-// Plain-English explanation of each model. Reed can refine the wording.
+// Plain-English explanation of the two public models. Retired models (v1, v2,
+// v4, v5) never appear here — v5's number was the market's own, the rest lose
+// to just picking the favorite.
 const MODEL_EXPLAIN = {
-  v1: 'A plain statistical baseline — weighs a handful of fighter stats in a straight line. The floor every other model has to beat.',
-  v2: 'Blends a chess-style Elo rating (updated after every fight) with gradient-boosted decision trees.',
-  v3: 'Adds recent-form weighting, style matchups (striker vs grappler), and durability/chin signals on top of the basics.',
-  v4: 'A stacker — a meta-model that learns the best way to combine v1, v2, and v3 into a single call.',
-  v5: 'Our flagship. Gradient-boosted trees (XGBoost) anchored on the betting line, plus performance stats adjusted for strength of schedule. Most accurate — ~75% on 2025.',
-  v6: 'The value hunter. Reads the betting line as an input and looks for fights where the market opened wrong. Picks fewer fights, but picks them to make money — not just to be right.',
+  v3: 'Fight IQ predicts winners from fighter data alone — it never sees a betting line. It calls 63.6% of fights right out of sample; just backing the closing favorite gets 68.4%. Within five points of Vegas without ever looking at Vegas.',
+  v6: 'Value reads the opening line and hunts fights the market priced wrong. On the fights graded after its training cutoff, its betting rule has gone 66-21 on flat $100 bets — +12.7% even at closing prices (simulated, as of July 2026; the live record starts July 2026).',
 };
 
 // Per-model input-weight graphs — real feature importances exported from each
@@ -896,10 +903,10 @@ function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p
 function populateModelSelect(modelNames) {
   const sel = document.getElementById('hpModelSelect');
   if (!sel) return;
-  const opts = ['<option value="consensus">Consensus (all models)</option>'];
+  const opts = ['<option value="consensus">Consensus (both models)</option>'];
   HP_VISIBLE_MODELS.forEach(mv => {
     const nm = modelNames && modelNames[mv];
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(mv.toUpperCase() + (nm ? ' · ' + nm : ''))}</option>`);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
   });
   sel.innerHTML = opts.join('');
   sel.value = _hpModelMode;
@@ -909,7 +916,7 @@ function renderModelExplanations(modelNames) {
   const body = document.getElementById('modelHowBody');
   if (!body) return;
   body.innerHTML = HP_VISIBLE_MODELS.map(mv => {
-    const nm = modelNames && modelNames[mv] ? modelNames[mv] : '';
+    const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
     const d = MODEL_EXPLAIN[mv] || '';
     if (!d && !nm) return '';
     return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
@@ -926,7 +933,7 @@ function renderModelExplanations(modelNames) {
 async function renderModelWeightGraphs() {
   const weights = await loadModelWeights();
   if (!weights) return;
-  HP_VISIBLE_MODELS.forEach(mv => {
+  cfl.PUBLIC_MODELS.forEach(mv => {
     const slot = document.querySelector(`.mh-weights[data-model="${mv}"]`);
     const w = weights[mv];
     if (!slot || !w || !w.weights || !w.weights.length) return;

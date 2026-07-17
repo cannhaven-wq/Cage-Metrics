@@ -30,6 +30,53 @@
   // --------- Helpers ---------
   const cfl = {};
 
+  // --------- Model registry (July 2026 three-product restructure) ---------
+  // The only models the public site shows. v1/v2/v4 are retired (they don't
+  // beat the closing favorite); v5 is retired because it was trained on the
+  // closing line — its accuracy is the market's own, and it cannot produce a
+  // pick before a line exists. Full story: edges.html July 2026 update.
+  //
+  // trainEnd is duplicated here (not just in model_versions) on purpose: it
+  // is the client-side floor below which a model's graded stats must never be
+  // displayed, even if the DB row's test_start_date is wrong. That exact bug
+  // is how v6 publicly claimed a 2021-2026 "never seen" record that included
+  // four years of its own training data.
+  cfl.MODELS = {
+    v6: {
+      slot: 'roi',
+      name: 'Value — beats the opener',
+      tagline: 'Hunts fights where the opening line is wrong. Every pick locked at first write, never re-priced.',
+      trainEnd: '2024-12-31',
+      money: true,
+    },
+    v3: {
+      slot: 'accuracy',
+      name: 'Fight IQ — tape only',
+      tagline: 'Predicts winners from fighter data alone. Never sees a betting line, so its number is fully independent of the market.',
+      trainEnd: '2022-12-31',
+      money: false,
+    },
+  };
+  cfl.PUBLIC_MODELS = ['v6', 'v3'];
+
+  cfl.modelName = function (id, dbName) {
+    return (cfl.MODELS[id] && cfl.MODELS[id].name) || dbName || id;
+  };
+
+  // Honest out-of-sample floor for a model's graded stats: the later of the
+  // DB's test_start_date and the day after the model's training cutoff.
+  cfl.modelWindowStart = function (id, testStartDate) {
+    const m = cfl.MODELS[id];
+    let floor = testStartDate || null;
+    if (m && m.trainEnd) {
+      const d = new Date(m.trainEnd + 'T00:00:00Z');
+      d.setUTCDate(d.getUTCDate() + 1);
+      const afterTrain = d.toISOString().slice(0, 10);
+      if (!floor || afterTrain > floor) floor = afterTrain;
+    }
+    return floor;
+  };
+
   cfl.initials = function (name) {
     if (!name) return '?';
     return name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
@@ -126,7 +173,7 @@
           <div class="cfl-nav-menu-panel">
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
-            <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Stat Finder</a>
+            <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
             <a href="predictor.html" ${active === 'predictor' ? 'class="active"' : ''}>Model Lab</a>
             <a href="mybook.html" ${active === 'mybook' ? 'class="active"' : ''} data-auth-only="true" style="display:none">My Book</a>
           </div>
