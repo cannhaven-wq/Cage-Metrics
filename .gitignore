@@ -5,3 +5,9 @@ package-lock.json
 .env
 .env.local
 .claude/
+
+# cfl_engine artifacts (regenerable)
+cfl_engine/data/
+out_synth/
+out_real/
+__pycache__/
