@@ -82,6 +82,66 @@
     return name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  // Put an upcoming card's fights into true card order and drop dead bookings.
+  //
+  // The fights table has two decay modes this compensates for:
+  //  - upserts key on ufc_fight_id, so a booking that drops off the UFCStats
+  //    event page stops being updated and can keep a stale is_main_event=true
+  //    forever (two "main events", the older row id winning the sort);
+  //  - opponent changes create a NEW ufc_fight_id, and nothing pruned the old
+  //    row, so the same fighter can appear in two fights on one card.
+  //
+  // Strategy, in order of trust:
+  //  1. rows the scraper marked is_active=false are dropped (column may not
+  //     exist yet — absent reads as undefined, which passes);
+  //  2. a fighter booked in two fights keeps only the newest row (higher id);
+  //  3. the real main event is resolved from the event name ("...: X vs. Y"),
+  //     which is authoritative in a way the flag isn't; ties on the flag keep
+  //     the newest claimant. The winning row's is_main_event is corrected in
+  //     place so page labels agree with the sort;
+  //  4. sort by bout_order when the scraper has written it, else main event
+  //     first then insert id (id order matches page order within one scrape).
+  cfl.orderCard = function (fights, eventName) {
+    if (!Array.isArray(fights) || fights.length === 0) return fights || [];
+    let rows = fights.filter(f => f.is_active !== false);
+
+    const newestByFighter = new Map();
+    rows.forEach(f => {
+      [f.fighter_a_id, f.fighter_b_id].forEach(id => {
+        if (id == null) return;
+        const prev = newestByFighter.get(id);
+        if (!prev || f.id > prev.id) newestByFighter.set(id, f);
+      });
+    });
+    rows = rows.filter(f =>
+      (f.fighter_a_id == null || newestByFighter.get(f.fighter_a_id) === f) &&
+      (f.fighter_b_id == null || newestByFighter.get(f.fighter_b_id) === f));
+
+    let mainRow = null;
+    const m = (eventName || '').match(/:\s*(.+?)\s+vs\.?\s+(.+)$/i);
+    if (m) {
+      const n1 = m[1].trim().toLowerCase();
+      const n2 = m[2].trim().toLowerCase();
+      mainRow = rows.find(f => {
+        const names = ((f.fighter_a_name || '') + '|' + (f.fighter_b_name || '')).toLowerCase();
+        return names.includes(n1) && names.includes(n2);
+      }) || null;
+    }
+    if (!mainRow) {
+      const claims = rows.filter(f => f.is_main_event);
+      if (claims.length) mainRow = claims.reduce((a, b) => (b.id > a.id ? b : a));
+    }
+    rows.forEach(f => { f.is_main_event = (f === mainRow); });
+
+    const hasOrder = rows.some(f => f.bout_order != null);
+    rows.sort((a, b) => {
+      if (hasOrder && a.bout_order != null && b.bout_order != null) return a.bout_order - b.bout_order;
+      if (a.is_main_event !== b.is_main_event) return a.is_main_event ? -1 : 1;
+      return a.id - b.id;
+    });
+    return rows;
+  };
+
   cfl.escapeHtml = function (s) {
     if (s == null) return '';
     return String(s).replace(/[&<>"']/g, c => ({

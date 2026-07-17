@@ -545,7 +545,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd4"></script>
+<script src="_shared.js?v=rd5"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="distanceEdges.js"></script>
@@ -649,12 +649,12 @@ async function load() {
     return;
   }
 
-  const { data: fights } = await sb
+  const { data: fightsRaw } = await sb
     .from('fights')
     .select('*')
-    .eq('event_id', event.id)
-    .order('is_main_event', { ascending: false })
-    .order('id', { ascending: true });
+    .eq('event_id', event.id);
+  // True card order + dead-booking cleanup — see cfl.orderCard in _shared.js.
+  const fights = cfl.orderCard(fightsRaw || [], event.name);
 
   const fighterIds = [...new Set((fights || []).flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
   let fighterMap = {};

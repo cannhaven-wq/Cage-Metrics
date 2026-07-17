@@ -474,7 +474,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd4"></script>
+<script src="_shared.js?v=rd5"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="fight-insights.js?v=4"></script>
@@ -795,12 +795,13 @@ async function loadFights(event) {
   ).join('');
   const sb = window.cflSupabase;
 
-  const { data: fights, error } = await sb
+  const { data: fightsRaw, error } = await sb
     .from('fights').select('*')
-    .eq('event_id', event.id)
-    .order('is_main_event', { ascending: false })
-    .order('id', { ascending: true });
+    .eq('event_id', event.id);
   if (error) { list.innerHTML = '<div class="load-err">Couldn\'t load the card. Try refreshing.</div>'; return; }
+  // True card order + dead-booking cleanup (stale is_main_event flags,
+  // superseded opponent changes) — see cfl.orderCard in _shared.js.
+  const fights = cfl.orderCard(fightsRaw || [], event.name);
   if (!fights || fights.length === 0) {
     list.innerHTML = '<div class="load-err">No fights listed for this event yet.</div>';
     return;
