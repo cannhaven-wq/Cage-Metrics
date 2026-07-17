@@ -3,5 +3,6 @@
   "117::cardio-flagged",
   "117::coinflip-lead",
   "2563::sensor-main",
-  "2563::coinflip-lead"
+  "2563::coinflip-lead",
+  "2563::poll-main"
 ]
