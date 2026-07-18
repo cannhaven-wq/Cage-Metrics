@@ -43,12 +43,14 @@ Usage (from repo root, PYTHONPATH=cfl_engine):
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import inspect
 import json
 import os
 import sys
 import urllib.error
 import urllib.request
+from collections import defaultdict
 
 import numpy as np
 import pandas as pd
@@ -70,6 +72,15 @@ PREVIEW_DIR = os.path.join(HERE, os.pardir, "out_real")
 MODEL_VERSION = "engine_v1"
 SOURCE = "live"
 ISO_MIN_POOL = 1500  # mirrors train.ISO_MIN_POOL: below this, isotonic overfits
+
+# Live picks are INSERT-ONLY (locked at first write, never re-priced), so a fight
+# must only ever be published on CURRENT point-in-time history. Publishing a card
+# weeks out would lock it onto stale features that a later run cannot correct.
+# Only publish events within this many days of the run date.
+DEFAULT_WITHIN_DAYS = 12
+# Warn if the completed-history export is older than this vs the run date — its
+# staleness silently degrades every published pick.
+STALE_HISTORY_DAYS = 9
 
 # No-bet segments (from audit.segment_brier: divisions where the market's Brier
 # beats the model). Debut fighters (0 prior fights) are the 'debut_involved'
@@ -115,12 +126,19 @@ def rest_insert(base_url: str, key: str, table: str, rows: list[dict],
 
 
 # --------------------------------------------------------------------- data pulls
-def pull_upcoming(base_url: str, key: str) -> pd.DataFrame:
+def pull_upcoming(base_url: str, key: str, within_days: int, log=print) -> pd.DataFrame:
     """Upcoming fights = fights on an is_upcoming event, both corners present,
-    winner_id still null. Returns DB corner order untouched."""
+    winner_id still null, on an event within `within_days` of today (so a fight
+    is only ever locked on current history). Returns DB corner order untouched."""
     events = fetch_all(base_url, key, "events",
                        "select=id,event_date,name&is_upcoming=eq.true&order=event_date")
-    ev = {e["id"]: e for e in events}
+    today = dt.date.today().isoformat()
+    horizon = (dt.date.today() + dt.timedelta(days=within_days)).isoformat()
+    ev = {e["id"]: e for e in events
+          if e["event_date"] and today <= e["event_date"] <= horizon}
+    n_far = sum(1 for e in events if e["event_date"] and e["event_date"] > horizon)
+    log(f"      {len(ev)} event(s) within {within_days}d (through {horizon}); "
+        f"{n_far} later event(s) held back until they enter the window")
     if not ev:
         return pd.DataFrame()
     idlist = ",".join(str(i) for i in ev)
@@ -142,6 +160,35 @@ def pull_upcoming(base_url: str, key: str) -> pd.DataFrame:
             "weight_class": f["weight_class"], "n_rounds_sched": f["scheduled_rounds"],
         })
     return pd.DataFrame(rows)
+
+
+def drop_dead_bookings(up: pd.DataFrame, consensus: dict, log=print) -> pd.DataFrame:
+    """A fighter fights at most once per event, so within the publish window a
+    fighter appearing in >1 booking is a stale/dead scraper duplicate (e.g. a
+    name booked against two opponents). Keep the booking a real market prices
+    (phantom rows don't get odds); tie-break on the newest scrape (highest
+    fight_id, matching export_data's canonical choice). Drops are logged."""
+    seen = defaultdict(list)  # fighter_id -> list of row dicts
+    for r in up.to_dict("records"):
+        seen[r["fighter_a_id"]].append(r)
+        seen[r["fighter_b_id"]].append(r)
+    drop_ids: set = set()
+    for fid, bookings in seen.items():
+        if len(bookings) < 2:
+            continue
+        keeper = sorted(
+            bookings,
+            key=lambda r: (r["fight_id"] in consensus, r["fight_id"]),
+        )[-1]
+        for r in bookings:
+            if r["fight_id"] != keeper["fight_id"]:
+                drop_ids.add(r["fight_id"])
+                log(f"      dead-booking: dropping fight {r['fight_id']} "
+                    f"(fighter {fid} also booked in {keeper['fight_id']}"
+                    f"{' — kept: has market' if keeper['fight_id'] in consensus else ''})")
+    if drop_ids:
+        up = up[~up["fight_id"].isin(drop_ids)].reset_index(drop=True)
+    return up
 
 
 def pull_consensus(base_url: str, key: str, fight_ids: list[int]) -> dict:
@@ -210,11 +257,18 @@ def train_final_model(feat_completed: pd.DataFrame, log=print):
     base_end = len(folds[0][0])
     params = tune(X, y, base_end, log=log)
 
-    es = int(len(X) * 0.9)  # last 10% for early stopping (same as walk_forward)
-    model = XGBClassifier(early_stopping_rounds=75, **{**FIXED, **params})
-    model.fit(X.iloc[:es], y[:es], eval_set=[(X.iloc[es:], y[es:])], verbose=False)
-    log(f"  final model: trained on {len(X)} decisive fights, "
-        f"best_iter={model.best_iteration}")
+    # Find the iteration count via early stopping on the last 10% (same watch set
+    # as walk_forward), THEN refit on ALL completed decisive fights at that fixed
+    # n_estimators. The recent 10% (often the most predictive fights) would
+    # otherwise only ever be an eval set, never training data for the served model.
+    es = int(len(X) * 0.9)
+    probe = XGBClassifier(early_stopping_rounds=75, **{**FIXED, **params})
+    probe.fit(X.iloc[:es], y[:es], eval_set=[(X.iloc[es:], y[es:])], verbose=False)
+    n_trees = (probe.best_iteration + 1) if probe.best_iteration is not None else FIXED["n_estimators"]
+    model = XGBClassifier(**{**FIXED, **params, "n_estimators": n_trees})
+    model.fit(X, y, verbose=False)  # full completed set, fixed tree count, no ES
+    log(f"  final model: refit on all {len(X)} decisive fights at "
+        f"n_estimators={n_trees} (early-stop probe best_iter={probe.best_iteration})")
     return model, diff_cols
 
 
@@ -252,22 +306,32 @@ def fit_calibrator_and_blend(log=print):
 
 
 # --------------------------------------------------------------------- main
-def build_predictions(base_url: str, key: str, log=print):
+def build_predictions(base_url: str, key: str, within_days: int = DEFAULT_WITHIN_DAYS,
+                      log=print):
     log("[1/5] pulling upcoming fights + current consensus ...")
-    up = pull_upcoming(base_url, key)
+    up = pull_upcoming(base_url, key, within_days, log=log)
     if up.empty:
-        log("      no upcoming fights found (no is_upcoming events).")
+        log("      no upcoming fights inside the publish window.")
         return pd.DataFrame(), pd.DataFrame()
-    fight_ids = up["fight_id"].tolist()
-    consensus = pull_consensus(base_url, key, fight_ids)
+    consensus = pull_consensus(base_url, key, up["fight_id"].tolist())
+    up = drop_dead_bookings(up, consensus, log=log)
     log(f"      {len(up)} upcoming fights across {up['event_id'].nunique()} events; "
-        f"consensus odds for {len(consensus)} of them")
+        f"consensus odds for {sum(fid in consensus for fid in up['fight_id'])} of them")
 
     log("[2/5] rebuilding point-in-time features (completed + upcoming) ...")
     fights_c, stats_c, fighters_c = load_data(
         os.path.join(DATA_DIR, "fights.csv"),
         os.path.join(DATA_DIR, "fight_stats.csv"),
         os.path.join(DATA_DIR, "fighters.csv"))
+    # Staleness guard: the completed-history CSVs anchor every point-in-time
+    # feature. If they are old relative to the card being priced, picks lock onto
+    # stale form. Warn loudly (run export_data.py first to refresh).
+    last_completed = pd.to_datetime(fights_c["event_date"]).max()
+    lag_days = (dt.date.today() - last_completed.date()).days
+    if lag_days > STALE_HISTORY_DAYS:
+        log(f"  WARNING: completed history ends {last_completed.date()} "
+            f"({lag_days}d ago). Re-run cfl_engine/export_data.py before publishing "
+            f"so picks lock onto current form, not stale features.")
     need = set(up["fighter_a_id"]) | set(up["fighter_b_id"])
     fighters_all = load_fighters(base_url, key, need)
 
@@ -441,6 +505,9 @@ def main():
     ap.add_argument("--execute", action="store_true",
                     help="insert into Supabase (default: dry-run preview only)")
     ap.add_argument("--dry-run", action="store_true", help="explicit no-op (default)")
+    ap.add_argument("--within-days", type=int, default=DEFAULT_WITHIN_DAYS,
+                    help=f"only publish events within N days (default {DEFAULT_WITHIN_DAYS}); "
+                         "keeps live picks locked on current history")
     args = ap.parse_args()
     execute = args.execute
 
@@ -449,7 +516,7 @@ def main():
         sys.exit("SUPABASE_URL not set in env.")
     key = _env_key()
 
-    picks, edges = build_predictions(base_url, key)
+    picks, edges = build_predictions(base_url, key, within_days=args.within_days)
     os.makedirs(PREVIEW_DIR, exist_ok=True)
 
     if picks.empty:

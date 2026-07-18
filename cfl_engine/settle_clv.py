@@ -5,13 +5,11 @@ For every model_edges row with source='live', settled_at IS NULL, and
 event_date < today, compute the closing price of the BET SIDE and score our
 closing-line value:
 
-  closing price (bet side), in precedence order —
-    1. median implied prob of the BestFightOdds closing capture: fight_odds rows
-       with is_closer=true for (fight_id, bet_fighter_id). Keyed by fighter_id,
-       never by the capture's A/B side convention.
-    2. fallback: the last stored fight_odds_consensus_snapshot price for that
-       fighter. The 2h Odds-API consensus stops refreshing at event start, so the
-       residue IS effectively the close.
+  closing price (bet side) = the closing capture in fight_odds: rows with
+  is_closer=true for (fight_id, bet_fighter_id), keyed by fighter_id (never by
+  the capture's A/B side convention). If no closer is on file yet, the row is
+  left unsettled — we never substitute a stale or devigged price for a real
+  close (both would silently corrupt clv on the product's headline metric).
 
 CLV sign convention (READ THIS — it is easy to get backwards):
   odds_at_publish is a single-side American price, so it can't be devigged after
@@ -50,7 +48,6 @@ import os
 import sys
 import urllib.error
 import urllib.request
-from statistics import median
 
 from engine import american_to_prob
 from export_data import fetch_all, prob_to_american
@@ -79,39 +76,33 @@ def fetch_maybe_missing(base_url: str, key: str, table: str, params: str) -> lis
 
 def closing_implied(base_url: str, key: str, fight_id: int, fighter_id: int) -> tuple:
     """Return (implied_close, american_close, source) for the bet fighter, or
-    (None, None, None) if no closing price is on file yet."""
+    (None, None, None) if no closing price is on file yet.
+
+    Both returned values come from the SAME median book: implied_close is that
+    book's raw single-side implied prob (unit-consistent with the raw, vigged
+    odds_at_publish — never devigged), and american_close is that book's real
+    booked price (not a reconstructed prob_to_american, which could be a line no
+    book offered). No stale-snapshot fallback: a missing close leaves the row
+    unsettled, which the caller handles.
+    """
     rows = fetch_maybe_missing(
         base_url, key, "fight_odds",
         "select=fighter_id,american_odds,implied_prob"
         f"&is_closer=eq.true&fight_id=eq.{fight_id}&fighter_id=eq.{fighter_id}")
-    probs = []
+    priced = []  # (implied_prob, american_odds) from real closing books
     for r in rows:
+        am = r.get("american_odds")
         p = r.get("implied_prob")
-        if p is None and r.get("american_odds") is not None:
-            p = american_to_prob(r["american_odds"])
-        if p is not None and 0.0 < float(p) < 1.0:
-            probs.append(float(p))
-    if probs:
-        m = median(probs)
-        return m, prob_to_american(m), "bfo_closer"
-
-    # fallback: last consensus snapshot price for this fighter
-    snap = fetch_maybe_missing(
-        base_url, key, "fight_odds_consensus_snapshot",
-        "select=fighter_a_id,fighter_b_id,american_odds_a,american_odds_b,fetched_at"
-        f"&fight_id=eq.{fight_id}&order=fetched_at.desc&limit=1")
-    if snap:
-        s = snap[0]
-        am = None
-        if s["fighter_a_id"] == fighter_id:
-            am = s["american_odds_a"]
-        elif s["fighter_b_id"] == fighter_id:
-            am = s["american_odds_b"]
-        if am is not None:
+        if p is None and am is not None:
             p = american_to_prob(am)
-            if p is not None and 0.0 < p < 1.0:
-                return p, int(am), "consensus_snapshot"
-    return None, None, None
+        if p is not None and 0.0 < float(p) < 1.0:
+            priced.append((float(p), am))
+    if not priced:
+        return None, None, None
+    priced.sort(key=lambda t: t[0])
+    imp, am = priced[len(priced) // 2]  # median book: prob + its own booked price
+    american_close = int(am) if am is not None else prob_to_american(imp)
+    return imp, american_close, "bfo_closer"
 
 
 def patch_row(base_url: str, key: str, row_id: int, payload: dict) -> None:

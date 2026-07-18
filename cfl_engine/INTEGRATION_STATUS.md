@@ -84,17 +84,53 @@ Tables created (SQL Editor) and both publishers executed against production:
   script now sends a browser User-Agent. (Migration itself was ultimately pasted
   into the SQL Editor; publishers use the PostgREST host, no CF block.)
 
-## Remaining (optional / recurring)
+## Hardening pass 2026-07-17 (adversarial review of the unattended-run scripts)
 
-1. Optional hygiene: run `dead_booking_cleanup.sql` (stale fight rows 43/46/8780
-   still present; model already unaffected — exporter dedupes them).
-2. Per event week: `predict_upcoming.py --execute` after odds land;
-   `settle_clv.py --execute` the day after each card (fills closing_odds + CLV).
-3. Upstream flagged: (a) fight_odds_consensus_snapshot table not refreshed since
-   May — fix its writer or drop it (serving uses v_fight_odds_consensus view);
-   (b) upcoming cards have stale double-bookings (Ankalaev vs both Rountree and
-   Guskov; Umar on two cards) — event scraper should kill dead future bookings;
-   (c) Railway Weekly Scraper cron still needs re-adding (separate incident doc).
+Fixed in code (committed, not pushed):
+- **settle_clv.py — 2 blockers**: it fell back to the STALE
+  fight_odds_consensus_snapshot table and compared its DEVIGGED prob against the
+  RAW vigged publish prob — either would silently corrupt clv on the headline
+  metric and lock it in (settled_at gate). Removed the fallback entirely: a
+  missing close now leaves the row unsettled. Also stores the real median-book
+  American close, not a reconstructed one. Sign convention was verified correct.
+- **predict_upcoming.py — important**: publishing ALL upcoming cards at once +
+  insert-only locking permanently locked far-future picks onto stale history.
+  Now gated to events within ~12 days (`--within-days`, default 12) + a staleness
+  warning if the completed-history export is old. Added dead-booking dedupe
+  (drops phantom double-bookings, keeps the market-priced real fight) and a final
+  model refit on ALL completed fights (was holding out the recent 10%).
+  Dry-run confirms: 71→27 picks (2 imminent cards), 3 phantoms dropped.
+
+## MUST DO to correct the live data (the first publish was the buggy version)
+
+1. SQL Editor: run `cleanup_stale_live_picks.sql` (clears the 71 stale live rows).
+2. `PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --execute`
+   — republishes just the imminent card(s), deduped, on current history.
+
+## Front-end wiring (staged, needs browser preview before ship)
+
+- `model_graded_views.sql` (repo root) — run in SQL Editor. Creates
+  v_model_picks_graded / v_model_edges_graded (server-side fights join, since the
+  tables have no outcome column and a 3k-id client join would 414). Pure additive
+  DB objects, safe to ship now.
+- HTML not yet edited (no browser this session to verify). Plan per review:
+  (a) track-record.html — add an ISOLATED `loadEngine()` in its own try/catch +
+  DOM block reading v_model_picks_graded (source='backtest' for the record); must
+  NOT run inside loadProof().catch (that replaces the whole page on any throw).
+  (b) card-lab.html — add engine_v1 to the model dropdown reading the live picks;
+  stage-for-preview (rewires interactive pickForFight/buildRows). Copy guardrail:
+  present engine_v1 as honest ~61% / calibrated, NEVER as beating the market; do
+  not render CLV yet (backtest clv null, live edges unsettled).
+
+## Recurring / upstream (unchanged)
+
+- Per event week: `predict_upcoming.py --execute` after odds land;
+  `settle_clv.py --execute` the day after each card (fills closing_odds + CLV).
+- Optional: `dead_booking_cleanup.sql` (past stale fight rows 43/46/8780).
+- Upstream: (a) fight_odds_consensus_snapshot table not refreshed since May — fix
+  its writer or drop it (serving + settle use v_fight_odds_consensus / is_closer);
+  (b) event scraper should kill dead future double-bookings at the source;
+  (c) Railway Weekly Scraper cron still needs re-adding (separate incident doc).
 
 ## Key facts for whoever resumes
 
