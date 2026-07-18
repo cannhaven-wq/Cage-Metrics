@@ -72,19 +72,29 @@ resume without re-deriving anything.
   positive clv_pp = beat the close). Publish clip [0.05, 0.95] applied UPSTREAM of
   the blend (isotonic tail artifact was flagging a fake 21-point edge).
 
-## For Reed (the only human steps left)
+## DEPLOYED 2026-07-17
 
-1. Supabase SQL Editor: run `model_picks_edges_migration.sql`, then
-   `dead_booking_cleanup.sql`.
-2. `PYTHONPATH=cfl_engine python cfl_engine/publish_backtest.py --execute` (once).
-3. Per event week: `predict_upcoming.py --execute` after odds land;
-   `settle_clv.py --execute` the day after each card.
-4. Upstream hygiene flagged: (a) fight_odds_consensus_snapshot table not being
-   refreshed since May — either fix its writer or drop it (serving now uses the
-   view); (b) upcoming cards contain stale double-bookings (e.g. Ankalaev booked
-   vs both Rountree and Guskov; Umar Nurmagomedov on two cards) — event scraper
-   should kill dead future bookings; (c) Railway Weekly Scraper cron still needs
-   re-adding (separate incident doc).
+Tables created (SQL Editor) and both publishers executed against production:
+- `model_picks`: 3,232 backtest + **71 live** (21 Lock / 29 Pick / 21 Lean).
+- `model_edges`: 638 backtest + **10 live**, all with `odds_at_publish` captured,
+  `closing_odds`/`clv_beat` null (pre-event). CLV clock running for the
+  Du Plessis–Usman card (2026-07-18).
+- DDL shipped via `cfl_engine/run_sql_mgmt.py` (Management API). NOTE: that host
+  is behind Cloudflare, which 403s (error 1010) on urllib's default UA — the
+  script now sends a browser User-Agent. (Migration itself was ultimately pasted
+  into the SQL Editor; publishers use the PostgREST host, no CF block.)
+
+## Remaining (optional / recurring)
+
+1. Optional hygiene: run `dead_booking_cleanup.sql` (stale fight rows 43/46/8780
+   still present; model already unaffected — exporter dedupes them).
+2. Per event week: `predict_upcoming.py --execute` after odds land;
+   `settle_clv.py --execute` the day after each card (fills closing_odds + CLV).
+3. Upstream flagged: (a) fight_odds_consensus_snapshot table not refreshed since
+   May — fix its writer or drop it (serving uses v_fight_odds_consensus view);
+   (b) upcoming cards have stale double-bookings (Ankalaev vs both Rountree and
+   Guskov; Umar on two cards) — event scraper should kill dead future bookings;
+   (c) Railway Weekly Scraper cron still needs re-adding (separate incident doc).
 
 ## Key facts for whoever resumes
 
