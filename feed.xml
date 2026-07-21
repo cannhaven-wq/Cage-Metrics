@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 20 Jul 2026 19:26:58 GMT</lastBuildDate>
+  <lastBuildDate>Tue, 21 Jul 2026 01:52:05 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Ankalaev vs. Guskov</title>
@@ -63,6 +63,13 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4225</guid>
     <pubDate>Sat, 05 Sep 2026 00:00:00 GMT</pubDate>
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night card — Paris, Ile-de-France, France.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night</title>
+    <link>https://cannonfightlab.com/event.html?id=4282</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4282</guid>
+    <pubDate>Sat, 12 Sep 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night card — Glendale, Arizona, USA.</description>
   </item>
 
 </channel>
