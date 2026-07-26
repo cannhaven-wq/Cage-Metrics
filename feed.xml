@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sat, 25 Jul 2026 18:54:48 GMT</lastBuildDate>
+  <lastBuildDate>Sun, 26 Jul 2026 01:57:38 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC Fight Night: Ankalaev vs. Guskov</title>
-    <link>https://cannonfightlab.com/event.html?id=2619</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=2619</guid>
-    <pubDate>Sat, 25 Jul 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Ankalaev vs. Guskov card — Abu Dhabi, Abu Dhabi, United Arab Emirates.</description>
-  </item>
   <item>
     <title>UFC Fight Night: Medic vs. Rodriguez</title>
     <link>https://cannonfightlab.com/event.html?id=2620</link>
