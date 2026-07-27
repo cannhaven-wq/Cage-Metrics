@@ -7,5 +7,6 @@
   "2563::poll-main",
   "2619::sensor-main",
   "2619::coinflip-lead",
-  "2619::whatif-finisher"
+  "2619::whatif-finisher",
+  "2620::sensor-main"
 ]
