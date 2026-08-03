@@ -13,8 +13,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800;900&family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 
@@ -27,7 +27,7 @@
     text-align: center;
   }
   .picks-hero .eyebrow {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 12px;
     font-weight: 700;
     color: var(--red);
@@ -36,7 +36,7 @@
     margin-bottom: 10px;
   }
   .picks-hero h1 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 44px;
     font-weight: 900;
     color: #fff;
@@ -83,7 +83,7 @@
     margin-bottom: 4px;
   }
   .record-strip .val {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 26px;
     font-weight: 800;
     color: #fff;
@@ -153,7 +153,7 @@
     margin-bottom: 18px;
   }
   .event-section .ev-name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 24px;
     font-weight: 800;
     color: #fff;
@@ -200,7 +200,7 @@
   }
 
   .pick-card .matchup {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 13px;
     color: var(--text-3);
     text-transform: uppercase;
@@ -221,7 +221,7 @@
     gap: 4px;
   }
   .pick-card .name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 28px;
     font-weight: 800;
     color: #fff;
@@ -230,7 +230,7 @@
   }
   .pick-card .odds {
     display: inline-block;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 16px;
     font-weight: 700;
     color: var(--text-2);
@@ -253,7 +253,7 @@
     letter-spacing: 0.10em;
   }
   .pick-card .stake-val {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 28px;
     font-weight: 800;
     color: var(--green);
@@ -286,7 +286,7 @@
     color: var(--text-2);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
   }
   .pick-card .rationale .agree strong { color: #fff; font-weight: 800; }
@@ -301,7 +301,7 @@
   .tape-chip {
     display: inline-flex;
     align-items: center;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
     padding: 2px 8px;
@@ -317,7 +317,7 @@
   .cfl-ind {
     display: inline-flex;
     align-items: center;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
     padding: 2px 8px;
@@ -400,7 +400,7 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
     color: #fde68a;
@@ -422,7 +422,7 @@
     align-items: center;
   }
   .top-pick .name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 42px;
     font-weight: 900;
     color: #fff;
@@ -442,7 +442,7 @@
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     color: #fff;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 700;
     padding: 2px 10px;
@@ -462,7 +462,7 @@
     margin-bottom: 2px;
   }
   .top-pick .payout .bet-amt {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 32px;
     font-weight: 800;
     color: var(--green);
@@ -496,7 +496,7 @@
     color: var(--text-2);
     text-transform: uppercase;
     letter-spacing: 0.08em;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
   }
   .top-pick .rationale .agree strong { color: #fff; }

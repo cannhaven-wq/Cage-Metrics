@@ -10,13 +10,13 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 
 <style>
-  body { font-family: 'Inter', sans-serif; }
-  .mono { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+  body { font-family: var(--font-body); }
+  .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
   .lab-header {
     background: linear-gradient(180deg, rgba(230,57,70,0.06), transparent);
@@ -32,7 +32,7 @@
     margin-bottom: 6px;
   }
   .lab-header h1 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 38px;
     font-weight: 800;
     color: #fff;
@@ -97,7 +97,7 @@
     margin-bottom: 6px;
   }
   .kpi .val {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 30px;
     font-weight: 800;
     color: #fff;
@@ -123,14 +123,14 @@
     align-items: baseline;
   }
   .model-block .head h2 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 24px;
     font-weight: 800;
     color: #fff;
     letter-spacing: 0.5px;
   }
   .model-block .head .vid {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     color: var(--red);
     font-size: 14px;

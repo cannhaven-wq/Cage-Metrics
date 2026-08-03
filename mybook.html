@@ -14,8 +14,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
@@ -24,7 +24,7 @@
   .book-wrap { max-width: 1100px; margin: 28px auto 64px; padding: 0 20px; }
   .book-header { margin-bottom: 28px; }
   .book-header h1 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 38px; font-weight: 800; color: var(--text);
     letter-spacing: -0.5px; margin: 0 0 4px;
   }
@@ -39,7 +39,7 @@
   .bk-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
   .bk-cell .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-3); }
   .bk-cell .val {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700;
+    font-family: var(--font-display); font-weight: 700;
     font-size: 26px; color: var(--text); font-variant-numeric: tabular-nums;
   }
   .bk-cell .val.pos { color: var(--green); }
@@ -54,7 +54,7 @@
   .bk-edit input, .bk-edit select {
     background: var(--bg-3); border: 1px solid var(--border-2);
     border-radius: 6px; padding: 6px 10px; color: var(--text);
-    font: 500 13px 'Inter', sans-serif; outline: none; width: 110px;
+    font: 500 13px var(--font-body); outline: none; width: 110px;
   }
   .bk-edit input:focus, .bk-edit select:focus { border-color: var(--red); }
   .bk-edit .btn { padding: 6px 14px; font-size: 12px; }
@@ -63,7 +63,7 @@
   /* --- Section ---------------------------------------------------------- */
   .sec { margin-top: 28px; }
   .sec h2 {
-    font-family: 'Barlow Condensed', sans-serif; font-size: 22px;
+    font-family: var(--font-display); font-size: 22px;
     font-weight: 700; color: var(--text); margin: 0 0 6px;
     letter-spacing: -0.3px;
   }
@@ -78,7 +78,7 @@
     display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline;
     margin-bottom: 10px;
   }
-  .logger .matchup { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 19px; color: var(--text); }
+  .logger .matchup { font-family: var(--font-display); font-weight: 700; font-size: 19px; color: var(--text); }
   .logger .matchup .pick { color: var(--green); }
   .logger .matchup .vs   { color: var(--text-3); margin: 0 6px; font-weight: 400; }
   .logger .meta { font-size: 12px; color: var(--text-3); }
@@ -88,7 +88,7 @@
     font-weight: 600; margin-right: 6px;
   }
   .logger .open-price {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
     color: var(--text); font-variant-numeric: tabular-nums;
   }
   .logger .row {
@@ -100,13 +100,13 @@
   .logger .field input, .logger .field select {
     background: var(--bg-3); border: 1px solid var(--border-2);
     border-radius: 6px; padding: 8px 10px; color: var(--text);
-    font: 500 13px 'Inter', sans-serif; outline: none; width: 100%;
+    font: 500 13px var(--font-body); outline: none; width: 100%;
   }
   .logger .field input:focus, .logger .field select:focus { border-color: var(--red); }
   .logger .computed {
     background: rgba(34,197,94,0.08); border: 1px solid rgba(34,197,94,0.30);
     border-radius: 6px; padding: 8px 10px; color: var(--green);
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px;
+    font-family: var(--font-display); font-weight: 700; font-size: 18px;
     text-align: right; font-variant-numeric: tabular-nums;
   }
   .logger .computed.neg { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.30); color: var(--red); }
@@ -114,7 +114,7 @@
   .logger .computed.marginal { background: rgba(234,179,8,0.10); border-color: rgba(234,179,8,0.35); color: #facc15; }
   .logger .verdict {
     display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px;
-    font: 700 10px 'Inter', sans-serif; letter-spacing: 0.05em; text-transform: uppercase;
+    font: 700 10px var(--font-body); letter-spacing: 0.05em; text-transform: uppercase;
     vertical-align: middle;
   }
   .logger .verdict.bet     { background: rgba(34,197,94,0.18); color: var(--green); }
@@ -123,7 +123,7 @@
   .logger .btn { padding: 9px 18px; font-size: 13px; white-space: nowrap; }
   .logger .reset-btn {
     background: none; border: none; padding: 4px 0 0 0; margin: 0;
-    color: var(--text-3); font: 500 11px 'Inter', sans-serif;
+    color: var(--text-3); font: 500 11px var(--font-body);
     cursor: pointer; text-align: center; width: 100%;
   }
   .logger .reset-btn:hover { color: var(--text); text-decoration: underline; }
@@ -174,7 +174,7 @@
   }
   .perf-card .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-3); }
   .perf-card .val {
-    font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 26px;
+    font-family: var(--font-display); font-weight: 700; font-size: 26px;
     color: var(--text); font-variant-numeric: tabular-nums;
   }
   .perf-card .val.pos { color: var(--green); }

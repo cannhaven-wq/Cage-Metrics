@@ -14,8 +14,8 @@
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
 
@@ -58,14 +58,14 @@
     margin-bottom: 8px;
   }
   .model-card .name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 800;
     color: #fff;
     letter-spacing: 0.5px;
   }
   .model-card .vid {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 13px;
     font-weight: 700;
     color: var(--red);
@@ -102,7 +102,7 @@
     margin-bottom: 4px;
   }
   .model-card .stats .val {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 800;
     color: #fff;
@@ -126,7 +126,7 @@
   }
   .model-card .track-rec strong {
     color: #fff;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 16px;
     letter-spacing: 0.5px;
     margin: 0 2px;
@@ -186,7 +186,7 @@
     cursor: pointer;
     padding: 14px 18px;
     background: var(--bg-3);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 16px;
     font-weight: 700;
     color: #fff;
@@ -234,7 +234,7 @@
   .cfl-ind {
     display: inline-flex;
     align-items: center;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
     padding: 2px 8px;
@@ -293,7 +293,7 @@
     margin-bottom: 10px;
   }
   .admin-banner .ab-tag {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
     font-weight: 700;
     color: #d8b4fe;
@@ -341,7 +341,7 @@
     margin-bottom: 12px;
   }
   .upcoming-event .ev-name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 800;
     color: #fff;
@@ -383,7 +383,7 @@
     border-bottom: 1px solid var(--border);
   }
   .upcoming-fight .matchup {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 700;
     color: #fff;
@@ -514,7 +514,7 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 700;
     color: #fff;
@@ -523,7 +523,7 @@
   details.howto > summary::-webkit-details-marker { display: none; }
   details.howto > summary::after {
     content: 'Open ▾';
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-size: 11px;
     font-weight: 600;
     color: var(--text-2);
@@ -538,7 +538,7 @@
     line-height: 1.7;
   }
   details.howto h3 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 14px;
     font-weight: 700;
     color: #fff;
@@ -572,7 +572,7 @@
   details.howto a { color: var(--red); border-bottom: 1px dotted var(--red); }
   .upcoming-fight td.num { font-variant-numeric: tabular-nums; }
   .upcoming-fight .vid {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 800;
     color: var(--red);
     font-size: 11px;

@@ -35,8 +35,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -69,7 +69,7 @@
   .toc li::before {
     content: counter(toc, decimal-leading-zero);
     color: var(--red);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
     margin-right: 12px;
     font-size: 13px;
@@ -79,7 +79,7 @@
 
   section.method { margin-bottom: 48px; scroll-margin-top: 72px; }
   section.method h2 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 28px;
     font-weight: 700;
     color: #fff;
@@ -95,7 +95,7 @@
     margin-bottom: 20px;
   }
   section.method h3 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 600;
     color: #fff;
@@ -131,7 +131,7 @@
     margin: 18px 0;
   }
   .stat-callout .headline {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 700;
     color: #fff;
@@ -141,7 +141,7 @@
   .stat-callout .sample {
     font-size: 12px;
     color: var(--text-3);
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
   }
   .stat-callout .sample strong { color: var(--text-2); font-weight: 600; }
 
@@ -151,7 +151,7 @@
     border-radius: 8px;
     padding: 14px 18px;
     margin: 14px 0;
-    font-family: 'SF Mono', Menlo, Consolas, monospace;
+    font-family: var(--font-mono);
     font-size: 13px;
     color: var(--text);
     overflow-x: auto;
@@ -160,7 +160,7 @@
   }
   .formula .label {
     display: block;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     font-size: 11px;
     color: var(--text-3);
     text-transform: uppercase;
@@ -196,7 +196,7 @@
   }
   table.method-table tr:last-child td { border-bottom: none; }
   table.method-table td.num {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-weight: 700;
     color: var(--red);
     font-size: 16px;

@@ -58,8 +58,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -113,7 +113,7 @@
     }
     .slip-mobile-handle .left-block { display: flex; align-items: center; gap: 10px; }
     .slip-mobile-handle .chevron {
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: var(--font-display);
       color: var(--text-3);
       font-size: 16px;
       transition: transform 0.2s;
@@ -122,7 +122,7 @@
     .slip-mobile-handle .leg-count {
       background: var(--red);
       color: #fff;
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: var(--font-display);
       font-size: 14px;
       font-weight: 800;
       padding: 2px 9px;
@@ -132,14 +132,14 @@
       line-height: 1.4;
     }
     .slip-mobile-handle .label {
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: var(--font-display);
       font-size: 18px;
       color: #fff;
       font-weight: 800;
       letter-spacing: 0.5px;
     }
     .slip-mobile-handle .preview-payout {
-      font-family: 'Barlow Condensed', sans-serif;
+      font-family: var(--font-display);
       font-size: 18px;
       color: var(--green);
       font-weight: 800;
@@ -165,7 +165,7 @@
   }
 
   .build-area h2 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 800;
     color: #fff;
@@ -175,7 +175,7 @@
 
   .event-section { margin-bottom: 32px; }
   .event-section .event-title {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 700;
     color: var(--text);
@@ -228,7 +228,7 @@
   }
   .pick-fighter .meta { font-size: 11px; color: var(--text-3); }
   .pick-odds-pill {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 15px;
     font-weight: 700;
     color: #fff;
@@ -245,7 +245,7 @@
   .pick-odds-pill.fav  { color: #fca5a5; border-color: rgba(239,68,68,0.40); }
   .pick-odds-pill.unknown { color: var(--text-3); }
   .pick-fighter.selected .pick-odds-pill { background: rgba(76,175,80,0.18); }
-  .pick-vs { font-family: 'Barlow Condensed', sans-serif; font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
+  .pick-vs { font-family: var(--font-display); font-size: 14px; color: var(--red); font-weight: 700; padding: 0 6px; }
   /* Keyboard focus ring for the (button-role) fighter tiles */
   .pick-fighter:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
 
@@ -283,7 +283,7 @@
     background: var(--bg-3);
     border: 1px solid var(--border-2);
     color: var(--text-2);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -337,7 +337,7 @@
     border: 1px solid var(--border-2);
     border-radius: 999px;
     padding: 1px 8px;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 10.5px;
     font-weight: 700;
     color: var(--text-2);
@@ -360,7 +360,7 @@
     top: 76px;
   }
   .slip h3 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 800;
     color: #fff;
@@ -406,7 +406,7 @@
     padding: 6px 10px;
     font-size: 13px;
     color: #fff;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     text-align: center;
     letter-spacing: 0.5px;
   }
@@ -414,7 +414,7 @@
   .implied {
     font-size: 11px;
     color: var(--text-3);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     letter-spacing: 0.5px;
   }
 
@@ -430,7 +430,7 @@
     font-size: 13px;
   }
   .summary-row .lbl { color: var(--text-2); }
-  .summary-row .val { color: #fff; font-family: 'Barlow Condensed', sans-serif; font-size: 16px; font-weight: 700; }
+  .summary-row .val { color: #fff; font-family: var(--font-display); font-size: 16px; font-weight: 700; }
   .summary-row.payout .val { color: var(--green); font-size: 22px; }
 
   .stake-row {
@@ -935,7 +935,7 @@ function renderSlip() {
       </div>
       <div class="summary-row" style="font-size:11px; color:var(--text-3);">
         <span>Profit</span>
-        <span class="val" id="sumProfit" style="font-family:'Barlow Condensed',sans-serif; font-size:13px;">${profit != null ? '+$' + profit.toFixed(2) : '—'}</span>
+        <span class="val" id="sumProfit" style="font-family:var(--font-display); font-size:13px;">${profit != null ? '+$' + profit.toFixed(2) : '—'}</span>
       </div>
     </div>
     <div class="help-box">

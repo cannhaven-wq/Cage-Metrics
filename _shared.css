@@ -3,32 +3,50 @@
    ========================================================================== */
 
 :root {
-  /* Brand + signal colors — red reserved for brand/primary action,
-     green = win/edge, amber = caution. */
-  --red: #ff3b47;
-  --red-dark: #d81f2a;
-  --red-2: #d81f2a;
-  --green: #3fd07a;
+  /* ============ THE LAB — core tokens ============ */
+
+  /* Surfaces — cool near-black, instrument-dark */
+  --void:   #060708;   --bg:    #060708;   /* page background / deepest */
+  --bg-1:   #0d1015;   --panel: #0d1015;   /* cards, panels */
+  --bg-2:   #0f1319;                        /* raised */
+  --bg-3:   #161b22;                        /* inputs, insets */
+  --bg-4:   #1c222b;                        /* strong insets */
+  --panel-2:#0b0e12;                        /* readout / gauge interiors (below panel) */
+
+  /* Lines */
+  --line:   #1a1f27;   --border:   #1a1f27;
+  --line-2: #252c36;   --border-2: #252c36;
+
+  /* Text */
+  --text:   #eef2f6;   /* primary   */
+  --text-2: #9aa4b0;   /* secondary */
+  --text-3: #6b7480;   /* tertiary / captions — ≥12px only */
+
+  /* SIGNAL (warm) — brand, CTAs, the edge, emphasis, "miss" on grades */
+  --signal:   #ff4d3d;   --red:   #ff4d3d;
+  --signal-2: #e23a2b;   --red-2: #e23a2b;   --red-dark: #e23a2b;
+  --signal-glow: rgba(255,77,61,.35);
+
+  /* PROBE (cool) — measurement, probability, data, model-favored, "live" */
+  --probe:      #2fdccb;
+  --probe-dim:  #12403b;                 /* probe tint backgrounds */
+  --probe-glow: rgba(47,220,203,.45);
+
+  /* Grading / semantic — kept intuitive on the Proof Center */
+  --green:  #3fd07a;   /* correct pick / hit */
   --green-dim: #1f5f3c;
-  --blue: #4a9be8;
-  --amber: #ffb547;
-  /* Neutral ramp — warmer near-black with more elevation steps. Old names
-     (--bg-2/3/4, --border, --border-2) kept so un-migrated pages don't break;
-     --bg-1/--line/--line-2 are the new aliases the redesigned components use. */
-  --bg: #08090b;
-  --bg-1: #0d0f12;
-  --bg-2: #0f1318;
-  --bg-3: #161a20;
-  --bg-4: #1c212a;
-  --border: #20252d;
-  --border-2: #2b313b;
-  --line: #20252d;
-  --line-2: #2b313b;
-  --text: #f4f6f8;
-  --text-2: #a0a8b4;
-  --text-3: #6b7480;
-  --radius: 14px;
-  --shadow: 0 8px 30px rgba(0,0,0,.45);
+  --amber:  #ffb547;   /* red-flag / caution */
+  --blue:   #4a9be8;   /* DEPRECATED — migrate uses to --probe */
+
+  /* Shape / depth */
+  --radius:    12px;   /* was 14 — tighter reads more engineered */
+  --radius-sm: 8px;
+  --shadow:    0 16px 44px rgba(0,0,0,.55);
+
+  /* Type roles */
+  --font-display: 'Saira Semi Condensed', system-ui, sans-serif;
+  --font-body:    'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', ui-monospace, monospace;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,13 +54,45 @@ html { scroll-behavior: smooth; }
 body {
   background: var(--bg);
   color: var(--text);
-  font-family: 'Space Grotesk', 'Inter', sans-serif;
+  font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.6;
   min-height: 100vh;
 }
 
 a { color: inherit; text-decoration: none; }
+
+/* ============== THE LAB — ambient graticule (replaces .glow-bg) ============== */
+.lab-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1000px 500px at 12% -10%, rgba(47,220,203,.06), transparent 60%),
+    var(--void); }
+.lab-bg .grid { position: absolute; inset: 0; opacity: .5;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 46px 46px;
+  -webkit-mask-image: radial-gradient(120% 120% at 50% 25%, #000 55%, transparent 100%);
+          mask-image: radial-gradient(120% 120% at 50% 25%, #000 55%, transparent 100%); }
+.lab-bg .scan { position: absolute; left: 0; right: 0; height: 120px;
+  background: linear-gradient(180deg, transparent, rgba(47,220,203,.08), transparent);
+  animation: lab-scan 6s linear infinite; }
+@keyframes lab-scan { 0% { top: -120px; } 100% { top: 100%; } }
+
+/* live-status dot pulse — model/live indicators only */
+.live-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+  background: var(--probe); box-shadow: 0 0 0 0 var(--probe-glow);
+  animation: live-pulse 1.8s ease-out infinite; }
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--probe-glow); }
+  70%  { box-shadow: 0 0 0 6px rgba(47,220,203,0); }
+  100% { box-shadow: 0 0 0 0 rgba(47,220,203,0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lab-bg .scan, .live-dot, .meter-fill, .lab-wave { animation: none !important; }
+  .lab-wave { stroke-dashoffset: 0; }
+}
 
 /* ============== NAV ============== */
 nav.cfl-nav {
@@ -60,7 +110,7 @@ nav.cfl-nav {
   z-index: 100;
 }
 .cfl-logo {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 800;
   color: #fff;
@@ -127,7 +177,7 @@ nav.cfl-nav {
 /* Tools dropdown — desktop hover/focus panel; flattens into the drawer on mobile */
 .cfl-nav-menu { position: relative; display: inline-flex; align-items: center; }
 .cfl-nav-menu-btn {
-  font-family: 'Inter', sans-serif; font-size: 13px; font-weight: 500;
+  font-family: var(--font-body); font-size: 13px; font-weight: 500;
   color: var(--text-2); background: transparent; border: 0; cursor: pointer;
   padding: 0; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap;
   transition: color 0.15s;
@@ -199,6 +249,27 @@ nav.cfl-nav.cfl-nav-open .cfl-nav-burger span:nth-child(3) {
   letter-spacing: 0.05em;
 }
 
+/* Model live-status chip — pushed to the right, before the auth slot */
+.cfl-nav-status {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  color: var(--probe);
+  padding: 4px 10px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: rgba(47,220,203,.04);
+  white-space: nowrap;
+}
+/* Chip needs real horizontal room — hide through the tablet band so it never
+   squeezes the wordmark into a wrap. */
+@media (max-width: 900px) { .cfl-nav-status { display: none; } }
+
 /* ============== Reusable bits ============== */
 .section-label {
   font-size: 11px;
@@ -236,7 +307,7 @@ nav.cfl-nav.cfl-nav-open .cfl-nav-burger span:nth-child(3) {
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
   transition: background 0.15s;
   text-decoration: none;
   display: inline-block;
@@ -260,7 +331,7 @@ input[type="text"], input[type="number"], select {
   font-size: 14px;
   color: #fff;
   outline: none;
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
   transition: border-color 0.15s;
 }
 input[type="text"]:focus, input[type="number"]:focus, select:focus {
@@ -289,7 +360,7 @@ textarea:focus-visible,
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-weight: 700;
   color: var(--red);
   flex-shrink: 0;
@@ -334,7 +405,7 @@ textarea:focus-visible,
   font-weight: 600;
   color: #fff;
   flex-shrink: 0;
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   letter-spacing: 0.5px;
 }
 .record-tag {
@@ -356,7 +427,7 @@ textarea:focus-visible,
   text-align: center;
 }
 .stat-val {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 700;
   color: #fff;
@@ -418,7 +489,7 @@ footer.cfl-footer {
   margin-top: 60px;
 }
 .cfl-footer .footer-logo {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 800;
   color: var(--text-3);
@@ -440,7 +511,7 @@ footer.cfl-footer {
   padding: 32px 32px 28px;
 }
 .page-hero h1 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 38px;
   font-weight: 800;
   color: #fff;
@@ -599,7 +670,7 @@ footer.cfl-footer {
   border-radius: 50%;
   background: var(--bg-4);
   color: var(--red);
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-weight: 700;
   font-size: 13px;
   display: flex;
@@ -642,7 +713,7 @@ footer.cfl-footer {
   max-width: 420px;
 }
 .auth-card h1 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 32px;
   font-weight: 800;
   color: var(--text);
@@ -676,7 +747,7 @@ footer.cfl-footer {
   padding: 12px 14px;
   font-size: 15px;
   color: var(--text);
-  font-family: 'Inter', sans-serif;
+  font-family: var(--font-body);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -730,7 +801,7 @@ footer.cfl-footer {
   margin-bottom: 20px;
 }
 .account-section h2 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 22px;
   font-weight: 700;
   color: var(--text);
@@ -780,7 +851,7 @@ footer.cfl-footer {
   font-weight: 700;
 }
 .premium-prompt-title {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 18px;
   font-weight: 700;
   color: var(--text);
@@ -824,7 +895,7 @@ footer.cfl-footer {
   padding: 48px 32px 80px;
 }
 .pricing-page h1 {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 48px;
   font-weight: 800;
   color: var(--text);
@@ -871,7 +942,7 @@ footer.cfl-footer {
   border-radius: 10px;
 }
 .pricing-tier-name {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 28px;
   font-weight: 800;
   color: var(--text);
@@ -884,7 +955,7 @@ footer.cfl-footer {
   margin-bottom: 20px;
 }
 .pricing-tier-price {
-  font-family: 'Barlow Condensed', sans-serif;
+  font-family: var(--font-display);
   font-size: 48px;
   font-weight: 800;
   color: var(--text);

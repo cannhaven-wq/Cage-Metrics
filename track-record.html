@@ -33,8 +33,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -45,16 +45,13 @@
    PROOF CENTER — scoped under #proof. Uses shared design tokens.
    ===================================================================== */
 #proof { max-width: 1200px; margin: 0 auto; padding: 0 28px 40px; }
-#proof .glow-bg { position: fixed; inset: 0; z-index: -1; pointer-events: none;
-  background:
-    radial-gradient(1200px 600px at 15% -5%, rgba(255,59,71,.10), transparent 60%),
-    radial-gradient(900px 500px at 100% 0%, rgba(74,155,232,.06), transparent 55%); }
+/* ambient background now handled globally by .lab-bg in _shared.css */
 
 #proof .page-head { padding: 44px 0 10px; max-width: 860px; }
 #proof .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
   letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 14px; }
 #proof .eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--red); }
-#proof h1 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 46px; line-height: 1.05; color: #fff; }
+#proof h1 { font-family: var(--font-display); font-weight: 800; font-size: 46px; line-height: 1.05; color: #fff; }
 #proof .lede { color: var(--text-2); font-size: 15.5px; line-height: 1.6; margin-top: 14px; }
 #proof .lede strong { color: var(--text); }
 #proof .updated { font-size: 12px; color: var(--text-3); margin-top: 10px; }
@@ -68,12 +65,12 @@
 
 /* Section scaffolding */
 #proof .section { padding: 26px 0 8px; }
-#proof .sec-head h2 { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 26px; color: #fff; }
+#proof .sec-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 26px; color: #fff; }
 #proof .sec-head .sub { font-size: 13px; color: var(--text-3); margin-top: 3px; max-width: 760px; line-height: 1.5; }
 
 /* Model tabs */
 #proof .model-tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 22px 0 4px; }
-#proof .model-tabs button { font-family: 'Space Grotesk', sans-serif; font-size: 12.5px; font-weight: 600; color: var(--text-2);
+#proof .model-tabs button { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--text-2);
   background: var(--bg-2); border: 1px solid var(--line); padding: 8px 14px; border-radius: 999px; cursor: pointer; transition: .15s; }
 #proof .model-tabs button:hover { color: #fff; border-color: var(--line-2); }
 #proof .model-tabs button.active { background: var(--red); border-color: var(--red); color: #fff; }
@@ -86,13 +83,13 @@
 #proof .rec-banner .rb.sim { border-left: 3px solid var(--text-3); }
 #proof .rec-banner .rb.live { border-left: 3px solid var(--green); }
 #proof .rec-banner .rb .t { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
-#proof .rec-banner .rb .n { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; font-variant-numeric: tabular-nums; }
+#proof .rec-banner .rb .n { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; font-variant-numeric: tabular-nums; }
 #proof .rec-banner .rb .d { font-size: 12px; color: var(--text-2); margin-top: 4px; line-height: 1.5; }
 
 /* KPI strip */
 #proof .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
 #proof .kpi { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
-#proof .kpi .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 28px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#proof .kpi .v { font-family: var(--font-display); font-weight: 800; font-size: 28px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
 #proof .kpi .v.good { color: var(--green); }
 #proof .kpi .v.bad { color: var(--red); }
 #proof .kpi .l { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-top: 4px; }
@@ -101,7 +98,7 @@
 /* Panels + tables */
 #proof .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
 #proof .panel { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; }
-#proof .panel h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 4px; }
+#proof .panel h3 { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 4px; }
 #proof .panel .ps { font-size: 12px; color: var(--text-3); line-height: 1.5; margin-bottom: 14px; }
 #proof table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
 #proof th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
@@ -120,7 +117,7 @@
 #proof .pf-event[open] summary::before { transform: rotate(90deg); }
 #proof .pf-ev-name { font-weight: 700; color: var(--text); flex: 1; }
 #proof .pf-ev-date { color: var(--text-3); font-size: 13px; white-space: nowrap; }
-#proof .pf-ev-acc { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 16px; color: var(--text-2); white-space: nowrap; }
+#proof .pf-ev-acc { font-family: var(--font-display); font-weight: 800; font-size: 16px; color: var(--text-2); white-space: nowrap; }
 #proof .pf-ev-acc.good { color: var(--green); }
 #proof .pf-ev-acc.bad { color: var(--red); }
 #proof .pf-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--line); }
@@ -167,7 +164,7 @@
 #proof .split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 #proof .split .cell { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
 #proof .split .cell .t { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; }
-#proof .split .cell .v { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; }
+#proof .split .cell .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; margin-top: 4px; }
 #proof .split .cell .d { font-size: 11.5px; color: var(--text-2); margin-top: 2px; }
 
 /* Misses */
@@ -175,7 +172,7 @@
 
 /* Honesty box */
 #proof .honesty { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 20px; margin-top: 16px; }
-#proof .honesty h3 { font-family: 'Barlow Condensed', sans-serif; font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px; }
+#proof .honesty h3 { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff; margin-bottom: 10px; }
 #proof .honesty ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
 #proof .honesty li { display: flex; gap: 9px; font-size: 13px; color: var(--text-2); line-height: 1.5; }
 #proof .honesty li::before { content: '—'; color: var(--red); flex-shrink: 0; }
@@ -184,10 +181,10 @@
 /* CTA band */
 #proof .cta-band { background: linear-gradient(120deg, rgba(255,59,71,.10), rgba(74,155,232,.06)); border: 1px solid var(--line);
   border-radius: 16px; padding: 26px; margin-top: 30px; display: flex; align-items: center; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
-#proof .cta-band .tx strong { display: block; font-family: 'Barlow Condensed', sans-serif; font-size: 22px; font-weight: 700; color: #fff; }
+#proof .cta-band .tx strong { display: block; font-family: var(--font-display); font-size: 22px; font-weight: 700; color: #fff; }
 #proof .cta-band .tx span { font-size: 13px; color: var(--text-2); }
 #proof .cta-band .acts { display: flex; gap: 10px; flex-wrap: wrap; }
-#proof .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: 'Space Grotesk', sans-serif;
+#proof .btn { display: inline-flex; align-items: center; gap: 8px; justify-content: center; font-family: var(--font-display);
   font-weight: 600; font-size: 13.5px; cursor: pointer; border-radius: 10px; padding: 11px 18px; border: 1px solid transparent; transition: .15s; white-space: nowrap; }
 #proof .btn-primary { background: var(--red); color: #fff; }
 #proof .btn-primary:hover { background: var(--red-2); }
@@ -209,7 +206,7 @@
 <body>
 
 <nav class="cfl-nav"></nav>
-<div class="glow-bg" aria-hidden="true"></div>
+<div class="lab-bg" aria-hidden="true"><div class="grid"></div><div class="scan"></div></div>
 
 <main id="proof">
 
@@ -286,7 +283,7 @@
 
   <!-- ===== Retired models — archived record ===== -->
   <details class="section" id="legacyArchive" style="margin-top:10px">
-    <summary style="cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px; color:var(--text-2);">
+    <summary style="cursor:pointer; font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--text-2);">
       Every model we've run — archived simulations
     </summary>
     <div class="window-note" style="margin-top:10px">Every model we've ever run, oldest to newest. These records are <strong>backtested simulations</strong> — each model re-run over history, not picks locked before fights — so we grade each only on fights <em>after</em> its training cutoff (its honest out-of-sample window). Where a model's exact cutoff isn't verified, we floor it at Jan 2025 to be safe from leakage. The one genuinely locked-before-the-bell record is the pre-fight section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The retired models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or overlapped their own training data — the exact leakage we walked away from. The engine's lower, honest number is the one we stand behind.</div>

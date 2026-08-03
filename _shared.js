@@ -303,6 +303,7 @@
         </div>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
+      <span class="cfl-nav-status" title="Model live"><span class="live-dot"></span>MODEL&nbsp;·&nbsp;LIVE</span>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
       <button class="cfl-nav-burger" id="cflNavBurger" aria-label="Menu" aria-expanded="false">
         <span></span><span></span><span></span>

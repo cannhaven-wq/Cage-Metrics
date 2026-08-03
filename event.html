@@ -42,8 +42,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rd3">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght;600;700;800&family=IBM+Plex+Sans:wght;500;600;700&family=IBM+Plex+Mono:wght;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -56,7 +56,7 @@
     text-align: center;
   }
   .event-hero h1 {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 38px;
     font-weight: 800;
     color: #fff;
@@ -115,17 +115,17 @@
     min-width: 76px;
   }
   .model-acc-strip .acc-mv {
-    font: 700 11px 'Inter', sans-serif;
+    font: 700 11px var(--font-body);
     color: var(--text-3);
     letter-spacing: 0.06em;
   }
   .model-acc-strip .acc-rec {
-    font: 700 18px 'Barlow Condensed', sans-serif;
+    font: 700 18px var(--font-display);
     line-height: 1;
     color: var(--text);
   }
   .model-acc-strip .acc-pct {
-    font: 600 10px 'Inter', sans-serif;
+    font: 600 10px var(--font-body);
     color: var(--text-3);
   }
   .model-acc-strip .acc-rec.good, .model-acc-strip .acc-pct.good { color: var(--green); }
@@ -142,7 +142,7 @@
     background: var(--bg-3);
   }
   .model-picks-row .mp-label {
-    font: 700 10px 'Inter', sans-serif;
+    font: 700 10px var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.08em;
     color: var(--text-3);
@@ -154,13 +154,13 @@
     gap: 6px;
     padding: 4px 9px;
     border-radius: 999px;
-    font: 600 11px 'Inter', sans-serif;
+    font: 600 11px var(--font-body);
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     color: var(--text-2);
   }
   .model-pick-pill .mp-mv {
-    font: 800 10px 'Inter', sans-serif;
+    font: 800 10px var(--font-body);
     color: var(--text-3);
     letter-spacing: 0.04em;
   }
@@ -214,7 +214,7 @@
   .fight-card-header .weight { color: var(--text-2); }
   .fight-card-header .result-pill {
     margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 11px;
   }
 
@@ -238,7 +238,7 @@
   .fight-fighter.loser .name { color: var(--text-3); }
   .fight-fighter .meta-block { flex: 1; min-width: 0; }
   .fight-fighter .name {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 22px;
     font-weight: 700;
     color: #fff;
@@ -248,9 +248,9 @@
     text-overflow: ellipsis;
   }
   .fight-fighter .nick { font-size: 12px; color: var(--text-2); font-style: italic; margin-top: 2px; }
-  .fight-fighter .record { font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: 'Barlow Condensed', sans-serif; }
+  .fight-fighter .record { font-size: 11px; color: var(--text-3); margin-top: 4px; font-family: var(--font-display); }
   .fight-vs {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 18px;
     font-weight: 800;
     color: var(--red);
@@ -293,7 +293,7 @@
     font-weight: 600;
   }
   .fight-verdict .pick {
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 16px;
     font-weight: 700;
     color: #fff;
@@ -317,12 +317,12 @@
   /* Market band — shows consensus odds + the model's edge over the market. */
   .fight-verdict.market .market-odds {
     color: var(--text-3);
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     margin-left: 4px;
   }
   .fight-verdict.market .edge {
     margin-left: auto;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 13px;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -335,7 +335,7 @@
   .fight-verdict.market .edge.neg { color: var(--red);   background: rgba(255,56,56,0.10); }
   .fight-verdict.market .value-badge {
     margin-left: 8px;
-    font-family: 'Barlow Condensed', sans-serif;
+    font-family: var(--font-display);
     font-size: 13px;
     font-weight: 800;
     padding: 3px 10px;
@@ -360,7 +360,7 @@
     margin-bottom: 16px;
   }
   .model-selector .ms-label {
-    font: 700 10px 'Inter', sans-serif;
+    font: 700 10px var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.10em;
     color: var(--text-3);
@@ -371,11 +371,11 @@
     border: 1px solid var(--border-2);
     border-radius: 6px;
     padding: 6px 10px;
-    font: 600 12px 'Inter', sans-serif;
+    font: 600 12px var(--font-body);
     cursor: pointer;
   }
   .model-selector .ms-blurb {
-    font: 500 11px 'Inter', sans-serif;
+    font: 500 11px var(--font-body);
     color: var(--text-3);
     margin-left: auto;
     max-width: 380px;
@@ -400,7 +400,7 @@
     gap: 5px;
     padding: 3px 8px;
     border-radius: 999px;
-    font: 600 10px 'Inter', sans-serif;
+    font: 600 10px var(--font-body);
     background: var(--bg-2);
     border: 1px solid var(--border-2);
     color: var(--text-3);
@@ -425,7 +425,7 @@
   .fight-why summary {
     cursor: pointer;
     padding: 8px 0;
-    font: 600 11px 'Inter', sans-serif;
+    font: 600 11px var(--font-body);
     color: var(--text-3);
     text-transform: uppercase;
     letter-spacing: 0.10em;
@@ -452,13 +452,13 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    font: 500 12px 'Inter', sans-serif;
+    font: 500 12px var(--font-body);
     color: var(--text-2);
     line-height: 1.4;
   }
   .fight-why .why-factor {
     display: inline-block;
-    font: 800 10px 'Inter', sans-serif;
+    font: 800 10px var(--font-body);
     text-transform: uppercase;
     letter-spacing: 0.06em;
     color: var(--text-3);
@@ -469,7 +469,7 @@
     text-align: center;
   }
   .fight-why .why-pct {
-    font: 700 12px 'Barlow Condensed', sans-serif;
+    font: 700 12px var(--font-display);
     color: var(--red);
     min-width: 44px;
   }
@@ -493,7 +493,7 @@
   .wf { margin-bottom: 12px; }
   .wf-legend {
     display: flex; gap: 14px; flex-wrap: wrap;
-    font: 500 10px 'Inter', sans-serif; color: var(--text-3);
+    font: 500 10px var(--font-body); color: var(--text-3);
     margin-bottom: 10px;
   }
   .wf-legend span { display: inline-flex; align-items: center; gap: 5px; }
@@ -502,7 +502,7 @@
   .wf-axis { width: 26px; flex-shrink: 0; position: relative; }
   .wf-axis span {
     position: absolute; right: 5px; transform: translateY(-50%);
-    font: 500 10px 'Inter', sans-serif; color: var(--text-3);
+    font: 500 10px var(--font-body); color: var(--text-3);
   }
   .wf-plot { flex: 1; position: relative; border-bottom: 1px solid var(--border-2); }
   .wf-grid { position: absolute; left: 0; right: 0; border-top: 1px solid var(--border); }
@@ -510,17 +510,17 @@
   .wf-bar {
     position: absolute; border-radius: 3px;
     display: flex; align-items: center; justify-content: center;
-    font: 700 11px 'Barlow Condensed', sans-serif; letter-spacing: 0.5px;
+    font: 700 11px var(--font-display); letter-spacing: 0.5px;
     color: #fff; overflow: hidden;
   }
   .wf-x { display: flex; margin-top: 6px; padding-left: 26px; }
   .wf-x > div { flex: 1; text-align: center; padding: 0 2px; }
   .wf-xf {
-    font: 800 9px 'Inter', sans-serif; text-transform: uppercase;
+    font: 800 9px var(--font-body); text-transform: uppercase;
     letter-spacing: 0.04em; color: var(--text-2);
   }
-  .wf-xc { font: 600 10px 'Inter', sans-serif; margin-top: 2px; }
-  .wf-cap { font: italic 500 10px 'Inter', sans-serif; color: var(--text-3); margin-top: 8px; }
+  .wf-xc { font: 600 10px var(--font-body); margin-top: 2px; }
+  .wf-cap { font: italic 500 10px var(--font-body); color: var(--text-3); margin-top: 8px; }
 
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
@@ -907,7 +907,7 @@ function renderModelAccuracyStrip(modelAccuracy, windowFiltered) {
       return `
         <div class="model-acc-strip">
           <div class="acc-label">Model accuracy on this card</div>
-          <div style="font: 500 12px 'Inter', sans-serif; color: var(--text-3);">This card predates the models' honest test windows — no graded picks shown.</div>
+          <div style="font: 500 12px var(--font-body); color: var(--text-3);">This card predates the models' honest test windows — no graded picks shown.</div>
         </div>`;
     }
     return '';
