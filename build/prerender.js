@@ -208,9 +208,9 @@ async function prerenderMatchupPreviews() {
 
   const [fightersData, predsData, cardioData, finishData] = await Promise.all([
     safe(sb.from('fighters').select('id, name, nickname').in('id', fighterIds)),
-    // Public models only ('v6' Value, 'v3' Fight IQ). Node script — window.cfl
-    // doesn't exist here; source of truth is cfl.PUBLIC_MODELS in _shared.js.
-    safe(sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', ['v6', 'v3'])),
+    // Engine picks (model_picks) — the one current model; a locked 'live' row
+    // outranks a 'backtest' replay row for the same fight.
+    safe(sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds)),
     safe(sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds)),
     safe(sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)),
   ]);
@@ -218,11 +218,17 @@ async function prerenderMatchupPreviews() {
   const fmap = {};
   fightersData.forEach(f => { fmap[f.id] = f; });
 
-  // picksByFight[fight_id] = [{ model_version, fighter_id, model_p }]
-  const picksByFight = {};
+  // picksByFight[fight_id] = [{ fighter_id, model_p }] (engine rows, live-preferred)
+  const engineByFight = {};
   predsData.forEach(p => {
+    const prev = engineByFight[p.fight_id];
+    if (prev && prev.source === 'live' && p.source !== 'live') return;
+    engineByFight[p.fight_id] = p;
+  });
+  const picksByFight = {};
+  Object.values(engineByFight).forEach(p => {
     if (!picksByFight[p.fight_id]) picksByFight[p.fight_id] = [];
-    picksByFight[p.fight_id].push(p);
+    picksByFight[p.fight_id].push({ fighter_id: p.pick_fighter_id, model_p: p.p_cal == null ? null : +p.p_cal });
   });
 
   // Cardio: prefer CAREER row (per-weight-class rows are noise at this level).

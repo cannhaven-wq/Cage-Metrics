@@ -36,8 +36,10 @@ Outputs: `report.md` (metrics, audit, both faces), `oos_predictions.csv`,
 sig_landed, sig_attempted, td_landed, td_attempted, sub_attempts, knockdowns,
 control_seconds, fight_seconds`
 
-**fighters.csv** — `fighter_id` required; `dob`, `name` optional (dob enables
-age features — worth having).
+**fighters.csv** — `fighter_id` required; `dob`, `name`, `height_in`,
+`reach_in`, `stance` optional (dob enables age features; the static physical
+attributes feed `STATIC_FEATS` diffs — missing values stay NaN, and a missing
+stance is NaN, never Orthodox).
 
 ## Exporting from Supabase
 
@@ -109,4 +111,4 @@ join from your BestFightOdds capture keyed on fight_id.
   not monthly ROI.
 - `n_reg_fights` here counts fights inside your dataset. Fighters with pre-UFC
   careers look like debutants; a `pre_dataset_fights` column in fighters.csv
-  is a cheap future upgrade, as are reach/height/stance diffs.
+  is a cheap future upgrade. (Reach/height/stance diffs shipped in engine_v2.)

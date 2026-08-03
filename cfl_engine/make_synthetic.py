@@ -27,6 +27,18 @@ def generate(outdir: str, n_fighters: int = 1100, seed: int = 7):
     debut = pd.Timestamp("2010-01-01") + pd.to_timedelta(
         rng.integers(0, 14 * 365, n_fighters), unit="D")
     career_years = np.clip(rng.normal(9, 2.5, n_fighters), 2, 14)
+    wc = rng.choice(WEIGHT_CLASSES, n_fighters)
+    # static physical attrs: height scales with weight class, reach with height.
+    # Deliberately holey (mirrors real coverage: reach is null for ~44% of
+    # fighters, stance ~19%) so the NaN paths in engine._static_maps get hit.
+    wc_idx = np.array([WEIGHT_CLASSES.index(w) for w in wc], dtype=float)
+    height = np.round(rng.normal(64.0 + 1.6 * wc_idx, 1.5, n_fighters), 0)
+    reach = np.round(height + rng.normal(1.5, 1.8, n_fighters), 0)
+    height[rng.random(n_fighters) < 0.07] = np.nan
+    reach[rng.random(n_fighters) < 0.44] = np.nan
+    stance = rng.choice(["Orthodox", "Southpaw", "Switch"], n_fighters,
+                        p=[0.76, 0.19, 0.05]).astype(object)
+    stance[rng.random(n_fighters) < 0.19] = None
     fighters = pd.DataFrame({
         "fighter_id": [f"F{i:05d}" for i in range(n_fighters)],
         "name": [f"Fighter {i}" for i in range(n_fighters)],
@@ -34,7 +46,10 @@ def generate(outdir: str, n_fighters: int = 1100, seed: int = 7):
         "retire": debut + pd.to_timedelta((career_years * 365).astype(int), unit="D"),
         "dob": debut - pd.to_timedelta((rng.uniform(20, 29, n_fighters) * 365).astype(int), unit="D"),
         "base_skill": rng.normal(0, 1, n_fighters),
-        "weight_class": rng.choice(WEIGHT_CLASSES, n_fighters),
+        "weight_class": wc,
+        "height_in": height,
+        "reach_in": reach,
+        "stance": stance,
     })
 
     def skill_at(i: int, date: pd.Timestamp) -> float:
@@ -131,7 +146,8 @@ def generate(outdir: str, n_fighters: int = 1100, seed: int = 7):
 
     fights = pd.DataFrame(fight_rows)
     stats = pd.DataFrame(stat_rows)
-    fighters_out = fighters[["fighter_id", "name", "dob", "weight_class"]].copy()
+    fighters_out = fighters[["fighter_id", "name", "dob", "weight_class",
+                             "height_in", "reach_in", "stance"]].copy()
     fights.to_csv(f"{outdir}/fights.csv", index=False)
     stats.to_csv(f"{outdir}/fight_stats.csv", index=False)
     fighters_out.to_csv(f"{outdir}/fighters.csv", index=False)

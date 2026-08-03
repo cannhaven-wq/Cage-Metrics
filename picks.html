@@ -596,15 +596,15 @@
   </div>
 
   <div class="picks-caveat">
-    <strong>This page is research, not advice.</strong> One model drives this page: <strong>Value</strong>. It prices every UFC fight on its own, then compares its number to the market. When its win probability beats the price by enough, the fight shows up here with the <strong>Kelly stake math</strong> — the formula that calculates an "optimal" stake size given a probability and a price. The number is what Kelly returns; whether you bet anything, and how much, is your call. A second model, <strong>Fight IQ</strong>, never sees a betting line — its chip on each pick tells you whether a pure tape read lands on the same fighter.<br><br>
-    The <strong>edge</strong> number is the gap between the model's win probability and what the price implies, measured against the best current price we track (opening line if no live price yet). Bigger gap = the model thinks the market is more wrong. The track record above is <strong>simulated</strong>: the model was frozen, then graded only on fights after its training cutoff — fights it had never seen. The live record started July 2026 and is 0-1 so far — the first settled bet lost. Simulated and live are labeled separately and always will be. Expect real-world results to run below simulation once slippage and book limits bite. <a href="track-record.html">The Proof Center</a> has the full breakdown if you want the receipts.<br><br>
+    <strong>This page is research, not advice.</strong> One engine drives this page, shown through its <strong>Value</strong> face. It prices every UFC fight on its own, then compares its number to the vig-free market consensus. When its win probability beats the price by at least 4 points, the fight shows up here with the <strong>Kelly stake math</strong> — the formula that calculates an "optimal" stake size given a probability and a price. The number is what Kelly returns; whether you bet anything, and how much, is your call. The same engine's <strong>Fight IQ</strong> face never sees a betting line — its chip on each pick tells you whether the pure tape read lands on the same fighter.<br><br>
+    The <strong>edge</strong> number is the gap between the model's win probability and what the price implies, measured against the best current price we track (the locked publish price if no live price yet). Bigger gap = the model thinks the market is more wrong. The track record above is mostly <strong>simulated</strong>: the engine walked forward through history, only ever betting fights it had not trained on, graded at real closing prices. The live record started July 2026 and is still tiny. Simulated and live are labeled separately and always will be. Expect real-world results to run below simulation once slippage and book limits bite. <a href="track-record.html">The Proof Center</a> has the full breakdown if you want the receipts.<br><br>
     <strong>Not a tout service. Not financial advice. Don't bet money you can't afford to lose. If gambling is a problem, call 1-800-GAMBLER.</strong>
   </div>
 </div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd5"></script>
+<script src="_shared.js?v=rd7"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('picks');
@@ -615,11 +615,10 @@ cfl.renderFooter();
   const escapeHtml = window.cfl.escapeHtml || (s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
   const fmtOdds = n => (n > 0 ? `+${n}` : `${n}`);
 
-  // The two public models. Value (v6) is the only model that generates picks,
-  // stakes, and P&L on this page. Fight IQ (v3) never sees a betting line and
-  // appears only as a corroboration chip on each pick.
-  const VALUE_ID = 'v6';
-  const TAPE_ID = 'v3';
+  // One engine, two faces. Value (model_edges) is the only face that generates
+  // picks, stakes, and P&L on this page. Fight IQ (model_picks) never sees a
+  // betting line and appears only as a corroboration chip on each pick.
+  // Live rows are locked at first write and never re-priced.
 
   // ---- Indicator metadata (admin-only chips on cards) ----
   // Names only — this page computes no indicator-level ROI, so it shows none.
@@ -656,62 +655,49 @@ cfl.renderFooter();
     }
   } catch {}
 
-  // ---- Pull predictions for the public models only ----
-  // We want both graded (for track record) and upcoming (for picks).
-  const { data: modelRows, error: mErr } = await sb.from('model_versions').select('id,name,test_start_date').order('id');
-  const models = (modelRows || []).filter(m => (cfl.PUBLIC_MODELS || []).includes(m.id));
-  if (mErr || !models.length || !models.some(m => m.id === VALUE_ID)) {
-    document.getElementById('picksList').innerHTML = `<div class="empty-state">The Value model isn't trained yet. Check back after the next training run.</div>`;
-    return;
+  // ---- Track record: graded engine bets (server-side grading view) ----
+  // Every graded row is out-of-sample: backtest rows come from the walk-forward
+  // replay (graded at the closing consensus), live rows grade at their locked
+  // publish price. No window clamp needed — nothing here ever trains on its
+  // own test fights.
+  const winProfit = o => o > 0 ? o : 100 * 100 / Math.abs(o);
+  const edgeOdds = r => r.closing_odds != null ? Number(r.closing_odds) : (r.odds_at_publish != null ? Number(r.odds_at_publish) : null);
+  let pnl = 0;
+  try {
+    const gradedAll = await window.cfl.fetchAll(() =>
+      sb.from('v_model_edges_graded').select('event_date,won,odds_at_publish,closing_odds')
+        .not('won', 'is', null)
+        .order('event_date', { ascending: true }).order('id', { ascending: true })
+    );
+    const graded = gradedAll || [];
+    const totalBets = graded.length;
+    const wins = graded.filter(p => p.won === true).length;
+    pnl = graded.reduce((s, p) => {
+      const o = edgeOdds(p);
+      return s + (o == null ? 0 : (p.won === true ? winProfit(o) : -100));
+    }, 0);
+    const roi = totalBets ? (100 * pnl / (totalBets * 100)) : 0;
+
+    // Recent (last 60 days) for "trending" KPI
+    const cutoff = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
+    const recent = graded.filter(p => p.event_date >= cutoff);
+    const recentWins = recent.filter(p => p.won === true).length;
+    const recentPnl = recent.reduce((s, p) => {
+      const o = edgeOdds(p);
+      return s + (o == null ? 0 : (p.won === true ? winProfit(o) : -100));
+    }, 0);
+    const recentRoi = recent.length ? (100 * recentPnl / (recent.length * 100)) : 0;
+
+    renderRecordStrip({ totalBets, wins, roi, recent: recent.length, recentWins, recentRoi });
+  } catch (e) {
+    console.warn('[picks] graded record unavailable', e);
+    renderRecordStrip({ totalBets: 0, wins: 0, roi: 0, recent: 0, recentWins: 0, recentRoi: 0 });
   }
-  const versionIds = models.map(m => m.id);
 
-  const allPreds = await window.cfl.fetchAll(() =>
-    sb.from('model_predictions')
-      .select('model_version,fight_id,fighter_id,side,event_date,model_p,opener_implied_p,opener_american_odds,edge,would_bet,outcome_known,won,pnl_usd')
-      .in('model_version', versionIds)
-      .order('event_date', { ascending: false })
-  );
-
-  // ---- Track record: Value model only, honest out-of-sample window ----
-  // cfl.modelWindowStart returns the LATER of the DB test_start_date and the
-  // day after the model's training cutoff, so a stale DB row can never widen
-  // the window back into training data.
-  const v6Meta = models.find(m => m.id === VALUE_ID);
-  const windowStart = cfl.modelWindowStart(VALUE_ID, (v6Meta && v6Meta.test_start_date) || '2025-01-01');
-  const graded = allPreds.filter(r =>
-    r.model_version === VALUE_ID && r.would_bet && r.outcome_known &&
-    (!windowStart || (r.event_date && r.event_date >= windowStart))
-  );
-  const totalBets = graded.length;
-  const wins = graded.filter(p => p.won).length;
-  const pnl = graded.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
-  const roi = totalBets ? (100 * pnl / (totalBets * 100)) : 0;
-
-  // Recent (last 60 days) for "trending" KPI
-  const cutoff = new Date(Date.now() - 60 * 86400000).toISOString().slice(0, 10);
-  const recent = graded.filter(p => p.event_date >= cutoff);
-  const recentWins = recent.filter(p => p.won).length;
-  const recentPnl = recent.reduce((s, p) => s + (parseFloat(p.pnl_usd) || 0), 0);
-  const recentRoi = recent.length ? (100 * recentPnl / (recent.length * 100)) : 0;
-
-  renderRecordStrip({
-    totalBets, wins, roi, recent: recent.length, recentWins, recentRoi
-  });
-
-  // ---- Indicator fetch (admin only) ----
+  // ---- Indicators ----
+  // The retired v5/v6 indicator signals don't apply to the engine; the chips
+  // stay wired but the map is empty until engine-native signals exist.
   const indicatorsByKey = {};
-  if (isAdmin) {
-    const { data: inds } = await sb.from('prediction_indicators')
-      .select('model_version,fight_id,fighter_id,indicator')
-      .in('model_version', versionIds);
-    if (inds) {
-      for (const i of inds) {
-        const k = `${i.fight_id}|${i.fighter_id}`;
-        (indicatorsByKey[k] = indicatorsByKey[k] || new Set()).add(i.indicator);
-      }
-    }
-  }
   function fightSideIndicators(fightId, fighterId) {
     const s = indicatorsByKey[`${fightId}|${fighterId}`];
     return s ? [...s].sort((a, b) => (INDICATOR_PRIORITY[b] || 0) - (INDICATOR_PRIORITY[a] || 0)) : [];
@@ -721,36 +707,36 @@ cfl.renderFooter();
     return tags[0] || null;
   }
 
-  // ---- Find the next upcoming event(s) ----
+  // ---- Find the next upcoming event(s): live engine rows only ----
   const today = new Date().toISOString().slice(0, 10);
-  const upcoming = allPreds.filter(p => !p.outcome_known && p.event_date >= today);
-  if (!upcoming.length) {
+  const [{ data: livePickRows, error: lpErr }, { data: liveEdgeRows }] = await Promise.all([
+    sb.from('model_picks').select('fight_id,event_date,p_cal,pick_fighter_id,pick_side,tier')
+      .eq('source', 'live').gte('event_date', today),
+    sb.from('model_edges').select('fight_id,event_date,side,bet_fighter_id,p_blend,q_mkt,edge,stake_frac,odds_at_publish')
+      .eq('source', 'live').gte('event_date', today),
+  ]);
+  const pickRowByFight = {};
+  (livePickRows || []).forEach(r => { pickRowByFight[r.fight_id] = r; });
+  const edgeRowByFight = {};
+  (liveEdgeRows || []).forEach(r => { edgeRowByFight[r.fight_id] = r; });
+  const upcoming = Object.keys(pickRowByFight).map(fid => pickRowByFight[fid]);
+  if (lpErr || !upcoming.length) {
     document.getElementById('picksHeroTitle').textContent = 'No upcoming picks yet';
-    document.getElementById('picksHeroEvent').textContent = 'Predictions populate after the next training run.';
-    document.getElementById('picksList').innerHTML = `<div class="empty-state">No upcoming fights scored yet. The model scores each card once matchups and opening lines land; check back in a few hours.</div>`;
+    document.getElementById('picksHeroEvent').textContent = 'Picks lock during fight week, once the card is close enough to price on current form.';
+    document.getElementById('picksList').innerHTML = `<div class="empty-state">No upcoming fights locked yet. The engine locks each card during fight week — publishing earlier would price fights on stale form. Check back closer to the card.</div>`;
     return;
   }
 
-  // Fight IQ (tape-only) rows for the corroboration chip, keyed by fight.
-  const tapeByFight = {};
-  for (const r of upcoming) {
-    if (r.model_version === TAPE_ID) {
-      (tapeByFight[r.fight_id] = tapeByFight[r.fight_id] || []).push(r);
-    }
-  }
-  // Returns true (tape agrees), false (tape disagrees), or null (no tape read).
+  // Fight IQ (Face 1) corroboration for each Value bet, keyed by fight.
+  // Returns true (tape agrees), false (tape disagrees), or null (no read).
   function tapeVerdict(fightId, pickedFighterId) {
-    const rows = tapeByFight[fightId] || [];
-    if (!rows.length) return null;
-    const same = rows.find(r => r.fighter_id === pickedFighterId && r.model_p != null);
-    if (same) return same.model_p >= 0.5;
-    const other = rows.find(r => r.fighter_id !== pickedFighterId && r.model_p != null);
-    if (other) return other.model_p < 0.5;
-    return null;
+    const p = pickRowByFight[fightId];
+    if (!p) return null;
+    return p.pick_fighter_id === pickedFighterId;
   }
   function tapeChipHtml(tape) {
-    if (tape === true) return `<span class="tape-chip agree" title="Fight IQ — our tape-only model, which never sees a betting line — independently favors the same fighter.">Tape agrees ✓</span>`;
-    if (tape === false) return `<span class="tape-chip disagree" title="Fight IQ — our tape-only model, which never sees a betting line — leans the other way on this one.">Tape disagrees ✕</span>`;
+    if (tape === true) return `<span class="tape-chip agree" title="Fight IQ — the engine's tape-only read, which never sees a betting line — independently favors the same fighter.">Tape agrees ✓</span>`;
+    if (tape === false) return `<span class="tape-chip disagree" title="Fight IQ — the engine's tape-only read, which never sees a betting line — leans the other way on this one.">Tape disagrees ✕</span>`;
     return '';
   }
 
@@ -762,7 +748,10 @@ cfl.renderFooter();
   // v_fight_odds_consensus and recompute edge live; opener_* remains the
   // fallback for fights where no live capture exists yet.
   const fightIds = [...new Set(upcoming.map(p => p.fight_id))];
-  const fighterIds = [...new Set(upcoming.map(p => p.fighter_id))];
+  const fighterIds = [...new Set([
+    ...upcoming.map(p => p.pick_fighter_id),
+    ...Object.values(edgeRowByFight).map(r => r.bet_fighter_id),
+  ])];
   const [{ data: fightRows }, { data: fighterRows }, { data: consensusRows }] = await Promise.all([
     sb.from('fights').select('id,event_id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name').in('id', fightIds),
     sb.from('fighters').select('id,name').in('id', fighterIds),
@@ -786,13 +775,18 @@ cfl.renderFooter();
   }
 
   // ---- Group upcoming by event ----
+  // One entry per fight: the engine's Face 1 pick row plus (when the market
+  // disagreed enough) its Face 2 edge row.
   const byEvent = {};
   for (const r of upcoming) {
     const f = fightMap[r.fight_id];
     const eid = f?.event_id ?? '__unknown__';
     if (!byEvent[eid]) byEvent[eid] = { eventId: eid, event: eventMap[eid] || null, fights: {} };
-    if (!byEvent[eid].fights[r.fight_id]) byEvent[eid].fights[r.fight_id] = { fight_id: r.fight_id, rows: [] };
-    byEvent[eid].fights[r.fight_id].rows.push(r);
+    byEvent[eid].fights[r.fight_id] = {
+      fight_id: r.fight_id,
+      pickRow: r,
+      edgeRow: edgeRowByFight[r.fight_id] || null,
+    };
   }
   const events = Object.values(byEvent).sort((a, b) => {
     const ad = a.event?.event_date || '9999';
@@ -821,29 +815,29 @@ cfl.renderFooter();
 
   // ====================== helpers ======================
 
-  // The single source of truth for what this page calls a pick: the Value
-  // model's would_bet row for a fight. Everything downstream (stake, edge,
+  // The single source of truth for what this page calls a pick: the engine's
+  // locked model_edges row for a fight. Everything downstream (stake, edge,
   // P&L framing) comes from that one row. Fight IQ only corroborates.
   function computePick(f) {
-    const v6Rows = f.rows.filter(r => r.model_version === VALUE_ID);
-    const betRows = v6Rows.filter(r => r.would_bet);
-    if (!betRows.length) {
-      return { fight: f, scored: v6Rows.length > 0, pick: null };
+    const r = f.edgeRow;
+    if (!r) {
+      return { fight: f, scored: !!f.pickRow, pick: null };
     }
-    const r = betRows.reduce((a, b) => (((b.edge || 0) > (a.edge || 0)) ? b : a));
-    const cm = currentMarket(f.fight_id, r.side);
-    const displayOdds = cm.american ?? r.opener_american_odds;
-    const marketP = cm.implied ?? r.opener_implied_p;
-    const edge = marketP != null ? (r.model_p - marketP) : (r.edge || 0);
-    const allInds = fightSideIndicators(f.fight_id, r.fighter_id);
+    const side = String(r.side || '').toUpperCase();  // engine stores 'a'/'b'
+    const cm = currentMarket(f.fight_id, side);
+    const displayOdds = cm.american ?? r.odds_at_publish;
+    const marketP = cm.implied != null ? Number(cm.implied) : Number(r.q_mkt);
+    const modelP = Number(r.p_blend);
+    const edge = marketP != null ? (modelP - marketP) : Number(r.edge || 0);
+    const allInds = fightSideIndicators(f.fight_id, r.bet_fighter_id);
     const antiFilters = allInds.filter(t => ANTI_FILTERS.has(t));
-    const top = topIndicator(f.fight_id, r.fighter_id);
+    const top = topIndicator(f.fight_id, r.bet_fighter_id);
     const pri = top ? (INDICATOR_PRIORITY[top] ?? 0) : 0;
     return {
       fight: f, scored: true, pick: r,
-      pickedFighter: r.fighter_id, side: r.side, modelP: r.model_p,
+      pickedFighter: r.bet_fighter_id, side, modelP,
       displayOdds, marketP, edge,
-      tape: tapeVerdict(f.fight_id, r.fighter_id),
+      tape: tapeVerdict(f.fight_id, r.bet_fighter_id),
       top, pri, antiFilters,
     };
   }
@@ -851,7 +845,7 @@ cfl.renderFooter();
   function countPicksForEvent(eventFights) {
     let n = 0;
     for (const f of eventFights) {
-      if (f.rows.some(r => r.model_version === VALUE_ID && r.would_bet)) n++;
+      if (f.edgeRow) n++;
     }
     return n;
   }
@@ -1008,7 +1002,7 @@ cfl.renderFooter();
     const rendered = [];
     for (const ev of events) {
       const evFights = Object.values(ev.fights);
-      const evDate = ev.event?.event_date || evFights[0]?.rows?.[0]?.event_date || '';
+      const evDate = ev.event?.event_date || evFights[0]?.pickRow?.event_date || '';
       const evName = ev.event?.name || 'Upcoming card';
       const evLoc = ev.event?.location || '';
 

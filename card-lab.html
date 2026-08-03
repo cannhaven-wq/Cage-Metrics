@@ -94,6 +94,7 @@
 #cardlab .stat .n.green { color: var(--green); }
 #cardlab .stat .n.amber { color: var(--amber); }
 #cardlab .stat .n.mut { color: var(--text-3); }
+#cardlab .stat .n.tier2 { color: var(--text-2); }
 #cardlab .confwrap { display: flex; flex-direction: column; gap: 4px; }
 #cardlab .conf-meter { height: 6px; border-radius: 4px; background: var(--bg-3); overflow: hidden; }
 #cardlab .conf-meter > i { display: block; height: 100%; border-radius: 4px; }
@@ -109,6 +110,7 @@
 #cardlab .lbadge.dog { background: rgba(255,181,71,.14); color: var(--amber); }
 #cardlab .lbadge.main { background: var(--bg-3); color: var(--text-2); }
 #cardlab .lbadge.thin { background: var(--bg-3); color: var(--text-3); }
+#cardlab .lbadge.tier2 { background: transparent; border: 1px dashed var(--text-3); color: var(--text-2); }
 
 /* Expanded detail */
 #cardlab .row-detail { display: none; border-top: 1px solid var(--line); padding: 14px 16px; }
@@ -233,7 +235,7 @@
     <label class="chk"><input type="checkbox" id="clHideThin"> Hide thin leans (&lt;55%)</label>
     <div class="model-filter">
       <span class="fl-label">Model</span>
-      <select id="clModelSelect"><option value="v6">Value — beats the opener (v6)</option></select>
+      <select id="clModelSelect"><option value="engine">Fight IQ — the engine</option></select>
     </div>
   </div>
 
@@ -268,7 +270,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd5"></script>
+<script src="_shared.js?v=rd7"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="fight-insights.js?v=4"></script>
@@ -278,18 +280,20 @@ cfl.renderFooter();
 
 // =============================================================================
 // CARD LAB — the one-screen card workspace.
-// Same data spine as the homepage (fights + model_predictions + consensus
+// Same data spine as the homepage (fights + engine model_picks + consensus
 // odds + cardio), rendered dense and sortable. Pick-explanation logic comes
-// from fight-insights.js (shared with the homepage).
+// from fight-insights.js (shared with the homepage). The engine ('engine' in
+// picksByFight) is the default; the retired v3/v6 rows remain selectable for
+// continuity while their archived records live on the track-record page.
 // =============================================================================
-const CL_MODELS = cfl.PUBLIC_MODELS;   // ['v6','v3'] — the only public models
+const CL_MODELS = cfl.PUBLIC_MODELS;   // ['v6','v3'] — retired, kept selectable
 let _state = null;        // { event, fights, fighterMap, picksByFight, modelNames }
 let _cardioMap = null;
 let _oddsMap = null;
 let _baseRates = null;
 let _sortKey = 'edge';
 let _hideThin = false;
-let _modelMode = 'v6';
+let _modelMode = 'engine';
 let _openFid = null;
 let _signedIn = false;
 
@@ -298,14 +302,12 @@ const $ = id => document.getElementById(id);
 // ---- Event selection (same rules as the homepage) ----
 async function load() {
   const sb = window.cflSupabase;
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+  const { fromStr, todayStr } = cfl.eventWindow();
 
   let event = null, phase = 'upcoming';
   {
     const { data } = await sb.from('events').select('id, name, event_date, location')
-      .gte('event_date', yesterdayStr).lte('event_date', todayStr)
+      .gte('event_date', fromStr).lte('event_date', todayStr)
       .order('event_date', { ascending: false }).limit(1);
     if (data && data[0]) { event = data[0]; phase = 'happening'; }
   }
@@ -334,13 +336,14 @@ async function load() {
   fights.forEach(f => { if (f.fighter_a_id) fighterIds.add(f.fighter_a_id); if (f.fighter_b_id) fighterIds.add(f.fighter_b_id); });
   const fightIds = fights.map(f => f.id);
 
-  const [fightersR, oddsDone, cardioDone, ratesDone, predsR, namesR] = await Promise.all([
+  const [fightersR, oddsDone, cardioDone, ratesDone, predsR, namesR, engR] = await Promise.all([
     sb.from('fighters').select('id, name, age, height_in, reach_in, wins, losses, draws, slpm, td_avg, td_acc, td_def').in('id', Array.from(fighterIds)),
     loadOddsMap(event.id),
     loadCardioMap(fighterIds),
     loadBaseRates(),
     sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', CL_MODELS),
     sb.from('model_versions').select('id, name').in('id', CL_MODELS),
+    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, tier, source').in('fight_id', fightIds),
   ]);
   if (fightersR.error) { showErr("Couldn't load fighter details. Try refreshing."); return; }
 
@@ -353,6 +356,20 @@ async function load() {
     const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
     slot[p.model_version] = { fighter_id: p.fighter_id, model_p: +p.model_p };
   });
+  // Engine picks: a locked 'live' row always outranks a 'backtest' replay row
+  // for the same fight (both can exist — unique is per (fight_id, source)).
+  if (engR && !engR.error) {
+    const byFight = {};
+    (engR.data || []).forEach(p => {
+      const prev = byFight[p.fight_id];
+      if (prev && prev.source === 'live' && p.source !== 'live') return;
+      byFight[p.fight_id] = p;
+    });
+    Object.values(byFight).forEach(p => {
+      const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
+      slot.engine = { fighter_id: p.pick_fighter_id, model_p: +p.p_cal, tier: p.tier };
+    });
+  }
 
   const modelNames = {};
   if (!namesR.error) (namesR.data || []).forEach(m => { modelNames[m.id] = m.name; });
@@ -431,7 +448,7 @@ function pickForFight(fightPicks, a, b) {
     if (!p) return null;
     const picked = p.fighter_id === a.id ? a : (p.fighter_id === b.id ? b : null);
     if (!picked) return null;
-    return { picked, opponent: picked === a ? b : a, pct: p.model_p * 100 };
+    return { picked, opponent: picked === a ? b : a, pct: p.model_p * 100, tier: p.tier || null };
   }
   let aVotes = 0, bVotes = 0, aSum = 0, bSum = 0;
   CL_MODELS.forEach(mv => {
@@ -452,15 +469,18 @@ function populateModelSelect(modelNames) {
   const picksByFight = (_state && _state.picksByFight) || {};
   const hasRows = mv => Object.values(picksByFight).some(slot => slot[mv]);
   const opts = [];
+  const engineHasRows = hasRows('engine');
+  if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
   CL_MODELS.forEach(mv => {
     const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ')')}</option>`);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ' — retired)')}</option>`);
   });
-  // "Both models" only makes sense when both public models actually scored
+  // "Both models" only makes sense when both retired models actually scored
   // fights on this card.
   const bothHaveRows = CL_MODELS.length > 1 && CL_MODELS.every(hasRows);
-  if (bothHaveRows) opts.push('<option value="consensus">Both models</option>');
+  if (bothHaveRows) opts.push('<option value="consensus">Both retired models</option>');
   sel.innerHTML = opts.join('');
+  if (_modelMode === 'engine' && !engineHasRows) _modelMode = 'v6';
   if (_modelMode === 'consensus' && !bothHaveRows) _modelMode = 'v6';
   sel.value = _modelMode;
 }
@@ -471,7 +491,21 @@ function buildRows() {
   return fights.map((fight, idx) => {
     const a = fighterMap[fight.fighter_a_id], b = fighterMap[fight.fighter_b_id];
     if (!a || !b) return null;
-    const pick = pickForFight(picksByFight[fight.id], a, b);
+    // Tier 1: the engine / retired-model pick when one exists.
+    let pick = pickForFight(picksByFight[fight.id], a, b);
+    let tier2 = false;
+    // Tier 2 fallback: when the model didn't score this fight (thin / debut
+    // fighters with no model row), derive a rules-based read from edges.js so no
+    // fight on the card is left blank. Only produces a read when the rules
+    // actually lean — a pure 50/50 with no signal stays "not scored".
+    if (!pick && window.cflEdges) {
+      const rr = window.cflEdges.computeEdges(a, b, { cardioMap: _cardioMap, fightWeightClass: fight.weight_class });
+      if (rr && rr.edges.length && Math.abs(rr.aProb - 0.5) > 0.005) {
+        const picked = rr.aProb >= 0.5 ? a : b;
+        pick = { picked, opponent: picked === a ? b : a, pct: Math.max(rr.aProb, 1 - rr.aProb) * 100, tier2: true };
+        tier2 = true;
+      }
+    }
     const oddsRow = _oddsMap && _oddsMap[fight.id];
 
     let marketPct = null, edge = null, isDog = false;
@@ -479,13 +513,17 @@ function buildRows() {
       const impl = pick.picked.id === a.id ? oddsRow.implied_prob_a : oddsRow.implied_prob_b;
       if (impl != null) {
         marketPct = +impl * 100;
-        edge = pick.pct - marketPct;
-        if (edge > 15) { marketPct = null; edge = null; }   // stale-odds guard
-        else isDog = marketPct < 50;
+        // Edge is a betting claim — only assert it for a real model pick, never
+        // for a lower-confidence Tier-2 read (market shown as context only).
+        if (!tier2) {
+          edge = pick.pct - marketPct;
+          if (edge > 15) { marketPct = null; edge = null; }   // stale-odds guard
+          else isDog = marketPct < 50;
+        }
       }
     }
     const conf = pick ? pick.pct : 0;
-    return { fight, a, b, pick, marketPct, edge, isDog, conf, order: idx };
+    return { fight, a, b, pick, tier2, marketPct, edge, isDog, conf, order: idx };
   }).filter(Boolean);
 }
 
@@ -505,7 +543,7 @@ function render() {
   let rows = buildRows();
 
   // Summary strip (always across the full card, unfiltered)
-  const picked = rows.filter(r => r.pick);
+  const picked = rows.filter(r => r.pick && !r.tier2);
   const valueEdges = rows.filter(r => r.edge != null && r.edge >= 3);
   const dogs = rows.filter(r => r.isDog && r.edge != null && r.edge >= 1);
   const best = rows.reduce((m, r) => (r.edge != null && (m == null || r.edge > m.edge)) ? r : m, null);
@@ -545,13 +583,16 @@ function rowHtml(r, visIdx) {
   else if (fight.is_title_fight) badges.push('<span class="lbadge main">Title</span>');
   if (r.edge != null && r.edge >= 5) badges.push('<span class="lbadge value">✦ Value</span>');
   if (r.isDog && pick) badges.push('<span class="lbadge dog">Dog pick</span>');
-  if (pick && r.conf < 55) badges.push('<span class="lbadge thin">Thin lean</span>');
+  if (r.tier2) badges.push('<span class="lbadge tier2">Rules-based read</span>');
+  if (pick && !r.tier2 && r.conf < 55) badges.push('<span class="lbadge thin">Thin lean</span>');
 
   const nameHtml = (f, isPick) => `<span class="${isPick ? 'pk' : ''}">${cfl.escapeHtml(f.name)}</span>`;
   const pickedIsA = pick && pick.picked.id === a.id;
 
   const stat = (t, n, cls) => `<div class="stat"><div class="t">${t}</div><div class="n ${cls || ''}">${n}</div></div>`;
-  const modelCell = pick ? stat('Model', Math.round(r.conf) + '%') : stat('Model', '—', 'mut');
+  const modelCell = pick
+    ? stat(r.tier2 ? 'Read' : 'Model', Math.round(r.conf) + '%', r.tier2 ? 'tier2' : '')
+    : stat('Model', '—', 'mut');
   const marketCell = r.marketPct != null ? stat('Market', Math.round(r.marketPct) + '%') : stat('Market', '—', 'mut');
   let edgeCell;
   if (r.edge == null) edgeCell = stat('Edge', '—', 'mut');
@@ -559,7 +600,12 @@ function rowHtml(r, visIdx) {
   else edgeCell = stat('Edge', r.edge.toFixed(0) + '%', 'mut');
 
   const confCls = r.conf >= 65 ? 'high' : (r.conf >= 55 ? 'med' : 'low');
-  const confWord = pick ? (r.conf >= 65 ? 'High confidence' : (r.conf >= 55 ? 'Medium' : 'Lean')) : 'Awaiting model';
+  // Engine picks carry the published tier (Lock / Pick / Lean); fall back to
+  // the generic wording for the retired models.
+  const confWord = pick
+    ? (r.tier2 ? 'Rules-based read'
+       : (pick.tier ? pick.tier : (r.conf >= 65 ? 'High confidence' : (r.conf >= 55 ? 'Medium' : 'Lean'))))
+    : 'Awaiting model';
   const confMeter = `<div class="confwrap">
     <div class="conf-meter ${confCls}"><i style="width:${Math.min(100, Math.max(4, (r.conf - 40) * 2.2)).toFixed(0)}%"></i></div>
     <div class="conf-word">${confWord}${pick && pick.votes ? ` · ${pick.votes}/${pick.total} models` : ''}</div>
@@ -578,10 +624,10 @@ function rowHtml(r, visIdx) {
       : '';
     const locked = !_signedIn && visIdx >= 2;
     detail = `<div class="row-detail ${locked ? 'locked' : ''}">
-      <div class="det likes"><h4>Why the model likes ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
+      <div class="det likes"><h4>${r.tier2 ? 'Why the rules favor' : 'Why the model likes'} ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
         ${bullets.length ? '<ul>' + bullets.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No single dominant factor — the pick rests on the model\'s broader stat weighting.</div>'}
       </div>
-      <div class="det flags"><h4>Why the model might be wrong</h4>
+      <div class="det flags"><h4>${r.tier2 ? 'Where this read could be wrong' : 'Why the model might be wrong'}</h4>
         ${flags.length ? '<ul>' + flags.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No structural red flag on this matchup.</div>'}
       </div>
       ${weightsBlock}
@@ -603,7 +649,7 @@ function rowHtml(r, visIdx) {
         <div class="wt">${cfl.escapeHtml(wt)} ${badges.join(' ')}</div>
         <div class="names">${nameHtml(a, pickedIsA)} <span style="color:var(--text-3)">vs</span> ${nameHtml(b, pick && !pickedIsA)}</div>
       </div>
-      <div class="pickcell"><div class="lab">Model pick</div><div class="nm">${pick ? cfl.escapeHtml(pick.picked.name) : 'Not scored yet'}</div></div>
+      <div class="pickcell"><div class="lab">${r.tier2 ? 'Rules-based read' : 'Model pick'}</div><div class="nm">${pick ? cfl.escapeHtml(pick.picked.name) : 'Not scored yet'}</div></div>
       <div class="row-stats">${modelCell}${marketCell}${edgeCell}</div>
       ${confMeter}
       <div class="caret">▶</div>

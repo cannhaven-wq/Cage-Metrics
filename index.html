@@ -361,13 +361,13 @@
     <div>
       <div class="hp-eyebrow">UFC Betting Analytics</div>
       <h1>Find where the betting<br>line is <span class="hl">wrong.</span></h1>
-      <p class="lede">CFL runs two models it can defend — Fight IQ, which never sees a betting line, and Value, which hunts mispriced openers — and shows every graded result, including the misses. The Factor Lab shows which stats survive the market and which just repeat it.</p>
+      <p class="lede">CFL runs one audited engine with two faces it can defend — Fight IQ, which calls every fight without ever seeing a betting line, and Value, which flags the fights where the market's price disagrees with the model — and shows every graded result, including the misses. The Factor Lab shows which stats survive the market and which just repeat it.</p>
       <div class="hero-cta">
         <a href="card-lab.html" class="btn btn-primary btn-lg">Analyze next card →</a>
         <a href="track-record.html" class="btn btn-ghost btn-lg">See verified track record</a>
       </div>
       <div class="hero-proofline" id="heroProofline">
-        <span class="pf" id="hpProof"><b>66-21</b> on flat $100 bets since Jan 2025 · <b>+12.7%</b> at closing prices (simulated)</span>
+        <span class="pf" id="hpProof"><b>61.4%</b> straight-up across 3,262 never-seen fights · Locks hit <b>74.7%</b> (simulated)</span>
         <span class="pf">Picks locked at first write · misses shown · live record since July 2026</span>
         <a class="pf link" href="track-record.html">Verify it →</a>
       </div>
@@ -409,7 +409,7 @@
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
     <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded in public, misses included.</div></div><a href="track-record.html">See the full verified record →</a></div>
-    <p class="track-note">Two models, two honest numbers. <strong>Value</strong> — the money model — has been graded on 395 fights that happened after its December 2024 training cutoff: 69.9% of its picks were right. Its betting rule (favorites only, at least 3 points of edge, flat $100 a bet) has gone <strong>66-21</strong> as of July 15, 2026: up <strong>$1,478</strong> at the opening price (+17.0%), still up $1,103 (+12.7%) re-priced at closing odds, and it beat the closing line on 57 of 87 bets. Those results are simulated point-in-time. The live record started July 2026 and is 0-1 so far — the first settled bet lost, and we show it like everything else. <strong>Fight IQ</strong> never sees a betting line and calls <strong>63.6%</strong> of fights right out of sample; just backing the closing favorite gets 68.4%. We publish a number that loses to Vegas because a model within five points of the market without ever looking at the market is a model you can actually trust to be independent of it. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market.</p>
+    <p class="track-note">One engine, two honest numbers. <strong>Fight IQ</strong> — the engine's tape-only face — has been graded on <strong>3,262</strong> fights it never trained on: <strong>61.4%</strong> of its picks were right, and its highest-confidence Locks hit <strong>74.7%</strong> (673 picks). Just backing the closing favorite gets about 68% — we publish a number that loses to Vegas because a model within seven points of the market without ever looking at the market is a model you can actually trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its 644 simulated bets, graded at real closing prices, went <strong>500-144</strong> (+4.6% Kelly-staked; roughly break-even at flat $100 — short-priced favorites pay small). Those results are the walk-forward replay, simulated point-in-time and labeled as such. The live record started July 2026 and is still tiny. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market.</p>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
@@ -435,7 +435,7 @@
       </a>
       <a class="tool" href="predictor.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M9 3h6v4l4 8a4 4 0 0 1-4 6H9a4 4 0 0 1-4-6l4-8V3Z"/><path d="M8 3h8"/></svg></div>
-        <h3>See how the models are built</h3><p>Both models' features, honest test windows, accuracy and ROI — nothing hidden.</p><span class="go">Open the Model Lab →</span>
+        <h3>See how the engine is built</h3><p>The engine's features, honest test windows, accuracy and ROI — nothing hidden.</p><span class="go">Open the Model Lab →</span>
       </a>
     </div>
   </section>
@@ -445,10 +445,10 @@
     <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
     <div class="trust" style="margin-top:14px">
       <div class="trust-grid">
-        <div class="trust-item"><div class="n">86</div><div class="l">flat-stake bets graded</div></div>
-        <div class="trust-item"><div class="n">+12.7<span class="u">%</span></div><div class="l">at closing prices (simulated)</div></div>
-        <div class="trust-item"><div class="n">8,853</div><div class="l">fights in the database</div></div>
-        <div class="trust-item"><div class="n">Locked</div><div class="l">every pick at first write</div></div>
+        <div class="trust-item"><div class="n">3,262</div><div class="l">never-seen fights graded</div></div>
+        <div class="trust-item"><div class="n">74.7<span class="u">%</span></div><div class="l">Lock-tier accuracy (simulated)</div></div>
+        <div class="trust-item"><div class="n">8,860</div><div class="l">fights in the database</div></div>
+        <div class="trust-item"><div class="n">Locked</div><div class="l">every live pick at first write</div></div>
       </div>
       <div class="trust-foot">Every number is computed live from the pick database — accuracy, calibration, ROI, and the misses. <a href="track-record.html">See the verified track record →</a> · <a href="methodology.html">Read the methodology</a></div>
     </div>
@@ -474,7 +474,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd5"></script>
+<script src="_shared.js?v=rd7"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="fight-insights.js?v=4"></script>
@@ -490,31 +490,25 @@ async function loadHomepageStats() {
   await Promise.all([loadHeroProof(), loadPastEvents()]);
 }
 
-// Live betting record for the hero proof line — Value model (v6) only, gated
-// to its honest never-seen window (cfl.modelWindowStart floors it at the day
-// after the training cutoff even if the DB row's test_start_date is wrong).
-// The static HTML numbers are the fallback. Always labeled "simulated" until
-// live bets exist (live record starts July 2026).
+// Engine record for the hero proof line, from the graded picks view. Every
+// row is out-of-sample by construction (walk-forward replay + locked live
+// picks), so no window clamp applies. The static HTML numbers are the
+// fallback. Labeled "simulated" while the live record is still small.
 async function loadHeroProof() {
-  const sb = window.cflSupabase;
   try {
-    const windowStart = cfl.modelWindowStart('v6', '2025-01-01');
-    const rows = await cfl.fetchAll(() => sb
-      .from('model_predictions')
-      .select('won, pnl_usd')
-      .eq('model_version', 'v6')
-      .eq('would_bet', true)
-      .eq('outcome_known', true)
-      .gte('event_date', windowStart));
-    const graded = (rows || []).filter(r => r.won === true || r.won === false);
-    const wins = graded.filter(r => r.won === true).length;
-    const losses = graded.length - wins;
-    if (graded.length >= 20) {
-      const pnl = graded.reduce((s, r) => s + (parseFloat(r.pnl_usd) || 0), 0);
-      const pnlStr = (pnl >= 0 ? '+' : '-') + '$' + Math.abs(Math.round(pnl)).toLocaleString();
+    const rows = await cfl.fetchEnginePicks(q => q.not('hit', 'is', null));
+    const graded = (rows || []).filter(r => r.hit === true || r.hit === false);
+    if (graded.length >= 100) {
+      const hits = graded.filter(r => r.hit === true).length;
+      const acc = (100 * hits / graded.length).toFixed(1);
+      const locks = graded.filter(r => r.tier === 'Lock');
+      const lockHits = locks.filter(r => r.hit === true).length;
+      const lockStr = locks.length >= 50
+        ? ' · Locks hit <b>' + (100 * lockHits / locks.length).toFixed(1) + '%</b>'
+        : '';
       const el = document.getElementById('hpProof');
-      if (el) el.innerHTML = '<b>' + wins + '-' + losses + '</b> on flat $100 bets · <b>' +
-        pnlStr + '</b> at the opener (simulated)';
+      if (el) el.innerHTML = '<b>' + acc + '%</b> straight-up across ' +
+        graded.length.toLocaleString() + ' never-seen fights' + lockStr + ' (simulated)';
     }
   } catch (err) { console.warn('[home] hero proof fetch failed', err); }
 }
@@ -530,7 +524,8 @@ function renderHeroEdge(event) {
   fights.forEach(fight => {
     const a = fighterMap[fight.fighter_a_id], b = fighterMap[fight.fighter_b_id];
     if (!a || !b) return;
-    const pick = pickForFight(picksByFight[fight.id], a, b, 'consensus');
+    const slot = picksByFight[fight.id];
+    const pick = pickForFight(slot, a, b, slot && slot.engine ? 'engine' : 'consensus');
     if (!pick) return;
     const oddsRow = _oddsMap && _oddsMap[fight.id];
     let impl = null, value = null;
@@ -618,28 +613,26 @@ async function loadPastEvents() {
     console.warn('[home] main-event fetch failed', err);
   }
 
-  const MODEL_VERSIONS = ['v3', 'v6'];   // public models only — see cfl.PUBLIC_MODELS
+  const MODEL_VERSIONS = ['engine'];   // the one current model; retired records live on track-record.html
   const modelStats = {};
   try {
     const eventDates = events.map(e => e.event_date);
-    const { data: preds } = await sb
-      .from('model_predictions')
-      .select('model_version, event_date, model_p, outcome_known, won')
+    const { data: picks } = await sb
+      .from('v_model_picks_graded')
+      .select('event_date, hit')
       .in('event_date', eventDates)
-      .in('model_version', MODEL_VERSIONS)
-      .eq('outcome_known', true);
-    (preds || []).forEach(p => {
-      if (Number(p.model_p) <= 0.5) return;
-      const k = p.event_date + '::' + p.model_version;
+      .not('hit', 'is', null);
+    (picks || []).forEach(p => {
+      const k = p.event_date + '::engine';
       if (!modelStats[k]) modelStats[k] = { picks: 0, hits: 0 };
       modelStats[k].picks += 1;
-      if (p.won === true) modelStats[k].hits += 1;
+      if (p.hit === true) modelStats[k].hits += 1;
     });
   } catch (err) {
-    console.warn('[home] model predictions fetch failed', err);
+    console.warn('[home] engine picks fetch failed', err);
   }
 
-  const PE_MODEL_LABELS = { v3: 'Fight IQ', v6: 'Value' };
+  const PE_MODEL_LABELS = { engine: 'Fight IQ' };
   function modelRowHtml(eventDate, version) {
     const s = modelStats[eventDate + '::' + version];
     const labelHtml = '<div class="pe-model-label">' + cfl.escapeHtml(PE_MODEL_LABELS[version] || version) + '</div>';
@@ -696,19 +689,20 @@ setTimeout(() => {
 // =============================================================================
 // NEXT CARD — event selection (preserved), lean fight-card render
 // =============================================================================
-const HP_VISIBLE_MODELS = cfl.PUBLIC_MODELS.slice();   // ['v6','v3'] — retired models never render here
+const HP_VISIBLE_MODELS = cfl.PUBLIC_MODELS.slice();   // ['v6','v3'] — retired, kept selectable
 let _cardioMap = null;
 let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
 let _hpSortKey = 'order';
-let _hpModelMode = 'consensus';
+let _hpModelMode = 'engine';
 
-// Plain-English explanation of the two public models. Retired models (v1, v2,
-// v4, v5) never appear here — v5's number was the market's own, the rest lose
-// to just picking the favorite.
+// Plain-English explanation of the engine and the retired models. Older
+// experiments (v1, v2, v4, v5) never appear here — v5's number was the
+// market's own, the rest lose to just picking the favorite.
 const MODEL_EXPLAIN = {
-  v3: 'Fight IQ predicts winners from fighter data alone — it never sees a betting line. It calls 63.6% of fights right out of sample; just backing the closing favorite gets 68.4%. Within five points of Vegas without ever looking at Vegas.',
-  v6: 'Value reads the opening line and hunts fights the market priced wrong. On the fights graded after its training cutoff, its betting rule has gone 66-21 on flat $100 bets — +12.7% even at closing prices (simulated, as of July 2026; the live record starts July 2026).',
+  engine: 'The engine calls every fight from fighter history, fight stats, and physical attributes — height, reach, stance, age — without ever seeing a betting line. It lands about 61.4% straight-up on never-seen fights, with its highest-confidence Locks hitting about 74.7%. Its Value face then flags the fights where its number disagrees with the market price by 4+ points.',
+  v3: 'Retired July 2026. Fight IQ v3 predicted winners from fighter data alone — its archived record is preserved on the track-record page.',
+  v6: 'Retired July 2026. Value v6 hunted mispriced opening lines — its archived record is preserved on the track-record page.',
 };
 
 // Per-model input-weight graphs — real feature importances exported from each
@@ -726,9 +720,7 @@ async function loadModelWeights() {
 
 async function load() {
   const sb = window.cflSupabase;
-  const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const yesterdayStr = new Date(now.getTime() - 86400000).toISOString().slice(0, 10);
+  const { fromStr, todayStr } = cfl.eventWindow();
 
   let event = null;
   let phase = 'upcoming';
@@ -736,7 +728,7 @@ async function load() {
   {
     const { data, error } = await sb
       .from('events').select('id, name, event_date, location, ufc_url')
-      .gte('event_date', yesterdayStr).lte('event_date', todayStr)
+      .gte('event_date', fromStr).lte('event_date', todayStr)
       .order('event_date', { ascending: false }).limit(1);
     if (error) { showCardError('Failed to load events: ' + error.message); return; }
     if (data && data[0]) { event = data[0]; phase = 'happening'; }
@@ -822,7 +814,7 @@ async function loadFights(event) {
   _cardioMap = null;
   _oddsMap = null;
   const fightIds = fights.map(f => f.id);
-  const [, , , predsR, namesR] = await Promise.all([
+  const [, , , predsR, namesR, engR] = await Promise.all([
     loadBaseRates(),
     loadCardioMap(fighterIds),
     loadOddsMap(event.id),
@@ -833,6 +825,11 @@ async function loadFights(event) {
           .in('model_version', HP_VISIBLE_MODELS)
       : Promise.resolve({ data: [] }),
     sb.from('model_versions').select('id, name').in('id', HP_VISIBLE_MODELS),
+    fightIds.length
+      ? sb.from('model_picks')
+          .select('fight_id, pick_fighter_id, p_cal, tier, source')
+          .in('fight_id', fightIds)
+      : Promise.resolve({ data: [] }),
   ]);
 
   const modelNames = {};
@@ -847,6 +844,19 @@ async function loadFights(event) {
     });
   } else {
     console.warn('Trained model predictions not available:', predsR.error.message);
+  }
+  // Engine picks: a locked 'live' row outranks a 'backtest' replay row.
+  if (engR && !engR.error) {
+    const byFight = {};
+    (engR.data || []).forEach(p => {
+      const prev = byFight[p.fight_id];
+      if (prev && prev.source === 'live' && p.source !== 'live') return;
+      byFight[p.fight_id] = p;
+    });
+    Object.values(byFight).forEach(p => {
+      const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
+      slot.engine = { fighter_id: p.pick_fighter_id, model_p: +p.p_cal, tier: p.tier };
+    });
   }
 
   _leanState = { fights, fighterMap, picksByFight, eventId: event.id, modelNames };
@@ -904,20 +914,27 @@ function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p
 function populateModelSelect(modelNames) {
   const sel = document.getElementById('hpModelSelect');
   if (!sel) return;
-  const opts = ['<option value="consensus">Consensus (both models)</option>'];
+  const picksByFight = (_leanState && _leanState.picksByFight) || {};
+  const engineHasRows = Object.values(picksByFight).some(slot => slot.engine);
+  const opts = [];
+  if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
+  opts.push('<option value="consensus">Consensus (retired models)</option>');
   HP_VISIBLE_MODELS.forEach(mv => {
     const nm = modelNames && modelNames[mv];
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm) + ' (retired)')}</option>`);
   });
   sel.innerHTML = opts.join('');
+  if (_hpModelMode === 'engine' && !engineHasRows) _hpModelMode = 'consensus';
   sel.value = _hpModelMode;
 }
 
 function renderModelExplanations(modelNames) {
   const body = document.getElementById('modelHowBody');
   if (!body) return;
-  body.innerHTML = HP_VISIBLE_MODELS.map(mv => {
-    const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
+  const items = [{ mv: 'engine', nm: cfl.ENGINE.accuracy.name }].concat(
+    HP_VISIBLE_MODELS.map(mv => ({ mv, nm: cfl.modelName(mv, modelNames && modelNames[mv]) }))
+  );
+  body.innerHTML = items.map(({ mv, nm }) => {
     const d = MODEL_EXPLAIN[mv] || '';
     if (!d && !nm) return '';
     return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +

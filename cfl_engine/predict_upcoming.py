@@ -63,13 +63,14 @@ from engine import (american_to_prob, build_features, devig_a, load_data,
                     make_matchup_features, predict_symmetric, randomize_corners)
 from export_data import fetch_all  # reuse the paginating PostgREST reader
 from train import EPS, FIXED, _logit, chronological_folds, tune
+from version import ENGINE_VERSION
 
 HERE = os.path.dirname(__file__)
 DATA_DIR = os.path.join(HERE, "data")
 OOS_CSV = os.path.join(HERE, os.pardir, "out_real", "oos_predictions.csv")
 PREVIEW_DIR = os.path.join(HERE, os.pardir, "out_real")
 
-MODEL_VERSION = "engine_v1"
+MODEL_VERSION = ENGINE_VERSION
 SOURCE = "live"
 ISO_MIN_POOL = 1500  # mirrors train.ISO_MIN_POOL: below this, isotonic overfits
 
@@ -227,16 +228,21 @@ def pull_consensus(base_url: str, key: str, fight_ids: list[int]) -> dict:
 
 
 def load_fighters(base_url: str, key: str, need_ids: set) -> pd.DataFrame:
-    """data/fighters.csv (dob for the trained population) + any upcoming
-    fighters missing from it, fetched live so debutants still get an age."""
+    """data/fighters.csv (dob + static attrs for the trained population) + any
+    upcoming fighters missing from it, fetched live so debutants still get an
+    age and their height/reach/stance."""
     base = pd.read_csv(os.path.join(DATA_DIR, "fighters.csv"))
     base["dob"] = pd.to_datetime(base["dob"], errors="coerce")
     missing = need_ids - set(base["fighter_id"])
     if missing:
         idlist = ",".join(str(i) for i in missing)
-        live = fetch_all(base_url, key, "fighters", f"select=id,name,dob&id=in.({idlist})")
+        live = fetch_all(base_url, key, "fighters",
+                         f"select=id,name,dob,height_in,reach_in,stance&id=in.({idlist})")
         if live:
-            add = pd.DataFrame([{"fighter_id": x["id"], "name": x["name"], "dob": x["dob"]}
+            add = pd.DataFrame([{"fighter_id": x["id"], "name": x["name"], "dob": x["dob"],
+                                 "height_in": x.get("height_in"),
+                                 "reach_in": x.get("reach_in"),
+                                 "stance": x.get("stance")}
                                for x in live])
             add["dob"] = pd.to_datetime(add["dob"], errors="coerce")
             base = pd.concat([base, add], ignore_index=True)

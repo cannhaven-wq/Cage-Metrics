@@ -110,6 +110,33 @@
 #proof td.num, #proof th.num { text-align: right; }
 #proof td .pos { color: var(--green); font-weight: 600; }
 #proof td .neg { color: var(--red); font-weight: 600; }
+/* Real pre-fight record (predictions table) */
+#proof #prefightSection { margin-top: 6px; }
+#proof #prefightSection .lede-real { border-left: 3px solid var(--green); }
+#proof .pf-event { border: 1px solid var(--line); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+#proof .pf-event summary { cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 12px 14px; list-style: none; }
+#proof .pf-event summary::-webkit-details-marker { display: none; }
+#proof .pf-event summary::before { content: '▶'; font-size: 10px; color: var(--text-3); transition: transform .15s; }
+#proof .pf-event[open] summary::before { transform: rotate(90deg); }
+#proof .pf-ev-name { font-weight: 700; color: var(--text); flex: 1; }
+#proof .pf-ev-date { color: var(--text-3); font-size: 13px; white-space: nowrap; }
+#proof .pf-ev-acc { font-family: 'Barlow Condensed', sans-serif; font-weight: 800; font-size: 16px; color: var(--text-2); white-space: nowrap; }
+#proof .pf-ev-acc.good { color: var(--green); }
+#proof .pf-ev-acc.bad { color: var(--red); }
+#proof .pf-table { width: 100%; border-collapse: collapse; border-top: 1px solid var(--line); }
+#proof .pf-table th, #proof .pf-table td { padding: 8px 14px; text-align: left; font-size: 14px; border-bottom: 1px solid var(--line); }
+#proof .pf-table th { color: var(--text-3); font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: .04em; }
+#proof .pf-table td.num, #proof .pf-table th.num { text-align: right; font-variant-numeric: tabular-nums; }
+/* Complete-record matrix: fights × models */
+#proof .pf-matrix-wrap { overflow-x: auto; border-top: 1px solid var(--line); }
+#proof .pf-matrix { border-collapse: collapse; width: 100%; min-width: 520px; }
+#proof .pf-matrix th, #proof .pf-matrix td { padding: 6px 8px; border-bottom: 1px solid var(--line); font-size: 13px; text-align: center; vertical-align: middle; }
+#proof .pf-matrix th { color: var(--text-3); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+#proof .pf-matrix th.mu, #proof .pf-matrix td.mu { text-align: left; white-space: nowrap; }
+#proof .pf-matrix td.win { color: var(--text); font-weight: 600; }
+#proof .pf-cell.hit { color: var(--green); font-weight: 700; }
+#proof .pf-cell.miss { color: var(--red); font-weight: 700; }
+#proof .pf-cell .pc { display: block; font-size: 9px; color: var(--text-3); font-weight: 400; }
 #proof td .mut { color: var(--text-3); }
 
 /* Bar rows (by-year, buckets) */
@@ -189,13 +216,80 @@
   <div class="page-head">
     <div class="eyebrow">Proof Center</div>
     <h1>Every pick, graded in public.</h1>
-    <p class="lede">This page is computed live from the same database our picks are written to — nothing on it is typed in by hand. Accuracy alone is not enough, so we also show <strong>calibration</strong> (were the probabilities honest?) and <strong>value</strong> (would betting the picks have made money?). We show the misses too.</p>
+    <p class="lede">This page is computed live from the same database our picks are written to — nothing on it is typed in by hand. One engine powers both products: <strong>Fight IQ</strong> calls a winner in every fight from fighter data alone, and <strong>Value</strong> flags the fights where the market's price disagrees with the model. Accuracy alone is not enough, so we also show <strong>calibration</strong> (were the probabilities honest?) and the misses.</p>
     <div class="updated" id="lastUpdated">Loading latest data…</div>
     <div class="pledge">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <div class="tx"><strong>Two records, clearly labeled.</strong> Since July 2026, every pick is written to the database before fight night with its probability and the opening line — insert-only, never revised. Everything before that is a point-in-time simulation: the model re-run on fights after its training cutoff, priced at the opener. We never present simulated as live.</div>
+      <div class="tx"><strong>Two records, clearly labeled.</strong> Live picks are written to the database before fight night with their probability and price — insert-only, never revised. Everything else is the walk-forward replay: the engine stepping through history year by year, always predicting fights it had not trained on, graded at the closing price. We never present simulated as live.</div>
     </div>
   </div>
+
+  <!-- ===== Real pre-fight record — locked before the bell (predictions table) ===== -->
+  <div class="section" id="prefightSection">
+    <div class="sec-head">
+      <div>
+        <h2>Locked before the bell — our real pre-fight record</h2>
+        <div class="sub">Not a simulation. Every pick below was saved <em>with a timestamp before the card started</em>, then graded against what actually happened — misses and all. Pick a model to see its genuine pre-fight record.</div>
+      </div>
+    </div>
+    <div class="loading-wrap" id="pfLoading">Loading the locked pick record…</div>
+    <div id="pfBody" hidden>
+      <div class="model-tabs" id="pfTabs" style="margin-bottom:8px"></div>
+      <div class="rec-banner" id="pfBanner"></div>
+      <div class="kpis" id="pfKpis"></div>
+      <div class="panel" style="margin-top:14px">
+        <h3>Every card, every pick — graded</h3>
+        <div class="ps" id="pfPs"></div>
+        <div id="pfEvents"></div>
+      </div>
+      <div class="window-note" id="pfNote" style="margin-top:12px"></div>
+    </div>
+    <div id="pfEmpty" hidden class="window-note"></div>
+  </div>
+
+  <!-- ===== Engine record (one brain, two faces) ===== -->
+  <div class="model-tabs" id="faceTabs"></div>
+  <div class="window-note" id="engNote"></div>
+
+  <div class="loading-wrap" id="engLoading">Crunching the graded record…</div>
+
+  <div id="engBody" hidden>
+
+    <!-- Two-state record banner -->
+    <div class="rec-banner" id="engBanner"></div>
+
+    <!-- KPI strip -->
+    <div class="kpis" id="engKpis"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h3 id="engLeftTitle">Accuracy by year</h3>
+        <div class="ps" id="engLeftPs"></div>
+        <div id="engLeft"></div>
+      </div>
+      <div class="panel">
+        <h3 id="engRightTitle">Calibration — did the probabilities tell the truth?</h3>
+        <div class="ps" id="engRightPs"></div>
+        <div class="cal-legend" id="engCalLegend"><span class="lp"><i></i>Predicted</span><span class="la"><i></i>Actual</span></div>
+        <div id="engRight"></div>
+      </div>
+    </div>
+
+    <!-- Misses -->
+    <div class="section">
+      <div class="sec-head"><h2>Where the model has been wrong</h2>
+        <div class="sub" id="engMissSub">The most recent graded misses. A model that only shows winners is selling something.</div></div>
+      <div class="panel" style="margin-top:14px"><div id="engMissTable"></div></div>
+    </div>
+
+  </div>
+
+  <!-- ===== Retired models — archived record ===== -->
+  <details class="section" id="legacyArchive" style="margin-top:10px">
+    <summary style="cursor:pointer; font-family:'Barlow Condensed',sans-serif; font-weight:800; font-size:22px; color:var(--text-2);">
+      Every model we've run — archived simulations
+    </summary>
+    <div class="window-note" style="margin-top:10px">Every model we've ever run, oldest to newest. These records are <strong>backtested simulations</strong> — each model re-run over history, not picks locked before fights — so we grade each only on fights <em>after</em> its training cutoff (its honest out-of-sample window). Where a model's exact cutoff isn't verified, we floor it at Jan 2025 to be safe from leakage. The one genuinely locked-before-the-bell record is the pre-fight section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The retired models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or overlapped their own training data — the exact leakage we walked away from. The engine's lower, honest number is the one we stand behind.</div>
 
   <!-- Model selector -->
   <div class="model-tabs" id="modelTabs"></div>
@@ -249,43 +343,45 @@
 
     <!-- All models comparison -->
     <div class="section">
-      <div class="sec-head"><h2>Both models, same test</h2>
-        <div class="sub">Our two public models measured on the identical window — fights from Jan 1, 2025 onward, after both models' training cutoffs. Apples to apples.</div></div>
+      <div class="sec-head"><h2>Engine vs the retired models, same test</h2>
+        <div class="sub">Everything measured on the identical window — fights from Jan 1, 2025 onward, after every model's training cutoff. Apples to apples.</div></div>
       <div class="panel" style="margin-top:14px"><div id="allModels"></div></div>
     </div>
 
-    <!-- CLV -->
-    <div class="section">
-      <div class="sec-head"><h2>Closing line value</h2>
-        <div class="sub">The sharpest test of a betting model: do our picks beat the price the market closes at?</div></div>
-      <div class="panel" style="margin-top:14px">
-        <div class="ps" style="margin-bottom:0">We started capturing closing lines from a 7+ book consensus in June 2026. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">CLV numbers will be published here once 100+ locked picks have both an opening and a closing line on record.</strong> Until then, judge us on the graded record above.</div>
-      </div>
-    </div>
-
-    <!-- Honesty box -->
-    <div class="honesty">
-      <h3>How to read this honestly</h3>
-      <ul>
-        <li><strong>Accuracy alone is not enough.</strong> Betting the closing favorite every time gets you to ≈68% at closing odds — for free. Beating that number is not what we sell. The Value model's claim is price: it finds fights where the opening line is wrong. The Fight IQ model's claim is independence: it gets close to the market without ever seeing a betting line.</li>
-        <li><span id="lockedSplitNote">Loading pick provenance…</span></li>
-        <li><strong>Model output, not guarantees.</strong> A 70% pick loses 3 times out of 10. Nothing here is betting advice.</li>
-        <li><strong>Samples matter.</strong> Anything under ~100 picks in a bucket is noise. We show the counts so you can discount accordingly.</li>
-      </ul>
-    </div>
-
-    <!-- CTA band -->
-    <div class="cta-band">
-      <div class="tx"><strong>The record is the pitch.</strong><span>Put the model to work on the next card — every pick, edge, and price in one place.</span></div>
-      <div class="acts">
-        <a class="btn btn-primary" href="card-lab.html">Analyze the next card →</a>
-        <a class="btn btn-ghost" href="signup.html?src=track-record">Create free account</a>
-      </div>
-    </div>
-
-    <p class="fineprint">Model probabilities are statistical estimates, not guarantees. Historical performance does not predict future results. Cannon Fight Lab is an analytics publication, not a sportsbook, and nothing on this page is betting advice. 21+ only.</p>
-
   </div>
+
+  </details>
+
+  <!-- CLV -->
+  <div class="section">
+    <div class="sec-head"><h2>Closing line value</h2>
+      <div class="sub">The sharpest test of a betting model: do our picks beat the price the market closes at?</div></div>
+    <div class="panel" style="margin-top:14px">
+      <div class="ps" style="margin-bottom:0">Every live Value pick locks its price at publish, and we grade it against the closing consensus after the card. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">closing-line-value numbers will be published here once 100+ locked picks have both a publish and a closing price on record.</strong> Until then, judge us on the graded record above.</div>
+    </div>
+  </div>
+
+  <!-- Honesty box -->
+  <div class="honesty">
+    <h3>How to read this honestly</h3>
+    <ul>
+      <li><strong>Accuracy alone is not enough.</strong> Betting the closing favorite every time gets you to ≈68% at closing odds — for free. Our engine lands around 61% without ever seeing a betting line, and we publish that number instead of dressing it up. Fight IQ's claim is independence; Value's claim is price — it only bets where the model and the market genuinely disagree.</li>
+      <li><span id="lockedSplitNote">Loading pick provenance…</span></li>
+      <li><strong>Model output, not guarantees.</strong> A 70% pick loses 3 times out of 10. Nothing here is betting advice.</li>
+      <li><strong>Samples matter.</strong> Anything under ~100 picks in a bucket is noise. We show the counts so you can discount accordingly.</li>
+    </ul>
+  </div>
+
+  <!-- CTA band -->
+  <div class="cta-band">
+    <div class="tx"><strong>The record is the pitch.</strong><span>Put the model to work on the next card — every pick, edge, and price in one place.</span></div>
+    <div class="acts">
+      <a class="btn btn-primary" href="card-lab.html">Analyze the next card →</a>
+      <a class="btn btn-ghost" href="signup.html?src=track-record">Create free account</a>
+    </div>
+  </div>
+
+  <p class="fineprint">Model probabilities are statistical estimates, not guarantees. Historical performance does not predict future results. Cannon Fight Lab is an analytics publication, not a sportsbook, and nothing on this page is betting advice. 21+ only.</p>
 
   <div class="cfl-email-capture" data-source="track-record" data-headline="Get the next card's model update." data-sub="Every upcoming UFC card with the model's picks and edges, in your inbox before fight night." style="margin-top:28px"></div>
 
@@ -293,7 +389,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd5"></script>
+<script src="_shared.js?v=rd7"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('track');
@@ -301,16 +397,21 @@ cfl.renderFooter();
 
 // =============================================================================
 // PROOF CENTER
-// Everything on this page is computed client-side from model_predictions —
-// the same insert-only table picks are locked into. Per-model stats are gated
-// to cfl.modelWindowStart(id, test_start_date): the LATER of the DB's
-// test_start_date and the day after the model's training cutoff, so no model
-// is ever graded on fights it trained on — even if the DB row is wrong.
-// Only cfl.PUBLIC_MODELS appear here; retired models never render.
+// Headline record: the engine — one brain, two faces — read from the graded
+// views v_model_picks_graded / v_model_edges_graded (fights join server-side;
+// hit/won are NULL while a fight is unresolved and render as pending, never as
+// a loss). Every backtest row is out-of-sample by construction (walk-forward,
+// fold 0 excluded at publish), so no window clamp applies; simulated-vs-live
+// maps to the source column. engine_v1/v2/… are one family — never filter by
+// model_version.
+//
+// Archive: the retired models' records still compute client-side from
+// model_predictions, each gated to cfl.modelWindowStart(id, test_start_date)
+// so no model is ever graded on fights it trained on.
 // =============================================================================
 const SHARED_HOLDOUT = '2025-01-01';   // apples-to-apples window for the comparison table
 const DEFAULT_MODEL = 'v6';
-const MODEL_ORDER = ['v6', 'v3'];
+const MODEL_ORDER = ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
 
 let _models = [];        // model_versions rows
 let _rows = [];          // graded model_predictions rows
@@ -319,6 +420,283 @@ let _activeModel = DEFAULT_MODEL;
 const $ = id => document.getElementById(id);
 const pct = (x, d = 1) => (x * 100).toFixed(d) + '%';
 const usd = x => (x < 0 ? '-$' : '+$') + Math.abs(Math.round(x)).toLocaleString();
+
+// =============================================================================
+// ENGINE RECORD
+// =============================================================================
+let _engPicks = [];      // v_model_picks_graded rows
+let _engEdges = [];      // v_model_edges_graded rows
+let _face = 'picks';     // 'picks' (Fight IQ) | 'edges' (Value)
+
+// American odds -> flat-$100 profit on a win.
+const winProfit = odds => odds > 0 ? odds : 100 * 100 / Math.abs(odds);
+// Grading price for an edge: closing consensus for backtest rows, the locked
+// publish price for live rows that haven't settled a close yet.
+const edgeOdds = r => r.closing_odds != null ? Number(r.closing_odds) : (r.odds_at_publish != null ? Number(r.odds_at_publish) : null);
+const edgeFlatPnl = r => {
+  const o = edgeOdds(r);
+  if (o == null || r.won == null) return null;
+  return r.won === true ? winProfit(o) : -100;
+};
+
+async function loadEngine() {
+  try {
+    const [picks, edges] = await Promise.all([
+      cfl.fetchEnginePicks(),
+      cfl.fetchEngineEdges(),
+    ]);
+    _engPicks = picks || [];
+    _engEdges = edges || [];
+    if (!_engPicks.length) throw new Error('engine views empty');
+
+    const latest = _engPicks.reduce((mx, r) => (r.hit != null && r.event_date > mx) ? r.event_date : mx, '');
+    if (latest) $('lastUpdated').textContent = 'Last updated: ' + cfl.formatDate(latest) + ' (most recent graded event) · recomputed live on every page load';
+
+    renderFaceTabs();
+    renderEngine();
+    $('engLoading').hidden = true;
+    $('engBody').hidden = false;
+    renderAllModelsTable();  // refresh the comparison table with the engine row
+  } catch (err) {
+    console.warn('[engine] load failed', err);
+    $('engLoading').textContent = 'The engine record is still being wired up — the archived model records below are unaffected.';
+    $('lastUpdated').textContent = 'Recomputed live on every page load';
+    $('lockedSplitNote').innerHTML = '<strong>Simulated vs live.</strong> Simulated rows are the walk-forward replay; live picks are written to the database before fight night, insert-only. Both are always labeled.';
+  }
+}
+
+function renderFaceTabs() {
+  const faces = [
+    { id: 'picks', label: cfl.ENGINE.accuracy.name + ' · never sees odds' },
+    { id: 'edges', label: cfl.ENGINE.roi.name + ' · the money face' },
+  ];
+  $('faceTabs').innerHTML = faces.map(f =>
+    `<button data-f="${f.id}" class="${f.id === _face ? 'active' : ''}">${cfl.escapeHtml(f.label)}</button>`
+  ).join('');
+  $('faceTabs').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    _face = btn.dataset.f;
+    document.querySelectorAll('#faceTabs button').forEach(b => b.classList.toggle('active', b === btn));
+    renderEngine();
+  });
+}
+
+function renderEngine() {
+  if (_face === 'picks') renderEnginePicks();
+  else renderEngineEdges();
+}
+
+function engBanner(rows, pendingCount, simDesc, liveDesc) {
+  const sim = rows.filter(r => r.source === 'backtest');
+  const live = rows.filter(r => r.source === 'live');
+  const simFrom = sim.length ? sim.reduce((mn, r) => r.event_date < mn ? r.event_date : mn, '9999').slice(0, 4) : null;
+  $('engBanner').innerHTML =
+    `<div class="rb sim"><div class="t">Simulated · walk-forward replay${simFrom ? ' · since ' + simFrom : ''}</div>` +
+    `<div class="n">${sim.length.toLocaleString()} ${_face === 'picks' ? 'picks' : 'bets'}</div>` +
+    `<div class="d">${simDesc}</div></div>` +
+    `<div class="rb live"><div class="t">Live · locked before fight night</div>` +
+    `<div class="n">${live.length.toLocaleString()} ${_face === 'picks' ? 'picks' : 'bets'}${pendingCount ? ` <span style="font-size:13px;color:var(--text-3)">(+${pendingCount} pending)</span>` : ''}</div>` +
+    `<div class="d">${liveDesc}</div></div>`;
+}
+
+function renderEnginePicks() {
+  const graded = _engPicks.filter(r => r.hit != null);
+  const pending = _engPicks.filter(r => r.hit == null);
+
+  $('engNote').innerHTML =
+    `<strong>${cfl.escapeHtml(cfl.ENGINE.accuracy.name)}</strong> — ${cfl.escapeHtml(cfl.ENGINE.accuracy.tagline)} ` +
+    `Every simulated row is out-of-sample by construction: the engine walks forward through history and only ever predicts fights it had not trained on. ` +
+    `Confidence tiers: <strong>Lock</strong> ≥ 65%, <strong>Pick</strong> ≥ 57%, else <strong>Lean</strong>.`;
+
+  engBanner(graded, pending.length,
+    'The engine re-run through history in strict date order, predicting each fight before "seeing" it. Graded against real results.',
+    'Written to the database before the event, insert-only, never edited. This record is just getting started — judge it as it grows.');
+
+  const n = graded.length;
+  const hits = graded.filter(r => r.hit === true).length;
+  const acc = n ? hits / n : 0;
+  const brier = n ? graded.reduce((s, r) => s + Math.pow(Number(r.p_cal) - (r.hit === true ? 1 : 0), 2), 0) / n : null;
+  const locks = graded.filter(r => r.tier === 'Lock');
+  const lockAcc = locks.length ? locks.filter(r => r.hit === true).length / locks.length : null;
+
+  $('engKpis').innerHTML = [
+    { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
+    { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'every fight gets a pick' },
+    { v: lockAcc != null ? pct(lockAcc) : '—', cls: lockAcc >= 0.7 ? 'good' : '', l: 'Lock-tier accuracy', d: `${locks.length} picks at 65%+ confidence` },
+    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.24 ? 'good' : '', l: 'Brier score', d: 'lower is better · 0.250 = coin flip' },
+  ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  // ---- By year ----
+  $('engLeftTitle').textContent = 'Accuracy by year';
+  $('engLeftPs').textContent = 'Straight-up picks grouped by the year the fight happened. The gray tick marks 50% — a coin flip.';
+  const byYear = {};
+  graded.forEach(r => {
+    const y = r.event_date.slice(0, 4);
+    const s = byYear[y] || (byYear[y] = { n: 0, w: 0 });
+    s.n++; if (r.hit === true) s.w++;
+  });
+  $('engLeft').innerHTML = Object.keys(byYear).sort().map(y => {
+    const s = byYear[y]; const a = s.w / s.n;
+    return `<div class="bar-row">
+      <div class="yl">${y}</div>
+      <div class="bar-track"><i style="width:${Math.min(100, a * 100).toFixed(1)}%"></i><span class="mark" style="left:50%"></span></div>
+      <div class="yv"><strong>${pct(a, 1)}</strong> · ${s.w}/${s.n}</div>
+    </div>`;
+  }).join('') || '<div class="ps">No graded picks yet.</div>';
+
+  // ---- Calibration ----
+  $('engRightTitle').textContent = 'Calibration — did the probabilities tell the truth?';
+  $('engRightPs').textContent = 'When the model says 65%, those picks should win about 65% of the time. Gray bar = what the model predicted on average, green bar = what actually happened.';
+  $('engCalLegend').style.display = '';
+  const buckets = [[0.5, 0.55], [0.55, 0.6], [0.6, 0.65], [0.65, 0.7], [0.7, 1.01]];
+  $('engRight').innerHTML = buckets.map(([lo, hi]) => {
+    const rows = graded.filter(r => Number(r.p_cal) >= lo && Number(r.p_cal) < hi);
+    if (!rows.length) return '';
+    const predAvg = rows.reduce((s, r) => s + Number(r.p_cal), 0) / rows.length;
+    const act = rows.filter(r => r.hit === true).length / rows.length;
+    const label = hi > 1 ? '70%+' : `${Math.round(lo * 100)}–${Math.round(hi * 100)}%`;
+    return `<div class="cal-row">
+      <div class="cl">${label}</div>
+      <div class="cal-bars">
+        <div class="t pred"><i style="width:${(predAvg * 100).toFixed(1)}%"></i></div>
+        <div class="t act"><i style="width:${Math.min(100, act * 100).toFixed(1)}%"></i></div>
+      </div>
+      <div class="cv">said <strong>${pct(predAvg, 0)}</strong> · won <strong>${pct(act, 0)}</strong> · n=${rows.length}</div>
+    </div>`;
+  }).join('') || '<div class="ps">Not enough graded picks yet.</div>';
+
+  // ---- Misses ----
+  $('engMissSub').textContent = 'The most recent graded misses. A model that only shows winners is selling something.';
+  const misses = graded.filter(r => r.hit === false)
+    .sort((a, b) => b.event_date.localeCompare(a.event_date))
+    .slice(0, 10);
+  $('engMissTable').innerHTML = misses.length ? `<table>
+    <thead><tr><th>Date</th><th>Fight</th><th>Our pick</th><th class="num">Model said</th><th class="num">Tier</th></tr></thead>
+    <tbody>` + misses.map(r => {
+      const pickName = r.pick_fighter_id === r.fighter_a_id ? r.fighter_a_name : r.fighter_b_name;
+      return `<tr>
+        <td>${cfl.escapeHtml(cfl.formatDateShort(r.event_date))} ${r.event_date.slice(0, 4)}</td>
+        <td>${cfl.escapeHtml((r.fighter_a_name || '?') + ' vs ' + (r.fighter_b_name || '?'))}</td>
+        <td>${cfl.escapeHtml(pickName || '—')} <span class="neg">✗</span></td>
+        <td class="num">${pct(Number(r.p_cal), 0)}</td>
+        <td class="num">${cfl.escapeHtml(r.tier || '—')}</td>
+      </tr>`;
+    }).join('') + '</tbody></table>' : '<div class="ps">No graded misses yet.</div>';
+
+  // ---- Provenance note in the honesty box ----
+  const live = graded.filter(r => r.source === 'live');
+  $('lockedSplitNote').innerHTML =
+    `<strong>Simulated vs live.</strong> ` +
+    `${(graded.length - live.length).toLocaleString()} graded picks are the walk-forward replay — the engine stepping through history in date order, only ever predicting fights it had not trained on. ` +
+    `${live.length.toLocaleString()} picks were locked live: written to the database before fight night, insert-only. ` +
+    `The live record is still small — treat the simulated numbers as a simulation, not a live betting history.`;
+}
+
+function renderEngineEdges() {
+  const graded = _engEdges.filter(r => r.won != null);
+  const pending = _engEdges.filter(r => r.won == null);
+
+  $('engNote').innerHTML =
+    `<strong>${cfl.escapeHtml(cfl.ENGINE.roi.name)}</strong> — ${cfl.escapeHtml(cfl.ENGINE.roi.tagline)} ` +
+    `A bet is flagged only when the model's probability beats the vig-free market price by at least 4 points. Stakes are fractional-Kelly, capped at 2% of bankroll. ` +
+    `Simulated bets are graded at the closing consensus; live bets grade at their locked publish price.`;
+
+  engBanner(graded, pending.length,
+    'Every bet the walk-forward replay would have flagged, priced at the real closing consensus. A simulation, labeled as one.',
+    'Flagged and priced before fight night, insert-only, never re-priced. This record is just getting started.');
+
+  const n = graded.length;
+  const wins = graded.filter(r => r.won === true).length;
+  const flat = graded.map(edgeFlatPnl).filter(p => p != null);
+  const flatPnlSum = flat.reduce((s, p) => s + p, 0);
+  const flatRoi = flat.length ? flatPnlSum / (flat.length * 100) : null;
+  // Kelly-staked: stake_frac × a fixed $10k bankroll per bet (no compounding).
+  let kStaked = 0, kPnl = 0;
+  graded.forEach(r => {
+    const o = edgeOdds(r);
+    const stake = Number(r.stake_frac) * 10000;
+    if (o == null || !stake) return;
+    kStaked += stake;
+    kPnl += r.won === true ? stake * (winProfit(o) / 100) : -stake;
+  });
+  const kRoi = kStaked ? kPnl / kStaked : null;
+
+  $('engKpis').innerHTML = [
+    { v: flatRoi != null ? (flatRoi >= 0 ? '+' : '') + pct(flatRoi) : '—', cls: flatRoi > 0 ? 'good' : (flatRoi < 0 ? 'bad' : ''), l: 'ROI — flat $100 a bet', d: flat.length ? `${usd(flatPnlSum)} across ${flat.length} bets` : 'no graded bets yet' },
+    { v: kRoi != null ? (kRoi >= 0 ? '+' : '') + pct(kRoi) : '—', cls: kRoi > 0 ? 'good' : (kRoi < 0 ? 'bad' : ''), l: 'ROI — Kelly-staked', d: 'stake scaled to edge, 2% cap' },
+    { v: `${wins}–${n - wins}`, cls: '', l: 'Record', d: n ? `${pct(wins / n, 1)} of flagged bets won` : 'no graded bets yet' },
+    { v: n ? pct(graded.reduce((s, r) => s + Number(r.edge), 0) / n, 1) : '—', cls: '', l: 'Average edge', d: 'model prob minus vig-free market prob' },
+  ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  // ---- P&L by year ----
+  $('engLeftTitle').textContent = 'Bet record by year';
+  $('engLeftPs').textContent = 'Win rate of flagged bets by year, with flat-$100 profit and loss. The gray tick marks 50%.';
+  const byYear = {};
+  graded.forEach(r => {
+    const y = r.event_date.slice(0, 4);
+    const s = byYear[y] || (byYear[y] = { n: 0, w: 0, p: 0 });
+    s.n++; if (r.won === true) s.w++;
+    const p = edgeFlatPnl(r); if (p != null) s.p += p;
+  });
+  $('engLeft').innerHTML = Object.keys(byYear).sort().map(y => {
+    const s = byYear[y]; const a = s.w / s.n;
+    return `<div class="bar-row">
+      <div class="yl">${y}</div>
+      <div class="bar-track"><i style="width:${Math.min(100, a * 100).toFixed(1)}%"></i><span class="mark" style="left:50%"></span></div>
+      <div class="yv"><strong>${usd(s.p)}</strong> · ${s.w}/${s.n}</div>
+    </div>`;
+  }).join('') || '<div class="ps">No graded bets yet.</div>';
+
+  // ---- ROI by edge threshold ----
+  $('engRightTitle').textContent = 'Return by edge size';
+  $('engRightPs').textContent = 'Flat $100 on every flagged bet at or above each edge threshold. Bigger disagreement with the market should mean better returns — check whether it does.';
+  $('engCalLegend').style.display = 'none';
+  const thresholds = [0.04, 0.05, 0.07, 0.10];
+  const roiRows = thresholds.map(t => {
+    const rows = graded.filter(r => Number(r.edge) >= t);
+    if (!rows.length) return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td><td class="num mut" colspan="4">no qualifying bets</td></tr>`;
+    const w = rows.filter(r => r.won === true).length;
+    const p = rows.reduce((s, r) => s + (edgeFlatPnl(r) || 0), 0);
+    const roi = p / (rows.length * 100);
+    return `<tr><td>edge ≥ ${Math.round(t * 100)}%</td>
+      <td class="num">${rows.length}</td>
+      <td class="num">${w}–${rows.length - w}</td>
+      <td class="num"><span class="${p >= 0 ? 'pos' : 'neg'}">${usd(p)}</span></td>
+      <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
+  }).join('');
+  $('engRight').innerHTML = `<table>
+    <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
+    <tbody>${roiRows}</tbody></table>`;
+
+  // ---- Losing bets ----
+  $('engMissSub').textContent = 'The most recent losing bets, at the price on record. A model that only shows winners is selling something.';
+  const losses = graded.filter(r => r.won === false)
+    .sort((a, b) => b.event_date.localeCompare(a.event_date))
+    .slice(0, 10);
+  $('engMissTable').innerHTML = losses.length ? `<table>
+    <thead><tr><th>Date</th><th>Fight</th><th>Our bet</th><th class="num">Model said</th><th class="num">Price</th><th class="num">$100 flat</th></tr></thead>
+    <tbody>` + losses.map(r => {
+      const betName = r.side === 'a' ? r.fighter_a_name : r.fighter_b_name;
+      const o = edgeOdds(r);
+      const odds = o != null ? (o > 0 ? '+' : '') + o : '—';
+      return `<tr>
+        <td>${cfl.escapeHtml(cfl.formatDateShort(r.event_date))} ${r.event_date.slice(0, 4)}</td>
+        <td>${cfl.escapeHtml((r.fighter_a_name || '?') + ' vs ' + (r.fighter_b_name || '?'))}</td>
+        <td>${cfl.escapeHtml(betName || '—')} <span class="neg">✗</span></td>
+        <td class="num">${pct(Number(r.p_blend), 0)}</td>
+        <td class="num">${cfl.escapeHtml(String(odds))}</td>
+        <td class="num"><span class="neg">-$100</span></td>
+      </tr>`;
+    }).join('') + '</tbody></table>' : '<div class="ps">No graded losing bets yet.</div>';
+
+  // ---- Provenance note in the honesty box ----
+  const live = graded.filter(r => r.source === 'live');
+  $('lockedSplitNote').innerHTML =
+    `<strong>Simulated vs live.</strong> ` +
+    `${(graded.length - live.length).toLocaleString()} graded bets are the walk-forward replay, priced at the real closing consensus. ` +
+    `${live.length.toLocaleString()} bets were locked live before fight night, insert-only, never re-priced. ` +
+    `The live record is still small — treat the simulated numbers as a simulation, not a live betting history.`;
+}
 
 async function loadProof() {
   const sb = window.cflSupabase;
@@ -330,9 +708,13 @@ async function loadProof() {
       .order('id', { ascending: true })),
   ]);
   if (mErr) throw mErr;
-  _models = (models || []).filter(m => cfl.PUBLIC_MODELS.includes(m.id) && MODEL_ORDER.includes(m.id))
-    .sort((a, b) => MODEL_ORDER.indexOf(a.id) - MODEL_ORDER.indexOf(b.id));
   _rows = rows || [];
+  // Show every model we've ever run, oldest→newest, so the progression reads as
+  // R&D history. Include a model only if it has graded rows inside its honest
+  // window — an empty tab would just read as broken.
+  _models = (models || []).filter(m => MODEL_ORDER.includes(m.id) &&
+      _rows.some(r => r.model_version === m.id && r.event_date >= honestFloor(m.id, m.test_start_date)))
+    .sort((a, b) => MODEL_ORDER.indexOf(a.id) - MODEL_ORDER.indexOf(b.id));
   if (!_models.length || !_rows.length) throw new Error('no data');
 
   renderTabs();
@@ -349,9 +731,20 @@ function modelById(id) { return _models.find(m => m.id === id); }
 // Honest window start for a model: the later of the DB's test_start_date and
 // the day after its training cutoff (cfl.modelWindowStart). Never trust the
 // DB row alone — a wrong test_start_date must not leak training-era fights.
+// Conservative honest floor. For v3/v6 the training cutoff is verified (in
+// cfl.MODELS), so we trust their computed out-of-sample window. For v1/v2/v4/v5
+// the cutoff is NOT verified, so we never trust the DB test_start_date alone —
+// floor at the shared 2025 holdout so a wrong window can't leak training-era
+// fights into a "prediction" record.
+function honestFloor(modelId, testStartDate) {
+  const verified = cfl.MODELS[modelId] && cfl.MODELS[modelId].trainEnd;
+  let w = cfl.modelWindowStart(modelId, testStartDate) || SHARED_HOLDOUT;
+  if (!verified && w < SHARED_HOLDOUT) w = SHARED_HOLDOUT;
+  return w;
+}
 function windowStart(modelId) {
   const m = modelById(modelId);
-  return cfl.modelWindowStart(modelId, m && m.test_start_date) || SHARED_HOLDOUT;
+  return honestFloor(modelId, m && m.test_start_date);
 }
 
 // A model's graded, post-cutoff pick rows: one row per fight — the side the
@@ -376,7 +769,9 @@ function flatPnl(r) {
 }
 
 function renderTabs() {
-  const tag = id => (cfl.MODELS[id] && cfl.MODELS[id].money) ? ' · the money model' : ' · never sees odds';
+  const tag = id => cfl.MODELS[id]
+    ? (cfl.MODELS[id].money ? ' · the money model' : ' · never sees odds')
+    : ' · retired model';
   $('modelTabs').innerHTML = _models.map(m =>
     `<button data-m="${m.id}" class="${m.id === _activeModel ? 'active' : ''}">${cfl.escapeHtml(cfl.modelName(m.id, m.name))}${tag(m.id)}</button>`
   ).join('');
@@ -422,9 +817,6 @@ function renderAll() {
   const bets = oos.filter(r => r.would_bet === true);
   const betPnl = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
   const betRoi = bets.length ? betPnl / (bets.length * 100) : null;
-
-  const latest = _rows.reduce((mx, r) => r.event_date > mx ? r.event_date : mx, '');
-  $('lastUpdated').textContent = 'Last updated: ' + cfl.formatDate(latest) + ' (most recent graded event) · recomputed live on every page load';
 
   const kpis = [
     { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
@@ -515,21 +907,34 @@ function renderAll() {
     $('roiTable').innerHTML = '';
   }
 
-  // ---- Simulated vs live provenance ----
-  $('lockedSplitNote').innerHTML =
-    `<strong>Simulated vs live.</strong> ` +
-    (simCount > 0
-      ? `${simCount.toLocaleString()} picks in this window are point-in-time simulations — the model re-run on fights after its training cutoff, shown only data available before each fight, priced at the opening line, then graded. `
-      : ``) +
-    `${liveRows.length.toLocaleString()} picks were locked live: written to the database before fight night, insert-only. ` +
-    `The live record starts July 2026 and is still small — treat the simulated numbers as a simulation, not a live betting history.`;
+  // (the honesty-box provenance note is owned by the engine record above)
 }
 
-// ---- Public-models comparison on the shared 2025+ window ----
-// Each model's rows are still floored at its honest window start, so a bad DB
-// test_start_date can never leak training-era fights into this table either.
+// ---- Engine + retired models comparison on the shared 2025+ window ----
+// Each retired model's rows are still floored at its honest window start, so a
+// bad DB test_start_date can never leak training-era fights into this table.
+// The engine row appears once its graded views load (loadEngine re-calls this).
 function renderAllModelsTable() {
-  const rows = _models.map(m => {
+  let engRow = '';
+  if (_engPicks.length) {
+    const ep = _engPicks.filter(r => r.hit != null && r.event_date >= SHARED_HOLDOUT);
+    if (ep.length) {
+      const w = ep.filter(r => r.hit === true).length;
+      const acc = w / ep.length;
+      const brier = ep.reduce((s, r) => s + Math.pow(Number(r.p_cal) - (r.hit === true ? 1 : 0), 2), 0) / ep.length;
+      const eb = _engEdges.filter(r => r.won != null && r.event_date >= SHARED_HOLDOUT);
+      const p = eb.reduce((s, r) => s + (edgeFlatPnl(r) || 0), 0);
+      const roi = eb.length ? p / (eb.length * 100) : null;
+      engRow = `<tr>
+        <td><strong style="color:var(--text)">The engine</strong> <span class="mut">· current</span></td>
+        <td class="num">${ep.length}</td>
+        <td class="num"><span class="${acc >= 0.6 ? 'pos' : ''}">${pct(acc, 1)}</span></td>
+        <td class="num">${brier.toFixed(3)}</td>
+        <td class="num">${roi != null ? `<span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span>` : '<span class="mut">—</span>'}</td>
+      </tr>`;
+    }
+  }
+  const rows = engRow + _models.map(m => {
     const ws = windowStart(m.id);
     const start = ws > SHARED_HOLDOUT ? ws : SHARED_HOLDOUT;
     const picks = _rows.filter(r => r.model_version === m.id && r.event_date >= start && Number(r.model_p) > 0.5);
@@ -596,9 +1001,250 @@ async function renderMisses() {
     }).join('') + '</tbody></table>';
 }
 
+// ===== Real pre-fight record — every model, locked before the bell =====
+// Two genuine pre-fight sources, both timestamp-proven:
+//  • Rules model — the `predictions` table (cfl-snapshotter), graded by
+//    v_predictions_with_results.
+//  • ML models v1-v6 — rows in `model_predictions` whose created_at DATE is
+//    strictly before the event_date (a nightly re-save captured cards while
+//    they were still upcoming). We keep the latest pre-event save per fight and
+//    take the model's pick side (>50%), then grade by the row's own `won` flag.
+// Neither can leak: a pick saved before the fight cannot use the outcome.
+const PF_START = '2026-05-01';
+const PF_MODEL_LABELS = {
+  rules: 'Rules model', v1: 'v1 — Logistic Regression', v2: 'v2 — Elo + GBM',
+  v3: 'v3 — Fight IQ (tape)', v4: 'v4 — Stacker', v5: 'v5 — XGBoost', v6: 'v6 — Value opener',
+};
+const PF_MODEL_ORDER = ['rules', 'v1', 'v2', 'v3', 'v4', 'v5', 'v6'];
+const PF_SHORT = { rules: 'Rules', v1: 'v1', v2: 'v2', v3: 'v3', v4: 'v4', v5: 'v5', v6: 'v6' };
+let _pfModels = [];
+let _pfCards = [];
+let _pfActive = 'all';
+
+async function loadPrefight() {
+  const sb = window.cflSupabase;
+  try {
+    const [pkR, mpR, evNamesR] = await Promise.all([
+      sb.from('v_predictions_with_results').select('*').order('event_date', { ascending: false }),
+      cfl.fetchAll(() => sb.from('model_predictions')
+        .select('model_version, fight_id, event_date, created_at, model_p, fighter_id, won, outcome_known')
+        .gte('event_date', PF_START).eq('outcome_known', true)),
+      sb.from('events').select('name, event_date'),
+    ]);
+    const rulesPicks = (pkR && pkR.data) || [];
+    const mpRows = mpR || [];
+    const evName = {};
+    ((evNamesR && evNamesR.data) || []).forEach(e => { evName[e.event_date] = e.name; });
+
+    // ---- Rules model → events ----
+    const rulesByDate = {};
+    rulesPicks.forEach(p => {
+      const e = rulesByDate[p.event_date] || (rulesByDate[p.event_date] = { name: p.event_name, picks: [] });
+      e.picks.push({ name: p.predicted_winner_name, pct: p.verdict_pct != null ? Number(p.verdict_pct) : null, outcome: p.outcome });
+    });
+
+    // ---- ML models v1-v6: genuine pre-fight rows only ----
+    const pfMp = mpRows.filter(r => r.created_at.slice(0, 10) < r.event_date);
+    const fids = [...new Set(pfMp.map(r => r.fighter_id))];
+    const fname = {};
+    for (let i = 0; i < fids.length; i += 300) {
+      const { data } = await sb.from('fighters').select('id, name').in('id', fids.slice(i, i + 300));
+      (data || []).forEach(f => { fname[f.id] = f.name; });
+    }
+    // group by model+fight → latest pre-event save → pick side (>50%)
+    const grp = {};
+    pfMp.forEach(r => { const k = r.model_version + '|' + r.fight_id; (grp[k] || (grp[k] = [])).push(r); });
+    const mlByModel = {};
+    const mlPicks = [];
+    Object.values(grp).forEach(rs => {
+      const latest = rs.reduce((m, r) => r.created_at > m ? r.created_at : m, '');
+      const batch = rs.filter(r => r.created_at === latest);
+      const pick = batch.reduce((b, r) => Number(r.model_p) > Number(b.model_p) ? r : b, batch[0]);
+      mlPicks.push(pick);
+      const M = mlByModel[pick.model_version] || (mlByModel[pick.model_version] = {});
+      const ev = M[pick.event_date] || (M[pick.event_date] = []);
+      ev.push({ name: fname[pick.fighter_id] || '—', pct: Number(pick.model_p) * 100, outcome: pick.won === true ? 'hit' : (pick.won === false ? 'miss' : 'pending') });
+    });
+
+    // Fight labels + actual winners for the unified matrix.
+    const allFids = [...new Set([...rulesPicks.map(p => p.fight_id), ...mlPicks.map(p => p.fight_id)])];
+    const finfo = {};
+    for (let i = 0; i < allFids.length; i += 300) {
+      const { data } = await sb.from('fights').select('id, fighter_a_name, fighter_b_name, fighter_a_id, fighter_b_id, winner_id').in('id', allFids.slice(i, i + 300));
+      (data || []).forEach(f => { finfo[f.id] = f; });
+    }
+
+    // ---- Unify into a model list ----
+    _pfModels = [];
+    if (Object.keys(rulesByDate).length) {
+      _pfModels.push({ id: 'rules', label: PF_MODEL_LABELS.rules,
+        events: Object.keys(rulesByDate).sort().reverse().map(d => ({ date: d, name: rulesByDate[d].name, picks: rulesByDate[d].picks })) });
+    }
+    ['v1', 'v2', 'v3', 'v4', 'v5', 'v6'].forEach(id => {
+      if (!mlByModel[id]) return;
+      _pfModels.push({ id, label: PF_MODEL_LABELS[id],
+        events: Object.keys(mlByModel[id]).sort().reverse().map(d => ({ date: d, name: evName[d] || ('Card · ' + d), picks: mlByModel[id][d] })) });
+    });
+    _pfModels.sort((a, b) => PF_MODEL_ORDER.indexOf(a.id) - PF_MODEL_ORDER.indexOf(b.id));
+
+    // ---- Unified complete record: every card, all models per fight ----
+    const winnerName = f => f.winner_id === f.fighter_a_id ? f.fighter_a_name : (f.winner_id === f.fighter_b_id ? f.fighter_b_name : null);
+    const cards = {};
+    const ensureCard = (date, name) => cards[date] || (cards[date] = { name: name || evName[date] || ('Card · ' + date), fights: {} });
+    const ensureFight = (card, fid) => {
+      const fi = finfo[fid]; if (!fi) return null;
+      return card.fights[fid] || (card.fights[fid] = { matchup: (fi.fighter_a_name || '?') + ' vs ' + (fi.fighter_b_name || '?'), winner: winnerName(fi), cells: {} });
+    };
+    rulesPicks.forEach(p => { const c = ensureCard(p.event_date, p.event_name); const fr = ensureFight(c, p.fight_id); if (fr) fr.cells.rules = { name: p.predicted_winner_name, pct: p.verdict_pct != null ? Number(p.verdict_pct) : null, outcome: p.outcome }; });
+    mlPicks.forEach(p => { const c = ensureCard(p.event_date); const fr = ensureFight(c, p.fight_id); if (fr) fr.cells[p.model_version] = { name: fname[p.fighter_id] || '—', pct: Number(p.model_p) * 100, outcome: p.won === true ? 'hit' : (p.won === false ? 'miss' : 'pending') }; });
+    _pfCards = Object.keys(cards).sort().reverse().map(d => {
+      const c = cards[d]; const fights = Object.values(c.fights);
+      const models = [...new Set(fights.flatMap(f => Object.keys(f.cells)))].sort((a, b) => PF_MODEL_ORDER.indexOf(a) - PF_MODEL_ORDER.indexOf(b));
+      const perModel = {};
+      models.forEach(m => { const cs = fights.map(f => f.cells[m]).filter(Boolean); const dd = cs.filter(x => x.outcome === 'hit' || x.outcome === 'miss'); perModel[m] = { h: dd.filter(x => x.outcome === 'hit').length, n: dd.length }; });
+      return { date: d, name: c.name, fights, models, perModel };
+    });
+    if (_pfCards.length) _pfModels.unshift({ id: 'all', label: 'Complete record — all models' });
+
+    if (!_pfModels.length) {
+      $('pfLoading').style.display = 'none';
+      $('pfEmpty').hidden = false;
+      $('pfEmpty').textContent = 'The pre-fight record is being rebuilt — check back soon.';
+      return;
+    }
+    if (!_pfModels.some(m => m.id === _pfActive)) _pfActive = _pfModels[0].id;
+
+    $('pfTabs').innerHTML = _pfModels.map(m =>
+      `<button data-pf="${m.id}" class="${m.id === _pfActive ? 'active' : ''}">${cfl.escapeHtml(m.label)}</button>`).join('');
+    $('pfTabs').addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      _pfActive = b.dataset.pf;
+      document.querySelectorAll('#pfTabs button').forEach(x => x.classList.toggle('active', x === b));
+      renderPrefight();
+    });
+
+    renderPrefight();
+    $('pfLoading').style.display = 'none';
+    $('pfBody').hidden = false;
+  } catch (err) {
+    console.warn('[prefight] load failed', err);
+    $('pfLoading').style.display = 'none';
+    $('pfEmpty').hidden = false;
+    $('pfEmpty').textContent = 'Could not load the pre-fight record right now. If you use strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.';
+  }
+}
+
+// Unified "every card, all models" matrix — the complete pre-fight timeline.
+function renderComplete() {
+  const cards = _pfCards;
+  const dates = cards.map(c => c.date).filter(Boolean).sort();
+  const from = dates[0], to = dates[dates.length - 1];
+  const yr = to ? to.slice(0, 4) : '';
+  const modelsAll = [...new Set(cards.flatMap(c => c.models))];
+
+  $('pfBanner').innerHTML =
+    `<div class="rb live"><div class="t">Complete pre-fight record${from ? ' · every card since ' + cfl.formatDateShort(from) + ' ' + yr : ''}</div>` +
+    `<div class="n">${cards.length} cards</div>` +
+    `<div class="d">${modelsAll.length} models with locked-before-the-fight picks · rules model early, ML models from May 30</div></div>`;
+
+  $('pfKpis').innerHTML = [
+    { v: cards.length, l: 'Cards on the board', d: from ? cfl.formatDateShort(from) + '–' + cfl.formatDateShort(to) + ' ' + yr : '' },
+    { v: modelsAll.length, l: 'Models with pre-fight picks', d: 'rules + v1–v6' },
+    { v: '2', l: 'Recorders that handed off', d: 'snapshotter (May) → nightly model job (Jun+)' },
+  ].map(k => `<div class="kpi"><div class="v">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  $('pfPs').innerHTML = 'Every card since we started, with <strong>all models</strong> that locked a pre-fight pick. Click a card to see each model’s call, fight by fight. <span class="pos">✓</span> = picked the eventual winner; hover a cell for who it picked.';
+
+  $('pfEvents').innerHTML = cards.map(c => {
+    const mini = c.models.map(m => `${PF_SHORT[m] || m} ${c.perModel[m].h}/${c.perModel[m].n}`).join(' · ');
+    const header = `<tr><th class="mu">Fight</th><th class="mu">Winner</th>${c.models.map(m => `<th>${PF_SHORT[m] || m}</th>`).join('')}</tr>`;
+    const rows = c.fights.map(f => {
+      const cells = c.models.map(m => {
+        const x = f.cells[m];
+        if (!x) return '<td class="pf-cell">·</td>';
+        const cls = x.outcome === 'hit' ? 'hit' : (x.outcome === 'miss' ? 'miss' : '');
+        const mark = x.outcome === 'hit' ? '✓' : (x.outcome === 'miss' ? '✗' : '·');
+        const t = (x.name || '') + (x.pct != null ? ' · ' + Math.round(x.pct) + '%' : '');
+        return `<td class="pf-cell ${cls}" title="${cfl.escapeHtml(t)}">${mark}<span class="pc">${x.pct != null ? Math.round(x.pct) + '%' : ''}</span></td>`;
+      }).join('');
+      return `<tr><td class="mu">${cfl.escapeHtml(f.matchup)}</td><td class="mu win">${cfl.escapeHtml(f.winner || '—')}</td>${cells}</tr>`;
+    }).join('');
+    return `<details class="pf-event">
+      <summary>
+        <span class="pf-ev-name">${cfl.escapeHtml(c.name)}</span>
+        <span class="pf-ev-date">${cfl.escapeHtml(cfl.formatDateShort(c.date))}</span>
+        <span class="pf-ev-acc">${cfl.escapeHtml(mini)}</span>
+      </summary>
+      <div class="pf-matrix-wrap"><table class="pf-matrix"><thead>${header}</thead><tbody>${rows}</tbody></table></div>
+    </details>`;
+  }).join('');
+
+  $('pfNote').innerHTML = 'Two recorders handed off at the May 30 card: the rules-model snapshotter covered the first four cards, then the nightly ML job (v1–v6) took over. Each ✓ means that model picked the eventual winner — the timestamps prove every pick was saved before its fight.';
+}
+
+function renderPrefight() {
+  if (_pfActive === 'all') return renderComplete();
+  const m = _pfModels.find(x => x.id === _pfActive) || _pfModels[0];
+  const allPicks = m.events.flatMap(e => e.picks);
+  const decided = allPicks.filter(p => p.outcome === 'hit' || p.outcome === 'miss');
+  const hits = decided.filter(p => p.outcome === 'hit').length;
+  const misses = decided.length - hits;
+  const acc = decided.length ? hits / decided.length : 0;
+  const dates = m.events.map(e => e.date).filter(Boolean).sort();
+  const from = dates[0], to = dates[dates.length - 1];
+  const yr = to ? to.slice(0, 4) : '';
+  const small = decided.length < 30;
+
+  $('pfBanner').innerHTML =
+    `<div class="rb live"><div class="t">Locked pre-fight · ${cfl.escapeHtml(m.label)}` +
+    `${from ? ' · ' + cfl.formatDateShort(from) + '–' + cfl.formatDateShort(to) + ' ' + yr : ''}</div>` +
+    `<div class="n">${hits}-${misses}</div>` +
+    `<div class="d">${m.events.length} card${m.events.length === 1 ? '' : 's'} · ${decided.length} graded picks · saved before each card</div></div>`;
+
+  $('pfKpis').innerHTML = [
+    { v: decided.length ? pct(acc, 1) : '—', cls: acc >= 0.6 ? 'good' : (decided.length && acc < 0.45 ? 'bad' : ''), l: 'Straight-up accuracy', d: `${hits} of ${decided.length} picks correct` },
+    { v: m.events.length, l: 'Cards graded', d: from ? cfl.formatDateShort(from) + '–' + cfl.formatDateShort(to) + ' ' + yr : '' },
+    { v: decided.length, l: 'Picks locked & graded', d: small ? 'small sample — read with caution' : 'saved before each card, then scored' },
+  ].map(k => `<div class="kpi"><div class="v ${k.cls || ''}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
+
+  $('pfPs').textContent = 'Each card lists the pre-fight picks and how they landed. Click a card to open every pick.';
+  $('pfEvents').innerHTML = m.events.map(e => {
+    const d = e.picks.filter(p => p.outcome === 'hit' || p.outcome === 'miss');
+    const h = d.filter(p => p.outcome === 'hit').length;
+    const a = d.length ? 100 * h / d.length : 0;
+    const accCls = a >= 60 ? 'good' : (a < 45 ? 'bad' : '');
+    const rows = e.picks.map(p => {
+      const res = p.outcome === 'hit' ? '<span class="pos">✓ hit</span>'
+        : (p.outcome === 'miss' ? '<span class="neg">✗ miss</span>'
+        : '<span style="color:var(--text-3)">pending</span>');
+      return `<tr>
+        <td>${cfl.escapeHtml(p.name || '—')}</td>
+        <td class="num">${p.pct != null ? Math.round(p.pct) + '%' : '—'}</td>
+        <td class="num">${res}</td>
+      </tr>`;
+    }).join('');
+    return `<details class="pf-event">
+      <summary>
+        <span class="pf-ev-name">${cfl.escapeHtml(e.name || 'Card')}</span>
+        <span class="pf-ev-date">${cfl.escapeHtml(cfl.formatDateShort(e.date))}</span>
+        <span class="pf-ev-acc ${accCls}">${h}/${d.length} · ${a.toFixed(1)}%</span>
+      </summary>
+      <table class="pf-table"><thead><tr><th>Our pick</th><th class="num">Said</th><th class="num">Result</th></tr></thead><tbody>${rows}</tbody></table>
+    </details>`;
+  }).join('');
+
+  $('pfNote').innerHTML = m.id === 'rules'
+    ? 'The rules model was saved by the pre-event snapshotter (May 2026). Its record pauses at May 30 — the snapshotter is being restarted so it resumes locking every future card.'
+    : `${cfl.escapeHtml(m.label)}: the pick as it was saved before each card by the nightly model job, from May 30 on. ${small ? 'Small sample — treat a single strong card as luck, not proven skill.' : 'A real read, but still a short window.'}`;
+}
+
+// The engine record and the legacy archive load independently — a failure in
+// one must never blank the other.
+loadPrefight().catch(err => console.warn('[prefight] load failed', err));
+loadEngine();
 loadProof().catch(err => {
   console.warn('[proof] load failed', err);
-  $('proofLoading').textContent = "Couldn't load the track record. If you use a tracking-prevention extension or strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.";
+  $('proofLoading').textContent = "Couldn't load the archived records. If you use a tracking-prevention extension or strict privacy mode, allow uftancejftcryfvbggll.supabase.co and refresh.";
 });
 </script>
 </body>

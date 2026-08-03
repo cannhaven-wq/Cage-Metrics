@@ -4,6 +4,46 @@ Working through `CLAUDE_CODE_HANDOFF.md` (from Downloads/files.zip, extracted to
 Claude scratchpad). Update this file after every milestone so a fresh session can
 resume without re-deriving anything.
 
+## 2026-07-19 — engine_v2 + full front-end rebuild ("one engine, three faces")
+
+- [x] **engine_v2 shipped in code**: STATIC_FEATS (height_in, reach_in,
+  is_southpaw, is_switch) added to engine.py as PIT-safe static lookups (NaN
+  when unknown — a missing stance never reads as Orthodox); export_data.py /
+  predict_upcoming.py fetch the columns; version string centralized in
+  version.py (`ENGINE_VERSION = "engine_v2"`), imported by both publishers.
+- [x] **Retrain passed the gate**: synthetic self-test clean; real run on the
+  2026-07-19 export (8,779 fights) — PIT sampled 0/200 AND exhaustive
+  pit_diagnose 17,558/0; no too-good flags; calibrated OOS 61.5% acc /
+  0.6537 LL vs engine_v1's 61.4% / 0.6511 (noise-level). `d_reach_in` is the
+  #3 feature by gain. Locks 74.5% (n=707). Face 2: 658 bets, 519-139,
+  flat +0.3% / Kelly +10.0%.
+- [x] **publish_backtest dry-run clean** (3,235 picks / 658 edges, no anomalies).
+  `--execute` NOT yet run (blocked in-session) — Reed runs it, see runbook below.
+- [x] **Front-end rebuilt around the engine** (all pages cache-busted to
+  `?v=rd6`): `_shared.js` gains `cfl.ENGINE` + `fetchEnginePicks/EngineEdges`
+  (graded-view loaders); track-record.html is engine-first (two face tabs,
+  source-keyed Simulated/Live banner, v3/v6 in a collapsed archive with the old
+  code path intact); card-lab.html defaults to the engine with published tiers;
+  picks.html runs entirely on live model_picks/model_edges; index.html hero,
+  model select, explanations, past-event rows repointed. Copy updated on
+  about/pricing/methodology/edges (dated 7/19 update post)/predictor (archive
+  framing). All build/ scripts (digest, social-post, social-engine, draft-post,
+  prerender) now read model_picks (live-preferred) instead of v3/v6.
+- [x] Front-end verified against production DB via local server: engine section
+  degrades gracefully while the graded views are missing; card-lab/index/picks
+  render engine rows end-to-end from the existing engine_v1 rows.
+
+### Runbook for Reed (in order)
+1. Supabase SQL Editor: run `cleanup_stale_live_picks.sql` (71 stale live picks
+   from the buggy first publish — the 7/18 card becomes a clean gap).
+2. SQL Editor: run `model_graded_views.sql` (front-end reads these views).
+3. `PYTHONPATH=cfl_engine python cfl_engine/publish_backtest.py --execute`
+   (replaces the engine_v1 backtest with engine_v2's 3,235 picks / 658 edges).
+4. Re-add the Railway Weekly Scraper cron (`0 6 * * 0,1,3,5`) so the 7/18
+   results land; then re-run export_data.py before the next predict_upcoming.
+5. Next fight week: `predict_upcoming.py` dry-run → `--execute` (publishes as
+   engine_v2), and `settle_clv.py --execute` the day after the card.
+
 ## Done
 
 - [x] **Task 1 — synthetic smoke test PASSED** (2026-07-16). `out_synth/report.md`:

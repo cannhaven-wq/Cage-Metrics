@@ -53,18 +53,23 @@ async function buildPost(event) {
   if (!fights || !fights.length) return null;
 
   const fightIds = fights.map(f => f.id);
-  const { data: preds } = await sb.from('model_predictions')
-    .select('model_version, fight_id, fighter_id, model_p')
-    .in('fight_id', fightIds)
-    // Public models only. Node script — window.cfl doesn't exist here, so
-    // the list is hardcoded. Source of truth: cfl.PUBLIC_MODELS in _shared.js.
-    .in('model_version', ['v6', 'v3']);
+  // Engine picks (model_picks) — the one current model. A locked 'live' row
+  // outranks a 'backtest' replay row for the same fight.
+  const { data: preds } = await sb.from('model_picks')
+    .select('fight_id, pick_fighter_id, p_cal, source')
+    .in('fight_id', fightIds);
 
-  const picksByFight = {};
+  const engineByFight = {};
   (preds || []).forEach(p => {
-    if (p.model_p == null || +p.model_p <= 0.5) return;
-    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {})[p.model_version] =
-      { fighter_id: p.fighter_id, model_p: +p.model_p };
+    const prev = engineByFight[p.fight_id];
+    if (prev && prev.source === 'live' && p.source !== 'live') return;
+    engineByFight[p.fight_id] = p;
+  });
+  const picksByFight = {};
+  Object.values(engineByFight).forEach(p => {
+    if (p.p_cal == null) return;
+    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {}).engine =
+      { fighter_id: p.pick_fighter_id, model_p: +p.p_cal };
   });
 
   // Pull up to 5 highest-confidence fights (with main/title prioritized).

@@ -29,6 +29,13 @@ FIGHTER_FEATS = [
     "slpm", "sapm", "str_acc", "str_def", "td_per15", "td_acc", "td_def",
     "sub_per15", "kd_per15", "ctrl_pct", "finish_rate", "last_ko_loss",
 ]
+# Static physical attributes, looked up once per fighter (height/reach/stance
+# are effectively immutable, so a present-day snapshot is PIT-safe -- same
+# argument as dob->age). Kept OUT of FIGHTER_FEATS: _decayed() seeds every
+# FIGHTER_FEAT from the history loop and the names would collide. Missing
+# values stay NaN (XGBoost-native); a missing stance must never read as
+# Orthodox, so the flags are NaN -- not 0 -- when stance is unknown.
+STATIC_FEATS = ["height_in", "reach_in", "is_southpaw", "is_switch"]
 MEAN_FEATS = ["n_fights", "age", "days_since_last"]  # symmetric context features
 SHARED_FEATS = ["n_rounds_sched", "wc_code"]
 
@@ -199,6 +206,28 @@ def build_long_table(fights: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
     return long_df.sort_values(["event_date", "fight_id"]).reset_index(drop=True)
 
 
+def _stance_flags(stance) -> tuple[float, float]:
+    """(is_southpaw, is_switch) from a raw stance string; (NaN, NaN) when unknown."""
+    if stance is None or (isinstance(stance, float) and np.isnan(stance)):
+        return np.nan, np.nan
+    s = str(stance).strip().lower()
+    if not s or s == "nan":
+        return np.nan, np.nan
+    return 1.0 if s == "southpaw" else 0.0, 1.0 if s == "switch" else 0.0
+
+
+def _static_maps(fighters: pd.DataFrame) -> dict[str, dict]:
+    """fighter_id -> value for each STATIC_FEAT. Columns absent from the
+    fighters frame (synthetic data, stale CSVs) resolve to NaN for everyone."""
+    maps: dict[str, dict] = {f: {} for f in STATIC_FEATS}
+    for rec in fighters.to_dict("records"):
+        fid = rec["fighter_id"]
+        maps["height_in"][fid] = pd.to_numeric(rec.get("height_in"), errors="coerce")
+        maps["reach_in"][fid] = pd.to_numeric(rec.get("reach_in"), errors="coerce")
+        maps["is_southpaw"][fid], maps["is_switch"][fid] = _stance_flags(rec.get("stance"))
+    return maps
+
+
 def build_features(fights: pd.DataFrame, stats: pd.DataFrame, fighters: pd.DataFrame) -> pd.DataFrame:
     """Attach point-in-time a_/b_ features to each fight (original corner order)."""
     fights = fights.sort_values("event_date").reset_index(drop=True).copy()
@@ -217,6 +246,7 @@ def build_features(fights: pd.DataFrame, stats: pd.DataFrame, fighters: pd.DataF
         hist[rec["fighter_id"]].append(rec)
 
     dob = fighters.set_index("fighter_id")["dob"].to_dict()
+    static = _static_maps(fighters)
     rows = []
     for r in fights.itertuples(index=False):
         row = {}
@@ -226,6 +256,8 @@ def build_features(fights: pd.DataFrame, stats: pd.DataFrame, fighters: pd.DataF
                 row[f"{side}_{k}"] = v
             d = dob.get(fid, pd.NaT)
             row[f"{side}_age"] = (r.event_date - d).days / 365.25 if pd.notna(d) else np.nan
+            for feat in STATIC_FEATS:
+                row[f"{side}_{feat}"] = static[feat].get(fid, np.nan)
         rows.append(row)
     feat_df = pd.DataFrame(rows)
     out = pd.concat([fights.reset_index(drop=True), feat_df], axis=1)
@@ -258,7 +290,7 @@ def make_matchup_features(df: pd.DataFrame):
     """Differential (A-B) + symmetric-mean features. Returns (X, diff_cols, all_cols)."""
     X = pd.DataFrame(index=df.index)
     diff_cols = []
-    for f in FIGHTER_FEATS:
+    for f in FIGHTER_FEATS + STATIC_FEATS:
         c = f"d_{f}"
         X[c] = df[f"a_{f}"] - df[f"b_{f}"]
         diff_cols.append(c)

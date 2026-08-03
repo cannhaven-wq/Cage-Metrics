@@ -121,17 +121,26 @@ async function loadCard(event) {
 
   const [fR, pR, cR, finR] = await Promise.all([
     sb.from('fighters').select('id, name, nickname').in('id', fighterIds),
-    // Public models only — keep in sync with cfl.PUBLIC_MODELS in _shared.js.
-    // v1/v2/v4/v5 are retired; blending them into posted consensus copy would
-    // resurface numbers the site no longer stands behind.
-    sb.from('model_predictions').select('fight_id, fighter_id, model_p').in('model_version', ['v6', 'v3']).in('fight_id', fightIds),
+    // Engine picks (model_picks) — the one current model. Retired v1-v6 rows
+    // never publish here; blending them into posted copy would resurface
+    // numbers the site no longer stands behind.
+    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds),
     sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds),
     sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds),
   ]);
 
   const fmap = {}; (fR.data || []).forEach(f => { fmap[f.id] = f; });
+  const engineByFight = {};
+  (pR.data || []).forEach(p => {
+    const prev = engineByFight[p.fight_id];
+    if (prev && prev.source === 'live' && p.source !== 'live') return;
+    engineByFight[p.fight_id] = p;
+  });
   const picksByFight = {};
-  (pR.data || []).forEach(p => { (picksByFight[p.fight_id] || (picksByFight[p.fight_id] = [])).push(p); });
+  Object.values(engineByFight).forEach(p => {
+    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || []).push(
+      { fighter_id: p.pick_fighter_id, model_p: p.p_cal == null ? null : +p.p_cal });
+  });
   const cardio = {}; (cR.data || []).forEach(r => { if (r.weight_class === 'CAREER') cardio[r.fighter_id] = r.cardio_tier; });
   const finish = {}; (finR.data || []).forEach(r => { finish[r.fighter_id] = r; });
 

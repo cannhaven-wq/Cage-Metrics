@@ -40,6 +40,7 @@ import numpy as np
 import pandas as pd
 
 import faces  # tier cutoffs + guardrail defaults; PYTHONPATH=cfl_engine
+from version import ENGINE_VERSION
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -50,7 +51,7 @@ PREVIEW_PICKS = os.path.join(REPO, "out_real", "publish_preview_picks.csv")
 PREVIEW_EDGES = os.path.join(REPO, "out_real", "publish_preview_edges.csv")
 
 SOURCE = "backtest"
-MODEL_VERSION = "engine_v1"
+MODEL_VERSION = ENGINE_VERSION
 BATCH = 500
 PAGE = 1000
 

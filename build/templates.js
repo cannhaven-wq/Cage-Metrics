@@ -44,9 +44,14 @@ function fighterStub(f) {
   const ufcWLD = `${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''}`;
   const division = f.division ? `, ${f.division}` : '';
 
-  const title = `${f.name} — UFC Fighter Stats & Analytics | Cannon Fight Lab`;
-  const description = `${f.name}${f.nickname ? ' "' + f.nickname + '"' : ''} UFC fighter stats: ${careerWLD} career record${division}. Cardio score, striking, grappling, recent form, head-to-head matchups.`;
-  const ogTitle = `${f.name} — UFC Fighter Stats`;
+  // Intent-first meta: lead with betting/matchup analysis, demote the raw
+  // career record to the tail. These stubs used to rank for biographical
+  // queries ("<name> record / height") because the title/description led with
+  // "Stats". The visible <title>, <meta description>, and <h1> are what drive
+  // query matching — the Person/Athlete JSON-LD below stays for entity recognition.
+  const title = `${f.name} — UFC Betting Analysis, Matchup Edges & Cardio | Cannon Fight Lab`;
+  const description = `${f.name} UFC betting breakdown: matchup edges, cardio score, striking & grappling read, and model prediction context. ${careerWLD} career${division}.`;
+  const ogTitle = `${f.name} — UFC Betting Analysis & Matchup Edges`;
 
   const athleteJsonLd = {
     '@context': 'https://schema.org',
@@ -109,7 +114,8 @@ function fighterStub(f) {
 <style>
   body { background: #0a0a0a; color: #e8e8e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 60px 20px; text-align: center; margin: 0; line-height: 1.5; }
   h1 { font-size: 36px; color: #fff; margin: 0 0 8px; }
-  .nick { color: #a0a0a0; font-style: italic; margin-bottom: 16px; }
+  .nick { color: #a0a0a0; font-style: italic; margin-bottom: 12px; }
+  .tag { color: #ff3838; font-size: 14px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; margin-bottom: 14px; }
   .record { color: #d0d0d0; font-size: 18px; margin-bottom: 28px; }
   a { color: #ff3838; text-decoration: none; }
   a:hover { text-decoration: underline; }
@@ -119,6 +125,7 @@ function fighterStub(f) {
 <body>
 <h1>${escapeHtml(f.name)}</h1>
 ${f.nickname ? `<div class="nick">"${escapeHtml(f.nickname)}"</div>` : ''}
+<div class="tag">UFC Betting Analysis &amp; Matchup Edges</div>
 <div class="record">${careerWLD} career${division ? ' ' + escapeHtml(division.slice(2)) : ''}${ufcCount > 0 ? ' &middot; ' + ufcWLD + ' UFC' : ''}</div>
 <p><a href="${canonicalUrl}">View full stats, cardio score, and head-to-head matchups &rarr;</a></p>
 <p class="loading">Redirecting&hellip;</p>

@@ -5,7 +5,7 @@ Produces (in --outdir, default cfl_engine/data/):
                    fighter_a_id, fighter_b_id, result, weight_class,
                    n_rounds_sched, method, odds_a, odds_b
   fight_stats.csv  one row per (fight, fighter): sig/td/sub/kd/control totals
-  fighters.csv     fighter_id, name, dob
+  fighters.csv     fighter_id, name, dob, height_in, reach_in, stance
 
 Sources (live schema, verified 2026-07-16):
   fights           per-fight totals in wide a_/b_ columns + winner_id/method
@@ -15,7 +15,8 @@ Sources (live schema, verified 2026-07-16):
   fight_odds       BestFightOdds capture; closing = is_closer rows, keyed by
                    fighter_id (never by the capture's side convention),
                    consensus = median implied prob across books per fighter
-  fighters         id, name, dob
+  fighters         id, name, dob, height_in, reach_in, stance (static physical
+                   attributes -- effectively immutable, so PIT-safe to join)
 
 Result mapping, in precedence order:
   method Overturned / Could Not Continue / No Contest / Other -> nc, even if a
@@ -138,7 +139,7 @@ def main() -> None:
     events = fetch_all(base_url, key, "events",
                        "select=id,event_date,is_upcoming&order=id")
     fighters = fetch_all(base_url, key, "fighters",
-                         "select=id,name,dob&order=id")
+                         "select=id,name,dob,height_in,reach_in,stance&order=id")
     fight_cols = ",".join(
         ["id", "event_id", "fighter_a_id", "fighter_b_id", "winner_id", "method",
          "weight_class", "scheduled_rounds", "end_round", "end_time"]
@@ -302,7 +303,9 @@ def main() -> None:
     fights_df = pd.DataFrame(fight_rows).sort_values(["event_date", "fight_id"])
     stats_df = pd.DataFrame(stat_rows)
     fighters_df = pd.DataFrame(
-        [{"fighter_id": x["id"], "name": x["name"], "dob": x["dob"]} for x in fighters]
+        [{"fighter_id": x["id"], "name": x["name"], "dob": x["dob"],
+          "height_in": x.get("height_in"), "reach_in": x.get("reach_in"),
+          "stance": x.get("stance")} for x in fighters]
     )
 
     fights_df.to_csv(os.path.join(args.outdir, "fights.csv"), index=False)
@@ -312,6 +315,9 @@ def main() -> None:
     both_odds = (fights_df["odds_a"].notna() & fights_df["odds_b"].notna()).mean()
     print(f"\nwrote {len(fights_df)} fights, {len(stats_df)} stat rows, "
           f"{len(fighters_df)} fighters -> {args.outdir}")
+    cov = {c: f"{fighters_df[c].notna().mean():.1%}"
+           for c in ("dob", "height_in", "reach_in", "stance")}
+    print(f"  fighter attribute coverage: {cov}")
     print(f"  results: {fights_df['result'].value_counts().to_dict()}")
     print(f"  excluded: {excluded}")
     print(f"  odds coverage (both sides): {both_odds:.1%} of exported fights")

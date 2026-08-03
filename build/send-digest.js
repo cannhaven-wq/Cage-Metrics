@@ -50,7 +50,7 @@ function formatLongDate(isoDate) {
 // Plain-English agreement label for the two public models (Value + Fight IQ).
 // Handles the one-model case too (a fight only one model has graded).
 function modelAgreementLabel(agree, total) {
-  if (total <= 1) return '1 model';
+  if (total <= 1) return 'the engine';
   if (agree === total) return total === 2 ? 'both models' : `all ${total} models`;
   return `${agree} of ${total} models`;
 }
@@ -80,22 +80,28 @@ async function buildVerdictLines(event) {
   const fighterIds = [...new Set(fights.flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
 
   const [predsR, cardioR] = await Promise.all([
-    sb.from('model_predictions')
-      .select('model_version, fight_id, fighter_id, model_p')
-      .in('fight_id', fightIds)
-      // Public models only. Node script — window.cfl doesn't exist here, so
-      // the list is hardcoded. Source of truth: cfl.PUBLIC_MODELS in _shared.js.
-      .in('model_version', ['v6', 'v3']),
+    // Engine picks (model_picks) — the one current model. A locked 'live' row
+    // outranks a 'backtest' replay row for the same fight. The retired
+    // v3/v6 model_predictions are archive-only and never publish here.
+    sb.from('model_picks')
+      .select('fight_id, pick_fighter_id, p_cal, source')
+      .in('fight_id', fightIds),
     sb.from('v_fighter_consistency')
       .select('fighter_id, weight_class, cardio_tier')
       .in('fighter_id', fighterIds)
   ]);
 
-  const picksByFight = {};
+  const engineByFight = {};
   (predsR.data || []).forEach(p => {
-    if (p.model_p == null || +p.model_p <= 0.5) return;
-    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {})[p.model_version] =
-      { fighter_id: p.fighter_id, model_p: +p.model_p };
+    const prev = engineByFight[p.fight_id];
+    if (prev && prev.source === 'live' && p.source !== 'live') return;
+    engineByFight[p.fight_id] = p;
+  });
+  const picksByFight = {};
+  Object.values(engineByFight).forEach(p => {
+    if (p.p_cal == null) return;
+    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {}).engine =
+      { fighter_id: p.pick_fighter_id, model_p: +p.p_cal };
   });
   const cardio = {};
   (cardioR.data || []).forEach(r => {

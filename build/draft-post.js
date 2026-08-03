@@ -63,10 +63,10 @@ function formatLongDate(isoDate) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-// Plain-English agreement label for the two public models (Value + Fight IQ).
-// Handles the one-model case too (a fight only one model has graded).
+// Plain-English agreement label. With one engine there is exactly one voice;
+// the multi-model branches only survive for safety if extra keys ever appear.
 function modelAgreementLabel(agree, total) {
-  if (total <= 1) return '1 model';
+  if (total <= 1) return 'the engine';
   if (agree === total) return total === 2 ? 'both models' : `all ${total} models`;
   return `${agree} of ${total} models`;
 }
@@ -91,9 +91,9 @@ async function main() {
 
   const [fightersR, predsR, cardioR, finishR] = await Promise.all([
     sb.from('fighters').select('id, name, nickname').in('id', fighterIds),
-    // Public models only ('v6' Value, 'v3' Fight IQ). Node script — window.cfl
-    // doesn't exist here; source of truth is cfl.PUBLIC_MODELS in _shared.js.
-    sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p').in('fight_id', fightIds).in('model_version', ['v6', 'v3']),
+    // Engine picks (model_picks) — the one current model; a locked 'live' row
+    // outranks a 'backtest' replay row for the same fight.
+    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds),
     sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds),
     sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds),
   ]);
@@ -101,13 +101,18 @@ async function main() {
   const fmap = {};
   (fightersR.data || []).forEach(f => { fmap[f.id] = f; });
 
-  // picksByFight[fight_id][model_version] = { fighter_id, model_p }
-  // Only count a model as "picking" a side if its probability > 0.5.
-  const picksByFight = {};
+  // picksByFight[fight_id].engine = { fighter_id, model_p }
+  const engineByFight = {};
   (predsR.data || []).forEach(p => {
-    if (p.model_p == null || +p.model_p <= 0.5) return;
+    const prev = engineByFight[p.fight_id];
+    if (prev && prev.source === 'live' && p.source !== 'live') return;
+    engineByFight[p.fight_id] = p;
+  });
+  const picksByFight = {};
+  Object.values(engineByFight).forEach(p => {
+    if (p.p_cal == null) return;
     const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
-    slot[p.model_version] = { fighter_id: p.fighter_id, model_p: +p.model_p };
+    slot.engine = { fighter_id: p.pick_fighter_id, model_p: +p.p_cal };
   });
 
   // Cardio (CAREER row only — the per-weight-class rows are noise for a one-line note).

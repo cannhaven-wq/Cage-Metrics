@@ -63,6 +63,49 @@
     return (cfl.MODELS[id] && cfl.MODELS[id].name) || dbName || id;
   };
 
+  // --------- Engine (July 2026 "one engine" rebuild) ---------
+  // The engine is one brain with two product faces. It publishes to the
+  // model_picks / model_edges tables (read via the graded views below), NOT
+  // model_predictions — so it deliberately lives outside cfl.MODELS, whose
+  // keys are model_version values queried against model_predictions.
+  // engine_v1/engine_v2/… rows are one model family: never filter by
+  // model_version (the string is provenance, shown as-is). Simulated-vs-live
+  // maps to the source column ('backtest' / 'live'). Every backtest row is
+  // out-of-sample by construction (walk-forward; the uncalibrated fold 0 is
+  // excluded at publish), so no trainEnd window clamp applies here.
+  cfl.ENGINE = {
+    family: 'engine',
+    accuracy: {
+      name: 'Fight IQ — tape only',
+      tagline: 'One calibrated winner probability per fight, built from fighter history, fight stats, and physical attributes. Never sees a betting line.',
+    },
+    roi: {
+      name: 'Value — where the price is wrong',
+      tagline: 'Flags fights where the model disagrees with the vig-free market price, with a disciplined stake attached. Live picks are locked at first write, never re-priced.',
+    },
+    tiers: { Lock: 0.65, Pick: 0.57 }, // mirrors cfl_engine/faces.py tier_of
+  };
+
+  // Graded-view loaders. Both views join fights server-side: hit/won are NULL
+  // while the fight is unresolved (render as pending, never as a loss). Pass a
+  // modifier to filter, e.g. cfl.fetchEnginePicks(q => q.eq('source', 'live')).
+  cfl.fetchEnginePicks = function (mod) {
+    const sb = window.cflSupabase;
+    return cfl.fetchAll(() => {
+      const q = sb.from('v_model_picks_graded').select('*')
+        .order('event_date', { ascending: true }).order('id', { ascending: true });
+      return mod ? mod(q) : q;
+    });
+  };
+  cfl.fetchEngineEdges = function (mod) {
+    const sb = window.cflSupabase;
+    return cfl.fetchAll(() => {
+      const q = sb.from('v_model_edges_graded').select('*')
+        .order('event_date', { ascending: true }).order('id', { ascending: true });
+      return mod ? mod(q) : q;
+    });
+  };
+
   // Honest out-of-sample floor for a model's graded stats: the later of the
   // DB's test_start_date and the day after the model's training cutoff.
   cfl.modelWindowStart = function (id, testStartDate) {
@@ -185,6 +228,26 @@
     today.setHours(0, 0, 0, 0);
     return Math.round((target - today) / (1000 * 60 * 60 * 24));
   };
+
+  // --------- Current-event window ---------
+  // How long a card stays on the home page / Card Lab after its own date ends,
+  // before we roll over to the next upcoming event. Local time, not UTC.
+  // 6h keeps a Saturday-night card up through Sunday sunrise, then rolls.
+  cfl.ROLLOVER_HOURS = 6;
+
+  // Returns { fromStr, todayStr } — the inclusive event_date range that counts
+  // as "happening now". Single source of truth: index.html and card-lab.html
+  // both select the current event with this window.
+  cfl.eventWindow = function (nowOverride) {
+    const now = nowOverride || new Date();
+    const from = new Date(now.getTime() - cfl.ROLLOVER_HOURS * 3600000);
+    return { fromStr: localDateStr(from), todayStr: localDateStr(now) };
+  };
+
+  function localDateStr(d) {
+    const p = n => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
 
   // --------- Active fighter cutoff ---------
   cfl.activeCutoff = (function () {
