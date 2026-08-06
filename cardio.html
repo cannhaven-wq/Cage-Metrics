@@ -398,12 +398,103 @@
     margin: 0;
   }
 
+  /* ============== Career cardio curve explorer ============== */
+  .curve-tool {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px 26px;
+  }
+  .curve-search { position: relative; max-width: 440px; margin-bottom: 20px; }
+  .curve-search input {
+    width: 100%;
+    padding: 11px 14px;
+    background: var(--bg-3);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    color: #fff;
+    font-size: 14px;
+    font-family: inherit;
+  }
+  .curve-search input:focus { outline: none; border-color: var(--red); }
+  .curve-results {
+    position: absolute;
+    top: 100%; left: 0; right: 0;
+    background: var(--bg-2);
+    border: 1px solid var(--border-2);
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 30;
+    display: none;
+    box-shadow: 0 8px 24px rgba(0,0,0,.4);
+  }
+  .curve-results.open { display: block; }
+  .curve-result { padding: 9px 14px; cursor: pointer; border-bottom: 1px solid var(--border); }
+  .curve-result:last-child { border-bottom: none; }
+  .curve-result:hover { background: var(--bg-3); }
+  .curve-result .nm { font-size: 14px; color: #fff; font-weight: 600; }
+  .curve-result .meta { font-size: 11px; color: var(--text-3); margin-top: 2px; }
+
+  .curve-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 2px; }
+  .curve-head .who { font-family: var(--font-display); font-size: 24px; font-weight: 800; color: #fff; }
+  .curve-head .curve-sub { font-size: 12px; color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+  .badge { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; padding: 3px 8px; border-radius: 5px; }
+  .badge.high { background: rgba(38,166,91,.15); color: var(--green); }
+  .badge.limited { background: rgba(255,167,38,.15); color: #ffa726; }
+  .badge.insufficient { background: rgba(130,130,130,.18); color: #9a9a9a; }
+
+  .chart {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    align-items: end;
+    height: 210px;
+    margin: 30px 0 8px;
+    position: relative;
+  }
+  .baseline {
+    position: absolute; left: 0; right: 0;
+    border-top: 1px dashed var(--border-2);
+    pointer-events: none;
+  }
+  .baseline-lab {
+    position: absolute; right: 0; top: -8px;
+    font-size: 10px; color: var(--text-3);
+    background: var(--bg-2); padding: 0 4px;
+    text-transform: uppercase; letter-spacing: .05em;
+  }
+  .bar-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; }
+  .bar { width: 66%; max-width: 54px; border-radius: 6px 6px 0 0; position: relative; min-height: 2px; }
+  .bar.up   { background: linear-gradient(180deg, var(--green), rgba(38,166,91,.35)); }
+  .bar.down { background: linear-gradient(180deg, #ffa726, rgba(255,167,38,.3)); }
+  .bar.deep { background: linear-gradient(180deg, var(--red), rgba(224,49,49,.3)); }
+  .bar-pct {
+    position: absolute; top: -21px; left: -8px; right: -8px;
+    text-align: center; font-family: var(--font-display);
+    font-size: 13px; font-weight: 700; color: #fff;
+  }
+  .bar-empty { color: var(--text-3); font-size: 16px; padding-bottom: 4px; }
+  .rlabels { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .rlabel { text-align: center; }
+  .rlabel .rn { font-size: 13px; color: var(--text-2); font-weight: 600; }
+  .rlabel .rs { font-size: 10px; color: var(--text-3); margin-top: 2px; text-transform: uppercase; letter-spacing: .04em; }
+  .curve-legend { font-size: 12px; color: var(--text-3); line-height: 1.55; margin-top: 16px; }
+  .curve-note { border-radius: 9px; padding: 14px 18px; margin-top: 18px; font-size: 13px; line-height: 1.6; color: var(--text-2); }
+  .curve-note strong { color: #fff; }
+  .curve-note.limited { background: rgba(255,167,38,.08); border: 1px solid rgba(255,167,38,.25); }
+  .curve-note.finisher { background: var(--bg-3); border: 1px solid var(--border-2); }
+  .curve-loading { color: var(--text-3); font-size: 13px; padding: 30px 0; text-align: center; }
+
   @media (max-width: 768px) {
     .cardio-hero { padding: 28px 16px 24px; }
     .cardio-hero h1 { font-size: 30px; }
     .leaderboards { grid-template-columns: 1fr; }
     .tiers { grid-template-columns: 1fr; }
     .formula-eq { font-size: 15px; }
+    .chart { height: 170px; gap: 7px; }
+    .rlabels { gap: 7px; }
   }
 </style>
 </head>
@@ -443,6 +534,23 @@
         <ul class="lb-list" id="lbBest">
           <li class="lb-row"><div class="lb-rank">—</div><div class="lb-info"><div class="lb-name">Loading…</div></div><div class="lb-score"></div></li>
         </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============== Career cardio curve explorer ============== -->
+  <div class="section">
+    <div class="section-eyebrow"><span class="dot"></span>Trace any fighter</div>
+    <h2>The career cardio curve</h2>
+    <p>Search any fighter to see how their output holds up round by round, across their <strong>entire</strong> UFC career. Each bar is that round's total output — strikes plus grappling — as a share of their round-one baseline. Above the line, they sustain or push the pace; below it, they fade.</p>
+    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;">This is career-wide, so it won't match the recent-five-fight score in the leaderboards above — it's the whole body of deep-water evidence, not current form. Fighters who finish too early to build a deep-round sample show a finish note instead of a curve.</p>
+    <div class="curve-tool">
+      <div class="curve-search">
+        <input type="text" id="curveSearch" placeholder="Search fighter name…" autocomplete="off" />
+        <div class="curve-results" id="curveResults"></div>
+      </div>
+      <div id="curveOut">
+        <div class="curve-loading">Search a fighter to trace their cardio curve.</div>
       </div>
     </div>
   </div>
@@ -678,6 +786,158 @@ function errorRow(msg) {
 }
 
 loadLeaderboards();
+
+// =============================================================================
+// CAREER CARDIO CURVE — interactive, pulled live from v_fighter_cardio_curve
+// =============================================================================
+//
+// One fighter at a time, CAREER row (all weight classes), rounds 1-5. Renders
+// pct_of_r1 as bars against a round-1 = 100% baseline. Career-wide window, so
+// it deliberately differs from the last-5 leaderboard score above.
+//
+// Three states, keyed to the view's `confidence`:
+//   high / limited -> draw the curve (limited gets a small-sample flag)
+//   insufficient   -> early finisher; show a finish note, not a fake score
+// =============================================================================
+
+const CC_DISPLAY_MAX = 2.2;   // bar-height ceiling; Holloway's R4 (~2.07x) sits near the top
+let ccFighters = [];
+
+async function initCardioCurve() {
+  const sb = window.cflSupabase;
+  try {
+    ccFighters = await cfl.fetchAll(() => sb
+      .from('fighters')
+      .select('id, name, nickname, division, ufc_wins, ufc_losses, ufc_draws'));
+  } catch (e) {
+    console.warn('[cardio-curve] fighter load failed:', e.message);
+  }
+  ccWireSearch();
+  // Showcase default so the section isn't empty on arrival.
+  const demo = ccFighters.find(f => f.id === 827)   // Max Holloway — textbook ramp
+            || ccFighters[0];
+  if (demo) ccSelect(demo);
+}
+
+function ccWireSearch() {
+  const input = document.getElementById('curveSearch');
+  const results = document.getElementById('curveResults');
+  if (!input) return;
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase().trim();
+    if (q.length < 2) { results.classList.remove('open'); return; }
+    const matches = ccFighters
+      .filter(f => f.name.toLowerCase().includes(q) || (f.nickname || '').toLowerCase().includes(q))
+      .slice(0, 12);
+    if (matches.length === 0) {
+      results.innerHTML = '<div class="curve-result" style="cursor:default;color:var(--text-3)">No matches</div>';
+    } else {
+      results.innerHTML = matches.map(f => `
+        <div class="curve-result" data-id="${f.id}">
+          <div class="nm">${cfl.escapeHtml(f.name)}${f.nickname ? ` <span style="color:var(--text-3)">"${cfl.escapeHtml(f.nickname)}"</span>` : ''}</div>
+          <div class="meta">${cfl.escapeHtml(f.division || 'Unknown')} · ${cfl.formatRecord(f.ufc_wins, f.ufc_losses, f.ufc_draws)} UFC</div>
+        </div>`).join('');
+    }
+    results.classList.add('open');
+  });
+
+  input.addEventListener('blur', () => setTimeout(() => results.classList.remove('open'), 150));
+
+  results.addEventListener('click', e => {
+    const item = e.target.closest('.curve-result');
+    if (!item || !item.dataset.id) return;
+    const f = ccFighters.find(x => x.id === parseInt(item.dataset.id, 10));
+    if (f) ccSelect(f);
+  });
+}
+
+async function ccSelect(f) {
+  const sb = window.cflSupabase;
+  const host = document.getElementById('curveOut');
+  document.getElementById('curveSearch').value = f.name;
+  document.getElementById('curveResults').classList.remove('open');
+  host.innerHTML = `<div class="curve-loading">Loading ${cfl.escapeHtml(f.name)}'s curve…</div>`;
+  try {
+    const { data, error } = await sb
+      .from('v_fighter_cardio_curve')
+      .select('round_number, n_fights, confidence, descriptor, strk_norm, grapp_norm, raw_output, pct_of_r1')
+      .eq('fighter_id', f.id)
+      .eq('weight_class', 'CAREER')
+      .order('round_number');
+    if (error) { console.error(error); host.innerHTML = ccMsg(f, 'Could not load this fighter’s curve.'); return; }
+    ccRenderCurve(f, data);
+  } catch (e) {
+    console.error('[cardio-curve] load failed:', e);
+    host.innerHTML = ccMsg(f, 'Could not load this fighter’s curve.');
+  }
+}
+
+function ccHead(f, conf) {
+  const label = conf === 'insufficient' ? 'No reading' : `${conf} confidence`;
+  return `<div class="curve-head">
+    <span class="who">${cfl.escapeHtml(f.name)}</span>
+    <span class="badge ${conf}">${label}</span>
+    <span class="curve-sub">${cfl.escapeHtml(f.division || '')} · career-wide</span>
+  </div>`;
+}
+
+function ccMsg(f, msg) {
+  return ccHead(f, 'insufficient') + `<div class="curve-note finisher">${cfl.escapeHtml(msg)}</div>`;
+}
+
+function ccRenderCurve(f, rows) {
+  const host = document.getElementById('curveOut');
+  if (!rows || rows.length === 0) {
+    host.innerHTML = ccMsg(f, 'No round-level data for this fighter yet.');
+    return;
+  }
+  const conf = rows[0].confidence;
+  const byRound = {};
+  rows.forEach(r => { byRound[r.round_number] = r; });
+
+  // Insufficient sample: early finisher. Tell that story from n_fights.
+  if (conf === 'insufficient') {
+    const r1n = byRound[1] ? byRound[1].n_fights : 0;
+    const deepest = [5, 4, 3, 2, 1].find(n => byRound[n]) || 1;
+    const deepN = byRound[deepest] ? byRound[deepest].n_fights : 0;
+    const last = f.name.split(' ').slice(-1)[0];
+    host.innerHTML = ccHead(f, conf) + `<div class="curve-note finisher">
+      <strong>${cfl.escapeHtml(last)} finishes too early for a cardio curve.</strong>
+      Fewer than four fights have reached round three, so there isn’t enough deep-water tape to trace a reliable curve —
+      ${r1n} fight${r1n === 1 ? '' : 's'} have round-one data, dropping to ${deepN} by round ${deepest}.
+      That early-finish tendency is its own signal; it drives a finish-threat flag elsewhere, not a fabricated cardio score.
+    </div>`;
+    return;
+  }
+
+  let bars = '';
+  let labels = '';
+  for (let n = 1; n <= 5; n++) {
+    const r = byRound[n];
+    if (!r || r.pct_of_r1 == null) {
+      bars += `<div class="bar-col"><div class="bar-empty">—</div></div>`;
+    } else {
+      const p = r.pct_of_r1;
+      const h = Math.max(2, Math.min(p, CC_DISPLAY_MAX) / CC_DISPLAY_MAX * 100);
+      const cls = p >= 0.97 ? 'up' : (p >= 0.7 ? 'down' : 'deep');
+      bars += `<div class="bar-col"><div class="bar ${cls}" style="height:${h.toFixed(1)}%"><span class="bar-pct">${Math.round(p * 100)}%</span></div></div>`;
+    }
+    labels += `<div class="rlabel"><div class="rn">R${n}</div><div class="rs">${r ? ('n=' + r.n_fights) : '—'}</div></div>`;
+  }
+  const baseBottom = (1 / CC_DISPLAY_MAX * 100).toFixed(1);
+  const limitedNote = conf === 'limited'
+    ? `<div class="curve-note limited"><strong>Limited sample.</strong> 4–6 fights reached round three — read this as directional, not conclusive. The <em>n=</em> under each round shows the sample it’s built on.</div>`
+    : '';
+
+  host.innerHTML = ccHead(f, conf) +
+    `<div class="chart"><div class="baseline" style="bottom:${baseBottom}%"><span class="baseline-lab">R1 = 100%</span></div>${bars}</div>` +
+    `<div class="rlabels">${labels}</div>` +
+    limitedNote +
+    `<div class="curve-legend">Each bar is that round’s total output (strikes + grappling) as a share of the fighter’s round-one output. <strong style="color:var(--green)">Green</strong> sustains or ramps, <strong style="color:#ffa726">amber</strong> dips, <strong style="color:var(--red)">red</strong> is a steep fade. The <em>n=</em> is how many career fights reached each round — lean on the deeper samples.</div>`;
+}
+
+initCardioCurve();
 </script>
 </body>
 </html>
