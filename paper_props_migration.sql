@@ -6,7 +6,9 @@
 -- bet, graded after the fact for closing-line value (CLV). prop_cards is the
 -- public, presentation-only projection the site shows fans.
 --
--- Two tables, deliberately opposite visibility:
+-- Three tables:
+--   prop_lines   — PUBLIC (like fight_odds). Captured market snapshots; the
+--                  pipeline's input. Raw book lines, no edge.
 --   paper_picks  — PRIVATE. service_role only. Holds entry prices, model/market
 --                  probabilities, blended edge, and post-event CLV. This is the
 --                  research ledger; it must never leak (it reveals the exact
@@ -19,6 +21,49 @@
 -- Apply via Supabase → SQL Editor (direct DB is IPv6-only from this machine;
 -- see reference_cfl_db_access). Idempotent — safe to re-run.
 -- =============================================================================
+
+
+-- ----------------------------------------------------------------------------
+-- prop_lines — captured prop market snapshots, the pipeline's INPUT. Append-only,
+-- one row per (fight, market, source, capture). Mirrors fight_odds' snapshot
+-- philosophy: earliest capture per (source, fighter, stat_type) is the OPEN, the
+-- last capture before the fight's start time is the CLOSE (grading/paper_clv.py).
+--
+-- fighter_id is NULLABLE by design: fight-level markets (total_rounds / duration,
+-- shipped first off The Odds API `totals`) have no fighter side, so fighter_id is
+-- NULL and the key is (fight_id, source, stat_type). Fighter props (sig strikes,
+-- takedowns) added later set fighter_id and reuse the same table.
+--
+-- over_odds / under_odds are stored together per snapshot so de-vig has both sides
+-- of the two-way market in one row (devig_pair needs the pair).
+--
+-- PUBLIC read, matching fight_odds precedent: raw book lines aren't secret, and a
+-- future prop page may read them. The EDGE is never here (it lives in paper_picks
+-- + the bucketed prop_cards). Writes are service_role only.
+-- ----------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS prop_lines (
+    id          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    captured_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    fight_id    INTEGER NOT NULL,
+    fighter_id  INTEGER,                            -- NULL for fight-level markets
+    source      TEXT    NOT NULL,                   -- book title, or a feed tag
+    stat_type   TEXT    NOT NULL,                   -- e.g. 'total_rounds'
+    line        NUMERIC NOT NULL,
+    over_odds   INTEGER,                            -- American price of Over
+    under_odds  INTEGER,                            -- American price of Under
+    source_url  TEXT                                -- provenance (feed identifier)
+);
+
+-- Open (earliest) / close (last-before-start) scans go by this key + time.
+CREATE INDEX IF NOT EXISTS prop_lines_scan
+    ON prop_lines (fight_id, stat_type, source, captured_at);
+CREATE INDEX IF NOT EXISTS prop_lines_fight ON prop_lines (fight_id);
+
+ALTER TABLE prop_lines ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "public read prop_lines" ON prop_lines;
+CREATE POLICY "public read prop_lines" ON prop_lines
+    FOR SELECT TO anon, authenticated USING (true);
+GRANT SELECT ON prop_lines TO anon, authenticated;
 
 
 -- ----------------------------------------------------------------------------
