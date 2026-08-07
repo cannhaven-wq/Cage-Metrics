@@ -12,6 +12,8 @@ out_synth/
 out_real/
 __pycache__/
 
-# duration model regenerable artifacts
+# duration + props model regenerable artifacts
 cfl_engine/features/*.parquet
 cfl_engine/harness/walkforward_report.json
+cfl_engine/harness/walkforward_counts_report.json
+cfl_engine/harness/artifacts/
