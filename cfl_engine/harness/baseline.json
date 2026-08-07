@@ -1,0 +1,7 @@
+{
+  "model_logloss": 0.5034,
+  "model_brier": 0.1615,
+  "cal_max_abs_dev": 0.0225,
+  "n_test_rows": 13076,
+  "written_from_start": "2014-01-01"
+}

@@ -11,3 +11,7 @@ cfl_engine/data/
 out_synth/
 out_real/
 __pycache__/
+
+# duration model regenerable artifacts
+cfl_engine/features/*.parquet
+cfl_engine/harness/walkforward_report.json
