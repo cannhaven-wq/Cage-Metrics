@@ -445,8 +445,8 @@ const VERDICT_COPY = {
 
 const VERDICT_LABEL = {
   real: 'Real edge',
-  proxy: 'Market proxy',
-  inverted: 'Inverted',
+  proxy: 'Just reads the favorite',
+  inverted: 'Backwards',
   unproven: 'Unproven',
   insufficient: 'Too few fights',
 };
@@ -482,7 +482,7 @@ async function loadFactorLab() {
   d.factors.forEach((f, i) => {
     const head = f.buckets.find((b) => b.headline) || f.buckets[0];
     const subs = f.buckets.filter((b) => b !== head);
-    const basis = f.basis === 'physical' ? 'Physical' : 'Point-in-time';
+    const basis = f.basis === 'physical' ? 'Physical' : 'From past fights';
 
     rows.push(`
       <tr class="lab-row-head" data-factor="${i}">

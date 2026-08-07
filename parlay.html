@@ -483,7 +483,8 @@
 <div class="page-hero">
   <div class="eyebrow">Build & evaluate</div>
   <h1>UFC Parlay Builder</h1>
-  <p>Pick fighters from the upcoming card — each one's <strong>best price across books right now</strong> is pre-filled, edit if your book has a better number. Combined payout + implied probability update live.</p>
+  <p>Pick fighters from the upcoming card — each one's <strong>best price across books right now</strong> is pre-filled, edit if your book has a better number. The combined payout and win chance update live.</p>
+  <p style="margin-top:14px; padding:10px 14px; border-left:3px solid var(--amber); background:var(--bg-1); border-radius:8px; font-size:13px; color:var(--text-2); line-height:1.55; max-width:640px;">Heads up: every leg you add makes the parlay much less likely to hit. A 4-leg parlay at even odds cashes about <strong>1 time in 16</strong>. Bigger payouts mean longer odds, not free money.</p>
 </div>
 
 <div class="page">
@@ -926,7 +927,7 @@ function renderSlip() {
         <span class="val" id="sumCombined">${allValid ? formatAmericanFromDecimal(combinedDec) : '—'}</span>
       </div>
       <div class="summary-row">
-        <span class="lbl">Implied probability</span>
+        <span class="lbl">Chance it hits</span>
         <span class="val" id="sumImplied">${allValid ? (combinedImplied * 100).toFixed(2) + '%' : '—'}</span>
       </div>
       <div class="summary-row payout">
