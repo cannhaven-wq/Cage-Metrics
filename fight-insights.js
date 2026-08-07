@@ -47,40 +47,40 @@
       if (rp > ro) {
         const oppWord = co.tier_word;
         out.push((oppWord === 'fades' || oppWord === 'collapses' || oppWord === 'tapers')
-          ? `Stronger late-round cardio — ${opp.name} ${oppWord}`
-          : 'Stronger late-round cardio score');
+          ? `${lastName(picked.name)} lasts deeper into the fight — ${lastName(opp.name)} ${oppWord} late`
+          : `${lastName(picked.name)} holds up better in the late rounds`);
       }
     }
     // Takedown defense
     if (picked.td_def != null && opp.td_def != null && picked.td_def - opp.td_def >= 8) {
-      out.push(`Stronger takedown defense (${picked.td_def}% vs ${opp.td_def}%)`);
+      out.push(`${lastName(picked.name)} stops more takedowns — ${picked.td_def}% to ${opp.td_def}%`);
     }
     // Grappling offense vs weak defense
     if (picked.td_avg != null && opp.td_def != null && picked.td_avg >= 2.0 && opp.td_def < 65) {
-      out.push(`Grappling edge vs weak takedown defense (${opp.td_def}%)`);
+      out.push(`${lastName(picked.name)} can drag it to the mat — ${lastName(opp.name)} stops only ${opp.td_def}% of takedowns`);
     }
     // Age — anchored to the historical base rate when available
     if (picked.age != null && opp.age != null && opp.age - picked.age >= 3) {
       let suffix = '';
       const br = baseRates.younger;
       if (br && br.younger_winrate != null) {
-        suffix = ` — younger fighters win ${(br.younger_winrate * 100).toFixed(0)}% of ${Number(br.sample_size).toLocaleString()} similar fights`;
+        suffix = ` — the younger fighter wins ${(br.younger_winrate * 100).toFixed(0)}% of ${Number(br.sample_size).toLocaleString()} fights like this`;
       }
-      out.push(`Younger by ${opp.age - picked.age} years${suffix}`);
+      out.push(`${lastName(picked.name)} is ${opp.age - picked.age} years younger${suffix}`);
     }
     // Reach — no win-rate suffix on purpose: the raw historical rate looks
     // predictive but collapses to a coin flip once you control for the
     // betting line (documented in the Factor Lab on stats.html).
     if (picked.reach_in != null && opp.reach_in != null && picked.reach_in - opp.reach_in >= 2) {
-      out.push(`Reach edge (+${picked.reach_in - opp.reach_in}")`);
+      out.push(`${lastName(picked.name)} has ${picked.reach_in - opp.reach_in}" more reach — that range adds up over a fight`);
     }
     // Striking output
     if (picked.slpm != null && opp.slpm != null && (picked.slpm - opp.slpm) >= 1) {
-      out.push(`Higher striking output (${Number(picked.slpm).toFixed(1)} vs ${Number(opp.slpm).toFixed(1)}/min)`);
+      out.push(`${lastName(picked.name)} lands more — ${Number(picked.slpm).toFixed(1)} clean strikes a minute to ${Number(opp.slpm).toFixed(1)}`);
     }
     // Takedown accuracy
     if (picked.td_acc != null && opp.td_acc != null && picked.td_acc - opp.td_acc >= 12) {
-      out.push(`Better takedown accuracy (${picked.td_acc}% vs ${opp.td_acc}%)`);
+      out.push(`${lastName(picked.name)} hits takedowns more often — ${picked.td_acc}% to ${opp.td_acc}%`);
     }
     return out;
   }
@@ -93,27 +93,27 @@
     const flags = [];
     // The market likes the other guy
     if (marketPct != null && confidence - marketPct <= -3) {
-      flags.push(`The books disagree — the market prices ${lastName(opp.name)} closer to ${Math.round(100 - marketPct)}%, and closing lines are right more often than any public model.`);
+      flags.push(`The books lean the other way — they give ${lastName(opp.name)} about a ${Math.round(100 - marketPct)}% chance, and the market's price is right more often than any model.`);
     }
     // Opponent has the cardio edge
     const cp = cardioFor(ctx.cardioMap, picked.id, ctx.weightClass);
     const co = cardioFor(ctx.cardioMap, opp.id, ctx.weightClass);
     if (cp && co && cp.tier_word && co.tier_word) {
       const rp = CARDIO_RANK[cp.tier_word] || 0, ro = CARDIO_RANK[co.tier_word] || 0;
-      if (ro > rp) flags.push(`${lastName(opp.name)} holds the better late-round cardio score — if this goes long, the pick weakens.`);
-      else if (cp.confidence === 'limited') flags.push(`${lastName(picked.name)}'s cardio score is built on a small sample — treat it as a guess, not a fact.`);
+      if (ro > rp) flags.push(`${lastName(opp.name)} has the better late-round cardio — if this goes long, our pick fades.`);
+      else if (cp.confidence === 'limited') flags.push(`${lastName(picked.name)}'s cardio read comes from just a few fights — treat it as a guess, not a fact.`);
     }
     // Giving up youth
     if (picked.age != null && opp.age != null && picked.age - opp.age >= 4) {
-      flags.push(`${lastName(picked.name)} is giving up ${picked.age - opp.age} years — age catches up suddenly, not gradually.`);
+      flags.push(`${lastName(picked.name)} is ${picked.age - opp.age} years older — age catches up fast, not slowly.`);
     }
     // Giving up reach
     if (picked.reach_in != null && opp.reach_in != null && opp.reach_in - picked.reach_in >= 3) {
-      flags.push(`Giving up ${opp.reach_in - picked.reach_in}" of reach — ${lastName(opp.name)} can score from range all night.`);
+      flags.push(`${lastName(picked.name)} is giving up ${opp.reach_in - picked.reach_in}" of reach — ${lastName(opp.name)} can pick at range all night.`);
     }
     // Thin lean
     if (confidence < 55) {
-      flags.push(`This is a thin lean, not a conviction pick — the model barely separates these two.`);
+      flags.push(`This is a lean, not a strong pick — the model barely separates these two.`);
     }
     // Structural flags only. The plain-variance point is made once at the
     // page level (card-lab intro note / edges calibration explainer).
@@ -148,9 +148,9 @@
       const aFav = v.aProb >= 0.5;
       const who = aFav ? a : b;
       const pctNet = Math.round((aFav ? v.aProb : 1 - v.aProb) * 100);
-      net = `Edge lean: ${esc(lastName(who.name))} ${pctNet}%`;
+      net = `Model leans ${esc(lastName(who.name))} — ${pctNet}%`;
     } else {
-      net = 'No strong edges';
+      net = 'No clear edge';
     }
     const rows = v.edges.map(e => {
       const fav = e.favors === 'a' ? a : b;
@@ -164,8 +164,8 @@
       </div>`;
     }).join('');
     const body = v.edges.length
-      ? `<div class="wt-note">The transparent, rules-based factors behind the verdict — the same inputs the models see. Green supports the pick, amber cuts against it.</div><div class="wt-rows">${rows}</div>`
-      : `<div class="wt-empty">No strong edge on record, cardio, or takedown defense here — the pick leans on the model's broader stat weighting.</div>`;
+      ? `<div class="wt-note">The clear-cut factors behind this pick — the same ones the model weighs. Green backs the pick, amber works against it.</div><div class="wt-rows">${rows}</div>`
+      : `<div class="wt-empty">No clear edge on record, cardio, or takedown defense here — the pick rests on the model's wider read.</div>`;
     return { net, body, hasEdges: v.edges.length > 0 };
   }
 

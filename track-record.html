@@ -212,12 +212,12 @@
 
   <div class="page-head">
     <div class="eyebrow">Proof Center</div>
-    <h1>Every pick, graded in public.</h1>
-    <p class="lede">This page is computed live from the same database our picks are written to — nothing on it is typed in by hand. One engine powers both products: <strong>Fight IQ</strong> calls a winner in every fight from fighter data alone, and <strong>Value</strong> flags the fights where the market's price disagrees with the model. Accuracy alone is not enough, so we also show <strong>calibration</strong> (were the probabilities honest?) and the misses.</p>
+    <h1>Every pick we've made. Wins and losses.</h1>
+    <p class="lede">This page is built live from the same database our picks are saved to — nothing here is typed in by hand. One engine, two jobs: <strong>Fight IQ</strong> calls a winner in every fight from fighter data alone, and <strong>Value</strong> flags the fights where the odds disagree with the model. Being right isn't enough, so we also show whether <strong>our percentages hold up</strong> — when we say 70%, does it hit about 7 times in 10? — and every miss.</p>
     <div class="updated" id="lastUpdated">Loading latest data…</div>
     <div class="pledge">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <div class="tx"><strong>Two records, clearly labeled.</strong> Live picks are written to the database before fight night with their probability and price — insert-only, never revised. Everything else is the walk-forward replay: the engine stepping through history year by year, always predicting fights it had not trained on, graded at the closing price. We never present simulated as live.</div>
+      <div class="tx"><strong>Two records, clearly labeled.</strong> Live picks are written to the database before fight night with their percentage and price — added once, never revised. Everything else is the replay: we re-ran the engine through history year by year, only ever letting it pick fights it had never seen, and graded it at the closing price. We never show a simulation as if it were live.</div>
     </div>
   </div>
 
@@ -265,7 +265,7 @@
         <div id="engLeft"></div>
       </div>
       <div class="panel">
-        <h3 id="engRightTitle">Calibration — did the probabilities tell the truth?</h3>
+        <h3 id="engRightTitle">Do our percentages hold up?</h3>
         <div class="ps" id="engRightPs"></div>
         <div class="cal-legend" id="engCalLegend"><span class="lp"><i></i>Predicted</span><span class="la"><i></i>Actual</span></div>
         <div id="engRight"></div>
@@ -286,7 +286,7 @@
     <summary style="cursor:pointer; font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--text-2);">
       Every model we've run — archived simulations
     </summary>
-    <div class="window-note" style="margin-top:10px">Every model we've ever run, oldest to newest. These records are <strong>backtested simulations</strong> — each model re-run over history, not picks locked before fights — so we grade each only on fights <em>after</em> its training cutoff (its honest out-of-sample window). Where a model's exact cutoff isn't verified, we floor it at Jan 2025 to be safe from leakage. The one genuinely locked-before-the-bell record is the pre-fight section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The retired models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or overlapped their own training data — the exact leakage we walked away from. The engine's lower, honest number is the one we stand behind.</div>
+    <div class="window-note" style="margin-top:10px">Every model we've ever run, oldest to newest. These records are <strong>simulations</strong> — each model re-run over history, not picks locked before fights — so we grade each only on fights <em>after</em> it was finished, the ones it never trained on. Where a model's exact cutoff isn't confirmed, we start it at Jan 2025 to be safe, so no model can score itself on data it already saw. The one genuinely locked-before-the-bell record is the pre-fight section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The retired models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or graded themselves partly on fights they trained on — the exact cheating we walked away from. The engine's lower, honest number is the one we stand behind.</div>
 
   <!-- Model selector -->
   <div class="model-tabs" id="modelTabs"></div>
@@ -310,7 +310,7 @@
         <div id="byYear"></div>
       </div>
       <div class="panel">
-        <h3>Calibration — did the probabilities tell the truth?</h3>
+        <h3>Do our percentages hold up?</h3>
         <div class="ps">When the model says 65%, those picks should win about 65% of the time. Gray bar = what the model predicted on average, green bar = what actually happened.</div>
         <div class="cal-legend"><span class="lp"><i></i>Predicted</span><span class="la"><i></i>Actual</span></div>
         <div id="calChart"></div>
@@ -325,8 +325,8 @@
         <div class="split" id="favDog"></div>
       </div>
       <div class="panel" id="roiPanel">
-        <h3 id="roiTitle">Return on investment — flat $100 per pick</h3>
-        <div class="ps" id="roiPs">What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.</div>
+        <h3 id="roiTitle">Profit per $100 bet</h3>
+        <div class="ps" id="roiPs">What you'd have made or lost betting $100 on every pick above each edge, at the opening line. Edge is how much higher our percentage is than what the odds say.</div>
         <div id="roiTable"></div>
       </div>
     </div>
@@ -351,10 +351,10 @@
 
   <!-- CLV -->
   <div class="section">
-    <div class="sec-head"><h2>Closing line value</h2>
-      <div class="sub">The sharpest test of a betting model: do our picks beat the price the market closes at?</div></div>
+    <div class="sec-head"><h2>Did we beat the closing price?</h2>
+      <div class="sub">The toughest test of a betting model: we take -150, it closes at -180, we got the better price. Do our picks do that over and over?</div></div>
     <div class="panel" style="margin-top:14px">
-      <div class="ps" style="margin-bottom:0">Every live Value pick locks its price at publish, and we grade it against the closing consensus after the card. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">closing-line-value numbers will be published here once 100+ locked picks have both a publish and a closing price on record.</strong> Until then, judge us on the graded record above.</div>
+      <div class="ps" style="margin-bottom:0">Every live Value pick locks its price the moment we post it, and we compare it to the closing price after the card. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">these numbers go up here once 100+ locked picks have both a posted price and a closing price on record.</strong> Until then, judge us on the graded record above.</div>
     </div>
   </div>
 
@@ -458,7 +458,7 @@ async function loadEngine() {
     console.warn('[engine] load failed', err);
     $('engLoading').textContent = 'The engine record is still being wired up — the archived model records below are unaffected.';
     $('lastUpdated').textContent = 'Recomputed live on every page load';
-    $('lockedSplitNote').innerHTML = '<strong>Simulated vs live.</strong> Simulated rows are the walk-forward replay; live picks are written to the database before fight night, insert-only. Both are always labeled.';
+    $('lockedSplitNote').innerHTML = '<strong>Simulated vs live.</strong> Simulated rows are the history replay. Live picks are written to the database before fight night and added once, never revised. Both are always labeled.';
   }
 }
 
@@ -488,7 +488,7 @@ function engBanner(rows, pendingCount, simDesc, liveDesc) {
   const live = rows.filter(r => r.source === 'live');
   const simFrom = sim.length ? sim.reduce((mn, r) => r.event_date < mn ? r.event_date : mn, '9999').slice(0, 4) : null;
   $('engBanner').innerHTML =
-    `<div class="rb sim"><div class="t">Simulated · walk-forward replay${simFrom ? ' · since ' + simFrom : ''}</div>` +
+    `<div class="rb sim"><div class="t">Simulated · history replay${simFrom ? ' · since ' + simFrom : ''}</div>` +
     `<div class="n">${sim.length.toLocaleString()} ${_face === 'picks' ? 'picks' : 'bets'}</div>` +
     `<div class="d">${simDesc}</div></div>` +
     `<div class="rb live"><div class="t">Live · locked before fight night</div>` +
@@ -502,12 +502,12 @@ function renderEnginePicks() {
 
   $('engNote').innerHTML =
     `<strong>${cfl.escapeHtml(cfl.ENGINE.accuracy.name)}</strong> — ${cfl.escapeHtml(cfl.ENGINE.accuracy.tagline)} ` +
-    `Every simulated row is out-of-sample by construction: the engine walks forward through history and only ever predicts fights it had not trained on. ` +
-    `Confidence tiers: <strong>Lock</strong> ≥ 65%, <strong>Pick</strong> ≥ 57%, else <strong>Lean</strong>.`;
+    `Every simulated pick is a fight the model never saw: we step it forward through history so it only ever calls fights it hadn't trained on yet. ` +
+    `How sure we are: <strong>Lock</strong> ≥ 65%, <strong>Pick</strong> ≥ 57%, else <strong>Lean</strong>.`;
 
   engBanner(graded, pending.length,
     'The engine re-run through history in strict date order, predicting each fight before "seeing" it. Graded against real results.',
-    'Written to the database before the event, insert-only, never edited. This record is just getting started — judge it as it grows.');
+    'Written to the database before the event, added once, never edited. This record is just getting started — judge it as it grows.');
 
   const n = graded.length;
   const hits = graded.filter(r => r.hit === true).length;
@@ -520,7 +520,7 @@ function renderEnginePicks() {
     { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
     { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'every fight gets a pick' },
     { v: lockAcc != null ? pct(lockAcc) : '—', cls: lockAcc >= 0.7 ? 'good' : '', l: 'Lock-tier accuracy', d: `${locks.length} picks at 65%+ confidence` },
-    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.24 ? 'good' : '', l: 'Brier score', d: 'lower is better · 0.250 = coin flip' },
+    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.24 ? 'good' : '', l: 'Score vs a coin flip', d: 'how close our percentages were to reality · 0.250 = coin flip, lower is better' },
   ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
 
   // ---- By year ----
@@ -542,7 +542,7 @@ function renderEnginePicks() {
   }).join('') || '<div class="ps">No graded picks yet.</div>';
 
   // ---- Calibration ----
-  $('engRightTitle').textContent = 'Calibration — did the probabilities tell the truth?';
+  $('engRightTitle').textContent = 'Do our percentages hold up?';
   $('engRightPs').textContent = 'When the model says 65%, those picks should win about 65% of the time. Gray bar = what the model predicted on average, green bar = what actually happened.';
   $('engCalLegend').style.display = '';
   const buckets = [[0.5, 0.55], [0.55, 0.6], [0.6, 0.65], [0.65, 0.7], [0.7, 1.01]];
@@ -584,8 +584,8 @@ function renderEnginePicks() {
   const live = graded.filter(r => r.source === 'live');
   $('lockedSplitNote').innerHTML =
     `<strong>Simulated vs live.</strong> ` +
-    `${(graded.length - live.length).toLocaleString()} graded picks are the walk-forward replay — the engine stepping through history in date order, only ever predicting fights it had not trained on. ` +
-    `${live.length.toLocaleString()} picks were locked live: written to the database before fight night, insert-only. ` +
+    `${(graded.length - live.length).toLocaleString()} graded picks are the history replay — the engine stepped through the calendar in order, only ever calling fights it hadn't trained on yet. ` +
+    `${live.length.toLocaleString()} picks were locked live: written to the database before fight night and added once, never revised. ` +
     `The live record is still small — treat the simulated numbers as a simulation, not a live betting history.`;
 }
 
@@ -595,12 +595,12 @@ function renderEngineEdges() {
 
   $('engNote').innerHTML =
     `<strong>${cfl.escapeHtml(cfl.ENGINE.roi.name)}</strong> — ${cfl.escapeHtml(cfl.ENGINE.roi.tagline)} ` +
-    `A bet is flagged only when the model's probability beats the vig-free market price by at least 4 points. Stakes are fractional-Kelly, capped at 2% of bankroll. ` +
-    `Simulated bets are graded at the closing consensus; live bets grade at their locked publish price.`;
+    `A bet is flagged only when the model's percentage beats the market's true price — the book's cut removed — by at least 4 points. We size each bet to the edge, capped at 2% of your bankroll. ` +
+    `Simulated bets are graded at the closing price. Live bets grade at the price we locked when we posted them.`;
 
   engBanner(graded, pending.length,
-    'Every bet the walk-forward replay would have flagged, priced at the real closing consensus. A simulation, labeled as one.',
-    'Flagged and priced before fight night, insert-only, never re-priced. This record is just getting started.');
+    'Every bet the history replay would have flagged, priced at the real closing price. A simulation, labeled as one.',
+    'Flagged and priced before fight night, added once, never re-priced. This record is just getting started.');
 
   const n = graded.length;
   const wins = graded.filter(r => r.won === true).length;
@@ -619,10 +619,10 @@ function renderEngineEdges() {
   const kRoi = kStaked ? kPnl / kStaked : null;
 
   $('engKpis').innerHTML = [
-    { v: flatRoi != null ? (flatRoi >= 0 ? '+' : '') + pct(flatRoi) : '—', cls: flatRoi > 0 ? 'good' : (flatRoi < 0 ? 'bad' : ''), l: 'ROI — flat $100 a bet', d: flat.length ? `${usd(flatPnlSum)} across ${flat.length} bets` : 'no graded bets yet' },
-    { v: kRoi != null ? (kRoi >= 0 ? '+' : '') + pct(kRoi) : '—', cls: kRoi > 0 ? 'good' : (kRoi < 0 ? 'bad' : ''), l: 'ROI — Kelly-staked', d: 'stake scaled to edge, 2% cap' },
+    { v: flatRoi != null ? (flatRoi >= 0 ? '+' : '') + pct(flatRoi) : '—', cls: flatRoi > 0 ? 'good' : (flatRoi < 0 ? 'bad' : ''), l: 'Profit per $100 bet', d: flat.length ? `${usd(flatPnlSum)} across ${flat.length} bets` : 'no graded bets yet' },
+    { v: kRoi != null ? (kRoi >= 0 ? '+' : '') + pct(kRoi) : '—', cls: kRoi > 0 ? 'good' : (kRoi < 0 ? 'bad' : ''), l: 'Profit — bet sized to edge', d: 'bigger edges get bigger bets · capped at 2%' },
     { v: `${wins}–${n - wins}`, cls: '', l: 'Record', d: n ? `${pct(wins / n, 1)} of flagged bets won` : 'no graded bets yet' },
-    { v: n ? pct(graded.reduce((s, r) => s + Number(r.edge), 0) / n, 1) : '—', cls: '', l: 'Average edge', d: 'model prob minus vig-free market prob' },
+    { v: n ? pct(graded.reduce((s, r) => s + Number(r.edge), 0) / n, 1) : '—', cls: '', l: 'Average edge', d: 'our percentage minus the market\'s true percentage' },
   ].map(k => `<div class="kpi"><div class="v ${k.cls}">${k.v}</div><div class="l">${k.l}</div><div class="d">${k.d}</div></div>`).join('');
 
   // ---- P&L by year ----
@@ -662,7 +662,7 @@ function renderEngineEdges() {
       <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
   }).join('');
   $('engRight').innerHTML = `<table>
-    <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
+    <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">Profit / loss</th><th class="num">Return %</th></tr></thead>
     <tbody>${roiRows}</tbody></table>`;
 
   // ---- Losing bets ----
@@ -690,8 +690,8 @@ function renderEngineEdges() {
   const live = graded.filter(r => r.source === 'live');
   $('lockedSplitNote').innerHTML =
     `<strong>Simulated vs live.</strong> ` +
-    `${(graded.length - live.length).toLocaleString()} graded bets are the walk-forward replay, priced at the real closing consensus. ` +
-    `${live.length.toLocaleString()} bets were locked live before fight night, insert-only, never re-priced. ` +
+    `${(graded.length - live.length).toLocaleString()} graded bets are the history replay, priced at the real closing price. ` +
+    `${live.length.toLocaleString()} bets were locked live before fight night and added once, never re-priced. ` +
     `The live record is still small — treat the simulated numbers as a simulation, not a live betting history.`;
 }
 
@@ -791,7 +791,7 @@ function renderAll() {
   $('windowNote').innerHTML =
     `<strong>${cfl.escapeHtml(cfl.modelName(_activeModel, m && m.name))}</strong> — stats shown only for fights from ` +
     `<strong>${cfl.escapeHtml(cfl.formatDate(start))}</strong> onward, after the model's training cutoff. ` +
-    `Picks dated before July 2026 are point-in-time simulations: the model re-run on fights it never trained on, priced at the opening line. ` +
+    `Picks dated before July 2026 are simulations: the model re-run on fights it never trained on, priced at the opening line. ` +
     `The live locked record starts July 2026. Widening the window would mix in training data and inflate the numbers, so we don't.`;
 
   // ---- Two-state record banner ----
@@ -800,10 +800,10 @@ function renderAll() {
   $('recBanner').innerHTML =
     `<div class="rb sim"><div class="t">Simulated · ${cfl.escapeHtml(cfl.formatDate(start))} – Jun 2026</div>` +
     `<div class="n">${simCount.toLocaleString()} picks</div>` +
-    `<div class="d">Every pick generated from point-in-time data the model never trained on, priced at the opening line. A simulation, labeled as one.</div></div>` +
+    `<div class="d">Every pick generated from data the model never trained on, priced at the opening line. A simulation, labeled as one.</div></div>` +
     `<div class="rb live"><div class="t">Live · Jul 2026 onward</div>` +
     `<div class="n">${liveRows.length.toLocaleString()} picks</div>` +
-    `<div class="d">Written to the database before the event, insert-only, never edited. This record is just getting started — judge it as it grows.</div></div>`;
+    `<div class="d">Written to the database before the event, added once, never edited. This record is just getting started — judge it as it grows.</div></div>`;
 
   // ---- KPIs ----
   const n = picks.length;
@@ -819,11 +819,11 @@ function renderAll() {
     { v: pct(acc), cls: acc >= 0.6 ? 'good' : '', l: 'Straight-up accuracy', d: `${hits} of ${n} picks hit` },
     { v: `${hits}–${n - hits}`, cls: '', l: 'Record', d: 'post-training-cutoff only' },
     { v: n.toLocaleString(), cls: '', l: 'Fights graded', d: `since ${start.slice(0, 4)}` },
-    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.22 ? 'good' : '', l: 'Brier score', d: 'lower is better · 0.250 = coin flip' },
+    { v: brier != null ? brier.toFixed(3) : '—', cls: brier != null && brier < 0.22 ? 'good' : '', l: 'Score vs a coin flip', d: 'how close our percentages were to reality · 0.250 = coin flip, lower is better' },
   ];
   if (isMoney) {
     kpis.push(
-      { v: betRoi != null ? (betRoi >= 0 ? '+' : '') + pct(betRoi) : '—', cls: betRoi > 0 ? 'good' : (betRoi < 0 ? 'bad' : ''), l: 'ROI on flagged bets', d: bets.length ? `${usd(betPnl)} on ${bets.length} bets, $100 flat` : 'no flagged bets in window' },
+      { v: betRoi != null ? (betRoi >= 0 ? '+' : '') + pct(betRoi) : '—', cls: betRoi > 0 ? 'good' : (betRoi < 0 ? 'bad' : ''), l: 'Return per $100 bet', d: bets.length ? `${usd(betPnl)} on ${bets.length} bets, $100 flat` : 'no flagged bets in window' },
       { v: usd(betPnl), cls: betPnl > 0 ? 'good' : (betPnl < 0 ? 'bad' : ''), l: 'Profit / loss', d: 'flat $100 at the opening line' },
     );
   }
@@ -879,8 +879,8 @@ function renderAll() {
 
   // ---- ROI by edge threshold (money model only) ----
   if (isMoney) {
-    $('roiTitle').textContent = 'Return on investment — flat $100 per pick';
-    $('roiPs').textContent = "What a $100 bet on every pick above each edge threshold would have returned at the opening line. Edge = model probability minus the market's implied probability.";
+    $('roiTitle').textContent = 'Profit per $100 bet';
+    $('roiPs').textContent = "What you'd have made or lost betting $100 on every pick above each edge, at the opening line. Edge is how much higher our percentage is than what the odds say.";
     const edged = oos.filter(r => r.edge != null && r.opener_american_odds != null);
     const thresholds = [0.03, 0.05, 0.07, 0.10];
     const roiRows = thresholds.map(t => {
@@ -896,10 +896,10 @@ function renderAll() {
         <td class="num"><span class="${roi >= 0 ? 'pos' : 'neg'}">${(roi >= 0 ? '+' : '') + pct(roi, 1)}</span></td></tr>`;
     }).join('');
     $('roiTable').innerHTML = `<table>
-      <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">P&amp;L</th><th class="num">ROI</th></tr></thead>
+      <thead><tr><th>Rule</th><th class="num">Bets</th><th class="num">Record</th><th class="num">Profit / loss</th><th class="num">Return %</th></tr></thead>
       <tbody>${roiRows}</tbody></table>`;
   } else {
-    $('roiTitle').textContent = 'Why there is no ROI here';
+    $('roiTitle').textContent = "Why there's no betting record here";
     $('roiPs').textContent = "Fight IQ doesn't price bets — it never sees odds. Its job is accuracy and honest probabilities, fully independent of the market. For the betting record, see the Value model tab.";
     $('roiTable').innerHTML = '';
   }
@@ -952,7 +952,7 @@ function renderAllModelsTable() {
     </tr>`;
   }).join('');
   $('allModels').innerHTML = `<table>
-    <thead><tr><th>Model</th><th class="num">Picks</th><th class="num">Accuracy</th><th class="num">Brier</th><th class="num">ROI (flagged bets)</th></tr></thead>
+    <thead><tr><th>Model</th><th class="num">Picks</th><th class="num">Accuracy</th><th class="num">vs coin flip</th><th class="num">Profit per $100</th></tr></thead>
     <tbody>${rows}</tbody></table>`;
 }
 

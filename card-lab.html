@@ -224,9 +224,9 @@
   <div class="controls">
     <span class="fl-label">Sort</span>
     <div class="seg" id="clSort">
-      <button data-sort="edge" class="active">Highest edge</button>
-      <button data-sort="conf">Confidence</button>
-      <button data-sort="dog">Dog value</button>
+      <button data-sort="edge" class="active">Biggest edge</button>
+      <button data-sort="conf">Most sure</button>
+      <button data-sort="dog">Best underdog price</button>
       <button data-sort="order">Card order</button>
     </div>
     <label class="chk"><input type="checkbox" id="clHideThin"> Hide thin leans (&lt;55%)</label>
@@ -251,7 +251,7 @@
     <div class="tx"><strong>Model probability does not guarantee profit.</strong> A 65% pick loses about one time in three, and a positive edge only pays off across many bets. Never bet money you can't lose, size bets to a small fixed share of your bankroll, and treat everything on this page as model output — not betting advice. Where the model has been wrong is documented in the <a href="track-record.html" style="color:var(--amber);font-weight:600">track record</a>.</div>
   </div>
 
-  <p class="fineprint">Market prices are a vig-removed consensus across sportsbooks and refresh throughout fight week. Edge = model probability minus market implied probability; small edges are noise. 21+ only.</p>
+  <p class="fineprint">Market prices are the sportsbooks' odds with the book's cut taken out, so they add up to 100%. They update all fight week. Edge is how much higher our number is than the book's — small edges are just noise. 21+ only.</p>
 
   <div class="cfl-email-capture" data-source="card-lab" data-headline="Get the next card's model update." data-sub="Every upcoming UFC card with the model's picks and edges, in your inbox before fight night." style="margin-top:24px"></div>
   <div class="cfl-funnel-cta" data-source="card-lab" data-headline="Free during beta — full card analysis unlocked." data-sub="Create a free account to see every factor, red flag, and edge on every fight. No card required."></div>
@@ -270,7 +270,7 @@
 <script src="_shared.js?v=rd7"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
-<script src="fight-insights.js?v=4"></script>
+<script src="fight-insights.js?v=5"></script>
 <script>
 cfl.renderNav('cardlab');
 cfl.renderFooter();
