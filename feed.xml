@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Thu, 06 Aug 2026 23:50:47 GMT</lastBuildDate>
+  <lastBuildDate>Fri, 07 Aug 2026 02:11:09 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Gamrot vs. Salkilld</title>
@@ -51,11 +51,11 @@
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Hooker vs. Parnasse card — Paris, Ile-de-France, France.</description>
   </item>
   <item>
-    <title>UFC Fight Night: Rodriguez vs. Silva</title>
+    <title>Noche UFC: Rodriguez vs. Silva</title>
     <link>https://cannonfightlab.com/event.html?id=4282</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4282</guid>
     <pubDate>Sat, 12 Sep 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Rodriguez vs. Silva card — Glendale, Arizona, USA.</description>
+    <description>Full model verdicts and edge factors for every fight on the Noche UFC: Rodriguez vs. Silva card — Glendale, Arizona, USA.</description>
   </item>
   <item>
     <title>UFC 331: Van vs. Pantoja 2</title>
