@@ -1,5 +1,5 @@
 {
-  "generated_at_utc": "2026-08-07T01:07:59.935929Z",
+  "generated_at_utc": "2026-08-07T01:25:15.295666Z",
   "source": "cfl_engine/data CSVs: fight_rounds, fights, fight_stats, fighters",
   "round_grain": "one row per (fight, round, fighter perspective)",
   "responses": {
@@ -8,7 +8,8 @@
     "td_any": "hurdle stage-1 target"
   },
   "offset": "log(round_minutes)  (5:00 rounds; finish round = leftover seconds)",
-  "point_in_time": "all rate covariates use only fights strictly before event_date, batched by date; shrunk toward the expanding league mean (pseudo-exposure 15.0 minutes)",
+  "min_year_emitted": 2010,
+  "point_in_time": "all rate covariates use only fights strictly before event_date, batched by date; shrunk toward the expanding league mean (pseudo-exposure 15.0 minutes). History accumulates over ALL fights; only rows on/after 2010 are emitted.",
   "covariate_discipline": "opponent 'def' rates are strikes/TDs ALLOWED per minute rebuilt from fight_rounds; career str_def/td_def fields are never used",
   "count_covariate_columns": [
     "own_sig_off_pm",
@@ -21,14 +22,14 @@
     "own_exp_min",
     "opp_exp_min"
   ],
-  "n_round_rows": 41262,
-  "n_fights": 8757,
-  "sig_mean": 15.717197421356211,
-  "sig_var": 143.97239467559697,
-  "td_any_rate": 0.315738451844312,
-  "finish_rate": 0.5295192417494575,
+  "n_round_rows": 36352,
+  "n_fights": 7513,
+  "sig_mean": 16.495873679577464,
+  "sig_var": 147.9244417224268,
+  "td_any_rate": 0.3073008362676056,
+  "finish_rate": 0.5041927325968322,
   "date_range": [
-    "1994-03-11",
+    "2010-01-02",
     "2026-07-18"
   ]
 }

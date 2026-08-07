@@ -45,6 +45,9 @@ ENGINE_DATA = DATA
 ROUND_SECS = 300.0
 SHRINK_MIN = 15.0   # pseudo-exposure (minutes) for rate shrinkage ~ one fight
 EPS = 1e-9
+MIN_YEAR = 2010     # modern-era cutoff (cfl-prop-model rule): EMIT rows for fights
+                    # on/after this year; PIT history still accumulates over ALL
+                    # fights so veterans are never treated as debutants.
 
 
 def _load_raw():
@@ -130,6 +133,9 @@ def build_panels():
             rf = int(rounds_fought[fid])
             fsec = float(row.fight_seconds) if pd.notna(row.fight_seconds) else ROUND_SECS * rf
             sched = int(row.n_rounds_sched) if pd.notna(row.n_rounds_sched) else 3
+            if edate.year < MIN_YEAR:        # fold into history but do not emit
+                pending.append(fid)
+                continue
             finished = _is_finish(row.method, rf, sched)
 
             def feats(fid_self, fid_opp):
@@ -281,10 +287,12 @@ def write_artifacts(outdir=None):
         "responses": {"sig_landed": "NB2 target", "td_landed": "hurdle target",
                       "td_any": "hurdle stage-1 target"},
         "offset": "log(round_minutes)  (5:00 rounds; finish round = leftover seconds)",
+        "min_year_emitted": MIN_YEAR,
         "point_in_time": ("all rate covariates use only fights strictly before "
                           "event_date, batched by date; shrunk toward the "
                           "expanding league mean (pseudo-exposure "
-                          f"{SHRINK_MIN} minutes)"),
+                          f"{SHRINK_MIN} minutes). History accumulates over ALL "
+                          f"fights; only rows on/after {MIN_YEAR} are emitted."),
         "covariate_discipline": ("opponent 'def' rates are strikes/TDs ALLOWED per "
                                  "minute rebuilt from fight_rounds; career "
                                  "str_def/td_def fields are never used"),
