@@ -312,6 +312,8 @@
 #home .mh-v { font-family: var(--font-display); font-weight: 700; font-size: 12px; color: var(--red); text-transform: uppercase; }
 #home .mh-name { font-size: 12.5px; font-weight: 600; color: var(--text); margin-left: 6px; }
 #home .mh-desc { font-size: 12px; color: var(--text-3); line-height: 1.45; margin-top: 3px; }
+#home .mh-hint { font-size: 12px; color: var(--text-3); margin-top: 12px; }
+#home .mh-hint strong { color: var(--text-2); font-weight: 600; }
 #home .mh-weights { margin-top: 8px; }
 #home .mhw-title { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
 #home .mhw-row { display: grid; grid-template-columns: 170px 1fr 34px; align-items: center; gap: 8px; padding: 2px 0; }
@@ -968,11 +970,16 @@ function updateModelDef() {
 }
 
 function renderModelExplanations(modelNames) {
+  if (modelNames) _hpModelNames = modelNames;
   const body = document.getElementById('modelHowBody');
   if (!body) return;
-  const items = [{ mv: 'engine', nm: cfl.ENGINE.accuracy.name }].concat(
-    HP_VISIBLE_MODELS.map(mv => ({ mv, nm: cfl.modelName(mv, modelNames && modelNames[mv]) }))
-  );
+  // Engine-first: by default this panel is about the one model we run. The
+  // numbered models (and their weight charts) only appear once the visitor has
+  // opened "Compare other models" on the picker — same signal, same place.
+  const items = [{ mv: 'engine', nm: cfl.ENGINE.accuracy.name }];
+  if (_hpCompareOpen) {
+    HP_VISIBLE_MODELS.forEach(mv => items.push({ mv, nm: cfl.modelName(mv, _hpModelNames && _hpModelNames[mv]) }));
+  }
   body.innerHTML = items.map(({ mv, nm }) => {
     const d = MODEL_EXPLAIN[mv] || cfl.modelDef(mv) || '';
     if (!d && !nm) return '';
@@ -980,7 +987,8 @@ function renderModelExplanations(modelNames) {
       `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
       `<div class="mh-desc">${cfl.escapeHtml(d)}</div>` +
       `<div class="mh-weights" data-model="${mv}"></div></div>`;
-  }).join('');
+  }).join('') +
+    (_hpCompareOpen ? '' : '<p class="mh-hint">Open <strong>Compare other models</strong> above to see the six earlier models and how they weigh their inputs.</p>');
   renderModelWeightGraphs();
 }
 
@@ -1035,6 +1043,7 @@ function wireControls() {
       _hpCompareOpen = !_hpCompareOpen;
       if (!_hpCompareOpen) _hpModelMode = 'engine';   // collapsing snaps back to the engine
       populateModelSelect();
+      renderModelExplanations();   // keep "How each model works" in step with the toggle
       renderLeanCards();
     });
   }
