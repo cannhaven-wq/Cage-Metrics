@@ -72,6 +72,8 @@
 #cardlab .chk input { accent-color: var(--red); width: 15px; height: 15px; cursor: pointer; }
 #cardlab .model-filter { display: inline-flex; align-items: center; gap: 8px; margin-left: auto; }
 #cardlab .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; font: 600 12px var(--font-display); cursor: pointer; }
+#cardlab .compare-toggle { background: transparent; border: 0; padding: 4px 2px; font: 600 12px var(--font-display); color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color .15s; }
+#cardlab .compare-toggle:hover { color: var(--red); }
 
 /* Fight rows */
 #cardlab .rows { display: flex; flex-direction: column; gap: 10px; }
@@ -233,6 +235,7 @@
     <div class="model-filter">
       <span class="fl-label">Model</span>
       <select id="clModelSelect"><option value="engine">Fight IQ — the engine</option></select>
+      <button type="button" id="clCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
     </div>
   </div>
 
@@ -291,6 +294,7 @@ let _baseRates = null;
 let _sortKey = 'edge';
 let _hideThin = false;
 let _modelMode = 'engine';
+let _compareOpen = false;   // legacy models stay hidden until the user asks
 let _openFid = null;
 let _signedIn = false;
 
@@ -461,28 +465,50 @@ function pickForFight(fightPicks, a, b) {
   return { picked: b, opponent: a, pct: (bSum / bVotes) * 100, votes: bVotes, total: aVotes + bVotes };
 }
 
+// The engine is the one pick we stand behind, so a normal visitor only sees
+// it. The numbered models (v1–v6) + consensus hide behind "Compare other
+// models" for people who actually want to weigh methods against each other.
+let _modelNames = null;
 function populateModelSelect(modelNames) {
+  if (modelNames) _modelNames = modelNames;
   const sel = $('clModelSelect');
+  const toggle = $('clCompareToggle');
   const picksByFight = (_state && _state.picksByFight) || {};
   const hasRows = mv => Object.values(picksByFight).some(slot => slot[mv]);
-  const opts = [];
   const engineHasRows = hasRows('engine');
-  if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
-  CL_MODELS.forEach(mv => {
-    if (!hasRows(mv)) return;   // don't list a model that scored nothing on this card
-    const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ')')}</option>`);
-  });
-  // Consensus needs at least two models that actually scored fights here.
   const scored = CL_MODELS.filter(hasRows);
   const canConsensus = scored.length > 1;
-  if (canConsensus) opts.push('<option value="consensus">Consensus — all models</option>');
-  sel.innerHTML = opts.join('');
   const firstScored = scored[0] || 'v6';
+
+  // If the engine somehow didn't score this card, fall open so there's still
+  // a pick to show instead of an empty dropdown.
+  if (!engineHasRows) _compareOpen = true;
+  const showCompare = _compareOpen;
+
+  const opts = [];
+  if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
+  if (showCompare) {
+    scored.forEach(mv => {
+      const nm = cfl.modelName(mv, _modelNames && _modelNames[mv]);
+      opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ')')}</option>`);
+    });
+    if (canConsensus) opts.push('<option value="consensus">Consensus — all models</option>');
+  }
+  sel.innerHTML = opts.join('');
+
+  // Keep _modelMode pointing at something the list actually contains.
   if (_modelMode === 'engine' && !engineHasRows) _modelMode = firstScored;
-  if (_modelMode === 'consensus' && !canConsensus) _modelMode = firstScored;
+  if (!showCompare && _modelMode !== 'engine') _modelMode = engineHasRows ? 'engine' : firstScored;
+  if (_modelMode === 'consensus' && !canConsensus) _modelMode = engineHasRows ? 'engine' : firstScored;
   if (_modelMode !== 'engine' && _modelMode !== 'consensus' && !hasRows(_modelMode)) _modelMode = engineHasRows ? 'engine' : firstScored;
   sel.value = _modelMode;
+
+  // Only offer the toggle when there's a comparison to make (engine + ≥1 other).
+  if (toggle) {
+    toggle.hidden = !(engineHasRows && scored.length > 0);
+    toggle.textContent = showCompare ? 'Hide other models ⌃' : 'Compare other models ⌄';
+    toggle.setAttribute('aria-expanded', showCompare ? 'true' : 'false');
+  }
 }
 
 // ---- Build per-fight view models ----
@@ -689,6 +715,12 @@ $('clSort').addEventListener('click', e => {
 });
 $('clHideThin').addEventListener('change', e => { _hideThin = e.target.checked; render(); });
 $('clModelSelect').addEventListener('change', e => { _modelMode = e.target.value; render(); });
+$('clCompareToggle').addEventListener('click', () => {
+  _compareOpen = !_compareOpen;
+  if (!_compareOpen) _modelMode = 'engine';   // collapsing snaps back to the engine
+  populateModelSelect();
+  render();
+});
 
 // ---- Auth state: unlock details + sticky CTA ----
 const STICKY_KEY = 'cfl_cardlab_sticky_dismissed_v1';
