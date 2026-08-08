@@ -299,6 +299,9 @@
 #home .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 10px; font: 600 12.5px var(--font-display); cursor: pointer; }
 #home .compare-toggle { background: transparent; border: 0; padding: 4px 2px; font: 600 12px var(--font-display); color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color .15s; }
 #home .compare-toggle:hover { color: var(--red); }
+#home .model-def { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--text-2); max-width: 720px; }
+#home .model-def:empty { display: none; }
+#home .model-def strong { color: var(--text); font-weight: 700; }
 #home .model-how { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 #home .model-how > summary { list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
 #home .model-how > summary::-webkit-details-marker { display: none; }
@@ -399,6 +402,7 @@
         <button type="button" id="hpCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
       </div>
     </div>
+    <p class="model-def" id="hpModelDef"></p>
     <div class="fights" id="fightsList"></div>
     <div class="card-foot">
       <a href="card-lab.html" class="btn btn-primary">Work this card in the Card Lab →</a>
@@ -474,7 +478,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd7"></script>
+<script src="_shared.js?v=rd8"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="fight-insights.js?v=5"></script>
@@ -697,13 +701,11 @@ let _hpSortKey = 'order';
 let _hpModelMode = 'engine';
 let _hpCompareOpen = false;   // legacy models stay hidden until the user asks
 
-// Plain-English explanation of the engine and the retired models. Older
-// experiments (v1, v2, v4, v5) never appear here — v5's number was the
-// market's own, the rest lose to just picking the favorite.
+// Longer-form explanation for the "How each model works" panel. The engine
+// gets a richer blurb here; every other model falls back to its shared
+// one-line definition (cfl.modelDef) so copy lives in exactly one place.
 const MODEL_EXPLAIN = {
   engine: 'The engine calls every fight from fighter history, fight stats, and physical attributes — height, reach, stance, age — without ever seeing a betting line. It lands about 61.4% straight-up on never-seen fights, with its highest-confidence Locks hitting about 74.7%. Its Value face then flags the fights where its number disagrees with the market price by 4+ points.',
-  v3: 'Fight IQ v3 predicts winners from fighter data alone — its record is on the track-record page.',
-  v6: 'Value v6 hunts mispriced opening lines — its record is on the track-record page.',
 };
 
 // Per-model input-weight graphs — real feature importances exported from each
@@ -950,6 +952,19 @@ function populateModelSelect(modelNames) {
     toggle.textContent = showCompare ? 'Hide other models ⌃' : 'Compare other models ⌄';
     toggle.setAttribute('aria-expanded', showCompare ? 'true' : 'false');
   }
+  updateModelDef();
+}
+
+// One-line plain-English definition of whichever model is selected, so a
+// visitor always knows what they're looking at. Names the model, then defines it.
+function updateModelDef() {
+  const el = document.getElementById('hpModelDef');
+  if (!el) return;
+  const id = _hpModelMode;
+  const label = id === 'engine' ? (cfl.ENGINE.accuracy.name + ' — the engine')
+    : id === 'consensus' ? 'Consensus'
+    : cfl.modelName(id) + ' (' + id + ')';
+  el.innerHTML = '<strong>' + cfl.escapeHtml(label) + ':</strong> ' + cfl.escapeHtml(cfl.modelDef(id));
 }
 
 function renderModelExplanations(modelNames) {
@@ -959,7 +974,7 @@ function renderModelExplanations(modelNames) {
     HP_VISIBLE_MODELS.map(mv => ({ mv, nm: cfl.modelName(mv, modelNames && modelNames[mv]) }))
   );
   body.innerHTML = items.map(({ mv, nm }) => {
-    const d = MODEL_EXPLAIN[mv] || '';
+    const d = MODEL_EXPLAIN[mv] || cfl.modelDef(mv) || '';
     if (!d && !nm) return '';
     return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
       `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
@@ -1011,7 +1026,7 @@ function wireControls() {
   const sel = document.getElementById('hpModelSelect');
   if (sel && !sel._wired) {
     sel._wired = true;
-    sel.addEventListener('change', () => { _hpModelMode = sel.value; renderLeanCards(); });
+    sel.addEventListener('change', () => { _hpModelMode = sel.value; updateModelDef(); renderLeanCards(); });
   }
   const cmp = document.getElementById('hpCompareToggle');
   if (cmp && !cmp._wired) {

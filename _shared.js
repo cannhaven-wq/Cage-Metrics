@@ -91,6 +91,16 @@
     return (cfl.MODELS[id] && cfl.MODELS[id].name) || dbName || id;
   };
 
+  // One plain-English definition per model, reused by every picker and the
+  // "How each model works" panel. 'engine' and 'consensus' aren't in
+  // cfl.MODELS, so they're handled explicitly. Single source of truth — edit
+  // the tagline in cfl.MODELS / cfl.ENGINE and it updates everywhere.
+  cfl.modelDef = function (id) {
+    if (id === 'engine') return cfl.ENGINE.accuracy.tagline;
+    if (id === 'consensus') return 'The average call across every model shown — a fight only counts when the models agree. A useful gut-check, but only as sound as the models feeding it.';
+    return (cfl.MODELS[id] && cfl.MODELS[id].tagline) || '';
+  };
+
   // --------- Engine (July 2026 "one engine" rebuild) ---------
   // The engine is one brain with two product faces. It publishes to the
   // model_picks / model_edges tables (read via the graded views below), NOT

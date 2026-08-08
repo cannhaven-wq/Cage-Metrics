@@ -74,6 +74,9 @@
 #cardlab .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; font: 600 12px var(--font-display); cursor: pointer; }
 #cardlab .compare-toggle { background: transparent; border: 0; padding: 4px 2px; font: 600 12px var(--font-display); color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color .15s; }
 #cardlab .compare-toggle:hover { color: var(--red); }
+#cardlab .model-def { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--text-2); max-width: 720px; }
+#cardlab .model-def:empty { display: none; }
+#cardlab .model-def strong { color: var(--text); font-weight: 700; }
 
 /* Fight rows */
 #cardlab .rows { display: flex; flex-direction: column; gap: 10px; }
@@ -238,6 +241,7 @@
       <button type="button" id="clCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
     </div>
   </div>
+  <p class="model-def" id="clModelDef"></p>
 
   <div class="rows" id="clRows">
     <div class="skel-row skel"></div><div class="skel-row skel"></div><div class="skel-row skel"></div>
@@ -270,7 +274,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd7"></script>
+<script src="_shared.js?v=rd8"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=steps1"></script>
 <script src="fight-insights.js?v=5"></script>
@@ -509,6 +513,19 @@ function populateModelSelect(modelNames) {
     toggle.textContent = showCompare ? 'Hide other models ⌃' : 'Compare other models ⌄';
     toggle.setAttribute('aria-expanded', showCompare ? 'true' : 'false');
   }
+  updateModelDef();
+}
+
+// One-line plain-English definition of whichever model is selected, so the
+// user always knows what they're looking at. Names the model, then defines it.
+function updateModelDef() {
+  const el = $('clModelDef');
+  if (!el) return;
+  const id = _modelMode;
+  const label = id === 'engine' ? (cfl.ENGINE.accuracy.name + ' — the engine')
+    : id === 'consensus' ? 'Consensus'
+    : cfl.modelName(id) + ' (' + id + ')';
+  el.innerHTML = '<strong>' + cfl.escapeHtml(label) + ':</strong> ' + cfl.escapeHtml(cfl.modelDef(id));
 }
 
 // ---- Build per-fight view models ----
@@ -714,7 +731,7 @@ $('clSort').addEventListener('click', e => {
   render();
 });
 $('clHideThin').addEventListener('change', e => { _hideThin = e.target.checked; render(); });
-$('clModelSelect').addEventListener('change', e => { _modelMode = e.target.value; render(); });
+$('clModelSelect').addEventListener('change', e => { _modelMode = e.target.value; updateModelDef(); render(); });
 $('clCompareToggle').addEventListener('click', () => {
   _compareOpen = !_compareOpen;
   if (!_compareOpen) _modelMode = 'engine';   // collapsing snaps back to the engine
