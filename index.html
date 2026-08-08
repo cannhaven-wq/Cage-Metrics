@@ -698,8 +698,8 @@ let _hpModelMode = 'engine';
 // market's own, the rest lose to just picking the favorite.
 const MODEL_EXPLAIN = {
   engine: 'The engine calls every fight from fighter history, fight stats, and physical attributes — height, reach, stance, age — without ever seeing a betting line. It lands about 61.4% straight-up on never-seen fights, with its highest-confidence Locks hitting about 74.7%. Its Value face then flags the fights where its number disagrees with the market price by 4+ points.',
-  v3: 'Retired July 2026. Fight IQ v3 predicted winners from fighter data alone — its archived record is preserved on the track-record page.',
-  v6: 'Retired July 2026. Value v6 hunted mispriced opening lines — its archived record is preserved on the track-record page.',
+  v3: 'Fight IQ v3 predicts winners from fighter data alone — its record is on the track-record page.',
+  v6: 'Value v6 hunts mispriced opening lines — its record is on the track-record page.',
 };
 
 // Per-model input-weight graphs — real feature importances exported from each
@@ -915,10 +915,10 @@ function populateModelSelect(modelNames) {
   const engineHasRows = Object.values(picksByFight).some(slot => slot.engine);
   const opts = [];
   if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
-  opts.push('<option value="consensus">Consensus (retired models)</option>');
+  opts.push('<option value="consensus">Consensus (all models)</option>');
   HP_VISIBLE_MODELS.forEach(mv => {
     const nm = modelNames && modelNames[mv];
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm) + ' (retired)')}</option>`);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
   });
   sel.innerHTML = opts.join('');
   if (_hpModelMode === 'engine' && !engineHasRows) _hpModelMode = 'consensus';
