@@ -1,0 +1,63 @@
+name: Engine — publish live picks
+
+# Keeps the engine's live coverage fresh. predict_upcoming.py publishes one
+# calibrated pick per UPCOMING fight (+ flagged value edges) as INSERT-ONLY
+# rows: a fight already locked is never re-priced, so re-running only fills in
+# newly-booked fights and cards that have entered the 12-day publish window.
+#
+# Before this existed the scorer only ran manually (last run 2026-07-18), so
+# cards that grew after that date showed "Not scored yet" for every fight the
+# main event aside. This runs it daily so that can't recur.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily at 09:00 UTC — after the odds cron + event scraper have refreshed.
+    - cron: '0 9 * * *'
+  # Re-publish immediately when the engine code changes.
+  push:
+    branches: [main]
+    paths:
+      - 'cfl_engine/**'
+      - '.github/workflows/engine-serve.yml'
+
+# Never run two publishes at once — both write the same model_picks table.
+concurrency:
+  group: engine-serve
+  cancel-in-progress: false
+
+jobs:
+  serve:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # The project URL is the public anon endpoint (also committed in _shared.js).
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      # predict_upcoming checks SUPABASE_SECRET_KEY first; map the repo's
+      # existing service-role secret (legacy JWT) onto it.
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: cfl_engine/requirements.txt
+
+      - name: Install deps
+        run: pip install -q -r cfl_engine/requirements.txt
+
+      - name: Guard — service key present
+        run: |
+          if [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set on this repo — add it (Settings → Secrets → Actions) or the publish can't authenticate."
+            exit 1
+          fi
+
+      - name: Refresh completed-history export
+        run: PYTHONPATH=cfl_engine python cfl_engine/export_data.py
+
+      - name: Publish live picks + edges
+        run: PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --execute
