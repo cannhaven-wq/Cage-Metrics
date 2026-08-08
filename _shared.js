@@ -31,10 +31,10 @@
   const cfl = {};
 
   // --------- Model registry (July 2026 three-product restructure) ---------
-  // The only models the public site shows. v1/v2/v4 are retired (they don't
-  // beat the closing favorite); v5 is retired because it was trained on the
-  // closing line — its accuracy is the market's own, and it cannot produce a
-  // pick before a line exists. Full story: edges.html July 2026 update.
+  // The models the public site shows. All six are live. Caveats: v1/v2 don't
+  // beat the closing favorite, and v5 was trained with the market line — its
+  // accuracy is partly the market's own and it can't produce a pick before a
+  // line exists. Each model's tagline states its limit. Story: edges.html.
   //
   // trainEnd is duplicated here (not just in model_versions) on purpose: it
   // is the client-side floor below which a model's graded stats must never be
@@ -56,8 +56,36 @@
       trainEnd: '2022-12-31',
       money: false,
     },
+    v5: {
+      slot: 'accuracy',
+      name: 'Accuracy v5 — market + tape',
+      tagline: 'XGBoost on 44 features including the Vegas line. Its 70% is tied to the market, so it reads best as a benchmark, not a live pre-line pick.',
+      trainEnd: '2023-12-31',
+      money: false,
+    },
+    v4: {
+      slot: 'accuracy',
+      name: 'Stacker — models on models',
+      tagline: 'Blends v1/v2/v3 into one number, plus the opener. Sharper on a smaller, higher-conviction pick set.',
+      trainEnd: '2024-12-31',
+      money: false,
+    },
+    v2: {
+      slot: 'accuracy',
+      name: 'Elo — opponent quality',
+      tagline: "Baseline tape stats plus a fighter Elo, so beating a contender counts more than beating a debutant.",
+      trainEnd: '2022-12-31',
+      money: false,
+    },
+    v1: {
+      slot: 'accuracy',
+      name: 'Baseline — tape only',
+      tagline: 'The reference model: rolling fighter stats, no opponent-quality signal. Shows what every later feature actually buys.',
+      trainEnd: '2022-12-31',
+      money: false,
+    },
   };
-  cfl.PUBLIC_MODELS = ['v6', 'v3'];
+  cfl.PUBLIC_MODELS = ['v6', 'v3', 'v5', 'v4', 'v2', 'v1'];
 
   cfl.modelName = function (id, dbName) {
     return (cfl.MODELS[id] && cfl.MODELS[id].name) || dbName || id;

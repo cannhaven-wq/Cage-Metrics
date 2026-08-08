@@ -283,7 +283,7 @@ cfl.renderFooter();
 // picksByFight) is the default; the retired v3/v6 rows remain selectable for
 // continuity while their archived records live on the track-record page.
 // =============================================================================
-const CL_MODELS = cfl.PUBLIC_MODELS;   // ['v6','v3'] — retired, kept selectable
+const CL_MODELS = cfl.PUBLIC_MODELS;   // all public models, selectable per fight
 let _state = null;        // { event, fights, fighterMap, picksByFight, modelNames }
 let _cardioMap = null;
 let _oddsMap = null;
@@ -469,16 +469,19 @@ function populateModelSelect(modelNames) {
   const engineHasRows = hasRows('engine');
   if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
   CL_MODELS.forEach(mv => {
+    if (!hasRows(mv)) return;   // don't list a model that scored nothing on this card
     const nm = cfl.modelName(mv, modelNames && modelNames[mv]);
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ' — retired)')}</option>`);
+    opts.push(`<option value="${mv}">${cfl.escapeHtml(nm + ' (' + mv + ')')}</option>`);
   });
-  // "Both models" only makes sense when both retired models actually scored
-  // fights on this card.
-  const bothHaveRows = CL_MODELS.length > 1 && CL_MODELS.every(hasRows);
-  if (bothHaveRows) opts.push('<option value="consensus">Both retired models</option>');
+  // Consensus needs at least two models that actually scored fights here.
+  const scored = CL_MODELS.filter(hasRows);
+  const canConsensus = scored.length > 1;
+  if (canConsensus) opts.push('<option value="consensus">Consensus — all models</option>');
   sel.innerHTML = opts.join('');
-  if (_modelMode === 'engine' && !engineHasRows) _modelMode = 'v6';
-  if (_modelMode === 'consensus' && !bothHaveRows) _modelMode = 'v6';
+  const firstScored = scored[0] || 'v6';
+  if (_modelMode === 'engine' && !engineHasRows) _modelMode = firstScored;
+  if (_modelMode === 'consensus' && !canConsensus) _modelMode = firstScored;
+  if (_modelMode !== 'engine' && _modelMode !== 'consensus' && !hasRows(_modelMode)) _modelMode = engineHasRows ? 'engine' : firstScored;
   sel.value = _modelMode;
 }
 
