@@ -297,6 +297,8 @@
 #home .model-filter { display: inline-flex; align-items: center; gap: 8px; }
 #home .model-filter label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
 #home .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 10px; font: 600 12.5px var(--font-display); cursor: pointer; }
+#home .compare-toggle { background: transparent; border: 0; padding: 4px 2px; font: 600 12px var(--font-display); color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color .15s; }
+#home .compare-toggle:hover { color: var(--red); }
 #home .model-how { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
 #home .model-how > summary { list-style: none; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-2); display: flex; align-items: center; gap: 6px; }
 #home .model-how > summary::-webkit-details-marker { display: none; }
@@ -393,7 +395,8 @@
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
       <div class="model-filter" style="margin-left:auto">
         <label for="hpModelSelect">Model</label>
-        <select id="hpModelSelect"><option value="consensus">Consensus (both models)</option></select>
+        <select id="hpModelSelect"><option value="engine">Fight IQ — the engine</option></select>
+        <button type="button" id="hpCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
       </div>
     </div>
     <div class="fights" id="fightsList"></div>
@@ -692,6 +695,7 @@ let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
 let _hpSortKey = 'order';
 let _hpModelMode = 'engine';
+let _hpCompareOpen = false;   // legacy models stay hidden until the user asks
 
 // Plain-English explanation of the engine and the retired models. Older
 // experiments (v1, v2, v4, v5) never appear here — v5's number was the
@@ -908,21 +912,44 @@ function renderWeights(a, b, fight, pick) {
 
 function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }
 
+// The engine is the one pick we stand behind, so it's all a normal visitor
+// sees. Consensus + the numbered models (v1–v6) hide behind "Compare other
+// models" for people who actually want to weigh methods against each other.
+let _hpModelNames = null;
 function populateModelSelect(modelNames) {
+  if (modelNames) _hpModelNames = modelNames;
   const sel = document.getElementById('hpModelSelect');
   if (!sel) return;
+  const toggle = document.getElementById('hpCompareToggle');
   const picksByFight = (_leanState && _leanState.picksByFight) || {};
   const engineHasRows = Object.values(picksByFight).some(slot => slot.engine);
+
+  // If the engine somehow didn't score this card, fall open so there's still
+  // a pick to show instead of an empty dropdown.
+  if (!engineHasRows) _hpCompareOpen = true;
+  const showCompare = _hpCompareOpen;
+
   const opts = [];
   if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
-  opts.push('<option value="consensus">Consensus (all models)</option>');
-  HP_VISIBLE_MODELS.forEach(mv => {
-    const nm = modelNames && modelNames[mv];
-    opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
-  });
+  if (showCompare) {
+    opts.push('<option value="consensus">Consensus (all models)</option>');
+    HP_VISIBLE_MODELS.forEach(mv => {
+      const nm = _hpModelNames && _hpModelNames[mv];
+      opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
+    });
+  }
   sel.innerHTML = opts.join('');
+
+  // Keep _hpModelMode valid for whatever the list now contains.
   if (_hpModelMode === 'engine' && !engineHasRows) _hpModelMode = 'consensus';
+  if (!showCompare && _hpModelMode !== 'engine') _hpModelMode = engineHasRows ? 'engine' : 'consensus';
   sel.value = _hpModelMode;
+
+  if (toggle) {
+    toggle.hidden = !engineHasRows;   // nothing to collapse to if the engine isn't here
+    toggle.textContent = showCompare ? 'Hide other models ⌃' : 'Compare other models ⌄';
+    toggle.setAttribute('aria-expanded', showCompare ? 'true' : 'false');
+  }
 }
 
 function renderModelExplanations(modelNames) {
@@ -985,6 +1012,16 @@ function wireControls() {
   if (sel && !sel._wired) {
     sel._wired = true;
     sel.addEventListener('change', () => { _hpModelMode = sel.value; renderLeanCards(); });
+  }
+  const cmp = document.getElementById('hpCompareToggle');
+  if (cmp && !cmp._wired) {
+    cmp._wired = true;
+    cmp.addEventListener('click', () => {
+      _hpCompareOpen = !_hpCompareOpen;
+      if (!_hpCompareOpen) _hpModelMode = 'engine';   // collapsing snaps back to the engine
+      populateModelSelect();
+      renderLeanCards();
+    });
   }
 }
 
