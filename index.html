@@ -380,7 +380,7 @@
       <div class="panel-head"><span class="t">Top edge · next card</span><span class="v" id="heroEdgeWhen"></span></div>
       <div id="heroEdge"><div class="models-loading">Scanning the next card for value…</div></div>
       <div class="panel-foot" id="heroEdgeFoot">Edge is how much higher our number is than what today's odds say.</div>
-      <details class="model-how" id="modelHow"><summary>How each model works</summary><div id="modelHowBody"></div></details>
+      <details class="model-how" id="modelHow"><summary>How the engine works</summary><div id="modelHowBody"></div></details>
     </aside>
   </section>
 
@@ -973,22 +973,17 @@ function renderModelExplanations(modelNames) {
   if (modelNames) _hpModelNames = modelNames;
   const body = document.getElementById('modelHowBody');
   if (!body) return;
-  // Engine-first: by default this panel is about the one model we run. The
-  // numbered models (and their weight charts) only appear once the visitor has
-  // opened "Compare other models" on the picker — same signal, same place.
-  const items = [{ mv: 'engine', nm: cfl.ENGINE.accuracy.name }];
-  if (_hpCompareOpen) {
-    HP_VISIBLE_MODELS.forEach(mv => items.push({ mv, nm: cfl.modelName(mv, _hpModelNames && _hpModelNames[mv]) }));
-  }
-  body.innerHTML = items.map(({ mv, nm }) => {
-    const d = MODEL_EXPLAIN[mv] || cfl.modelDef(mv) || '';
-    if (!d && !nm) return '';
-    return `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
-      `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
-      `<div class="mh-desc">${cfl.escapeHtml(d)}</div>` +
-      `<div class="mh-weights" data-model="${mv}"></div></div>`;
-  }).join('') +
-    (_hpCompareOpen ? '' : '<p class="mh-hint">Open <strong>Compare other models</strong> above to see the six earlier models and how they weigh their inputs.</p>');
+  // Hero panel is a narrow rail — it holds ONLY the engine (the one model we
+  // run). The numbered models are defined one-by-one under the card picker via
+  // the definition line; dumping all seven with weight charts here blew the
+  // hero into a 2,000px column. Keep this compact and engine-only.
+  const mv = 'engine', nm = cfl.ENGINE.accuracy.name;
+  const d = MODEL_EXPLAIN[mv] || cfl.modelDef(mv) || '';
+  body.innerHTML =
+    `<div class="mh-item"><span class="mh-v">${cfl.escapeHtml(mv.toUpperCase())}</span>` +
+    `<span class="mh-name">${cfl.escapeHtml(nm)}</span>` +
+    `<div class="mh-desc">${cfl.escapeHtml(d)}</div>` +
+    `<div class="mh-weights" data-model="${mv}"></div></div>`;
   renderModelWeightGraphs();
 }
 
@@ -1043,7 +1038,6 @@ function wireControls() {
       _hpCompareOpen = !_hpCompareOpen;
       if (!_hpCompareOpen) _hpModelMode = 'engine';   // collapsing snaps back to the engine
       populateModelSelect();
-      renderModelExplanations();   // keep "How each model works" in step with the toggle
       renderLeanCards();
     });
   }
