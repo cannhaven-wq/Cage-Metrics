@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prop Projections — Cannon Fight Lab</title>
+<meta name="description" content="CFL's prop model: significant-strike and takedown projections for every live fight on tonight's UFC card.">
+<!--
+  props.html — standalone prop-projection board.
+  STATUS: static snapshot of one card (data embedded in the FIGHTS array below).
+  Generated from cfl_engine/predict_props_upcoming.py (out_real/props_preview.csv).
+  Next step to make it self-updating: publish projections to a Supabase table and
+  read them here live (mirroring card-lab.html), plus wire in nav via _shared.js.
+  Lives on branch council/props-output-layer — not merged to main, so not live yet.
+-->
+<style>
+  :root{
+    --ground:#0e1116; --card:#161b22; --card2:#1c222b; --line:#28303b;
+    --ink:#e6eaf0; --muted:#7d8896; --faint:#5a6472;
+    --ember:#ff6b3d; --ember-dim:#c9502a; --grap:#3fb98a; --warn:#e8b23a;
+    --barbg:#232b35;
+    --shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 8px 24px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --ground:#eef1f5; --card:#ffffff; --card2:#f5f7fa; --line:#dce1e8;
+    --ink:#161b22; --muted:#5c6672; --faint:#8a94a1;
+    --ember:#e0521f; --ember-dim:#b8420f; --grap:#1f9c6e; --warn:#c9911f;
+    --barbg:#e6eaf0;
+    --shadow:0 1px 2px rgba(20,25,35,.06), 0 8px 22px rgba(20,25,35,.08);
+  }
+  @media (prefers-color-scheme: light){
+    :root:not([data-theme="dark"]){
+      --ground:#eef1f5; --card:#ffffff; --card2:#f5f7fa; --line:#dce1e8;
+      --ink:#161b22; --muted:#5c6672; --faint:#8a94a1;
+      --ember:#e0521f; --ember-dim:#b8420f; --grap:#1f9c6e; --warn:#c9911f;
+      --barbg:#e6eaf0;
+      --shadow:0 1px 2px rgba(20,25,35,.06), 0 8px 22px rgba(20,25,35,.08);
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:"Inter","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    font-variant-numeric:tabular-nums; line-height:1.45; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1120px; margin:0 auto; padding:22px 20px 72px}
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:26px}
+  .brand{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:-.01em}
+  .brand .mark{width:26px; height:26px; border-radius:7px; background:linear-gradient(140deg,var(--ember),var(--ember-dim)); display:grid; place-items:center; font-size:15px}
+  .brand small{display:block; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); font-weight:700}
+  .themebtn{background:var(--card); color:var(--muted); border:1px solid var(--line); border-radius:8px; padding:7px 12px; font-size:12px; cursor:pointer; font-family:inherit}
+  .themebtn:hover{color:var(--ink)}
+  .themebtn:focus-visible{outline:2px solid var(--ember); outline-offset:2px}
+
+  .eyebrow{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--ember); font-weight:700}
+  header h1{font-size:clamp(26px,4.4vw,42px); line-height:1.02; margin:.28em 0 .12em; font-weight:800; letter-spacing:-.02em; text-wrap:balance}
+  .sub{color:var(--muted); font-size:14px; max-width:64ch}
+  .meta-row{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:16px; font-size:12.5px; color:var(--muted)}
+  .meta-row b{color:var(--ink); font-weight:600}
+
+  .legend{margin-top:22px; padding:14px 16px; background:var(--card); border:1px solid var(--line); border-radius:12px; display:flex; flex-wrap:wrap; gap:10px 22px; font-size:12.5px; color:var(--muted); box-shadow:var(--shadow)}
+  .legend b{color:var(--ink)}
+  .dot{display:inline-block; width:9px; height:9px; border-radius:2px; vertical-align:middle; margin-right:6px}
+
+  .cards{display:flex; flex-direction:column; gap:16px; margin-top:26px}
+  .fight{background:var(--card); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); overflow:hidden}
+  .fight.main{border-color:var(--ember-dim)}
+  .fhead{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 18px; border-bottom:1px solid var(--line); background:var(--card2)}
+  .wc{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted); font-weight:700}
+  .mainflag{font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ember); font-weight:800}
+  .grid{display:grid; grid-template-columns:1fr 92px 1fr}
+  @media (max-width:680px){ .grid{grid-template-columns:1fr} }
+
+  .corner{padding:18px 18px 20px}
+  .corner.b{text-align:right}
+  .cname{font-size:19px; font-weight:750; letter-spacing:-.01em; line-height:1.1; display:flex; align-items:baseline; gap:8px}
+  .corner.b .cname{justify-content:flex-end}
+  .chip{font-size:10px; letter-spacing:.06em; text-transform:uppercase; font-weight:700; color:var(--warn); border:1px solid color-mix(in srgb, var(--warn) 45%, transparent); padding:1px 6px; border-radius:5px; white-space:nowrap; background:color-mix(in srgb,var(--warn) 12%, transparent)}
+  .stat-label{font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); font-weight:700; margin-top:16px}
+  .sig-num{font-size:38px; font-weight:820; letter-spacing:-.03em; line-height:1; color:var(--ember)}
+  .sig-num small{font-size:14px; font-weight:600; color:var(--muted); letter-spacing:0}
+  .rangebar{position:relative; height:8px; border-radius:5px; background:var(--barbg); margin-top:10px; overflow:hidden}
+  .rangebar .span{position:absolute; top:0; bottom:0; background:color-mix(in srgb,var(--ember) 42%, transparent); border-radius:5px}
+  .rangebar .med{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--ember)}
+  .rangecap{font-size:11.5px; color:var(--muted); margin-top:5px}
+  .tdrow{display:flex; align-items:baseline; gap:9px; margin-top:6px}
+  .corner.b .tdrow{justify-content:flex-end}
+  .td-num{font-size:23px; font-weight:780; letter-spacing:-.02em; color:var(--grap)}
+  .td-unit{font-size:12px; color:var(--muted)}
+  .meters{display:flex; gap:14px; margin-top:9px}
+  .corner.b .meters{justify-content:flex-end}
+  .meter{min-width:96px}
+  .meter .mlab{font-size:10.5px; color:var(--muted); display:flex; justify-content:space-between; gap:8px; margin-bottom:4px}
+  .meter .mlab b{color:var(--ink); font-weight:650}
+  .mbar{height:6px; border-radius:4px; background:var(--barbg); overflow:hidden}
+  .mbar .fill{height:100%; background:var(--grap); border-radius:4px}
+
+  .vs{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border-left:1px solid var(--line); border-right:1px solid var(--line); padding:16px 6px; background:linear-gradient(180deg, var(--card2), transparent)}
+  @media (max-width:680px){ .vs{flex-direction:row; border:0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:12px} }
+  .vs .vtxt{font-size:12px; font-weight:800; color:var(--faint); letter-spacing:.1em}
+  .dist{display:flex; flex-direction:column; align-items:center; gap:6px}
+  @media (max-width:680px){ .dist{flex-direction:row; gap:10px} }
+  .distbar{width:8px; height:96px; border-radius:5px; background:var(--warn); overflow:hidden; display:flex; flex-direction:column}
+  @media (max-width:680px){ .distbar{width:120px; height:8px; flex-direction:row} }
+  .distbar .fin{background:var(--ember); width:100%}
+  .distcap{font-size:10px; color:var(--muted); text-align:center; letter-spacing:.02em; line-height:1.3}
+  .distcap b{color:var(--ink); font-weight:650; display:block; font-size:12.5px}
+
+  footer{margin-top:30px; padding-top:20px; border-top:1px solid var(--line); color:var(--muted); font-size:12px; line-height:1.6}
+  footer b{color:var(--ink); font-weight:600}
+  .disc{margin-top:10px; color:var(--faint); font-size:11px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand">
+      <span class="mark">🥊</span>
+      <span>Cannon Fight Lab<small>Prop Projections</small></span>
+    </div>
+    <button class="themebtn" id="themebtn" type="button" aria-label="Toggle light/dark theme">Theme</button>
+  </div>
+
+  <header>
+    <div class="eyebrow">Prop Model · Beta</div>
+    <h1>Tonight's Prop Board</h1>
+    <div class="sub">Significant-strike and takedown projections for every unsettled fight on UFC Fight Night: Gamrot vs. Salkilld — per fighter, whole fight, from CFL's walk-forward count models.</div>
+    <div class="meta-row">
+      <span><b>Sat Aug 8, 2026</b> · Las Vegas</span>
+      <span><b>5</b> live fights</span>
+      <span>Models: sig-strike NB2 · takedown hurdle · Monte-Carlo</span>
+      <span>Trained through <b>Jul 18, 2026</b> · out-of-sample</span>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span><span class="dot" style="background:var(--ember)"></span><b>SIG</b> significant strikes landed — projection <i>if the fight goes its full rounds</i></span>
+    <span><span class="dot" style="background:var(--grap)"></span><b>TD</b> takedowns landed · P(1+) &amp; P(2+) include finish risk</span>
+    <span><span class="dot" style="background:var(--warn)"></span>goes distance / <span class="dot" style="background:var(--ember)"></span>finish</span>
+    <span><span class="chip" style="color:var(--warn)">thin tape</span> &lt; 30 min of prior film — shrunk to league average</span>
+  </div>
+
+  <div class="cards" id="cards"></div>
+
+  <footer>
+    <div><b>How to read it.</b> The SIG number is the model's central projection for significant strikes landed <b>assuming the fight reaches the scorecards</b> — the cleanest number for an over/under, because it depends only on each fighter's own pace and the opponent's output-allowed, not on how long the fight lasts. The bar shows the middle-60% range (20th–80th percentile). Takedown P(1+)/P(2+) already fold in the chance of an early finish.</div>
+    <div style="margin-top:9px"><b>Duration is a v1 baseline.</b> The finish / distance split is the league-average 3-round curve, the same for every fight for now — <b>not yet fighter-adjusted</b>. Strike and takedown projections are fully fighter-specific.</div>
+    <div class="disc">Model output for research, not betting advice. Projections are estimates with real uncertainty — thin-tape fighters especially. No posted prop lines were used; these are the model's own numbers.</div>
+  </footer>
+</div>
+
+<script>
+const SIG_MAX = 112;
+const FIGHTS = [
+  { wc:"Lightweight", main:true, dist:0.518,
+    a:{name:"Mateusz Gamrot",   sig:42.5, lo:27, hi:56, med:40, td:3.47, p1:0.785, p2:0.581},
+    b:{name:"Quillan Salkilld", sig:51.0, lo:33, hi:68, med:48, td:1.81, p1:0.598, p2:0.331, thin:true} },
+  { wc:"Lightweight", dist:0.520,
+    a:{name:"Diego Ferreira",     sig:81.6, lo:54, hi:107, med:78, td:0.91, p1:0.403, p2:0.150},
+    b:{name:"Billy Quarantillo",  sig:74.0, lo:48, hi:97,  med:70, td:2.30, p1:0.705, p2:0.437} },
+  { wc:"Strawweight", dist:0.523,
+    a:{name:"Amanda Lemos",     sig:38.5, lo:25, hi:51, med:36, td:0.49, p1:0.263, p2:0.063},
+    b:{name:"Alexia Thainara",  sig:47.1, lo:31, hi:62, med:45, td:3.60, p1:0.822, p2:0.619} },
+  { wc:"Welterweight", dist:0.515,
+    a:{name:"Billy Ray Goff", sig:76.8, lo:50, hi:101, med:73, td:1.06, p1:0.469, p2:0.181, thin:true},
+    b:{name:"Ty Miller",      sig:76.9, lo:50, hi:101, med:73, td:1.05, p1:0.448, p2:0.183, thin:true} },
+  { wc:"Featherweight", dist:0.520,
+    a:{name:"Darren Elkins",     sig:37.3, lo:24, hi:50, med:35, td:2.92, p1:0.764, p2:0.531},
+    b:{name:"Yadier del Valle",  sig:38.1, lo:24, hi:51, med:36, td:0.92, p1:0.429, p2:0.151, thin:true} },
+];
+
+const pct = v => Math.round(v*100);
+const esc = t => t.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function corner(f, side){
+  const s = f[side];
+  const spanL=(s.lo/SIG_MAX)*100, spanW=((s.hi-s.lo)/SIG_MAX)*100, medL=(s.med/SIG_MAX)*100;
+  const chip = s.thin ? '<span class="chip">thin tape</span>' : '';
+  return `
+  <div class="corner ${side}">
+    <div class="cname">${side==='b' ? chip+esc(s.name) : esc(s.name)+chip}</div>
+    <div class="stat-label">Sig strikes</div>
+    <div class="sig-num">${s.sig.toFixed(0)} <small>proj.</small></div>
+    <div class="rangebar"><div class="span" style="left:${spanL}%; width:${spanW}%"></div><div class="med" style="left:${medL}%"></div></div>
+    <div class="rangecap">likely ${s.lo}–${s.hi}</div>
+    <div class="stat-label">Takedowns</div>
+    <div class="tdrow"><span class="td-num">${s.td.toFixed(2)}</span><span class="td-unit">expected</span></div>
+    <div class="meters">
+      <div class="meter"><div class="mlab"><span>P(1+)</span><b>${pct(s.p1)}%</b></div><div class="mbar"><div class="fill" style="width:${pct(s.p1)}%"></div></div></div>
+      <div class="meter"><div class="mlab"><span>P(2+)</span><b>${pct(s.p2)}%</b></div><div class="mbar"><div class="fill" style="width:${pct(s.p2)}%"></div></div></div>
+    </div>
+  </div>`;
+}
+document.getElementById('cards').innerHTML = FIGHTS.map(f=>{
+  const distP=pct(f.dist), finP=100-distP;
+  return `
+  <div class="fight ${f.main?'main':''}">
+    <div class="fhead"><span class="wc">${f.wc}</span>${f.main?'<span class="mainflag">Main event</span>':'<span class="wc" style="color:var(--faint)">Prelim</span>'}</div>
+    <div class="grid">
+      ${corner(f,'a')}
+      <div class="vs"><div class="vtxt">VS</div><div class="dist"><div class="distbar" title="finish ${finP}% / distance ${distP}%"><div class="fin" style="flex-basis:${finP}%"></div></div></div><div class="distcap"><b>${distP}%</b>go distance</div></div>
+      ${corner(f,'b')}
+    </div>
+  </div>`;
+}).join('');
+
+// theme toggle (persists for the session)
+const btn=document.getElementById('themebtn');
+btn.addEventListener('click',()=>{
+  const cur=document.documentElement.getAttribute('data-theme');
+  const next=cur==='light'?'dark':(cur==='dark'?'light':(matchMedia('(prefers-color-scheme: dark)').matches?'light':'dark'));
+  document.documentElement.setAttribute('data-theme',next);
+});
+</script>
+</body>
+</html>
