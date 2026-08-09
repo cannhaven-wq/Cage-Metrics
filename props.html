@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>Prop Board — Sig Strikes &amp; Takedowns for the Next UFC Card | Cannon Fight Lab</title>
+<meta name="description" content="CFL's prop model projects significant strikes and takedowns for every fight on the next UFC card — per fighter, whole fight, from walk-forward count models.">
+<meta name="keywords" content="UFC prop projections, UFC significant strikes prop, UFC takedowns prop, MMA player props, UFC prop model">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/props.html">
+
+<!-- ===== Open Graph ===== -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="Prop Board — Sig Strikes & Takedowns for the Next UFC Card">
+<meta property="og:description" content="Significant-strike and takedown projections for every fight on the card, from CFL's walk-forward prop model.">
+<meta property="og:url" content="https://cannonfightlab.com/props.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Prop Board — CFL Prop Model">
+<meta name="twitter:description" content="Sig-strike and takedown projections for every fight on the card.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<meta name="theme-color" content="#08090b">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=lab1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  /* Prop board — namespaced pb-* so it can't collide with _shared.css. Uses the
+     site palette + fonts throughout so the page reads as part of CFL. */
+  .pb-wrap{max-width:1100px; margin:0 auto; padding:26px 20px 80px; font-family:var(--font-body)}
+  .pb-eyebrow{font-family:var(--font-mono); font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--signal); font-weight:600}
+  .pb-wrap h1{font-family:var(--font-display); font-size:clamp(30px,5vw,50px); line-height:.98; margin:.2em 0 .16em; font-weight:800; letter-spacing:-.01em; color:var(--text); text-wrap:balance}
+  .pb-sub{color:var(--text-dim,#9aa4b0); font-size:14.5px; max-width:66ch; line-height:1.5}
+  .pb-meta{display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:16px; font-size:12.5px; color:var(--text-dim,#9aa4b0); font-family:var(--font-mono)}
+  .pb-meta b{color:var(--text); font-weight:600}
+
+  .pb-legend{margin-top:22px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); display:flex; flex-wrap:wrap; gap:10px 22px; font-size:12.5px; color:var(--text-dim,#9aa4b0)}
+  .pb-legend b{color:var(--text)}
+  .pb-dot{display:inline-block; width:9px; height:9px; border-radius:2px; vertical-align:middle; margin-right:6px}
+
+  .pb-cards{display:flex; flex-direction:column; gap:16px; margin-top:26px}
+  .pb-fight{background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden}
+  .pb-fight.pb-main{border-color:var(--signal-2)}
+  .pb-fhead{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 18px; border-bottom:1px solid var(--line); background:rgba(255,255,255,.015)}
+  .pb-wc{font-family:var(--font-mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase; color:var(--text-dim,#9aa4b0); font-weight:600}
+  .pb-mainflag{font-family:var(--font-mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--signal); font-weight:700}
+  .pb-grid{display:grid; grid-template-columns:1fr 92px 1fr}
+  @media (max-width:680px){ .pb-grid{grid-template-columns:1fr} }
+
+  .pb-corner{padding:18px 18px 20px}
+  .pb-corner.pb-b{text-align:right}
+  .pb-name{font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:0; line-height:1.05; color:var(--text); display:flex; align-items:baseline; gap:8px}
+  .pb-corner.pb-b .pb-name{justify-content:flex-end}
+  .pb-tchip{font-family:var(--font-mono); font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:600; color:var(--amber); border:1px solid color-mix(in srgb, var(--amber) 45%, transparent); padding:2px 6px; border-radius:5px; white-space:nowrap; background:color-mix(in srgb,var(--amber) 12%, transparent)}
+  .pb-stat-label{font-family:var(--font-mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--text-dim,#8993a0); font-weight:600; margin-top:16px}
+
+  .pb-signum{font-family:var(--font-display); font-size:42px; font-weight:800; letter-spacing:-.01em; line-height:1; color:var(--signal)}
+  .pb-signum small{font-family:var(--font-mono); font-size:13px; font-weight:500; color:var(--text-dim,#8993a0); letter-spacing:0}
+  .pb-rangebar{position:relative; height:8px; border-radius:5px; background:rgba(255,255,255,.06); margin-top:10px; overflow:hidden}
+  .pb-corner.pb-b .pb-rangebar{direction:rtl}
+  .pb-rangebar .pb-span{position:absolute; top:0; bottom:0; background:color-mix(in srgb,var(--signal) 45%, transparent); border-radius:5px}
+  .pb-rangebar .pb-med{position:absolute; top:-2px; bottom:-2px; width:2px; background:var(--signal)}
+  .pb-rangecap{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim,#8993a0); margin-top:6px}
+
+  .pb-tdrow{display:flex; align-items:baseline; gap:9px; margin-top:6px}
+  .pb-corner.pb-b .pb-tdrow{justify-content:flex-end}
+  .pb-tdnum{font-family:var(--font-display); font-size:26px; font-weight:700; letter-spacing:0; color:var(--green)}
+  .pb-tdunit{font-family:var(--font-mono); font-size:11.5px; color:var(--text-dim,#8993a0)}
+  .pb-meters{display:flex; gap:14px; margin-top:9px}
+  .pb-corner.pb-b .pb-meters{justify-content:flex-end}
+  .pb-meter{min-width:98px}
+  .pb-meter .pb-mlab{font-family:var(--font-mono); font-size:10.5px; color:var(--text-dim,#8993a0); display:flex; justify-content:space-between; gap:8px; margin-bottom:4px}
+  .pb-meter .pb-mlab b{color:var(--text); font-weight:600}
+  .pb-mbar{height:6px; border-radius:4px; background:rgba(255,255,255,.06); overflow:hidden}
+  .pb-mbar .pb-fill{height:100%; background:var(--green); border-radius:4px}
+
+  .pb-vs{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:12px; border-left:1px solid var(--line); border-right:1px solid var(--line); padding:16px 6px; background:rgba(255,255,255,.015)}
+  @media (max-width:680px){ .pb-vs{flex-direction:row; border:0; border-top:1px solid var(--line); border-bottom:1px solid var(--line); padding:12px} }
+  .pb-vtxt{font-family:var(--font-mono); font-size:11px; font-weight:700; color:var(--text-dim,#6b7480); letter-spacing:.1em}
+  .pb-dist{display:flex; flex-direction:column; align-items:center; gap:6px}
+  @media (max-width:680px){ .pb-dist{flex-direction:row; gap:10px} }
+  .pb-distbar{width:8px; height:92px; border-radius:5px; background:var(--amber); overflow:hidden; display:flex; flex-direction:column}
+  @media (max-width:680px){ .pb-distbar{width:120px; height:8px; flex-direction:row} }
+  .pb-distbar .pb-fin{background:var(--signal); width:100%}
+  .pb-distcap{font-family:var(--font-mono); font-size:10px; color:var(--text-dim,#8993a0); text-align:center; letter-spacing:.02em; line-height:1.3}
+  .pb-distcap b{color:var(--text); font-weight:600; display:block; font-size:13px}
+
+  .pb-foot{margin-top:30px; padding-top:20px; border-top:1px solid var(--line); color:var(--text-dim,#8993a0); font-size:12.5px; line-height:1.65}
+  .pb-foot b{color:var(--text); font-weight:600}
+  .pb-disc{margin-top:10px; color:var(--text-dim,#6b7480); font-size:11px}
+</style>
+</head>
+<body>
+<nav class="cfl-nav"></nav>
+
+<div class="pb-wrap">
+  <div class="pb-eyebrow">Prop Model · Beta</div>
+  <h1>Prop Board</h1>
+  <div class="pb-sub">Significant-strike and takedown projections for every unsettled fight on the card — per fighter, whole fight, from CFL's walk-forward count models.</div>
+  <div class="pb-meta" id="pbMeta"></div>
+
+  <div class="pb-legend">
+    <span><span class="pb-dot" style="background:var(--signal)"></span><b>SIG</b> significant strikes landed — projection <i>if the fight goes its full rounds</i></span>
+    <span><span class="pb-dot" style="background:var(--green)"></span><b>TD</b> takedowns landed · P(1+) &amp; P(2+) include finish risk</span>
+    <span><span class="pb-dot" style="background:var(--amber)"></span>goes distance / <span class="pb-dot" style="background:var(--signal)"></span>finish</span>
+    <span><span class="pb-tchip">thin tape</span> &lt; 30 min of prior film — shrunk to league average</span>
+  </div>
+
+  <div class="pb-cards" id="pbCards"></div>
+
+  <div class="pb-foot">
+    <div><b>How to read it.</b> The SIG number is the model's central projection for significant strikes landed <b>assuming the fight reaches the scorecards</b> — the cleanest number for an over/under, because it depends only on each fighter's own pace and the opponent's output-allowed, not on how long the fight lasts. The bar shows the middle-60% range (20th–80th percentile). Takedown P(1+)/P(2+) already fold in the chance of an early finish.</div>
+    <div style="margin-top:9px"><b>Duration is a v1 baseline.</b> The finish / distance split is the league-average 3-round curve, the same for every fight for now — <b>not yet fighter-adjusted</b>. Strike and takedown projections are fully fighter-specific.</div>
+    <div class="pb-disc">Model output for research, not betting advice. Projections are estimates with real uncertainty — thin-tape fighters especially. No posted prop lines were used; these are the model's own numbers.</div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rd8"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('props');
+cfl.renderFooter();
+
+// ---- Prop board data ------------------------------------------------------
+// STATIC SNAPSHOT. Generated by cfl_engine/predict_props_upcoming.py
+// (out_real/props_preview.csv). To refresh for a new card, regenerate and swap
+// EVENT + FIGHTS. Live-from-Supabase is the planned follow-up.
+const EVENT = { name:"UFC Fight Night: Gamrot vs. Salkilld", date:"Sat Aug 8, 2026",
+                place:"Las Vegas", n:5, trained:"Jul 18, 2026" };
+const SIG_MAX = 112;
+const FIGHTS = [
+  { wc:"Lightweight", main:true, dist:0.518,
+    a:{name:"Mateusz Gamrot",   sig:42.5, lo:27, hi:56, med:40, td:3.47, p1:0.785, p2:0.581},
+    b:{name:"Quillan Salkilld", sig:51.0, lo:33, hi:68, med:48, td:1.81, p1:0.598, p2:0.331, thin:true} },
+  { wc:"Lightweight", dist:0.520,
+    a:{name:"Diego Ferreira",     sig:81.6, lo:54, hi:107, med:78, td:0.91, p1:0.403, p2:0.150},
+    b:{name:"Billy Quarantillo",  sig:74.0, lo:48, hi:97,  med:70, td:2.30, p1:0.705, p2:0.437} },
+  { wc:"Strawweight", dist:0.523,
+    a:{name:"Amanda Lemos",     sig:38.5, lo:25, hi:51, med:36, td:0.49, p1:0.263, p2:0.063},
+    b:{name:"Alexia Thainara",  sig:47.1, lo:31, hi:62, med:45, td:3.60, p1:0.822, p2:0.619} },
+  { wc:"Welterweight", dist:0.515,
+    a:{name:"Billy Ray Goff", sig:76.8, lo:50, hi:101, med:73, td:1.06, p1:0.469, p2:0.181, thin:true},
+    b:{name:"Ty Miller",      sig:76.9, lo:50, hi:101, med:73, td:1.05, p1:0.448, p2:0.183, thin:true} },
+  { wc:"Featherweight", dist:0.520,
+    a:{name:"Darren Elkins",     sig:37.3, lo:24, hi:50, med:35, td:2.92, p1:0.764, p2:0.531},
+    b:{name:"Yadier del Valle",  sig:38.1, lo:24, hi:51, med:36, td:0.92, p1:0.429, p2:0.151, thin:true} },
+];
+
+const pct = v => Math.round(v*100);
+const esc = t => cfl.escapeHtml ? cfl.escapeHtml(t) : t.replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+document.getElementById('pbMeta').innerHTML = [
+  `<span><b>${esc(EVENT.date)}</b> · ${esc(EVENT.place)}</span>`,
+  `<span><b>${EVENT.n}</b> live fights</span>`,
+  `<span>Models: sig-strike NB2 · takedown hurdle · Monte-Carlo</span>`,
+  `<span>Trained through <b>${esc(EVENT.trained)}</b> · out-of-sample</span>`,
+].join('');
+
+function corner(f, side){
+  const s = f[side];
+  const spanL=(s.lo/SIG_MAX)*100, spanW=((s.hi-s.lo)/SIG_MAX)*100, medL=(s.med/SIG_MAX)*100;
+  const chip = s.thin ? '<span class="pb-tchip">thin tape</span>' : '';
+  return `
+  <div class="pb-corner pb-${side}">
+    <div class="pb-name">${side==='b' ? chip+esc(s.name) : esc(s.name)+chip}</div>
+    <div class="pb-stat-label">Sig strikes</div>
+    <div class="pb-signum">${s.sig.toFixed(0)} <small>proj.</small></div>
+    <div class="pb-rangebar"><div class="pb-span" style="left:${spanL}%; width:${spanW}%"></div><div class="pb-med" style="left:${medL}%"></div></div>
+    <div class="pb-rangecap">likely ${s.lo}–${s.hi}</div>
+    <div class="pb-stat-label">Takedowns</div>
+    <div class="pb-tdrow"><span class="pb-tdnum">${s.td.toFixed(2)}</span><span class="pb-tdunit">expected</span></div>
+    <div class="pb-meters">
+      <div class="pb-meter"><div class="pb-mlab"><span>P(1+)</span><b>${pct(s.p1)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p1)}%"></div></div></div>
+      <div class="pb-meter"><div class="pb-mlab"><span>P(2+)</span><b>${pct(s.p2)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p2)}%"></div></div></div>
+    </div>
+  </div>`;
+}
+document.getElementById('pbCards').innerHTML = FIGHTS.map(f=>{
+  const distP=pct(f.dist), finP=100-distP;
+  return `
+  <div class="pb-fight ${f.main?'pb-main':''}">
+    <div class="pb-fhead"><span class="pb-wc">${esc(f.wc)}</span>${f.main?'<span class="pb-mainflag">Main event</span>':'<span class="pb-wc" style="color:var(--text-dim,#6b7480)">Prelim</span>'}</div>
+    <div class="pb-grid">
+      ${corner(f,'a')}
+      <div class="pb-vs"><div class="pb-vtxt">VS</div><div class="pb-dist"><div class="pb-distbar" title="finish ${finP}% / distance ${distP}%"><div class="pb-fin" style="flex-basis:${finP}%"></div></div></div><div class="pb-distcap"><b>${distP}%</b>go distance</div></div>
+      ${corner(f,'b')}
+    </div>
+  </div>`;
+}).join('');
+</script>
+</body>
+</html>
