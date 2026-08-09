@@ -44,6 +44,7 @@ import datetime as dt
 import json
 import os
 import sys
+import urllib.request
 
 import numpy as np
 import pandas as pd
@@ -61,6 +62,9 @@ from export_data import fetch_all            # noqa: E402  (paginating PostgREST
 DATA_DIR = os.path.join(HERE, "data")
 FEAT_DIR = os.path.join(HERE, "features")
 PREVIEW = os.path.join(HERE, os.pardir, "out_real")
+
+MODEL_VERSION = "props_v1"
+PROJ_TABLE = "prop_projections"
 
 # Sig-strike over/under lines to quote P(over) at (illustrative — no posted prop
 # board is captured yet; these are round half-points near typical UFC totals).
@@ -172,7 +176,8 @@ def fit_count_models(log=print):
 
 
 # --------------------------------------------------------------------- main
-def run(base_url, key, event_id, date, within_days, sims, seed, log=print):
+def run(base_url, key, event_id, date, within_days, sims, seed,
+        main_fight_id=None, log=print):
     log("[1/4] pulling card ...")
     card, dropped = pull_card(base_url, key, event_id, date, within_days, log=log)
     if card.empty:
@@ -215,10 +220,13 @@ def run(base_url, key, event_id, date, within_days, sims, seed, log=print):
             sig_d = sig_draws[went_distance]
             td_d = td_draws[went_distance]
             out_rows.append({
-                "fight_id": r.fight_id, "event": r.event_name,
+                "fight_id": r.fight_id, "event_id": int(r.event_id),
+                "event": r.event_name, "event_date": str(r.event_date),
                 "weight_class": r.weight_class, "side": side,
+                "fighter_id": int(fid_self),
                 "fighter": names.get(fid_self, str(fid_self)),
                 "opponent": names.get(fid_opp, str(fid_opp)),
+                "main_event": bool(main_fight_id and int(r.fight_id) == int(main_fight_id)),
                 "exp_min_tape": round(float(feats["own_exp_min"]), 1),
                 "debut": acc[fid_self]["nf"] == 0,
                 # ---- distance-conditional (recommended prop projection) ----
@@ -269,6 +277,62 @@ def print_report(df, exp_min=None):
         print()
 
 
+# --------------------------------------------------------------------- publish
+def _to_db_rows(df):
+    """Map the per-fighter output frame to prop_projections rows (one per corner)."""
+    rows = []
+    for r in df.itertuples(index=False):
+        rows.append({
+            "event_id": int(r.event_id),
+            "event_name": r.event,
+            "event_date": r.event_date,
+            "fight_id": int(r.fight_id),
+            "weight_class": r.weight_class,
+            "main_event": bool(r.main_event),
+            "side": r.side,
+            "fighter_id": int(r.fighter_id),
+            "fighter_name": r.fighter,
+            "opponent_name": r.opponent,
+            "p_distance": float(r.p_distance),
+            "sig_proj": float(r.sig_dist_mean),
+            "sig_lo": float(r.sig_dist_p20),
+            "sig_hi": float(r.sig_dist_p80),
+            "sig_med": float(r.sig_dist_median),
+            "td_proj": float(r.td_dist_exp),
+            "p_td_1plus": float(r.p_td_1plus),
+            "p_td_2plus": float(r.p_td_2plus),
+            "thin_tape": bool(r.exp_min_tape < 30 or r.debut),
+            "model_version": MODEL_VERSION,
+        })
+    return rows
+
+
+def _rest(base_url, key, method, path, body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        f"{base_url}/rest/v1/{path}", data=data, method=method,
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json",
+                 "Prefer": "return=representation"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        txt = resp.read().decode()
+        return json.loads(txt) if txt else []
+
+
+def publish(base_url, key, df, log=print):
+    """Replace-by-event publish: for each event in the frame, delete its existing
+    prop_projections rows then insert the fresh set, so a card that lost a fight
+    (dead booking) never keeps a stale row. Idempotent."""
+    rows = _to_db_rows(df)
+    event_ids = sorted({row["event_id"] for row in rows})
+    for eid in event_ids:
+        _rest(base_url, key, "DELETE", f"{PROJ_TABLE}?event_id=eq.{eid}")
+    inserted = _rest(base_url, key, "POST", PROJ_TABLE, rows)
+    log(f"  published {len(inserted)} row(s) across {len(event_ids)} event(s) "
+        f"to {PROJ_TABLE}.")
+    return len(inserted)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -278,8 +342,12 @@ def main():
                     help="target date YYYY-MM-DD (default: today)")
     ap.add_argument("--within-days", type=int, default=1,
                     help="with --date, also include events up to N days later (default 1)")
+    ap.add_argument("--main-fight-id", type=int, default=None,
+                    help="fight id to flag as the main event (highlighted on the page)")
     ap.add_argument("--sims", type=int, default=20000, help="Monte-Carlo draws per fight")
     ap.add_argument("--seed", type=int, default=20260808)
+    ap.add_argument("--execute", action="store_true",
+                    help="publish to the prop_projections table (default: dry-run)")
     args = ap.parse_args()
 
     try:
@@ -293,7 +361,8 @@ def main():
     key = _env_key()
     date = (dt.date.fromisoformat(args.date) if args.date else dt.date.today())
 
-    df = run(base_url, key, args.event_id, date, args.within_days, args.sims, args.seed)
+    df = run(base_url, key, args.event_id, date, args.within_days, args.sims,
+             args.seed, main_fight_id=args.main_fight_id)
     if df.empty:
         return
     print_report(df)
@@ -302,6 +371,14 @@ def main():
     outp = os.path.join(PREVIEW, "props_preview.csv")
     df.to_csv(outp, index=False)
     print(f"preview CSV → {os.path.abspath(outp)}")
+
+    if args.execute:
+        print("\nPublishing to prop_projections ...")
+        publish(base_url, key, df)
+        print("Done. props.html (reading v_prop_projections_current) will show it.")
+    else:
+        print("\nDRY-RUN — nothing published. Re-run with --execute to publish "
+              "to the site table.")
 
 
 if __name__ == "__main__":
