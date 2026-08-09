@@ -314,5 +314,104 @@ def write_artifacts(outdir=None):
     return panel, ff
 
 
+# =============================================================================
+# SERVING PATH — career-to-date covariates for UPCOMING (unfought) matchups.
+#
+# build_panels() emits one PIT training row per (fight, round) for fights that
+# have already happened. To PRICE a fight that has NOT happened, we need each
+# fighter's covariate vector as of the last completed fight. career_state() folds
+# every completed fight into the same per-fighter accumulators build_panels uses
+# (via the shared _fold), and serve_feats() rebuilds the identical covariate dict
+# the training-time feats() closure produces — so there is no train/serve skew.
+# Used by predict_props_upcoming.py.
+# =============================================================================
+
+_ACC_KEYS = ("min", "sig_off", "sig_def", "td_off", "td_def", "kd_off", "kd_def",
+             "sub_off", "sub_def", "ctrl_off", "min_r1", "sig_r1", "min_late",
+             "sig_late", "nf")
+
+
+def _serve_new_acc():
+    return {k: 0.0 for k in _ACC_KEYS}
+
+
+def priors_from_global(g):
+    """As-of league mean rates from the pooled global accumulator — the same
+    priors build_panels snapshots per date, here taken after all folds (= now)."""
+    m = g["min"] if g["min"] > 0 else 1.0
+    return dict(
+        sig=g["sig_off"] / m,
+        td=g["td_off"] / m,
+        kd=g["kd_off"] / m,
+        sub=g["sub_off"] / m,
+        grapp=(g["td_off"] * 60.0 + g["ctrl_off"]) / m,
+    )
+
+
+def career_state(until_date=None):
+    """Fold every completed fight (optionally only those strictly before
+    `until_date`, for skew verification) into per-fighter career accumulators
+    and the pooled global accumulator.
+
+    Returns (acc, g, priors): acc maps fighter_id -> accumulator dict identical
+    to build_panels'; g is the pooled global accumulator; priors is the as-of
+    league mean-rate dict. History accumulates over ALL fights (incl. pre-2010),
+    exactly as build_panels does, so veterans are never treated as debutants.
+    """
+    fr, fights, _ = _load_raw()
+    rounds_fought = fr.groupby("fight_id").round_number.max()
+    rounds_by_fight = {fid: grp for fid, grp in fr.groupby("fight_id")}
+    fights = fights.sort_values(["event_date", "fight_id"])
+    if until_date is not None:
+        fights = fights[fights.event_date < pd.to_datetime(until_date)]
+
+    acc = defaultdict(_serve_new_acc)
+    g = _serve_new_acc()
+    for row in fights.itertuples(index=False):
+        fid = row.fight_id
+        if fid not in rounds_by_fight:
+            continue
+        a_id, b_id = int(row.fighter_a_id), int(row.fighter_b_id)
+        rf = int(rounds_fought[fid])
+        fsec = float(row.fight_seconds) if pd.notna(row.fight_seconds) else ROUND_SECS * rf
+        for rr in rounds_by_fight[fid].itertuples(index=False):
+            rn = int(rr.round_number)
+            if rn > rf:
+                continue
+            rmin = _round_seconds(rn, rf, fsec) / 60.0
+            _fold(acc[a_id], g, rmin, rn,
+                  _num(rr.a_sig_landed), _num(rr.b_sig_landed),
+                  _num(rr.a_td_landed), _num(rr.b_td_landed),
+                  _num(rr.a_kd), _num(rr.b_kd),
+                  _num(rr.a_sub_att), _num(rr.b_sub_att), _num(rr.a_ctrl))
+            _fold(acc[b_id], g, rmin, rn,
+                  _num(rr.b_sig_landed), _num(rr.a_sig_landed),
+                  _num(rr.b_td_landed), _num(rr.a_td_landed),
+                  _num(rr.b_kd), _num(rr.a_kd),
+                  _num(rr.b_sub_att), _num(rr.a_sub_att), _num(rr.b_ctrl))
+        acc[a_id]["nf"] += 1
+        acc[b_id]["nf"] += 1
+    return acc, g, priors_from_global(g)
+
+
+def serve_feats(s, o, priors):
+    """Rebuild the count-covariate dict for a matchup where `s` fights `o`,
+    from their career accumulators and the as-of league priors. Identical math
+    to build_panels' inner feats() closure (own = offense, opp = defense)."""
+    own_sig_off = _shrunk(s["sig_off"], s["min"], priors["sig"])
+    opp_sig_def = _shrunk(o["sig_def"], o["min"], priors["sig"])
+    own_td_off = _shrunk(s["td_off"], s["min"], priors["td"])
+    opp_td_def = _shrunk(o["td_def"], o["min"], priors["td"])
+    own_grapp = _shrunk(s["td_off"] * 60.0 + s["ctrl_off"], s["min"], priors["grapp"])
+    opp_grapp = _shrunk(o["td_off"] * 60.0 + o["ctrl_off"], o["min"], priors["grapp"])
+    early = _shrunk(s["sig_r1"], s["min_r1"], priors["sig"])
+    late = _shrunk(s["sig_late"], s["min_late"], priors["sig"])
+    decay = late / (early + EPS)
+    return dict(own_sig_off_pm=own_sig_off, opp_sig_def_pm=opp_sig_def,
+                own_td_off_pm=own_td_off, opp_td_def_pm=opp_td_def,
+                own_grapp_pm=own_grapp, opp_grapp_pm=opp_grapp,
+                own_decay=decay, own_exp_min=s["min"], opp_exp_min=o["min"])
+
+
 if __name__ == "__main__":
     write_artifacts()
