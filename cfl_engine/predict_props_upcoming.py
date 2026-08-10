@@ -132,7 +132,52 @@ def pull_card(base_url, key, event_id, date, within_days, log=print):
             "weight_class": f["weight_class"],
             "rounds_sched": f["scheduled_rounds"] or 3,
         })
-    return pd.DataFrame(rows), dropped
+    df = pd.DataFrame(rows)
+    if not df.empty:
+        df, dup_dropped = _dedupe_duplicate_fighters(df, log)
+        dropped += dup_dropped
+    return df, dropped
+
+
+def _dedupe_duplicate_fighters(df, log=print):
+    """On a fully-upcoming card there is no result to catch a scraper
+    double-booking, so a fighter appearing in >1 pending fight on the same event
+    is a phantom. Keep the newest scrape (highest fight_id) — matching
+    export_data's canonical choice. Returns (kept_df, dropped_ids)."""
+    keep = set(df["fight_id"])
+    for _eid, grp in df.groupby("event_id"):
+        booked = {}
+        for r in grp.itertuples(index=False):
+            for fid in (r.fighter_a_id, r.fighter_b_id):
+                booked.setdefault(fid, []).append(r.fight_id)
+        for fighter, fids in booked.items():
+            if len(set(fids)) > 1:
+                for drop in sorted(set(fids))[:-1]:   # keep the highest fight_id
+                    if drop in keep:
+                        keep.discard(drop)
+                        log(f"      duplicate booking: dropping fight {drop} "
+                            f"(fighter {fighter} also booked in {max(fids)})")
+    dropped = sorted(set(df["fight_id"]) - keep)
+    return df[df["fight_id"].isin(keep)].reset_index(drop=True), dropped
+
+
+def detect_main_fight(card, names, log=print):
+    """Best-effort main-event id from the event headline (e.g.
+    'UFC 330: Makhachev vs. Machado Garry'): the fight whose BOTH fighters'
+    surnames appear after the colon. None if no confident match."""
+    ev = str(card["event_name"].iloc[0] or "")
+    headline = (ev.split(":", 1)[1] if ":" in ev else ev).lower()
+    if not headline.strip():
+        return None
+    for r in card.itertuples(index=False):
+        an = names.get(int(r.fighter_a_id), "") or ""
+        bn = names.get(int(r.fighter_b_id), "") or ""
+        a_sur = an.split()[-1].lower() if an.split() else ""
+        b_sur = bn.split()[-1].lower() if bn.split() else ""
+        if a_sur and b_sur and a_sur in headline and b_sur in headline:
+            log(f"      main event: fight {int(r.fight_id)} ({an} vs {bn})")
+            return int(r.fight_id)
+    return None
 
 
 def name_map(base_url, key, ids):
@@ -191,6 +236,8 @@ def run(base_url, key, event_id, date, within_days, sims, seed,
     acc, g, priors = bcf.career_state()
     names = name_map(base_url, key,
                      set(card.fighter_a_id) | set(card.fighter_b_id))
+    if main_fight_id is None:
+        main_fight_id = detect_main_fight(card, names, log=log)
 
     log("[3/4] fitting models ...")
     sig, td = fit_count_models(log=log)
@@ -320,17 +367,36 @@ def _rest(base_url, key, method, path, body=None):
 
 
 def publish(base_url, key, df, log=print):
-    """Replace-by-event publish: for each event in the frame, delete its existing
-    prop_projections rows then insert the fresh set, so a card that lost a fight
-    (dead booking) never keeps a stale row. Idempotent."""
+    """Full-table replace: the board only ever shows ONE card, so wipe
+    prop_projections and insert the current card's rows. Keeps the table from
+    accumulating finished cards; the view hides it once the card's date passes."""
     rows = _to_db_rows(df)
-    event_ids = sorted({row["event_id"] for row in rows})
-    for eid in event_ids:
-        _rest(base_url, key, "DELETE", f"{PROJ_TABLE}?event_id=eq.{eid}")
+    _rest(base_url, key, "DELETE", f"{PROJ_TABLE}?id=gt.0")   # clear all
     inserted = _rest(base_url, key, "POST", PROJ_TABLE, rows)
-    log(f"  published {len(inserted)} row(s) across {len(event_ids)} event(s) "
-        f"to {PROJ_TABLE}.")
+    events = sorted({row["event_id"] for row in rows})
+    log(f"  published {len(inserted)} row(s) for event(s) {events} to {PROJ_TABLE} "
+        f"(table replaced).")
     return len(inserted)
+
+
+def find_next_event(base_url, key, within_days, log=print):
+    """Soonest UPCOMING event (today .. today+within_days) that still has at least
+    one pending fight. Returns event_id or None. Used by --auto so a scheduled run
+    always targets the next card and skips one that has already finished."""
+    today = dt.date.today()
+    horizon = (today + dt.timedelta(days=within_days)).isoformat()
+    events = fetch_all(base_url, key, "events",
+                       "select=id,event_date,name"
+                       f"&event_date=gte.{today.isoformat()}&event_date=lte.{horizon}"
+                       "&order=event_date")
+    for e in events:                       # soonest first
+        pend = fetch_all(base_url, key, "fights",
+                         f"select=id&event_id=eq.{e['id']}&winner_id=is.null&limit=1")
+        if pend:
+            log(f"      next card: {e['name']} ({e['event_date']}, id {e['id']})")
+            return e["id"]
+    log(f"      no upcoming card with pending fights within {within_days} days.")
+    return None
 
 
 def main():
@@ -342,6 +408,9 @@ def main():
                     help="target date YYYY-MM-DD (default: today)")
     ap.add_argument("--within-days", type=int, default=1,
                     help="with --date, also include events up to N days later (default 1)")
+    ap.add_argument("--auto", action="store_true",
+                    help="target the soonest upcoming card with pending fights within "
+                         "--within-days (for scheduled runs); overrides --date")
     ap.add_argument("--main-fight-id", type=int, default=None,
                     help="fight id to flag as the main event (highlighted on the page)")
     ap.add_argument("--sims", type=int, default=20000, help="Monte-Carlo draws per fight")
@@ -361,7 +430,17 @@ def main():
     key = _env_key()
     date = (dt.date.fromisoformat(args.date) if args.date else dt.date.today())
 
-    df = run(base_url, key, args.event_id, date, args.within_days, args.sims,
+    event_id = args.event_id
+    if args.auto and event_id is None:
+        wd = max(args.within_days, 8)   # look a card-week ahead by default
+        print(f"[auto] finding the next card within {wd} days ...")
+        event_id = find_next_event(base_url, key, wd)
+        if event_id is None:
+            print("[auto] nothing to publish — no upcoming card in the window. "
+                  "(The board keeps showing the last card until its date passes.)")
+            return
+
+    df = run(base_url, key, event_id, date, args.within_days, args.sims,
              args.seed, main_fight_id=args.main_fight_id)
     if df.empty:
         return
