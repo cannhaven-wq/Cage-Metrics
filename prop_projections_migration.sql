@@ -41,17 +41,16 @@ create policy prop_projections_public_read
   using (true);
 grant select on public.prop_projections to anon, authenticated;
 
--- Convenience view: just the most recent card's rows, ordered for the page
--- (main event first, then by fight, corner a before b). security_invoker so the
--- table's public-read RLS governs access.
+-- Convenience view for the page. The publisher full-replaces the table so it
+-- holds exactly one (the next) card; this view shows it only while it is still
+-- upcoming (event_date >= today) and hides it automatically once the card is in
+-- the past, so the page never displays a finished card. Ordered main event
+-- first, then by fight, corner a before b. security_invoker so the table's
+-- public-read RLS governs access.
 create or replace view public.v_prop_projections_current
   with (security_invoker = true) as
   select *
   from public.prop_projections
-  where event_id = (
-    select event_id from public.prop_projections
-    order by event_date desc nulls last, generated_at desc
-    limit 1
-  )
+  where event_date >= current_date
   order by main_event desc, fight_id, side;
 grant select on public.v_prop_projections_current to anon, authenticated;
