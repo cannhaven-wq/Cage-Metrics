@@ -7,6 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Product name is Cannon Fight Lab (CFL).** Never refer to it as "Cage Metrics" in user-facing copy. The repo on GitHub is still named `Cage-Metrics` for historical reasons — **do not rename the repo**.
 - Wordmark: "Cannon Fight Lab" full / "CFL" short. Domain: `cannonfightlab.com`.
 - Owner: Reed Cannon. GitHub: `cannhaven-wq`. Remote: `https://github.com/cannhaven-wq/Cage-Metrics.git`.
+- **Copy voice is governed by [`COPY_STYLE.md`](COPY_STYLE.md).** Every user-facing string — page copy, buttons, model explanations, red flags, generated text like `prop_cards.why_text` — follows it. Anti-tout, plain English (no stats jargon), losses at equal prominence to wins, CLV as the north star. Read it before writing UI copy; the shipped reference implementations are `track-record.html` and `fight-insights.js`.
 
 ## Related repos (live on GitHub under `cannhaven-wq`, not in this folder)
 
@@ -152,3 +153,4 @@ GitHub Pages caches `_shared.js` and `_auth.js` aggressively. After shipping a c
 - For Supabase reads that may exceed the 1000-row per-call cap, use `cfl.fetchAll(() => sb.from(...).select(...))` — it pages through with `.range()`.
 - HTML escaping: every interpolated string from the DB goes through `cfl.escapeHtml`. There is no template framework — XSS protection is manual.
 - Per-page SEO meta is documented in `SEO_PER_PAGE.md`.
+- User-facing copy follows `COPY_STYLE.md` (voice, plain-language translations of stats terms, anti-tout rules). See the note under "Product / naming".
