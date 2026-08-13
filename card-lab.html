@@ -316,9 +316,10 @@ let _modelMode = 'engine';
 // The single definition of "value" on this page. A fight is a value play when
 // the model's probability beats the book's implied probability by at least this
 // many points. One number, used everywhere: the Value badge, the summary
-// counts, and the parlay trigger. (Matches the shipped engine rule edge > 0.03
-// and track-record's Value-pick locking — don't fork it.)
-const VALUE_EDGE = 3;
+// counts, and the parlay trigger. Set to 4 to match the graded Value record on
+// the track record (the 500-144 number flags at 4+ points) — so "value" means
+// the same thing here as on the proof page. Don't fork it.
+const VALUE_EDGE = 4;
 let _compareOpen = false;   // legacy models stay hidden until the user asks
 let _openFid = null;
 let _signedIn = false;
