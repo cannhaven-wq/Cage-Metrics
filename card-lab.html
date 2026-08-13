@@ -78,6 +78,13 @@
 #cardlab .model-def { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--text-2); max-width: 720px; }
 #cardlab .model-def:empty { display: none; }
 #cardlab .model-def strong { color: var(--text); font-weight: 700; }
+#cardlab .options-toggle { margin-left: auto; background: transparent; border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; font: 600 12px var(--font-display); color: var(--text-2); cursor: pointer; white-space: nowrap; transition: color .15s, border-color .15s; }
+#cardlab .options-toggle:hover { color: #fff; border-color: var(--line-2); }
+#cardlab .options-toggle[aria-expanded="true"] { color: #fff; border-color: var(--line-2); }
+#cardlab .cl-options { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 18px; padding: 12px 14px; margin: -4px 0 14px; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; }
+#cardlab .cl-options[hidden] { display: none; }
+#cardlab .cl-options .model-filter { margin-left: 0; }
+#cardlab .cl-options .model-def { flex-basis: 100%; margin: 2px 0 0; }
 
 /* Fight rows */
 #cardlab .rows { display: flex; flex-direction: column; gap: 10px; }
@@ -235,14 +242,20 @@
       <button data-sort="dog">Best underdog price</button>
       <button data-sort="order">Card order</button>
     </div>
+    <button type="button" id="clOptionsToggle" class="options-toggle" aria-expanded="false" aria-controls="clOptions">Options ⌄</button>
+  </div>
+  <!-- Power controls, collapsed by default so the card reads in one glance.
+       Nothing removed — hide-thin, the model picker, and the model note all
+       live here on demand. -->
+  <div class="cl-options" id="clOptions" hidden>
     <label class="chk"><input type="checkbox" id="clHideThin"> Hide thin leans (&lt;55%)</label>
     <div class="model-filter">
       <span class="fl-label">Model</span>
       <select id="clModelSelect"><option value="engine">Fight IQ — the engine</option></select>
       <button type="button" id="clCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
     </div>
+    <p class="model-def" id="clModelDef"></p>
   </div>
-  <p class="model-def" id="clModelDef"></p>
 
   <div class="rows" id="clRows">
     <div class="skel-row skel"></div><div class="skel-row skel"></div><div class="skel-row skel"></div>
@@ -744,6 +757,14 @@ function wireRows() {
 }
 
 // ---- Controls ----
+$('clOptionsToggle').addEventListener('click', () => {
+  const panel = $('clOptions');
+  const opening = panel.hasAttribute('hidden');
+  if (opening) panel.removeAttribute('hidden'); else panel.setAttribute('hidden', '');
+  const t = $('clOptionsToggle');
+  t.setAttribute('aria-expanded', opening ? 'true' : 'false');
+  t.textContent = opening ? 'Options ⌃' : 'Options ⌄';
+});
 $('clSort').addEventListener('click', e => {
   const btn = e.target.closest('button'); if (!btn) return;
   document.querySelectorAll('#clSort button').forEach(b => b.classList.toggle('active', b === btn));
