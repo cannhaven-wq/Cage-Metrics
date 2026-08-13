@@ -109,21 +109,21 @@
 <div class="pb-wrap">
   <div class="pb-eyebrow">Prop Model · Beta</div>
   <h1>Prop Board</h1>
-  <div class="pb-sub" id="pbSub">Significant-strike and takedown projections for every unsettled fight on the card — per fighter, whole fight, from CFL's walk-forward count models.</div>
+  <div class="pb-sub" id="pbSub">Significant-strike and takedown projections for every unsettled fight on the card — per fighter, whole fight, from CFL's count models — tested only on fights they hadn't seen.</div>
   <div class="pb-meta" id="pbMeta"></div>
 
   <div class="pb-legend">
     <span><span class="pb-dot" style="background:var(--signal)"></span><b>SIG</b> significant strikes landed — projection <i>if the fight goes its full rounds</i></span>
-    <span><span class="pb-dot" style="background:var(--green)"></span><b>TD</b> takedowns landed · P(1+) &amp; P(2+) include finish risk</span>
+    <span><span class="pb-dot" style="background:var(--green)"></span><b>TD</b> takedowns landed · chance of 1+ and 2+ (a fast finish lowers both)</span>
     <span><span class="pb-dot" style="background:var(--amber)"></span>goes distance / <span class="pb-dot" style="background:var(--signal)"></span>finish</span>
-    <span><span class="pb-tchip">thin tape</span> &lt; 30 min of prior film — shrunk to league average</span>
+    <span><span class="pb-tchip">thin tape</span> &lt; 30 min of prior film — pulled toward the division average</span>
   </div>
 
   <div class="pb-cards" id="pbCards"><div class="pb-fight" style="padding:30px 20px; text-align:center; color:var(--text-dim,#8993a0)">Loading projections…</div></div>
 
   <div class="pb-foot">
-    <div><b>How to read it.</b> The SIG number is the model's central projection for significant strikes landed <b>assuming the fight reaches the scorecards</b> — the cleanest number for an over/under, because it depends only on each fighter's own pace and the opponent's output-allowed, not on how long the fight lasts. The bar shows the middle-60% range (20th–80th percentile). Takedown P(1+)/P(2+) already fold in the chance of an early finish.</div>
-    <div style="margin-top:9px"><b>Duration is a v1 baseline.</b> The finish / distance split is the league-average 3-round curve, the same for every fight for now — <b>not yet fighter-adjusted</b>. Strike and takedown projections are fully fighter-specific.</div>
+    <div><b>How to read it.</b> The SIG number is the model's projection for significant strikes landed <b>if the fight reaches the scorecards</b> — the cleanest number for an over/under, because it depends only on each fighter's own pace and how much the opponent lets them throw, not on how long the fight lasts. The bar is the middle range of likely outcomes — the real number lands inside it about 60% of the time. The takedown chances already include the odds of an early finish.</div>
+    <div style="margin-top:9px"><b>Fight length is a rough baseline for now.</b> The finish / distance split uses the average 3-round pace, the same for every fight for now — <b>not yet tuned to these two fighters</b>. Strike and takedown projections are fully fighter-specific.</div>
     <div class="pb-disc">Model output for research, not betting advice. Projections are estimates with real uncertainty — thin-tape fighters especially. No posted prop lines were used; these are the model's own numbers.</div>
   </div>
 </div>
@@ -168,8 +168,8 @@ function corner(s, side, sigMax){
     <div class="pb-stat-label">Takedowns</div>
     <div class="pb-tdrow"><span class="pb-tdnum">${(+s.td_proj).toFixed(2)}</span><span class="pb-tdunit">expected</span></div>
     <div class="pb-meters">
-      <div class="pb-meter"><div class="pb-mlab"><span>P(1+)</span><b>${pct(s.p_td_1plus)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p_td_1plus)}%"></div></div></div>
-      <div class="pb-meter"><div class="pb-mlab"><span>P(2+)</span><b>${pct(s.p_td_2plus)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p_td_2plus)}%"></div></div></div>
+      <div class="pb-meter"><div class="pb-mlab"><span>1+ TD</span><b>${pct(s.p_td_1plus)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p_td_1plus)}%"></div></div></div>
+      <div class="pb-meter"><div class="pb-mlab"><span>2+ TD</span><b>${pct(s.p_td_2plus)}%</b></div><div class="pb-mbar"><div class="pb-fill" style="width:${pct(s.p_td_2plus)}%"></div></div></div>
     </div>
   </div>`;
 }
@@ -207,11 +207,11 @@ async function loadBoard(){
   $('pbSub').innerHTML =
     `Significant-strike and takedown projections for every unsettled fight on `
     + `<b style="color:var(--text)">${esc(ev.event_name)}</b> — per fighter, whole `
-    + `fight, from CFL's walk-forward count models.`;
+    + `fight, from CFL's count models — tested only on fights they hadn't seen.`;
   $('pbMeta').innerHTML = [
     evDate ? `<span><b>${esc(evDate)}</b></span>` : '',
     `<span><b>${fights.length}</b> live ${fights.length===1?'fight':'fights'}</span>`,
-    `<span>Models: sig-strike NB2 · takedown hurdle · Monte-Carlo</span>`,
+    `<span>Tested only on fights the model hadn't seen</span>`,
     updated ? `<span>Updated <b>${esc(updated)}</b></span>` : '',
   ].filter(Boolean).join('');
 
