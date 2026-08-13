@@ -328,10 +328,12 @@
         <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
           <span class="full">Track Record</span><span class="short">Record</span>
         </a>
+        <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>
+          <span class="full">Prop Board</span><span class="short">Props</span>
+        </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','mybook','predictor','props'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','mybook','predictor'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
           <div class="cfl-nav-menu-panel">
-            <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>Prop Board</a>
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
