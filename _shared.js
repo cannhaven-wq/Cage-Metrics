@@ -321,10 +321,7 @@
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
-        <a class="cfl-nav-cta-link ${active === 'cardlab' ? 'active' : ''}" href="card-lab.html">Card Lab</a>
-        <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
-          <span class="full">Next Card</span><span class="short">Card</span>
-        </a>
+        <a class="cfl-nav-cta-link ${active === 'home' || active === 'cardlab' ? 'active' : ''}" href="index.html#next">Card Lab</a>
         <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
           <span class="full">Track Record</span><span class="short">Record</span>
         </a>
