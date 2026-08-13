@@ -911,7 +911,7 @@ function getTrainedPick(modelKey, fightPicks, a, b) {
 function renderWeights(a, b, fight, pick) {
   const w = window.cflInsights.inputWeights(a, b, { cardioMap: _cardioMap, weightClass: fight.weight_class }, pick);
   if (!w) return '';
-  return `<details class="weights"><summary><span class="lbl">Input weights</span><span class="wt-net">${w.net}</span></summary><div class="wt-body">${w.body}</div></details>`;
+  return `<details class="weights"><summary><span class="lbl">What's driving this pick</span><span class="wt-net">${w.net}</span></summary><div class="wt-body">${w.body}</div></details>`;
 }
 
 function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }

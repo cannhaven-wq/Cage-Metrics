@@ -82,7 +82,7 @@ good when the bet wins, cut it.
 | Don't ship | Ship |
 |---|---|
 | Input weights | What's driving this pick |
-| Rules-based read / tier-2 | (name the actual signal, e.g. "quick read" — see item E) |
+| Rules-based read / tier-2 | Quick read (the lighter edges.js fallback when the engine didn't score a fight) |
 | Edge (as a bare noun) | The gap between our number and the book's |
 | ROI | Profit per $100 |
 | Log-loss / Brier score | Score vs a coin flip |

@@ -58,6 +58,7 @@
 #cardlab .sum .cell { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
 #cardlab .sum .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
 #cardlab .sum .v.green { color: var(--green); }
+#cardlab .sum .v.amber { color: var(--amber); }
 #cardlab .sum .l { font-size: 10.5px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 600; margin-top: 3px; }
 
 /* Controls */
@@ -298,6 +299,13 @@ let _baseRates = null;
 let _sortKey = 'edge';
 let _hideThin = false;
 let _modelMode = 'engine';
+
+// The single definition of "value" on this page. A fight is a value play when
+// the model's probability beats the book's implied probability by at least this
+// many points. One number, used everywhere: the Value badge, the summary
+// counts, and the parlay trigger. (Matches the shipped engine rule edge > 0.03
+// and track-record's Value-pick locking — don't fork it.)
+const VALUE_EDGE = 3;
 let _compareOpen = false;   // legacy models stay hidden until the user asks
 let _openFid = null;
 let _signedIn = false;
@@ -585,18 +593,25 @@ function render() {
   if (!_state) return;
   let rows = buildRows();
 
-  // Summary strip (always across the full card, unfiltered)
+  // Summary strip (always across the full card, unfiltered). Everything that
+  // means "value" keys off VALUE_EDGE — no second threshold.
   const picked = rows.filter(r => r.pick && !r.tier2);
-  const valueEdges = rows.filter(r => r.edge != null && r.edge >= 3);
-  const dogs = rows.filter(r => r.isDog && r.edge != null && r.edge >= 1);
+  const valuePlays = rows.filter(r => r.edge != null && r.edge >= VALUE_EDGE);
+  const dogValue = valuePlays.filter(r => r.isDog);
   const best = rows.reduce((m, r) => (r.edge != null && (m == null || r.edge > m.edge)) ? r : m, null);
+  // Best play only earns the "value" name if it clears the bar. Underdog value
+  // gets its own amber highlight — that's where the mispricing lives.
+  const bestIsValue = best && best.edge >= VALUE_EDGE;
+  const bestCell = bestIsValue
+    ? { v: '+' + best.edge.toFixed(0) + '%',
+        l: (best.isDog ? 'best underdog value · ' : 'best value · ') + window.cflInsights.lastName(best.pick.picked.name),
+        cls: best.isDog ? 'amber' : 'green' }
+    : { v: '—', l: 'no value edge on this card yet' };
   $('clSummary').innerHTML = [
     { v: rows.length, l: 'fights on the card' },
     { v: picked.length, l: 'model picks locked' },
-    { v: valueEdges.length, l: 'edges ≥ 3% vs market', cls: valueEdges.length ? 'green' : '' },
-    best && best.edge >= 1
-      ? { v: '+' + best.edge.toFixed(0) + '%', l: 'best edge · ' + window.cflInsights.lastName(best.pick.picked.name), cls: 'green' }
-      : { v: '—', l: 'no market edge yet' },
+    { v: valuePlays.length, l: `value plays · ${VALUE_EDGE}%+ over the line` + (dogValue.length ? ` (${dogValue.length} on dogs)` : ''), cls: valuePlays.length ? 'green' : '' },
+    bestCell,
   ].map(c => `<div class="cell"><div class="v ${c.cls || ''}">${c.v}</div><div class="l">${cfl.escapeHtml(String(c.l))}</div></div>`).join('');
   $('clSummary').hidden = false;
 
@@ -607,9 +622,11 @@ function render() {
     ? rows.map((r, i) => rowHtml(r, i)).join('')
     : '<div class="load-err">Every pick on this card is a thin lean — uncheck the filter to see them.</div>';
 
-  // Parlay strip
-  if (valueEdges.length >= 2) {
-    $('clParlayText').innerHTML = `<strong>${valueEdges.length} picks</strong> on this card carry a 3%+ edge over the market — the raw material for a disciplined parlay. Small stakes: parlays multiply variance as fast as payouts. The 3%-edge rule's graded record is simulated (+12.7% at closing prices as of July 2026); the live record starts July 2026.`;
+  // Parlay strip. No ROI number here — a return figure above a "place the bet"
+  // CTA reads like a tout. Frame it as raw material + risk, and point to the
+  // graded record for anyone who wants the receipts.
+  if (valuePlays.length >= 2) {
+    $('clParlayText').innerHTML = `<strong>${valuePlays.length} picks</strong> on this card clear our ${VALUE_EDGE}% value bar — the model's number beats the book's by at least that much. That's the raw material for a parlay, not a green light: a parlay multiplies the swings as fast as the payout, so keep stakes small. We grade every one of these in the open — <a href="track-record.html">see the record</a>, wins and losses.`;
     $('clParlayStrip').hidden = false;
   } else {
     $('clParlayStrip').hidden = true;
@@ -624,9 +641,9 @@ function rowHtml(r, visIdx) {
   const badges = [];
   if (fight.is_main_event) badges.push('<span class="lbadge main">Main event</span>');
   else if (fight.is_title_fight) badges.push('<span class="lbadge main">Title</span>');
-  if (r.edge != null && r.edge >= 5) badges.push('<span class="lbadge value">✦ Value</span>');
+  if (r.edge != null && r.edge >= VALUE_EDGE) badges.push('<span class="lbadge value">✦ Value</span>');
   if (r.isDog && pick) badges.push('<span class="lbadge dog">Dog pick</span>');
-  if (r.tier2) badges.push('<span class="lbadge tier2">Rules-based read</span>');
+  if (r.tier2) badges.push('<span class="lbadge tier2">Quick read</span>');
   if (pick && !r.tier2 && r.conf < 55) badges.push('<span class="lbadge thin">Thin lean</span>');
 
   const nameHtml = (f, isPick) => `<span class="${isPick ? 'pk' : ''}">${cfl.escapeHtml(f.name)}</span>`;
@@ -638,15 +655,18 @@ function rowHtml(r, visIdx) {
     : stat('Model', '—', 'mut');
   const marketCell = r.marketPct != null ? stat('Market', Math.round(r.marketPct) + '%') : stat('Market', '—', 'mut');
   let edgeCell;
+  // Green means "value play" — same bar as the ✦ Value badge. A small positive
+  // edge shows plain (real but not a value play); zero/negative is muted.
   if (r.edge == null) edgeCell = stat('Edge', '—', 'mut');
-  else if (r.edge >= 1) edgeCell = stat('Edge', '+' + r.edge.toFixed(0) + '%', 'green');
+  else if (r.edge >= VALUE_EDGE) edgeCell = stat('Edge', '+' + r.edge.toFixed(0) + '%', 'green');
+  else if (r.edge > 0) edgeCell = stat('Edge', '+' + r.edge.toFixed(0) + '%', '');
   else edgeCell = stat('Edge', r.edge.toFixed(0) + '%', 'mut');
 
   const confCls = r.conf >= 65 ? 'high' : (r.conf >= 55 ? 'med' : 'low');
   // Engine picks carry the published tier (Lock / Pick / Lean); fall back to
   // the generic wording for the retired models.
   const confWord = pick
-    ? (r.tier2 ? 'Rules-based read'
+    ? (r.tier2 ? 'Quick read'
        : (pick.tier ? pick.tier : (r.conf >= 65 ? 'High confidence' : (r.conf >= 55 ? 'Medium' : 'Lean'))))
     : 'Awaiting model';
   const confMeter = `<div class="confwrap">
@@ -663,11 +683,11 @@ function rowHtml(r, visIdx) {
     const flags = window.cflInsights.buildRedFlags(pick.picked, pick.opponent, ctx, r.marketPct, r.conf).slice(0, 2);
     const wts = window.cflInsights.inputWeights(a, b, { cardioMap: _cardioMap, weightClass: fight.weight_class }, pick);
     const weightsBlock = wts
-      ? `<div class="det wts"><h4><span>Input weights — what's pushing this pick</span><span class="wt-net">${wts.net}</span></h4>${wts.body}</div>`
+      ? `<div class="det wts"><h4><span>What's driving this pick</span><span class="wt-net">${wts.net}</span></h4>${wts.body}</div>`
       : '';
     const locked = !_signedIn && visIdx >= 2;
     detail = `<div class="row-detail ${locked ? 'locked' : ''}">
-      <div class="det likes"><h4>${r.tier2 ? 'Why the rules favor' : 'Why the model likes'} ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
+      <div class="det likes"><h4>${r.tier2 ? 'Why the quick read likes' : 'Why the model likes'} ${cfl.escapeHtml(window.cflInsights.lastName(pick.picked.name))}</h4>
         ${bullets.length ? '<ul>' + bullets.map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>' : '<div class="none">No single dominant factor — the pick rests on the model\'s broader stat weighting.</div>'}
       </div>
       <div class="det flags"><h4>${r.tier2 ? 'Where this read could be wrong' : 'Why the model might be wrong'}</h4>
@@ -692,7 +712,7 @@ function rowHtml(r, visIdx) {
         <div class="wt">${cfl.escapeHtml(wt)} ${badges.join(' ')}</div>
         <div class="names">${nameHtml(a, pickedIsA)} <span style="color:var(--text-3)">vs</span> ${nameHtml(b, pick && !pickedIsA)}</div>
       </div>
-      <div class="pickcell"><div class="lab">${r.tier2 ? 'Rules-based read' : 'Model pick'}</div><div class="nm">${pick ? cfl.escapeHtml(pick.picked.name) : 'Not scored yet'}</div></div>
+      <div class="pickcell"><div class="lab">${r.tier2 ? 'Quick read' : 'Model pick'}</div><div class="nm">${pick ? cfl.escapeHtml(pick.picked.name) : 'Not scored yet'}</div></div>
       <div class="row-stats">${modelCell}${marketCell}${edgeCell}</div>
       ${confMeter}
       <div class="caret">▶</div>
