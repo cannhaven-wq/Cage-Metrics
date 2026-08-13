@@ -322,7 +322,6 @@
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
         <a class="cfl-nav-cta-link ${active === 'cardlab' ? 'active' : ''}" href="card-lab.html">Card Lab</a>
-        <a href="picks.html" ${active === 'picks' ? 'class="active"' : ''}>Picks</a>
         <a href="index.html" ${active === 'home' ? 'class="active"' : ''}>
           <span class="full">Next Card</span><span class="short">Card</span>
         </a>
