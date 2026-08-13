@@ -190,7 +190,6 @@ async function main() {
 
   const dateLabel = formatLongDate(event.event_date);
   const eventUrl  = `${SITE}/event.html?id=${event.id}`;
-  const picksUrl  = `${SITE}/picks.html`;
   const trackUrl  = `${SITE}/track-record.html`;
 
   // ----- Reddit markdown -----
