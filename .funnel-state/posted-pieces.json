@@ -15,5 +15,6 @@
   "4221::whatif-finisher",
   "4221::poll-main",
   "118::sensor-main",
-  "118::cardio-flagged"
+  "118::cardio-flagged",
+  "118::coinflip-lead"
 ]
