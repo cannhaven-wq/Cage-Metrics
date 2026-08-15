@@ -1,0 +1,82 @@
+name: Snapshot — freeze the pre-fight record
+
+# THE RULE: no fight goes off without our prediction already on record.
+#
+# Before every card, each fight gets exactly one immutable row in
+# pre_fight_snapshots freezing the engine's pick, the market price we could see,
+# the flagged edge, the Prop Board numbers, and the legacy model cards. Written
+# once, never revised — the table's triggers reject UPDATE and DELETE for every
+# role, service_role included.
+#
+# Why two runs a day rather than one timed to the bell: ufcstats gives us the
+# event DATE but no start time, and UFC cards open anywhere from ~02:00 UTC
+# (Australia/Asia) to ~22:00 UTC (US numbered events). No single daily slot is
+# safely before all of them. So:
+#
+#   23:00 UTC  — the night before. Covers every card on the following date,
+#                including early international ones.
+#   10:30 UTC  — day-of, after odds (08:00) / engine-serve (09:00) /
+#                props-refresh (10:00). Catches fights booked late and anything
+#                the first pass missed, still ahead of the earliest US bell.
+#
+# The script is append-only and skips fights already on record, so the earlier
+# run always wins and the second can only ever add. It also skips any card whose
+# fights are already settled, so a snapshot can never be backfilled after the
+# bell.
+#
+# Self-gating: with no card in the window the run finds nothing and exits clean,
+# so a daily schedule is a no-op except around fight days.
+
+on:
+  workflow_dispatch:
+    inputs:
+      event_id:
+        description: 'Snapshot one specific event id (blank = auto-target the next card)'
+        required: false
+        type: string
+  schedule:
+    # Night before — covers cards dated tomorrow.
+    - cron: '0 23 * * *'
+    # Day-of safety net — after the odds, engine and props crons have run.
+    - cron: '30 10 * * *'
+
+# Never run two snapshots at once — both insert into the same table, and a
+# concurrent pair would race on the already-snapshotted check.
+concurrency:
+  group: pre-fight-snapshot
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      # Public anon endpoint (also committed in _shared.js).
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      # The script checks SUPABASE_SECRET_KEY first; map the repo's existing
+      # service-role secret (legacy JWT). Writes bypass RLS.
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Guard — service key present
+        run: |
+          if [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set — add it (Settings → Secrets → Actions) or the snapshot can't authenticate."
+            exit 1
+          fi
+
+      # No third-party deps: the script uses only the standard library, so a
+      # broken pip mirror can never be the reason a card goes unrecorded.
+      - name: Freeze the pre-fight record
+        run: |
+          if [ -n "${{ inputs.event_id }}" ]; then
+            python cfl_engine/snapshot_predictions.py --event-id "${{ inputs.event_id }}" --execute
+          else
+            python cfl_engine/snapshot_predictions.py --within-days 1 --execute
+          fi

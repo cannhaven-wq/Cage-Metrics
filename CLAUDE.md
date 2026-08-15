@@ -25,6 +25,22 @@ The site itself is plain static HTML/CSS/JS — no bundler, no test suite. There
 - **Prerender**: `cd build && npm install && npm run prerender` regenerates the static stubs (see "Prerendered stubs" below). You almost never need to run this locally — the GitHub Action handles it on a 6-hour cron.
 - No lint, no test suite. Don't add either without asking.
 
+## The pre-fight record (hard rule)
+
+**No fight goes off without our prediction already on record.** Before every card, every fight on it gets exactly one immutable row in `pre_fight_snapshots` freezing what CFL was publicly showing at that moment: the engine's pick and calibrated probability, which engine version produced it, the market price we could see, any flagged value edge, the Prop Board projections for both corners, and the legacy v1–v6 model cards.
+
+- Owned by [`cfl_engine/snapshot_predictions.py`](cfl_engine/snapshot_predictions.py), scheduled by [`.github/workflows/snapshot.yml`](.github/workflows/snapshot.yml) (23:00 UTC the night before + 10:30 UTC day-of). Schema in [`pre_fight_snapshots_migration.sql`](pre_fight_snapshots_migration.sql).
+- **Append-only, enforced by database triggers that reject UPDATE and DELETE for every role including `service_role`.** Do not add a "fix up the snapshot" path. A record that can be revised after the bell is not evidence, and that is the only thing this table is for.
+- The script **collects, it never computes.** It reads what we already published. Re-running the model at snapshot time could disagree with what the site actually showed, which defeats the purpose.
+- Re-runs are always safe: fights already on record are skipped, never overwritten. Earliest snapshot wins; the second daily pass only adds late-booked fights.
+- It refuses to snapshot a settled card, so a snapshot can never be backfilled after a result is known.
+
+Why it can't just be the tables we already have: `model_picks` is insert-only but carries no price and no props; `prop_projections` is **full-table replaced** on every refresh, so it holds only the next card; `v_fight_odds_consensus` is overwritten as the line moves. The snapshot is the only place all three are frozen together ahead of the bell.
+
+Grade it through `v_pre_fight_graded`, which joins snapshots to results — it can only ever contain picks that were on record before the fight.
+
+Not to be confused with the legacy `predictions` table (the retired rules-model snapshotter, `cfl-snapshotter` on Railway, cron dead since 2026-05-29).
+
 ## Architecture
 
 ### Page model
