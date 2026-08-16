@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sat, 15 Aug 2026 18:15:36 GMT</lastBuildDate>
+  <lastBuildDate>Sun, 16 Aug 2026 00:46:27 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC 330: Makhachev vs. Machado Garry</title>
-    <link>https://cannonfightlab.com/event.html?id=118</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=118</guid>
-    <pubDate>Sat, 15 Aug 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 330: Makhachev vs. Machado Garry card — Philadelphia, Pennsylvania, USA.</description>
-  </item>
   <item>
     <title>UFC Fight Night: Hernandez vs. Rodrigues</title>
     <link>https://cannonfightlab.com/event.html?id=2626</link>

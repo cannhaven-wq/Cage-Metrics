@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-08-15T18:15:40.006Z",
+  "generated_at": "2026-08-16T00:46:30.343Z",
   "dataset": {
-    "fights_scored": 8669,
-    "market_even_cohort": 867,
+    "fights_scored": 8674,
+    "market_even_cohort": 869,
     "first_event": "1994-03-11",
     "last_event": "2026-10-17"
   },
@@ -24,15 +24,15 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 8542,
-            "wins": 4878,
+            "n": 8547,
+            "wins": 4880,
             "pct": 57.1,
-            "ci_lo": 56.1,
-            "ci_hi": 58.2
+            "ci_lo": 56,
+            "ci_hi": 58.1
           },
           "even": {
-            "n": 866,
-            "wins": 494,
+            "n": 868,
+            "wins": 495,
             "pct": 57,
             "ci_lo": 53.7,
             "ci_hi": 60.3
@@ -60,46 +60,46 @@
         {
           "label": "3–4 years younger",
           "all": {
-            "n": 2196,
-            "wins": 1241,
+            "n": 2197,
+            "wins": 1242,
             "pct": 56.5,
             "ci_lo": 54.4,
             "ci_hi": 58.6
           },
           "even": {
-            "n": 233,
-            "wins": 140,
-            "pct": 60.1,
-            "ci_lo": 53.7,
-            "ci_hi": 66.2
+            "n": 234,
+            "wins": 141,
+            "pct": 60.3,
+            "ci_lo": 53.9,
+            "ci_hi": 66.3
           },
           "verdict": "real"
         },
         {
           "label": "5–6 years younger",
           "all": {
-            "n": 1638,
+            "n": 1639,
             "wins": 923,
             "pct": 56.3,
             "ci_lo": 53.9,
             "ci_hi": 58.7
           },
           "even": {
-            "n": 159,
+            "n": 160,
             "wins": 97,
-            "pct": 61,
-            "ci_lo": 53.3,
-            "ci_hi": 68.2
+            "pct": 60.6,
+            "ci_lo": 52.9,
+            "ci_hi": 67.9
           },
           "verdict": "real"
         },
         {
           "label": "7–9 years younger",
           "all": {
-            "n": 1420,
-            "wins": 875,
+            "n": 1422,
+            "wins": 876,
             "pct": 61.6,
-            "ci_lo": 59.1,
+            "ci_lo": 59,
             "ci_hi": 64.1
           },
           "even": {
@@ -114,9 +114,9 @@
         {
           "label": "10+ years younger",
           "all": {
-            "n": 764,
+            "n": 765,
             "wins": 519,
-            "pct": 67.9,
+            "pct": 67.8,
             "ci_lo": 64.5,
             "ci_hi": 71.1
           },
@@ -143,18 +143,18 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 6628,
-            "wins": 3447,
+            "n": 6631,
+            "wins": 3449,
             "pct": 52,
             "ci_lo": 50.8,
             "ci_hi": 53.2
           },
           "even": {
-            "n": 711,
-            "wins": 375,
-            "pct": 52.7,
+            "n": 712,
+            "wins": 376,
+            "pct": 52.8,
             "ci_lo": 49.1,
-            "ci_hi": 56.4
+            "ci_hi": 56.5
           },
           "verdict": "proxy"
         },
@@ -179,9 +179,9 @@
         {
           "label": "2–3 inches longer",
           "all": {
-            "n": 2770,
+            "n": 2771,
             "wins": 1406,
-            "pct": 50.8,
+            "pct": 50.7,
             "ci_lo": 48.9,
             "ci_hi": 52.6
           },
@@ -215,18 +215,18 @@
         {
           "label": "6+ inches longer",
           "all": {
-            "n": 713,
-            "wins": 419,
-            "pct": 58.8,
-            "ci_lo": 55.1,
-            "ci_hi": 62.3
+            "n": 715,
+            "wins": 421,
+            "pct": 58.9,
+            "ci_lo": 55.2,
+            "ci_hi": 62.4
           },
           "even": {
-            "n": 76,
-            "wins": 43,
-            "pct": 56.6,
-            "ci_lo": 45.4,
-            "ci_hi": 67.1
+            "n": 77,
+            "wins": 44,
+            "pct": 57.1,
+            "ci_lo": 46,
+            "ci_hi": 67.6
           },
           "verdict": "unproven"
         }
@@ -244,46 +244,46 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 7161,
-            "wins": 3744,
+            "n": 7166,
+            "wins": 3747,
             "pct": 52.3,
             "ci_lo": 51.1,
             "ci_hi": 53.4
           },
           "even": {
-            "n": 692,
-            "wins": 352,
-            "pct": 50.9,
-            "ci_lo": 47.1,
-            "ci_hi": 54.6
+            "n": 694,
+            "wins": 354,
+            "pct": 51,
+            "ci_lo": 47.3,
+            "ci_hi": 54.7
           },
           "verdict": "proxy"
         },
         {
           "label": "1–2 inches taller",
           "all": {
-            "n": 4510,
-            "wins": 2325,
+            "n": 4513,
+            "wins": 2327,
             "pct": 51.6,
             "ci_lo": 50.1,
             "ci_hi": 53
           },
           "even": {
-            "n": 450,
-            "wins": 231,
-            "pct": 51.3,
-            "ci_lo": 46.7,
-            "ci_hi": 55.9
+            "n": 451,
+            "wins": 232,
+            "pct": 51.4,
+            "ci_lo": 46.8,
+            "ci_hi": 56
           },
           "verdict": "proxy"
         },
         {
           "label": "3–4 inches taller",
           "all": {
-            "n": 1996,
+            "n": 1997,
             "wins": 1073,
-            "pct": 53.8,
-            "ci_lo": 51.6,
+            "pct": 53.7,
+            "ci_lo": 51.5,
             "ci_hi": 55.9
           },
           "even": {
@@ -298,18 +298,18 @@
         {
           "label": "5+ inches taller",
           "all": {
-            "n": 655,
-            "wins": 346,
-            "pct": 52.8,
-            "ci_lo": 49,
-            "ci_hi": 56.6
+            "n": 656,
+            "wins": 347,
+            "pct": 52.9,
+            "ci_lo": 49.1,
+            "ci_hi": 56.7
           },
           "even": {
-            "n": 50,
-            "wins": 25,
-            "pct": 50,
-            "ci_lo": 36.6,
-            "ci_hi": 63.4
+            "n": 51,
+            "wins": 26,
+            "pct": 51,
+            "ci_lo": 37.7,
+            "ci_hi": 64.1
           },
           "verdict": "unproven"
         }
@@ -355,54 +355,54 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 1836,
-            "wins": 1140,
-            "pct": 62.1,
+            "n": 1839,
+            "wins": 1141,
+            "pct": 62,
             "ci_lo": 59.8,
-            "ci_hi": 64.3
+            "ci_hi": 64.2
           },
           "even": {
-            "n": 165,
-            "wins": 97,
-            "pct": 58.8,
-            "ci_lo": 51.2,
-            "ci_hi": 66
+            "n": 167,
+            "wins": 98,
+            "pct": 58.7,
+            "ci_lo": 51.1,
+            "ci_hi": 65.9
           },
           "verdict": "real"
         },
         {
           "label": "8–15 point edge",
           "all": {
-            "n": 1108,
-            "wins": 674,
+            "n": 1110,
+            "wins": 675,
             "pct": 60.8,
             "ci_lo": 57.9,
-            "ci_hi": 63.7
+            "ci_hi": 63.6
           },
           "even": {
-            "n": 118,
-            "wins": 66,
-            "pct": 55.9,
-            "ci_lo": 46.9,
-            "ci_hi": 64.6
+            "n": 119,
+            "wins": 67,
+            "pct": 56.3,
+            "ci_lo": 47.3,
+            "ci_hi": 64.9
           },
           "verdict": "proxy"
         },
         {
           "label": "15–25 point edge",
           "all": {
-            "n": 626,
+            "n": 627,
             "wins": 391,
-            "pct": 62.5,
-            "ci_lo": 58.6,
-            "ci_hi": 66.2
+            "pct": 62.4,
+            "ci_lo": 58.5,
+            "ci_hi": 66.1
           },
           "even": {
-            "n": 44,
+            "n": 45,
             "wins": 29,
-            "pct": 65.9,
-            "ci_lo": 51.1,
-            "ci_hi": 78.1
+            "pct": 64.4,
+            "ci_lo": 49.8,
+            "ci_hi": 76.8
           },
           "verdict": "unproven"
         },
@@ -450,54 +450,54 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 2586,
-            "wins": 1415,
-            "pct": 54.7,
+            "n": 2588,
+            "wins": 1417,
+            "pct": 54.8,
             "ci_lo": 52.8,
-            "ci_hi": 56.6
+            "ci_hi": 56.7
           },
           "even": {
-            "n": 293,
-            "wins": 143,
-            "pct": 48.8,
-            "ci_lo": 43.1,
-            "ci_hi": 54.5
+            "n": 295,
+            "wins": 145,
+            "pct": 49.2,
+            "ci_lo": 43.5,
+            "ci_hi": 54.8
           },
           "verdict": "proxy"
         },
         {
           "label": "10–20 point edge",
           "all": {
-            "n": 1032,
-            "wins": 549,
+            "n": 1033,
+            "wins": 550,
             "pct": 53.2,
-            "ci_lo": 50.1,
-            "ci_hi": 56.2
+            "ci_lo": 50.2,
+            "ci_hi": 56.3
           },
           "even": {
-            "n": 110,
-            "wins": 56,
-            "pct": 50.9,
-            "ci_lo": 41.7,
-            "ci_hi": 60.1
+            "n": 111,
+            "wins": 57,
+            "pct": 51.4,
+            "ci_lo": 42.2,
+            "ci_hi": 60.4
           },
           "verdict": "proxy"
         },
         {
           "label": "20–30 point edge",
           "all": {
-            "n": 720,
-            "wins": 400,
+            "n": 721,
+            "wins": 401,
             "pct": 55.6,
-            "ci_lo": 51.9,
-            "ci_hi": 59.1
+            "ci_lo": 52,
+            "ci_hi": 59.2
           },
           "even": {
-            "n": 88,
-            "wins": 44,
-            "pct": 50,
-            "ci_lo": 39.8,
-            "ci_hi": 60.2
+            "n": 89,
+            "wins": 45,
+            "pct": 50.6,
+            "ci_lo": 40.4,
+            "ci_hi": 60.7
           },
           "verdict": "unproven"
         },
@@ -533,34 +533,34 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 2884,
-            "wins": 1550,
+            "n": 2886,
+            "wins": 1551,
             "pct": 53.7,
             "ci_lo": 51.9,
             "ci_hi": 55.6
           },
           "even": {
-            "n": 310,
-            "wins": 141,
+            "n": 312,
+            "wins": 142,
             "pct": 45.5,
-            "ci_lo": 40,
-            "ci_hi": 51
+            "ci_lo": 40.1,
+            "ci_hi": 51.1
           },
           "verdict": "proxy"
         },
         {
           "label": "0.5–1.5 more per minute",
           "all": {
-            "n": 1556,
-            "wins": 815,
+            "n": 1558,
+            "wins": 816,
             "pct": 52.4,
             "ci_lo": 49.9,
-            "ci_hi": 54.9
+            "ci_hi": 54.8
           },
           "even": {
-            "n": 161,
-            "wins": 77,
-            "pct": 47.8,
+            "n": 163,
+            "wins": 78,
+            "pct": 47.9,
             "ci_lo": 40.3,
             "ci_hi": 55.5
           },
@@ -616,18 +616,18 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 1553,
+            "n": 1554,
             "wins": 785,
             "pct": 50.5,
-            "ci_lo": 48.1,
+            "ci_lo": 48,
             "ci_hi": 53
           },
           "even": {
-            "n": 171,
+            "n": 172,
             "wins": 86,
-            "pct": 50.3,
-            "ci_lo": 42.9,
-            "ci_hi": 57.7
+            "pct": 50,
+            "ci_lo": 42.6,
+            "ci_hi": 57.4
           },
           "verdict": "proxy"
         },
@@ -652,18 +652,18 @@
         {
           "label": "40–60 point edge",
           "all": {
-            "n": 425,
+            "n": 426,
             "wins": 217,
-            "pct": 51.1,
-            "ci_lo": 46.3,
-            "ci_hi": 55.8
+            "pct": 50.9,
+            "ci_lo": 46.2,
+            "ci_hi": 55.7
           },
           "even": {
-            "n": 55,
+            "n": 56,
             "wins": 27,
-            "pct": 49.1,
-            "ci_lo": 36.4,
-            "ci_hi": 61.9
+            "pct": 48.2,
+            "ci_lo": 35.7,
+            "ci_hi": 61
           },
           "verdict": "unproven"
         },
