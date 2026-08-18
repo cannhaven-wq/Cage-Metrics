@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-08-18T18:24:00.394Z",
+  "generated_at": "2026-08-18T22:51:31.681Z",
   "dataset": {
     "fights_scored": 8681,
     "market_even_cohort": 871,
     "first_event": "1994-03-11",
-    "last_event": "2026-10-24"
+    "last_event": "2026-08-15"
   },
   "rules": {
     "min_sample": 100,
