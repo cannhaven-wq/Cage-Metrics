@@ -46,7 +46,7 @@
       "name": "Do southpaws really have an advantage in MMA?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "In southpaw vs orthodox UFC bouts across thousands of historical fights, southpaws win at a rate above 50%. The exact figure is computed live from the full UFC fight history."
+        "text": "The southpaw vs orthodox win rate is computed live from the full UFC fight history on this page, with the sample size shown. Historically the edge has been small, and it does not survive a control for the betting line."
       }
     },
     {
@@ -527,7 +527,7 @@ async function loadFactorLab() {
     `Scored across ${d.dataset.fights_scored.toLocaleString()} decided UFC fights `
     + `(${d.dataset.first_event} to ${d.dataset.last_event}), of which `
     + `${d.dataset.market_even_cohort.toLocaleString()} were priced within ±${d.rules.even_band_american} at close. `
-    + `Ranges are 95% confidence. Recomputed from the database on ${when} — nothing on this page is hardcoded.`;
+    + `Ranges are 95% confidence. Rebuilt from the full database on ${when}; only decided fights count toward the scores.`;
 }
 
 async function loadYounger() {

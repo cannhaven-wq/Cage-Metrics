@@ -257,7 +257,7 @@
         <li><a href="#age-gap">Age-gap win rate</a></li>
         <li><a href="#reach-gap">Reach-gap win rate</a></li>
         <li><a href="#stance">Stance matchup win rate</a></li>
-        <li><a href="#implied-win">Implied win percentage model</a></li>
+        <li><a href="#implied-win">How CFL produces a per-fight number</a></li>
         <li><a href="#fighter-style">Fighter style classification</a></li>
         <li><a href="#cardio">Cardio and consistency scores</a></li>
         <li><a href="#exclusions">What we deliberately do not publish</a></li>
@@ -272,11 +272,11 @@
       <p>All historical fight data on CFL is sourced from the official UFC statistics website, accessed via public HTTP requests at a rate-limited cadence designed to avoid burdening their servers. We collect publicly available facts only — fighter biographical data, fight outcomes, and round-level box-score statistics. We do not collect personal information, do not bypass any authentication or rate limit, and do not republish source HTML.</p>
       <p>The database powering this site currently contains:</p>
       <ul>
-        <li>4,506 fighter profiles covering substantially the full historical UFC roster</li>
-        <li>8,853 completed fights with outcome, method, round, and weight class</li>
-        <li>788 events spanning UFC history through the most recent card</li>
+        <li>4,500+ fighter profiles covering substantially the full historical UFC roster</li>
+        <li>8,900+ completed fights with outcome, method, round, and weight class</li>
+        <li>790+ events spanning UFC history through the most recent card</li>
       </ul>
-      <p class="muted">Counts as of July 14, 2026. New cards are scraped as they happen, so these numbers grow weekly.</p>
+      <p class="muted">Counts as of August 18, 2026. New cards are scraped as they happen, so these numbers grow weekly.</p>
       <p class="muted">Fight metadata (who fought whom, who won, by what method, in what round) is complete across the dataset. Per-fight round-by-round statistics (significant strikes, takedowns, control time) are populated for the subset of fights where UFC published them — primarily Zuffa-era events.</p>
     </section>
 
@@ -286,8 +286,8 @@
       <p>For every completed UFC fight in the dataset where both fighters' dates of birth are known, we compute the age difference in whole years between the two fighters on the date of the fight. We then bucket fights by the absolute age gap and measure the win rate of the younger fighter within each bucket.</p>
 
       <div class="stat-callout">
-        <div class="headline">When one fighter is 5+ years younger, they win 62.4% of the time.</div>
-        <div class="sample"><strong>Sample:</strong> 3,309 fights. <strong>Source:</strong> Completed UFC fights with both DOBs known.</div>
+        <div class="headline">When one fighter is 5+ years younger, they win about 60% of the time.</div>
+        <div class="sample"><strong>Sample:</strong> 3,831 fights. <strong>Source:</strong> the Factor Lab dataset — point-in-time, decided UFC fights with both DOBs known (5–6 yr gap: 56.2% of 1,642 · 7–9 yr: 61.6% of 1,423 · 10+ yr: 67.9% of 766).</div>
       </div>
 
       <h3>Formula</h3>
@@ -297,10 +297,10 @@ win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in b
 
       <h3>Why we trust this signal</h3>
       <ul>
-        <li>The sample size (3,309 fights) is large enough to be statistically meaningful</li>
+        <li>The sample size (3,831 fights) is large enough to be statistically meaningful</li>
         <li>The pattern is monotonic — larger age gaps produce larger win-rate gaps for the younger fighter, which is what you would expect if the effect is real and not noise</li>
         <li>Age is exogenous — fighters cannot manipulate it, and matchmaking does not systematically pair younger versus older fighters in a way that would confound the result</li>
-        <li>Age is the only factor we measure that survives market control — the younger fighter still wins 56.8% of fights the betting market priced as even. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
+        <li>Age is one of only two factors we measure that survive market control (the other is a fighter's UFC record, on a smaller sample) — the younger fighter still wins 57.0% of fights the betting market priced as even. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
       </ul>
 
       <h3>Known caveats</h3>
@@ -318,8 +318,8 @@ win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in b
       <p>For every completed UFC fight where both fighters' reach measurements are recorded, we compute the reach difference in whole inches and measure the win rate of the longer-reach fighter at each gap.</p>
 
       <div class="stat-callout">
-        <div class="headline">When one fighter has a 4+ inch reach advantage, they win 55.0% of the time.</div>
-        <div class="sample"><strong>Sample:</strong> 2,006 fights. <strong>Source:</strong> Completed UFC fights with both reach measurements recorded.</div>
+        <div class="headline">When one fighter has a 4+ inch reach advantage, they win about 55% of the time.</div>
+        <div class="sample"><strong>Sample:</strong> 2,057 fights. <strong>Source:</strong> the Factor Lab dataset — point-in-time, decided UFC fights with both reach measurements recorded (4–5 in gap: 53.7% of 1,341 · 6+ in: 58.8% of 716).</div>
       </div>
 
       <h3>Formula</h3>
@@ -343,47 +343,38 @@ win_rate(bucket) = sum(longer_won where reach_gap in bucket) / count(reach_gap i
       <p>For every completed UFC fight where both fighters' stances are recorded, we group fights by the specific stance pairing (Orthodox vs Orthodox, Orthodox vs Southpaw, Switch vs Southpaw, etc.) and measure win rates by stance.</p>
 
       <div class="stat-callout">
-        <div class="headline">Switch-stance fighters beat Southpaws 58.1% of the time.</div>
-        <div class="sample"><strong>Sample:</strong> 191 fights. <strong>Source:</strong> Completed UFC fights between fighters with recorded stances of Switch and Southpaw.</div>
-        <div class="sample" style="margin-top:8px;"><strong>Raw base rate only.</strong> This number does not survive market control — once you hold the betting line flat, the stance advantage collapses to roughly a coin flip. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a>.</div>
+        <div class="headline">A southpaw with a reach edge wins 56.9% of the time — but only 49.3% when the market priced the fight even.</div>
+        <div class="sample"><strong>Sample:</strong> 673 fights raw, 73 market-even. <strong>Source:</strong> the Factor Lab dataset — point-in-time, decided UFC fights.</div>
+        <div class="sample" style="margin-top:8px;"><strong>Raw base rate only.</strong> The stance signal does not survive market control — once you hold the betting line flat, it collapses to a coin flip. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a>.</div>
       </div>
 
-      <h3>Why we report only the matchups with real signal</h3>
-      <p>Most stance pairings cluster near 50% and are not predictive. We publish only the specific pairings where the deviation from 50% is large enough and the sample is wide enough to be worth a bettor's attention. Orthodox-versus-Orthodox is treated as a 50% baseline.</p>
+      <h3>Why we stopped publishing per-pairing stance records</h3>
+      <p>Most stance pairings cluster near 50% and are not predictive, and the pairings that once looked interesting (like Switch vs Southpaw) came from samples too small to trust. The stance factor we still track — southpaw plus a reach edge — is measured in the Factor Lab with its sample size and confidence range attached.</p>
 
       <h3>Known caveats</h3>
       <ul>
-        <li>The Switch-vs-Southpaw sample (191 fights) is far smaller than the age or reach samples — the confidence interval around 58.1% is wider</li>
-        <li>"Switch" classification depends on how UFC categorizes a fighter, which is occasionally inconsistent</li>
-        <li>This effect may partially reflect that Switch-stance fighters tend to be more experienced, not that the stance itself confers an advantage</li>
+        <li>Stance classification depends on how UFC categorizes a fighter, which is occasionally inconsistent</li>
+        <li>Any raw stance effect may partially reflect experience differences, not the stance itself</li>
       </ul>
       <a href="#" class="back-to-top">Back to top ↑</a>
     </section>
 
     <section class="method" id="implied-win">
-      <h2>05 &nbsp;Implied win percentage model</h2>
-      <div class="subhead">How CFL produces a per-fight number from the base rates above</div>
-      <p>For each upcoming fight, we compute an implied win percentage for each fighter by starting at 50% and additively applying the deviation from base rate contributed by each measured signal.</p>
-
-      <h3>Formula</h3>
-<div class="formula"><span class="label">Implied win %</span>implied_win_pct = 0.50
-                  + age_gap_deviation
-                  + reach_gap_deviation
-                  + stance_matchup_deviation
-
-Each deviation = (measured_win_rate_in_bucket - 0.50)
-Deviations are signed in the direction of the favored fighter.</div>
-
-      <h3>What this model deliberately is not</h3>
+      <h2>05 &nbsp;How CFL produces a per-fight number</h2>
+      <div class="subhead">The engine — one calibrated probability per fight (since July 2026)</div>
+      <p>Every published pick comes from a single machine-learned engine. It reads each fighter's history, per-fight statistics (strikes, takedowns, control, knockdowns), and physical attributes — height, reach, stance, age — and produces one calibrated win probability per fight. It never sees a betting line.</p>
+      <p>Three rules govern everything it publishes:</p>
       <ul>
-        <li>It is not a multivariate regression. Each signal is applied independently, which slightly overcounts when signals are correlated (e.g., age and reach can interact)</li>
-        <li>It does not include career stats like finish rate, strikes-per-minute, or takedown defense. Those metrics are confounded with fighter quality and we have not yet isolated their independent predictive value</li>
-        <li>It does not adjust for opponent quality, recent form, weight cut, layoff, or camp changes</li>
+        <li><strong>Walk-forward only.</strong> To score any fight, the engine may use only what was knowable before that fight. Its backtest replays history year by year, only ever picking fights it had not trained on, and the replay's first, uncalibrated year is excluded from everything published.</li>
+        <li><strong>An automated leakage audit has to pass before anything ships</strong> — including a hard flag if accuracy looks too good (clean MMA models live in the low-to-mid 60s; a number above 70% means leakage, not genius).</li>
+        <li><strong>Picks are locked at first write.</strong> Live picks are inserted before the card with their percentage and price, and are never revised. Every fight also gets one immutable pre-fight snapshot of everything CFL was showing at that moment.</li>
       </ul>
+      <p>The engine's confidence tiers are <strong>Lock</strong> (65%+), <strong>Pick</strong> (57%+), and <strong>Lean</strong> (everything else). Its money face, <strong>Value</strong>, flags a bet only when the engine's number beats the vig-free market price by 4+ points, sized to the edge and capped at 2% of bankroll. The graded record for all of it lives on the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>.</p>
+      <p class="muted">Some fight cards also show a factor-based verdict built from the base rates above (age, record, cardio) where engine picks aren't published yet. That verdict is the older May 2026 system and is labeled provisional — see <a href="edges.html" style="color:var(--red); text-decoration: underline;">the edges page</a> for its full history, including the mistakes.</p>
 
       <div class="warn-box">
         <div class="warn-label">Important</div>
-        <p>The implied win percentage published on CFL is a description of historical patterns applied to a future event. It is not a prediction of the outcome of any individual fight. Single-fight outcomes have substantial variance that no statistical model can eliminate.</p>
+        <p>The win percentage published on CFL is a description of historical patterns applied to a future event. It is not a prediction of the outcome of any individual fight. Single-fight outcomes have substantial variance that no statistical model can eliminate.</p>
       </div>
       <a href="#" class="back-to-top">Back to top ↑</a>
     </section>
@@ -444,7 +435,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
       <ul>
         <li><strong>Finish rate.</strong> Strongly correlated with fighter quality — high-finish-rate fighters tend to face weaker opposition early in their careers. We cannot yet isolate the independent contribution</li>
         <li><strong>Strikes landed per minute (SLPM).</strong> Same confound as finish rate. A high SLPM may reflect dominant matchmaking rather than predictive striking volume</li>
-        <li><strong>Takedown defense.</strong> Sample-size issues for fighters who are rarely shot on. Reported on the fighter card but not used in the implied win percentage model</li>
+        <li><strong>Takedown defense.</strong> Sample-size issues for fighters who are rarely shot on. Reported on the fighter card; in the Factor Lab it does not survive market control</li>
         <li><strong>Recent form / last five.</strong> Reported as a streak but not modeled — small samples and high variance make it noisy</li>
         <li><strong>Short-notice replacements.</strong> Sample size too small for any specific weight class to be informative</li>
       </ul>
@@ -457,7 +448,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
       <div class="subhead">What this data cannot tell you</div>
       <ul>
         <li>None of these statistics predict any individual fight outcome. They describe historical population-level patterns</li>
-        <li>The implied win percentage is additive across signals and does not account for interactions between them</li>
+        <li>The legacy factor verdict (where shown) is additive across signals and does not account for interactions between them; the engine models interactions directly</li>
         <li>UFC matchmaking is non-random. Title contenders fight title contenders. This biases certain base rates in ways we have not fully corrected for</li>
         <li>Per-fight round-by-round statistics are missing for older fights — analytics that require these stats use the subset of fights for which they exist, which skews more recent</li>
         <li>Stance, reach, and DOB are self-reported through UFC and occasionally inconsistent or missing</li>
@@ -486,7 +477,7 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
     </section>
 
     <div class="last-updated">
-      Last updated: July 14, 2026 · Cannon Fight Lab is operated by Reed Cannon. Cannon Fight Lab is not a sportsbook.
+      Last updated: August 18, 2026 · Cannon Fight Lab is operated by Cannon Fight Lab LLC. Cannon Fight Lab is not a sportsbook.
     </div>
 
   </div>

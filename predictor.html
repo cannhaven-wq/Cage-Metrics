@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Model Lab — Cannon Fight Lab</title>
-<meta name="description" content="How CFL's two public UFC models work — Value, which prices bets against the opening line, and Fight IQ, which never sees a betting line — and the honest windows they're graded on.">
+<meta name="description" content="How CFL's archived UFC models work — from the baseline to Value and Fight IQ — and the honest out-of-sample windows each one is graded on.">
 <meta name="robots" content="noindex">
 <link rel="canonical" href="https://cannonfightlab.com/predictor.html">
 
@@ -695,14 +695,17 @@
       one fighter. Even at 0% Kelly value, you'll never be exposed beyond this cap on one bet.</p>
 
       <h3>Edge thresholds — when to bet</h3>
-      <p>We use <strong>edge ≥ 5%</strong> as the default "would_bet" threshold. Lower thresholds catch more bets but include
+      <p>On this page we use <strong>edge ≥ 5%</strong> as the default "would_bet" threshold for the archived models. (The
+      live engine's Value face uses a stricter, separate bar — 4 points against the vig-free close — described on the
+      <a href="track-record.html">Proof Center</a>.) Lower thresholds catch more bets but include
       more marginal ones; higher thresholds (7–10%) are more selective with better per-bet ROI but fewer opportunities.
       The model card stats above show how each threshold performed historically.</p>
 
       <div class="caveat">
-        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. Value's betting
-        record is simulated point-in-time, not live: on fights after its December 2024 training cutoff, the shipped rule
-        (favorites with 3+ points of edge, $100 flat bets) has gone 66–21 as of July 15, 2026 — correct on 66 of 87 bets — for +$1,478 at the
+        <strong>Honest caveats.</strong> This is an experimental research tool, not a tout service. The archived v6
+        model's betting record is simulated point-in-time, not live: on fights after its December 2024 training cutoff,
+        its rule (favorites with 3+ points of edge, $100 flat bets — v6's own historical rule; the live engine's bar is
+        4 points) has gone 66–21 as of July 15, 2026 — correct on 66 of 87 bets — for +$1,478 at the
         opening price (+17.0%). Re-priced at closing odds, that drops to +$1,103 (+12.7%). The live record starts
         July 2026 and is 0-1 so far — the first settled live bet lost. Real-world results also shrink with liquidity friction and book
         limits, and a losing month or two is normal — not a sign the strategy is broken. Never bet money you can't
@@ -767,8 +770,8 @@ cfl.renderFooter();
   const escapeHtml = window.cfl.escapeHtml || (s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])));
 
   // ---- pull models ----
-  // Only registry-listed public models ever render. Retired models (v1, v2,
-  // v4, v5) stay in the DB for history but never reach this page.
+  // Only registry-listed public models ever render (cfl.PUBLIC_MODELS — all
+  // six archived models today). Anything not in the registry stays DB-only.
   const { data: allModels, error: mErr } = await sb
     .from('model_versions')
     .select('*')
@@ -997,10 +1000,13 @@ cfl.renderFooter();
   const detailEl = document.getElementById('modelDetail');
   detailEl.innerHTML = models.map(m => {
     const rows = byModel[m.id] || [];
+    // Same honest window as the model cards above — roiAt requires it; without
+    // it every row fails the date filter and the table renders zeros.
+    const dws = windowStartFor(m);
     const roiRows = EDGES.map(e => {
-      const all = roiAt(rows, e);
+      const all = roiAt(rows, e, dws);
       const dogRows = rows.filter(r => r.opener_implied_p != null && r.opener_implied_p < 0.5);
-      const dog = roiAt(dogRows, e);
+      const dog = roiAt(dogRows, e, dws);
       return { e, all, dog };
     });
     const picks = rows

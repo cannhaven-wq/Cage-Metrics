@@ -276,7 +276,7 @@
   <!-- Performance -->
   <div class="sec">
     <h2>Performance</h2>
-    <p class="desc">Live numbers from your actual bets. For context: the Value model's simulated record is +12.7% at closing prices as of July 2026; your book is your own record.</p>
+    <p class="desc">Live numbers from your actual bets. For context: our value flags' simulated record is a high win rate that lands roughly break-even at flat stakes (bets sized to the edge do better) — your book is your own record.</p>
     <div class="perf-grid" id="perfGrid"></div>
   </div>
 
@@ -883,7 +883,7 @@
       <div class="perf-card">
         <div class="lbl">ROI on $ at risk</div>
         <div class="val ${roi > 0 ? 'pos' : roi < 0 ? 'neg' : ''}">${n > 0 ? (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%' : '—'}</div>
-        <div class="sub">Value model simulated: +12.7% at closing prices</div>
+        <div class="sub">our simulated value flags: roughly break-even at flat stakes</div>
       </div>
       <div class="perf-card">
         <div class="lbl">Avg CLV vs opener</div>

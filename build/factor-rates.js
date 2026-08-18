@@ -473,8 +473,11 @@ async function main() {
     dataset: {
       fights_scored: matchups.length,
       market_even_cohort: evenCount,
-      first_event: dated[0] ? dated[0].date : null,
-      last_event: dated[dated.length - 1] ? dated[dated.length - 1].date : null,
+      // Bound the window by SCORED fights only — `dated` includes upcoming
+      // cards, and showing an unfought event as the dataset boundary reads as
+      // grading fights that haven't happened.
+      first_event: matchups[0] ? matchups[0].date : null,
+      last_event: matchups.length ? matchups[matchups.length - 1].date : null,
     },
     rules: {
       min_sample: MIN_SAMPLE,
