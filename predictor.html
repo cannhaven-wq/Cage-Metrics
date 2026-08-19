@@ -925,7 +925,10 @@ cfl.renderFooter();
   const isHoldout = (r, ws) => r.outcome_known && (r.event_date || '') >= ws;
 
   function roiAt(rows, edge, ws) {
-    const bets = rows.filter(r => isHoldout(r, ws) && r.edge != null && r.edge > edge && r.opener_american_odds != null);
+    // Reconstructed picks (outage carve-out) carry a proxy opener, so without
+    // this filter they'd enter the bet denominators with $0 P&L. They count
+    // toward accuracy only — the documented policy.
+    const bets = rows.filter(r => isHoldout(r, ws) && !r.reconstructed && r.edge != null && r.edge > edge && r.opener_american_odds != null);
     if (!bets.length) return { bets: 0, wins: 0, win_pct: 0, roi: 0, pnl: 0 };
     const wins = bets.filter(b => b.won).length;
     const pnl = bets.reduce((s, b) => s + (parseFloat(b.pnl_usd) || 0), 0);

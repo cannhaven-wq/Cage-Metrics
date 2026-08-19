@@ -700,7 +700,7 @@ async function loadProof() {
   const [{ data: models, error: mErr }, rows] = await Promise.all([
     sb.from('model_versions').select('id, name, test_start_date, test_brier').order('id'),
     cfl.fetchAll(() => sb.from('model_predictions')
-      .select('model_version, fight_id, fighter_id, event_date, model_p, opener_implied_p, opener_american_odds, edge, would_bet, won, pnl_usd, created_at')
+      .select('model_version, fight_id, fighter_id, event_date, model_p, opener_implied_p, opener_american_odds, edge, would_bet, won, pnl_usd, created_at, reconstructed')
       .eq('outcome_known', true)
       .order('id', { ascending: true })),
   ]);
@@ -811,7 +811,9 @@ function renderAll() {
   const acc = n ? hits / n : 0;
   const brier = n ? picks.reduce((s, r) => s + Math.pow(Number(r.model_p) - (r.won === true ? 1 : 0), 2), 0) / n : null;
 
-  const bets = oos.filter(r => r.would_bet === true);
+  // Reconstructed picks (outage carve-out) are accuracy-only by policy — they
+  // are never bets, even if a future backfill mis-sets would_bet.
+  const bets = oos.filter(r => r.would_bet === true && !r.reconstructed);
   const betPnl = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
   const betRoi = bets.length ? betPnl / (bets.length * 100) : null;
 
@@ -939,7 +941,7 @@ function renderAllModelsTable() {
     const w = picks.filter(r => r.won === true).length;
     const brier = picks.reduce((s, r) => s + Math.pow(Number(r.model_p) - (r.won === true ? 1 : 0), 2), 0) / picks.length;
     const isMoney = !!(cfl.MODELS[m.id] && cfl.MODELS[m.id].money);
-    const bets = isMoney ? _rows.filter(r => r.model_version === m.id && r.event_date >= start && r.would_bet === true) : [];
+    const bets = isMoney ? _rows.filter(r => r.model_version === m.id && r.event_date >= start && r.would_bet === true && !r.reconstructed) : [];
     const p = bets.reduce((s, r) => s + (flatPnl(r) || 0), 0);
     const roi = bets.length ? p / (bets.length * 100) : null;
     const acc = w / picks.length;
