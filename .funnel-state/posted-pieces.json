@@ -17,5 +17,6 @@
   "118::sensor-main",
   "118::cardio-flagged",
   "118::coinflip-lead",
-  "2626::sensor-main"
+  "2626::sensor-main",
+  "2626::coinflip-lead"
 ]
