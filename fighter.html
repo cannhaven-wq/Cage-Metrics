@@ -387,6 +387,11 @@ async function load() {
         <div class="fin-wrap" id="finisherCard"></div>
       </div>
 
+      <div class="stat-section" id="cardioSection" hidden>
+        <h2>Deep water</h2>
+        <div class="fin-wrap" id="cardioCard"></div>
+      </div>
+
       <div class="stat-section">
         <h2>Physical attributes</h2>
         <div class="pa-grid">
@@ -411,10 +416,75 @@ async function load() {
     </div>
   `;
 
-  // Fire style, finisher and history loads in parallel — none blocks the others
+  // Fire style, finisher, cardio and history loads in parallel — none blocks the others
   loadStyle(f);
   loadFinisher(f);
+  loadCardio(f);
   await loadHistory();
+}
+
+// Does this fighter hold their pace into rounds three and beyond? Reads
+// v_fighter_consistency, which compares late-round output to round-one output
+// within the SAME fights. The score is a ratio, so 100 means they kept exactly
+// the pace they set — which is why we also show the pace itself: a fighter who
+// is equally inactive early and late scores well without being hard to fight.
+async function loadCardio(f) {
+  const sb = window.cflSupabase;
+  const sec = document.getElementById('cardioSection');
+  const box = document.getElementById('cardioCard');
+  if (!sec || !box) return;
+
+  // Weight-class row first, CAREER as the fallback (same pattern as loadStyle).
+  let row = null;
+  if (f.division) {
+    const { data } = await sb.from('v_fighter_consistency').select('*')
+      .eq('fighter_id', f.id).eq('weight_class', f.division).maybeSingle();
+    if (data && data.consistency_score != null) row = data;
+  }
+  if (!row) {
+    const { data } = await sb.from('v_fighter_consistency').select('*')
+      .eq('fighter_id', f.id).eq('weight_class', 'CAREER').maybeSingle();
+    if (data && data.consistency_score != null) row = data;
+  }
+  if (!row) return;   // not enough deep-water film — leave the section hidden
+
+  const score = Number(row.consistency_score);
+  const TIER = {
+    tireless:  { label: 'Tireless',  cls: 'granite', line: 'Holds their pace into the championship rounds.' },
+    steady:    { label: 'Steady',    cls: 'granite', line: 'Output holds up well as the fight wears on.' },
+    tapers:    { label: 'Tapers',    cls: '',        line: 'Slows down noticeably in the later rounds.' },
+    fades:     { label: 'Fades',     cls: 'fragile', line: 'Output drops off badly once the fight gets deep.' },
+    collapses: { label: 'Collapses', cls: 'fragile', line: 'Falls apart in deep water — a real vulnerability.' },
+  };
+  const t = TIER[row.cardio_tier] || { label: row.cardio_tier, cls: '', line: '' };
+  const pace = row.r1_sig_str_per_min != null ? Number(row.r1_sig_str_per_min) : null;
+  const lowPace = pace != null && pace < 4.0;
+  const limited = row.confidence_tier === 'limited';
+
+  // 50 -> 0%, 100 -> 50%, 150+ -> 100%. The bar is a feel, the number is truth.
+  const barPct = Math.max(2, Math.min(100, (score - 50)));
+
+  box.innerHTML = `
+    <div class="fin-tags">
+      <span class="fin-tag ${t.cls}">${cfl.escapeHtml(t.label)}</span>
+      ${lowPace ? '<span class="fin-tag">Low volume</span>' : ''}
+      ${limited ? '<span class="fin-tag">Thin sample</span>' : ''}
+    </div>
+    <div class="fin-bar" style="background:var(--bg-4)">
+      <div class="fin-seg ${score >= 90 ? 'sub' : 'ko'}" style="width:${barPct}%">${score.toFixed(0)}</div>
+    </div>
+    <div class="fin-legend"><span>50 = output halves late</span><span>100 = pace held exactly</span></div>
+    <div class="pa-grid">
+      <div class="pa-box"><div class="pa-val">${score.toFixed(0)}</div><div class="pa-lbl">Pace held into rounds 3+</div></div>
+      <div class="pa-box"><div class="pa-val">${pace != null ? pace.toFixed(1) : '—'}</div><div class="pa-lbl">Strikes thrown per min (R1)</div></div>
+      <div class="pa-box"><div class="pa-val">${row.r3p_minutes}m</div><div class="pa-lbl">Late-round film measured</div></div>
+    </div>
+    <div class="fin-note">${cfl.escapeHtml(t.line)}
+      ${lowPace ? ' Worth noting they fight at a low volume to begin with, so holding that pace is easier than it looks.' : ''}
+      Measured only in fights that actually reached round three, comparing their late output to their own round-one pace in those same fights.
+      ${limited ? ' Based on limited deep-water film — treat it loosely.' : ''}</div>
+  `;
+  sec.hidden = false;
 }
 
 // How this fighter ends fights, and how they get ended. Reads
