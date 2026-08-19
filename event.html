@@ -173,6 +173,11 @@
   }
   .model-pick-pill.correct .mp-mv,
   .model-pick-pill.correct .mp-pct { color: var(--green); opacity: 0.85; }
+  .model-pick-pill.value {
+    border-color: color-mix(in srgb, var(--blue) 45%, transparent);
+    background: color-mix(in srgb, var(--blue) 10%, transparent);
+  }
+  .model-pick-pill.value .mp-mv { color: var(--blue); }
   .model-pick-pill.wrong {
     background: rgba(239,68,68,0.10);
     border-color: rgba(239,68,68,0.30);
@@ -555,12 +560,6 @@ cfl.renderFooter();
 
 const eventId = parseInt(cfl.getQueryParam('id'), 10);
 
-// Short display name for a public model: the part of the registry name before
-// the dash, e.g. "Value" / "Fight IQ". Falls back to the raw id.
-function modelShortName(id) {
-  return String(cfl.modelName(id) || id).split(' — ')[0];
-}
-
 function setMeta(attr, key, value) {
   let tag = document.querySelector(`meta[${attr}="${key}"]`);
   if (!tag) {
@@ -673,7 +672,7 @@ async function load() {
   // streak factors went away.
   const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date';
   const fightIds = (fights || []).map(f => f.id);
-  const [fightersR, cardioR, finishR, oddsR, predsR] = await Promise.all([
+  const [fightersR, cardioR, finishR, oddsR, engPicksR, engEdgesR] = await Promise.all([
     fighterIds.length
       ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
       : Promise.resolve({ data: [] }),
@@ -684,13 +683,21 @@ async function load() {
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
     sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
-    // Trained-model predictions — public models only (cfl.PUBLIC_MODELS).
-    // Used for both the per-event accuracy strip (past events) and the
-    // per-fight pick pills (both past + upcoming). For upcoming events `won`
-    // is null and `outcome_known` is false, but the pick row (model_p,
-    // fighter_id) is still useful — model already ran.
+    // Engine picks + edges. cfl_engine is the canonical stack — the only one
+    // with a passed leak audit, PIT structural verification and calibration
+    // checks — so it is the only model this page renders. The legacy v1-v6
+    // pipeline still runs and still writes to model_predictions; its disclosed
+    // archive lives on track-record.html.
+    //
+    // The graded views join fights server-side, so `hit` / `won` are NULL
+    // while a fight is unresolved (render as pending, never as a loss). No
+    // honest-window clamp applies: every backtest row is out-of-sample by
+    // construction (walk-forward, uncalibrated fold 0 excluded at publish).
     fightIds.length
-      ? sb.from('model_predictions').select('model_version, fight_id, fighter_id, model_p, won, outcome_known').in('fight_id', fightIds).in('model_version', cfl.PUBLIC_MODELS)
+      ? sb.from('v_model_picks_graded').select('fight_id, p_cal, pick_fighter_id, tier, source, hit').in('fight_id', fightIds)
+      : Promise.resolve({ data: [] }),
+    fightIds.length
+      ? sb.from('v_model_edges_graded').select('fight_id, bet_fighter_id, edge, stake_frac, source, won').in('fight_id', fightIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -711,40 +718,55 @@ async function load() {
   if (oddsR.error) console.warn('Market odds not available:', oddsR.error.message);
   (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
 
-  if (predsR.error) console.warn('Model predictions not available:', predsR.error.message);
-  // Single pass: build per-fight picks AND per-event accuracy from predictions.
-  //   picksByFight[fight_id][model_version] = { fighter_id, model_p, won, outcome_known }
-  //   modelAccuracy[model_version] = { n, wins }   ← only for graded picks (past events)
-  // A "pick" is the side with model_p > 0.5; ties at 0.5 are excluded.
-  //
-  // Honest-window gate: a model's picks on fights it may have trained on
-  // (event before cfl.modelWindowStart) are hindsight, not predictions —
-  // they never render and never grade publicly. We pass null as the DB
-  // test_start_date on purpose: the registry's training cutoff is the
-  // trusted floor even if the DB row is stale.
-  const picksByFight = {};
-  const modelAccuracy = {};
-  let windowFiltered = false;
-  (predsR.data || []).forEach(p => {
-    if (p.model_p == null || +p.model_p <= 0.5) return;
-    const winStart = cfl.modelWindowStart(p.model_version, null);
-    if (winStart && event.event_date && event.event_date < winStart) {
-      windowFiltered = true;
-      return;
-    }
-    const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
-    slot[p.model_version] = {
-      fighter_id: p.fighter_id,
-      model_p: +p.model_p,
-      won: p.won,
-      outcome_known: p.outcome_known,
-    };
-    if (p.outcome_known) {
-      const acc = modelAccuracy[p.model_version] || (modelAccuracy[p.model_version] = { n: 0, wins: 0 });
-      acc.n += 1;
-      if (p.won) acc.wins += 1;
-    }
-  });
+  // ---------------------------------------------------------------------
+  // Engine picks + edges, keyed by fight.
+  //   engineByFight[fight_id] = { fighterId, pCal, tier, hit, edge, stakeFrac }
+  // A locked 'live' row always outranks a 'backtest' replay row for the same
+  // fight (same precedence rule the homepage uses). engineAcc is the graded
+  // record on this card — only fights with a known result count.
+  // ---------------------------------------------------------------------
+  const engineByFight = {};
+  const engineAcc = { n: 0, wins: 0 };
+  if (engPicksR.error) {
+    console.warn('Engine picks not available:', engPicksR.error.message);
+  } else {
+    const bestPick = {};
+    (engPicksR.data || []).forEach(p => {
+      const prev = bestPick[p.fight_id];
+      if (prev && prev.source === 'live' && p.source !== 'live') return;
+      bestPick[p.fight_id] = p;
+    });
+    Object.values(bestPick).forEach(p => {
+      engineByFight[p.fight_id] = {
+        fighterId: p.pick_fighter_id,
+        pCal: +p.p_cal,
+        tier: p.tier,
+        hit: p.hit,
+        edge: null,
+        stakeFrac: null,
+      };
+      if (p.hit === true)       { engineAcc.n += 1; engineAcc.wins += 1; }
+      else if (p.hit === false) { engineAcc.n += 1; }
+    });
+  }
+  if (engEdgesR.error) {
+    console.warn('Engine edges not available:', engEdgesR.error.message);
+  } else {
+    const bestEdge = {};
+    (engEdgesR.data || []).forEach(e => {
+      const prev = bestEdge[e.fight_id];
+      if (prev && prev.source === 'live' && e.source !== 'live') return;
+      bestEdge[e.fight_id] = e;
+    });
+    Object.values(bestEdge).forEach(e => {
+      const slot = engineByFight[e.fight_id];
+      // Only attach the edge when it backs the same fighter the pick names;
+      // otherwise the card would show a % for one man and a stake for the other.
+      if (!slot || slot.fighterId !== e.bet_fighter_id) return;
+      slot.edge = e.edge != null ? +e.edge : null;
+      slot.stakeFrac = e.stake_frac != null ? +e.stake_frac : null;
+    });
+  }
 
   updateEventSEO(event, fights, fighterMap);
 
@@ -759,7 +781,7 @@ async function load() {
     finishRateMap,
     oddsMap,
     eventDate: event.event_date,
-    picksByFight,
+    engineByFight,
   };
 
   document.getElementById('content').innerHTML = `
@@ -768,79 +790,29 @@ async function load() {
       <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
     </div>
-    ${renderModelAccuracyStrip(modelAccuracy, windowFiltered)}
+    ${renderEngineAccuracyStrip(engineAcc)}
     <div class="page">
-      ${renderModelSelector()}
       <div id="fightsList">
-        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, picksByFight, _currentModelMode)).join('')}
+        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, _currentModelMode)).join('')}
       </div>
     </div>
   `;
 
-  const sel = document.getElementById('modelModeSelect');
-  if (sel) sel.addEventListener('change', (e) => {
-    _currentModelMode = e.target.value;
-    rerenderFights();
-  });
 }
 
 // =============================================================================
-// Model selector + re-render
+// Fight-card re-render
 // =============================================================================
-// The selector swaps which subset of edge factors the heuristic model runs on
-// every fight. Default is 'full' (all three factors — the same model that ships
-// in edges.js). The single-factor variants exist for "what if the model only
-// looked at cardio?" comparisons — useful for spotting fights where the full
-// model and a focused variant disagree, which usually means an interesting
-// stylistic matchup. None of these touch the trained model predictions shown
-// in the model-acc-strip above; those come from the model_predictions table
-// and are unaffected by this selector.
+// The "Model" dropdown that used to sit here swapped which subset of edge
+// factors the client-side heuristic ran on (full / record-only / TD-defence).
+// It was removed when cfl_engine became the canonical stack: offering factor
+// subsets as selectable "models" reads as a version picker, and users should
+// see one set of predictions. The heuristic still runs — it produces the
+// "why this pick" factor breakdown below each fight — but only in its full
+// form, which is what edges.js ships.
 
 let _renderState = null;
-let _currentModelMode = 'full';
-
-// Cardio-only was dropped on 2026-08-19: re-measured point-in-time on fights
-// the market priced even, cardio picks winners 50.2% of the time, so the mode
-// existed to produce coin flips. Cardio still appears on fighter pages, where
-// it describes how someone fights rather than claiming who wins.
-const MODEL_MODES = [
-  { key: 'full',   label: 'Full edges (record + grappling)',
-    blurb: 'Bayesian combination of both surviving edge factors. Default.' },
-  { key: 'record', label: 'Record only',
-    blurb: 'Picks based purely on win/loss record gap. Ignores style.' },
-  { key: 'tddef',  label: 'Anti-grappler (TD defense only)',
-    blurb: 'Picks the fighter with the better takedown defense, when relevant.' },
-];
-
-function renderModelSelector() {
-  const opts = MODEL_MODES.map(m =>
-    `<option value="${m.key}" ${m.key === _currentModelMode ? 'selected' : ''}>${cfl.escapeHtml(m.label)}</option>`
-  ).join('');
-  const current = MODEL_MODES.find(m => m.key === _currentModelMode) || MODEL_MODES[0];
-  return `
-    <div class="model-selector">
-      <span class="ms-label">Model</span>
-      <select id="modelModeSelect">${opts}</select>
-      <span class="ms-blurb" id="modelModeBlurb">${cfl.escapeHtml(current.blurb)}</span>
-    </div>
-  `;
-}
-
-function rerenderFights() {
-  if (!_renderState) return;
-  const s = _renderState;
-  const list = document.getElementById('fightsList');
-  if (list) {
-    list.innerHTML = s.fights.map(f =>
-      renderFight(f, s.fighterMap, s.isUpcoming, s.streakMap, s.cardioMap, s.finishRateMap, s.oddsMap, s.eventDate, s.picksByFight, _currentModelMode)
-    ).join('');
-  }
-  const blurb = document.getElementById('modelModeBlurb');
-  if (blurb) {
-    const m = MODEL_MODES.find(m => m.key === _currentModelMode) || MODEL_MODES[0];
-    blurb.textContent = m.blurb;
-  }
-}
+const _currentModelMode = 'full';
 
 // =============================================================================
 // Method-of-victory inference
@@ -902,38 +874,24 @@ function renderMovPills(mov, pickedFighter) {
 // for upcoming events or events without graded predictions. If every graded
 // pick was dropped by the honest-window gate (old card inside the models'
 // training data), we say so instead of showing hindsight numbers.
-function renderModelAccuracyStrip(modelAccuracy, windowFiltered) {
-  const versions = Object.keys(modelAccuracy).sort();
-  if (!versions.length) {
-    if (windowFiltered) {
-      return `
-        <div class="model-acc-strip">
-          <div class="acc-label">Model accuracy on this card</div>
-          <div style="font: 500 12px var(--font-body); color: var(--text-3);">This card predates the models' honest test windows — no graded picks shown.</div>
-        </div>`;
-    }
-    return '';
-  }
-  const cells = versions.map(mv => {
-    const { n, wins } = modelAccuracy[mv];
-    if (!n) return '';
-    const pct = wins / n * 100;
-    const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'ok' : 'bad');
-    return `
-      <div class="acc-cell">
-        <div class="acc-mv">${cfl.escapeHtml(modelShortName(mv))}</div>
-        <div class="acc-rec ${cls}">${wins}/${n}</div>
-        <div class="acc-pct ${cls}">${pct.toFixed(0)}%</div>
-      </div>`;
-  }).join('');
+function renderEngineAccuracyStrip(engineAcc) {
+  if (!engineAcc || !engineAcc.n) return '';
+  const pct = engineAcc.wins / engineAcc.n * 100;
+  const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'ok' : 'bad');
   return `
     <div class="model-acc-strip">
-      <div class="acc-label">Model accuracy on this card</div>
-      <div class="acc-cells">${cells}</div>
+      <div class="acc-label">How the model did on this card</div>
+      <div class="acc-cells">
+        <div class="acc-cell">
+          <div class="acc-mv">${cfl.escapeHtml(cfl.ENGINE.accuracy.name)}</div>
+          <div class="acc-rec ${cls}">${engineAcc.wins}/${engineAcc.n}</div>
+          <div class="acc-pct ${cls}">${pct.toFixed(0)}%</div>
+        </div>
+      </div>
     </div>`;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, picksByFight, modelMode) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, engineByFight, modelMode) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -960,7 +918,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
 
   const odds = (oddsMap || {})[fight.id] || null;
   const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate, modelMode);
-  const modelPicks = renderModelPicks(fight, fmap, (picksByFight || {})[fight.id]);
+  const modelPicks = renderEnginePick(fmap, (engineByFight || {})[fight.id]);
 
   return `
     <div class="${cardClass}">
@@ -984,34 +942,42 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
   `;
 }
 
-// Compact strip of trained-model picks for a single fight. One pill per
-// public model (cfl.PUBLIC_MODELS — retired models never render). Fights
-// inside a model's training window were already dropped by the honest-window
-// gate upstream. On past fights the pill is colored by ✓/✗ outcome; on
-// upcoming fights it's neutral. Hidden if no model has a pick for this
-// fight (e.g. fight added after the last model run).
-function renderModelPicks(fight, fmap, fightPicks) {
-  if (!fightPicks) return '';
-  const versions = Object.keys(fightPicks).sort();
-  if (!versions.length) return '';
-  const pills = versions.map(mv => {
-    const pick = fightPicks[mv];
-    const picked = fmap[pick.fighter_id];
-    if (!picked) return '';
-    const pct = (pick.model_p * 100).toFixed(0);
-    let cls = 'neutral', mark = '';
-    if (pick.outcome_known) {
-      if (pick.won === true)       { cls = 'correct'; mark = ' ✓'; }
-      else if (pick.won === false) { cls = 'wrong';   mark = ' ✗'; }
-    }
-    return `
+// The engine's call on a single fight: who it picks, its calibrated
+// confidence, the confidence tier, and — when the engine also flagged this
+// fight as +EV — the edge over the vig-free market price and the suggested
+// stake. On settled fights the pill is coloured by the result; while a fight
+// is unresolved `hit` is null and the pill stays neutral (pending, not a loss).
+//
+// One pill, one model. The v1-v6 row that used to sit here was removed when
+// cfl_engine became canonical; that archive lives on track-record.html.
+function renderEnginePick(fmap, eng) {
+  if (!eng) return '';
+  const picked = fmap[eng.fighterId];
+  if (!picked) return '';
+
+  let cls = 'neutral', mark = '';
+  if (eng.hit === true)       { cls = 'correct'; mark = ' ✓'; }
+  else if (eng.hit === false) { cls = 'wrong';   mark = ' ✗'; }
+
+  const pct = (eng.pCal * 100).toFixed(0);
+  const valueBits = (eng.edge != null)
+    ? `<span class="model-pick-pill value">
+        <span class="mp-mv">VALUE</span>
+        <span class="mp-pct">+${(eng.edge * 100).toFixed(0)}% over the market</span>
+        ${eng.stakeFrac != null ? `<span class="mp-pct">· ${(eng.stakeFrac * 100).toFixed(1)}% stake</span>` : ''}
+      </span>`
+    : '';
+
+  return `
+    <div class="model-picks-row">
+      <span class="mp-label">Model pick</span>
       <span class="model-pick-pill ${cls}">
-        <span class="mp-mv">${cfl.escapeHtml(modelShortName(mv))}</span>
+        <span class="mp-mv">${cfl.escapeHtml(eng.tier)}</span>
         <span class="mp-name">${cfl.escapeHtml(picked.name)}</span>
         <span class="mp-pct">${pct}%</span><span class="mp-mark">${mark}</span>
-      </span>`;
-  }).join('');
-  return `<div class="model-picks-row"><span class="mp-label">Trained models</span>${pills}</div>`;
+      </span>
+      ${valueBits}
+    </div>`;
 }
 
 // Renders the model-verdict band on each fight card — winner pick + distance
