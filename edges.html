@@ -380,8 +380,9 @@
     <div class="section-eyebrow"><span class="dot"></span>Model update — May 17, 2026</div>
     <h2>Why the verdict shrank from ten edges to three</h2>
     <p>The May 16 Allen vs Costa card was the worst single result in the model's track record: 2 of 10 committed picks. We audited the verdict logic the next day. The finding was uncomfortable but clear.</p>
-    <p>Of the ten edge factors, seven sat at <strong>52–57% per-fire accuracy</strong> — close enough to a coin flip that they were behaving like correlated noise in the Bayesian combiner. A 53% factor doesn't add information; it adds confidence theatre. When several stacked on the wrong side of an upset, they outvoted the genuinely predictive signals (Record, Cardio, Takedown Defense — all 60%+ per-fire).</p>
-    <p>The verdict now combines only those three. We tested every subset of the ten factors against 8,533 historical fights (<code>research/subset-test.js</code>):</p>
+    <p>Of the ten edge factors, seven sat at <strong>52–57% per-fire accuracy</strong> — close enough to a coin flip that they were behaving like correlated noise in the Bayesian combiner. A 53% factor doesn't add information; it adds confidence theatre. When several stacked on the wrong side of an upset, they outvoted what looked at the time like the genuinely predictive signals: Record, Cardio and Takedown Defense, all measuring 60%+ per-fire.</p>
+    <p><em>Read that last number with the July and August 2026 updates above in mind.</em> Those 60%+ figures came from the same hindsight-biased test as everything else in this section. Cardio was re-measured honestly in August 2026 and retired — it picks winners 50.2% of the time. Two factors still fire, Record and TD Defense, and neither has been re-validated point-in-time either.</p>
+    <p>At the time, we tested every subset of the ten factors against 8,533 historical fights (<code>research/subset-test.js</code>):</p>
     <div class="formula">
       <div class="superseded">Superseded July 2026 — measured with hindsight; see update above</div>
       <div class="formula-title">Accuracy by edge subset</div>
@@ -421,11 +422,11 @@
           <td><span class="factor-range">60–72%</span></td>
           <td><span class="factor-status active">Active</span></td>
         </tr>
-        <tr>
+        <tr class="retired">
           <td><span class="factor-name">Cardio</span><br><span style="font-size:12px;color:var(--text-3)">Late-round output sustain</span></td>
-          <td>Cardio tier gap of 3+ (e.g. Tireless vs Fades). See <a href="cardio.html" style="color:var(--red)">cardio methodology</a>.</td>
-          <td><span class="factor-range">54–58%</span></td>
-          <td><span class="factor-status active">Active</span></td>
+          <td>Was: cardio tier gap of 3+. Re-tested point-in-time on market-even fights it picks winners 50.2% of the time — a coin flip. It predicts fight <em>length</em>, not the winner. See <a href="cardio.html" style="color:var(--red)">cardio methodology</a>.</td>
+          <td><span class="factor-range">50%</span></td>
+          <td><span class="factor-status retired">Retired Aug 19</span></td>
         </tr>
         <tr>
           <td><span class="factor-name">TD defense</span><br><span style="font-size:12px;color:var(--text-3)">Takedown defense %</span></td>

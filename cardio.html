@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>UFC Fighter Cardio Scores — Who Fades in the Late Rounds | Cannon Fight Lab</title>
-<meta name="description" content="See which UFC fighters maintain output deep into fights and which ones fade. Cardio scores derived from per-round strike and takedown data, validated against 2,000+ historical fights.">
+<meta name="description" content="See which UFC fighters maintain output deep into fights and which ones fade. Cardio scores built from per-round strike and grappling data across 2,000+ fights — a guide to how a fight plays out, not a pick.">
 <meta name="keywords" content="UFC cardio scores, UFC fighter conditioning, MMA late round fade, UFC stamina rankings, UFC tireless fighters, UFC cardio rankings">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -639,26 +639,23 @@
   <!-- ============== How we use it in the verdict ============== -->
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>What it predicts</div>
-    <h2>How cardio drives the verdict</h2>
-    <p>We backtested the cardio metric against 2,068 historical UFC fights where both fighters had high-confidence readings in different tiers. The honest result:</p>
+    <h2>Cardio doesn't pick winners. Here's what it does.</h2>
+    <p>This page used to claim cardio predicted winners — up to 66.7% when the gap was widest. In August 2026 we tested that properly and it didn't hold up. We've pulled the claim and retired cardio as a pick factor. What follows is what survived.</p>
     <div class="formula">
-      <div class="formula-title">Tier gap → fighter with better cardio wins</div>
-      <div class="formula-eq" style="font-size: 16px; line-height: 1.8;">
-        1-tier gap (e.g. Steady vs Tapers): <strong>51.7%</strong> · n=1,217<br>
-        2-tier gap (e.g. Steady vs Fades): <strong>51.4%</strong> · n=556<br>
-        3-tier gap (e.g. Steady vs Collapses): <strong>55.5%</strong> · n=256<br>
-        4-tier gap (Tireless vs Collapses): <strong>66.7%</strong> · n=39 — a small sample, below our usual 100-fight noise floor; treat it as directional
+      <div class="formula-title">Why the old number was wrong</div>
+      <div class="formula-eq" style="font-size: 15px; line-height: 1.8;">
+        Scored each fighter using their cardio <strong>as measured today</strong><br>
+        → so a 2019 fight was graded with 2026 information<br><br>
+        Counted every round as a full five minutes<br>
+        → so finishing someone at 0:45 of round three read as gassing<br><br>
+        Never checked against the betting line<br>
+        → so "better cardio wins" was partly just "the favourite wins"
       </div>
-      <div class="formula-note">Cardio matters most when the gap is wide. Small tier gaps don't move the needle in the historical data — the better-cardio fighter wins them only marginally more often than coin flip.</div>
+      <div class="formula-note">Rebuilt without hindsight, using real round lengths, and measured only on fights the market priced as even — the test that separates a real signal from re-reading the favourite — cardio picks the winner <strong>50.2%</strong> of the time. That is a coin flip. The 66.7% figure also rested on 39 fights, well below our own 100-fight noise floor.</div>
     </div>
-    <p>So our verdict panel is calibrated accordingly. Cardio fires as an edge factor only when fighters are <strong>3 or more tiers apart</strong>:</p>
-    <ul style="padding-left: 22px; margin-bottom: 16px; font-size: 15px; color: var(--text-2); line-height: 1.7;">
-      <li><strong style="color: var(--text);">3-tier gap → 55%</strong> edge to the better-cardio fighter</li>
-      <li><strong style="color: var(--text);">4-tier gap → 58%</strong> edge to the better-cardio fighter</li>
-      <li><strong style="color: var(--text);">1- or 2-tier gap → no edge fires</strong> — the data doesn't support it</li>
-    </ul>
-    <p>Most fight cards won't have a cardio edge listed because most fighters are within 1-2 tiers of each other. When you do see "Tireless cardio vs Tapers" or "Steady cardio vs Collapses" in the edge panel, that's a real, calibrated signal worth weighting in your bet.</p>
-    <p style="font-size: 13px; color: var(--text-3); margin-top: 14px; line-height: 1.6;"><strong>What this metric is better at than rating:</strong> identifying faders. The bottom of the leaderboard below names known cardio collapses — Chandler, Woodley, Sandhagen — with real differentiation. The top compresses at the cap (most elite fighters tie at 140) because the metric measures consistency, not absolute output. For betting, the actionable signal is "lean against the fader," not "lean toward the elite."</p>
+    <p><strong>So cardio no longer moves a verdict.</strong> It doesn't appear as an edge factor on fight cards and it isn't part of any pick. If you saw a cardio edge listed here before, that's why it's gone.</p>
+    <p>What the same testing did find is that cardio predicts <strong>how long a fight lasts</strong>. When both fighters hold their pace, about 64% of fights go the distance; when one of them gasses, that drops to about 52%. That's a real pattern, and it's a different question from who wins — so we report it as context on a matchup, not as a reason to back someone.</p>
+    <p style="font-size: 13px; color: var(--text-3); margin-top: 14px; line-height: 1.6;"><strong>What the metric is genuinely good at:</strong> identifying faders. The bottom of the leaderboard names known cardio collapses with real differentiation. The top compresses at the cap because the metric measures consistency, not absolute output — which is also its blind spot: a fighter who is equally inactive early and late scores well without being hard to fight. Read the score next to the pace it's holding.</p>
   </div>
 
   <!-- ============== Caveats ============== -->

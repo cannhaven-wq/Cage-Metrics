@@ -32,12 +32,20 @@
 //   }
 //
 // MODEL HISTORY: an earlier version of this module fed ten edges (age, streak,
-// loss_streak, post_loss, stance_reach, slpm, td_acc, plus the current three)
+// loss_streak, post_loss, stance_reach, slpm, td_acc, plus record/cardio/td_def)
 // into the Bayesian combiner. Backtest against 8,533 historical fights
 // (research/subset-test.js) showed those seven extra factors sat at 52–57%
 // per-fire accuracy and acted as correlated noise that diluted the strong
-// signals: feeding only record/cardio/td_def yields 68.4% accuracy vs 66.3%
-// with all ten. They were removed on 2026-05-17.
+// signals. They were removed on 2026-05-17. That backtest was itself later
+// found to be hindsight-biased — it scored old fights using each fighter's
+// CURRENT career stats — so read its accuracy figures as an upper bound, not
+// as a result.
+//
+// Cardio was retired on 2026-08-19 (see cardioEdge for the evidence). Two
+// factors still fire: record and td_def. Both are inherited from that same
+// superseded backtest and have not been re-validated point-in-time, which is
+// why the verdict this module produces is labelled provisional on edges.html.
+// CFL's published picks come from the audited engine, not from here.
 // =============================================================================
 
 (function (root) {
@@ -199,33 +207,26 @@
     };
   }
 
-  function cardioEdge(a, b, cardioMap, fightWeightClass) {
-    const ca = cardioFor(a.id, fightWeightClass, cardioMap);
-    const cb = cardioFor(b.id, fightWeightClass, cardioMap);
-    if (!ca || !cb) return null;
-    if (!ca.tier_word || !cb.tier_word) return null;
-    const ra = CARDIO_TIER_RANK[ca.tier_word];
-    const rb = CARDIO_TIER_RANK[cb.tier_word];
-    if (ra == null || rb == null) return null;
-    const tierGap = Math.abs(ra - rb);
-    if (tierGap < 3) return null;
-    const eitherLimited = (ca.confidence === 'limited' || cb.confidence === 'limited');
-    const eitherCareer = (ca.source === 'career' || cb.source === 'career');
-    const conservative = eitherLimited || eitherCareer;
-    let pct;
-    if (tierGap >= 4) pct = conservative ? 56.0 : 58.0;
-    else              pct = conservative ? 54.0 : 55.0;
-    const aBetter = ra > rb;
-    const winnerTier = aBetter ? ca.tier_word : cb.tier_word;
-    const loserTier  = aBetter ? cb.tier_word : ca.tier_word;
-    const limited = conservative ? ' (limited data)' : '';
-    return {
-      factor: 'cardio',
-      favors: aBetter ? 'a' : 'b',
-      pct,
-      fighterName: aBetter ? a.name : b.name,
-      desc: winnerTier + ' cardio vs ' + loserTier + limited,
-    };
+  // RETIRED 2026-08-19 — cardio does not predict winners.
+  //
+  // This factor used to fire at a 3+ tier gap and claim 54-58%. That number
+  // came from a backtest with two flaws: it scored past fights using each
+  // fighter's cardio as measured TODAY (hindsight), and the underlying view
+  // counted every round as a full five minutes regardless of when the fight
+  // actually ended. Rebuilt point-in-time and re-measured on fights the market
+  // priced even — the only test that separates a real signal from re-reading
+  // the favourite — cardio lands at 50.2%. A coin flip. Even restricted to
+  // fights that genuinely reached round three it is 54.1% on 218 fights, with
+  // a confidence range that still includes 50.
+  //
+  // What cardio DOES predict is how long a fight lasts, which is a different
+  // market and is not a win-probability input. It stays on fighter pages and
+  // in the matchup context as description; it no longer moves a verdict.
+  //
+  // Kept as a stub rather than deleted so the export surface and the ctx shape
+  // stay stable for the cfl-snapshotter service, which shares this module.
+  function cardioEdge() {
+    return null;
   }
 
   // =========================================================================

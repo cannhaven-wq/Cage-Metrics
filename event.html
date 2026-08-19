@@ -547,7 +547,7 @@
 
 <script src="_shared.js?v=rd12"></script>
 <script src="_auth.js"></script>
-<script src="edges.js?v=steps1"></script>
+<script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -799,13 +799,15 @@ async function load() {
 let _renderState = null;
 let _currentModelMode = 'full';
 
+// Cardio-only was dropped on 2026-08-19: re-measured point-in-time on fights
+// the market priced even, cardio picks winners 50.2% of the time, so the mode
+// existed to produce coin flips. Cardio still appears on fighter pages, where
+// it describes how someone fights rather than claiming who wins.
 const MODEL_MODES = [
-  { key: 'full',   label: 'Full edges (record + cardio + grappling)',
-    blurb: 'Bayesian combination of all three edge factors. Default.' },
+  { key: 'full',   label: 'Full edges (record + grappling)',
+    blurb: 'Bayesian combination of both surviving edge factors. Default.' },
   { key: 'record', label: 'Record only',
     blurb: 'Picks based purely on win/loss record gap. Ignores style.' },
-  { key: 'cardio', label: 'Cardio only',
-    blurb: 'Picks based purely on the gas-tank tier gap. Best on later-round finishes.' },
   { key: 'tddef',  label: 'Anti-grappler (TD defense only)',
     blurb: 'Picks the fighter with the better takedown defense, when relevant.' },
 ];
