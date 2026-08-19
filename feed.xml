@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 18 Aug 2026 22:51:28 GMT</lastBuildDate>
+  <lastBuildDate>Wed, 19 Aug 2026 00:43:19 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Hernandez vs. Rodrigues</title>
@@ -49,6 +49,20 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4433</guid>
     <pubDate>Sat, 19 Sep 2026 00:00:00 GMT</pubDate>
     <description>Full model verdicts and edge factors for every fight on the UFC 331: Van vs. Pantoja 2 card — Los Angeles, California, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Rosas Jr. vs. Barcelos</title>
+    <link>https://cannonfightlab.com/event.html?id=4550</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4550</guid>
+    <pubDate>Sat, 26 Sep 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Rosas Jr. vs. Barcelos card — Las Vegas, Nevada, USA.</description>
+  </item>
+  <item>
+    <title>UFC 332</title>
+    <link>https://cannonfightlab.com/event.html?id=4551</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4551</guid>
+    <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC 332 card — Salt Lake City, Utah, USA.</description>
   </item>
   <item>
     <title>UFC Fight Night: Buckley vs. Malott</title>
