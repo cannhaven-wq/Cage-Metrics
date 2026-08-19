@@ -403,11 +403,6 @@
         <button data-sort="value">Value</button>
       </div>
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
-      <div class="model-filter" style="margin-left:auto">
-        <label for="hpModelSelect">Model</label>
-        <select id="hpModelSelect"><option value="engine">Fight IQ — the engine</option></select>
-        <button type="button" id="hpCompareToggle" class="compare-toggle" aria-expanded="false" hidden>Compare other models ⌄</button>
-      </div>
     </div>
     <p class="model-def" id="hpModelDef"></p>
     <div class="fights" id="fightsList"></div>
@@ -443,9 +438,9 @@
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M6 20v-6"/><path d="M12 20V4"/><path d="M18 20v-9"/></svg></div>
         <h3>The Factor Lab</h3><p>Which stats actually predict fights — and which just repeat the betting line. Live rates, real sample sizes.</p><span class="go">Open the Factor Lab →</span>
       </a>
-      <a class="tool" href="predictor.html">
+      <a class="tool" href="methodology.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M9 3h6v4l4 8a4 4 0 0 1-4 6H9a4 4 0 0 1-4-6l4-8V3Z"/><path d="M8 3h8"/></svg></div>
-        <h3>See how the engine is built</h3><p>The engine's features, honest test windows, accuracy and ROI — nothing hidden.</p><span class="go">Open the Model Lab →</span>
+        <h3>See how the engine is built</h3><p>The engine's features, honest test windows, accuracy and ROI — nothing hidden.</p><span class="go">Read the methodology →</span>
       </a>
     </div>
   </section>
@@ -721,13 +716,17 @@ setTimeout(() => {
 // =============================================================================
 // NEXT CARD — event selection (preserved), lean fight-card render
 // =============================================================================
-const HP_VISIBLE_MODELS = cfl.PUBLIC_MODELS.slice();   // ['v6','v3'] — retired, kept selectable
+// Legacy v1-v6 are no longer surfaced anywhere on the card. cfl_engine is the
+// canonical stack (the only one with a passed leak audit, PIT structural
+// verification and calibration checks), so the homepage shows its pick and
+// nothing else. The legacy pipeline still runs and still writes to
+// model_predictions — see track-record.html for the disclosed archive.
+const HP_VISIBLE_MODELS = [];   // empty = no legacy model reaches the UI
 let _cardioMap = null;
 let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
 let _hpSortKey = 'order';
 let _hpModelMode = 'engine';
-let _hpCompareOpen = false;   // legacy models stay hidden until the user asks
 
 // The single definition of "value" — same bar as the graded Value record on
 // the track record (flags at 4+ points). Drives the Value badge, edge colour,
@@ -854,13 +853,15 @@ async function loadFights(event) {
     loadBaseRates(),
     loadCardioMap(fighterIds),
     loadOddsMap(event.id),
-    fightIds.length
+    (fightIds.length && HP_VISIBLE_MODELS.length)
       ? sb.from('model_predictions')
           .select('model_version, fight_id, fighter_id, model_p')
           .in('fight_id', fightIds)
           .in('model_version', HP_VISIBLE_MODELS)
       : Promise.resolve({ data: [] }),
-    sb.from('model_versions').select('id, name').in('id', HP_VISIBLE_MODELS),
+    HP_VISIBLE_MODELS.length
+      ? sb.from('model_versions').select('id, name').in('id', HP_VISIBLE_MODELS)
+      : Promise.resolve({ data: [] }),
     fightIds.length
       ? sb.from('model_picks')
           .select('fight_id, pick_fighter_id, p_cal, tier, source')
@@ -963,40 +964,14 @@ function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p
 // sees. Consensus + the numbered models (v1–v6) hide behind "Compare other
 // models" for people who actually want to weigh methods against each other.
 let _hpModelNames = null;
+
+// The model picker was removed in the "one canonical stack" collapse. The
+// engine is the only thing that renders, so this is now just a hook that keeps
+// the mode pinned and refreshes the definition line. Kept as a function
+// because three call sites still invoke it after a data load.
 function populateModelSelect(modelNames) {
   if (modelNames) _hpModelNames = modelNames;
-  const sel = document.getElementById('hpModelSelect');
-  if (!sel) return;
-  const toggle = document.getElementById('hpCompareToggle');
-  const picksByFight = (_leanState && _leanState.picksByFight) || {};
-  const engineHasRows = Object.values(picksByFight).some(slot => slot.engine);
-
-  // If the engine somehow didn't score this card, fall open so there's still
-  // a pick to show instead of an empty dropdown.
-  if (!engineHasRows) _hpCompareOpen = true;
-  const showCompare = _hpCompareOpen;
-
-  const opts = [];
-  if (engineHasRows) opts.push(`<option value="engine">${cfl.escapeHtml(cfl.ENGINE.accuracy.name + ' — the engine')}</option>`);
-  if (showCompare) {
-    opts.push('<option value="consensus">Consensus (all models)</option>');
-    HP_VISIBLE_MODELS.forEach(mv => {
-      const nm = _hpModelNames && _hpModelNames[mv];
-      opts.push(`<option value="${mv}">${cfl.escapeHtml(cfl.modelName(mv, nm))}</option>`);
-    });
-  }
-  sel.innerHTML = opts.join('');
-
-  // Keep _hpModelMode valid for whatever the list now contains.
-  if (_hpModelMode === 'engine' && !engineHasRows) _hpModelMode = 'consensus';
-  if (!showCompare && _hpModelMode !== 'engine') _hpModelMode = engineHasRows ? 'engine' : 'consensus';
-  sel.value = _hpModelMode;
-
-  if (toggle) {
-    toggle.hidden = !engineHasRows;   // nothing to collapse to if the engine isn't here
-    toggle.textContent = showCompare ? 'Hide other models ⌃' : 'Compare other models ⌄';
-    toggle.setAttribute('aria-expanded', showCompare ? 'true' : 'false');
-  }
+  _hpModelMode = 'engine';
   updateModelDef();
 }
 
@@ -1067,21 +1042,6 @@ function wireControls() {
       _hpSortKey = btn.dataset.sort;
       renderLeanCards();
       if (hint) hint.textContent = hints[_hpSortKey] || '';
-    });
-  }
-  const sel = document.getElementById('hpModelSelect');
-  if (sel && !sel._wired) {
-    sel._wired = true;
-    sel.addEventListener('change', () => { _hpModelMode = sel.value; updateModelDef(); renderLeanCards(); });
-  }
-  const cmp = document.getElementById('hpCompareToggle');
-  if (cmp && !cmp._wired) {
-    cmp._wired = true;
-    cmp.addEventListener('click', () => {
-      _hpCompareOpen = !_hpCompareOpen;
-      if (!_hpCompareOpen) _hpModelMode = 'engine';   // collapsing snaps back to the engine
-      populateModelSelect();
-      renderLeanCards();
     });
   }
 }
