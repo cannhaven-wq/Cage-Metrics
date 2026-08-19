@@ -193,6 +193,35 @@
   .pa-val { font-size: 18px; font-weight: 600; color: #fff; }
   .pa-lbl { font-size: 11px; color: var(--text-3); margin-top: 2px; }
 
+  /* --- Finisher card --- */
+  .fin-wrap {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 18px;
+  }
+  .fin-tags { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+  .fin-tag {
+    font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+    padding: 4px 10px; border-radius: 99px;
+    background: var(--bg-4); color: var(--text-2); border: 1px solid var(--border);
+  }
+  .fin-tag.ko { background: rgba(214,58,58,.14); color: #ff7b7b; border-color: rgba(214,58,58,.35); }
+  .fin-tag.sub { background: rgba(58,140,214,.14); color: #74b6f0; border-color: rgba(58,140,214,.35); }
+  .fin-tag.grind { background: rgba(150,150,150,.12); color: var(--text-2); }
+  .fin-tag.granite { background: rgba(70,180,120,.14); color: #6fd39c; border-color: rgba(70,180,120,.35); }
+  .fin-tag.fragile { background: rgba(214,150,58,.14); color: #e8b45c; border-color: rgba(214,150,58,.35); }
+
+  .fin-bar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin-bottom: 8px; }
+  .fin-seg { display: flex; align-items: center; justify-content: center;
+             font-size: 11px; font-weight: 700; color: #fff; min-width: 0; }
+  .fin-seg.ko { background: #b8322f; }
+  .fin-seg.sub { background: #2f6bb8; }
+  .fin-seg.dec { background: #4a4a52; }
+  .fin-legend { display: flex; gap: 16px; font-size: 11px; color: var(--text-3); margin-bottom: 16px; }
+  .fin-legend i { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 5px; }
+  .fin-note { font-size: 11.5px; color: var(--text-3); margin-top: 12px; line-height: 1.5; }
+
   @media (max-width: 768px) {
     .fighter-hero { padding: 24px 16px; }
     .fh-name { font-size: 32px; }
@@ -353,6 +382,11 @@ async function load() {
         </div>
       </div>
 
+      <div class="stat-section" id="finisherSection" hidden>
+        <h2>How they finish</h2>
+        <div class="fin-wrap" id="finisherCard"></div>
+      </div>
+
       <div class="stat-section">
         <h2>Physical attributes</h2>
         <div class="pa-grid">
@@ -377,9 +411,82 @@ async function load() {
     </div>
   `;
 
-  // Fire style and history loads in parallel — neither blocks the other
+  // Fire style, finisher and history loads in parallel — none blocks the others
   loadStyle(f);
+  loadFinisher(f);
   await loadHistory();
+}
+
+// How this fighter ends fights, and how they get ended. Reads
+// v_fighter_finisher, which splits finishes they scored from finishes they
+// suffered — the older v_fighter_finish_rate lumped both together, so a fighter
+// who kept getting knocked out looked identical to one who did the knocking.
+// Career-to-date by design: this describes a record, it doesn't forecast.
+async function loadFinisher(f) {
+  const sb = window.cflSupabase;
+  const sec = document.getElementById('finisherSection');
+  const box = document.getElementById('finisherCard');
+  if (!sec || !box) return;
+
+  const { data, error } = await sb
+    .from('v_fighter_finisher')
+    .select('*')
+    .eq('fighter_id', f.id)
+    .maybeSingle();
+  if (error || !data) return;   // under 3 graded fights — leave the section hidden
+
+  const pct = v => Math.round(100 * Number(v || 0));
+  const koP = pct(data.ko_rate), subP = pct(data.sub_rate);
+  const decP = Math.max(0, 100 - koP - subP);
+
+  const STYLE = {
+    ko_artist:           { label: 'Knockout artist',   cls: 'ko' },
+    submission_hunter:   { label: 'Submission hunter', cls: 'sub' },
+    mixed_finisher:      { label: 'Finisher',          cls: 'ko' },
+    occasional_finisher: { label: 'Occasional finisher', cls: '' },
+    grinder:             { label: 'Goes to the cards', cls: 'grind' },
+  };
+  const DURA = {
+    granite:    { label: 'Never been finished', cls: 'granite' },
+    solid:      { label: 'Hard to finish',      cls: 'granite' },
+    vulnerable: { label: 'Can be finished',     cls: '' },
+    fragile:    { label: 'Gets finished often', cls: 'fragile' },
+  };
+  const st = STYLE[data.finish_style] || { label: data.finish_style, cls: '' };
+  const du = DURA[data.durability] || { label: data.durability, cls: '' };
+
+  // Only label a segment when there's room for the text to fit.
+  const seg = (p, cls) => p >= 8
+    ? `<div class="fin-seg ${cls}" style="width:${p}%">${p}%</div>`
+    : (p > 0 ? `<div class="fin-seg ${cls}" style="width:${p}%"></div>` : '');
+
+  box.innerHTML = `
+    <div class="fin-tags">
+      <span class="fin-tag ${st.cls}">${cfl.escapeHtml(st.label)}</span>
+      <span class="fin-tag ${du.cls}">${cfl.escapeHtml(du.label)}</span>
+    </div>
+    <div class="fin-bar">
+      ${seg(koP, 'ko')}${seg(subP, 'sub')}${seg(decP, 'dec')}
+    </div>
+    <div class="fin-legend">
+      <span><i style="background:#b8322f"></i>KO/TKO</span>
+      <span><i style="background:#2f6bb8"></i>Submission</span>
+      <span><i style="background:#4a4a52"></i>Decision</span>
+    </div>
+    <div class="pa-grid">
+      <div class="pa-box"><div class="pa-val">${pct(data.finish_rate)}%</div><div class="pa-lbl">Fights they finish</div></div>
+      <div class="pa-box"><div class="pa-val">${data.avg_fight_min}m</div><div class="pa-lbl">Average fight length</div></div>
+      <div class="pa-box"><div class="pa-val">${pct(data.finished_rate)}%</div><div class="pa-lbl">Fights they're finished in</div></div>
+      <div class="pa-box"><div class="pa-val">${data.ko_wins + data.sub_wins}</div><div class="pa-lbl">Career finishes</div></div>
+      <div class="pa-box"><div class="pa-val">${data.times_finished}</div><div class="pa-lbl">Times finished</div></div>
+      <div class="pa-box"><div class="pa-val">${data.total_fights}</div><div class="pa-lbl">Fights counted</div></div>
+    </div>
+    <div class="fin-note">Across ${data.total_fights} graded UFC fights. The split above is how
+      <strong>their own wins</strong> came — losses aren't counted as knockouts for them.
+      Finishing style tracks how long a fight lasts, not who wins it: in our testing it says
+      nothing useful about picking a winner.</div>
+  `;
+  sec.hidden = false;
 }
 
 async function loadStyle(f) {
