@@ -11,6 +11,16 @@ closing-line value:
   left unsettled — we never substitute a stale or devigged price for a real
   close (both would silently corrupt clv on the product's headline metric).
 
+  NON-MARKET PRICE GUARD (added 2026-08-19 after a live near-miss): a capture
+  outside [MIN_MARKET_PROB, MAX_MARKET_PROB] is discarded as not-a-market and
+  the row is left unsettled. The feed emits sentinel lines like -199900 /
+  +199900 (implied 0.9995 / 0.0005) when a book pulls a fight off the board or
+  the capture lands post-settlement. No book prices a real fight there. One
+  such row (Makhachev vs Machado Garry, fight 27648) was single-handedly
+  responsible for the entire positive mean CLV across the first 21 settleable
+  edges: +0.99pp with it, -0.03pp without. Left ungated, this metric reports a
+  house edge that does not exist.
+
 CLV sign convention (READ THIS — it is easy to get backwards):
   odds_at_publish is a single-side American price, so it can't be devigged after
   the fact (you'd need the other side at the same instant). We therefore compare
@@ -51,6 +61,13 @@ import urllib.request
 
 from engine import american_to_prob
 from export_data import fetch_all, prob_to_american
+
+
+# A real two-way market never prices a side outside this band. Anything beyond
+# it is a pulled line, a settled line, or a feed artifact — not a price we could
+# have bet, so it cannot be used to score closing-line value.
+MIN_MARKET_PROB = 0.03
+MAX_MARKET_PROB = 0.97
 
 
 def _env_key() -> str:
@@ -95,8 +112,13 @@ def closing_implied(base_url: str, key: str, fight_id: int, fighter_id: int) -> 
         p = r.get("implied_prob")
         if p is None and am is not None:
             p = american_to_prob(am)
-        if p is not None and 0.0 < float(p) < 1.0:
-            priced.append((float(p), am))
+        if p is None:
+            continue
+        p = float(p)
+        if not (MIN_MARKET_PROB <= p <= MAX_MARKET_PROB):
+            # Sentinel / pulled / post-settlement capture — not a bettable price.
+            continue
+        priced.append((p, am))
     if not priced:
         return None, None, None
     priced.sort(key=lambda t: t[0])
@@ -142,12 +164,16 @@ def main():
 
     now_iso = dt.datetime.now(dt.timezone.utc).isoformat()
     planned = []
+    skipped: list[int] = []
     for r in rows:
         implied_pub = american_to_prob(r["odds_at_publish"]) if r["odds_at_publish"] is not None else None
         imp_close, am_close, src = closing_implied(base_url, key, r["fight_id"], r["bet_fighter_id"])
         if imp_close is None or implied_pub is None:
-            print(f"  fight {r['fight_id']} side {r['side']}: no closing price yet "
-                  f"(publish odds {r['odds_at_publish']}) — skipped.")
+            skipped.append(r["fight_id"])
+            print(f"  fight {r['fight_id']} side {r['side']}: no usable closing price "
+                  f"(publish odds {r['odds_at_publish']}) — skipped. Either no closer "
+                  f"is on file yet, or every capture was outside the "
+                  f"{MIN_MARKET_PROB}-{MAX_MARKET_PROB} market band.")
             continue
         clv_pp = round(imp_close - implied_pub, 6)
         clv_beat = clv_pp > 0
@@ -159,6 +185,13 @@ def main():
               f"close {am_close} (imp {imp_close:.4f}, {src})  "
               f"clv_pp {clv_pp:+.4f}  {'BEAT' if clv_beat else 'lost'}")
 
+    if skipped:
+        print(f"\n{len(skipped)} row(s) left unsettled for lack of a usable "
+              f"close: {skipped}. They stay eligible — a later run picks them "
+              f"up if a real closing price arrives.")
+
+    _summarise(planned)
+
     if not execute:
         print(f"\nDRY-RUN — {len(planned)} row(s) would be settled. "
               f"Re-run with --execute to write.")
@@ -166,6 +199,27 @@ def main():
     for row_id, payload in planned:
         patch_row(base_url, key, row_id, payload)
     print(f"\nEXECUTED — settled {len(planned)} edge row(s).")
+
+
+
+def _summarise(planned: list) -> None:
+    """Print the headline number for THIS run's rows.
+
+    Deliberately loud. The whole point of settling is the number, and a cron
+    that writes silently is how this metric sat null for months. Both the beat
+    RATE and the average move are reported because they can disagree: many
+    small wins against a few large losses is a good rate and no real edge,
+    which is exactly what the first backfill showed.
+    """
+    if not planned:
+        print("\nno settleable rows — nothing to summarise.")
+        return
+    vals = [pl["clv_pp"] for _, pl in planned]
+    beat = sum(1 for v in vals if v > 0)
+    mean = sum(vals) / len(vals)
+    print(f"\nTHIS RUN: {beat}/{len(vals)} bets got a better price than the "
+          f"close ({100.0 * beat / len(vals):.0f}%). "
+          f"Average move {mean * 100:+.2f} points.")
 
 
 if __name__ == "__main__":

@@ -14,3 +14,4 @@ __pycache__/
 
 # Cardio model intermediate — 2.6MB, regenerable via build_features.py
 cfl_engine/cardio/round_observations.csv
+logs/

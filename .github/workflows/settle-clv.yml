@@ -1,0 +1,117 @@
+name: Settle closing prices on live bets
+
+# Fills in what price each flagged bet actually closed at, and scores whether we
+# got a better price than the market did. This is the one number that separates
+# a real model from a good-looking replay of history, and it sat empty for
+# months because settle_clv.py existed but nothing ever ran it. That is exactly
+# what this workflow is for.
+#
+# Safe to run as often as we like:
+#   - the script only ever looks at bets that are (a) real/live, (b) not already
+#     settled, and (c) on a card that has already happened. A row it has already
+#     written is invisible to the next run, so it can never be double-settled.
+#   - a bet with no usable closing price yet is skipped, not guessed at, and
+#     stays eligible for a later run once a real price shows up.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily at 12:00 UTC. Cards finish late Saturday/Sunday US time; by midday
+    # UTC the results scraper and the odds feed have both caught up, so the
+    # closing prices we need are on file. Daily (rather than weekly) means a
+    # late-graded card is picked up the next morning instead of six days later.
+    - cron: '0 12 * * *'
+
+# Two settlement runs at once would race on the same rows. Queue instead.
+concurrency:
+  group: settle-clv
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      # settle_clv.py checks SUPABASE_SECRET_KEY first; map the repo's existing
+      # service-role secret (legacy JWT) onto it.
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: cfl_engine/requirements.txt
+
+      - name: Install deps
+        run: pip install -q -r cfl_engine/requirements.txt
+
+      - name: Guard — service key present
+        run: |
+          if [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set on this repo — add it (Settings → Secrets → Actions) or settlement can't authenticate."
+            exit 1
+          fi
+
+      - name: Settle closing prices
+        id: settle
+        run: |
+          mkdir -p logs
+          STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
+          LOG="logs/settle-clv-${STAMP}.log"
+          echo "run started $(date -u +%FT%TZ)" | tee "$LOG"
+          set -o pipefail
+          PYTHONPATH=cfl_engine python cfl_engine/settle_clv.py --execute 2>&1 | tee -a "$LOG"
+          echo "log=$LOG" >> "$GITHUB_OUTPUT"
+          # Surface the headline on the run summary page so nobody has to open
+          # the log to find out whether we beat the market this week.
+          grep -E '^(THIS RUN|EXECUTED|unsettled live edges)' "$LOG" >> "$GITHUB_STEP_SUMMARY" || true
+
+      - name: Keep the log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: settle-clv-log
+          path: logs/
+          retention-days: 90
+
+      # Silent failure is how this stayed broken. If the run dies, open a real
+      # issue rather than relying on someone noticing a red tick.
+      - name: Raise an issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = 'Closing-price settlement failed';
+            const url = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = [
+              'The scheduled job that records what price each flagged bet closed at has failed.',
+              '',
+              `Run: ${url}`,
+              '',
+              'While this is broken, no new bet gets a closing price, and the',
+              'headline "did we get a better price than the market" number silently',
+              'stops moving instead of going wrong — which is harder to notice.',
+              '',
+              'Most likely causes: the Supabase service key expired or was rotated,',
+              'or the odds feed stopped writing closing prices.',
+            ].join('\n');
+            const existing = await github.rest.issues.listForRepo({
+              owner: context.repo.owner, repo: context.repo.repo,
+              state: 'open', labels: 'settle-clv',
+            });
+            if (existing.data.length) {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: existing.data[0].number,
+                body: `Failed again — ${url}`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner: context.repo.owner, repo: context.repo.repo,
+                title, body, labels: ['settle-clv'],
+              });
+            }
