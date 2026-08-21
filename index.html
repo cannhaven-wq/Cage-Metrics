@@ -72,11 +72,12 @@
    the shared component library in the shared stylesheet. Uses the shared design
    tokens (--bg, --bg-1, --line, --red, --green, ...).
    ===================================================================== */
-#home { max-width: 1200px; margin: 0 auto; padding: 0 28px; }
+#home { width: 100%; max-width: clamp(1200px, 92vw, 2080px); margin: 0 auto; padding: 0 clamp(16px, 2.2vw, 40px); }
 /* ambient background now handled globally by .lab-bg in _shared.css */
 
 /* Section scaffolding */
 #home .section { padding: 34px 0; }
+#home .section#next { padding-top: 6px; }
 #home .sec-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 6px; }
 #home .sec-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: #fff; letter-spacing: .2px; }
 #home .sec-head .sub { font-size: 13px; color: var(--text-3); margin-top: 3px; }
@@ -95,18 +96,19 @@
 #home .btn-block { width: 100%; }
 
 /* ===== HERO ===== */
-#home .hero { display: grid; grid-template-columns: 1.1fr .9fr; gap: 44px; align-items: center; padding: 60px 0 44px; }
+#home .hero { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(360px, .7fr); gap: 40px; align-items: center;
+  padding: 24px 0 20px; }
 #home .hp-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
-  letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 18px; }
+  letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
 #home .hp-eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--red); }
-#home .hero h1 { font-family: var(--font-display); font-weight: 800; font-size: 56px; line-height: 1.03;
+#home .hero h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 3.4vw, 58px); line-height: 1.05;
   letter-spacing: -.4px; color: #fff; }
 #home .hero h1 .hl { color: var(--red); }
-#home .hero p.lede { color: var(--text-2); font-size: 16.5px; line-height: 1.6; max-width: 500px; margin: 18px 0 28px; }
+#home .hero p.lede { color: var(--text-2); font-size: 15px; line-height: 1.55; max-width: 660px; margin: 12px 0 18px; }
 #home .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* Hero proof line */
-#home .hero-proofline { display: flex; flex-wrap: wrap; gap: 8px 18px; margin-top: 22px; }
+#home .hero-proofline { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 14px; }
 #home .hero-proofline .pf { font-size: 12px; color: var(--text-3); display: inline-flex; align-items: center; gap: 6px; }
 #home .hero-proofline .pf::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
 #home .hero-proofline .pf b { color: var(--text-2); font-weight: 600; }
@@ -151,12 +153,12 @@
 #home .panel-foot strong { font-family: var(--font-display); font-size: 15px; color: #fff; margin-right: 6px; }
 
 /* ===== NEXT CARD header + sort ===== */
-#home .card-head { margin-bottom: 14px; }
+#home .card-head { margin-bottom: 10px; }
 #home .card-head .eyebrow-live { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--red); display: inline-flex; align-items: center; gap: 7px; }
 #home .card-head .eyebrow-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 #home .card-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: #fff; margin-top: 6px; }
 #home .card-head .meta { font-size: 13px; color: var(--text-2); margin-top: 3px; }
-#home .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 12px 0 20px; }
+#home .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 14px; }
 #home .fl-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
 #home .fl-hint { font-size: 12.5px; color: var(--text-3); }
 #home .seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
@@ -165,7 +167,7 @@
 #home .seg button.active { background: var(--red); color: #fff; }
 
 /* ===== Lean fight cards ===== */
-#home .fights { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+#home .fights { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); gap: 16px; }
 #home .fight { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; transition: .16s; }
 #home .fight:hover { border-color: var(--line-2); }
 #home .fight-hd { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
@@ -286,11 +288,36 @@
 .beta-banner .cta:hover { text-decoration: underline; }
 .beta-banner .dismiss { background: none; border: none; color: var(--text-3); cursor: pointer; font-size: 18px; line-height: 1; padding: 4px 8px; }
 .beta-banner .dismiss:hover { color: var(--text); }
+@media (max-width: 700px) {
+  .beta-banner { padding: 8px 12px; gap: 8px; font-size: 12px; }
+  .beta-banner .tag { display: none; }
+}
+
+/* Mobile pitch strip — hidden on desktop, where the hero says all this. */
+#home .m-pitch { display: none; }
 
 @media (max-width: 900px) {
-  #home .hero { grid-template-columns: 1fr; gap: 30px; padding: 40px 0; }
-  #home .hero h1 { font-size: 42px; }
+  /* Phones: the card comes first, the full pitch reads underneath it. */
+  #home { display: flex; flex-direction: column; }
+  #home > * { order: 3; }
+  #home > .m-pitch { order: 0; }
+  #home > #next { order: 1; }
+  #home > .hero { order: 2; }
+
+  #home .m-pitch { display: block; padding: 14px 0 2px; }
+  #home .m-pitch b { display: block; font-family: var(--font-display); font-weight: 800;
+    font-size: 21px; line-height: 1.15; color: #fff; letter-spacing: -.2px; text-wrap: balance; }
+  #home .m-pitch b .hl { color: var(--red); }
+  #home .m-pitch span { display: block; font-size: 12px; color: var(--text-3); margin-top: 5px; }
+
+  #home .section#next { padding-top: 16px; }
+  #home .hero { grid-template-columns: 1fr; gap: 22px; padding: 22px 0 18px; }
+  #home .hero h1 { font-size: 36px; }
+  /* Both of these just scroll to the card that is now above them. */
+  #home .hero-cta { display: none; }
   #home .fights { grid-template-columns: 1fr; }
+  #home .card-head h2 { font-size: 24px; }
+  #home .fl-hint { display: none; }
   #home .past-events-grid { grid-template-columns: 1fr; }
   #home .tools { grid-template-columns: 1fr; }
   #home .trust-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -304,7 +331,7 @@
 #home .model-filter select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line-2); border-radius: 8px; padding: 7px 10px; font: 600 12.5px var(--font-display); cursor: pointer; }
 #home .compare-toggle { background: transparent; border: 0; padding: 4px 2px; font: 600 12px var(--font-display); color: var(--text-3); cursor: pointer; white-space: nowrap; transition: color .15s; }
 #home .compare-toggle:hover { color: var(--red); }
-#home .model-def { margin: 10px 2px 0; font-size: 13px; line-height: 1.5; color: var(--text-2); max-width: 720px; }
+#home .model-def { margin: 16px 2px 0; font-size: 13px; line-height: 1.5; color: var(--text-2); max-width: 720px; }
 #home .model-def:empty { display: none; }
 #home .model-def strong { color: var(--text); font-weight: 700; }
 #home .model-how { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
@@ -365,12 +392,18 @@
 
 <main id="home">
 
+  <!-- 1a · MOBILE PITCH STRIP — phones only; the full hero sits below the card. -->
+  <div class="m-pitch">
+    <b>Find where the betting line is <span class="hl">wrong.</span></b>
+    <span>61.6% on 3,288 fights the model never saw &middot; every miss posted</span>
+  </div>
+
   <!-- 1 · HERO -->
   <section class="hero">
     <div>
       <div class="hp-eyebrow">UFC Betting Analytics</div>
-      <h1>Find where the betting<br>line is <span class="hl">wrong.</span></h1>
-      <p class="lede">UFC picks with the math shown and the losses posted. One model calls every fight without ever seeing the odds. A second flags the fights where the price looks off. You get every graded result — the misses too — plus the Factor Lab, which shows which stats actually predict fights and which just echo the odds.</p>
+      <h1>Find where the betting line is <span class="hl">wrong.</span></h1>
+      <p class="lede">UFC picks with the math shown and the losses posted. One model calls every fight without ever seeing the odds; a second flags the fights where the price looks off.</p>
       <div class="hero-cta">
         <a href="#next" class="btn btn-primary btn-lg">Analyze next card →</a>
         <a href="track-record.html" class="btn btn-ghost btn-lg">See the graded track record</a>
@@ -404,8 +437,8 @@
       </div>
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
     </div>
-    <p class="model-def" id="hpModelDef"></p>
     <div class="fights" id="fightsList"></div>
+    <p class="model-def" id="hpModelDef"></p>
     <div class="hp-parlay" id="hpParlay" hidden>
       <div class="tx" id="hpParlayText"></div>
       <a class="btn btn-primary" href="parlay.html">Stack them in the Parlay Builder →</a>
@@ -603,7 +636,6 @@ function renderHeroEdge(event) {
       ${edgeCell}
     </div>
     <div class="spot-note">${note}</div>
-    <a href="#next" class="btn btn-primary btn-block" style="margin-top:12px">Work the full card →</a>
   `;
 }
 
