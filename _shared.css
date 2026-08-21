@@ -358,12 +358,13 @@ textarea:focus-visible,
    .cfl-flagged washes the flag in behind whatever the element contains —
    texture, to break up a grid of identical cards. .cfl-flag is the legible
    version for pages where the country is information, not decoration. */
-.cfl-flagged { position: relative; overflow: hidden; }
+.cfl-flagged { position: relative; overflow: hidden; isolation: isolate; }
 .cfl-flagged::before {
   content: '';
   position: absolute;
   left: 0; right: 0; bottom: 0;
   height: 62%;
+  z-index: -1;
   background: var(--flag);
   opacity: .16;
   pointer-events: none;

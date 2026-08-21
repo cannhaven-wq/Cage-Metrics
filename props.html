@@ -32,7 +32,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=lab1">
+<link rel="stylesheet" href="_shared.css?v=flag2">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
@@ -64,6 +64,12 @@
   .pb-corner.pb-b{text-align:right}
   .pb-name{font-family:var(--font-display); font-size:22px; font-weight:700; letter-spacing:0; line-height:1.05; color:var(--text); display:flex; align-items:baseline; gap:8px}
   .pb-corner.pb-b .pb-name{justify-content:flex-end}
+  /* Country of origin behind the name — .cfl-flagged in _shared.css.
+     fit-content keeps the wash hugging the name instead of running the full
+     width of the corner, where it reads as an underline bar. */
+  .pb-name.cfl-flagged{padding:7px 10px 8px; margin:-7px 0 0 -10px; border-radius:9px;
+    width:fit-content; max-width:calc(100% + 20px)}
+  .pb-corner.pb-b .pb-name.cfl-flagged{margin:-7px -10px 0 auto}
   .pb-tchip{font-family:var(--font-mono); font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:600; color:var(--amber); border:1px solid color-mix(in srgb, var(--amber) 45%, transparent); padding:2px 6px; border-radius:5px; white-space:nowrap; background:color-mix(in srgb,var(--amber) 12%, transparent)}
   .pb-stat-label{font-family:var(--font-mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--text-dim,#8993a0); font-weight:600; margin-top:16px}
 
@@ -130,7 +136,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd12"></script>
+<script src="_shared.js?v=rd14"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('props');
@@ -153,14 +159,19 @@ function renderEmpty(msg){
     + `color:var(--text-dim,#8993a0); line-height:1.6">${esc(msg)}</div>`;
 }
 
-function corner(s, side, sigMax){
+function corner(s, side, sigMax, country){
   const lo = +s.sig_lo, hi = +s.sig_hi, med = +s.sig_med;
   const spanL = (lo/sigMax)*100, spanW = ((hi-lo)/sigMax)*100, medL = (med/sigMax)*100;
   const chip = s.thin_tape ? '<span class="pb-tchip">thin tape</span>' : '';
   const nm = esc(s.fighter_name);
+  // Country of origin, washed in behind the name. country is looked up from
+  // the fighters table by fighter_id; the prop view carries no country column.
+  const fc = country || {};
+  const flagCls = cfl.flagClass ? cfl.flagClass(fc.country_code) : '';
+  const flagVar = cfl.flagStyle ? cfl.flagStyle(fc) : '';
   return `
   <div class="pb-corner pb-${side}">
-    <div class="pb-name">${side==='b' ? chip+nm : nm+chip}</div>
+    <div class="pb-name${flagCls}"${flagVar}>${side==='b' ? chip+nm : nm+chip}</div>
     <div class="pb-stat-label">Sig strikes</div>
     <div class="pb-signum">${Math.round(+s.sig_proj)} <small>proj.</small></div>
     <div class="pb-rangebar"><div class="pb-span" style="left:${spanL}%; width:${spanW}%"></div><div class="pb-med" style="left:${medL}%"></div></div>
@@ -198,6 +209,18 @@ async function loadBoard(){
   if(!fights.length){ renderEmpty('No complete matchups to show for this card yet.'); return; }
   const sigMax = Math.max(60, ...data.map(r => +r.sig_hi || 0)) * 1.04;
 
+  // Country of origin for the flag behind each name. Best-effort: if the
+  // lookup fails the board renders exactly as before, without flags.
+  const countries = {};
+  try {
+    const ids = [...new Set(data.map(r => r.fighter_id).filter(Boolean))];
+    if (ids.length) {
+      const { data: fr } = await sb.from('fighters')
+        .select('id, country, country_code').in('id', ids);
+      for (const f of (fr || [])) countries[f.id] = f;
+    }
+  } catch (e) { /* flags are decoration — never block the board on them */ }
+
   // Header meta from the card.
   const ev = data[0];
   const evDate = cfl.formatDate ? cfl.formatDate(ev.event_date) : ev.event_date;
@@ -221,9 +244,9 @@ async function loadBoard(){
     <div class="pb-fight ${f.main?'pb-main':''}">
       <div class="pb-fhead"><span class="pb-wc">${esc(f.wc)}</span>${f.main?'<span class="pb-mainflag">Main event</span>':'<span class="pb-wc" style="color:var(--text-dim,#6b7480)">Prelim</span>'}</div>
       <div class="pb-grid">
-        ${corner(f.c.a,'a',sigMax)}
+        ${corner(f.c.a,'a',sigMax,countries[f.c.a.fighter_id])}
         <div class="pb-vs"><div class="pb-vtxt">VS</div><div class="pb-dist"><div class="pb-distbar" title="finish ${finP}% / distance ${distP}%"><div class="pb-fin" style="flex-basis:${finP}%"></div></div></div><div class="pb-distcap"><b>${distP}%</b>go distance</div></div>
-        ${corner(f.c.b,'b',sigMax)}
+        ${corner(f.c.b,'b',sigMax,countries[f.c.b.fighter_id])}
       </div>
     </div>`;
   }).join('');
