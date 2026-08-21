@@ -67,9 +67,19 @@
   /* Country of origin behind the name — .cfl-flagged in _shared.css.
      fit-content keeps the wash hugging the name instead of running the full
      width of the corner, where it reads as an underline bar. */
-  .pb-name.cfl-flagged{padding:7px 10px 8px; margin:-7px 0 0 -10px; border-radius:9px;
-    width:fit-content; max-width:calc(100% + 20px)}
-  .pb-corner.pb-b .pb-name.cfl-flagged{margin:-7px -10px 0 auto}
+  .pb-name.cfl-flagged{padding:11px 14px 12px; margin:-11px 0 0 -14px; border-radius:10px;
+    width:fit-content; max-width:calc(100% + 28px)}
+  .pb-corner.pb-b .pb-name.cfl-flagged{margin:-11px -14px 0 auto}
+  /* The shared rule washes only the bottom 62% and fades until 60%, which at
+     this size lands as a stripe under the name rather than colour behind it.
+     Fill the whole box and start the fade high, so the flag reads as a wash
+     the name sits on. Opacity stays low — it is texture, not a label. */
+  .pb-name.cfl-flagged::before{
+    height:100%;
+    opacity:.2;
+    -webkit-mask-image:linear-gradient(180deg, transparent, #000 30%);
+    mask-image:linear-gradient(180deg, transparent, #000 30%);
+  }
   .pb-tchip{font-family:var(--font-mono); font-size:9.5px; letter-spacing:.06em; text-transform:uppercase; font-weight:600; color:var(--amber); border:1px solid color-mix(in srgb, var(--amber) 45%, transparent); padding:2px 6px; border-radius:5px; white-space:nowrap; background:color-mix(in srgb,var(--amber) 12%, transparent)}
   .pb-stat-label{font-family:var(--font-mono); font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--text-dim,#8993a0); font-weight:600; margin-top:16px}
 
