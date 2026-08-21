@@ -329,6 +329,35 @@
     return !!FLAG_COLORS[String(code || '').toUpperCase()];
   };
 
+  // Markup helpers so every page renders the flag the same way.
+  //
+  // Background wash — pair the class with the style on the same element:
+  //   `<a class="side${cfl.flagClass(f.country_code)}"${cfl.flagStyle(f)}>`
+  // Both return '' for an unknown country, so the element falls back to a
+  // plain surface instead of an arbitrary colour.
+  cfl.flagClass = function (code) {
+    return cfl.hasFlag(code) ? ' cfl-flagged' : '';
+  };
+
+  cfl.flagStyle = function (fighter) {
+    const f = fighter || {};
+    const tint = cfl.flagTint(f.country_code);
+    if (!tint) return '';
+    // The gradient comes from our own colour table, never from user input.
+    const title = f.country ? ' title="' + cfl.escapeHtml(f.country) + '"' : '';
+    return ' style="--flag:' + tint + '"' + title;
+  };
+
+  // Legible version: a flag swatch next to the country name, for pages where
+  // where a fighter is from is information rather than texture.
+  cfl.flagChip = function (fighter) {
+    const f = fighter || {};
+    const tint = cfl.flagTint(f.country_code);
+    if (!tint || !f.country) return '';
+    return '<span class="cfl-flag"><i style="--flag:' + tint + '"></i>'
+      + cfl.escapeHtml(f.country) + '</span>';
+  };
+
   // Put an upcoming card's fights into true card order and drop dead bookings.
   //
   // The fights table has two decay modes this compensates for:

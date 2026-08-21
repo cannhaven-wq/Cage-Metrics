@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=lab1">
+<link rel="stylesheet" href="_shared.css?v=flag1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -550,7 +550,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd12"></script>
+<script src="_shared.js?v=rd14"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
@@ -670,7 +670,7 @@ async function load() {
   // used to add ~4 round trips of latency before render. streakMap is left
   // empty; the v_fighter_recent_form view query was removed when edges.js's
   // streak factors went away.
-  const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date';
+  const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
   const fightIds = (fights || []).map(f => f.id);
   const [fightersR, cardioR, finishR, oddsR, engPicksR, engEdgesR] = await Promise.all([
     fighterIds.length
@@ -1254,6 +1254,8 @@ function renderFighterSide(f, side, won, opponentWon) {
   const recordStr = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0) > 0
     ? `${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''} UFC`
     : `${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''} career`;
+  // These rows are wide, so the background wash used on the home card would
+  // read as a colour bar. State the country instead — there is room for it.
   return `
     <a class="${cls}" href="${cfl.fighterUrl(f.id)}">
       <div class="cfl-avatar lg">${cfl.escapeHtml(cfl.initials(f.name))}</div>
@@ -1261,6 +1263,7 @@ function renderFighterSide(f, side, won, opponentWon) {
         <div class="name">${cfl.escapeHtml(f.name)}</div>
         ${f.nickname ? `<div class="nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
         <div class="record">${recordStr}</div>
+        ${cfl.flagChip ? cfl.flagChip(f) : ''}
       </div>
     </a>
   `;

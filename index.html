@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=lab1">
+<link rel="stylesheet" href="_shared.css?v=flag1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -193,16 +193,9 @@
 #home .cbadge.pending { background: var(--bg-3); color: var(--text-3); }
 #home .matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
 #home .side { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 12px 6px; border-radius: 10px; border: 1px solid transparent; text-decoration: none; }
-/* Country of origin, washed in behind the name. Deliberately faint — it is
-   there to break up a grid of identical cards, not to be read as a label. */
-#home .side.has-flag::before {
-  content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 62%;
-  background: var(--flag); opacity: .16; pointer-events: none;
-  -webkit-mask-image: linear-gradient(180deg, transparent, #000 60%);
-  mask-image: linear-gradient(180deg, transparent, #000 60%);
-}
-#home .side.pick.has-flag::before { opacity: .2; }
-#home .side > * { position: relative; }
+/* Country of origin — .cfl-flagged in _shared.css does the wash; the picked
+   corner carries a touch more of it so the highlight still reads. */
+#home .side.pick.cfl-flagged::before { opacity: .2; }
 #home .side.pick { border-color: rgba(63,208,122,.35); background: rgba(63,208,122,.06); }
 #home .ava { width: 46px; height: 46px; border-radius: 50%; background: var(--bg-3); border: 1px solid var(--line-2); display: flex; align-items: center; justify-content: center; font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text-2); }
 #home .side.pick .ava { border-color: var(--green); color: var(--green); }
@@ -535,7 +528,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd13"></script>
+<script src="_shared.js?v=rd14"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="fight-insights.js?v=5"></script>
@@ -1210,15 +1203,11 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
 function fighterSideHtml(f, isPick) {
   const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
   const rec = (w + l + d) > 0 ? `${w}-${l}${d ? '-' + d : '-0'}` : '0-0';
-  // Country of origin as a washed-out flag behind the name. cfl.flagTint only
-  // ever returns a gradient built from its own colour table, so the value is
-  // safe to drop straight into the style attribute.
-  const tint = cfl.flagTint ? cfl.flagTint(f.country_code) : null;
-  const flagCls = tint ? ' has-flag' : '';
-  const flagVar = tint ? ` style="--flag:${tint}"` : '';
-  const home = f.country ? ` title="${cfl.escapeHtml(f.country)}"` : '';
+  // Country of origin, washed in behind the name (cfl.flagClass/flagStyle).
+  const flagCls = cfl.flagClass ? cfl.flagClass(f.country_code) : '';
+  const flagVar = cfl.flagStyle ? cfl.flagStyle(f) : '';
   return `
-    <a class="side ${isPick ? 'pick' : ''}${flagCls}" href="${cfl.fighterUrl(f.id)}"${flagVar}${home}>
+    <a class="side ${isPick ? 'pick' : ''}${flagCls}" href="${cfl.fighterUrl(f.id)}"${flagVar}>
       <div class="ava">${cfl.escapeHtml(cfl.initials(f.name))}</div>
       <div class="nm">${cfl.escapeHtml(f.name)}</div>
       <div class="rec">${rec}</div>

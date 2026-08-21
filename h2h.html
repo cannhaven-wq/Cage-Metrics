@@ -69,7 +69,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=lab1">
+<link rel="stylesheet" href="_shared.css?v=flag1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -274,7 +274,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd12"></script>
+<script src="_shared.js?v=rd14"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('h2h');
@@ -288,7 +288,7 @@ async function load() {
   try {
     allFighters = await cfl.fetchAll(() => sb
       .from('fighters')
-      .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, height_in, reach_in, stance, age, slpm, sapm, str_acc, str_def, td_avg, td_acc, td_def, sub_avg, last_5, last_fight_date'));
+      .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, height_in, reach_in, stance, age, slpm, sapm, str_acc, str_def, td_avg, td_acc, td_def, sub_avg, last_5, last_fight_date, country, country_code'));
   } catch (err) {
     document.getElementById('compareArea').innerHTML = cfl.errorHtml('Failed to load fighters: ' + err.message);
     return;
@@ -364,6 +364,7 @@ function renderPicker(side) {
         <div style="flex:1">
           <div class="selected-name">${cfl.escapeHtml(sel.name)}</div>
           <div class="selected-meta">${cfl.escapeHtml(sel.division || 'Unknown')} · ${cfl.formatRecord(sel.ufc_wins, sel.ufc_losses, sel.ufc_draws)} UFC</div>
+          ${cfl.flagChip ? cfl.flagChip(sel) : ''}
         </div>
         <button class="picker-clear" data-side="${side}">Change</button>
       </div>

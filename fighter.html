@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=lab1">
+<link rel="stylesheet" href="_shared.css?v=flag1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -87,6 +87,7 @@
     letter-spacing: 0.06em;
     margin-top: 10px;
   }
+  .fh-origin { margin-top: 9px; }
   .fh-style {
     display: inline-block;
     background: var(--bg-3);
@@ -244,7 +245,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd12"></script>
+<script src="_shared.js?v=rd14"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('fighters');
@@ -350,6 +351,7 @@ async function load() {
           <h1 class="fh-name">${cfl.escapeHtml(f.name)}</h1>
           ${f.nickname ? `<div class="fh-nick">"${cfl.escapeHtml(f.nickname)}"</div>` : ''}
           ${f.division ? `<div class="fh-division">${cfl.escapeHtml(f.division)}</div>` : ''}
+          ${cfl.flagChip && cfl.flagChip(f) ? `<div class="fh-origin" title="${cfl.escapeHtml(f.birth_place || f.country)}">${cfl.flagChip(f)}</div>` : ''}
           <div class="fh-style" id="fhStyle" style="display:none"></div>
         </div>
         <div class="fh-records">
