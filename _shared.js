@@ -163,6 +163,172 @@
     return name.split(/\s+/).filter(Boolean).map(w => w[0]).join('').slice(0, 2).toUpperCase();
   };
 
+  // ---- Country of origin -------------------------------------------------
+  // Flags are drawn as CSS gradients rather than images or emoji. Flag emoji
+  // have no glyphs on Windows (they render as the bare letters "US", "BR"),
+  // and an image set would be ~26 extra requests on a full card. A gradient is
+  // one string, scales to any size, and at low opacity reads as the flag's
+  // colours — which is all a background tint has to do.
+  //
+  // Each entry is [orientation, ...colours]: 'v' vertical bands, 'h'
+  // horizontal bands, 'd' diagonal (used for flags whose real design is a
+  // cross, canton, or emblem that bands cannot approximate).
+  const FLAG_COLORS = {
+    US: ['h', '#b22234', '#ffffff', '#3c3b6e'],
+    BR: ['d', '#009b3a', '#ffdf00', '#002776'],
+    MX: ['v', '#006847', '#ffffff', '#ce1126'],
+    CA: ['v', '#d80621', '#ffffff', '#d80621'],
+    RU: ['h', '#ffffff', '#0039a6', '#d52b1e'],
+    GB: ['d', '#012169', '#ffffff', '#c8102e'],
+    IE: ['v', '#169b62', '#ffffff', '#ff883e'],
+    AU: ['d', '#012169', '#ffffff', '#e4002b'],
+    NZ: ['d', '#012169', '#ffffff', '#c8102e'],
+    CN: ['d', '#de2910', '#ffde00', '#de2910'],
+    JP: ['d', '#ffffff', '#bc002d', '#ffffff'],
+    KR: ['d', '#ffffff', '#cd2e3a', '#0047a0'],
+    KP: ['h', '#024fa2', '#ffffff', '#ed1c27'],
+    FR: ['v', '#002395', '#ffffff', '#ed2939'],
+    DE: ['h', '#000000', '#dd0000', '#ffce00'],
+    ES: ['h', '#aa151b', '#f1bf00', '#aa151b'],
+    IT: ['v', '#008c45', '#f4f5f0', '#cd212a'],
+    NL: ['h', '#ae1c28', '#ffffff', '#21468b'],
+    BE: ['v', '#000000', '#fdda24', '#ef3340'],
+    SE: ['d', '#006aa7', '#fecc00', '#006aa7'],
+    NO: ['d', '#ba0c2f', '#ffffff', '#00205b'],
+    DK: ['d', '#c60c30', '#ffffff', '#c60c30'],
+    FI: ['d', '#ffffff', '#002f6c', '#ffffff'],
+    IS: ['d', '#02529c', '#ffffff', '#dc1e35'],
+    PL: ['h', '#ffffff', '#dc143c', '#dc143c'],
+    CZ: ['d', '#11457e', '#ffffff', '#d7141a'],
+    SK: ['h', '#ffffff', '#0b4ea2', '#ee1c25'],
+    AT: ['h', '#ed2939', '#ffffff', '#ed2939'],
+    CH: ['d', '#d52b1e', '#ffffff', '#d52b1e'],
+    PT: ['v', '#046a38', '#046a38', '#da291c'],
+    GR: ['h', '#0d5eaf', '#ffffff', '#0d5eaf'],
+    HR: ['h', '#ff0000', '#ffffff', '#171796'],
+    RS: ['h', '#c6363c', '#0c4076', '#ffffff'],
+    BA: ['d', '#002395', '#fecb00', '#002395'],
+    SI: ['h', '#ffffff', '#005da4', '#ed1c24'],
+    HU: ['h', '#ce2939', '#ffffff', '#477050'],
+    RO: ['v', '#002b7f', '#fcd116', '#ce1126'],
+    BG: ['h', '#ffffff', '#00966e', '#d62612'],
+    UA: ['h', '#0057b7', '#0057b7', '#ffd700'],
+    BY: ['h', '#c8313e', '#ffffff', '#4aa657'],
+    MD: ['v', '#0046ae', '#ffd200', '#cc092f'],
+    LT: ['h', '#fdb913', '#006a44', '#c1272d'],
+    LV: ['h', '#9e3039', '#ffffff', '#9e3039'],
+    EE: ['h', '#0072ce', '#000000', '#ffffff'],
+    GE: ['d', '#ffffff', '#ff0000', '#ffffff'],
+    AM: ['h', '#d90012', '#0033a0', '#f2a800'],
+    AZ: ['h', '#0092bc', '#ed2939', '#3f9c35'],
+    KZ: ['d', '#00afca', '#fec50c', '#00afca'],
+    UZ: ['h', '#0099b5', '#ffffff', '#1eb53a'],
+    KG: ['d', '#e8112d', '#ffef00', '#e8112d'],
+    TJ: ['h', '#cc0000', '#ffffff', '#006600'],
+    TM: ['v', '#28ae66', '#ffffff', '#28ae66'],
+    TR: ['d', '#e30a17', '#ffffff', '#e30a17'],
+    IR: ['h', '#239f40', '#ffffff', '#da0000'],
+    IQ: ['h', '#ce1126', '#ffffff', '#000000'],
+    IL: ['h', '#ffffff', '#0038b8', '#ffffff'],
+    LB: ['h', '#ed1c24', '#ffffff', '#00a651'],
+    JO: ['h', '#000000', '#ffffff', '#007a3d'],
+    SY: ['h', '#ce1126', '#ffffff', '#000000'],
+    SA: ['d', '#006c35', '#ffffff', '#006c35'],
+    AE: ['h', '#00732f', '#ffffff', '#000000'],
+    BH: ['v', '#ffffff', '#ce1126', '#ce1126'],
+    KW: ['h', '#007a3d', '#ffffff', '#ce1126'],
+    QA: ['v', '#ffffff', '#8a1538', '#8a1538'],
+    OM: ['h', '#ffffff', '#db161b', '#008000'],
+    AF: ['v', '#000000', '#d32011', '#007a36'],
+    PK: ['v', '#ffffff', '#01411c', '#01411c'],
+    IN: ['h', '#ff9933', '#ffffff', '#138808'],
+    NP: ['d', '#dc143c', '#ffffff', '#003893'],
+    BD: ['d', '#006a4e', '#f42a41', '#006a4e'],
+    LK: ['d', '#ffbe29', '#8d153a', '#00534e'],
+    TH: ['h', '#a51931', '#f4f5f8', '#2d2a4a'],
+    VN: ['d', '#da251d', '#ffff00', '#da251d'],
+    PH: ['d', '#0038a8', '#ffffff', '#ce1126'],
+    ID: ['h', '#ce1126', '#ce1126', '#ffffff'],
+    MY: ['h', '#010066', '#ffffff', '#cc0001'],
+    SG: ['h', '#ed2939', '#ffffff', '#ffffff'],
+    MM: ['h', '#fecb00', '#34b233', '#ea2839'],
+    KH: ['h', '#032ea1', '#e00025', '#032ea1'],
+    LA: ['h', '#ce1126', '#002868', '#ce1126'],
+    MN: ['v', '#c4272f', '#015197', '#c4272f'],
+    AR: ['h', '#74acdf', '#ffffff', '#74acdf'],
+    CL: ['d', '#0039a6', '#ffffff', '#d52b1e'],
+    PE: ['v', '#d91023', '#ffffff', '#d91023'],
+    CO: ['h', '#fcd116', '#003893', '#ce1126'],
+    VE: ['h', '#ffcc00', '#00247d', '#cf142b'],
+    EC: ['h', '#ffdd00', '#034ea2', '#ed1c24'],
+    BO: ['h', '#d52b1e', '#f9e300', '#007a33'],
+    UY: ['d', '#0038a8', '#ffffff', '#0038a8'],
+    PY: ['h', '#d52b1e', '#ffffff', '#0038a8'],
+    PA: ['d', '#005293', '#ffffff', '#d21034'],
+    CR: ['h', '#002b7f', '#ffffff', '#ce1126'],
+    GT: ['v', '#4997d0', '#ffffff', '#4997d0'],
+    HN: ['h', '#0073cf', '#ffffff', '#0073cf'],
+    NI: ['h', '#0067c6', '#ffffff', '#0067c6'],
+    SV: ['h', '#0f47af', '#ffffff', '#0f47af'],
+    CU: ['d', '#002a8f', '#ffffff', '#cf142b'],
+    DO: ['d', '#002d62', '#ffffff', '#ce1126'],
+    PR: ['d', '#ed0000', '#ffffff', '#0050f0'],
+    JM: ['d', '#009b3a', '#fed100', '#000000'],
+    TT: ['d', '#da1a35', '#ffffff', '#000000'],
+    HT: ['h', '#00209f', '#00209f', '#d21034'],
+    BS: ['h', '#00abc9', '#ffc72c', '#000000'],
+    SR: ['h', '#377e3f', '#ffffff', '#b40a2d'],
+    GY: ['d', '#009e49', '#fcd116', '#ce1126'],
+    BZ: ['h', '#003f87', '#ce1126', '#003f87'],
+    NG: ['v', '#008751', '#ffffff', '#008751'],
+    GH: ['h', '#ce1126', '#fcd116', '#006b3f'],
+    CM: ['v', '#007a5e', '#ce1126', '#fcd116'],
+    ZA: ['d', '#007749', '#ffb612', '#de3831'],
+    KE: ['h', '#000000', '#bb0000', '#006600'],
+    MA: ['d', '#c1272d', '#006233', '#c1272d'],
+    DZ: ['v', '#006233', '#ffffff', '#d21034'],
+    TN: ['d', '#e70013', '#ffffff', '#e70013'],
+    EG: ['h', '#ce1126', '#ffffff', '#000000'],
+    SN: ['v', '#00853f', '#fdef42', '#e31b23'],
+    AO: ['h', '#ce1126', '#000000', '#ce1126'],
+    CG: ['d', '#009543', '#fbde4a', '#dc241f'],
+    CD: ['d', '#007fff', '#f7d618', '#ce1021'],
+    CI: ['v', '#f77f00', '#ffffff', '#009e60'],
+    ML: ['v', '#14b53a', '#fcd116', '#ce1126'],
+    SD: ['h', '#d21034', '#ffffff', '#000000'],
+    ET: ['h', '#009a49', '#fedd00', '#da121a'],
+    TZ: ['d', '#1eb53a', '#000000', '#00a3dd'],
+    UG: ['h', '#000000', '#fcdc04', '#d90000'],
+    ZW: ['h', '#319208', '#ffd200', '#de2010'],
+    MZ: ['h', '#007168', '#ffffff', '#d21034'],
+    GU: ['d', '#0071bc', '#ffffff', '#0071bc'],
+    WS: ['d', '#ce1126', '#002b7f', '#ce1126'],
+    AS: ['d', '#002b7f', '#ffffff', '#c8102e'],
+    FJ: ['d', '#68bfe5', '#ffffff', '#68bfe5'],
+    TO: ['d', '#c10000', '#ffffff', '#c10000'],
+    PG: ['d', '#000000', '#ce1126', '#fcd116'],
+    CV: ['h', '#003893', '#ffffff', '#cf2027'],
+  };
+
+  const FLAG_ANGLE = { v: '90deg', h: '180deg', d: '125deg' };
+
+  // A CSS gradient approximating a country's flag, for use as a background
+  // tint. Returns null for unknown or missing codes so callers fall back to a
+  // plain surface rather than an arbitrary colour.
+  cfl.flagTint = function (code) {
+    const spec = FLAG_COLORS[String(code || '').toUpperCase()];
+    if (!spec) return null;
+    const colors = spec.slice(1);
+    const angle = FLAG_ANGLE[spec[0]] || '180deg';
+    const step = 100 / colors.length;
+    const stops = colors.map((c, i) => c + ' ' + (i * step) + '% ' + ((i + 1) * step) + '%');
+    return 'linear-gradient(' + angle + ', ' + stops.join(', ') + ')';
+  };
+
+  cfl.hasFlag = function (code) {
+    return !!FLAG_COLORS[String(code || '').toUpperCase()];
+  };
+
   // Put an upcoming card's fights into true card order and drop dead bookings.
   //
   // The fights table has two decay modes this compensates for:
