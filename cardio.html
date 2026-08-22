@@ -62,7 +62,7 @@
       "name": "Which UFC fighters have the best cardio?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "The leaderboard ranks every fighter with high-confidence cardio data by consistency score. Only fighters with at least 15 minutes of round-3+ data qualify for high confidence."
+        "text": "The leaderboard ranks fighters who have competed in the last two years by consistency score. Only fighters with at least 15 minutes of round-3+ data qualify for high confidence."
       }
     },
     {
@@ -514,8 +514,8 @@
   <div class="section">
     <div class="section-eyebrow"><span class="dot"></span>Right now in the UFC</div>
     <h2>The leaderboards</h2>
-    <p>Top and bottom 20, recent five-fight window, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific.</p>
-    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;"><strong>Read the faders list first.</strong> That's where the metric earns its keep — Michael Chandler, Tyron Woodley, Cory Sandhagen are real, named, well-known cardio collapses, and the data ranks them where you'd expect. The elite list compresses at the score cap (most "tireless" fighters tie at 140), so it's a directional list of "these are good," not a ranking. We sort ties by deepest sample so the most-confident readings rise to the top.</p>
+    <p>Top and bottom 20 among fighters who have been in the cage in the last two years, high confidence only. Updated automatically as new fights are added. Career-aggregate, not weight-class specific.</p>
+    <p style="font-size: 13px; color: var(--text-3); line-height: 1.6;"><strong>Read the faders list first.</strong> That's where the metric earns its keep. The elite list compresses at the score cap (most "tireless" fighters tie at 140), so it's a directional list of "these are good," not a ranking. We sort ties by deepest sample so the most-confident readings rise to the top.</p>
     <div class="leaderboards">
       <div class="leaderboard worst">
         <div class="leaderboard-header">
@@ -730,14 +730,32 @@ async function loadLeaderboards() {
     const fighterIds = data.map(r => r.fighter_id);
     const { data: fighters } = await sb
       .from('fighters')
-      .select('id, name, division')
+      .select('id, name, division, last_fight_date')
       .in('id', fighterIds);
     const fmap = {};
     (fighters || []).forEach(f => { fmap[f.id] = f; });
 
+    // "Right now in the UFC" has to mean it. The consistency view carries every
+    // fighter who ever built a high-confidence sample, so without this the board
+    // ranked men who left the promotion a decade ago — and two who have died.
+    //
+    // Two years rather than one because `fighters.last_fight_date` is refreshed
+    // by the fighter scraper, not the event scraper, and currently trails the
+    // fights table by a few months; a twelve-month cut would silently drop
+    // fighters who are active. Anyone with no last_fight_date at all is out.
+    const ACTIVE_MONTHS = 24;
+    const cutoff = new Date();
+    cutoff.setMonth(cutoff.getMonth() - ACTIVE_MONTHS);
+    const cutoffISO = cutoff.toISOString().slice(0, 10);
+
     const enriched = data
-      .map(r => ({ ...r, name: fmap[r.fighter_id]?.name, division: fmap[r.fighter_id]?.division }))
-      .filter(r => r.name);
+      .map(r => ({
+        ...r,
+        name: fmap[r.fighter_id]?.name,
+        division: fmap[r.fighter_id]?.division,
+        lastFight: fmap[r.fighter_id]?.last_fight_date,
+      }))
+      .filter(r => r.name && r.lastFight && r.lastFight >= cutoffISO);
 
     // Tiebreaker on R3+ minutes — many elite fighters tie at the score cap,
     // so the fighter with the deepest deep-water sample ranks higher.
