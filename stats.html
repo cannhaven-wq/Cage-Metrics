@@ -218,82 +218,50 @@
   }
 
   /* ---- Factor lab ---- */
-  /* The verdict used to be asserted in a column that said the same sentence on
-     six of eight rows. It is a position against a coin flip, so it is drawn as
-     one: every factor gets a scale, and you can see whether its range clears
-     the 50% line instead of being told. */
+  /* Built for someone who has never read a stats page. The default view answers
+     one question per factor — does this stat help me pick fights — in one word,
+     one number and one bar. No legend: a graphic that needs a key isn't simple.
+     Everything that proves the answer lives behind "Show the proof". */
   .lab-intro {
     color: var(--text-2);
-    font-size: 14px;
-    line-height: 1.7;
-    max-width: 760px;
-    margin: 0 0 14px;
+    font-size: 15px;
+    line-height: 1.65;
+    max-width: 560px;
+    margin: 0 0 22px;
   }
   .lab-intro strong { color: var(--text-1); }
   .lab-loading { color: var(--text-3); text-align: center; padding: 40px 0; }
 
-  /* The finding, before the evidence. */
   .fl-finding {
-    margin: 26px 0 20px;
-    padding: 20px 22px;
-    border: 1px solid var(--border);
+    margin: 0 0 22px;
+    padding: 16px 20px;
     border-left: 3px solid var(--red);
-    border-radius: 8px;
+    border-radius: 0 8px 8px 0;
     background: var(--bg-1);
-  }
-  .fl-finding-lead {
     font-family: var(--font-display);
-    font-size: clamp(20px, 3vw, 27px);
+    font-size: clamp(18px, 2.6vw, 24px);
     font-weight: 800;
-    line-height: 1.2;
+    line-height: 1.25;
     color: var(--text-1);
     text-wrap: balance;
   }
-  .fl-finding-lead b { color: var(--red); }
-  .fl-finding-tally {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px 18px;
-    margin-top: 14px;
-    font-size: 12.5px;
-    color: var(--text-3);
-  }
-  .fl-finding-tally span { display: inline-flex; align-items: center; gap: 7px; }
-  .fl-finding-tally i {
-    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
-  }
+  .fl-finding b { color: var(--red); }
 
-  .fl-legend {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px 20px;
-    margin-bottom: 14px;
-    font-size: 11.5px;
-    color: var(--text-3);
-  }
-  .fl-key { display: inline-flex; align-items: center; gap: 7px; }
-  .fl-key i { flex-shrink: 0; }
-  .fl-key-raw { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-3); }
-  .fl-key-even { width: 10px; height: 10px; border-radius: 50%; background: var(--text-1); }
-  .fl-key-ci { width: 22px; height: 3px; border-radius: 2px; background: var(--bg-4); }
-  .fl-key-line { width: 2px; height: 12px; background: var(--text-3); }
-
-  .fl-list { display: grid; gap: 10px; }
+  .fl-list { display: grid; gap: 8px; }
 
   .fl-card {
     border: 1px solid var(--border);
     border-radius: 8px;
     background: var(--bg-1);
-    padding: 16px 18px;
+    padding: 15px 18px;
   }
-  /* One factor cleared the bar. It should not look like the seven that didn't. */
-  .fl-card[data-verdict="real"] { border-color: rgba(63, 208, 122, .34); background: rgba(63, 208, 122, .04); }
-  .fl-card[data-verdict="lean"] { border-color: rgba(210, 153, 34, .28); }
+  .fl-card[data-verdict="real"] { border-color: rgba(63, 208, 122, .3); background: rgba(63, 208, 122, .04); }
 
-  .fl-head { display: flex; align-items: flex-start; gap: 12px; }
+  /* Row one: what we asked, and the answer. Nothing else competes with it. */
+  .fl-top { display: flex; align-items: center; gap: 12px; }
   .fl-glyph {
     flex-shrink: 0;
-    width: 34px; height: 34px;
+    width: 32px; height: 32px;
     display: flex; align-items: center; justify-content: center;
     border-radius: 7px;
     background: var(--bg-3);
@@ -301,106 +269,77 @@
   }
   .fl-card[data-verdict="real"] .fl-glyph { background: rgba(63, 208, 122, .12); color: var(--green); }
   .fl-glyph svg { display: block; }
-  .fl-head-text { flex: 1; min-width: 0; }
-  .fl-name {
+  .fl-ask {
+    flex: 1; min-width: 0;
     font-family: var(--font-display);
     font-size: 17px; font-weight: 700; color: var(--text-1);
-    margin: 0; line-height: 1.2;
+    line-height: 1.2;
   }
-  .fl-basis {
-    display: inline-block;
-    font-family: var(--font-body);
-    font-size: 9.5px; font-weight: 600;
-    letter-spacing: 0.08em; text-transform: uppercase;
-    padding: 2px 6px; border-radius: 4px; margin-left: 8px;
-    vertical-align: 2px;
-    background: var(--bg-4); color: var(--text-3);
-  }
-  .fl-q { font-size: 12.5px; color: var(--text-3); margin: 3px 0 0; }
-  .fl-badge {
+  .fl-answer {
     flex-shrink: 0;
-    font-size: 10.5px; font-weight: 700;
-    letter-spacing: 0.05em; text-transform: uppercase;
-    padding: 5px 10px; border-radius: 5px; white-space: nowrap;
+    font-family: var(--font-display);
+    font-size: 19px; font-weight: 800;
+    letter-spacing: 0.01em;
   }
-  .fl-badge.real { background: rgba(63, 208, 122, .16); color: var(--green); }
-  .fl-badge.lean { background: rgba(210, 153, 34, .16); color: #d29922; }
-  .fl-badge.proxy { background: var(--bg-4); color: var(--text-3); }
-  .fl-badge.inverted { background: rgba(255, 77, 61, .14); color: var(--red); }
-  .fl-badge.unproven, .fl-badge.insufficient { background: var(--bg-4); color: var(--text-3); }
+  .fl-answer.real { color: var(--green); }
+  .fl-answer.lean { color: #d29922; }
+  .fl-answer.proxy, .fl-answer.unproven, .fl-answer.insufficient { color: var(--text-3); }
+  .fl-answer.inverted { color: var(--red); }
 
-  /* The scale. Positions are the stored rate mapped onto a fixed 35–75% domain
-     — no statistic is computed here, only placed. */
-  .fl-scale { position: relative; height: 40px; margin: 14px 0 4px; }
-  .fl-track {
-    position: absolute; left: 0; right: 0; top: 17px; height: 2px;
-    background: var(--bg-4); border-radius: 2px;
-  }
-  .fl-coin {
-    position: absolute; top: 4px; bottom: 12px; width: 0;
-    border-left: 1px dashed var(--text-3); opacity: .75;
-  }
-  .fl-ci {
-    position: absolute; top: 15px; height: 6px; border-radius: 3px;
-    background: var(--bg-4);
-  }
-  .fl-card[data-verdict="real"] .fl-ci { background: rgba(63, 208, 122, .3); }
-  .fl-dot, .fl-raw {
-    position: absolute; top: 12px;
-    width: 12px; height: 12px; border-radius: 50%;
-    transform: translateX(-50%);
-  }
-  .fl-dot { background: var(--text-1); box-shadow: 0 0 0 2px var(--bg-1); }
-  .fl-card[data-verdict="real"] .fl-dot { background: var(--green); }
-  .fl-raw {
-    background: transparent;
-    border: 1.5px solid var(--text-3);
-    top: 13px; width: 10px; height: 10px;
-  }
-  .fl-ticks {
-    position: absolute; left: 0; right: 0; bottom: 0; height: 12px;
-    font-size: 9.5px; color: var(--text-3);
-    font-variant-numeric: tabular-nums;
-  }
-  .fl-ticks span { position: absolute; transform: translateX(-50%); }
+  /* Row two: the one number, in words. */
+  .fl-line { font-size: 13.5px; color: var(--text-2); margin: 9px 0 0; }
+  .fl-line b { color: var(--text-1); font-weight: 700; font-variant-numeric: tabular-nums; }
 
-  .fl-read {
-    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
-    font-size: 12.5px; color: var(--text-3);
-    padding-top: 8px; border-top: 1px solid var(--border);
+  /* Row three: the bar. Centre is a coin flip and says so, so it reads without
+     a key — right of the middle is better than a coin flip, left is worse. */
+  .fl-bar { position: relative; height: 26px; margin-top: 8px; }
+  .fl-bar-track {
+    position: absolute; left: 0; right: 0; top: 4px; height: 10px;
+    background: var(--bg-3); border-radius: 5px;
   }
-  .fl-read b {
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    color: var(--text-2); font-variant-numeric: tabular-nums;
+  .fl-bar-fill { position: absolute; top: 4px; height: 10px; background: var(--text-3); border-radius: 5px; }
+  .fl-card[data-verdict="real"] .fl-bar-fill { background: var(--green); }
+  .fl-card[data-verdict="lean"] .fl-bar-fill { background: #d29922; }
+  .fl-card[data-verdict="inverted"] .fl-bar-fill { background: var(--red); }
+  .fl-bar-mid {
+    position: absolute; top: 1px; height: 16px; width: 2px;
+    background: var(--text-2); border-radius: 1px; transform: translateX(-50%);
   }
-  .fl-read .live { color: var(--green); }
-  .fl-say { flex-basis: 100%; color: var(--text-2); line-height: 1.5; }
+  .fl-bar-cap { position: absolute; top: 18px; font-size: 9.5px; color: var(--text-3); transform: translateX(-50%); white-space: nowrap; }
+  .fl-bar-none { position: absolute; top: 4px; left: 0; font-size: 12px; color: var(--text-3); }
 
   .fl-toggle {
-    background: none; border: 1px solid var(--border); border-radius: 5px;
-    color: var(--text-2); font: inherit; font-size: 11.5px;
-    cursor: pointer; padding: 5px 10px; margin-top: 12px;
+    background: none; border: none; padding: 8px 0 0;
+    color: var(--text-3); font: inherit; font-size: 11.5px; cursor: pointer;
   }
-  .fl-toggle:hover { border-color: var(--text-3); color: var(--text-1); }
-  .fl-toggle:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
-  .fl-toggle b { color: var(--text-1); font-variant-numeric: tabular-nums; }
+  .fl-toggle:hover { color: var(--text-1); }
+  .fl-toggle:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; border-radius: 3px; }
 
-  .fl-bands { margin-top: 12px; display: grid; gap: 9px; }
-  .fl-band { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; align-items: center; }
-  .fl-band-label { font-size: 12px; color: var(--text-2); }
-  .fl-band-n { font-size: 10.5px; color: var(--text-3); display: block; margin-top: 1px; }
-  .fl-band-scale { position: relative; height: 16px; }
-  .fl-band-scale .fl-track { top: 7px; }
-  .fl-band-scale .fl-coin { top: 1px; bottom: 1px; }
-  .fl-band-scale .fl-dot { top: 3px; width: 10px; height: 10px; }
+  /* The proof. Everything a sceptic wants, nothing a first-timer must read. */
+  .fl-proof {
+    margin-top: 10px; padding-top: 12px;
+    border-top: 1px solid var(--border);
+    font-size: 12.5px; color: var(--text-3); line-height: 1.6;
+  }
+  .fl-proof p { margin: 0 0 10px; max-width: 62ch; }
+  .fl-proof b { color: var(--text-2); font-variant-numeric: tabular-nums; }
+  .fl-proof-grid { display: grid; gap: 5px; margin-top: 4px; }
+  .fl-proof-row { display: grid; grid-template-columns: minmax(0, 1fr) 120px 74px; gap: 10px; align-items: center; }
+  .fl-proof-row span:nth-child(2) { position: relative; height: 10px; }
+  .fl-proof-row i {
+    position: absolute; top: 3px; height: 4px; background: var(--text-3); border-radius: 2px;
+  }
+  .fl-proof-row em { font-style: normal; color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; }
+  .fl-proof-mid { position: absolute; top: 0; height: 10px; width: 1px; background: var(--text-3); opacity: .5; }
 
-  .lab-foot { font-size: 12px; color: var(--text-3); margin-top: 18px; line-height: 1.6; max-width: 820px; }
+  .lab-foot { font-size: 11.5px; color: var(--text-3); margin-top: 18px; line-height: 1.6; max-width: 780px; }
 
   @media (max-width: 640px) {
-    .fl-head { flex-wrap: wrap; }
-    .fl-badge { order: 3; }
-    .fl-band { grid-template-columns: 1fr; gap: 4px; }
-    .fl-band-scale { width: 100%; }
+    .fl-top { flex-wrap: wrap; }
+    .fl-ask { flex-basis: calc(100% - 44px); font-size: 15.5px; }
+    .fl-answer { margin-left: 44px; }
+    .fl-proof-row { grid-template-columns: 1fr 60px; }
+    .fl-proof-row span:nth-child(2) { display: none; }
   }
 </style>
 </head>
@@ -415,32 +354,14 @@
 </div>
 
 <div class="page">
-  <h2 class="section-h">Does it survive the market?</h2>
+  <h2 class="section-h">Which stats actually help?</h2>
   <p class="lab-intro">
-    Every factor below is scored against <strong id="lab-n">—</strong> UFC fights. The hollow ring on each
-    scale is how often the fighter it favours actually won. The solid dot is the one that matters: the same
-    rate across only the fights the betting market priced as a coin flip &mdash; both men inside
-    &plusmn;140 at close. Take the odds away, and see what the factor still knows.
-  </p>
-  <p class="lab-intro">
-    A factor whose ring sits well right of the coin-flip line but whose dot falls back to it isn't telling you
-    about the fight. It's telling you who the favourite was, which you could already read off the odds for free. Every stat
-    here is rebuilt from fights that had already happened when the fight being scored took place &mdash; a
-    fighter's career record contains the result we're trying to predict, so we never use it.
-    Nothing is shown below <strong id="lab-floor">100</strong> fights.
+    Some stats look like they predict fights when really they just point at the betting favourite.
+    So we tested each one on the <strong id="lab-n">—</strong> fights where the odds were even.
+    If it still wins there, it knows something the odds don't.
   </p>
 
-  <div class="fl-finding" id="fl-finding" hidden>
-    <div class="fl-finding-lead" id="fl-finding-lead"></div>
-    <div class="fl-finding-tally" id="fl-finding-tally"></div>
-  </div>
-
-  <div class="fl-legend" id="fl-legend" hidden>
-    <span class="fl-key"><i class="fl-key-raw"></i>Raw win rate</span>
-    <span class="fl-key"><i class="fl-key-even"></i>In even fights</span>
-    <span class="fl-key"><i class="fl-key-ci"></i>95% range</span>
-    <span class="fl-key"><i class="fl-key-line"></i>Coin flip</span>
-  </div>
+  <div class="fl-finding" id="fl-finding" hidden></div>
 
   <div class="fl-list" id="labBody"><div class="lab-loading">Loading…</div></div>
   <p class="lab-foot" id="lab-foot"></p>
@@ -547,47 +468,44 @@ async function loadAll() {
 // Factor lab — reads factor-rates.json, regenerated by build/factor-rates.js.
 // Verdicts are computed there, not here; this only renders them.
 //
-// The verdict is a position against a coin flip, so it is drawn as one. Each
-// factor gets a scale: a hollow marker for the raw win rate, a solid dot plus
-// its 95% range for the same factor across evenly-priced fights only, and a dashed
-// line at 50%. The distance between the two markers is the whole thesis of the
-// page — how much of a factor's apparent edge was only ever the favourite.
+// Written for a first-time visitor who has never read a stats page. Each factor
+// answers one question in one word, one sentence and one bar, and the bar is
+// centred on a coin flip so it reads without a legend. The raw-vs-even
+// contrast, the sample sizes, the ranges and the bands are all real and all
+// still here — behind "Show the proof", where they cost a newcomer nothing.
 // ---------------------------------------------------------------------------
 
-// Fixed domain so every factor is read on the same ruler. The widest stored
-// range in the data runs 36.2–75.4, so nothing clips.
-const FL_MIN = 35;
-const FL_MAX = 78;
-// Stored rate -> percentage across the track. Placement, not arithmetic on the
-// statistic itself: the numbers are rendered exactly as the build wrote them.
-const flPos = (v) => ((Math.min(FL_MAX, Math.max(FL_MIN, v)) - FL_MIN) / (FL_MAX - FL_MIN)) * 100;
+// The bar is centred on 50 so the middle means a coin flip. Every rate we hold
+// flat against the market falls inside this window; anything outside clamps.
+const FL_LO = 40;
+const FL_HI = 60;
+const flPos = (v) => ((Math.min(FL_HI, Math.max(FL_LO, v)) - FL_LO) / (FL_HI - FL_LO)) * 100;
 
-const VERDICT_LABEL = {
-  real: 'Real edge',
-  lean: 'Can’t tell yet',
-  proxy: 'No edge over the odds',
-  inverted: 'Backwards',
-  unproven: 'Unproven',
-  insufficient: 'Too few fights',
+// One word. The uncertainty lives in the word, not in a chart a newcomer would
+// have to be taught to read.
+const ANSWER = {
+  real: 'Yes',
+  lean: 'Maybe',
+  proxy: 'No',
+  inverted: 'No',
+  unproven: 'No idea',
+  insufficient: 'No idea',
 };
 
-const VERDICT_COPY = {
-  real: 'Survives. Still beats a coin flip when the market says the fight is even.',
-  lean: 'Still ahead once the market is level, but the range crosses a coin flip — not enough evenly-priced fights to call it either way.',
-  proxy: 'The fighter it favours is usually the betting favourite anyway. Price the fight even and it stops beating a coin flip.',
-  inverted: 'Backwards. The fighter it favours loses more often than not in even fights.',
-  unproven: 'Too few evenly-priced fights to judge either way.',
-  insufficient: 'Below our sample floor. We won’t put a number on it.',
+// One short line under it, and none of them repeat the sentence above.
+const BECAUSE = {
+  real: 'That is a real edge.',
+  lean: 'Close, but not enough fights yet to be sure.',
+  proxy: 'Take the odds away and it stops working.',
+  inverted: 'It points the wrong way.',
+  unproven: 'Too few even-odds fights to say yet.',
+  insufficient: 'Too few fights to say yet.',
 };
 
 const VERDICT_ORDER = { real: 0, lean: 1, inverted: 2, proxy: 3, unproven: 4, insufficient: 5 };
-const VERDICT_TINT = {
-  real: 'var(--green)', lean: '#d29922', inverted: 'var(--red)',
-  proxy: 'var(--bg-4)', unproven: 'var(--bg-4)', insufficient: 'var(--bg-4)',
-};
 
-// Geometric marks, not clip-art: each one is the shape of the thing it measures,
-// so the list can be scanned without reading every label.
+// Geometric marks, not clip-art: each is the shape of the thing it measures, so
+// the list can be scanned without reading every question.
 const FL_GLYPH = {
   age: '<path d="M5 3h10M5 17h10M6.5 3c0 4 7 4 7 7s-7 3-7 7" /><path d="M13.5 3c0 4-7 4-7 7s7 3 7 7" />',
   reach: '<path d="M3 4v12M17 4v12M3 10h14" /><path d="M6 7l-3 3 3 3M14 7l3 3-3 3" />',
@@ -603,44 +521,47 @@ const FL_GLYPH_FOR = {
   ufc_record: 'ufc_record', td_def: 'td_def', striking_volume: 'striking',
   slpm: 'striking', finish_rate: 'finishing', finishing_rate: 'finishing',
 };
-
 function flGlyph(id) {
-  const key = FL_GLYPH_FOR[id] || (id.indexOf('strik') === 0 ? 'striking' : id.indexOf('finish') === 0 ? 'finishing' : null);
+  const key = FL_GLYPH_FOR[id]
+    || (id.indexOf('strik') === 0 ? 'striking' : id.indexOf('finish') === 0 ? 'finishing' : null);
   const d = key && FL_GLYPH[key];
   if (!d) return '';
-  return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
-    + ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-    + d + '</svg>';
+  return '<svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+    + ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
 }
 
-// One scale. `even` carries the range; `raw` is drawn as a hollow marker so the
-// collapse between them is visible rather than inferred.
-function flScale(raw, even, floor, opts) {
-  opts = opts || {};
-  const bits = ['<div class="fl-track"></div>'];
-  if (even && even.n >= floor) {
-    bits.push(`<div class="fl-ci" style="left:${flPos(even.ci_lo)}%;width:${flPos(even.ci_hi) - flPos(even.ci_lo)}%"></div>`);
+// Out of 100, because "57 out of 100" is a thing you can picture and "57.0%"
+// with a confidence interval beside it is a thing you have to be taught.
+const outOf100 = (pct) => Math.round(pct);
+
+// The bar grows from the centre. Right of it beats a coin flip, left of it
+// loses to one, and the centre is labelled, so nothing needs a key.
+function flBar(even, floor) {
+  if (!even || even.n < floor) {
+    return '<div class="fl-bar"><div class="fl-bar-track"></div>'
+      + `<div class="fl-bar-mid" style="left:${flPos(50)}%"></div>`
+      + `<div class="fl-bar-cap" style="left:${flPos(50)}%">coin flip</div></div>`;
   }
-  bits.push(`<div class="fl-coin" style="left:${flPos(50)}%"></div>`);
-  if (raw && raw.n >= floor && !opts.hideRaw) {
-    bits.push(`<div class="fl-raw" style="left:${flPos(raw.pct)}%" title="Raw ${raw.pct.toFixed(1)}%"></div>`);
-  }
-  if (even && even.n >= floor) {
-    bits.push(`<div class="fl-dot" style="left:${flPos(even.pct)}%" title="In even fights ${even.pct.toFixed(1)}%"></div>`);
-  } else if (raw && raw.n >= floor && opts.dotRaw) {
-    bits.push(`<div class="fl-dot" style="left:${flPos(raw.pct)}%" title="${raw.pct.toFixed(1)}%"></div>`);
-  }
-  if (!opts.compact) {
-    bits.push('<div class="fl-ticks">'
-      + [40, 50, 60, 70].map((t) => `<span style="left:${flPos(t)}%">${t}%</span>`).join('')
-      + '</div>');
-  }
-  return bits.join('');
+  const mid = flPos(50);
+  const val = flPos(even.pct);
+  const left = Math.min(mid, val);
+  const width = Math.abs(val - mid);
+  return '<div class="fl-bar"><div class="fl-bar-track"></div>'
+    + `<div class="fl-bar-fill" style="left:${left}%;width:${width}%"></div>`
+    + `<div class="fl-bar-mid" style="left:${mid}%"></div>`
+    + `<div class="fl-bar-cap" style="left:${mid}%">coin flip</div></div>`;
 }
 
-const flNum = (r, floor, live) => (r && r.n >= floor
-  ? `<b class="${live && r.ci_lo > 50 ? 'live' : ''}">${r.pct.toFixed(1)}%</b> <span>${r.n.toLocaleString()} fights</span>`
-  : `<b>—</b> <span>${r ? 'only ' + r.n + ' fights' : 'no sample'}</span>`);
+// A skinny version for the bands inside the proof drawer.
+function flMiniBar(r, floor) {
+  if (!r || r.n < floor) return '<span></span>';
+  const mid = flPos(50);
+  const val = flPos(r.pct);
+  const left = Math.min(mid, val);
+  const width = Math.max(1, Math.abs(val - mid));
+  return `<span><i style="left:${left}%;width:${width}%"></i>`
+    + `<span class="fl-proof-mid" style="left:${mid}%"></span></span>`;
+}
 
 async function loadFactorLab() {
   const body = document.getElementById('labBody');
@@ -656,7 +577,6 @@ async function loadFactorLab() {
 
   const floor = d.rules.min_sample;
   document.getElementById('lab-n').textContent = d.dataset.fights_scored.toLocaleString();
-  document.getElementById('lab-floor').textContent = floor.toLocaleString();
 
   const factors = d.factors.slice().sort((x, y) => {
     const hx = x.buckets.find((b) => b.headline) || x.buckets[0];
@@ -666,89 +586,72 @@ async function loadFactorLab() {
     return ((hy.even && hy.even.pct) || 0) - ((hx.even && hx.even.pct) || 0);
   });
 
-  // The finding, stated before the evidence for it.
-  const tally = {};
-  factors.forEach((f) => {
-    const h = f.buckets.find((b) => b.headline) || f.buckets[0];
-    tally[h.verdict] = (tally[h.verdict] || 0) + 1;
-  });
-  const survivors = tally.real || 0;
-  const names = factors
-    .filter((f) => (f.buckets.find((b) => b.headline) || f.buckets[0]).verdict === 'real')
-    .map((f) => f.label);
-  const word = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][survivors] || String(survivors);
-  document.getElementById('fl-finding-lead').innerHTML = survivors
-    ? `<b>${word}</b> of ${factors.length} factors survives the market — ${cfl.escapeHtml(names.join(', '))}. `
-      + 'The rest were mostly telling you who the favourite was.'
-    : `<b>None</b> of ${factors.length} factors survives the market.`;
-  document.getElementById('fl-finding-tally').innerHTML = Object.keys(VERDICT_ORDER)
-    .filter((k) => tally[k])
-    .map((k) => `<span><i style="background:${VERDICT_TINT[k]}"></i>${tally[k]} ${cfl.escapeHtml(VERDICT_LABEL[k].toLowerCase())}</span>`)
-    .join('');
+  const heads = factors.map((f) => f.buckets.find((b) => b.headline) || f.buckets[0]);
+  const winners = factors.filter((f, i) => heads[i].verdict === 'real').map((f) => f.label);
+  const word = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][winners.length] || String(winners.length);
+  document.getElementById('fl-finding').innerHTML = winners.length
+    ? `Out of ${factors.length} stats people bet on, <b>${word.toLowerCase()}</b> actually helps: `
+      + `${cfl.escapeHtml(winners.join(', '))}.`
+    : `Out of ${factors.length} stats people bet on, <b>none</b> actually helps.`;
   document.getElementById('fl-finding').hidden = false;
-  document.getElementById('fl-legend').hidden = false;
 
   body.innerHTML = factors.map((f, i) => {
-    const head = f.buckets.find((b) => b.headline) || f.buckets[0];
-    const subs = f.buckets.filter((b) => b !== head).filter((b) => b.all && b.all.n >= floor);
-    const basis = f.basis === 'physical' ? 'Physical' : 'From past fights';
+    const head = heads[i];
+    const bands = f.buckets.filter((b) => b !== head).filter((b) => b.all && b.all.n >= floor);
+    const shown = head.even && head.even.n >= floor;
 
-    // The toggle carries the finding, so the gradient is advertised even closed.
-    let toggle = '';
-    if (subs.length) {
-      const lo = subs[0].all.pct;
-      const hi = subs[subs.length - 1].all.pct;
-      toggle = `<button class="fl-toggle" data-toggle="${i}" aria-expanded="false">`
-        + `${subs.length} bands · <b>${lo.toFixed(0)}%</b> → <b>${hi.toFixed(0)}%</b> as the gap widens ▾</button>`;
-    }
+    const line = shown
+      ? `Wins <b>${outOf100(head.even.pct)} out of 100</b> when the odds are even. ${BECAUSE[head.verdict]}`
+      : `${BECAUSE[head.verdict]}`;
 
-    const bands = subs.map((b) => `
-      <div class="fl-band">
-        <div class="fl-band-label">${cfl.escapeHtml(b.label)}
-          <span class="fl-band-n">${b.all.pct.toFixed(1)}% · ${b.all.n.toLocaleString()} fights</span></div>
-        <div class="fl-band-scale">${flScale(b.all, b.even, floor, { compact: true, hideRaw: true, dotRaw: true })}</div>
+    const bandRows = bands.map((b) => `
+      <div class="fl-proof-row">
+        <span>${cfl.escapeHtml(b.label)}</span>
+        ${flMiniBar(b.all, floor)}
+        <em>${outOf100(b.all.pct)}/100</em>
       </div>`).join('');
+
+    const proof = `
+      <div class="fl-proof" data-proof="${i}" hidden>
+        <p>Across every fight, this picks the winner <b>${outOf100(head.all.pct)} out of 100</b> times
+        (${head.all.n.toLocaleString()} fights). But most of those were fights the market already
+        called${shown ? `, so we look only at the ${head.even.n.toLocaleString()} fights the odds priced
+        even — there it wins <b>${outOf100(head.even.pct)} out of 100</b>, and the true figure sits
+        somewhere between <b>${head.even.ci_lo.toFixed(0)}</b> and <b>${head.even.ci_hi.toFixed(0)}</b>.`
+          : `. We only found ${head.even ? head.even.n : 0} even-priced fights, which is too few to trust.`}</p>
+        ${bands.length ? `<p>The bigger the gap, the better it does:</p><div class="fl-proof-grid">${bandRows}</div>` : ''}
+      </div>`;
 
     return `
       <article class="fl-card" data-verdict="${head.verdict}">
-        <header class="fl-head">
+        <div class="fl-top">
           <span class="fl-glyph">${flGlyph(f.id)}</span>
-          <div class="fl-head-text">
-            <h3 class="fl-name">${cfl.escapeHtml(f.label)}<span class="fl-basis">${basis}</span></h3>
-            <p class="fl-q">${cfl.escapeHtml(f.question)}</p>
-          </div>
-          <span class="fl-badge ${head.verdict}">${VERDICT_LABEL[head.verdict]}</span>
-        </header>
-        <div class="fl-scale">${flScale(head.all, head.even, floor)}</div>
-        <div class="fl-read">
-          <span>Raw ${flNum(head.all, floor, false)}</span>
-          <span>In even fights ${flNum(head.even, floor, true)}</span>
-          <span class="fl-say">${VERDICT_COPY[head.verdict]}</span>
+          <div class="fl-ask">${cfl.escapeHtml(f.question)}</div>
+          <span class="fl-answer ${head.verdict}">${ANSWER[head.verdict]}</span>
         </div>
-        ${toggle}
-        ${subs.length ? `<div class="fl-bands" data-bands="${i}" hidden>${bands}</div>` : ''}
+        <p class="fl-line">${line}</p>
+        ${flBar(head.even, floor)}
+        <button class="fl-toggle" data-toggle="${i}" aria-expanded="false">Show the proof ▾</button>
+        ${proof}
       </article>`;
   }).join('');
 
   body.querySelectorAll('[data-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const i = btn.getAttribute('data-toggle');
-      const box = body.querySelector(`[data-bands="${i}"]`);
+      const box = body.querySelector(`[data-proof="${btn.getAttribute('data-toggle')}"]`);
       const opening = box.hidden;
       box.hidden = !opening;
       btn.setAttribute('aria-expanded', String(opening));
-      btn.innerHTML = btn.innerHTML.replace(opening ? '▾' : '▴', opening ? '▴' : '▾');
+      btn.textContent = opening ? 'Hide the proof ▴' : 'Show the proof ▾';
     });
   });
 
   const when = new Date(d.generated_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
-  document.getElementById('lab-foot').innerHTML =
-    `Scored across ${d.dataset.fights_scored.toLocaleString()} decided UFC fights `
-    + `(${d.dataset.first_event} to ${d.dataset.last_event}), of which `
-    + `${d.dataset.market_even_cohort.toLocaleString()} were priced within ±${d.rules.even_band_american} at close. `
-    + `Ranges are 95% confidence. A factor still above ${d.rules.lean_pct}% in evenly-priced fights, but whose range `
-    + `crosses a coin flip, is marked “can’t tell yet” rather than lumped in with the ones that know nothing. `
-    + `Rebuilt from the full database on ${when}; only decided fights count toward the scores.`;
+  document.getElementById('lab-foot').textContent =
+    `${d.dataset.fights_scored.toLocaleString()} decided UFC fights, ${d.dataset.first_event} to ${d.dataset.last_event}. `
+    + `"Odds even" means both fighters priced inside ±${d.rules.even_band_american} at close — `
+    + `${d.dataset.market_even_cohort.toLocaleString()} fights. Anything under ${floor} fights we don't put a number on. `
+    + `Rebuilt from the database on ${when}.`;
 }
 
 async function loadYounger() {
