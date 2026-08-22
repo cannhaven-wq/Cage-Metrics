@@ -37,6 +37,8 @@ const OUT = path.join(path.resolve(__dirname, '..'), 'factor-rates.json');
 // Below this many fights a rate is noise dressed as a number. We refuse to
 // publish it rather than let the reader talk themselves into it.
 const MIN_SAMPLE = 100;
+// Straddles 50 but still sits this far above it: not proven, but not nothing.
+const LEAN_PCT = 55;
 // "The market called it a coin flip": both sides inside this American-odds band
 // at close.
 const EVEN_BAND = 140;
@@ -97,11 +99,18 @@ function rate(wins, n) {
 }
 
 // A factor earns "real" only by beating a coin flip with the market held flat.
+//
+// Everything whose range straddles 50 used to collapse into one verdict, which
+// put the same sentence on six of eight rows and said the wrong thing on two of
+// them: a factor sitting on the line with a tight range knows nothing, while one
+// sitting well above it with a range too wide to call simply has not been
+// measured enough yet. LEAN_PCT is the disclosed cut between those two.
 function verdictFor(all, even) {
   if (!all || all.n < MIN_SAMPLE) return 'insufficient';
   if (!even || even.n < MIN_SAMPLE) return 'unproven';
   if (even.ci_lo > 50) return 'real';
   if (even.ci_hi < 50) return 'inverted';
+  if (even.pct >= LEAN_PCT) return 'lean';
   return 'proxy';
 }
 
@@ -487,6 +496,7 @@ async function main() {
     },
     rules: {
       min_sample: MIN_SAMPLE,
+      lean_pct: LEAN_PCT,
       even_band_american: EVEN_BAND,
       min_prior_fights: MIN_PRIOR_FIGHTS,
       min_record_fights: MIN_RECORD_FIGHTS,

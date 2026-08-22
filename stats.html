@@ -218,6 +218,10 @@
   }
 
   /* ---- Factor lab ---- */
+  /* The verdict used to be asserted in a column that said the same sentence on
+     six of eight rows. It is a position against a coin flip, so it is drawn as
+     one: every factor gets a scale, and you can see whether its range clears
+     the 50% line instead of being told. */
   .lab-intro {
     color: var(--text-2);
     font-size: 14px;
@@ -226,67 +230,178 @@
     margin: 0 0 14px;
   }
   .lab-intro strong { color: var(--text-1); }
-  .lab-table-wrap { overflow-x: auto; margin-top: 22px; }
-  .lab-table { min-width: 640px; }
-  .lab-table th.num, .lab-table td.num { text-align: right; }
-  .lab-loading { color: var(--text-3); text-align: center; padding: 28px 0; }
+  .lab-loading { color: var(--text-3); text-align: center; padding: 40px 0; }
 
-  .lab-factor { font-weight: 700; font-size: 15px; }
-  .lab-question { font-size: 12px; color: var(--text-3); margin-top: 3px; }
-  .lab-basis {
-    display: inline-block;
-    font-size: 10px;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-left: 8px;
-    vertical-align: middle;
-    background: var(--bg-4);
+  /* The finding, before the evidence. */
+  .fl-finding {
+    margin: 26px 0 20px;
+    padding: 20px 22px;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    background: var(--bg-1);
+  }
+  .fl-finding-lead {
+    font-family: var(--font-display);
+    font-size: clamp(20px, 3vw, 27px);
+    font-weight: 800;
+    line-height: 1.2;
+    color: var(--text-1);
+    text-wrap: balance;
+  }
+  .fl-finding-lead b { color: var(--red); }
+  .fl-finding-tally {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 18px;
+    margin-top: 14px;
+    font-size: 12.5px;
     color: var(--text-3);
   }
-  .lab-rate { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 16px; }
-  .lab-ci { font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; margin-top: 2px; }
-  .lab-rate.dead { color: var(--text-3); }
-  .lab-rate.live { color: var(--green); }
-
-  .lab-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-    padding: 4px 9px;
-    border-radius: 5px;
-    white-space: nowrap;
+  .fl-finding-tally span { display: inline-flex; align-items: center; gap: 7px; }
+  .fl-finding-tally i {
+    width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0;
   }
-  .lab-badge.real { background: rgba(46, 160, 67, 0.15); color: var(--green); }
-  .lab-badge.proxy { background: rgba(180, 180, 180, 0.1); color: var(--text-3); }
-  .lab-badge.inverted { background: rgba(210, 153, 34, 0.15); color: #d29922; }
-  .lab-badge.unproven, .lab-badge.insufficient { background: var(--bg-4); color: var(--text-3); }
-  .lab-verdict-note { font-size: 11px; color: var(--text-3); margin-top: 4px; max-width: 210px; line-height: 1.45; }
 
-  .lab-row-sub td {
+  .fl-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 20px;
+    margin-bottom: 14px;
+    font-size: 11.5px;
+    color: var(--text-3);
+  }
+  .fl-key { display: inline-flex; align-items: center; gap: 7px; }
+  .fl-key i { flex-shrink: 0; }
+  .fl-key-raw { width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--text-3); }
+  .fl-key-even { width: 10px; height: 10px; border-radius: 50%; background: var(--text-1); }
+  .fl-key-ci { width: 22px; height: 3px; border-radius: 2px; background: var(--bg-4); }
+  .fl-key-line { width: 2px; height: 12px; background: var(--text-3); }
+
+  .fl-list { display: grid; gap: 10px; }
+
+  .fl-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
     background: var(--bg-1);
-    font-size: 13px;
-    padding-top: 7px;
-    padding-bottom: 7px;
+    padding: 16px 18px;
   }
-  .lab-row-sub .lab-rate { font-size: 13px; font-weight: 600; }
-  .lab-row-sub .lab-bucket { padding-left: 18px; color: var(--text-2); }
-  .lab-toggle {
-    background: none;
-    border: none;
-    color: var(--red);
-    font: inherit;
-    font-size: 11px;
-    cursor: pointer;
-    padding: 4px 0 0;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+  /* One factor cleared the bar. It should not look like the seven that didn't. */
+  .fl-card[data-verdict="real"] { border-color: rgba(63, 208, 122, .34); background: rgba(63, 208, 122, .04); }
+  .fl-card[data-verdict="lean"] { border-color: rgba(210, 153, 34, .28); }
+
+  .fl-head { display: flex; align-items: flex-start; gap: 12px; }
+  .fl-glyph {
+    flex-shrink: 0;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 7px;
+    background: var(--bg-3);
+    color: var(--text-3);
   }
-  .lab-toggle:hover { text-decoration: underline; }
-  .lab-foot { font-size: 12px; color: var(--text-3); margin-top: 14px; line-height: 1.6; }
+  .fl-card[data-verdict="real"] .fl-glyph { background: rgba(63, 208, 122, .12); color: var(--green); }
+  .fl-glyph svg { display: block; }
+  .fl-head-text { flex: 1; min-width: 0; }
+  .fl-name {
+    font-family: var(--font-display);
+    font-size: 17px; font-weight: 700; color: var(--text-1);
+    margin: 0; line-height: 1.2;
+  }
+  .fl-basis {
+    display: inline-block;
+    font-family: var(--font-body);
+    font-size: 9.5px; font-weight: 600;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+    vertical-align: 2px;
+    background: var(--bg-4); color: var(--text-3);
+  }
+  .fl-q { font-size: 12.5px; color: var(--text-3); margin: 3px 0 0; }
+  .fl-badge {
+    flex-shrink: 0;
+    font-size: 10.5px; font-weight: 700;
+    letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 5px; white-space: nowrap;
+  }
+  .fl-badge.real { background: rgba(63, 208, 122, .16); color: var(--green); }
+  .fl-badge.lean { background: rgba(210, 153, 34, .16); color: #d29922; }
+  .fl-badge.proxy { background: var(--bg-4); color: var(--text-3); }
+  .fl-badge.inverted { background: rgba(255, 77, 61, .14); color: var(--red); }
+  .fl-badge.unproven, .fl-badge.insufficient { background: var(--bg-4); color: var(--text-3); }
+
+  /* The scale. Positions are the stored rate mapped onto a fixed 35–75% domain
+     — no statistic is computed here, only placed. */
+  .fl-scale { position: relative; height: 40px; margin: 14px 0 4px; }
+  .fl-track {
+    position: absolute; left: 0; right: 0; top: 17px; height: 2px;
+    background: var(--bg-4); border-radius: 2px;
+  }
+  .fl-coin {
+    position: absolute; top: 4px; bottom: 12px; width: 0;
+    border-left: 1px dashed var(--text-3); opacity: .75;
+  }
+  .fl-ci {
+    position: absolute; top: 15px; height: 6px; border-radius: 3px;
+    background: var(--bg-4);
+  }
+  .fl-card[data-verdict="real"] .fl-ci { background: rgba(63, 208, 122, .3); }
+  .fl-dot, .fl-raw {
+    position: absolute; top: 12px;
+    width: 12px; height: 12px; border-radius: 50%;
+    transform: translateX(-50%);
+  }
+  .fl-dot { background: var(--text-1); box-shadow: 0 0 0 2px var(--bg-1); }
+  .fl-card[data-verdict="real"] .fl-dot { background: var(--green); }
+  .fl-raw {
+    background: transparent;
+    border: 1.5px solid var(--text-3);
+    top: 13px; width: 10px; height: 10px;
+  }
+  .fl-ticks {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 12px;
+    font-size: 9.5px; color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .fl-ticks span { position: absolute; transform: translateX(-50%); }
+
+  .fl-read {
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px;
+    font-size: 12.5px; color: var(--text-3);
+    padding-top: 8px; border-top: 1px solid var(--border);
+  }
+  .fl-read b {
+    font-family: var(--font-display); font-size: 15px; font-weight: 700;
+    color: var(--text-2); font-variant-numeric: tabular-nums;
+  }
+  .fl-read .live { color: var(--green); }
+  .fl-say { flex-basis: 100%; color: var(--text-2); line-height: 1.5; }
+
+  .fl-toggle {
+    background: none; border: 1px solid var(--border); border-radius: 5px;
+    color: var(--text-2); font: inherit; font-size: 11.5px;
+    cursor: pointer; padding: 5px 10px; margin-top: 12px;
+  }
+  .fl-toggle:hover { border-color: var(--text-3); color: var(--text-1); }
+  .fl-toggle:focus-visible { outline: 2px solid var(--red); outline-offset: 2px; }
+  .fl-toggle b { color: var(--text-1); font-variant-numeric: tabular-nums; }
+
+  .fl-bands { margin-top: 12px; display: grid; gap: 9px; }
+  .fl-band { display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 12px; align-items: center; }
+  .fl-band-label { font-size: 12px; color: var(--text-2); }
+  .fl-band-n { font-size: 10.5px; color: var(--text-3); display: block; margin-top: 1px; }
+  .fl-band-scale { position: relative; height: 16px; }
+  .fl-band-scale .fl-track { top: 7px; }
+  .fl-band-scale .fl-coin { top: 1px; bottom: 1px; }
+  .fl-band-scale .fl-dot { top: 3px; width: 10px; height: 10px; }
+
+  .lab-foot { font-size: 12px; color: var(--text-3); margin-top: 18px; line-height: 1.6; max-width: 820px; }
+
+  @media (max-width: 640px) {
+    .fl-head { flex-wrap: wrap; }
+    .fl-badge { order: 3; }
+    .fl-band { grid-template-columns: 1fr; gap: 4px; }
+    .fl-band-scale { width: 100%; }
+  }
 </style>
 </head>
 <body>
@@ -315,21 +430,19 @@
     Nothing is shown below <strong id="lab-floor">100</strong> fights.
   </p>
 
-  <div class="lab-table-wrap">
-    <table class="div-table lab-table" id="labTable">
-      <thead>
-        <tr>
-          <th>Factor</th>
-          <th class="num">Raw win rate</th>
-          <th class="num">Market held flat</th>
-          <th>Verdict</th>
-        </tr>
-      </thead>
-      <tbody id="labBody">
-        <tr><td colspan="4" class="lab-loading">Loading…</td></tr>
-      </tbody>
-    </table>
+  <div class="fl-finding" id="fl-finding" hidden>
+    <div class="fl-finding-lead" id="fl-finding-lead"></div>
+    <div class="fl-finding-tally" id="fl-finding-tally"></div>
   </div>
+
+  <div class="fl-legend" id="fl-legend" hidden>
+    <span class="fl-key"><i class="fl-key-raw"></i>Raw win rate</span>
+    <span class="fl-key"><i class="fl-key-even"></i>Market held flat</span>
+    <span class="fl-key"><i class="fl-key-ci"></i>95% range</span>
+    <span class="fl-key"><i class="fl-key-line"></i>Coin flip</span>
+  </div>
+
+  <div class="fl-list" id="labBody"><div class="lab-loading">Loading…</div></div>
   <p class="lab-foot" id="lab-foot"></p>
 
   <h2 class="section-h">Headline edges</h2>
@@ -433,34 +546,101 @@ async function loadAll() {
 // ---------------------------------------------------------------------------
 // Factor lab — reads factor-rates.json, regenerated by build/factor-rates.js.
 // Verdicts are computed there, not here; this only renders them.
+//
+// The verdict is a position against a coin flip, so it is drawn as one. Each
+// factor gets a scale: a hollow marker for the raw win rate, a solid dot plus
+// its 95% range for the same factor with the market held flat, and a dashed
+// line at 50%. The distance between the two markers is the whole thesis of the
+// page — how much of a factor's apparent edge was only ever the favourite.
 // ---------------------------------------------------------------------------
 
-const VERDICT_COPY = {
-  real: 'Survives. Still beats a coin flip when the market says the fight is even.',
-  proxy: 'Reads the favourite. Once the market is level, it stops knowing anything.',
-  inverted: 'Backwards. The fighter it favours loses more often than not in even fights.',
-  unproven: 'Too few evenly-priced fights to judge either way.',
-  insufficient: 'Below our sample floor. We won\'t put a number on it.',
-};
+// Fixed domain so every factor is read on the same ruler. The widest stored
+// range in the data runs 36.2–75.4, so nothing clips.
+const FL_MIN = 35;
+const FL_MAX = 78;
+// Stored rate -> percentage across the track. Placement, not arithmetic on the
+// statistic itself: the numbers are rendered exactly as the build wrote them.
+const flPos = (v) => ((Math.min(FL_MAX, Math.max(FL_MIN, v)) - FL_MIN) / (FL_MAX - FL_MIN)) * 100;
 
 const VERDICT_LABEL = {
   real: 'Real edge',
+  lean: 'Can’t tell yet',
   proxy: 'Just reads the favorite',
   inverted: 'Backwards',
   unproven: 'Unproven',
   insufficient: 'Too few fights',
 };
 
-function labRate(r, opts) {
-  opts = opts || {};
-  if (!r || (opts.floor && r.n < opts.floor)) {
-    return '<div class="lab-rate dead">—</div><div class="lab-ci">'
-      + (r ? `only ${r.n} fights` : 'no sample') + '</div>';
-  }
-  const live = opts.live && r.ci_lo > 50;
-  return `<div class="lab-rate ${live ? 'live' : ''}">${r.pct.toFixed(1)}%</div>`
-    + `<div class="lab-ci">${r.ci_lo.toFixed(1)}–${r.ci_hi.toFixed(1)} · ${r.n.toLocaleString()} fights</div>`;
+const VERDICT_COPY = {
+  real: 'Survives. Still beats a coin flip when the market says the fight is even.',
+  lean: 'Still ahead once the market is level, but the range crosses a coin flip — not enough evenly-priced fights to call it either way.',
+  proxy: 'Reads the favourite. Once the market is level, it stops knowing anything.',
+  inverted: 'Backwards. The fighter it favours loses more often than not in even fights.',
+  unproven: 'Too few evenly-priced fights to judge either way.',
+  insufficient: 'Below our sample floor. We won’t put a number on it.',
+};
+
+const VERDICT_ORDER = { real: 0, lean: 1, inverted: 2, proxy: 3, unproven: 4, insufficient: 5 };
+const VERDICT_TINT = {
+  real: 'var(--green)', lean: '#d29922', inverted: 'var(--red)',
+  proxy: 'var(--bg-4)', unproven: 'var(--bg-4)', insufficient: 'var(--bg-4)',
+};
+
+// Geometric marks, not clip-art: each one is the shape of the thing it measures,
+// so the list can be scanned without reading every label.
+const FL_GLYPH = {
+  age: '<path d="M5 3h10M5 17h10M6.5 3c0 4 7 4 7 7s-7 3-7 7" /><path d="M13.5 3c0 4-7 4-7 7s7 3 7 7" />',
+  reach: '<path d="M3 4v12M17 4v12M3 10h14" /><path d="M6 7l-3 3 3 3M14 7l3 3-3 3" />',
+  height: '<path d="M4 3h12M4 17h12M10 3v14" /><path d="M7 6l3-3 3 3M7 14l3 3 3-3" />',
+  southpaw_reach: '<path d="M4 16V8a2 2 0 0 1 4 0M16 16V8a2 2 0 0 0-4 0" /><path d="M4 16h4M12 16h4M8 11h4" />',
+  ufc_record: '<path d="M4 16V9M8 16V5M12 16v-8M16 16v-4" /><path d="M2 18h16" />',
+  td_def: '<path d="M10 2l7 3v5c0 4-3 7-7 8-4-1-7-4-7-8V5z" /><path d="M7 10l2 2 4-4" />',
+  striking: '<path d="M2 14l4-6 3 4 3-7 3 5 3-3" />',
+  finishing: '<circle cx="10" cy="10" r="7" /><circle cx="10" cy="10" r="3" /><path d="M10 1v3M10 16v3M1 10h3M16 10h3" />',
+};
+const FL_GLYPH_FOR = {
+  age: 'age', reach: 'reach', height: 'height', southpaw_reach: 'southpaw_reach',
+  ufc_record: 'ufc_record', td_def: 'td_def', striking_volume: 'striking',
+  slpm: 'striking', finish_rate: 'finishing', finishing_rate: 'finishing',
+};
+
+function flGlyph(id) {
+  const key = FL_GLYPH_FOR[id] || (id.indexOf('strik') === 0 ? 'striking' : id.indexOf('finish') === 0 ? 'finishing' : null);
+  const d = key && FL_GLYPH[key];
+  if (!d) return '';
+  return '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor"'
+    + ' stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
+    + d + '</svg>';
 }
+
+// One scale. `even` carries the range; `raw` is drawn as a hollow marker so the
+// collapse between them is visible rather than inferred.
+function flScale(raw, even, floor, opts) {
+  opts = opts || {};
+  const bits = ['<div class="fl-track"></div>'];
+  if (even && even.n >= floor) {
+    bits.push(`<div class="fl-ci" style="left:${flPos(even.ci_lo)}%;width:${flPos(even.ci_hi) - flPos(even.ci_lo)}%"></div>`);
+  }
+  bits.push(`<div class="fl-coin" style="left:${flPos(50)}%"></div>`);
+  if (raw && raw.n >= floor && !opts.hideRaw) {
+    bits.push(`<div class="fl-raw" style="left:${flPos(raw.pct)}%" title="Raw ${raw.pct.toFixed(1)}%"></div>`);
+  }
+  if (even && even.n >= floor) {
+    bits.push(`<div class="fl-dot" style="left:${flPos(even.pct)}%" title="Market held flat ${even.pct.toFixed(1)}%"></div>`);
+  } else if (raw && raw.n >= floor && opts.dotRaw) {
+    bits.push(`<div class="fl-dot" style="left:${flPos(raw.pct)}%" title="${raw.pct.toFixed(1)}%"></div>`);
+  }
+  if (!opts.compact) {
+    bits.push('<div class="fl-ticks">'
+      + [40, 50, 60, 70].map((t) => `<span style="left:${flPos(t)}%">${t}%</span>`).join('')
+      + '</div>');
+  }
+  return bits.join('');
+}
+
+const flNum = (r, floor, live) => (r && r.n >= floor
+  ? `<b class="${live && r.ci_lo > 50 ? 'live' : ''}">${r.pct.toFixed(1)}%</b> <span>${r.n.toLocaleString()} fights</span>`
+  : `<b>—</b> <span>${r ? 'only ' + r.n + ' fights' : 'no sample'}</span>`);
 
 async function loadFactorLab() {
   const body = document.getElementById('labBody');
@@ -470,7 +650,7 @@ async function loadFactorLab() {
     if (!res.ok) throw new Error(res.status);
     d = await res.json();
   } catch (e) {
-    body.innerHTML = '<tr><td colspan="4" class="lab-loading">Factor rates unavailable right now.</td></tr>';
+    body.innerHTML = '<div class="lab-loading">Factor rates unavailable right now.</div>';
     return;
   }
 
@@ -478,47 +658,86 @@ async function loadFactorLab() {
   document.getElementById('lab-n').textContent = d.dataset.fights_scored.toLocaleString();
   document.getElementById('lab-floor').textContent = floor.toLocaleString();
 
-  const rows = [];
-  d.factors.forEach((f, i) => {
-    const head = f.buckets.find((b) => b.headline) || f.buckets[0];
-    const subs = f.buckets.filter((b) => b !== head);
-    const basis = f.basis === 'physical' ? 'Physical' : 'From past fights';
-
-    rows.push(`
-      <tr class="lab-row-head" data-factor="${i}">
-        <td>
-          <div class="lab-factor">${cfl.escapeHtml(f.label)}<span class="lab-basis">${basis}</span></div>
-          <div class="lab-question">${cfl.escapeHtml(f.question)}</div>
-          ${subs.length ? `<button class="lab-toggle" data-toggle="${i}">Show ${subs.length} bands ▾</button>` : ''}
-        </td>
-        <td class="num">${labRate(head.all, { floor })}</td>
-        <td class="num">${labRate(head.even, { floor, live: true })}</td>
-        <td>
-          <span class="lab-badge ${head.verdict}">${VERDICT_LABEL[head.verdict]}</span>
-          <div class="lab-verdict-note">${VERDICT_COPY[head.verdict]}</div>
-        </td>
-      </tr>`);
-
-    subs.forEach((b) => {
-      rows.push(`
-        <tr class="lab-row-sub" data-sub="${i}" hidden>
-          <td class="lab-bucket">${cfl.escapeHtml(b.label)}</td>
-          <td class="num">${labRate(b.all, { floor })}</td>
-          <td class="num">${labRate(b.even, { floor, live: true })}</td>
-          <td><span class="lab-badge ${b.verdict}">${VERDICT_LABEL[b.verdict]}</span></td>
-        </tr>`);
-    });
+  const factors = d.factors.slice().sort((x, y) => {
+    const hx = x.buckets.find((b) => b.headline) || x.buckets[0];
+    const hy = y.buckets.find((b) => b.headline) || y.buckets[0];
+    const o = (VERDICT_ORDER[hx.verdict] ?? 9) - (VERDICT_ORDER[hy.verdict] ?? 9);
+    if (o) return o;
+    return ((hy.even && hy.even.pct) || 0) - ((hx.even && hx.even.pct) || 0);
   });
 
-  body.innerHTML = rows.join('');
+  // The finding, stated before the evidence for it.
+  const tally = {};
+  factors.forEach((f) => {
+    const h = f.buckets.find((b) => b.headline) || f.buckets[0];
+    tally[h.verdict] = (tally[h.verdict] || 0) + 1;
+  });
+  const survivors = tally.real || 0;
+  const names = factors
+    .filter((f) => (f.buckets.find((b) => b.headline) || f.buckets[0]).verdict === 'real')
+    .map((f) => f.label);
+  const word = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight'][survivors] || String(survivors);
+  document.getElementById('fl-finding-lead').innerHTML = survivors
+    ? `<b>${word}</b> of ${factors.length} factors survives the market — ${cfl.escapeHtml(names.join(', '))}. `
+      + 'The rest were mostly telling you who the favourite was.'
+    : `<b>None</b> of ${factors.length} factors survives the market.`;
+  document.getElementById('fl-finding-tally').innerHTML = Object.keys(VERDICT_ORDER)
+    .filter((k) => tally[k])
+    .map((k) => `<span><i style="background:${VERDICT_TINT[k]}"></i>${tally[k]} ${cfl.escapeHtml(VERDICT_LABEL[k].toLowerCase())}</span>`)
+    .join('');
+  document.getElementById('fl-finding').hidden = false;
+  document.getElementById('fl-legend').hidden = false;
+
+  body.innerHTML = factors.map((f, i) => {
+    const head = f.buckets.find((b) => b.headline) || f.buckets[0];
+    const subs = f.buckets.filter((b) => b !== head).filter((b) => b.all && b.all.n >= floor);
+    const basis = f.basis === 'physical' ? 'Physical' : 'From past fights';
+
+    // The toggle carries the finding, so the gradient is advertised even closed.
+    let toggle = '';
+    if (subs.length) {
+      const lo = subs[0].all.pct;
+      const hi = subs[subs.length - 1].all.pct;
+      toggle = `<button class="fl-toggle" data-toggle="${i}" aria-expanded="false">`
+        + `${subs.length} bands · <b>${lo.toFixed(0)}%</b> → <b>${hi.toFixed(0)}%</b> as the gap widens ▾</button>`;
+    }
+
+    const bands = subs.map((b) => `
+      <div class="fl-band">
+        <div class="fl-band-label">${cfl.escapeHtml(b.label)}
+          <span class="fl-band-n">${b.all.pct.toFixed(1)}% · ${b.all.n.toLocaleString()} fights</span></div>
+        <div class="fl-band-scale">${flScale(b.all, b.even, floor, { compact: true, hideRaw: true, dotRaw: true })}</div>
+      </div>`).join('');
+
+    return `
+      <article class="fl-card" data-verdict="${head.verdict}">
+        <header class="fl-head">
+          <span class="fl-glyph">${flGlyph(f.id)}</span>
+          <div class="fl-head-text">
+            <h3 class="fl-name">${cfl.escapeHtml(f.label)}<span class="fl-basis">${basis}</span></h3>
+            <p class="fl-q">${cfl.escapeHtml(f.question)}</p>
+          </div>
+          <span class="fl-badge ${head.verdict}">${VERDICT_LABEL[head.verdict]}</span>
+        </header>
+        <div class="fl-scale">${flScale(head.all, head.even, floor)}</div>
+        <div class="fl-read">
+          <span>Raw ${flNum(head.all, floor, false)}</span>
+          <span>Market held flat ${flNum(head.even, floor, true)}</span>
+          <span class="fl-say">${VERDICT_COPY[head.verdict]}</span>
+        </div>
+        ${toggle}
+        ${subs.length ? `<div class="fl-bands" data-bands="${i}" hidden>${bands}</div>` : ''}
+      </article>`;
+  }).join('');
 
   body.querySelectorAll('[data-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const i = btn.getAttribute('data-toggle');
-      const subs = body.querySelectorAll(`[data-sub="${i}"]`);
-      const opening = subs[0] && subs[0].hidden;
-      subs.forEach((r) => { r.hidden = !opening; });
-      btn.textContent = opening ? 'Hide bands ▴' : `Show ${subs.length} bands ▾`;
+      const box = body.querySelector(`[data-bands="${i}"]`);
+      const opening = box.hidden;
+      box.hidden = !opening;
+      btn.setAttribute('aria-expanded', String(opening));
+      btn.innerHTML = btn.innerHTML.replace(opening ? '▾' : '▴', opening ? '▴' : '▾');
     });
   });
 
@@ -527,7 +746,9 @@ async function loadFactorLab() {
     `Scored across ${d.dataset.fights_scored.toLocaleString()} decided UFC fights `
     + `(${d.dataset.first_event} to ${d.dataset.last_event}), of which `
     + `${d.dataset.market_even_cohort.toLocaleString()} were priced within ±${d.rules.even_band_american} at close. `
-    + `Ranges are 95% confidence. Rebuilt from the full database on ${when}; only decided fights count toward the scores.`;
+    + `Ranges are 95% confidence. A factor still above ${d.rules.lean_pct}% with the market held flat, but whose range `
+    + `crosses a coin flip, is marked “can’t tell yet” rather than lumped in with the ones that know nothing. `
+    + `Rebuilt from the full database on ${when}; only decided fights count toward the scores.`;
 }
 
 async function loadYounger() {

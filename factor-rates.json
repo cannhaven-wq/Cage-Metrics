@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-22T00:56:47.480Z",
+  "generated_at": "2026-08-22T01:12:23.404Z",
   "dataset": {
     "fights_scored": 8681,
     "market_even_cohort": 871,
@@ -8,6 +8,7 @@
   },
   "rules": {
     "min_sample": 100,
+    "lean_pct": 55,
     "even_band_american": 140,
     "min_prior_fights": 3,
     "min_record_fights": 5
@@ -110,7 +111,7 @@
             "ci_lo": 49.9,
             "ci_hi": 65.3
           },
-          "verdict": "proxy"
+          "verdict": "lean"
         },
         {
           "label": "10+ years younger",
@@ -350,7 +351,7 @@
       "question": "Does the fighter with the better UFC record win?",
       "basis": "point-in-time",
       "note": "Win rate over UFC fights that had already happened, rebuilt fight by fight — never the career total off the fighters table, which contains the result being scored. Both fighters need five prior UFC fights. The bands are the raw gap between the two win rates, so you can check one off a fight card: 9-1 is 90%, 6-4 is 60%, that fight is a 30-point gap.",
-      "verdict": "proxy",
+      "verdict": "lean",
       "buckets": [
         {
           "label": "Any gap (all fights it fires on)",
@@ -369,7 +370,7 @@
             "ci_lo": 48.4,
             "ci_hi": 65.3
           },
-          "verdict": "proxy"
+          "verdict": "lean"
         },
         {
           "label": "10–15 points better (like 6-4 vs 5-5)",
