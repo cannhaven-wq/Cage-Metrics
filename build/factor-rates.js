@@ -43,6 +43,12 @@ const EVEN_BAND = 140;
 // A fighter needs this much UFC history before their point-in-time form stats
 // mean anything.
 const MIN_PRIOR_FIGHTS = 3;
+// UFC record is bucketed on the raw win rate, which is far noisier than a rate
+// that has been smoothed, so it carries its own higher floor: at three fights a
+// 3-0 fighter reads as a flawless 100%. Five is the point where the buckets stop
+// being dominated by tiny records without gutting the sample — it costs about
+// 500 of the 1,841 fights the factor used to fire on.
+const MIN_RECORD_FIGHTS = 5;
 const MIN_TD_ATTEMPTS = 5;
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -204,25 +210,25 @@ const FACTORS = [
     label: 'UFC record',
     question: 'Does the fighter with the better UFC record win?',
     basis: 'point-in-time',
-    note: 'Win rate over UFC fights that had already happened, Laplace-smoothed. Rebuilt fight by fight — never the career total off the fighters table, which contains the result being scored.',
+    note: 'Win rate over UFC fights that had already happened, rebuilt fight by fight — never the career total off the fighters table, which contains the result being scored. Both fighters need five prior UFC fights. The bands are the raw gap between the two win rates, so you can check one off a fight card: 9-1 is 90%, 6-4 is 60%, that fight is a 30-point gap.',
     buckets: [
-      { label: '8–15 point edge', lo: 0.08, hi: 0.15 },
-      { label: '15–25 point edge', lo: 0.15, hi: 0.25 },
-      { label: '25–40 point edge', lo: 0.25, hi: 0.40 },
-      { label: '40+ point edge', lo: 0.40, hi: 999 },
+      { label: '10–15 points better (like 6-4 vs 5-5)', lo: 0.10, hi: 0.15 },
+      { label: '15–22 points better (like 7-3 vs 5-5)', lo: 0.15, hi: 0.22 },
+      { label: '22–30 points better (like 9-3 vs 6-6)', lo: 0.22, hi: 0.30 },
+      { label: '30+ points better (like 9-1 vs 6-4)', lo: 0.30, hi: 999 },
     ],
+    // Raw, not smoothed. The bands used to sit on a Laplace-smoothed rate,
+    // which pulls both fighters toward .500 — so a 9-1 vs 5-5 matchup scored
+    // 0.286 and the top two bands, cut at 0.25 and 0.40, held 98 fights and 4.
+    // Half the breakout published as "insufficient". The raw gap spans the
+    // range the labels claim, and MIN_RECORD_FIGHTS covers the small samples
+    // the smoothing used to hide.
     gap: (m) => {
       if (!m.sA || !m.sB) return null;
-      if (m.sA.fights < MIN_PRIOR_FIGHTS || m.sB.fights < MIN_PRIOR_FIGHTS) return null;
-      const ra = (m.sA.wins + 2) / (m.sA.fights + 4);
-      const rb = (m.sB.wins + 2) / (m.sB.fights + 4);
-      return Math.abs(ra - rb);
+      if (m.sA.fights < MIN_RECORD_FIGHTS || m.sB.fights < MIN_RECORD_FIGHTS) return null;
+      return Math.abs(m.sA.wins / m.sA.fights - m.sB.wins / m.sB.fights);
     },
-    pick: (m) => {
-      const ra = (m.sA.wins + 2) / (m.sA.fights + 4);
-      const rb = (m.sB.wins + 2) / (m.sB.fights + 4);
-      return ra > rb ? m.a.id : m.b.id;
-    },
+    pick: (m) => (m.sA.wins / m.sA.fights > m.sB.wins / m.sB.fights ? m.a.id : m.b.id),
   },
   {
     id: 'td_def',
@@ -483,6 +489,7 @@ async function main() {
       min_sample: MIN_SAMPLE,
       even_band_american: EVEN_BAND,
       min_prior_fights: MIN_PRIOR_FIGHTS,
+      min_record_fights: MIN_RECORD_FIGHTS,
     },
     factors: out,
   };
