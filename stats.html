@@ -417,14 +417,14 @@
 <div class="page">
   <h2 class="section-h">Does it survive the market?</h2>
   <p class="lab-intro">
-    Every factor below is scored against <strong id="lab-n">—</strong> UFC fights. The first column is how
-    often the fighter it favours actually won. The second column is the one that matters: the same rate
-    across only the fights the betting market priced as a coin flip &mdash; both men inside
-    &plusmn;140 at close. Hold the market flat, and see what the factor still knows.
+    Every factor below is scored against <strong id="lab-n">—</strong> UFC fights. The hollow ring on each
+    scale is how often the fighter it favours actually won. The solid dot is the one that matters: the same
+    rate across only the fights the betting market priced as a coin flip &mdash; both men inside
+    &plusmn;140 at close. Take the odds away, and see what the factor still knows.
   </p>
   <p class="lab-intro">
-    A factor that looks strong in column one and collapses in column two isn't telling you about the fight.
-    It's telling you who the favourite was, which you could already read off the odds for free. Every stat
+    A factor whose ring sits well right of the coin-flip line but whose dot falls back to it isn't telling you
+    about the fight. It's telling you who the favourite was, which you could already read off the odds for free. Every stat
     here is rebuilt from fights that had already happened when the fight being scored took place &mdash; a
     fighter's career record contains the result we're trying to predict, so we never use it.
     Nothing is shown below <strong id="lab-floor">100</strong> fights.
@@ -437,7 +437,7 @@
 
   <div class="fl-legend" id="fl-legend" hidden>
     <span class="fl-key"><i class="fl-key-raw"></i>Raw win rate</span>
-    <span class="fl-key"><i class="fl-key-even"></i>Market held flat</span>
+    <span class="fl-key"><i class="fl-key-even"></i>In even fights</span>
     <span class="fl-key"><i class="fl-key-ci"></i>95% range</span>
     <span class="fl-key"><i class="fl-key-line"></i>Coin flip</span>
   </div>
@@ -549,7 +549,7 @@ async function loadAll() {
 //
 // The verdict is a position against a coin flip, so it is drawn as one. Each
 // factor gets a scale: a hollow marker for the raw win rate, a solid dot plus
-// its 95% range for the same factor with the market held flat, and a dashed
+// its 95% range for the same factor across evenly-priced fights only, and a dashed
 // line at 50%. The distance between the two markers is the whole thesis of the
 // page — how much of a factor's apparent edge was only ever the favourite.
 // ---------------------------------------------------------------------------
@@ -565,7 +565,7 @@ const flPos = (v) => ((Math.min(FL_MAX, Math.max(FL_MIN, v)) - FL_MIN) / (FL_MAX
 const VERDICT_LABEL = {
   real: 'Real edge',
   lean: 'Can’t tell yet',
-  proxy: 'Just reads the favorite',
+  proxy: 'No edge over the odds',
   inverted: 'Backwards',
   unproven: 'Unproven',
   insufficient: 'Too few fights',
@@ -574,7 +574,7 @@ const VERDICT_LABEL = {
 const VERDICT_COPY = {
   real: 'Survives. Still beats a coin flip when the market says the fight is even.',
   lean: 'Still ahead once the market is level, but the range crosses a coin flip — not enough evenly-priced fights to call it either way.',
-  proxy: 'Reads the favourite. Once the market is level, it stops knowing anything.',
+  proxy: 'The fighter it favours is usually the betting favourite anyway. Price the fight even and it stops beating a coin flip.',
   inverted: 'Backwards. The fighter it favours loses more often than not in even fights.',
   unproven: 'Too few evenly-priced fights to judge either way.',
   insufficient: 'Below our sample floor. We won’t put a number on it.',
@@ -626,7 +626,7 @@ function flScale(raw, even, floor, opts) {
     bits.push(`<div class="fl-raw" style="left:${flPos(raw.pct)}%" title="Raw ${raw.pct.toFixed(1)}%"></div>`);
   }
   if (even && even.n >= floor) {
-    bits.push(`<div class="fl-dot" style="left:${flPos(even.pct)}%" title="Market held flat ${even.pct.toFixed(1)}%"></div>`);
+    bits.push(`<div class="fl-dot" style="left:${flPos(even.pct)}%" title="In even fights ${even.pct.toFixed(1)}%"></div>`);
   } else if (raw && raw.n >= floor && opts.dotRaw) {
     bits.push(`<div class="fl-dot" style="left:${flPos(raw.pct)}%" title="${raw.pct.toFixed(1)}%"></div>`);
   }
@@ -722,7 +722,7 @@ async function loadFactorLab() {
         <div class="fl-scale">${flScale(head.all, head.even, floor)}</div>
         <div class="fl-read">
           <span>Raw ${flNum(head.all, floor, false)}</span>
-          <span>Market held flat ${flNum(head.even, floor, true)}</span>
+          <span>In even fights ${flNum(head.even, floor, true)}</span>
           <span class="fl-say">${VERDICT_COPY[head.verdict]}</span>
         </div>
         ${toggle}
@@ -746,7 +746,7 @@ async function loadFactorLab() {
     `Scored across ${d.dataset.fights_scored.toLocaleString()} decided UFC fights `
     + `(${d.dataset.first_event} to ${d.dataset.last_event}), of which `
     + `${d.dataset.market_even_cohort.toLocaleString()} were priced within ±${d.rules.even_band_american} at close. `
-    + `Ranges are 95% confidence. A factor still above ${d.rules.lean_pct}% with the market held flat, but whose range `
+    + `Ranges are 95% confidence. A factor still above ${d.rules.lean_pct}% in evenly-priced fights, but whose range `
     + `crosses a coin flip, is marked “can’t tell yet” rather than lumped in with the ones that know nothing. `
     + `Rebuilt from the full database on ${when}; only decided fights count toward the scores.`;
 }
