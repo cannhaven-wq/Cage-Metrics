@@ -348,14 +348,26 @@
     return ' style="--flag:' + tint + '"' + title;
   };
 
-  // Legible version: a flag swatch next to the country name, for pages where
+  // Legible version: the real flag next to the country name, for pages where
   // where a fighter is from is information rather than texture.
+  //
+  // This used to draw cfl.flagTint()'s gradient of stripes, which is fine as a
+  // background wash but wrong as a flag — the US came out looking Dutch, and
+  // every flag carrying a symbol (the maple leaf, the Brazilian globe, the
+  // Union Jack) was simply not that flag. The image is the flag.
+  //
+  // A missing or malformed country_code would 404 on the CDN and paint a
+  // broken-image icon, so those render the country name on its own. As of
+  // August 2026 that is 903 of 4,529 fighters — none of which reach here,
+  // because every one of them has a null `country` too.
   cfl.flagChip = function (fighter) {
     const f = fighter || {};
-    const tint = cfl.flagTint(f.country_code);
-    if (!tint || !f.country) return '';
-    return '<span class="cfl-flag"><i style="--flag:' + tint + '"></i>'
-      + cfl.escapeHtml(f.country) + '</span>';
+    if (!f.country) return '';
+    const name = cfl.escapeHtml(f.country);
+    const code = String(f.country_code || '').trim();
+    if (!/^[A-Za-z]{2}$/.test(code)) return '<span class="cfl-flag">' + name + '</span>';
+    return '<span class="cfl-flag"><img src="https://flagcdn.com/w40/' + code.toLowerCase() + '.png"'
+      + ' width="20" height="14" loading="lazy" alt="">' + name + '</span>';
   };
 
   // Put an upcoming card's fights into true card order and drop dead bookings.

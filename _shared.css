@@ -354,10 +354,11 @@ textarea:focus-visible,
 }
 
 /* ============== Country of origin ============== */
-/* Two ways to show where a fighter is from, both fed by cfl.flagTint().
-   .cfl-flagged washes the flag in behind whatever the element contains —
+/* Two ways to show where a fighter is from. .cfl-flagged washes
+   cfl.flagTint()'s gradient in behind whatever the element contains —
    texture, to break up a grid of identical cards. .cfl-flag is the legible
-   version for pages where the country is information, not decoration. */
+   version for pages where the country is information, not decoration, and
+   carries the real flag image from cfl.flagChip(). */
 .cfl-flagged { position: relative; overflow: hidden; isolation: isolate; }
 .cfl-flagged::before {
   content: '';
@@ -381,10 +382,10 @@ textarea:focus-visible,
   color: var(--text-2);
   white-space: nowrap;
 }
-.cfl-flag i {
+.cfl-flag img {
   width: 20px; height: 14px;
+  object-fit: cover;
   border-radius: 3px;
-  background: var(--flag);
   border: 1px solid rgba(255, 255, 255, .16);
   flex-shrink: 0;
 }

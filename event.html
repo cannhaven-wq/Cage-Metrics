@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag2">
+<link rel="stylesheet" href="_shared.css?v=flag3">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -236,6 +236,9 @@
     gap: 14px;
     cursor: pointer;
     transition: opacity 0.15s;
+    /* Grid items default to min-width:auto, so a long fighter name held the
+       1fr track open and pushed the right-hand column off the card. */
+    min-width: 0;
   }
   .fight-fighter:hover { opacity: 0.85; }
   .fight-fighter.right { flex-direction: row-reverse; text-align: right; }
@@ -270,6 +273,67 @@
     letter-spacing: 0.1em;
   }
   .fight-vs .compare:hover { color: var(--red); }
+
+  /* Tale of the tape — fighter A's value left, label centred, B's value right.
+     Same three-track grammar as .fight-body so the columns line up. */
+  .fight-tape {
+    border-top: 1px solid var(--border);
+    padding: 8px 20px 10px;
+  }
+  .tot-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 2px 0;
+  }
+  .tot-val {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: var(--text-2);
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .tot-val.right { text-align: right; }
+  /* Only the physical-advantage rows (height, reach) bold a side. */
+  .tot-val.lead { color: #fff; font-weight: 700; }
+  .tot-lbl {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-3);
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  /* Last five, oldest on the left. Result colour is the signal; the method
+     is there so a 5-0 run of decisions doesn't read like a 5-0 run of KOs. */
+  .fight-form {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 20px 10px;
+    border-top: 1px solid var(--border);
+  }
+  .rf-set { display: flex; gap: 4px; min-width: 0; flex-wrap: wrap; }
+  .rf-set.right { justify-content: flex-end; }
+  .rf-pill {
+    font-family: var(--font-display);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .rf-pill.win  { color: var(--green); background: rgba(63, 208, 122, .12); border-color: rgba(63, 208, 122, .28); }
+  .rf-pill.loss { color: var(--red);   background: rgba(255, 77, 61, .12);  border-color: rgba(255, 77, 61, .28); }
+  .rf-pill.none { color: var(--text-3); background: var(--bg-3); border-color: var(--border); }
+  .rf-empty { font-size: 11px; color: var(--text-3); }
 
   .fight-result-detail {
     border-top: 1px solid var(--border);
@@ -530,8 +594,16 @@
   @media (max-width: 768px) {
     .event-hero { padding: 24px 16px; }
     .event-hero h1 { font-size: 26px; }
-    .fight-body { gap: 8px; padding: 14px 12px; }
+    /* One column on a phone: fighter A, then VS/Compare, then fighter B,
+       stacked. Nothing is clipped, and the right-hand corner reads
+       left-to-right like the left-hand one. */
+    .fight-body { grid-template-columns: 1fr; gap: 8px; padding: 14px 12px; }
+    .fight-fighter.right { flex-direction: row; text-align: left; }
+    .fight-vs { text-align: left; }
     .fight-fighter .name { font-size: 16px; }
+    .fight-tape, .fight-form { padding-left: 12px; padding-right: 12px; }
+    .fight-form { grid-template-columns: 1fr; gap: 6px; }
+    .rf-set.right { justify-content: flex-start; }
     .wf-xf { font-size: 8px; }
     .wf-xc { font-size: 9px; }
   }
@@ -550,7 +622,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd14"></script>
+<script src="_shared.js?v=rd15"></script>
 <script src="_auth.js"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
@@ -670,9 +742,10 @@ async function load() {
   // used to add ~4 round trips of latency before render. streakMap is left
   // empty; the v_fighter_recent_form view query was removed when edges.js's
   // streak factors went away.
-  const fighterColumns = 'id, name, nickname, age, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
+  const fighterColumns = 'id, name, nickname, age, height_in, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
   const fightIds = (fights || []).map(f => f.id);
-  const [fightersR, cardioR, finishR, oddsR, engPicksR, engEdgesR] = await Promise.all([
+  const idList = fighterIds.join(',');
+  const [fightersR, cardioR, finishR, oddsR, engPicksR, engEdgesR, formR] = await Promise.all([
     fighterIds.length
       ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
       : Promise.resolve({ data: [] }),
@@ -699,6 +772,18 @@ async function load() {
     fightIds.length
       ? sb.from('v_model_edges_graded').select('fight_id, bet_fighter_id, edge, stake_frac, source, won').in('fight_id', fightIds)
       : Promise.resolve({ data: [] }),
+    // Recent form. One batched fetch of every settled fight belonging to any
+    // fighter on this card, not one request per fighter — a full card is ~27
+    // fighters and ~150 history rows. `method=not.is.null` drops future
+    // bookings; the ordering and the five-row cut happen below, because a
+    // fight's date lives on `events`, not on `fights`.
+    fighterIds.length
+      ? cfl.fetchAll(() => sb.from('fights')
+          .select('event_id, fighter_a_id, fighter_b_id, winner_id, method, events!inner(event_date)')
+          .or(`fighter_a_id.in.(${idList}),fighter_b_id.in.(${idList})`)
+          .not('method', 'is', null))
+          .then(data => ({ data }), err => ({ data: [], error: err }))
+      : Promise.resolve({ data: [] }),
   ]);
 
   if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
@@ -717,6 +802,37 @@ async function load() {
 
   if (oddsR.error) console.warn('Market odds not available:', oddsR.error.message);
   (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
+
+  // formMap[fighter_id] = up to five settled fights, oldest first.
+  //
+  // Only fights BEFORE this event count. On a past event that keeps the card's
+  // own result out of its own form row (it is already in the header), and on
+  // any event it keeps a later fight from appearing as "recent" form for a
+  // bout that happened before it.
+  //
+  // Win/loss comes from winner_id vs the fighter's own id, never from which
+  // slot they sit in — the scraper puts the winner in fighter_a on roughly
+  // two thirds of rows, so side is not a result.
+  const formMap = {};
+  if (formR.error) console.warn('Recent form not available:', formR.error.message);
+  (formR.data || []).forEach(r => {
+    const d = r.events && r.events.event_date;
+    if (!d || !event.event_date || d >= event.event_date) return;
+    [r.fighter_a_id, r.fighter_b_id].forEach(fid => {
+      if (!fid || !fighterMap[fid]) return;
+      (formMap[fid] || (formMap[fid] = [])).push({
+        date: d,
+        result: r.winner_id == null ? 'draw' : (r.winner_id === fid ? 'win' : 'loss'),
+        method: r.method,
+      });
+    });
+  });
+  Object.keys(formMap).forEach(fid => {
+    formMap[fid] = formMap[fid]
+      .sort((x, y) => (x.date < y.date ? 1 : x.date > y.date ? -1 : 0))
+      .slice(0, 5)
+      .reverse();
+  });
 
   // ---------------------------------------------------------------------
   // Engine picks + edges, keyed by fight.
@@ -782,6 +898,7 @@ async function load() {
     oddsMap,
     eventDate: event.event_date,
     engineByFight,
+    formMap,
   };
 
   document.getElementById('content').innerHTML = `
@@ -793,7 +910,7 @@ async function load() {
     ${renderEngineAccuracyStrip(engineAcc)}
     <div class="page">
       <div id="fightsList">
-        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, _currentModelMode)).join('')}
+        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, _currentModelMode, formMap)).join('')}
       </div>
     </div>
   `;
@@ -891,7 +1008,7 @@ function renderEngineAccuracyStrip(engineAcc) {
     </div>`;
 }
 
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, engineByFight, modelMode) {
+function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, engineByFight, modelMode, formMap) {
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
@@ -935,6 +1052,8 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
         </div>
         ${renderFighterSide(b, 'right', bWon, aWon)}
       </div>
+      ${renderTape(a, b)}
+      ${renderForm((formMap || {})[a.id], (formMap || {})[b.id])}
       ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
       ${verdict}
       ${modelPicks}
@@ -1245,6 +1364,84 @@ function renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fightW
   }
   if (!reasons.length) return '';
   return `<div class="why-mov"><strong>Method signals:</strong> ${reasons.map(r => cfl.escapeHtml(r)).join(' · ')}</div>`;
+}
+
+// Tale of the tape. Four fixed rows — a null shows a dash and the row stays,
+// so the strip is the same height on every card and the eye can scan down it.
+//
+// Height and reach bold the bigger number because bigger is the advantage.
+// Age and stance don't: older is not worse, and southpaw is not better than
+// orthodox — bolding either would be us making a claim we can't support.
+//
+// No weight row. Weight isn't stored as a number, and the division is already
+// in the card header.
+function renderTape(a, b) {
+  return `
+    <div class="fight-tape">
+      ${tapeRow('Height', a.height_in, b.height_in, v => cfl.formatHeight(v), true)}
+      ${tapeRow('Reach', a.reach_in, b.reach_in, v => cfl.formatReach(Math.round(v * 10) / 10), true)}
+      ${tapeRow('Age', a.age, b.age, v => String(v), false)}
+      ${tapeRow('Stance', a.stance, b.stance, v => String(v), false)}
+    </div>
+  `;
+}
+
+function tapeRow(label, va, vb, fmt, boldLarger) {
+  const has = v => v != null && v !== '';
+  let ca = 'tot-val', cb = 'tot-val right';
+  if (boldLarger && has(va) && has(vb) && va !== vb) {
+    if (va > vb) ca += ' lead'; else cb += ' lead';
+  }
+  const fa = has(va) ? cfl.escapeHtml(fmt(va)) : '—';
+  const fb = has(vb) ? cfl.escapeHtml(fmt(vb)) : '—';
+  return `
+    <div class="tot-row">
+      <div class="${ca}">${fa}</div>
+      <div class="tot-lbl">${label}</div>
+      <div class="${cb}">${fb}</div>
+    </div>
+  `;
+}
+
+// Last five, oldest on the left, newest on the right — the same direction a
+// record reads. Built from the fights table: `fighters.last_5` is a bare
+// W/L/dash string with no method in it and a length that doesn't always
+// reach five, so it can't fill this row.
+function renderForm(a, b) {
+  if (!(a && a.length) && !(b && b.length)) return '';
+  return `
+    <div class="fight-form">
+      ${formSet(a, '')}
+      <div class="tot-lbl">Last 5</div>
+      ${formSet(b, ' right')}
+    </div>
+  `;
+}
+
+function formSet(rows, side) {
+  if (!rows || !rows.length) {
+    return `<div class="rf-set${side}"><span class="rf-empty">No UFC fights yet</span></div>`;
+  }
+  return `<div class="rf-set${side}">${rows.map(formPill).join('')}</div>`;
+}
+
+// KO/TKO and doctor's stoppage are both KO. Overturned, DQ, could-not-continue
+// and anything unrecognised are NC — those carry no W or L, so the pill is
+// just the two letters.
+function formShortMethod(m) {
+  const s = String(m || '');
+  if (/^(KO|TKO)/i.test(s)) return 'KO';
+  if (/^Sub/i.test(s)) return 'SUB';
+  if (/^Dec/i.test(s)) return 'DEC';
+  return 'NC';
+}
+
+function formPill(r) {
+  const method = formShortMethod(r.method);
+  const cls = r.result === 'win' ? 'win' : r.result === 'loss' ? 'loss' : 'none';
+  const mark = r.result === 'win' ? 'W' : r.result === 'loss' ? 'L' : 'D';
+  const text = method === 'NC' ? 'NC' : `${mark} ${method}`;
+  return `<span class="rf-pill ${cls}">${text}</span>`;
 }
 
 function renderFighterSide(f, side, won, opponentWon) {
