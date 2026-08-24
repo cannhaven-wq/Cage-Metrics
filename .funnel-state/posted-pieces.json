@@ -19,5 +19,6 @@
   "118::coinflip-lead",
   "2626::sensor-main",
   "2626::coinflip-lead",
-  "2626::whatif-finisher"
+  "2626::whatif-finisher",
+  "4224::sensor-main"
 ]
