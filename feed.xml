@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 24 Aug 2026 18:26:47 GMT</lastBuildDate>
+  <lastBuildDate>Tue, 25 Aug 2026 00:44:33 GMT</lastBuildDate>
 
   <item>
     <title>DWCS 10.3</title>
@@ -70,6 +70,13 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4542</guid>
     <pubDate>Sat, 24 Oct 2026 00:00:00 GMT</pubDate>
     <description>Full model verdicts and edge factors for every fight on the UFC 333: Volkanovski vs. Evloev card — Abu Dhabi, Abu Dhabi, United Arab Emirates.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night</title>
+    <link>https://cannonfightlab.com/event.html?id=4617</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4617</guid>
+    <pubDate>Sat, 31 Oct 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night card — Las Vegas, Nevada, USA.</description>
   </item>
 
 </channel>
