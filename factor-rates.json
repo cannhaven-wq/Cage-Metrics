@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-08-26T19:38:34.398Z",
+  "generated_at": "2026-08-27T05:57:15.521Z",
   "dataset": {
-    "fights_scored": 8697,
+    "fights_scored": 8699,
     "market_even_cohort": 884,
     "first_event": "1994-03-11",
     "last_event": "2026-08-25"
@@ -26,7 +26,7 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 8570,
+            "n": 8572,
             "wins": 4893,
             "pct": 57.1,
             "ci_lo": 56,
@@ -44,11 +44,11 @@
         {
           "label": "1–2 years younger",
           "all": {
-            "n": 2532,
+            "n": 2533,
             "wins": 1325,
             "pct": 52.3,
             "ci_lo": 50.4,
-            "ci_hi": 54.3
+            "ci_hi": 54.2
           },
           "even": {
             "n": 267,
@@ -116,11 +116,11 @@
         {
           "label": "10+ years younger",
           "all": {
-            "n": 766,
+            "n": 767,
             "wins": 520,
-            "pct": 67.9,
-            "ci_lo": 64.5,
-            "ci_hi": 71.1
+            "pct": 67.8,
+            "ci_lo": 64.4,
+            "ci_hi": 71
           },
           "even": {
             "n": 58,
@@ -145,11 +145,11 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 6650,
-            "wins": 3461,
-            "pct": 52,
-            "ci_lo": 50.8,
-            "ci_hi": 53.2
+            "n": 6652,
+            "wins": 3463,
+            "pct": 52.1,
+            "ci_lo": 50.9,
+            "ci_hi": 53.3
           },
           "even": {
             "n": 719,
@@ -163,8 +163,8 @@
         {
           "label": "1 inch longer",
           "all": {
-            "n": 1809,
-            "wins": 903,
+            "n": 1810,
+            "wins": 904,
             "pct": 49.9,
             "ci_lo": 47.6,
             "ci_hi": 52.2
@@ -199,10 +199,10 @@
         {
           "label": "4–5 inches longer",
           "all": {
-            "n": 1343,
-            "wins": 720,
+            "n": 1344,
+            "wins": 721,
             "pct": 53.6,
-            "ci_lo": 50.9,
+            "ci_lo": 51,
             "ci_hi": 56.3
           },
           "even": {
@@ -246,8 +246,8 @@
           "label": "Any gap (all fights it fires on)",
           "headline": true,
           "all": {
-            "n": 7187,
-            "wins": 3758,
+            "n": 7188,
+            "wins": 3759,
             "pct": 52.3,
             "ci_lo": 51.1,
             "ci_hi": 53.4
@@ -282,11 +282,11 @@
         {
           "label": "3–4 inches taller",
           "all": {
-            "n": 2001,
-            "wins": 1076,
+            "n": 2002,
+            "wins": 1077,
             "pct": 53.8,
             "ci_lo": 51.6,
-            "ci_hi": 55.9
+            "ci_hi": 56
           },
           "even": {
             "n": 194,
