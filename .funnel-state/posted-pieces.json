@@ -22,5 +22,6 @@
   "2626::whatif-finisher",
   "4224::sensor-main",
   "4224::cardio-flagged",
-  "4224::coinflip-lead"
+  "4224::coinflip-lead",
+  "4225::sensor-main"
 ]
