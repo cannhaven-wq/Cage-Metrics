@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+> Every feature, every explanation, and every task must be understandable by a UFC bettor with no stats background. Plain verdict first, plain reason second, math only in a collapsed block if at all. No closing line value, no edge percentages, and no market language anywhere in the user interface. If Reed can't explain it to a friend in one sentence, it does not ship.
+
+> Before writing any code, state the task in plain English: what changes, why it matters, and what the user sees differently. Reed approves the plain version first. No task starts from jargon.
+
+Wording reference: [`COPY_STYLE.md`](COPY_STYLE.md) governs every user-facing string.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Product / naming
