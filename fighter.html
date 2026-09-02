@@ -230,6 +230,42 @@
     .pa-grid { grid-template-columns: repeat(2, 1fr); }
     .history-table th:nth-child(4), .history-table td:nth-child(4) { display: none; }
   }
+  .read-lead { font-family: 'Saira Semi Condensed', sans-serif; font-weight: 600; font-size: 22px; line-height: 1.25; color: var(--text); margin-bottom: 18px; max-width: 70ch; text-wrap: balance; }
+  .read-list { display: flex; flex-direction: column; gap: 10px; }
+  .read-row { display: grid; grid-template-columns: minmax(0, 1fr) 140px; grid-template-areas: "sent bar" "stat bar"; column-gap: 18px; row-gap: 3px; align-items: center; padding: 12px 14px; background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; }
+  .read-sent { grid-area: sent; font-size: 15px; line-height: 1.4; color: var(--text); }
+  .read-stat { grid-area: stat; font-family: 'IBM Plex Mono', monospace; font-size: 11.5px; color: var(--text-3); }
+  .read-bar { grid-area: bar; position: relative; height: 8px; background: var(--bg-4); border-radius: 4px; overflow: hidden; }
+  .read-bar i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--text-3); border-radius: 4px; }
+  .read-row.good .read-bar i { background: #3fae6b; }
+  .read-row.bad .read-bar i { background: #d6603a; }
+  .read-bar b { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .6; }
+  .read-foot { font-size: 12px; color: var(--text-3); margin-top: 6px; }
+  .mr-bars { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 12px; }
+  .mr-row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 12px; align-items: center; font-size: 13px; color: var(--text-2); }
+  .mr-track { height: 10px; background: var(--bg-4); border-radius: 5px; overflow: hidden; }
+  .mr-track i { display: block; height: 100%; background: var(--text-3); }
+  .mr-track.act i { background: #3fae6b; }
+  .mr-row b { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text); text-align: right; }
+  .nx-top { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+  .nx-when { font-weight: 400; font-size: 13px; color: var(--text-3); margin-left: 8px; }
+  .nx-pick { font-size: 15px; margin: 6px 0 4px; }
+  .nx-pick.muted { color: var(--text-3); }
+  .nx-pct { font-family: 'IBM Plex Mono', monospace; color: var(--red); font-weight: 600; }
+  .nx-word { font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); margin-left: 6px; }
+  .nx-hd { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #3fae6b; margin: 12px 0 4px; }
+  .nx-hd.against { color: #e8b45c; }
+  .nx-list { margin: 0; padding-left: 18px; font-size: 13.5px; line-height: 1.5; color: var(--text-2); }
+  .all-numbers { border: 1px solid var(--border); border-radius: 10px; padding: 0 16px; background: var(--bg-2); }
+  .all-numbers > summary { list-style: none; cursor: pointer; display: flex; align-items: baseline; gap: 12px; padding: 14px 0; }
+  .all-numbers > summary::-webkit-details-marker { display: none; }
+  .all-numbers > summary h2 { margin: 0; }
+  .all-numbers > summary h2::before { content: '\25B8  '; color: var(--text-3); }
+  .all-numbers[open] > summary h2::before { content: '\25BE  '; }
+  .an-hint { font-size: 12px; color: var(--text-3); }
+  .an-body { padding: 0 0 18px; }
+  .an-body h3 { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); margin: 14px 0 8px; }
+  @media (max-width: 640px) { .read-row { grid-template-columns: 1fr; grid-template-areas: "sent" "bar" "stat"; } }
 </style>
 </head>
 <body>
@@ -245,8 +281,9 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd15"></script>
+<script src="_shared.js?v=rd16"></script>
 <script src="_auth.js"></script>
+<script src="fight-insights.js?v=6"></script>
 <script>
 cfl.renderNav('fighters');
 cfl.renderFooter();
@@ -357,7 +394,7 @@ async function load() {
         <div class="fh-records">
           ${hasUfc ? `
             <div class="record-block">
-              <div class="big-record">${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''}</div>
+              <div class="big-record" id="ufcRecordBig">${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''}</div>
               <div class="record-label">UFC record</div>
             </div>
           ` : ''}
@@ -370,18 +407,20 @@ async function load() {
     </div>
 
     <div class="page">
-      <div class="stat-section">
-        <h2>Performance stats</h2>
-        <div class="stats-grid-4">
-          <div class="stat-box"><div class="stat-val accent">${f.slpm != null ? Number(f.slpm).toFixed(1) : '—'}</div><div class="stat-lbl">Sig. strikes per min</div></div>
-          <div class="stat-box"><div class="stat-val">${f.sapm != null ? Number(f.sapm).toFixed(1) : '—'}</div><div class="stat-lbl">Absorbed per min</div></div>
-          <div class="stat-box"><div class="stat-val accent">${f.td_avg != null ? Number(f.td_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Takedowns per 15 min</div></div>
-          <div class="stat-box"><div class="stat-val">${f.td_def != null ? f.td_def + '%' : '—'}</div><div class="stat-lbl">Takedown defense</div></div>
-          <div class="stat-box"><div class="stat-val">${f.str_acc != null ? f.str_acc + '%' : '—'}</div><div class="stat-lbl">Strike accuracy</div></div>
-          <div class="stat-box"><div class="stat-val">${f.str_def != null ? f.str_def + '%' : '—'}</div><div class="stat-lbl">Strike defense</div></div>
-          <div class="stat-box"><div class="stat-val">${f.sub_avg != null ? Number(f.sub_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Sub attempts per 15</div></div>
-          <div class="stat-box"><div class="stat-val">${f.last_5 || '—'}</div><div class="stat-lbl">Last 5 fights</div></div>
-        </div>
+      <div class="stat-section" id="readSection">
+        <h2>The read</h2>
+        <div class="read-lead" id="readLead">Placing ${cfl.escapeHtml(f.name)} against the division…</div>
+        <div class="read-list" id="readList"></div>
+      </div>
+
+      <div class="stat-section" id="modelRecSection" hidden>
+        <h2>Against the model's expectations</h2>
+        <div class="fin-wrap" id="modelRecCard"></div>
+      </div>
+
+      <div class="stat-section" id="nextSection" hidden>
+        <h2>Next fight</h2>
+        <div class="fin-wrap" id="nextCard"></div>
       </div>
 
       <div class="stat-section" id="finisherSection" hidden>
@@ -394,17 +433,32 @@ async function load() {
         <div class="fin-wrap" id="cardioCard"></div>
       </div>
 
-      <div class="stat-section">
-        <h2>Physical attributes</h2>
-        <div class="pa-grid">
-          <div class="pa-box"><div class="pa-val">${cfl.formatHeight(f.height_in)}</div><div class="pa-lbl">Height</div></div>
-          <div class="pa-box"><div class="pa-val">${cfl.formatReach(f.reach_in)}</div><div class="pa-lbl">Reach</div></div>
-          <div class="pa-box"><div class="pa-val">${cfl.escapeHtml(f.stance || '—')}</div><div class="pa-lbl">Stance</div></div>
-          <div class="pa-box"><div class="pa-val">${f.age ?? '—'}</div><div class="pa-lbl">Age</div></div>
-          <div class="pa-box"><div class="pa-val">${ufcRec || '—'}</div><div class="pa-lbl">UFC fights</div></div>
-          <div class="pa-box"><div class="pa-val">${(f.wins ?? 0) + (f.losses ?? 0) + (f.draws ?? 0)}</div><div class="pa-lbl">Career total</div></div>
+      <details class="stat-section all-numbers">
+        <summary><h2>All the numbers</h2><span class="an-hint">the raw stats behind the read</span></summary>
+        <div class="an-body">
+          <h3>Performance</h3>
+          <div class="stats-grid-4">
+            <div class="stat-box"><div class="stat-val accent">${f.slpm != null ? Number(f.slpm).toFixed(1) : '—'}</div><div class="stat-lbl">Sig. strikes per min</div></div>
+            <div class="stat-box"><div class="stat-val">${f.sapm != null ? Number(f.sapm).toFixed(1) : '—'}</div><div class="stat-lbl">Absorbed per min</div></div>
+            <div class="stat-box"><div class="stat-val accent">${f.td_avg != null ? Number(f.td_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Takedowns per 15 min</div></div>
+            <div class="stat-box"><div class="stat-val">${f.td_def != null ? f.td_def + '%' : '—'}</div><div class="stat-lbl">Takedown defense</div></div>
+            <div class="stat-box"><div class="stat-val">${f.str_acc != null ? f.str_acc + '%' : '—'}</div><div class="stat-lbl">Strike accuracy</div></div>
+            <div class="stat-box"><div class="stat-val">${f.str_def != null ? f.str_def + '%' : '—'}</div><div class="stat-lbl">Strike defense</div></div>
+            <div class="stat-box"><div class="stat-val">${f.sub_avg != null ? Number(f.sub_avg).toFixed(1) : '—'}</div><div class="stat-lbl">Sub attempts per 15</div></div>
+            <div class="stat-box"><div class="stat-val">${f.last_5 || '—'}</div><div class="stat-lbl">Last 5 fights</div></div>
+          </div>
+          <h3>Physical</h3>
+          <div class="pa-grid">
+            <div class="pa-box"><div class="pa-val">${cfl.formatHeight(f.height_in)}</div><div class="pa-lbl">Height</div></div>
+            <div class="pa-box"><div class="pa-val">${cfl.formatReach(f.reach_in)}</div><div class="pa-lbl">Reach</div></div>
+            <div class="pa-box"><div class="pa-val">${cfl.escapeHtml(f.stance || '—')}</div><div class="pa-lbl">Stance</div></div>
+            <div class="pa-box"><div class="pa-val">${f.age ?? '—'}</div><div class="pa-lbl">Age</div></div>
+            <div class="pa-box"><div class="pa-val">${ufcRec || '—'}</div><div class="pa-lbl">UFC fights</div></div>
+            <div class="pa-box"><div class="pa-val">${(f.wins ?? 0) + (f.losses ?? 0) + (f.draws ?? 0)}</div><div class="pa-lbl">Career total</div></div>
+          </div>
+          <div class="pa-grid" id="ratingNumbers"></div>
         </div>
-      </div>
+      </details>
 
       <div class="stat-section">
         <h2>Fight history</h2>
@@ -419,10 +473,13 @@ async function load() {
   `;
 
   // Fire style, finisher, cardio and history loads in parallel — none blocks the others
+  loadRead(f);
+  loadModelRecord(f);
   loadStyle(f);
   loadFinisher(f);
   loadCardio(f);
-  await loadHistory();
+  const fights = await loadHistory();
+  loadNextFight(f, fights);
 }
 
 // Does this fighter hold their pace into rounds three and beyond? Reads
@@ -607,12 +664,12 @@ async function loadHistory() {
 
   if (error) {
     container.innerHTML = cfl.errorHtml('Failed to load fight history: ' + error.message);
-    return;
+    return [];
   }
 
   if (!fights || fights.length === 0) {
     container.innerHTML = '<div class="no-results">No UFC fights found for this fighter.</div>';
-    return;
+    return [];
   }
 
   // Get event dates so we can sort
@@ -670,6 +727,15 @@ async function loadHistory() {
   const completed = fights.filter(f => f._event && !f._event.is_upcoming);
   const wins = completed.filter(f => f.winner_id === fighterId).length;
   const losses = completed.filter(f => f.winner_id != null && f.winner_id !== fighterId).length;
+  // The fighters table's ufc_wins/ufc_losses field drifts from the fights we
+  // actually hold (Jon Jones read 12-11 there against 22-1 on the record
+  // below). The hero shows the record the history proves, so the two can
+  // never disagree on one page.
+  const hero = document.getElementById('ufcRecordBig');
+  if (hero && completed.length) {
+    const draws = completed.filter(f => f.winner_id == null && (f.method || '').toLowerCase().startsWith('decision')).length;
+    hero.textContent = `${wins}-${losses}${draws ? '-' + draws : ''}`;
+  }
 
   container.innerHTML = `
     <div style="margin-bottom: 12px; font-size: 13px; color: var(--text-3);">
@@ -690,6 +756,239 @@ async function loadHistory() {
       </table>
     </div>
   `;
+  return fights;
+}
+
+// ---------------------------------------------------------------------------
+// THE READ — where this fighter sits inside the division on each thing that
+// matters, said in words. Percentiles come from v_fighter_division_read
+// (fighters with 3+ UFC fights who fought in the last five years), so "7 of
+// 10 lightweights" means the lightweights they actually share a roster with.
+// Opponent quality comes from fighter_ratings (the engine's own Elo).
+// ---------------------------------------------------------------------------
+const lastName = n => { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; };
+const divPlural = d => { const x = String(d || 'fighter').toLowerCase(); return x.endsWith('weight') ? x + 's' : x + ' fighters'; };
+const divSingular = d => String(d || 'fighter').toLowerCase();
+const tenths = p => Math.max(1, Math.min(9, Math.round(p * 10)));
+
+async function loadRead(f) {
+  const sb = window.cflSupabase;
+  const lead = document.getElementById('readLead');
+  const list = document.getElementById('readList');
+  if (!lead || !list) return;
+
+  const ufcN = (f.ufc_wins ?? 0) + (f.ufc_losses ?? 0) + (f.ufc_draws ?? 0);
+  const [dR, rR] = await Promise.all([
+    sb.from('v_fighter_division_read').select('*').eq('fighter_id', f.id).maybeSingle(),
+    sb.from('fighter_ratings').select('*').eq('fighter_id', f.id).maybeSingle(),
+  ]);
+  const d = dR.data || null;
+  const r = rR.data || null;
+
+  if (!d || !d.in_pool) {
+    lead.textContent = ufcN === 0
+      ? `${f.name} has no UFC fights on record. There is no tape to read yet — treat every number on this page as a guess until there is.`
+      : `${f.name} has ${ufcN} UFC fight${ufcN === 1 ? '' : 's'} on record — too few to place against the division honestly. The numbers below are real but thin.`;
+    list.innerHTML = '';
+    return;
+  }
+
+  const L = lastName(f.name);
+  const div = divPlural(d.division);
+  const one = divSingular(d.division);
+  const rows = [];   // { strength, phrase, sentence, stat, pct, good }
+  const push = (pct, hiPhrase, hiSent, loPhrase, loSent, midSent, stat, hiIsGood) => {
+    if (pct == null) return;
+    const n = tenths(pct);
+    if (pct >= 0.7)      rows.push({ strength: pct - 0.5, phrase: hiPhrase(n), sentence: hiSent(n), stat, pct, good: hiIsGood });
+    else if (pct <= 0.3) rows.push({ strength: 0.5 - pct, phrase: loPhrase(10 - n), sentence: loSent(10 - n), stat, pct, good: hiIsGood == null ? null : !hiIsGood });
+    else                 rows.push({ strength: 0, phrase: null, sentence: midSent, stat, pct, good: null });
+  };
+  const num = (v, dp = 1) => v == null ? '—' : Number(v).toFixed(dp);
+
+  push(d.slpm_pct,
+    n => 'a high-volume striker', n => `${L} lands more than ${n} of 10 ${div}.`,
+    n => 'a low-volume striker', n => `${L} lands less than ${n} of 10 ${div} — a low-volume fighter by choice or by style.`,
+    `${L} lands about what a typical ${one} lands.`,
+    `${num(f.slpm)} landed per minute · division median ${num(d.slpm_med)}`, true);
+  push(d.sapm_pct,
+    n => 'gets hit a lot', n => `${L} gets hit more than ${n} of 10 ${div}.`,
+    n => 'hard to hit', n => `${L} gets hit less than ${n} of 10 ${div}.`,
+    `${L} absorbs about as much as a typical ${one}.`,
+    `${num(f.sapm)} absorbed per minute · division median ${num(d.sapm_med)}`, false);
+  push(d.str_def_pct,
+    n => 'slippery on defense', n => `${L} slips more strikes than ${n} of 10 ${div}.`,
+    n => 'easy to find with strikes', n => `${L} is easier to hit clean than ${n} of 10 ${div} — strike defense is a real weakness.`,
+    `${L}'s strike defense is about average for the division.`,
+    `${f.str_def ?? '—'}% of strikes avoided · division median ${num(d.str_def_med, 0)}%`, true);
+  push(d.td_def_pct,
+    n => 'hard to take down', n => `${L} stops more takedowns than ${n} of 10 ${div}.`,
+    n => 'easy to take down', n => `${L} gets taken down more easily than ${n} of 10 ${div}.`,
+    `${L}'s takedown defense is about average for the division.`,
+    `${f.td_def ?? '—'}% of takedowns stopped · division median ${num(d.td_def_med, 0)}%`, true);
+  push(d.td_avg_pct,
+    n => 'a wrestler first', n => `${L} takes opponents down more than ${n} of 10 ${div}.`,
+    n => 'rarely shoots', n => `${L} shoots for takedowns less than ${n} of 10 ${div} — expect this to stay standing when ${L} decides.`,
+    `${L} wrestles about as much as a typical ${one}.`,
+    `${num(f.td_avg)} takedowns per 15 min · division median ${num(d.td_avg_med)}`, null);
+  push(d.reach_pct,
+    n => 'long for the division', n => `${L} has a longer reach than ${n} of 10 ${div}.`,
+    n => 'gives up reach', n => `${L} gives up reach to ${n} of 10 ${div}.`,
+    `${L}'s reach is about average for the division.`,
+    `${cfl.formatReach(f.reach_in)} reach · division median ${d.reach_med != null ? cfl.formatReach(d.reach_med) : '—'}`, true);
+  push(d.age_pct,
+    n => 'older than most of the division', n => `${L} is older than ${n} of 10 ${div}. Age is the one stat that still predicts fights once the odds are accounted for, and it cuts the wrong way here.`,
+    n => 'young for the division', n => `${L} is younger than ${n} of 10 ${div}. Age is the one stat that still predicts fights once the odds are accounted for, and it's on ${L}'s side.`,
+    `${L} is about the division's typical age.`,
+    `${f.age ?? '—'} years old · division median ${num(d.age_med, 0)}`, false);
+
+  // Opponent quality: where this fighter's average opponent rating sits among
+  // the division's rated fighters. Two small queries; no join needed.
+  if (r && r.opp_elo_avg != null && d.division) {
+    const { data: peers } = await sb.from('fighters').select('id').eq('division', d.division).limit(1000);
+    const ids = (peers || []).map(p => p.id);
+    if (ids.length) {
+      const { data: prs } = await sb.from('fighter_ratings').select('fighter_id, elo, opp_elo_avg, n_fights').in('fighter_id', ids).gte('n_fights', 3);
+      const pool = (prs || []).filter(x => x.opp_elo_avg != null);
+      if (pool.length >= 10) {
+        const oppVals = pool.map(x => Number(x.opp_elo_avg)).sort((x, y) => x - y);
+        const oppMed = oppVals[Math.floor(oppVals.length / 2)];
+        const pctOpp = pool.filter(x => Number(x.opp_elo_avg) < Number(r.opp_elo_avg)).length / pool.length;
+        push(pctOpp,
+          n => 'battle-tested', n => `${L} has faced tougher opponents than ${n} of 10 ${div}, going by who those opponents had beaten at the time.`,
+          n => 'lightly tested', n => `${L} has faced softer opposition than ${n} of 10 ${div} — the record may flatter.`,
+          `${L}'s opposition has been about average for the division.`,
+          `average opponent rating ${num(r.opp_elo_avg, 0)} · division median ${num(oppMed, 0)} · ${r.wins_vs_rated} wins over above-average opponents`, true);
+        const pctElo = pool.filter(x => Number(x.elo) < Number(r.elo)).length / pool.length;
+        rows.unshift({ strength: Math.abs(pctElo - 0.5) + 0.01, phrase: null, pct: pctElo, good: pctElo >= 0.5,
+          sentence: pctElo >= 0.7 ? `Once you account for who ${L} has beaten, the engine rates ${L} above ${tenths(pctElo)} of 10 ${div}.`
+                  : pctElo <= 0.3 ? `Once you account for who ${L} has beaten, the engine rates ${L} below ${10 - tenths(pctElo)} of 10 ${div}.`
+                  : `Once you account for who ${L} has beaten, the engine rates ${L} about mid-division.`,
+          stat: `opponent-adjusted rating ${num(r.elo, 0)} · peak ${num(r.elo_peak, 0)} · ${r.n_fights} fights rated` });
+        const rn = document.getElementById('ratingNumbers');
+        if (rn) rn.innerHTML = `
+          <div class="pa-box"><div class="pa-val">${num(r.elo, 0)}</div><div class="pa-lbl">Opponent-adjusted rating</div></div>
+          <div class="pa-box"><div class="pa-val">${num(r.elo_peak, 0)}</div><div class="pa-lbl">Peak rating</div></div>
+          <div class="pa-box"><div class="pa-val">${num(r.opp_elo_avg, 0)}</div><div class="pa-lbl">Avg opponent rating</div></div>
+          <div class="pa-box"><div class="pa-val">${num(r.opp_elo_last5, 0)}</div><div class="pa-lbl">Avg opponent, last 5</div></div>`;
+      }
+    }
+  }
+
+  // Lead sentence: the three strongest things about this fighter, in one line.
+  const strong = rows.filter(x => x.phrase).sort((x, y) => y.strength - x.strength).slice(0, 3).map(x => x.phrase);
+  lead.textContent = strong.length
+    ? `${f.name} is ${strong.length === 1 ? strong[0] : strong.slice(0, -1).join(', ') + ' and ' + strong[strong.length - 1]}.`
+    : `${f.name} sits close to the division average on everything we measure — no single trait stands out.`;
+
+  list.innerHTML = rows.map(x => {
+    const w = Math.round((x.pct ?? 0.5) * 100);
+    const cls = x.good === true ? 'good' : (x.good === false ? 'bad' : '');
+    return `<div class="read-row ${cls}">
+      <div class="read-sent">${cfl.escapeHtml(x.sentence)}</div>
+      <div class="read-bar"><i style="width:${w}%"></i><b></b></div>
+      <div class="read-stat">${cfl.escapeHtml(x.stat)}</div>
+    </div>`;
+  }).join('') + `<div class="read-foot">Bars show where ${cfl.escapeHtml(L)} ranks among ${d.pool_n} active ${cfl.escapeHtml(div)} (3+ UFC fights, fought in the last five years). The tick is the division middle.</div>`;
+}
+
+// ---------------------------------------------------------------------------
+// AGAINST THE MODEL'S EXPECTATIONS — the engine has scored this fighter's past
+// fights. Did they win more or fewer than it expected? Reads
+// v_fighter_model_record (built from the graded picks table).
+// ---------------------------------------------------------------------------
+async function loadModelRecord(f) {
+  const sb = window.cflSupabase;
+  const sec = document.getElementById('modelRecSection');
+  const box = document.getElementById('modelRecCard');
+  if (!sec || !box) return;
+  const { data: m } = await sb.from('v_fighter_model_record').select('*').eq('fighter_id', f.id).maybeSingle();
+  if (!m || m.n_scored < 3) return;
+
+  const L = lastName(f.name);
+  const exp = Number(m.expected_wins), wins = Number(m.wins), n = Number(m.n_scored);
+  const diff = wins - exp;
+  let tag, cls, line;
+  if (diff >= 1)       { tag = 'Beats expectations'; cls = 'granite'; line = `${L} wins fights the model doesn't expect. Across ${n} scored fights the engine expected about ${exp.toFixed(1)} wins and ${L} got ${wins}${m.won_as_underdog ? `, including ${m.won_as_underdog} as the underdog on our numbers` : ''}.`; }
+  else if (diff <= -1) { tag = 'Trails expectations'; cls = 'fragile'; line = `${L} loses fights the model expects ${L} to win. Across ${n} scored fights the engine expected about ${exp.toFixed(1)} wins and ${L} got ${wins}${m.lost_as_pick ? `, losing ${m.lost_as_pick} as our pick` : ''}.`; }
+  else                 { tag = 'About as expected';  cls = '';        line = `${L} lands about where the model expects: ${wins} wins across ${n} scored fights against about ${exp.toFixed(1)} expected.`; }
+  const wExp = Math.round(100 * exp / n), wAct = Math.round(100 * wins / n);
+  box.innerHTML = `
+    <div class="fin-tags"><span class="fin-tag ${cls}">${tag}</span><span class="fin-tag">Model called ${m.model_correct} of ${n}</span></div>
+    <div class="mr-bars">
+      <div class="mr-row"><span>Expected wins</span><div class="mr-track"><i style="width:${wExp}%"></i></div><b>${exp.toFixed(1)}</b></div>
+      <div class="mr-row"><span>Actual wins</span><div class="mr-track act"><i style="width:${wAct}%"></i></div><b>${wins}</b></div>
+    </div>
+    <div class="fin-note">${cfl.escapeHtml(line)} A fighter who keeps beating the number is telling you something the stats don't; one who keeps trailing it is a fade candidate at a short price.</div>`;
+  sec.hidden = false;
+}
+
+// ---------------------------------------------------------------------------
+// NEXT FIGHT — the engine's pick with its reasons, and the prop projection,
+// pulled from the same places the card and Prop Board read.
+// ---------------------------------------------------------------------------
+async function loadNextFight(f, fights) {
+  const sb = window.cflSupabase;
+  const sec = document.getElementById('nextSection');
+  const box = document.getElementById('nextCard');
+  if (!sec || !box || !fights) return;
+  const up = fights.filter(x => x._event && x._event.is_upcoming).sort((x, y) => (x._date || '').localeCompare(y._date || ''))[0];
+  if (!up) return;
+  const isA = up.fighter_a_id === f.id;
+  const oppId = isA ? up.fighter_b_id : up.fighter_a_id;
+  const oppName = isA ? up.fighter_b_name : up.fighter_a_name;
+
+  const [pickR, oppR, propR] = await Promise.all([
+    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, tier, source').eq('fight_id', up.id),
+    oppId ? sb.from('fighters').select('id, name, age, height_in, reach_in, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def').eq('id', oppId).maybeSingle() : Promise.resolve({ data: null }),
+    sb.from('v_prop_projections_current').select('*').eq('fight_id', up.id).eq('fighter_id', f.id).maybeSingle(),
+  ]);
+  let pick = null;
+  (pickR.data || []).forEach(p => { if (!pick || (p.source === 'live' && pick.source !== 'live')) pick = p; });
+  const opp = oppR.data;
+  const prop = propR.data;
+
+  let pickHtml;
+  if (pick && (pick.pick_fighter_id === f.id || pick.pick_fighter_id === oppId)) {
+    const pickedMe = pick.pick_fighter_id === f.id;
+    const conf = Number(pick.p_cal) * 100;
+    const word = conf >= 65 ? 'High confidence' : (conf >= 55 ? 'Medium confidence' : 'Lean');
+    const pickedName = pickedMe ? f.name : (oppName || 'the opponent');
+    let why = '';
+    if (window.cflInsights && opp) {
+      const ctx = { weightClass: up.weight_class };
+      const picked = pickedMe ? f : opp, other = pickedMe ? opp : f;
+      const bullets = window.cflInsights.buildEdgeBullets(picked, other, ctx).slice(0, 3);
+      const flags = window.cflInsights.buildRedFlags(picked, other, ctx, null, conf).slice(0, 2);
+      const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
+      why = (bullets.length ? `<div class="nx-hd">Why the model likes ${cfl.escapeHtml(lastName(pickedName))}</div><ul class="nx-list">${bullets.map(li).join('')}</ul>` : '')
+          + (flags.length ? `<div class="nx-hd against">Why it might be wrong</div><ul class="nx-list against">${flags.map(li).join('')}</ul>` : '');
+    }
+    pickHtml = `<div class="nx-pick">Model pick: <strong>${cfl.escapeHtml(pickedName)}</strong> <span class="nx-pct">${Math.round(conf)}%</span> <span class="nx-word">${word}</span></div>${why}`;
+  } else {
+    pickHtml = `<div class="nx-pick muted">Not scored yet — the engine's pick lands closer to fight night.</div>`;
+  }
+
+  let propHtml = '';
+  if (prop) {
+    const pd = prop.p_distance != null ? Math.round(Number(prop.p_distance) * 100) : null;
+    const td1 = prop.p_td_1plus != null ? Math.round(Number(prop.p_td_1plus) * 100) : null;
+    const range = (prop.sig_lo != null && prop.sig_hi != null) ? ` (usually ${Math.round(Number(prop.sig_lo))}–${Math.round(Number(prop.sig_hi))})` : '';
+    propHtml = `<div class="nx-hd">Prop projection</div>
+      <div class="pa-grid">
+        <div class="pa-box"><div class="pa-val">${prop.sig_med != null ? Math.round(Number(prop.sig_med)) : '—'}</div><div class="pa-lbl">Significant strikes${range}</div></div>
+        <div class="pa-box"><div class="pa-val">${td1 != null ? td1 + '%' : '—'}</div><div class="pa-lbl">Chance of a takedown</div></div>
+        <div class="pa-box"><div class="pa-val">${pd != null ? pd + '%' : '—'}</div><div class="pa-lbl">Goes the distance</div></div>
+      </div>
+      ${prop.thin_tape ? '<div class="fin-note">Thin tape: under 30 minutes of prior film, so this projection is pulled toward the division average.</div>' : ''}`;
+  }
+
+  box.innerHTML = `
+    <div class="nx-top">vs <a class="opp-link" href="${oppId ? cfl.fighterUrl(oppId) : '#'}">${cfl.escapeHtml(oppName || 'TBA')}</a>
+      <span class="nx-when">${cfl.formatDate(up._event.event_date)} · <a class="opp-link" href="${cfl.eventUrl(up._event.id)}">${cfl.escapeHtml(up._event.name || '')}</a></span></div>
+    ${pickHtml}
+    ${propHtml}`;
+  sec.hidden = false;
 }
 
 load();

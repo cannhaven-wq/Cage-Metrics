@@ -536,8 +536,10 @@
           <span class="full">Prop Board</span><span class="short">Props</span>
         </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','fighters','h2h'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
           <div class="cfl-nav-menu-panel">
+            <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
+            <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
