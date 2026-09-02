@@ -61,3 +61,9 @@ jobs:
 
       - name: Publish live picks + edges
         run: PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --execute
+
+      # Fighter ratings (the engine's Elo + strength of schedule) feed "The
+      # read" on every fighter page. Derived from the export above; full-table
+      # replace, so a card that settled yesterday shows up here today.
+      - name: Refresh fighter ratings
+        run: PYTHONPATH=cfl_engine python cfl_engine/export_ratings.py --execute
