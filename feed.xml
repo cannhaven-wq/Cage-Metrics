@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 01 Sep 2026 20:20:03 GMT</lastBuildDate>
+  <lastBuildDate>Wed, 02 Sep 2026 02:08:08 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Hooker vs. Parnasse</title>
@@ -42,6 +42,13 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4551</guid>
     <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
     <description>Full model verdicts and edge factors for every fight on the UFC 332 card — Salt Lake City, Utah, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Allen vs. Duncan</title>
+    <link>https://cannonfightlab.com/event.html?id=4713</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4713</guid>
+    <pubDate>Sat, 10 Oct 2026 00:00:00 GMT</pubDate>
+    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Allen vs. Duncan card — Las Vegas, Nevada, USA.</description>
   </item>
   <item>
     <title>UFC Fight Night: Buckley vs. Malott</title>
