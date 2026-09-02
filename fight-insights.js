@@ -2,7 +2,7 @@
    Cannon Fight Lab — shared fight-insight helpers
    Single source of truth for the human-readable "why" behind a pick:
    edge bullets (why the model likes it) and red flags (why it might be
-   wrong). Used by index.html and card-lab.html so the two never drift.
+   wrong). Used by index.html and event.html so the two never drift.
 
    ctx shape (all optional):
      {
@@ -32,6 +32,18 @@
     return null;
   }
 
+  // A fighter with no UFC fights has every stat stored as 0, not null. Any
+  // comparison against those zeros ("stops more takedowns — 77% to 0%") is a
+  // missing-data bug wearing a confident sentence, so stat bullets need real
+  // tape on both sides. Age and reach are real regardless.
+  function hasTape(f) {
+    if (!f) return false;
+    if (f.ufc_wins != null || f.ufc_losses != null) {
+      return ((+f.ufc_wins || 0) + (+f.ufc_losses || 0) + (+f.ufc_draws || 0)) > 0;
+    }
+    return !((+f.slpm || 0) === 0 && (+f.sapm || 0) === 0 && (+f.td_def || 0) === 0);
+  }
+
   // Advantages the picked fighter holds, ordered by how much bettors weight
   // them; callers take the top 3. Base-rate anchors are appended when the
   // Stat Finder aggregates are supplied in ctx.
@@ -39,6 +51,7 @@
     ctx = ctx || {};
     const out = [];
     const baseRates = ctx.baseRates || {};
+    const tape = hasTape(picked) && hasTape(opp);
     // Cardio tier
     const cp = cardioFor(ctx.cardioMap, picked.id, ctx.weightClass);
     const co = cardioFor(ctx.cardioMap, opp.id, ctx.weightClass);
@@ -52,11 +65,11 @@
       }
     }
     // Takedown defense
-    if (picked.td_def != null && opp.td_def != null && picked.td_def - opp.td_def >= 8) {
+    if (tape && picked.td_def != null && opp.td_def != null && picked.td_def - opp.td_def >= 8) {
       out.push(`${lastName(picked.name)} stops more takedowns — ${picked.td_def}% to ${opp.td_def}%`);
     }
     // Grappling offense vs weak defense
-    if (picked.td_avg != null && opp.td_def != null && picked.td_avg >= 2.0 && opp.td_def < 65) {
+    if (tape && picked.td_avg != null && opp.td_def != null && picked.td_avg >= 2.0 && opp.td_def < 65) {
       out.push(`${lastName(picked.name)} can drag it to the mat — ${lastName(opp.name)} stops only ${opp.td_def}% of takedowns`);
     }
     // Age — anchored to the historical base rate when available
@@ -75,11 +88,11 @@
       out.push(`${lastName(picked.name)} has ${picked.reach_in - opp.reach_in}" more reach — that range adds up over a fight`);
     }
     // Striking output
-    if (picked.slpm != null && opp.slpm != null && (picked.slpm - opp.slpm) >= 1) {
+    if (tape && picked.slpm != null && opp.slpm != null && (picked.slpm - opp.slpm) >= 1) {
       out.push(`${lastName(picked.name)} lands more — ${Number(picked.slpm).toFixed(1)} clean strikes a minute to ${Number(opp.slpm).toFixed(1)}`);
     }
     // Takedown accuracy
-    if (picked.td_acc != null && opp.td_acc != null && picked.td_acc - opp.td_acc >= 12) {
+    if (tape && picked.td_acc != null && opp.td_acc != null && (+picked.td_avg || 0) > 0 && (+opp.td_avg || 0) > 0 && picked.td_acc - opp.td_acc >= 12) {
       out.push(`${lastName(picked.name)} hits takedowns more often — ${picked.td_acc}% to ${opp.td_acc}%`);
     }
     return out;
@@ -91,6 +104,13 @@
   function buildRedFlags(picked, opp, ctx, marketPct, confidence) {
     ctx = ctx || {};
     const flags = [];
+    // No UFC tape on one side — say so before anything else
+    if (!hasTape(opp)) {
+      flags.push(`${lastName(opp.name)} has no UFC fights on record — there's nothing to compare against, so this read is thinner than the number looks.`);
+    }
+    if (!hasTape(picked)) {
+      flags.push(`${lastName(picked.name)} has no UFC fights on record — the model is working off very little tape here.`);
+    }
     // The market likes the other guy
     if (marketPct != null && confidence - marketPct <= -3) {
       flags.push(`The books lean the other way — they give ${lastName(opp.name)} about a ${Math.round(100 - marketPct)}% chance, and the market's price is right more often than any model.`);
@@ -127,49 +147,7 @@
     }[c]));
   }
 
-  // Input-weights "box graph" — the transparent, rules-based factors behind a
-  // pick (Record / Cardio / Takedown D), each bar sized by its weight. Green
-  // when a factor supports the model's pick, amber when it cuts against it.
-  // Delegates the math to edges.js (single source of truth). Returns
-  // { net, body, hasEdges } HTML strings built on the .wt-* classes — pages
-  // supply their own wrapper element and scoped CSS. Null when edges.js isn't
-  // loaded or the computation fails.
-  function inputWeights(a, b, ctx, pick) {
-    ctx = ctx || {};
-    const ce = (typeof window !== 'undefined' && window.cflEdges && window.cflEdges.computeEdges) ? window.cflEdges.computeEdges : null;
-    if (!ce) return null;
-    let v;
-    try {
-      v = ce(a, b, { cardioMap: ctx.cardioMap, fightWeightClass: ctx.weightClass });
-    } catch (e) { return null; }
-    const LABEL = { record: 'Record', cardio: 'Cardio', td_def: 'Takedown D' };
-    let net;
-    if (v.edges.length) {
-      const aFav = v.aProb >= 0.5;
-      const who = aFav ? a : b;
-      const pctNet = Math.round((aFav ? v.aProb : 1 - v.aProb) * 100);
-      net = `Model leans ${esc(lastName(who.name))} — ${pctNet}%`;
-    } else {
-      net = 'No clear edge';
-    }
-    const rows = v.edges.map(e => {
-      const fav = e.favors === 'a' ? a : b;
-      const supports = pick && fav.id === pick.picked.id;
-      const cls = pick ? (supports ? 'support' : 'against') : '';
-      const w = Math.max(6, Math.min(100, ((e.pct - 50) / 22) * 100));
-      return `<div class="wt-row ${cls}">
-        <div class="wt-label">${LABEL[e.factor] || esc(e.factor)}</div>
-        <div class="wt-track"><i style="width:${w.toFixed(0)}%"></i></div>
-        <div class="wt-pct">${e.pct.toFixed(0)}% ${esc(lastName(fav.name))}</div>
-      </div>`;
-    }).join('');
-    const body = v.edges.length
-      ? `<div class="wt-note">The clear-cut factors behind this pick — the same ones the model weighs. Green backs the pick, amber works against it.</div><div class="wt-rows">${rows}</div>`
-      : `<div class="wt-empty">No clear edge on record, cardio, or takedown defense here — the pick rests on the model's wider read.</div>`;
-    return { net, body, hasEdges: v.edges.length > 0 };
-  }
-
-  const api = { CARDIO_RANK, lastName, cardioFor, buildEdgeBullets, buildRedFlags, inputWeights };
+  const api = { CARDIO_RANK, lastName, cardioFor, hasTape, buildEdgeBullets, buildRedFlags };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.cflInsights = api;
 })();

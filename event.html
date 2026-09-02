@@ -637,6 +637,11 @@
     .wf-xf { font-size: 8px; }
     .wf-xc { font-size: 9px; }
   }
+  .fight-verdict .tier-word { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--text-3); margin-left: 8px; }
+  .fight-why .why-hd { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--green); margin: 10px 0 4px; }
+  .fight-why .why-hd.against { color: var(--amber, #d39a2b); }
+  .fight-why .why-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
+  .fight-why .why-list li { margin: 3px 0; }
 </style>
 </head>
 <body>
@@ -656,6 +661,7 @@
 <script src="_auth.js"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
+<script src="fight-insights.js?v=6"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -940,7 +946,7 @@ async function load() {
     ${renderEngineAccuracyStrip(engineAcc)}
     <div class="page">
       <div id="fightsList">
-        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, _currentModelMode, formMap)).join('')}
+        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, null, formMap)).join('')}
       </div>
     </div>
   `;
@@ -959,7 +965,6 @@ async function load() {
 // form, which is what edges.js ships.
 
 let _renderState = null;
-const _currentModelMode = 'full';
 
 // =============================================================================
 // Method-of-victory inference
@@ -1064,8 +1069,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
     : '';
 
   const odds = (oddsMap || {})[fight.id] || null;
-  const verdict = renderVerdict(a, b, fight, isUpcoming, streakMap || {}, cardioMap || {}, finishRateMap || {}, odds, eventDate, modelMode);
-  const modelPicks = renderEnginePick(fmap, (engineByFight || {})[fight.id]);
+  const verdict = renderVerdict(a, b, fight, isUpcoming, cardioMap || {}, finishRateMap || {}, odds, (engineByFight || {})[fight.id], fmap);
 
   return `
     <div class="${cardClass}">
@@ -1085,117 +1089,39 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
       ${renderStats(a, b, (formMap || {})[a.id], (formMap || {})[b.id])}
       ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
       ${verdict}
-      ${modelPicks}
     </div>
   `;
 }
 
-// The engine's call on a single fight: who it picks, its calibrated
-// confidence, the confidence tier, and — when the engine also flagged this
-// fight as +EV — the edge over the vig-free market price and the suggested
-// stake. On settled fights the pill is coloured by the result; while a fight
-// is unresolved `hit` is null and the pill stays neutral (pending, not a loss).
-//
-// One pill, one model. The v1-v6 row that used to sit here was removed when
-// cfl_engine became canonical; that archive lives on track-record.html.
-function renderEnginePick(fmap, eng) {
-  if (!eng) return '';
-  const picked = fmap[eng.fighterId];
-  if (!picked) return '';
-
-  let cls = 'neutral', mark = '';
-  if (eng.hit === true)       { cls = 'correct'; mark = ' ✓'; }
-  else if (eng.hit === false) { cls = 'wrong';   mark = ' ✗'; }
-
-  const pct = (eng.pCal * 100).toFixed(0);
-  const valueBits = (eng.edge != null)
-    ? `<span class="model-pick-pill value">
-        <span class="mp-mv">VALUE</span>
-        <span class="mp-pct">+${(eng.edge * 100).toFixed(0)}% over the market</span>
-        ${eng.stakeFrac != null ? `<span class="mp-pct">· ${(eng.stakeFrac * 100).toFixed(1)}% stake</span>` : ''}
-      </span>`
-    : '';
-
-  return `
-    <div class="model-picks-row">
-      <span class="mp-label">Model pick</span>
-      <span class="model-pick-pill ${cls}">
-        <span class="mp-mv">${cfl.escapeHtml(eng.tier)}</span>
-        <span class="mp-name">${cfl.escapeHtml(picked.name)}</span>
-        <span class="mp-pct">${pct}%</span><span class="mp-mark">${mark}</span>
-      </span>
-      ${valueBits}
-    </div>`;
-}
-
-// Renders the model-verdict band on each fight card — winner pick + distance
-// prediction stacked. For past fights with a known winner / method we tag
-// each band with ✓ or ✗ comparing the model's call to the actual outcome.
-//
-// Past-event caveat: verdicts here are computed against CURRENT fighter
-// career stats, not stats as of the fight date. For very recent events that's
-// fine (career averages don't shift in 2 weeks). For older events this is
-// hindsight-biased, same issue as research/validate.js.
-function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRateMap, marketOdds, eventDate, modelMode) {
+// The model-verdict band on each fight card: the engine's pick (the only
+// model this site publishes), the distance call, the market band, and the
+// collapsed "Why this pick?" reasons from fight-insights.js. One pick per
+// fight — the retired May 2026 rules model (edges.js) no longer renders
+// anywhere a visitor can see it.
+function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, marketOdds, eng, fmap) {
   let html = '';
+  let picked = null, opponent = null, pickIsA = false, conf = null;
 
-  // Translate the model-selector value into a `factors` whitelist for
-  // edges.js. 'full' = all three (no filter). Single-factor modes restrict to
-  // one edge type.
-  const factorsByMode = {
-    full:   null,
-    record: ['record'],
-    cardio: ['cardio'],
-    tddef:  ['td_def'],
-  };
-  const factors = factorsByMode[modelMode || 'full'];
-
-  // Winner verdict (edges.js). Hoist `edges`, `aProb`, and the picked fighter
-  // to function scope so the methodology disclosure at the bottom of the card
-  // can render the same edges without recomputing.
-  let edges = [];
-  let aProb = 0.5;
-  let steps = [];
-  let capped = false;
-  let picked = null;
-  let opponent = null;
-  if (window.cflEdges) {
-    const r = window.cflEdges.computeEdges(a, b, {
-      streakMap,
-      cardioMap,
-      fightWeightClass: fight.weight_class,
-      eventDate,
-      factors,
-    });
-    edges = r.edges;
-    aProb = r.aProb;
-    steps = r.steps || [];
-    capped = !!r.capped;
-
-    if (!edges.length || Math.abs(aProb - 0.5) < 0.001) {
-      html += '<div class="fight-verdict too-close"><span class="label">Model</span><span class="pick">Too close to call</span></div>';
-    } else {
-      const pickIsA = aProb > 0.5;
-      picked   = pickIsA ? a : b;
-      opponent = pickIsA ? b : a;
-      const confidence = ((pickIsA ? aProb : 1 - aProb) * 100).toFixed(1);
-      const labelText = isUpcoming ? 'Winner pick' : 'Winner picked';
-
-      // Method-of-victory split for the picked fighter. Shown as three pills
-      // right after the confidence — visitor sees at a glance whether the
-      // model thinks this is a KO matchup, a sub matchup, or a likely
-      // decision.
-      const mov = computeMOV(picked, opponent, finishRateMap, cardioMap, fight.weight_class);
-      const movHtml = renderMovPills(mov, picked);
-      const pickHtml = `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${confidence}%</span>${movHtml}</span>`;
-
-      let checkHtml = '';
-      if (!isUpcoming && fight.winner_id != null) {
-        const correct = (pickIsA && fight.winner_id === a.id) || (!pickIsA && fight.winner_id === b.id);
-        checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
-      }
-      html += `<div class="fight-verdict"><span class="label">${labelText}</span>${pickHtml}${checkHtml}</div>`;
-    }
+  if (eng && fmap[eng.fighterId] && (eng.fighterId === a.id || eng.fighterId === b.id)) {
+    picked = fmap[eng.fighterId];
+    pickIsA = picked.id === a.id;
+    opponent = pickIsA ? b : a;
+    conf = eng.pCal * 100;
+    const tierWord = conf >= 65 ? 'High confidence' : (conf >= 55 ? 'Medium confidence' : 'Lean');
+    // Method-of-victory pills only when the picked fighter has enough graded
+    // fights for the split to mean anything (three 100%/0% pills off one
+    // fight read as nonsense).
+    const fr = (finishRateMap || {})[picked.id];
+    const movHtml = (fr && +fr.total_fights >= 3)
+      ? renderMovPills(computeMOV(picked, opponent, finishRateMap, cardioMap, fight.weight_class), picked)
+      : '';
+    let checkHtml = '';
+    if (!isUpcoming && eng.hit === true)  checkHtml = '<span class="check correct">✓ Correct</span>';
+    if (!isUpcoming && eng.hit === false) checkHtml = '<span class="check wrong">✗ Missed</span>';
+    html += `<div class="fight-verdict"><span class="label">${isUpcoming ? 'Model pick' : 'Model picked'}</span>`
+      + `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${Math.round(conf)}%</span><span class="tier-word">${tierWord}</span>${movHtml}</span>${checkHtml}</div>`;
+  } else {
+    html += `<div class="fight-verdict too-close"><span class="label">Model pick</span><span class="pick">${isUpcoming ? 'Not scored yet' : 'No pick on record'}</span></div>`;
   }
 
   // Distance verdict (distanceEdges.js)
@@ -1224,22 +1150,23 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
     html += `<div class="fight-verdict distance"><span class="label">${labelText}</span><span class="pick">${callText}</span>${checkHtml}</div>`;
   }
 
-  // Market consensus + edge vs model. Skipped silently if we have no odds
-  // row for this fight (most past events won't, since we just started
-  // fetching). Edge is model probability minus market-implied probability,
-  // both expressed as the side the MODEL picks. Uses the already-computed
-  // aProb from the winner band so the market edge respects the model toggle.
-  if (marketOdds && window.cflEdges) {
-    const modelPickA = aProb > 0.5;
-    const modelProb  = modelPickA ? aProb : (1 - aProb);
-    const marketProb = modelPickA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
-    const marketOddsAm = modelPickA ? marketOdds.american_odds_a : marketOdds.american_odds_b;
-    const pickedName = modelPickA ? a.name : b.name;
+  // Market band, on the engine's number. Skipped when there is no pick or
+  // no consensus row. (The plan moves this behind the premium door.)
+  let marketPct = null;
+  if (marketOdds && picked) {
+    const marketProb   = pickIsA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
+    const marketOddsAm = pickIsA ? marketOdds.american_odds_a : marketOdds.american_odds_b;
     if (marketProb != null) {
-      const edgePp = (modelProb - marketProb) * 100;
+      marketPct = marketProb * 100;
+      const edgePp = conf - marketPct;
       const edgeRound = Math.round(edgePp);
-      // Sign formatting + value badge threshold (>=3pp model-over-market edge
-      // on the model's pick = "value bet")
+      // Same guard the homepage uses: a gap this wide is almost always a stale
+      // or mismatched line, not a real disagreement. Don't print it.
+      if (edgePp > 15) { marketPct = null; }
+    }
+    if (marketPct != null) {
+      const edgePp = conf - marketPct;
+      const edgeRound = Math.round(edgePp);
       const edgeStr = (edgeRound > 0 ? '+' : '') + edgeRound + 'pp';
       const isValue = edgePp >= 3;
       const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
@@ -1247,129 +1174,35 @@ function renderVerdict(a, b, fight, isUpcoming, streakMap, cardioMap, finishRate
       const valueBadge = isValue ? '<span class="value-badge">⚡ Value</span>' : '';
       html += `<div class="fight-verdict market">
         <span class="label">${labelText}</span>
-        <span class="pick">${cfl.escapeHtml(pickedName)} <span class="market-odds">${oddsStr}</span> <span class="pct">${Math.round(marketProb * 100)}%</span></span>
+        <span class="pick">${cfl.escapeHtml(picked.name)} <span class="market-odds">${oddsStr}</span> <span class="pct">${Math.round(marketPct)}%</span></span>
         <span class="edge ${edgePp > 0 ? 'pos' : (edgePp < 0 ? 'neg' : '')}">Edge ${edgeStr}</span>
         ${valueBadge}
       </div>`;
     }
   }
 
-  // "Why this pick?" disclosure. Lists every edge factor that fired plus a
-  // plain-text gloss on the method-of-victory split. Collapsed by default
-  // so visitors who just want the call aren't buried in detail.
-  if (window.cflEdges) {
-    const waterfall = (picked && steps.length)
-      ? renderVerdictWaterfall(steps, aProb > 0.5, (aProb > 0.5 ? aProb : 1 - aProb) * 100, capped, picked.name)
-      : '';
-    const whyRows = edges.length
-      ? edges.map(renderWhyRow).join('')
-      : '<div class="why-none">No clear edges in this matchup — coin flip on paper.</div>';
-    const movExplanation = picked
-      ? renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fight.weight_class)
-      : '';
+  // "Why this pick?" — the same reasons writer the homepage uses, so the two
+  // pages can never disagree about why. Collapsed by default.
+  if (picked && window.cflInsights) {
+    const ctx = { cardioMap, weightClass: fight.weight_class };
+    const bullets = window.cflInsights.buildEdgeBullets(picked, opponent, ctx).slice(0, 3);
+    const flags = window.cflInsights.buildRedFlags(picked, opponent, ctx, marketPct, conf).slice(0, 2);
+    const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
+    const movExplanation = renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fight.weight_class);
     html += `
       <details class="fight-why">
         <summary>Why this pick?</summary>
         <div class="why-body">
-          ${waterfall}
-          ${whyRows}
+          ${bullets.length
+            ? `<div class="why-hd">Why the model likes it</div><ul class="why-list">${bullets.map(li).join('')}</ul>`
+            : '<div class="why-none">No single stat stands out — the model is weighing the whole picture.</div>'}
+          ${flags.length ? `<div class="why-hd against">Why it might be wrong</div><ul class="why-list against">${flags.map(li).join('')}</ul>` : ''}
           ${movExplanation}
         </div>
       </details>`;
   }
 
   return html;
-}
-
-function renderWhyRow(edge) {
-  const factorLabel = edge.factor === 'td_def' ? 'TD Def'
-                    : edge.factor.charAt(0).toUpperCase() + edge.factor.slice(1);
-  return `
-    <div class="why-row">
-      <span class="why-factor">${factorLabel}</span>
-      <span class="why-pct">${edge.pct.toFixed(0)}%</span>
-      <span><span class="why-fighter">${cfl.escapeHtml(edge.fighterName)}</span> ${cfl.escapeHtml(edge.desc)}</span>
-    </div>`;
-}
-
-// Draws the net-effect waterfall: a 50/50 coin flip, then each edge factor
-// pushing the picked fighter's win probability up (green) or down (red),
-// ending at the final verdict (blue). Driven by the `steps` array edges.js
-// returns so the Bayesian math stays in one place.
-function renderVerdictWaterfall(steps, pickIsA, finalPickPct, capped, pickedName) {
-  const PLOT = 150;
-  const lastName = n => { const t = String(n || '').trim().split(/\s+/); return t[t.length - 1] || n; };
-  const factorLabel = f => f === 'td_def' ? 'TD Def' : f.charAt(0).toUpperCase() + f.slice(1);
-
-  // Running pick-side win % after each step (A-prob -> pick-prob), bookended by
-  // the 50% coin flip and the final (capped) verdict.
-  const toPick = v => (pickIsA ? v : 1 - v) * 100;
-  const vals = [50];
-  steps.forEach(s => vals.push(toPick(s.aProbAfter)));
-  vals.push(finalPickPct);
-
-  // Auto-scale the axis around the values so small moves stay visible.
-  const lo = Math.min(50, Math.min.apply(null, vals));
-  const hi = Math.max.apply(null, vals);
-  const vMin = Math.max(0, Math.floor(lo) - 6);
-  let vMax = Math.min(100, Math.ceil(hi) + 6);
-  if (vMax - vMin < 24) vMax = Math.min(100, vMin + 24);
-  const span = vMax - vMin;
-  const y = v => PLOT * (vMax - v) / span;
-
-  const nCols = steps.length + 2;
-  const colW = 100 / nCols;
-  const barW = Math.min(13, colW * 0.5);
-  const barLeft = i => (i + 0.5) * colW - barW / 2;
-  const bar = (i, top, h, bg, label) =>
-    `<div class="wf-bar" style="left:${barLeft(i).toFixed(2)}%;width:${barW.toFixed(2)}%;top:${top.toFixed(1)}px;height:${Math.max(h, 3).toFixed(1)}px;background:${bg};">${label}</div>`;
-
-  let grid = '';
-  for (let g = Math.ceil(vMin / 10) * 10; g <= vMax; g += 10) {
-    grid += `<div class="wf-grid" style="top:${y(g).toFixed(1)}px;"></div>`;
-  }
-  grid += `<div class="wf-base" style="top:${y(50).toFixed(1)}px;"></div>`;
-
-  const axis = `<span style="top:${y(vMax).toFixed(1)}px;">${Math.round(vMax)}</span>`
-             + `<span style="top:${y(50).toFixed(1)}px;">50</span>`
-             + `<span style="top:${y(vMin).toFixed(1)}px;">${Math.round(vMin)}</span>`;
-
-  let bars = bar(0, y(50), PLOT - y(50), '#4b5563', '50%');
-  let xcells = `<div><div class="wf-xf">Coin flip</div><div class="wf-xc" style="color:var(--text-3);">even</div></div>`;
-
-  for (let i = 0; i < steps.length; i++) {
-    const from = vals[i], to = vals[i + 1];
-    const up = to >= from;
-    const color = up ? 'var(--green)' : 'var(--red)';
-    const delta = to - from;
-    const lbl = (delta >= 0 ? '+' : '−') + Math.abs(delta).toFixed(1);
-    bars += bar(i + 1, y(Math.max(from, to)), Math.abs(y(from) - y(to)), color, lbl);
-    xcells += `<div><div class="wf-xf">${factorLabel(steps[i].factor)}</div>`
-            + `<div class="wf-xc" style="color:${color};">${cfl.escapeHtml(lastName(steps[i].fighterName))}</div></div>`;
-  }
-
-  const vi = nCols - 1;
-  bars += bar(vi, y(finalPickPct), PLOT - y(finalPickPct), 'var(--blue)', finalPickPct.toFixed(1) + '%');
-  xcells += `<div><div class="wf-xf">Verdict</div><div class="wf-xc" style="color:var(--blue);">${cfl.escapeHtml(lastName(pickedName))}</div></div>`;
-
-  const capNote = capped
-    ? '<div class="wf-cap">Capped to avoid over-confidence from stacked edges.</div>'
-    : '';
-
-  return `
-    <div class="wf">
-      <div class="wf-legend">
-        <span><span class="wf-dot" style="background:var(--green);"></span>helps the pick</span>
-        <span><span class="wf-dot" style="background:var(--red);"></span>helps the opponent</span>
-        <span><span class="wf-dot" style="background:var(--blue);"></span>final verdict</span>
-      </div>
-      <div class="wf-chart">
-        <div class="wf-axis" style="height:${PLOT}px;">${axis}</div>
-        <div class="wf-plot" style="height:${PLOT}px;">${grid}${bars}</div>
-      </div>
-      <div class="wf-x">${xcells}</div>
-      ${capNote}
-    </div>`;
 }
 
 function renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fightWeightClass) {

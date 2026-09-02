@@ -372,24 +372,6 @@
 @media (max-width: 560px) { #home .mhw-row { grid-template-columns: 120px 1fr 30px; } }
 
 /* ===== Input weights (box graph) per fight ===== */
-#home .weights { border-top: 1px solid var(--line); padding-top: 12px; }
-#home .weights > summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; font-weight: 600; color: var(--text-2); }
-#home .weights > summary::-webkit-details-marker { display: none; }
-#home .weights > summary .lbl { display: flex; align-items: center; gap: 6px; }
-#home .weights > summary .lbl::before { content: '▸'; color: var(--text-3); transition: transform .15s; }
-#home .weights[open] > summary .lbl::before { transform: rotate(90deg); }
-#home .wt-net { color: var(--text-3); font-weight: 500; font-size: 11.5px; white-space: nowrap; }
-#home .wt-body { margin-top: 12px; }
-#home .wt-note { font-size: 11px; color: var(--text-3); line-height: 1.4; margin-bottom: 10px; }
-#home .wt-row { display: grid; grid-template-columns: 84px 1fr auto; align-items: center; gap: 10px; margin-bottom: 8px; }
-#home .wt-row:last-child { margin-bottom: 0; }
-#home .wt-label { font-size: 11px; color: var(--text-2); text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }
-#home .wt-track { height: 8px; background: var(--bg-3); border-radius: 4px; overflow: hidden; }
-#home .wt-track > i { display: block; height: 100%; border-radius: 4px; background: var(--text-3); }
-#home .wt-row.support .wt-track > i { background: linear-gradient(90deg, var(--green-dim), var(--green)); }
-#home .wt-row.against .wt-track > i { background: var(--amber); }
-#home .wt-pct { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-2); white-space: nowrap; }
-#home .wt-empty { font-size: 12px; color: var(--text-3); line-height: 1.45; }
 </style>
 </head>
 <body>
@@ -411,7 +393,7 @@
   <!-- 1a · MOBILE PITCH STRIP — phones only; the full hero sits below the card. -->
   <div class="m-pitch">
     <b>Find where the betting line is <span class="hl">wrong.</span></b>
-    <span>61.6% on 3,288 fights the model never saw &middot; every miss posted</span>
+    <span id="mProof">Every pick graded in public &middot; every miss posted</span>
   </div>
 
   <!-- 1 · HERO -->
@@ -467,7 +449,7 @@
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
     <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded in public, misses included.</div></div><a href="track-record.html">See the full graded record →</a></div>
-    <p class="track-note">One engine, two honest numbers. <strong>Fight IQ</strong> — the engine's tape-only face — has been graded on <strong>3,288</strong> fights it never trained on: <strong>61.6%</strong> of its picks were right, and its highest-confidence Locks hit <strong>74.7%</strong> (722 picks). Just backing the closing favorite gets about 68% — we publish a number that loses to Vegas because a model within seven points of the market without ever looking at the market is a model you can actually trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its 658 simulated bets, graded at real closing prices, went <strong>519-139</strong> (+10.0% when bets are sized to the edge; roughly break-even at flat $100 — short-priced favorites pay small). Those results are the walk-forward replay, simulated point-in-time and labeled as such; the replay's first, uncalibrated year is excluded from everything we publish. The live record started July 2026 and is still tiny — <strong>12-5</strong> on settled flags, down $61 at flat $100 so far. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market. Numbers on this panel are a snapshot as of Aug 18, 2026.</p>
+    <p class="track-note">One engine, two honest numbers. <strong>Fight IQ</strong> — the engine's tape-only face — has been graded on <strong id="hpN2">3,288</strong> fights it never trained on: <strong id="hpAcc2">61.6%</strong> of its picks were right, and its highest-confidence Locks hit <strong id="hpLockAcc2">74.7%</strong> (<span id="hpLockN2">722</span> picks). Just backing the closing favorite gets about 68% — we publish a number that loses to Vegas because a model within seven points of the market without ever looking at the market is a model you can actually trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its 658 simulated bets, graded at real closing prices, went <strong>519-139</strong> (+10.0% when bets are sized to the edge; roughly break-even at flat $100 — short-priced favorites pay small). Those results are the walk-forward replay, simulated point-in-time and labeled as such; the replay's first, uncalibrated year is excluded from everything we publish. The live record started July 2026 and is still tiny — <strong>12-5</strong> on settled flags, down $61 at flat $100 so far. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market. The Fight IQ numbers refresh from the pick database on every load; the Value numbers are a snapshot as of Aug 18, 2026.</p>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
@@ -530,8 +512,7 @@
 
 <script src="_shared.js?v=rd15"></script>
 <script src="_auth.js"></script>
-<script src="edges.js?v=cardio-retired"></script>
-<script src="fight-insights.js?v=5"></script>
+<script src="fight-insights.js?v=6"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -563,6 +544,13 @@ async function loadHeroProof() {
       const el = document.getElementById('hpProof');
       if (el) el.innerHTML = '<b>' + acc + '%</b> straight-up across ' +
         graded.length.toLocaleString() + ' never-seen fights' + lockStr + ' (simulated)';
+      // Every other place the record is quoted reads these same numbers, so
+      // the site never shows two sample sizes for one record.
+      const setText = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
+      setText('mProof', acc + '% on ' + graded.length.toLocaleString() + ' fights the model never saw · every miss posted');
+      setText('hpN2', graded.length.toLocaleString());
+      setText('hpAcc2', acc + '%');
+      if (locks.length >= 50) { setText('hpLockAcc2', (100 * lockHits / locks.length).toFixed(1) + '%'); setText('hpLockN2', locks.length.toLocaleString()); }
       // Keep the "Why trust it?" tiles on the same live numbers as the hero.
       const tg = document.getElementById('tileGraded');
       if (tg) tg.textContent = graded.length.toLocaleString();
@@ -887,7 +875,7 @@ async function loadFights(event) {
 
   const { data: fighters, error: fErr } = await sb
     .from('fighters')
-    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, slpm, td_avg, td_acc, td_def, country, country_code')
+    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
     .in('id', Array.from(fighterIds));
   if (fErr) { list.innerHTML = '<div class="load-err">Couldn\'t load fighter details. Try refreshing.</div>'; return; }
 
@@ -996,14 +984,6 @@ function getTrainedPick(modelKey, fightPicks, a, b) {
   if (!picked) return null;
   const opponent = picked === a ? b : a;
   return { picked, opponent, pct: p.model_p * 100 };
-}
-
-// Input-weights "box graph" — shared renderer in fight-insights.js (delegates
-// the math to edges.js). This page wraps it in a collapsible <details>.
-function renderWeights(a, b, fight, pick) {
-  const w = window.cflInsights.inputWeights(a, b, { cardioMap: _cardioMap, weightClass: fight.weight_class }, pick);
-  if (!w) return '';
-  return `<details class="weights"><summary><span class="lbl">What's driving this pick</span><span class="wt-net">${w.net}</span></summary><div class="wt-body">${w.body}</div></details>`;
 }
 
 function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }
@@ -1193,7 +1173,6 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
       ${probsHtml}
       ${bulletsHtml}
       ${flagsHtml}
-      ${renderWeights(a, b, fight, pick)}
       <a href="${cfl.eventUrl(eventId)}" class="btn btn-ghost btn-block">View matchup</a>
     </div>`;
 
