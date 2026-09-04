@@ -24,5 +24,6 @@
   "4224::cardio-flagged",
   "4224::coinflip-lead",
   "4225::sensor-main",
-  "4225::cardio-flagged"
+  "4225::cardio-flagged",
+  "4225::coinflip-lead"
 ]
