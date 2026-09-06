@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sat, 05 Sep 2026 19:44:21 GMT</lastBuildDate>
+  <lastBuildDate>Sun, 06 Sep 2026 02:06:02 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC Fight Night: Hooker vs. Parnasse</title>
-    <link>https://cannonfightlab.com/event.html?id=4225</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4225</guid>
-    <pubDate>Sat, 05 Sep 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Hooker vs. Parnasse card — Paris, Ile-de-France, France.</description>
-  </item>
   <item>
     <title>Noche UFC: Silva vs. Delgado</title>
     <link>https://cannonfightlab.com/event.html?id=4282</link>
@@ -37,11 +30,11 @@
     <description>Full model verdicts and edge factors for every fight on the UFC Fight Night: Rosas Jr. vs. Barcelos card — Las Vegas, Nevada, USA.</description>
   </item>
   <item>
-    <title>UFC 332</title>
+    <title>UFC 332: Silva vs. Wang</title>
     <link>https://cannonfightlab.com/event.html?id=4551</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4551</guid>
     <pubDate>Sat, 03 Oct 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 332 card — Salt Lake City, Utah, USA.</description>
+    <description>Full model verdicts and edge factors for every fight on the UFC 332: Silva vs. Wang card — Salt Lake City, Utah, USA.</description>
   </item>
   <item>
     <title>UFC Fight Night: Allen vs. Duncan</title>
