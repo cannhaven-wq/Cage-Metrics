@@ -1,0 +1,51 @@
+name: DUR-001 — lock PROP-0001 duration predictions
+
+# Writes immutable PROP-0001 prediction locks (prop_model_locks) for every
+# eligible 3-round fight on any card in the next 8 days. First lock wins:
+# re-runs skip fights already on the ledger for the current model_version, so a
+# daily schedule is safe and a fight is locked the first day it enters the
+# window (i.e. with the data available THAT day — see cfl_engine/dur001/README.md).
+#
+# The database itself refuses a lock whose training cutoff is after the lock,
+# whose fight already has a result, or whose best-known start is not after the
+# lock, so a late run cannot backfill anything.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Daily at 11:00 UTC — after the event scraper and the 10:00 props refresh.
+    - cron: '0 11 * * *'
+
+concurrency:
+  group: prop-locks
+  cancel-in-progress: false
+
+jobs:
+  lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: cfl_engine/requirements.txt
+
+      - name: Install deps
+        run: pip install -q -r cfl_engine/requirements.txt
+
+      - name: Guard — service key present
+        run: |
+          if [ -z "$SUPABASE_SECRET_KEY" ]; then
+            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set."
+            exit 1
+          fi
+
+      - name: Lock PROP-0001 for the next 8 days of cards
+        run: python cfl_engine/dur001/lock_prop0001.py --within-days 8 --execute

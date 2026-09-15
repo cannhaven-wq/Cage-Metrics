@@ -10,11 +10,27 @@ name: Fetch UFC odds
 #                                 service_role key — bypasses RLS to write)
 #
 # Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
-# whole MMA slate. Every 2h = ~360 requests/month, under the 500 free-tier cap.
+# whole MMA slate.
+#
+# CADENCE (2026-08-30): wakes hourly; build/fetch-odds.js decides whether the run
+# is worth a credit BEFORE calling the API (shouldSpendCredit). A card today or
+# tomorrow (UTC) => capture every hour, so the last price on file before a bell
+# is at most ~60 min old instead of up to ~24h. Otherwise => one baseline
+# capture a day at 08:00 UTC. ~215 credits/month, inside the 500 free-tier cap.
+#
+# Why this matters: settle_clv.py scores every published edge against the last
+# capture on file. A once-a-day line is not a close, so CLV computed off it is
+# noise. Density near the bell is the whole point of this job.
+#
+# DUR-001 (2026-09-14): the same call also carries the fight TOTALS market when
+# build/fetch-odds.js::wantTotals() says so (+1 credit per call), appended to the
+# private prop_odds ledger, plus the provider commence time into
+# fight_start_estimates. Set ODDS_MARKETS=h2h to switch totals off.
+# See cfl_engine/dur001/README.md.
 
 on:
   schedule:
-    - cron: '0 */2 * * *'   # every 2 hours
+    - cron: '0 * * * *'   # hourly wake-up; the script self-gates on card proximity
   workflow_dispatch:
 
 permissions:
@@ -45,4 +61,7 @@ jobs:
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # A hand-fired run always captures — never let the cadence gate make a
+          # manual "is this thing on?" check look like a silent success.
+          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
         run: node fetch-odds.js

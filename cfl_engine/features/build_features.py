@@ -373,6 +373,65 @@ def stance_flag(stance):
     return s if s in ("orthodox", "southpaw", "switch") else None
 
 
+# FROZEN PROP-0001 feature set (2026-08-06). These lists define the covariate
+# columns of the duration hazard model. They are module-level so the live lock
+# script (cfl_engine/dur001/lock_prop0001.py) assembles EXACTLY the same row the
+# training panel uses — no train/serve skew. Do not edit without bumping the
+# PROP-0001 model_version.
+#
+# NOTE deliberate omissions to avoid exact/near collinearity (which explodes
+# the Wald CIs without helping prediction):
+#   - rp_pace_pm == rp_sig_landed_pm + rp_sig_absorbed_pm exactly -> keep the
+#     two components in diffs, keep pace only as a mean feature.
+#   - fh_finish_win + fh_finish_loss + fh_decision ~= 1 -> drop fh_decision_rate;
+#     avg_end_round already carries the "goes-long" signal distinctly.
+RATE_FEATS = ["rp_sig_landed_pm", "rp_sig_absorbed_pm", "rp_td_pm",
+              "rp_ctrl_pct", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm",
+              "rp_strike_decay", "rp_grap_decay", "fh_finish_win_rate",
+              "fh_finish_loss_rate", "fh_win_rate",
+              "fh_avg_end_round", "fh_streak", "age", "reach_in", "height_in"]
+MEAN_FEATS = ["rp_pace_pm", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm", "rp_td_pm",
+              "rp_ctrl_pct", "rp_strike_decay", "rp_grap_decay",
+              "fh_finish_win_rate", "fh_finish_loss_rate",
+              "fh_avg_end_round", "fh_win_rate", "fh_n_fights", "age"]
+ABS_FEATS = ["age", "reach_in", "height_in", "fh_win_rate", "rp_pace_pm",
+             "fh_finish_win_rate"]
+STANCES = ["orthodox", "southpaw", "switch"]
+STYLES = ["grappler", "striker", "hybrid"]
+
+
+def matchup_features(fa: dict, fb: dict) -> dict:
+    """Signed diffs + symmetric means + abs-diffs + stance/style one-hots for one
+    fight, from the two fighters' point-in-time feature dicts (feats_asof)."""
+    row = {}
+    for k in RATE_FEATS:
+        row[f"d_{k}"] = fa[k] - fb[k]
+    for k in MEAN_FEATS:
+        row[f"m_{k}"] = (fa[k] + fb[k]) / 2.0
+    for k in ABS_FEATS:
+        row[f"ad_{k}"] = abs(fa[k] - fb[k])
+    # stance matchup (unordered one-hot; unknown -> all zero baseline)
+    sp = tuple(sorted([fa["stance"] or "unk", fb["stance"] or "unk"]))
+    for i, s1 in enumerate(STANCES):
+        for s2 in STANCES[i:]:
+            row[f"stance_{s1[:3]}_{s2[:3]}"] = 1.0 if sp == tuple(sorted([s1, s2])) else 0.0
+    # style matchup (unordered one-hot; unknown -> all zero baseline)
+    yp = tuple(sorted([fa["style"], fb["style"]]))
+    for i, y1 in enumerate(STYLES):
+        for y2 in STYLES[i:]:
+            row[f"style_{y1[:4]}_{y2[:4]}"] = 1.0 if yp == tuple(sorted([y1, y2])) else 0.0
+    return row
+
+
+def covariate_columns() -> list[str]:
+    """The ordered covariate column list the hazard model is fit on."""
+    return list(matchup_features(_DUMMY_FEATS, _DUMMY_FEATS).keys())
+
+
+_DUMMY_FEATS = {k: 0.0 for k in set(RATE_FEATS) | set(MEAN_FEATS) | set(ABS_FEATS)}
+_DUMMY_FEATS.update({"stance": None, "style": "unknown"})
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     here = os.path.dirname(__file__)
@@ -485,25 +544,8 @@ def main() -> None:
 
     # -------- emit qualifying fights (sched==3, >=2010, clean finish/decision)
     rng = np.random.default_rng(args.seed)
-    # NOTE deliberate omissions to avoid exact/near collinearity (which explodes
-    # the Wald CIs without helping prediction):
-    #   - rp_pace_pm == rp_sig_landed_pm + rp_sig_absorbed_pm exactly -> keep the
-    #     two components in diffs, keep pace only as a mean feature.
-    #   - fh_finish_win + fh_finish_loss + fh_decision ~= 1 -> drop fh_decision_rate;
-    #     avg_end_round already carries the "goes-long" signal distinctly.
-    RATE_FEATS = ["rp_sig_landed_pm", "rp_sig_absorbed_pm", "rp_td_pm",
-                  "rp_ctrl_pct", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm",
-                  "rp_strike_decay", "rp_grap_decay", "fh_finish_win_rate",
-                  "fh_finish_loss_rate", "fh_win_rate",
-                  "fh_avg_end_round", "fh_streak", "age", "reach_in", "height_in"]
-    MEAN_FEATS = ["rp_pace_pm", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm", "rp_td_pm",
-                  "rp_ctrl_pct", "rp_strike_decay", "rp_grap_decay",
-                  "fh_finish_win_rate", "fh_finish_loss_rate",
-                  "fh_avg_end_round", "fh_win_rate", "fh_n_fights", "age"]
-    ABS_FEATS = ["age", "reach_in", "height_in", "fh_win_rate", "rp_pace_pm",
-                 "fh_finish_win_rate"]
-    STANCES = ["orthodox", "southpaw", "switch"]
-    STYLES = ["grappler", "striker", "hybrid"]
+    # Feature lists + matchup assembly live at module level (frozen PROP-0001
+    # set) so the lock script serves the identical row. See matchup_features().
 
     excluded = defaultdict(int)
     fight_rows = []
@@ -541,22 +583,7 @@ def main() -> None:
             "fighter_a_id": a_id, "fighter_b_id": b_id,
         }
         # signed diffs (as specified) + symmetric means + abs-diffs (duration signal)
-        for k in RATE_FEATS:
-            row[f"d_{k}"] = fa[k] - fb[k]
-        for k in MEAN_FEATS:
-            row[f"m_{k}"] = (fa[k] + fb[k]) / 2.0
-        for k in ABS_FEATS:
-            row[f"ad_{k}"] = abs(fa[k] - fb[k])
-        # stance matchup (unordered one-hot; unknown -> all zero baseline)
-        sp = tuple(sorted([fa["stance"] or "unk", fb["stance"] or "unk"]))
-        for i, s1 in enumerate(STANCES):
-            for s2 in STANCES[i:]:
-                row[f"stance_{s1[:3]}_{s2[:3]}"] = 1.0 if sp == tuple(sorted([s1, s2])) else 0.0
-        # style matchup (unordered one-hot; unknown -> all zero baseline)
-        yp = tuple(sorted([fa["style"], fb["style"]]))
-        for i, y1 in enumerate(STYLES):
-            for y2 in STYLES[i:]:
-                row[f"style_{y1[:4]}_{y2[:4]}"] = 1.0 if yp == tuple(sorted([y1, y2])) else 0.0
+        row.update(matchup_features(fa, fb))
         row["a_style"], row["b_style"] = fa["style"], fb["style"]
         fight_rows.append(row)
 
