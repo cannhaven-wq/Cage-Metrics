@@ -240,6 +240,14 @@ function firstLast(normalized) {
   return t.length <= 1 ? normalized : `${t[0]} ${t[t.length - 1]}`;
 }
 
+// Third-tier key: the normalized name with every space removed, so word-break
+// drift between sources ("JooSang Yoo" vs "Joo Sang Yoo", "DeLima" vs
+// "De Lima") still matches. Symmetric, and stricter than first+last because
+// every letter has to agree.
+function squash(normalized) {
+  return normalized.replace(/ /g, '');
+}
+
 function pairKey(a, b) {
   return [a, b].sort().join('||');
 }
@@ -250,6 +258,7 @@ function pairKey(a, b) {
 function buildFightIndex(fights) {
   const strict = {};
   const loose = {};
+  const squashed = {};
   for (const f of fights) {
     if (!f.fighter_a_name || !f.fighter_b_name) continue;
     const a = normalizeName(f.fighter_a_name);
@@ -257,14 +266,19 @@ function buildFightIndex(fights) {
     strict[pairKey(a, b)] = f;
     const lk = pairKey(firstLast(a), firstLast(b));
     if (!(lk in loose)) loose[lk] = f; // first writer wins; ambiguous keys stay put
+    const sk = pairKey(squash(a), squash(b));
+    if (!(sk in squashed)) squashed[sk] = f;
   }
-  return { strict, loose };
+  return { strict, loose, squashed };
 }
 
 function lookupFight(index, homeName, awayName) {
   const a = normalizeName(homeName);
   const b = normalizeName(awayName);
-  return index.strict[pairKey(a, b)] || index.loose[pairKey(firstLast(a), firstLast(b))] || null;
+  return index.strict[pairKey(a, b)]
+    || index.loose[pairKey(firstLast(a), firstLast(b))]
+    || index.squashed[pairKey(squash(a), squash(b))]
+    || null;
 }
 
 // -----------------------------------------------------------------------------
@@ -563,8 +577,8 @@ async function writePropOdds(rows) {
           if (o.price == null) continue;
           const n = normalizeName(o.name);
           let side, fighter_id;
-          if (n === nA || firstLast(n) === flA) { side = 'A'; fighter_id = fight.fighter_a_id; }
-          else if (n === nB || firstLast(n) === flB) { side = 'B'; fighter_id = fight.fighter_b_id; }
+          if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) { side = 'A'; fighter_id = fight.fighter_a_id; }
+          else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) { side = 'B'; fighter_id = fight.fighter_b_id; }
           else continue; // draw / unexpected label
           rows.push({
             fight_id: fight.id,
