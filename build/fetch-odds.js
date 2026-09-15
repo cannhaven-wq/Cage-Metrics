@@ -174,8 +174,8 @@ async function fetchOddsFromApi(markets = 'h2h') {
       await new Promise(r => setTimeout(r, 2000 * attempt));
       continue;
     }
-    console.log(`[odds-api] quota: used=${res.headers.get('x-requests-used')}, ` +
-      `remaining=${res.headers.get('x-requests-remaining')}`);
+    console.log(`[odds-api] HTTP ${res.status} quota: used=${res.headers.get('x-requests-used')}, ` +
+      `remaining=${res.headers.get('x-requests-remaining')}, last=${res.headers.get('x-requests-last')}`);
     if (res.ok) {
       const events = await res.json();
       console.log(`[odds-api] got ${events.length} MMA events`);
@@ -575,6 +575,11 @@ async function writePropOdds(rows) {
             implied_prob: Number(americanToImplied(o.price).toFixed(6)),
             captured_at,
             source_url: SOURCE_TAG,
+            // Explicit on EVERY row. PostgREST bulk inserts union the keys of all
+            // rows and send NULL for any a row lacks, which overrides the column
+            // default and trips NOT NULL — this is what killed every scheduled
+            // run from 2026-07-31 to 2026-09-15 (rows flipped to true below).
+            is_opener: false,
           });
           wrote++;
         }
@@ -679,6 +684,7 @@ async function writePropOdds(rows) {
         implied_prob: Number(med.toFixed(6)),
         captured_at,
         source_url: SOURCE_TAG,
+        is_opener: false,
       });
     }
 

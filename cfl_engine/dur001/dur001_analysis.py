@@ -51,6 +51,7 @@ ENGINE = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ENGINE, "features"))
 
 MODEL_VERSION = "PROP-0001@v1"
+PRIMARY_CLOSE_BASES = ("bell_at", "provider_commence")   # event_date_fallback is diagnostic only
 MIDPOINT = 150
 ROUND_SECONDS = 300
 EPS = 1e-6
@@ -158,7 +159,7 @@ def calibration(p, y):
 
 
 # ------------------------------------------------------------------ the data
-def load_live(base_url, key, log=print):
+def load_live(base_url, key, log=print, include_fallback=False):
     import build_features as bf
     close = bf.fetch_all(base_url, key, "v_prop_odds_closing_consensus",
                          "select=fight_id,event_id,event_date,line,bookmaker_count,median_over_prob_vigfree,"
@@ -191,6 +192,18 @@ def load_live(base_url, key, log=print):
     df["actual_lock_at"] = pd.to_datetime(df["actual_lock_at"], utc=True)
     df["latest_book_close_at"] = pd.to_datetime(df["latest_book_close_at"], utc=True)
     df = df[df["actual_lock_at"] <= df["latest_book_close_at"]]
+    # PRIMARY close-quality rule (2026-09-15): a close is only a benchmark when the
+    # fight's start time is known — an actual bell or the provider's commence
+    # time. The event_date 18:00 UTC fallback is a diagnostic only; those rows
+    # never enter the market log loss, the residual test, CLV, or the verdict.
+    n_fallback = int((~df["start_basis"].isin(PRIMARY_CLOSE_BASES)).sum())
+    if n_fallback:
+        log(f"  excluded {n_fallback} row(s) whose close rests on the event-date fallback "
+            f"(diagnostic only; not a primary benchmark)")
+    if include_fallback:
+        log("  --include-fallback set: DIAGNOSTIC run, not the primary analysis")
+    else:
+        df = df[df["start_basis"].isin(PRIMARY_CLOSE_BASES)]
     return df
 
 
@@ -431,6 +444,9 @@ def main():
     ap.add_argument("--out", default=os.path.join(ENGINE, os.pardir, "out_real", "dur001"))
     ap.add_argument("--synthetic", type=int, default=0, metavar="N_EVENTS",
                     help="run on N synthetic events instead of live data (pipeline check only)")
+    ap.add_argument("--include-fallback", action="store_true",
+                    help="DIAGNOSTIC: also score closes that rest on the event-date fallback "
+                         "(never the primary analysis)")
     ap.add_argument("--synthetic-signal", type=float, default=0.0,
                     help="planted residual CFL signal for the synthetic run (0 = none)")
     args = ap.parse_args()
@@ -449,7 +465,7 @@ def main():
     if not base_url or not key:
         sys.exit("SUPABASE_URL + service key required (or use --synthetic N).")
     print("[dur001] loading live closes, locks and outcomes ...")
-    df = load_live(base_url, key)
+    df = load_live(base_url, key, include_fallback=args.include_fallback)
     if df.empty:
         print("[dur001] no (closing consensus × PROP-0001 lock) rows yet — the ledgers are "
               "prospective; re-run after the first captured card settles.")
