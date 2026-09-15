@@ -1,0 +1,56 @@
+name: Export tables
+
+# Daily newline-delimited-JSON dump of the research-relevant Supabase tables to
+# data/exports/, committed back to main.
+#
+# Why: two of these sources are destructive by design — prop_projections is
+# full-table replaced on every refresh and v_fight_odds_consensus is overwritten
+# as the line moves — so a daily snapshot is the only history we get. It is also
+# the bulk dump for prop_model_locks, which RLS makes unreadable with the
+# publishable key.
+#
+# Triggers:
+#   - schedule: 05:00 UTC daily, after the overnight scrapers have settled
+#   - workflow_dispatch: manual run from the Actions tab
+#
+# Read-only against Supabase: build/export_tables.py issues GET requests only.
+
+on:
+  schedule:
+    - cron: '0 5 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: export
+  cancel-in-progress: false
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # No third-party deps on purpose — the script uses only the stdlib, so
+      # there is nothing to install and nothing to pin.
+      - name: Export tables
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python build/export_tables.py
+
+      - name: Commit exports
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: refresh table exports [skip ci]'
+          file_pattern: 'data/exports/*.jsonl data/exports/manifest.json'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: '41898282+github-actions[bot]@users.noreply.github.com'
