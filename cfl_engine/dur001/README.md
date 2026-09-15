@@ -141,13 +141,37 @@ is unlikely and the answer is not "add features". Otherwise HOLD and keep
 collecting. Sportsbooks and thresholds are never selected after results are
 visible; every posted line at every captured book enters the consensus.
 
+## Historical safety rule (hard)
+
+DUR-001 has no historical rows and none may be manufactured from the model
+trained today. If a historical backfill is ever attempted it must:
+
+1. produce PROP-0001 predictions **walk-forward**, refitting on completed fights
+   with `training_cutoff < fight_start` for every historical fight, using the
+   same frozen spec (`PROP-0001@v1`), and label the rows as a distinct
+   `model_version` (e.g. `PROP-0001@v1-wf`) so they never mix with live locks;
+2. never write them into `prop_model_locks` — the insert guard rejects any lock
+   on a fight that already has a result, and that guard is not to be relaxed;
+3. pair them only with sportsbook quotes that were genuinely captured before
+   the fight (`captured_at < start_at`, `is_live = false`) — there is no
+   historical totals feed on file, so today there is nothing to pair with.
+
+The September 2026 model (trained through 2026-09-14) must never be used to
+create predictions for fights before that date.
+
+### Primary close-quality rule (2026-09-15)
+
+Only closes whose start time is known enter the primary analysis:
+`start_basis in ('bell_at', 'provider_commence')`. Rows resting on the
+`event_date_fallback` are excluded from the closing benchmark, the market log
+loss, the residual test, CLV and the verdict. `--include-fallback` runs them for
+diagnostics only and labels the report as such.
+
 ## Known limits
 
-* **The Odds API feed has been failing in CI** (every scheduled `odds.yml` run
-  since at least 2026-08-29; the last successful write was 2026-08-16). Totals
-  capture rides on that job, so nothing is captured until it is fixed. Run logs
-  need repo admin; the two candidates are the `ODDS_API_KEY` (quota / revoked)
-  and the service-role secret. The fixture replay above proves the code path.
+* The Odds API job failed on every scheduled run from 2026-07-31 to 2026-09-15
+  (`is_opener` NOT NULL violation on mixed-key bulk inserts). Fixed 2026-09-15;
+  first real totals quotes landed the same day.
 * Credits: totals add one credit per call. With the hourly card-window cadence
   the gating keeps a 4–5 card month around 400–430 of the 500 free credits.
   `ODDS_MARKETS=h2h` switches totals off.
