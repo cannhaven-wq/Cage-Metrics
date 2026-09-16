@@ -24,7 +24,9 @@ from research.dur001_backfill.gate import (  # noqa: E402
     is_clear,
 )
 from research.dur001_backfill.spec import (  # noqa: E402
+    FROZEN_TIMING_RULE,
     LOCKED_MODEL_VERSION,
+    REJECTED_TIMING_RULES,
     BackfillRow,
     BackfillSpec,
     SpecViolation,
@@ -45,7 +47,7 @@ def good_spec(**over):
     base = dict(
         model_version="PROP-0001-BACKFILL@v1",
         target_table="research_backfill_results",
-        timing_rule="t10_earliest_observed_start",
+        timing_rule=FROZEN_TIMING_RULE,
         timing_rule_approved=True,
         writes_to_database=False,
         uses_odds_api=False,
@@ -70,8 +72,8 @@ class TestCleanSpecPasses(unittest.TestCase):
     def test_explain_says_clear(self):
         self.assertIn("GATE CLEAR", explain(good_spec()))
 
-    def test_either_timing_rule_is_acceptable_once_approved(self):
-        self.assertTrue(is_clear(good_spec(timing_rule="self_consistent_walkback")))
+    def test_the_frozen_rule_is_the_only_acceptable_one(self):
+        self.assertTrue(is_clear(good_spec(timing_rule=FROZEN_TIMING_RULE)))
 
 
 class TestLockLedgerIsUntouchable(unittest.TestCase):
@@ -140,15 +142,37 @@ class TestWalkForwardRows(unittest.TestCase):
 
 
 class TestTimingRule(unittest.TestCase):
-    """Amendment item (i) is unapproved, so a backfill cannot run yet."""
+    """Preregistration amendment 1.2 froze exactly one historical timing rule."""
 
     def test_unset_rule_is_refused(self):
+        """Frozen does not mean defaulted into — the spec must name it."""
         self.assertIn("TIMING_RULE", codes(good_spec(timing_rule=None)))
 
     def test_unknown_rule_is_refused(self):
         self.assertIn("TIMING_RULE", codes(good_spec(timing_rule="whatever_looks_best")))
 
-    def test_known_but_unapproved_rule_is_refused(self):
+    def test_the_rejected_candidate_gets_its_own_refusal(self):
+        """Candidate 2 was rejected outright and is NOT kept as a sensitivity.
+        It earns a distinct code so the refusal explains itself."""
+        for rule in REJECTED_TIMING_RULES:
+            with self.subTest(rule=rule):
+                c = codes(good_spec(timing_rule=rule))
+                self.assertIn("TIMING_REJECTED", c)
+                self.assertNotIn("TIMING_RULE", c)
+
+    def test_rejected_candidate_stays_refused_even_if_marked_approved(self):
+        """Asserting approval must not buy past a rule the amendment rejected."""
+        self.assertIn("TIMING_REJECTED",
+                      codes(good_spec(timing_rule="self_consistent_walkback",
+                                      timing_rule_approved=True)))
+
+    def test_rejection_message_explains_why(self):
+        msg = [v.message for v in check(good_spec(timing_rule="self_consistent_walkback"))
+               if v.code == "TIMING_REJECTED"][0]
+        self.assertIn("after the sampling decision", msg)
+        self.assertIn(FROZEN_TIMING_RULE, msg)
+
+    def test_frozen_rule_without_asserted_approval_is_refused(self):
         c = codes(good_spec(timing_rule_approved=False))
         self.assertIn("TIMING_UNAPPROVED", c)
         self.assertNotIn("TIMING_RULE", c)

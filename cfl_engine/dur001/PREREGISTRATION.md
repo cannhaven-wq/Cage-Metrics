@@ -153,4 +153,102 @@ distinct `model_version`, and never be written to `prop_model_locks`.
 
 ## Amendments
 
-_None._
+### Amendment 1 — 2026-09-16 — de-vig method and historical timing rule
+
+**Approved by:** Reed Cannon, 2026-09-16.
+**Status:** in force.
+**Motivation:** both items fix a *definitional* choice that must be settled
+before more data accumulates. Neither was motivated by an observed result: no
+UFC 331 outcome had been inspected when they were drafted or approved, no
+DUR-001 performance number has been computed, and the verdict machinery in §11
+is untouched by this amendment.
+
+Recorded here rather than by rewriting §6 and §13, so the original text stays
+legible and the change is dated.
+
+---
+
+#### 1.1 — De-vig method (amends §6)
+
+§6 currently reads:
+
+> - Two-way de-vig per book: `p_over = q_over / (q_over + q_under)`.
+
+**Amended to:**
+
+> - **Primary de-vig: the power method.** Per book, solve for the single
+>   exponent `k > 0` satisfying
+>
+>   ```
+>   q_over^(1/k) + q_under^(1/k) = 1
+>   ```
+>
+>   and take `p_over = q_over^(1/k)`. Solved by bisection on `k` over
+>   `[0.5, 5.0]` to a tolerance of 1e-10; the sum is strictly decreasing in `k`,
+>   so the root is unique. A book whose two-way overround is non-positive, or
+>   for which no root exists in that bracket, is dropped from the consensus for
+>   that (fight, threshold) and the drop is logged.
+>
+> - **Frozen sensitivity: proportional de-vig**, `p_over = q_over / (q_over + q_under)`,
+>   reported beside the primary and never in place of it.
+>
+> - **Frozen sensitivity: Shin (1993)**, reported beside the primary.
+>
+> No further de-vig method may be introduced. The three named here are the
+> complete set for the life of DUR-001, and the primary may not be swapped for a
+> sensitivity after any result is visible.
+
+**Reasoning.** The power method carries a cleaner assumption set for a two-sided
+market: it is transparent, monotonic, and makes no claim about *why* the margin
+is distributed as it is. Proportional de-vig is known to under-price favourites
+and over-price longshots. Shin is retained as a sensitivity rather than promoted
+because using it as the primary leans on its insider-trading interpretation,
+which is a substantive claim about UFC round-totals markets that CFL has no
+evidence for.
+
+Naming all three now, with one fixed as primary, is the point: the choice of
+de-vig cannot become a free parameter searched after the fact.
+
+---
+
+#### 1.2 — Historical timing rule (amends §13)
+
+§13 requires a historical backfill to be walk-forward but does not say which
+historical quote is the benchmark. That gap is closed:
+
+> **Historical pre-fight benchmark (the "T-10 historical pre-fight benchmark").**
+> For each fight, the benchmark quote is the last snapshot at or before
+> **T − 10 minutes**, where T is the **earliest provider start time ever
+> observed** for that fight across all stored snapshots.
+>
+> A fight whose observed provider start moved after capture is **flagged** in
+> the output and **retained**. No fight is excluded on the basis of a capture
+> property.
+>
+> This rule spends **no additional Odds API credits**: it reads only snapshots
+> already stored.
+
+**Reasoning.** The rejected alternative walked back through 5-minute snapshots
+to find the latest one that still believed the fight had not started, and
+excluded fights where none qualified. Excluding a fight because its card became
+chaotic conditions the dataset on events that occur *after* the sampling
+decision was made — the cohort stops being defined prospectively. Flagging
+preserves the cohort and still allows a chaos split as a zero-cost sensitivity.
+
+The rejected candidate is **not** retained as a sensitivity. Keeping both would
+reintroduce exactly the choice this amendment exists to remove.
+
+---
+
+#### 1.3 — What this amendment does not do
+
+Explicitly unchanged, and still **PROPOSED** only, in
+[`AMENDMENT_DRAFT_2026-09-15.md`](AMENDMENT_DRAFT_2026-09-15.md): items (a)
+consensus book minimum, (b) one line per fight, (c) the two-questions split,
+(d) the verdict rule, (e) cluster-CI gating, (f) the checkpoint, (g)
+terminology, (j) `market_last_update`, (k) the dirty-tree guard.
+
+Nothing touching calibration, scoring, or the market comparison is approved
+while the walk-forward fold discrepancy is open. The backfill gate in
+`research/dur001_backfill/` stays shut on every axis other than the timing rule
+frozen above.

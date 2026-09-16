@@ -19,29 +19,35 @@ advance — which is the only property it has.
 
 So the conditions are code, not prose, and they run before any work happens.
 
-## Current status: refusing, by design
+## Current status: the timing rule is frozen; the gate still refuses loosely-specified runs
 
-No backfill can clear the gate today. The blocker is `TIMING_RULE`: amendment
-item (i) puts two candidate historical timing rules to Reed and neither has been
-picked. Until one is chosen and marked approved there is no pre-registered
-definition of which historical quote is the benchmark, so there is nothing
-legitimate to compute.
+**Preregistration Amendment 1.2 (2026-09-16) froze the historical timing rule**
+to `t10_earliest_observed_start` — T−10 before the earliest provider start ever
+observed, with moved starts flagged and retained. Item (i) is decided.
 
-That is the point. Choosing the rule after seeing which one flatters the result
-is exactly the selection the preregistration exists to prevent.
+The rejected candidate, `self_consistent_walkback`, is **not** retained as a
+sensitivity. It excluded fights that had no self-consistent snapshot, which
+conditions the cohort on events occurring after the sampling decision. It now
+earns its own `TIMING_REJECTED` refusal, and asserting `timing_rule_approved`
+cannot buy past it — otherwise "approval" would become the very re-decision the
+amendment removed.
+
+A backfill can now clear the gate, but only by naming the frozen rule
+explicitly and satisfying every other §13 condition. Frozen does not mean
+defaulted into: a spec that leaves `timing_rule` unset is still refused.
 
 ```
 $ python research/dur001_backfill/run_backfill.py --check
 GATE REFUSED — 3 violation(s):
   [MODEL_VERSION] model_version is empty. ...
   [NO_ROWS] the spec scores no fights. ...
-  [TIMING_RULE] no historical timing rule set. Amendment item (i) ...
+  [TIMING_RULE] no historical timing rule set. Preregistration amendment 1.2 ...
 ```
 
-`run_backfill.py` deliberately contains **no scoring code**. Writing the scorer
-before the rule is chosen invites running it "just to look", and the looking is
-the damage. When item (i) is approved, the scorer goes in that file, behind
-`assert_clear`.
+`run_backfill.py` still contains **no scoring code**. Item (i) is settled, but
+the walk-forward fold discrepancy is not, and Reed has held every amendment
+clause that touches calibration or scoring until it is. The scorer goes in that
+file, behind `assert_clear`, once that is closed.
 
 ## The checks
 
@@ -52,8 +58,9 @@ the damage. When item (i) is approved, the scorer goes in that file, behind
 | `DB_WRITE` | any database write at all — a backfill's output is a file |
 | `MODEL_VERSION` | an empty version, or reusing the live `PROP-0001@v1` |
 | `LEAKY_ROW` | `training_cutoff >= fight_start` on any row, strictly compared |
-| `TIMING_RULE` | an unset or non-pre-registrable historical timing rule |
-| `TIMING_UNAPPROVED` | a valid rule that nobody has approved yet |
+| `TIMING_RULE` | an unset rule, or one that is not the rule Amendment 1.2 froze |
+| `TIMING_REJECTED` | the candidate Amendment 1.2 rejected — refused even if marked approved |
+| `TIMING_UNAPPROVED` | the frozen rule, but the spec does not assert it is running under 1.2 |
 | `ODDS_API` | spending live Odds API credits on historical work |
 | `NO_ROWS` | running an empty backfill that produces a result-shaped artifact |
 

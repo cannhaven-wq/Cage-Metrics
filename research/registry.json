@@ -27,7 +27,7 @@
         "the lock's actual_lock_at is not after the latest closing quote"
       ],
       "preregistration_path": "cfl_engine/dur001/PREREGISTRATION.md",
-      "preregistration_sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+      "preregistration_sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
       "model_artifact_sha256": null,
       "data_artifact_sha256": "9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6",
       "freeze_timestamp": "2026-09-15T00:00:00Z",
@@ -38,6 +38,9 @@
       ],
       "kill_rule": null,
       "allowed_sensitivities": [
+        "de-vig sensitivity: proportional, reported beside the primary power de-vig (amendment 1.1)",
+        "de-vig sensitivity: Shin (1993), reported beside the primary (amendment 1.1)",
+        "moved-provider-start split on the historical flag, zero credit cost (amendment 1.2)",
         "secondary opener test (walk-forward OLS predicting logit(P_close) from logit(P_open) with and without logit(P_CFL)); not a decision input",
         "raw comparison LL_market - LL_CFL, informational only",
         "Brier, calibration intercept and slope of the challenger"
@@ -49,7 +52,11 @@
         "interpolating, extrapolating or nearest-line mapping a threshold",
         "deriving 3.5 or 4.5 probabilities for five-round fights",
         "writing any historical backfill into prop_model_locks",
-        "optimising ROI thresholds; CLV and ROI are reported as null"
+        "optimising ROI thresholds; CLV and ROI are reported as null",
+        "introducing any de-vig method beyond power (primary), proportional and Shin (sensitivities) - amendment 1.1",
+        "promoting a de-vig sensitivity to primary after any result is visible - amendment 1.1",
+        "excluding a fight from the historical cohort on a capture property; moved starts are flagged and retained - amendment 1.2",
+        "retaining the rejected self-consistent-walkback timing rule as a sensitivity - amendment 1.2"
       ],
       "results_artifact": null,
       "verdict": null,
@@ -57,8 +64,10 @@
       "frozen_files": [
         {
           "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
-          "frozen_at_commit": "1bc3fdd"
+          "sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "frozen_at_commit": "1bc3fdd",
+          "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+          "amended": true
         },
         {
           "path": "cfl_engine/dur001/dur001_analysis.py",
@@ -89,6 +98,21 @@
           "path": "cfl_engine/harness/walkforward_report.json",
           "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
           "frozen_at_commit": "90571ff"
+        }
+      ],
+      "preregistration_amendments": [
+        {
+          "number": 1,
+          "date": "2026-09-16",
+          "approved_by": "Reed Cannon",
+          "title": "De-vig method (item h) and historical timing rule (item i)",
+          "amends_sections": [
+            "6",
+            "13"
+          ],
+          "sha256_before": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+          "sha256_after": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "motivated_by_observed_results": false
         }
       ]
     },
@@ -132,8 +156,10 @@
       "frozen_files": [
         {
           "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
-          "frozen_at_commit": "1bc3fdd"
+          "sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "frozen_at_commit": "1bc3fdd",
+          "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+          "amended": true
         },
         {
           "path": "cfl_engine/dur001/dur001_analysis.py",
@@ -165,7 +191,8 @@
           "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
           "frozen_at_commit": "90571ff"
         }
-      ]
+      ],
+      "preregistration_amendments": null
     }
   ]
 }
