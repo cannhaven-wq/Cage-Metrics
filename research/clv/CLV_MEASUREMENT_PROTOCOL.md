@@ -6,11 +6,11 @@ draft.**
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `0.2.0-draft` |
+| version | `0.3.0-draft` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
-| next action | **second-pass ChatGPT review.** Reed does not see the L3 set before it |
+| next action | **Reed — L3 approval.** The methodological review is complete |
 | frozen at | — |
 | frozen by | — |
 | machine mirror | [`protocol.json`](protocol.json) |
@@ -91,7 +91,7 @@ So, binding for the draft period:
 
 ## 1. What is being measured
 
-> **Revised 2026-09-16 (v0.2.0-draft)** against
+> **Revised 2026-09-16 (v0.3.0-draft)** against
 > [ChatGPT's methodological review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).
 > The primary measure below replaces raw implied-probability movement. The
 > `clv_pp` construction that follows it is retained because it is what
@@ -127,7 +127,9 @@ de-vig was blocked until two-sided capture existed *at publish*. Under
 is required is two-sided capture **at close**. That is a different and more
 achievable blocker, and it is item 2 in §4.
 
-The de-vig method for the closing side is **not yet chosen** — see Q-12.
+The de-vig method for the closing side is the **power** method, matching
+DUR-001 Amendment 1.1 — Q-12, resolved. Proportional and Shin are frozen
+sensitivities only.
 
 ### 1.2 Secondary measure — `clv_pp`, the shipped construction
 
@@ -268,6 +270,34 @@ or script that produced it.
 Any CLV wording follows [`COPY_STYLE.md`](../../COPY_STYLE.md) — plain English,
 anti-tout, losses at equal prominence. Q-11 fixes what may and may not be
 claimed; `COPY_STYLE.md` governs how it is said.
+
+---
+
+### R-13 — A sentinel timestamp is not a timestamp
+
+R-02 makes a quote without a timestamp ineligible. That is not enough: a
+**populated but fake** timestamp passes it.
+
+Measured 2026-09-16, read-only: **30,724 of 110,032 `fight_odds` rows — 27.9%,
+across 7,681 fights — carry `captured_at = 1970-01-01`**, the Unix epoch. Live
+capture begins 2026-05-22; everything before it is a historical import whose
+capture instant was never recorded and defaulted to epoch.
+
+**Rule.** A quote whose `captured_at` is not a credible capture instant is
+ineligible, exactly as a missing one is. Credible means at or after the
+live-capture era began (2026-05-22) and not in the future. Such rows are
+**retained raw** under R-01 and excluded at scoring time — never deleted.
+
+**Consequence, which is a coverage fact and not a gap to paper over.** CLV can
+only ever be computed on fights from the live-capture era. Those 7,681 historical
+fights have prices but no usable capture timing, and can never enter the measure.
+That number gets reported under R-05, not quietly dropped.
+
+An epoch timestamp is also the worst possible failure mode for this protocol
+specifically: it is always "before the fight", so a sentinel row is not merely
+noise — it is a row that looks *eligible* to every ordering rule in §3, and would
+be selected as the opener every time. This is the same family of defect as the
+R-03 sentinel that once flipped the sign of mean CLV.
 
 ---
 
@@ -636,6 +666,45 @@ is being hidden, whereas a labelled descriptive number invites none.
 
 ---
 
+### Q-14 — May CLV appear in the user interface at all · proposed **L3**
+
+*Raised by the revision. No reviewer recommendation — see below.*
+
+**Why L3:** two documents Reed owns give opposite answers, and Q-11 presupposes
+one of them.
+
+> `CLAUDE.md`, line 3 — the top-line product rule:
+> "**No closing line value**, no edge percentages, and no market language
+> **anywhere in the user interface**."
+
+> `COPY_STYLE.md`, rule 3:
+> "**CLV is the north star**, not win rate. When we talk about whether we're
+> good, the honest answer is closing-line value — did we get a better price than
+> the market closed at — not a hot streak. **Say so.**"
+
+These cannot both hold. Q-11 spends its effort on *how* a positive CLV figure may
+be phrased on a surface; `CLAUDE.md` says no such figure may be on a surface in
+the first place.
+
+| option | consequence |
+|---|---|
+| `CLAUDE.md` governs | CLV stays an internal measure, never on a surface. **Q-11 becomes moot** and the publication gate stays shut permanently for the UI |
+| `COPY_STYLE.md` governs | CLV may be shown under Q-11's constraints, and `CLAUDE.md` line 3 is amended |
+| a middle rule | CLV appears only on a named methodology surface, never on product pages |
+
+**No recommendation is offered.** This is a product-voice decision, not a
+methodological one, and a reviewer cannot resolve a conflict between two rules
+the owner wrote. Whichever way it goes, **one of the two documents has to be
+amended** so they stop contradicting — that is true under every option.
+
+It is worth noting which way the *measurement* work has been pointing: the
+protocol has been built on the assumption that a CLV figure eventually reaches a
+surface, because that is what the publication gate in R-10 exists to hold shut.
+If `CLAUDE.md` governs, the gate is not a gate but a permanent wall, and R-10
+should say so plainly instead.
+
+---
+
 ## 4. Raw capture requirements
 
 Binding on the capture path **now**, because these cannot be backfilled:
@@ -721,7 +790,7 @@ amendment records `motivated_by_observed_results: false` — and it must be true
 | id | question | level | status after the 2026-09-16 review |
 |---|---|---|---|
 | Q-01 | what "closing line" means (+ staleness limit) | L2 | **resolved** — scheduled-close *proxy*, never "the closing line" |
-| Q-02 | eligible books and exclusion rules | L2 | open — **not addressed by the review** |
+| Q-02 | eligible books and exclusion rules | L2 | **resolved** — named list, ≥3 books, de-vig per book *then* median |
 | Q-03 | exchanges and prediction markets | L2 | **resolved** — excluded from the primary |
 | Q-04 | how multiple books become one probability | L2 | **resolved** — median across eligible sportsbooks |
 | Q-05 | vigged or de-vigged | **L3** | recommendation: **vigged at publish, de-vigged at close** (a fourth option) |
@@ -729,21 +798,31 @@ amendment records `motivated_by_observed_results: false` — and it must be true
 | Q-07 | aggregation and weighting | **L3** | recommendation: equal weight per scored fight; no stake/Kelly weighting |
 | Q-08 | minimum sample before display | **L3** | recommendation: keep 100 **and** add a distinct-event minimum |
 | Q-09 | uncertainty | L2 | **resolved** — event-cluster bootstrap primary, Wilson demoted |
-| Q-10 | cancellation, rescheduling, opponent change | L2 | open — **not addressed by the review** |
-| Q-11 | how positive CLV may be described | **L3** | open — **not addressed by the review** |
-| Q-12 | which de-vig method applies at close | L2 | open — **raised by the revision** |
-| Q-13 | minimum distinct events before a summary displays | **L3** | open — **raised by the revision** |
+| Q-10 | cancellation, rescheduling, opponent change | L2 | **resolved** — unscored unless re-locked; match on fighter + provider market ID |
+| Q-11 | how positive CLV may be described | **L3** | recommendation attached — **blocked by Q-14** |
+| Q-12 | which de-vig method applies at close | L2 | **resolved** — power, matching DUR-001 Amendment 1.1 |
+| Q-13 | minimum distinct events before a summary displays | **L3** | recommendation: **100 picks AND 20 events** |
+| Q-14 | may CLV appear in the user interface at all | **L3** | open — **raised by the revision; blocks Q-11** |
 
-### Review coverage
+### Review coverage — complete
 
-The handoff asked for a resolution on all six L2 questions and a recommendation
-on all five L3. **Four of six L2 and four of five L3 came back.** Q-02, Q-10 and
-Q-11 were not addressed and are carried forward — silence is not a resolution.
+**All six L2 resolved; all five L3 have a recommendation.** The first pass
+returned four of each; the second pass closed Q-02, Q-10 and Q-11, resolved
+Q-12 and recommended on Q-13.
 
-Q-12 and Q-13 are new, and both are consequences of adopting `CLV_return` rather
-than fresh proposals: the recommendation says "de-vigged" without naming a
-method, and "a minimum number of distinct events" without giving a number. In
-each case the missing part is the whole content of the rule.
+**Q-14 has no reviewer recommendation, by design.** It was raised after the
+review and is a product-voice decision that belongs to Reed — and the two
+documents he owns give opposite answers, so it cannot be resolved by a reviewer
+at all.
+
+### What now goes to Reed
+
+| | |
+|---|---|
+| **Q-14** | **take this first** — it decides whether Q-11 has a subject |
+| Q-11 | how positive CLV may be described, if it may be shown at all |
+| Q-05, Q-06 | what the headline number is |
+| Q-07, Q-08, Q-13 | how it is aggregated and when it may appear |
 
 ---
 

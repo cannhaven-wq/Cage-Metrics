@@ -360,3 +360,103 @@ class TestPrimaryDefinition(unittest.TestCase):
 
     def test_blocking_dependency_is_named(self):
         self.assertIn("close", (self._pd().get("blocking_dependency") or "").lower())
+
+
+class TestStalenessRule(unittest.TestCase):
+    """Q-01's limit is a number or it is nothing.
+
+    "Subject to a staleness limit set from capture cadence" is not a rule — it is
+    a promise to write one. The number has to exist, and it has to be on record
+    as fixed before any CLV result was looked at.
+    """
+
+    def _q01(self):
+        return next(q for q in doc()["open_questions"] if q["id"] == "Q-01")
+
+    def test_the_limit_is_numeric(self):
+        sr = self._q01().get("staleness_rule") or {}
+        self.assertIsInstance(sr.get("limit_minutes"), (int, float),
+                              "Q-01 resolves to a scheduled-close proxy 'subject to a "
+                              "staleness limit'; the limit must be a number")
+        self.assertGreater(sr["limit_minutes"], 0)
+
+    def test_the_limit_records_its_derivation_and_its_measurement(self):
+        sr = self._q01().get("staleness_rule") or {}
+        self.assertTrue((sr.get("derivation") or "").strip())
+        self.assertTrue((sr.get("measured_from") or "").strip(),
+                        "a limit derived from cadence must say which stream it was "
+                        "measured on")
+
+    def test_the_limit_was_fixed_before_results(self):
+        self.assertIs(self._q01().get("staleness_rule", {}).get("fixed_before_results"),
+                      True)
+
+    def test_the_bimodal_caveat_is_recorded(self):
+        """The measured gap distribution is bimodal — ~30 min near a card, ~24 h
+        between them. A limit taken from the overall distribution would be ~24
+        hours and useless, so the caveat has to travel with the number."""
+        self.assertTrue(
+            (self._q01().get("staleness_rule", {}).get("caveat_bimodal") or "").strip(),
+            "the cadence is bimodal; without that recorded, the next person to "
+            "re-derive this limit gets a number an order of magnitude too large",
+        )
+
+
+class TestBlockingRelationships(unittest.TestCase):
+    """A question that cannot be decided before another must say so, on both ends."""
+
+    def test_a_blocker_points_at_a_real_question(self):
+        ids = {q["id"] for q in doc()["open_questions"]}
+        for q in doc()["open_questions"]:
+            target = q.get("blocks")
+            if not target or not target.startswith("Q-"):
+                continue
+            with self.subTest(question=q["id"]):
+                self.assertIn(target.split()[0], ids,
+                              f"{q['id']} blocks {target!r}, which does not exist")
+
+    def test_a_blocked_question_names_its_blocker(self):
+        blocks = {q["blocks"].split()[0]: q["id"] for q in doc()["open_questions"]
+                  if (q.get("blocks") or "").startswith("Q-")}
+        for blocked, blocker in blocks.items():
+            q = next(x for x in doc()["open_questions"] if x["id"] == blocked)
+            with self.subTest(question=blocked):
+                self.assertIn(
+                    blocker, (q.get("blocked_by") or ""),
+                    f"{blocker} blocks {blocked} but {blocked} does not record it. "
+                    f"A one-way blocking relationship is invisible from the side "
+                    f"that has to wait.",
+                )
+
+    def test_a_blocked_question_is_not_marked_resolved(self):
+        for q in doc()["open_questions"]:
+            if not (q.get("blocked_by") or ""):
+                continue
+            with self.subTest(question=q["id"]):
+                self.assertEqual(q.get("status"), "open",
+                                 f"{q['id']} is blocked by {q['blocked_by']} but is "
+                                 f"marked {q.get('status')!r}")
+
+
+class TestSentinelTimestampRule(unittest.TestCase):
+    """R-13. R-02 excludes a MISSING timestamp; a populated fake one passes it."""
+
+    def _r13(self):
+        return next((r for r in doc()["decided_rules"] if r["id"] == "R-13"), None)
+
+    def test_r13_exists(self):
+        self.assertIsNotNone(self._r13(),
+                             "R-13 is what stops an epoch-dated quote from being "
+                             "treated as a real pre-fight observation")
+
+    def test_r13_records_the_measurement_behind_it(self):
+        basis = (self._r13() or {}).get("basis", "")
+        self.assertIn("1970", basis,
+                      "R-13 exists because of a measured sentinel population; the "
+                      "measurement belongs in the rule, not in a commit message")
+
+    def test_r13_excludes_rather_than_deletes(self):
+        """R-01 makes the store append-only. A cleanup rule that deletes would
+        contradict it."""
+        text = json.dumps(self._r13() or {}).lower()
+        self.assertIn("never deleted", text)

@@ -4,7 +4,7 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "draft",
-  "version": "0.2.0-draft",
+  "version": "0.3.0-draft",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
   "protocol_sha256": null,
@@ -90,6 +90,13 @@
       "id": "R-12",
       "title": "Copy governance \u2014 CLV wording follows COPY_STYLE.md",
       "basis": "Q-11 fixes substance, COPY_STYLE.md fixes wording"
+    },
+    {
+      "id": "R-13",
+      "title": "A sentinel timestamp is not a timestamp",
+      "basis": "measured 2026-09-16: 30,724 of 110,032 fight_odds rows - 27.9%, across 7,681 fights - carry captured_at = 1970-01-01, the Unix epoch. R-02 as written excludes a MISSING timestamp but not a populated fake one, so these rows would pass it.",
+      "rule": "a quote whose captured_at is not a credible capture instant is ineligible, the same as a missing one. Credible means strictly after the live-capture era began (2026-05-22) and not in the future. Such rows are retained raw under R-01 and excluded at scoring time, never deleted.",
+      "consequence": "CLV can only ever be computed on fights from the live-capture era. The 7,681 historical fights have prices but no usable capture timing and can never enter the measure. That is a coverage fact to report under R-05, not a gap to paper over."
     }
   ],
   "open_questions": [
@@ -106,9 +113,22 @@
       "recommendation": "last quote before scheduled start, subject to a staleness limit set from capture cadence",
       "chosen_by_historical_comparison": false,
       "status": "resolved",
-      "resolution": "last quote before SCHEDULED start, named a 'scheduled-close proxy' and never 'the closing line'. A staleness limit is still set from capture cadence.",
+      "resolution": "last quote before SCHEDULED start, named a 'scheduled-close proxy' and never 'the closing line'. A staleness limit is still set from capture cadence. Staleness limit: 45 minutes, derived from the measured 30-minute near-card capture interval plus a 15-minute grace.",
       "resolved_by": "ChatGPT review 2026-09-16",
-      "note": "Corroborated independently: fights.bell_at is populated on 0 of 8,992 fights, so no row in the database currently supports a literal closing line. The proxy naming is forced by the data, not just prudent."
+      "note": "Corroborated independently: fights.bell_at is populated on 0 of 8,992 fights, so no row in the database currently supports a literal closing line. The proxy naming is forced by the data, not just prudent.",
+      "staleness_rule": {
+        "limit_minutes": 45,
+        "derivation": "one normal capture interval (30 min, measured) + 15 min operational grace",
+        "measured_from": "fight_odds captured_at, live-capture era only (>= 2026-05-22), 668 minute-level batch gaps",
+        "measured_cadence": {
+          "p50_min": 30.0,
+          "p75_min": 32.0,
+          "min_min": 1.0
+        },
+        "fixed_before_results": true,
+        "caveat_bimodal": "The gap distribution is BIMODAL: ~30 min during a fight week, ~24 h between cards (p90 = 1426.6 min, 50 gaps over 24 h, max 2952 min). Only the near-card mode is relevant, because a staleness limit only binds near the close. A limit naively derived from the overall p90 would be ~24 hours and would be useless.",
+        "set_by": "Claude, on ChatGPT second-pass review 2026-09-16's instruction to derive it from actual cadence"
+      }
     },
     {
       "id": "Q-02",
@@ -121,8 +141,10 @@
       ],
       "recommendation": "fixed named list; DUR-001 already forbids selecting books after results are visible, and a fixed list makes that unbreakable rather than merely prohibited",
       "chosen_by_historical_comparison": false,
-      "status": "open",
-      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L2 - eligible books and exclusion rules)"
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "fixed NAMED sportsbook list frozen at protocol freeze; require >= 3 eligible books with valid TWO-SIDED closing markets. De-vig each book SEPARATELY first, then take the median of the per-book fair probabilities.",
+      "note": "Order matters and is easy to get backwards: de-vig per book, then median. Taking the median of vigged prices and de-vigging once afterwards is a different estimator and mixes books' margins together."
     },
     {
       "id": "Q-03",
@@ -169,12 +191,13 @@
         "vigged at publish, de-vigged at close (the CLV_return construction)"
       ],
       "recommendation": "vigged at publish, de-vigged at close. This is a FOURTH option, not one of the original three: the posted price is used as posted and only the closing side is de-vigged.",
-      "blocks": "two-sided capture at publish time must start immediately \u2014 the de-vigged variant can never be backfilled",
+      "blocks": "two-sided capture AT CLOSE must start immediately - the closing side is de-vigged and can never be backfilled. NOTE: this corrects v0.2.0, which still said 'at publish time'. Under CLV_return the publish side is used as posted and is never de-vigged.",
       "chosen_by_historical_comparison": false,
       "status": "open",
       "recommended_by": "ChatGPT review 2026-09-16",
       "supersedes_prior_recommendation": "'raw as primary, de-vigged as a frozen sensitivity' - the review's judgement is that this deferred the contradiction rather than resolving it",
-      "still_open": "which de-vig method applies at close - see Q-12"
+      "still_open": "which de-vig method applies at close - see Q-12",
+      "blocks_corrected": "2026-09-16, flagged by ChatGPT second-pass review 2026-09-16"
     },
     {
       "id": "Q-06",
@@ -252,8 +275,13 @@
       ],
       "recommendation": "score neither for a rescheduled fight, and exclude a fight whose opponent changed after the forecast lock; keyed mechanically on whether either fighter id changed",
       "chosen_by_historical_comparison": false,
-      "status": "open",
-      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L2 - cancellation, rescheduling, late opponent change)"
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "cancelled, rescheduled and opponent-changed fights become UNSCORED unless CFL re-locks / re-publishes the new matchup. Matching is mechanical on fighter identity + provider market ID.",
+      "depends_on_capture": [
+        "opponent identities at quote time",
+        "provider market IDs"
+      ]
     },
     {
       "id": "Q-11",
@@ -265,7 +293,7 @@
         "stricter \u2014 descriptive reporting only, with no comparative framing of any kind",
         "more permissive \u2014 allow comparison against public benchmarks once past the Q-08 floor"
       ],
-      "recommendation": "adopt the list as written; it permits the measurement to be stated plainly with its interval and n, and forbids every phrasing that converts a price measurement into a claim about winning money",
+      "recommendation": "permit \"positive closing-line value over this sample\" ONLY when the cluster interval excludes zero AND the sample floor is met. Never \"proven edge\", \"beats the market\", expected profit, ROI, or bankroll growth.",
       "never_permitted": [
         "any projection of profit, ROI or bankroll growth from a CLV figure",
         "'beats the market', 'proven edge', or any phrasing converting a price measurement into a claim about winning money",
@@ -275,7 +303,8 @@
       ],
       "chosen_by_historical_comparison": false,
       "status": "open",
-      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L3 - how positive CLV may be described publicly)"
+      "recommended_by": "ChatGPT second-pass review 2026-09-16",
+      "blocked_by": "Q-14 - whether CLV may appear in the user interface at all"
     },
     {
       "id": "Q-12",
@@ -291,7 +320,9 @@
       ],
       "recommendation": "power, for consistency with DUR-001 Amendment 1.1, with proportional and Shin as frozen sensitivities on the same pattern. Diverging from the frozen house method needs a reason; adopting it silently is also a choice and should be recorded.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "POWER de-vig as primary, matching DUR-001 Amendment 1.1; proportional and Shin as frozen sensitivities only."
     },
     {
       "id": "Q-13",
@@ -305,10 +336,32 @@
         "20 completed events, matching DUR-001 amendment (e)",
         "a fixed small floor such as 8 or 10"
       ],
-      "recommendation": "set it from the cluster bootstrap's coverage rather than picking a round number; report the figure as descriptive-only below the floor rather than withholding it entirely",
+      "recommendation": "100 scored picks AND 20 distinct UFC events before any headline CLV summary",
       "chosen_by_historical_comparison": false,
       "status": "open",
-      "why_l3": "the floor is the number itself: it decides when a public CLV figure may appear at all"
+      "why_l3": "the floor is the number itself: it decides when a public CLV figure may appear at all",
+      "recommended_by": "ChatGPT second-pass review 2026-09-16",
+      "note": "20 events matches DUR-001 amendment (e)'s proposed cluster-CI floor, which is still held - the two now agree, which is worth more than either alone."
+    },
+    {
+      "id": "Q-14",
+      "question": "may CLV appear in the user interface at all",
+      "level": "L3",
+      "why_l3": "two governing documents give opposite answers, and Q-11 presupposes one of them. This is a product rule, not a measurement rule.",
+      "raised_by": "Claude, revising against the second pass",
+      "conflict": {
+        "CLAUDE.md_line_3": "'No closing line value, no edge percentages, and no market language anywhere in the user interface.'",
+        "COPY_STYLE.md_rule_3": "'CLV is the north star, not win rate. When we talk about whether we're good, the honest answer is closing-line value ... Say so.'"
+      },
+      "options": [
+        "CLAUDE.md governs: CLV stays an internal measure, never on a surface, and Q-11 becomes moot",
+        "COPY_STYLE.md governs: CLV may be shown under Q-11's constraints, and CLAUDE.md line 3 is amended",
+        "a middle rule: CLV shown only in a named methodology surface, never on the product pages"
+      ],
+      "recommendation": "no recommendation - this is a product-voice decision that belongs to Reed, and the two documents he owns disagree. Whichever way it goes, ONE of them must be amended so they stop contradicting.",
+      "chosen_by_historical_comparison": false,
+      "status": "open",
+      "blocks": "Q-11"
     }
   ],
   "capture_requirements_that_cannot_be_backfilled": [
@@ -337,7 +390,7 @@
     "a new protocol version"
   ],
   "revised": "2026-09-16",
-  "revision_note": "Revised against ChatGPT's methodological review of 2026-09-16, recorded at coordination/reviews/2026-09-16-chatgpt-clv-review.md. Still DRAFT: the review's own instruction is that the revision returns to ChatGPT before Reed sees the L3 choices.",
+  "revision_note": "v0.3.0 applies ChatGPT's SECOND-pass review (same review file, second-pass section). The methodological review is complete. Remaining owner-level choices are Q-05, Q-06, Q-07, Q-08, Q-11, Q-13 - plus Q-14, which the revision raised and which blocks Q-11.",
   "primary_definition": {
     "name": "CLV_return",
     "formula": "CLV_return = closing_fair_probability * decimal_odds_at_publish - 1",
@@ -353,29 +406,27 @@
   },
   "capture_requirements_source": "Items 7-12 added from the ChatGPT review of 2026-09-16. Item 2 promoted from the definition change. Capture starts immediately under R-01; none of this waits on the freeze, because none of it can be recreated later.",
   "review_coverage_audit": {
-    "reviewed_by": "ChatGPT review 2026-09-16",
+    "reviewed_by": "ChatGPT, first pass + second pass, 2026-09-16",
     "l2_asked": 6,
-    "l2_resolved": 4,
-    "l2_outstanding": [
-      "Q-02",
-      "Q-10"
-    ],
+    "l2_resolved": 6,
+    "l2_outstanding": [],
     "l3_asked": 5,
-    "l3_recommended": 4,
-    "l3_outstanding": [
-      "Q-11"
-    ],
-    "note": "The handoff asked for a resolution on all six L2 questions and a recommendation on all five L3. Three came back unaddressed and are carried forward rather than treated as settled by silence."
+    "l3_recommended": 5,
+    "l3_outstanding": [],
+    "note": "Complete after the second pass. Q-02, Q-10 and Q-11 - unanswered in the first pass - came back. Q-12 resolved, Q-13 recommended. Q-14 was raised by the revision after the review and has no reviewer recommendation by design: it is a product-voice decision."
   },
   "next_action": {
-    "owner": "ChatGPT",
-    "action": "second-pass review of this revision, then Reed sees the L3 set. Reed does NOT see them before that pass.",
-    "carry_forward": [
-      "Q-02",
-      "Q-10",
+    "owner": "Reed",
+    "action": "L3 approval. The methodological review is complete; these are owner-level choices.",
+    "l3_set": [
+      "Q-05",
+      "Q-06",
+      "Q-07",
+      "Q-08",
       "Q-11",
-      "Q-12",
-      "Q-13"
-    ]
+      "Q-13",
+      "Q-14"
+    ],
+    "note": "Q-14 blocks Q-11 and should be taken first."
   }
 }

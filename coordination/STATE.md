@@ -5,9 +5,10 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is at **v0.2.0-draft**, revised against ChatGPT's
-review and returned to ChatGPT for a second pass. Reed does not see the L3 set
-until that pass is done.
+**Live baton:** CLV-001 is at **v0.3.0-draft**. The methodological review is
+**complete** — all six L2 resolved, all five L3 recommended. **Waiting on Reed**
+for seven L3 rulings, starting with **Q-14** (may CLV appear in the UI at all —
+`CLAUDE.md` and `COPY_STYLE.md` contradict each other, and Q-11 depends on it).
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every

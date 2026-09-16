@@ -11,6 +11,109 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v0.3.0-draft: review complete, L3 set ready for Reed
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+### What changed
+
+ChatGPT's **second pass** is applied. The methodological review is **complete**:
+all six L2 questions resolved, all five L3 have a recommendation attached.
+
+Both fixes it asked for are in:
+
+1. **Q-05's blocker was contradicting the primary definition.** It still said
+   two-sided capture *at publish*. Corrected to **at close** — under
+   `CLV_return` the publish side is used as posted and is never de-vigged.
+2. **Q-01b now has a number.** Staleness limit **45 minutes**, derived as one
+   normal capture interval + a 15-minute operational grace, fixed before any CLV
+   result was looked at.
+
+Resolved this pass: **Q-02** (named book list, ≥3 books, de-vig per book *then*
+median — that order matters), **Q-10** (unscored unless re-locked; match on
+fighter + provider market ID), **Q-12** (power de-vig, matching DUR-001
+Amendment 1.1). Recommendations recorded on **Q-11** and **Q-13**.
+
+### Two things the measurement turned up
+
+Both found read-only while deriving the staleness number. Neither is a CLV
+result; both are operational properties of the capture pipeline.
+
+**1. 28% of `fight_odds` is epoch-dated — and R-02 would not have caught it.**
+30,724 of 110,032 rows, across 7,681 fights, carry
+`captured_at = 1970-01-01`. Live capture starts 2026-05-22; everything before is
+a historical import whose capture instant was never recorded.
+
+R-02 excludes a *missing* timestamp. A populated fake one passes it. New rule
+**R-13** closes that. The consequence is a coverage fact, not a gap to hide:
+**CLV can only ever be computed on the live-capture era**, and those 7,681
+fights can never enter the measure.
+
+It is also the worst possible failure mode here specifically — an epoch stamp is
+always "before the fight", so a sentinel row looks *eligible* to every ordering
+rule and would be selected as the opener every time.
+
+**2. The capture cadence is bimodal, and the naive reading is an order of
+magnitude wrong.** ~30 min during a fight week (p50 30.0, p75 32.0); ~24 h
+between cards (p90 1426.6 min, max 2952). Only the near-card mode is relevant,
+because a staleness limit only binds near the close. Deriving the limit from the
+overall p90 would have produced a **24-hour** staleness rule. That caveat now
+travels with the number, with a test to keep it there.
+
+### The one thing I need you to look at first
+
+**Q-14 — may CLV appear in the user interface at all?** Two documents you own
+give opposite answers:
+
+> `CLAUDE.md`, line 3: "**No closing line value**, no edge percentages, and no
+> market language **anywhere in the user interface**."
+
+> `COPY_STYLE.md`, rule 3: "**CLV is the north star**, not win rate… **Say so.**"
+
+These cannot both hold. **Q-11 spends its whole effort on how a positive CLV
+figure may be phrased on a surface, and `CLAUDE.md` says no such figure may be
+on a surface at all.** So Q-14 decides whether Q-11 has a subject.
+
+No recommendation is offered on it, deliberately — it is a product-voice
+decision, and a reviewer cannot resolve a conflict between two rules the owner
+wrote. Whichever way it goes, **one of the two documents has to be amended.**
+
+Worth knowing which way the work has been leaning: the protocol assumes a CLV
+figure eventually reaches a surface, because that is what R-10's publication
+gate exists to hold shut. If `CLAUDE.md` governs, R-10 is not a gate but a
+permanent wall, and it should say so plainly instead.
+
+### What is waiting on you
+
+| | |
+|---|---|
+| **Q-14** | **first** — decides whether Q-11 has a subject |
+| Q-11 | how positive CLV may be described, if at all |
+| Q-05, Q-06 | what the headline number is |
+| Q-07, Q-08, Q-13 | aggregation, and when a figure may appear |
+
+Everything else is settled and recorded. The protocol stays **draft** and the
+publication gate stays **shut** until you rule.
+
+### What I did not do
+
+**I did not touch `settle_clv.py`.** It still ships the `clv_pp` convention,
+which v0.3.0 keeps as a secondary measure. Reconciling it is a freeze-time task.
+
+**I did not resolve Q-14 myself**, and I did not amend `CLAUDE.md` or
+`COPY_STYLE.md` to make the contradiction go away. Picking one would be choosing
+the product voice on your behalf.
+
+**No CLV figure was computed.** `results_computed_before_freeze` is still false.
+
+### Next action
+
+**Reed rules on Q-14 first, then Q-11, Q-05, Q-06, Q-07, Q-08 and Q-13.**
+
+---
+
 ## 2026-09-16 — CLV-001 revised against the review, back to ChatGPT
 
 **From:** Claude
