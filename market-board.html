@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>UFC Market Board — CFL vs the Market | Cannon Fight Lab</title>
+<meta name="description" content="The current UFC card, model vs market: the largest disagreements between CFL's locked forecast and the vig-free sportsbook number, a price watch across Tennessee-licensed books, and line movement since lock.">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+<link rel="canonical" href="https://cannonfightlab.com/market-board.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Market Board — CFL vs the Market">
+<meta property="og:description" content="Largest disagreements, price watch and line movement for the current UFC card. Predictions locked before results.">
+<meta property="og:url" content="https://cannonfightlab.com/market-board.html">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Market Board — CFL vs the Market">
+<meta name="twitter:description" content="Largest disagreements, price watch and line movement for the current UFC card.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="theme-color" content="#08090b">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=flag4">
+<link rel="stylesheet" href="fight-week.css?v=fw1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+</head>
+<body data-page="market_board">
+
+<nav class="cfl-nav"></nav>
+<div class="lab-bg" aria-hidden="true"><div class="grid"></div><div class="scan"></div></div>
+
+<main class="fw" id="board">
+  <div class="fw-eyebrow"><span>Market Board</span><span class="fw-eyebrow-dim" id="mbEyebrow">Loading the current card…</span></div>
+  <h1 id="mbTitle">UFC Market Board</h1>
+  <p class="fw-lede" id="mbLede">CFL's locked forecast against the sportsbook market for the current card: where the two disagree most, what the prices look like at Tennessee-licensed books, and how the line has moved since the forecast was locked.</p>
+  <p class="fw-rule"><b>CFL publishes model forecasts and market analysis, not handicapper picks.</b> Market numbers are the books' prices with the cut removed. A disagreement is not a proven betting edge.</p>
+
+  <div class="fw-summary" id="mbSummary" hidden></div>
+
+  <section class="fw-section">
+    <h2>Largest disagreements</h2>
+    <p>Every priced fight on the card, biggest gap first. The gap is CFL minus market on the fighter CFL favours. A disagreement is not a proven betting edge.</p>
+    <div id="mbDisagree"><div class="fw-empty">Loading…</div></div>
+  </section>
+
+  <section class="fw-section">
+    <h2>Price watch</h2>
+    <p>For each fight: CFL's probability on its favoured fighter, the moneyline that probability would be worth, and the best price currently posted on that fighter at a Tennessee-licensed book. <b>For comparison, not a recommendation.</b> Offshore quotes feed the market number above but are never shown as a price to take.</p>
+    <div id="mbPrices"><div class="fw-empty">Loading…</div></div>
+  </section>
+
+  <section class="fw-section">
+    <h2>Market movement</h2>
+    <p>How the vig-free market number on CFL's favoured fighter has moved since the forecast was locked. Only timestamped sportsbook quotes count — nothing is back-filled.</p>
+    <div id="mbMoves"><div class="fw-empty">Loading…</div></div>
+  </section>
+
+  <section class="fw-section">
+    <h2>Go deeper</h2>
+    <div class="fw-links" id="mbLinks">
+      <a href="track-record.html">Proof Center — the graded record →</a>
+      <a href="methodology.html">How the numbers are made →</a>
+    </div>
+  </section>
+</main>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
+<script src="fight-week-core.js?v=fw1"></script>
+<script src="books.js?v=fw1"></script>
+<script src="fight-week.js?v=fw1"></script>
+<script>
+cfl.renderNav('board');
+cfl.renderFooter();
+
+(async function () {
+  const core = window.cflFightWeek, books = window.cflBooks, fw = window.cflFW;
+  const esc = core.escapeHtml;
+  const $ = id => document.getElementById(id);
+
+  let card;
+  try { card = await fw.loadCurrent(); }
+  catch (e) { console.warn('[board] load failed', e); card = null; }
+
+  if (!card || !card.event) {
+    $('mbEyebrow').textContent = 'No card with a locked forecast';
+    ['mbDisagree', 'mbPrices', 'mbMoves'].forEach(id => { $(id).innerHTML = '<div class="fw-empty">No UFC card has a locked CFL forecast on record right now. Check back during fight week.</div>'; });
+    return;
+  }
+  const { event, rows, byBook, summary: s, phase } = card;
+  document.body.setAttribute('data-event-id', String(event.id));
+  fw.track('market_board_view', { event_id: String(event.id) });
+
+  $('mbEyebrow').textContent = `${event.name} · ${core.fmtDate(event.event_date)}${phase === 'graded' ? ' · graded card (no upcoming card has a locked forecast yet)' : ''}`;
+  $('mbTitle').textContent = `${event.name} — Market Board`;
+  document.title = `${event.name} Market Board — CFL vs the Market | Cannon Fight Lab`;
+  $('mbLinks').insertAdjacentHTML('afterbegin', `<a href="${core.hubPath(event)}">${esc(event.name)} Event Hub →</a>`);
+
+  const stale = core.isStale(s.lastUpdated, 24);
+  $('mbSummary').innerHTML = `
+    <div class="fw-cell"><div class="t">Fights analyzed</div><div class="n">${s.analyzed}<span class="fw-dim" style="font-size:14px"> / ${s.fights}</span></div><div class="s">with a locked CFL forecast</div></div>
+    <div class="fw-cell"><div class="t">Big disagreements</div><div class="n">${s.big}</div><div class="s">${core.BIG_POINTS}+ points apart · ${s.priced} priced</div></div>
+    <div class="fw-cell"><div class="t">Odds last updated</div><div class="n small${stale ? ' fw-stale' : ''}">${esc(core.fmtWhen(s.lastUpdated))}</div><div class="s">${stale ? 'stale — more than a day old' : 'vig-free · sportsbooks only'}</div></div>
+    <div class="fw-cell"><div class="t">Predictions locked before results.</div><div class="n small">${esc(core.fmtStamp(s.lockedAt))}</div><div class="s">locked, never revised</div></div>`;
+  $('mbSummary').hidden = false;
+
+  // ---- 1. Largest disagreements ----
+  const priced = core.biggest(rows);
+  $('mbDisagree').innerHTML = priced.length
+    ? `<div class="fw-cards">${priced.map(r => fw.disagreementCard(r)).join('')}</div>`
+    : '<div class="fw-empty">No fight on this card has both a locked forecast and a sportsbook price yet.</div>';
+
+  // ---- 2. Price watch ----
+  // Best price = the highest American odds on CFL's favoured fighter among
+  // Tennessee-licensed books only. Ranking is by price and nothing else.
+  const priceRows = rows.filter(r => r.cfl_p_a != null).map(r => {
+    const favA = r.cfl_p_a >= 0.5;
+    const fav = favA ? r.fighter_a_name : r.fighter_b_name;
+    const p = favA ? r.cfl_p_a : r.cfl_p_b;
+    const fair = core.americanFromProb(p);
+    const quotes = (byBook[r.fight_id] || []).filter(q => books.isLicensed(q.book_name))
+      .map(q => ({ book: q.book_name, odds: favA ? q.american_odds_a : q.american_odds_b, at: q.captured_at }))
+      .filter(q => q.odds != null)
+      .sort((x, y) => y.odds - x.odds);
+    const best = quotes[0] || null;
+    const offshore = (byBook[r.fight_id] || []).filter(q => !books.isLicensed(q.book_name)).length;
+    const priceCell = best
+      ? `<div class="fw-price"><b>${core.fmtAmerican(best.odds)}</b> <a class="book" href="${books.link(best.book)}" rel="noopener nofollow" target="_blank" data-book="${esc(books.label(best.book))}" data-fight-id="${r.fight_id}">${esc(books.label(best.book))}</a><span class="best">best price</span>${quotes.length > 1 ? `<span class="book">· ${quotes.slice(1).map(q => `${esc(books.label(q.book))} ${core.fmtAmerican(q.odds)}`).join(' · ')}</span>` : ''}</div>`
+      : `<span class="fw-dim">No Tennessee-licensed quote on file${offshore ? ` (${offshore} offshore quote${offshore === 1 ? '' : 's'} feed the market number)` : ''}</span>`;
+    return `<tr data-fight-id="${r.fight_id}">
+      <td class="fw-bout"><a href="${core.fightPath(r)}">${esc(r.fighter_a_name)} <span class="vs">vs</span> ${esc(r.fighter_b_name)}</a><span class="sub">CFL favours ${esc(fav)}${r.is_main_event ? ' · Main event' : ''}</span></td>
+      <td class="num">${core.pct(p)}</td>
+      <td class="num">${core.fmtAmerican(fair)}</td>
+      <td>${priceCell}</td>
+    </tr>`;
+  });
+  $('mbPrices').innerHTML = priceRows.length
+    ? `<div class="fw-tablewrap"><table class="fw-table" data-track="odds_view"><thead><tr><th>Fight</th><th class="num">CFL probability</th><th class="num">Fair line</th><th>Best posted price (TN-licensed)</th></tr></thead><tbody>${priceRows.join('')}</tbody></table></div>
+       <p class="fw-note">Fair line is the moneyline CFL's probability is worth, before any book's cut. A posted price that pays more than the fair line only means the book disagrees with the model — the market's price is right more often than any model. Prices refresh hourly around fight day; timestamps are on each fight page. No affiliate links.</p>`
+    : '<div class="fw-empty">No locked forecasts on this card yet.</div>';
+
+  // ---- 3. Market movement ----
+  const moves = core.biggestMoves(rows);
+  const noLock = rows.filter(r => r.cfl_p_a != null && r.market_p_a != null && r.market_p_a_at_lock == null).length;
+  $('mbMoves').innerHTML = (moves.length
+    ? `<div class="fw-tablewrap"><table class="fw-table"><thead><tr><th>Fight</th><th class="num">CFL</th><th class="num">Market at lock</th><th class="num">Market now</th><th>Move</th></tr></thead><tbody>${moves.map(r => {
+        const favA = r.cfl_p_a >= 0.5; const fav = favA ? r.fighter_a_name : r.fighter_b_name;
+        return `<tr><td class="fw-bout"><a href="${core.fightPath(r)}">${esc(r.fighter_a_name)} <span class="vs">vs</span> ${esc(r.fighter_b_name)}</a><span class="sub">on ${esc(core.lastName(fav))} · locked ${esc(core.fmtStamp(r.locked_at))} · ${r.book_count_at_lock} book${r.book_count_at_lock === 1 ? '' : 's'} at lock</span></td>
+          <td class="num">${core.pct(favA ? r.cfl_p_a : r.cfl_p_b)}</td><td class="num">${core.pct(r.move.then)}</td><td class="num">${core.pct(r.move.now)}</td><td>${esc(r.move.label)}</td></tr>`;
+      }).join('')}</tbody></table></div>`
+    : '<div class="fw-empty">No fight has a sportsbook quote on file from before its forecast was locked, so no movement can be shown yet.</div>')
+    + (noLock ? `<p class="fw-note">${noLock} fight${noLock === 1 ? ' has' : 's have'} no sportsbook quote from before the lock (books post UFC prices a few days out; CFL locks earlier).</p>` : '');
+
+  // Track the odds table when it comes into view.
+  const tbl = document.querySelector('[data-track="odds_view"]');
+  if (tbl) fw.onFirstView(tbl, () => fw.track('odds_view', { event_id: String(event.id) }));
+})();
+</script>
+</body>
+</html>
