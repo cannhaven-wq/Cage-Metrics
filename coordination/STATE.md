@@ -129,7 +129,9 @@ One card of waiting, not a build.
 | the first write is an atomic compare-and-set, not a PATCH by id | **fixed**, 2 live-SQL tests |
 | the linked publish quote must predate publication | **fixed**, 4 tests |
 | an unratified amendment holds write mode shut | **fixed**, 9 tests |
-| the lock is the EDGE's publication, never the model pick's | **fixed**, 10 tests + 4 live-SQL |
+| the lock is the EDGE's publication, never the model pick's | **fixed**, 11 tests + 4 live-SQL |
+| the machine mirror cannot drift back to the superseded rule | **fixed**, 6 tests |
+| `edge_model_edge_id` + `edge_published_at` required BOTH ways in SQL | **fixed**, 3 live-SQL tests |
 | a snapshot names WHICH edge it froze (`edge_model_edge_id`) | **written, UNAPPLIED**, 9 tests |
 | ambiguous edge identity scores nothing | **fixed**, included above |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last to apply |
@@ -229,6 +231,13 @@ quotes from before the edge existed. `edge_published_at` is added beside
 Historical snapshots fall back to `snapshot_at` only — later than publication,
 therefore conservative, and labelled as a fallback on the row — and never to
 `engine_published_at`, which stays as provenance for the main model prediction.
+
+**The machine mirror is the copy a program reads.** `protocol.json` twice kept
+a superseded rule after the markdown and the code had moved on — most recently
+`forecast_lock.instant_within_snapshot` still saying *"engine_published_at,
+falling back to snapshot_at"*. Corrected, and `tests/test_clv_protocol.py` now
+pins the mirror against the module's own constants so the two cannot be fixed
+independently and disagree again.
 
 **Amendment 7 is ratified.** Approved substance: *a scored CLV-001 observation is
 permanent; later runs may verify it but never overwrite it, and a genuine

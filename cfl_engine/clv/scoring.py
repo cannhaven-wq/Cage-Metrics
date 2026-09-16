@@ -607,12 +607,22 @@ def forecast_lock(edge: dict, snapshot: dict | None,
     is exactly the accident R-07 warns about, one step removed.
 
     `pre_fight_snapshots` is the immutable record, and it is trigger-enforced
-    against UPDATE and DELETE for every role including `service_role`. It carries
-    the edge as published — `edge_side`, `edge_bet_fighter_id`,
-    `edge_odds_at_publish` — so the snapshot can be matched to THIS edge rather
-    than merely to its fight, which is what makes it a crosscheck instead of a
-    coincidence. All three must agree; a snapshot that names a different side,
-    fighter or price is a record of a different forecast.
+    against UPDATE and DELETE for every role including `service_role`. Identity
+    within it is `edge_model_edge_id` first and the tuple only as the legacy
+    fallback, as above.
+
+    WHICH INSTANT, and this is the part that is easy to get wrong:
+
+      1. `edge_published_at` — the EDGE's own publication, when the snapshot
+         carries it (and the edge id beside it; the two are required together).
+      2. `snapshot_at` — the legacy fallback, for snapshots taken before that
+         column existed. Later than publication, so fail-closed, and marked
+         `immutable_is_conservative_fallback` on the row rather than passed off
+         as the real instant.
+      3. **Never `engine_published_at`.** That is `model_picks.published_at` —
+         the MODEL PICK's publication — and a pick and a value edge are
+         different records published at different times. It is carried for audit
+         and is not a lock in any branch (`NOT_AN_EDGE_LOCK_FIELDS`).
 
     THE EFFECTIVE LOCK IS THE LATER of the immutable instant and the mutable
     `published_at`. Later is strictly harder to satisfy, so a `published_at`
@@ -620,10 +630,6 @@ def forecast_lock(edge: dict, snapshot: dict | None,
     cost observations. It can never admit a quote the immutable record would
     have excluded. That asymmetry is the whole point, and it is why the two are
     combined this way rather than one being trusted over the other.
-
-    Within the snapshot, `engine_published_at` is preferred and `snapshot_at` is
-    the fallback. `snapshot_at` is later than publication, so falling back to it
-    is also fail-closed.
     """
     if not snapshot:
         raise Unscored("no_immutable_forecast_lock",

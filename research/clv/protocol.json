@@ -7,7 +7,7 @@
   "version": "1.0.10",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "df5ce2a5dcea00012766943db2131b778e3201429b234d4f8ee80b2e03965c53",
+  "protocol_sha256": "8167dcf1d4bead1ba3b886bf2935615cfe6025580f4f90d334360a41ec31ee71",
   "benchmark_name": {
     "short": "CFL closing-price proxy",
     "long": "late pre-fight closing-price proxy",
@@ -857,7 +857,7 @@
       "version_before": "1.0.9",
       "version_after": "1.0.10",
       "sha256_before": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
-      "sha256_after": "df5ce2a5dcea00012766943db2131b778e3201429b234d4f8ee80b2e03965c53",
+      "sha256_after": "8167dcf1d4bead1ba3b886bf2935615cfe6025580f4f90d334360a41ec31ee71",
       "parts": {
         "a": "a scored observation is written ONCE and thereafter only verified. The settler re-scored every historical live edge on every run and re-PATCHed every result with no check for an existing clv_protocol_version, clv_consensus_sha256 or clv_scored_at - so a second run could reinterpret an earlier observation against later database state and refresh clv_scored_at to hide it. Now: never scored -> write once; scored under this version and reproduces -> zero writes; scored and does not reproduce -> abort the run loudly; scored under another version -> untouched. clv_scored_at is never refreshed.",
         "b": "clv_publish_quote_id stays fail-closed. Until the external edge publisher records the exact fight_odds.id contemporaneously with odds_at_publish, no edge scores - historical or future - and nothing backfills the link by matching prices.",
@@ -870,7 +870,8 @@
       "motivated_by_observed_results": false,
       "approval_status": "APPROVED 2026-09-16 (L3). Filed PROPOSED and ratified after review; settle_clv.preflight held write mode shut while it was pending and still governs the next unratified amendment.",
       "approved_substance": "A scored CLV-001 observation is permanent. Later runs may verify it but never overwrite it. Any genuine correction is a new auditable superseding record, not a mutation of the original observation. The superseding MECHANISM is deliberately not designed in this version: zero observations have been scored, so there is nothing to correct, and the half that cannot wait - that nothing overwrites an observation - is what this version guarantees.",
-      "superseding_mechanism": "deferred by owner decision; to be designed before the first real correction"
+      "superseding_mechanism": "deferred by owner decision; to be designed before the first real correction",
+      "conformance_correction": "2026-09-16, same day, no change of rule. protocol.json's live forecast_lock block still carried the pre-amendment 'engine_published_at, falling back to snapshot_at' and described edge matching as the tuple rather than the id - the mirror a program reads disagreeing with the markdown and the code. Corrected, together with a stale forecast_lock() docstring saying the pick instant was preferred under an implementation that did the opposite, and with the DB pairing of edge_model_edge_id and edge_published_at now enforced in both directions. tests/test_clv_protocol.py asserts the mirror cannot drift back."
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
@@ -922,19 +923,23 @@
     "unscored_reason": "incomplete_quote_provenance"
   },
   "forecast_lock": {
-    "frozen_by": "Amendment 6 (b) and (c), 2026-09-16, approved by Reed Cannon (L3)",
+    "frozen_by": "Amendment 6 (b) and (c), 2026-09-16; the instant and the identity corrected by Amendment 7 (c) and (e), approved by Michael Cannon (owner, L3)",
     "rule": "forecast_locked_at < close_quoted_at, strictly, in UTC, for EVERY quote entering the consensus - not once per edge against the cutoff",
     "worked_example": "a forecast locked at 9:28 cannot be scored against a book quote from 9:20 even though the cutoff is 9:30: that price was on the screen before the forecast existed",
-    "immutable_record": "pre_fight_snapshots, matched to this edge by edge_side + edge_bet_fighter_id + edge_odds_at_publish, all three agreeing",
-    "instant_within_snapshot": "engine_published_at, falling back to snapshot_at (which is later, so also fail-closed)",
+    "immutable_record": "pre_fight_snapshots. IDENTITY: pre_fight_snapshots.edge_model_edge_id = model_edges.id is primary and exact. Matching on (edge_side, edge_bet_fighter_id, edge_odds_at_publish), all three agreeing, is the LEGACY FALLBACK only - for snapshots taken before the id column existed - and it must additionally be unique among the fight's live edges, because one fight can be republished with the same three. Two matches, or a cohort never established, is ambiguous_edge_identity and scores nothing.",
+    "instant_within_snapshot": "pre_fight_snapshots.edge_published_at - the EDGE's own publication instant - required together with edge_model_edge_id. LEGACY FALLBACK: pre_fight_snapshots.snapshot_at, which is later than publication and therefore fail-closed, recorded on the scored row as immutable_is_conservative_fallback = true. NEVER engine_published_at.",
     "effective_lock": "the LATER of the immutable instant and model_edges.published_at - later is strictly harder to satisfy, so a mutated published_at can only cost observations",
     "why_not_published_at_alone": "model_edges is a working table with no append-only trigger; a row rewritten after the fact is a claim about what we published, not a record of it",
     "dedicated_ledger_needed": false,
     "dedicated_ledger_note": "pre_fight_snapshots already identifies the exact edge and predates CLV-001, which is what makes it good evidence. A new ledger would be a second copy with less provenance.",
-    "unscored_reason": "no_immutable_forecast_lock"
+    "unscored_reason": [
+      "no_immutable_forecast_lock",
+      "ambiguous_edge_identity"
+    ],
+    "engine_published_at": "model_picks.published_at - the MODEL PICK's publication. A pick and a value edge are different records published at different times: the engine posts a pick, and the edge derived from it appears later, once the price has moved far enough to flag one. Using it as the edge's lock places the lock early and admits quotes from before the edge existed. It is carried as provenance for the main model prediction and is NOT an edge lock in any branch (NOT_AN_EDGE_LOCK_FIELDS in cfl_engine/clv/scoring.py)."
   },
   "publish_price_provenance": {
-    "frozen_by": "Amendment 6 (d), 2026-09-16, approved by Reed Cannon (L3)",
+    "frozen_by": "Amendment 6 (d), 2026-09-16; the temporal requirement added by Amendment 7 (c) and bound to the edge instant by 7 (e), approved by Michael Cannon (owner, L3)",
     "requirement": "S4 item 12: an immutable link from odds_at_publish to the exact source quote",
     "column": "model_edges.clv_publish_quote_id -> fight_odds.id",
     "verified_not_trusted": [
@@ -943,6 +948,7 @@
       "opponent identity is the fight's other corner (Q-10)",
       "provider market id is present (R-06)",
       "the quote instant is credible (R-13)",
+      "the quote was captured AT OR BEFORE the immutable edge publication bound - a quote captured after the edge was published cannot be the source of its posted price, however exactly the price matches",
       "full S4 provenance on the quote row"
     ],
     "closing_side_must_match": [
@@ -954,7 +960,9 @@
       "no_publish_quote_link",
       "market_identity_changed"
     ],
-    "producer_status": "NONE. Whatever writes model_edges does not record clv_publish_quote_id yet, so no edge can score - historical or future. Fail-closed and confirmed as such by Amendment 7 (b); the link is never backfilled by matching prices."
+    "producer_status": "NONE. Whatever writes model_edges does not record clv_publish_quote_id yet, so no edge can score - historical or future. Fail-closed and confirmed as such by Amendment 7 (b); the link is never backfilled by matching prices.",
+    "temporal_bound": "captured_at <= min(model_edges.published_at, the immutable edge instant), where the immutable instant is edge_published_at or the snapshot_at fallback - the same instant the lock uses, never engine_published_at. The EARLIER of the two, deliberately: the lock takes the later because a later lock only shrinks the closing window, but this comparison runs the other way, so a published_at edited forwards would admit a quote captured after the real publication. A mutable timestamp may narrow this window and may never widen it. Consequence: the publish side can never be drawn from inside the window the closing side is measured over.",
+    "why_the_price_match_is_not_enough": "a book that has not moved for an hour leaves several rows at the same price, and only one of them precedes publication. Selecting on price alone picks the wrong one routinely rather than rarely."
   },
   "staleness": {
     "limit_minutes": 45,
@@ -1033,6 +1041,7 @@
     "never": "pre_fight_snapshots.engine_published_at. It is model_picks.published_at - the MODEL PICK's publication, a different record at a different time - and stays as provenance for the main model prediction.",
     "why": "the engine posts a pick, and the edge derived from it appears later, once the price has moved far enough to flag one. Reading the pick's instant as the edge's places the lock early and admits quotes from before the edge existed.",
     "publish_quote_bound": "the same instant, tightened by model_edges.published_at when that is earlier. A mutable timestamp may narrow the window and may never widen it.",
-    "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)"
+    "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)",
+    "db_pairing": "edge_model_edge_id and edge_published_at are required TOGETHER, enforced in both directions by pre_fight_snapshots_edge_published_needs_an_id and pre_fight_snapshots_edge_id_needs_published_at. Historical rows carry NULL in both and satisfy them untouched. The producer drops both halves when either is missing, so an edge with no published_at degrades to the legacy path rather than failing the snapshot batch."
   }
 }

@@ -1465,6 +1465,29 @@ class TestEdgePublicationInstant(unittest.TestCase):
                           src.index("OPTIONAL_COLUMNS") + 200],
                       "it must degrade when the column is absent, like the id")
 
+    def test_the_producer_drops_both_halves_when_either_is_missing(self):
+        """The pair is required in both directions and the database enforces it,
+        so a producer that writes an id with no instant would fail the whole
+        INSERT batch. `model_edges.published_at` can be NULL, so that is
+        reachable. Degrading that fight to the legacy path costs precision and
+        is the right trade against losing the snapshot."""
+        engine_dir = os.path.join(REPO_ROOT, "cfl_engine")
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import snapshot_predictions as snap                           # noqa: E402
+
+        rows = [{"fight_id": 1, "edge_model_edge_id": 7,
+                 "edge_published_at": None},          # edge with no publish time
+                {"fight_id": 2, "edge_model_edge_id": None,
+                 "edge_published_at": None},          # no edge at all
+                {"fight_id": 3, "edge_model_edge_id": 9,
+                 "edge_published_at": LOCK}]          # complete
+        snap._pair_edge_identity(rows, log=lambda *_: None)
+        self.assertNotIn("edge_model_edge_id", rows[0])
+        self.assertNotIn("edge_published_at", rows[0])
+        self.assertEqual(rows[2]["edge_model_edge_id"], 9)
+        self.assertEqual(rows[2]["edge_published_at"], LOCK)
+
     def test_the_migration_adds_the_column_and_pairs_it_with_the_id(self):
         sql = open(os.path.join(REPO_ROOT, "research", "clv",
                                 "proposed_2026-09-16_snapshot_edge_identity.sql"),
@@ -1472,6 +1495,9 @@ class TestEdgePublicationInstant(unittest.TestCase):
         self.assertIn(f"add column if not exists {SNAPSHOT_EDGE_PUBLISHED_FIELD} "
                       f"timestamptz", sql)
         self.assertIn("pre_fight_snapshots_edge_published_needs_an_id", sql)
+        self.assertIn("pre_fight_snapshots_edge_id_needs_published_at", sql,
+                      "the pairing is required in BOTH directions; an id with "
+                      "no instant is a half-written row")
         self.assertIn("pre_fight_snapshots_edge_published_before_snapshot", sql)
 
 

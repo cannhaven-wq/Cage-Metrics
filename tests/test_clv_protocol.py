@@ -781,3 +781,69 @@ class TestAmendmentApprovalIsNotClaimed(unittest.TestCase):
         green was never a gate."""
         src = (REPO / "cfl_engine" / "settle_clv.py").read_text(encoding="utf-8")
         self.assertIn('cond["all_amendments_approved"]', src)
+
+
+class TestMachineMirrorMatchesTheAmendments(unittest.TestCase):
+    """The JSON is what a program reads. It has drifted twice.
+
+    Both times the markdown and the code were right and `protocol.json` still
+    carried the superseded rule — which is the worst place for it to survive,
+    because the mirror is the copy that gets parsed rather than read. These are
+    tripwires on the specific sentences that went stale.
+    """
+
+    def lock(self):
+        return doc()["forecast_lock"]
+
+    def test_the_instant_is_the_edges_publication_not_the_picks(self):
+        instant = self.lock()["instant_within_snapshot"]
+        self.assertIn("edge_published_at", instant)
+        self.assertIn("snapshot_at", instant)
+        self.assertIn("NEVER engine_published_at", instant)
+        self.assertNotIn("engine_published_at, falling back", instant,
+                         "the mirror still carries the pre-Amendment-7 rule")
+
+    def test_the_mirror_says_what_engine_published_at_actually_is(self):
+        self.assertIn("engine_published_at", self.lock())
+        described = self.lock()["engine_published_at"]
+        self.assertIn("model_picks.published_at", described)
+        self.assertIn("NOT an edge lock", described)
+
+    def test_identity_is_the_edge_id_first_and_the_tuple_as_a_fallback(self):
+        record = self.lock()["immutable_record"]
+        self.assertIn("edge_model_edge_id", record)
+        self.assertIn("primary", record)
+        self.assertIn("LEGACY FALLBACK", record)
+        self.assertIn("unique", record,
+                      "the tuple fallback is only admissible when it is unique "
+                      "among the fight's live edges")
+
+    def test_the_publish_side_carries_its_temporal_requirement(self):
+        pp = doc()["publish_price_provenance"]
+        self.assertIn("temporal_bound", pp)
+        self.assertIn("captured_at <=", pp["temporal_bound"])
+        self.assertIn("never engine_published_at", pp["temporal_bound"])
+        self.assertTrue(
+            any("captured AT OR BEFORE" in v for v in pp["verified_not_trusted"]),
+            "the verified list must include the timing check, not only price and "
+            "identity")
+
+    def test_the_mirror_agrees_with_the_module_on_what_is_never_a_lock(self):
+        """Pinned against the code rather than restated, so the two cannot be
+        corrected independently and disagree again."""
+        import sys
+        clv_dir = str(REPO / "cfl_engine" / "clv")
+        if clv_dir not in sys.path:
+            sys.path.insert(0, clv_dir)
+        import scoring                                                # noqa: E402
+        for field in scoring.NOT_AN_EDGE_LOCK_FIELDS:
+            self.assertIn(field, self.lock()["instant_within_snapshot"])
+        self.assertIn(scoring.SNAPSHOT_EDGE_PUBLISHED_FIELD,
+                      self.lock()["instant_within_snapshot"])
+        self.assertIn(scoring.SNAPSHOT_EDGE_ID_FIELD,
+                      self.lock()["immutable_record"])
+
+    def test_no_stale_docstring_prefers_the_pick_instant(self):
+        src = (REPO / "cfl_engine" / "clv" / "scoring.py").read_text(encoding="utf-8")
+        self.assertNotIn("`engine_published_at` is preferred", src)
+        self.assertIn("Never `engine_published_at`", src)

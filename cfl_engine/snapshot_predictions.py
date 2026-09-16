@@ -379,11 +379,40 @@ def _drop_unknown_columns(base_url, key, rows, log=print):
     return rows
 
 
+# edge_model_edge_id and edge_published_at are required TOGETHER, in both
+# directions, and the database enforces it. An edge whose published_at is NULL —
+# possible, since model_edges does not require it — would otherwise produce a row
+# with an id and no instant, and the INSERT would fail for the whole batch.
+EDGE_IDENTITY_PAIR = ("edge_model_edge_id", "edge_published_at")
+
+
+def _pair_edge_identity(rows, log=print):
+    """Drop both halves of the edge-identity pair unless both are present.
+
+    Degrading to the legacy path costs precision — CLV-001 falls back to
+    matching by tuple and locking on snapshot_at — and that is the right trade
+    against failing the whole snapshot batch. It is logged, because a fight
+    silently losing its edge identity is exactly the kind of thing that is only
+    noticed months later.
+    """
+    for r in rows:
+        present = [c for c in EDGE_IDENTITY_PAIR if r.get(c) is not None]
+        if present and len(present) < len(EDGE_IDENTITY_PAIR):
+            missing = [c for c in EDGE_IDENTITY_PAIR if r.get(c) is None]
+            log(f"  note: fight {r.get('fight_id')} has {', '.join(present)} but "
+                f"no {', '.join(missing)} — dropping both. CLV-001 will match "
+                f"this edge by tuple and lock on snapshot_at.")
+            for c in EDGE_IDENTITY_PAIR:
+                r.pop(c, None)
+    return rows
+
+
 def publish(base_url, key, rows, label, log=print):
     """Insert, ignoring any fight already on record. Never updates: the table's
     triggers reject UPDATE outright, so a duplicate must be dropped, not merged."""
     for r in rows:
         r["snapshot_label"] = label
+    rows = _pair_edge_identity(rows, log=log)
     rows = _drop_unknown_columns(base_url, key, rows, log=log)
     inserted = _rest(base_url, key, "POST", SNAP_TABLE, rows,
                      prefer="return=representation,resolution=ignore-duplicates")

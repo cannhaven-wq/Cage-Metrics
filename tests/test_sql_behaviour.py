@@ -536,6 +536,38 @@ class TestProposedMigrationsApply(PostgresCase):
                         db=self.db, expect_error=True)
         self.assertIn("pre_fight_snapshots_edge_published_needs_an_id", err)
 
+    def test_an_edge_id_without_an_instant_is_rejected_too(self):
+        """The other direction. Amendment 7 (e) requires the pair, and the
+        runtime being safe from a half-written row — it falls back to
+        `snapshot_at` — is not the same as the row being impossible. A producer
+        that writes one and forgets the other should fail at the INSERT rather
+        than quietly degrade every row it writes to the legacy path."""
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        err = self.psql("""
+          insert into public.pre_fight_snapshots (fight_id, snapshot_at,
+            edge_model_edge_id, edge_side, edge_bet_fighter_id,
+            edge_odds_at_publish)
+          values (6, '2026-09-09T12:00:00+00', 7, 'a', 101, 150)
+        """, db=self.db, expect_error=True)
+        self.assertIn("pre_fight_snapshots_edge_id_needs_published_at", err)
+
+    def test_a_historical_row_with_both_null_is_still_valid(self):
+        """The constraints bind what gets written from here on. Every snapshot
+        taken before these columns existed carries NULL in both and must remain
+        insertable and untouched — that is what makes them NOT VALID and still
+        meaningful."""
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        self.psql("insert into public.pre_fight_snapshots (fight_id, snapshot_at,"
+                  " engine_published_at, edge_side, edge_bet_fighter_id,"
+                  " edge_odds_at_publish) values (7, '2026-09-09T12:00:00+00',"
+                  " '2026-09-07T12:00:00+00', 'a', 101, 150)", db=self.db)
+        self.assertEqual(
+            self.psql("select count(*) from public.pre_fight_snapshots "
+                      "where fight_id = 7 and edge_model_edge_id is null "
+                      "and edge_published_at is null", db=self.db), "1")
+
     def test_an_edge_cannot_be_published_after_the_snapshot_that_froze_it(self):
         for name in self.ORDER:
             self.psql_file(os.path.join(CLV, name), db=self.db)

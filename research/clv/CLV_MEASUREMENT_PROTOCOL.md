@@ -443,6 +443,30 @@ published number means.
 > records — `DECISIONS.md`, earlier handoffs, and every amendment above — keep the
 > name they were written with. Rewriting those would falsify who decided what.
 >
+> ### Conformance correction, same day — the machine mirror
+>
+> `protocol.json` kept the pre-amendment rule in its live `forecast_lock` block:
+> *"engine_published_at, falling back to snapshot_at"*, and described edge
+> matching as the tuple rather than the id. The markdown and the code said one
+> thing and the machine-readable mirror said the superseded other — and the
+> mirror is the copy a program reads.
+>
+> Corrected, with no change of rule: `instant_within_snapshot` names
+> `edge_published_at` with the `snapshot_at` fallback and states that
+> `engine_published_at` is never an edge lock; `immutable_record` names
+> `edge_model_edge_id` as the primary identity and the unique tuple as the legacy
+> fallback; `publish_price_provenance` carries the temporal bound explicitly. A
+> stale docstring in `forecast_lock()` that still said the pick instant was
+> preferred — under an implementation that did the opposite — was fixed with it.
+>
+> The pairing of `edge_model_edge_id` and `edge_published_at` is now enforced in
+> the database **both ways**. It only ever checked that a timestamp had an id;
+> an id with no timestamp was accepted, and the runtime merely degraded to the
+> legacy fallback. Safe is not the same as impossible, and the frozen rule says
+> *together*.
+>
+> `tests/test_clv_protocol.py` now asserts the mirror cannot drift back.
+>
 > ### What did NOT change
 >
 > The estimator, the cutoff bases, the de-vig, the 45-minute limit, the book

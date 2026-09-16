@@ -109,9 +109,25 @@ begin
   end if;
 end $$;
 
--- An edge publication instant belongs to an identified edge. A timestamp with no
--- edge id beside it cannot be attached to a particular publication, and would be
--- indistinguishable from the pick timestamp this column exists to displace.
+-- THE TWO NEW COLUMNS ARE REQUIRED TOGETHER, in both directions.
+--
+-- Amendment 7 (e) says so, and `forecast_lock` enforces it: an edge publication
+-- instant is only used when an edge id sits beside it. The database has to say
+-- the same thing, or the frozen specification and its storage disagree and the
+-- storage is the one people will read.
+--
+--   -> a timestamp with no id cannot be attached to a particular publication,
+--      and would be indistinguishable from the pick timestamp this column exists
+--      to displace;
+--   -> an id with no timestamp is a half-written row. The runtime is safe from
+--      it — it falls back to snapshot_at — but "safe because something
+--      downstream compensates" is not the same as "cannot happen", and a
+--      producer that writes one and forgets the other should fail at the INSERT
+--      rather than quietly degrade every row it writes to the legacy path.
+--
+-- Historical rows carry NULL in both and satisfy this untouched, which is why it
+-- can be NOT VALID and still mean something: it binds what gets written from
+-- here on.
 do $$
 begin
   if not exists (select 1 from pg_constraint
@@ -120,6 +136,18 @@ begin
     alter table public.pre_fight_snapshots
       add constraint pre_fight_snapshots_edge_published_needs_an_id
       check (edge_published_at is null or edge_model_edge_id is not null)
+      not valid;
+  end if;
+end $$;
+
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'pre_fight_snapshots_edge_id_needs_published_at'
+                    and conrelid = 'public.pre_fight_snapshots'::regclass) then
+    alter table public.pre_fight_snapshots
+      add constraint pre_fight_snapshots_edge_id_needs_published_at
+      check (edge_model_edge_id is null or edge_published_at is not null)
       not valid;
   end if;
 end $$;
