@@ -107,6 +107,34 @@ t('the page explains why a same-day timestamp is not proof', function () {
   present(/before the first bell/i, 'the reason a card date cannot settle timing');
 });
 
+// ------------- 3b. the live bucket is a dataset, not a timing proof ---------
+// REGRESSION. source='live' identifies the prospective feed. It does NOT by
+// itself establish that any given row preceded its fight — that is what the
+// per-row timing grades are for. No label may collapse the two.
+
+t('no label describes the whole live bucket as proven pre-fight', function () {
+  [
+    'posted before the fight',
+    'posted before its card',
+    'written to the database before the card started',
+    'every call posted before',
+    'all posted before the fight',
+    'every live pick was posted before',
+    'locked before the bell',
+    'locked before fight night',
+  ].forEach(function (p) {
+    absent(p, "source='live' names the dataset, it does not prove per-row timing");
+  });
+});
+
+t('the live record is labelled as a feed, and points at the per-row grading', function () {
+  present(/live ?\/ ?prospective/i, 'the live bucket labelled as the prospective record');
+  present(/graded separately/i, 'copy saying timing is graded separately');
+  present(/calls from the live feed/i, 'the archive note describing the feed rather than asserting timing');
+  present(/not by itself proof|does <em>not<\/em>, on its own, prove|not, on its own, prove/i,
+          'an explicit statement that being in the live feed is not a timing proof');
+});
+
 // ------------------------------- 4. governance, not impossibility -----------
 
 t('the rules question is not answered "No"', function () {
@@ -159,6 +187,20 @@ t('the market gate renders no progress bar and no count', function () {
 t('the CLV gate ships the agreed fail-closed sentence', function () {
   present(/Prospective market-price validation is collecting/i, 'the collecting sentence');
   present(/No CLV figure is publication-approved yet/i, 'the not-approved sentence');
+});
+
+t('the CLV freeze claim is narrowed to CLV-001 results', function () {
+  // REGRESSION. UFC outcomes and legacy price data predate CLV-001, so "frozen
+  // before any result could be seen" is broader than the truth. The defensible
+  // claim is about CLV-001's own results.
+  [
+    'frozen before any result can be seen',
+    'frozen before any result is visible',
+    'frozen before any result could be seen',
+    'before any result was seen',
+  ].forEach(function (p) { absent(p, 'the freeze claim must be scoped to CLV-001 results'); });
+  present(/frozen before any CLV-001 result was computed or reviewed/i,
+          'the narrowed freeze wording naming CLV-001');
 });
 
 t('the page says the market rule is not its own', function () {

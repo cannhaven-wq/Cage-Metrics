@@ -81,7 +81,7 @@
   // What a number on screen is allowed to say about itself. Every figure the
   // Proof Center renders carries exactly one of these.
   const STATUS = {
-    LIVE:        'live',         // measured only on rows posted before the fight
+    LIVE:        'live',         // measured only on the prospective feed; per-row timing graded separately
     REPLAY:      'replay',       // simulated — the engine re-run through history
     PROVISIONAL: 'provisional',  // real live rows, but under the sample floor: read it as noise
     COLLECTING:  'collecting',   // gate not passed — there is no number to show yet
@@ -91,7 +91,7 @@
   // Plain-English label + one-line meaning. No stats vocabulary — a 24-year-old
   // who has never read a stats textbook has to get these in one pass.
   const STATUS_COPY = {
-    live:        { label: 'Live',            blurb: 'Measured only on picks posted before the fight, with a timestamp on record.' },
+    live:        { label: 'Live',            blurb: 'Measured only on the prospective feed — the calls we published as the card approached. How well each one\u2019s timing can be proved is graded separately, row by row.' },
     replay:      { label: 'Simulated',       blurb: 'The engine re-run through old fights. Useful for a sanity check, never proof.' },
     provisional: { label: 'Too early',       blurb: 'These are real live picks, but there are too few to mean anything yet. Read it as noise.' },
     collecting:  { label: 'Still collecting', blurb: 'We are not showing a number until enough of them are on record. No estimate, no placeholder.' },
@@ -137,6 +137,10 @@
       authority: 'CLV-001',
       record: RECORD.LIVE,
       source: 'The CLV publication rule is owned by the CLV-001 research protocol, which is not integrated here. Proof Center holds no CLV threshold of its own and computes no CLV figure.',
+      // Narrow on purpose. UFC outcomes and the legacy price fields predate
+      // CLV-001, so "frozen before any result could be seen" claims more than
+      // is true. What the freeze actually establishes is about its own results.
+      freezeNote: 'frozen before any CLV-001 result was computed or reviewed',
       pending: 'Prospective market-price validation is collecting. No CLV figure is publication-approved yet.',
     },
 
@@ -327,8 +331,20 @@
       if (s && s.fight_id != null) byFight[s.fight_id] = s;
     });
 
-    const out = { total: 0, sealed: 0, dated: 0, sameDay: 0, unverified: 0,
-                  sealedCovered: 0, unverifiedRows: [] };
+    const out = {
+      total: 0,
+      // Timing grades — these partition the rows.
+      sealed: 0, dated: 0, sameDay: 0, unverified: 0,
+      // Snapshot facts — THREE SEPARATE THINGS, deliberately not one counter.
+      // A snapshot can exist and no longer match; that is a mismatch to report,
+      // not an absence to quietly fold into "uncovered". And a snapshot that
+      // both exists and matches still says nothing about the clock.
+      snapshotPresent: 0,      // a sealed copy exists for this fight
+      snapshotMatched: 0,      // …and it still matches the current row
+      snapshotMismatched: 0,   // …and it does not
+      snapshotAbsent: 0,       // no sealed copy at all
+      unverifiedRows: [],
+    };
 
     splitByRecord(rows).live.forEach(function (r) {
       out.total++;
@@ -336,15 +352,23 @@
       const posted = r.published_at ? String(r.published_at).slice(0, 10) : null;
       const snap = byFight[r.fight_id];
 
-      if (snap && card) {
-        const snapDay = snap.snapshot_at ? String(snap.snapshot_at).slice(0, 10) : null;
+      let matched = false;
+      if (snap) {
+        out.snapshotPresent++;
         const samePick = String(snap.engine_pick_fighter_id) === String(r.pick_fighter_id);
         const sameProb = snap.engine_p_cal != null && r.p_cal != null &&
           Math.abs(Number(snap.engine_p_cal) - Number(r.p_cal)) < 1e-6;
-        if (samePick && sameProb) {
-          out.sealedCovered++;
-          if (snapDay && snapDay < card) { out.sealed++; return; }
-        }
+        matched = samePick && sameProb;
+        if (matched) out.snapshotMatched++; else out.snapshotMismatched++;
+      } else {
+        out.snapshotAbsent++;
+      }
+
+      // The sealed TIMING grade needs all three: a copy exists, it still
+      // matches, and it was taken on an earlier calendar day than the card.
+      if (matched && card) {
+        const snapDay = snap.snapshot_at ? String(snap.snapshot_at).slice(0, 10) : null;
+        if (snapDay && snapDay < card) { out.sealed++; return; }
       }
 
       if (!posted || !card) { out.unverified++; out.unverifiedRows.push(r); return; }

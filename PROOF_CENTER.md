@@ -495,3 +495,129 @@ I can do it in a follow-up on your word.**
 4. **The audit table's nine rows** against the database, not against the
    migration files. That distinction is what caught the immutability bug.
 5. **Do not merge, deploy, index, or add to the nav.**
+
+---
+
+## Revision 3 — final trust-copy / semantics fixes (2026-09-16)
+
+Passed major review. No redesign; three fixes only. Still not merged, not
+deployed, not indexed, not in the nav.
+
+### 1. `source='live'` no longer reads as proof of pre-fight timing
+
+It identifies the prospective dataset. It says nothing about whether any given
+row beat the first bell — that is what the per-row grades are for. Every label
+now agrees:
+
+| Was | Now |
+|---|---|
+| Filter: *"Posted before the fight"* | *"Live / prospective"* |
+| Record card: *"Posted before the fight"* | *"Live / prospective record"* |
+| Archive note: *"Every call posted before its card"* | *"Calls from the live feed, newest first, each tagged with what its timing can actually be shown to support"* |
+| Live section: *"Only picks written to the database before the card started"* | *"The prospective feed only — calls published as the card approached… what each row can prove about **when** it was written is a separate question, graded below"* |
+| Record card: *"A row written to the database ahead of the card"* | *"Calls from the live feed: rows written as a card approached"* + *"It does **not**, on its own, prove any given call beat the first bell"* |
+| `STATUS_COPY.live` blurb: *"Measured only on picks posted before the fight"* | *"Measured only on the prospective feed… graded separately, row by row"* |
+
+The lede now states it outright: *"being in the live feed is not by itself proof
+that a call beat the first bell."*
+
+One stale trailing code comment in `proof-gates.js` still said "rows posted
+before the fight" and was corrected too — the copy scan caught it, because it
+only strips full-line comments. That false positive is the safe direction, so
+the stripper stays naive on purpose.
+
+### 2. Snapshot presence, match and timing are three counters, not one
+
+`sealedCovered` conflated "a sealed copy exists" with "it still matches", so a
+future mismatch would have silently read as *uncovered* — hiding the exact
+failure the crosscheck exists to catch. Replaced by four explicit fields:
+
+| Field | Today |
+|---|---|
+| `snapshotPresent` | 67 |
+| `snapshotMatched` | 67 |
+| `snapshotMismatched` | 0 |
+| `snapshotAbsent` | 84 |
+
+Invariants now hold by construction and are tested: `present + absent === total`,
+`matched + mismatched === present`. The timing grade is computed downstream of
+all three and still requires **all** of: a copy exists, it matches, and it was
+taken on an earlier calendar day than the card.
+
+The UI follows. The totals card reads *"67 have a sealed copy at all"* from
+`snapshotPresent`, and appends a red *"N of those no longer match it"* if that
+ever becomes non-zero. The audit verdict reads *"67 of 67 sealed copies still
+match · 84 calls have no sealed copy"*, and on a mismatch flips to *"N of M are
+**covered by a sealed copy but no longer match it**"* — never "uncovered". The
+audit row spells the three facts out and says a copy that stops matching is
+*"never quietly folded back into 'no copy'."*
+
+### 3. CLV freeze wording narrowed
+
+*"frozen before any result can be seen"* → **"frozen before any CLV-001 result
+was computed or reviewed"**, in all three places. UFC outcomes and the legacy
+price fields predate CLV-001, so the broad claim was more than is true.
+
+The sentence now lives once, as `GATES.clv.freezeNote`, and the page renders it
+from there — so the wording cannot drift between the gate panel and the audit
+row, and the copy test asserts on a real literal rather than a template.
+
+### Revision 3 — tests
+
+```
+$ node tests/proof-gates.test.js
+  40 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  20 passed — shipped copy matches what the data actually supports.
+```
+
+New this revision:
+
+- **`proof-gates`** — *a snapshot that exists but does not match: present, not
+  sealed, still a mismatch* (the required test: asserts `snapshotPresent`, no
+  sealed grade, and an independent `crossCheckSnapshots` mismatch);
+  *a mismatch on probability alone is still present-and-mismatched*;
+  *the three snapshot facts stay consistent with each other*;
+  *snapshot presence never implies a timing grade on its own*;
+  *the live status blurb does not claim the whole bucket is proven pre-fight*.
+- **`proof-copy`** — *no label describes the whole live bucket as proven
+  pre-fight* (the required regression, eight banned phrasings);
+  *the live record is labelled as a feed, and points at the per-row grading*;
+  *the CLV freeze claim is narrowed to CLV-001 results*.
+
+**All three verified to bite:** restoring *"Posted before the fight"* on the
+record card fails the live-bucket test; broadening `freezeNote` back to *"frozen
+before any result can be seen"* fails the freeze test; folding a mismatched
+snapshot into `snapshotAbsent` fails three gate tests including the
+`present + absent === total` invariant.
+
+Re-rendered headless against the real rows at 1360px and 390px: no page errors,
+no horizontal overflow, timing grades unchanged at **54 / 70 / 27 / 0**.
+
+### Revision 3 — files changed
+
+```
+edit   proof.html                    live-bucket labels, snapshot counters in UI, freeze wording
+edit   proof-gates.js                snapshotPresent/Matched/Mismatched/Absent replace sealedCovered;
+                                     live status blurb; GATES.clv.freezeNote; stale comment
+edit   tests/proof-gates.test.js     40 assertions (was 36)
+edit   tests/proof-copy.test.js      20 assertions (was 17)
+edit   PROOF_CENTER.md               this section
+```
+
+`track-record.html` unchanged since revision 1 (+1 link line). No frozen file,
+no migration, no engine file, no shared script, no stylesheet, no database
+change.
+
+### Revision 3 — preserved
+
+Deferred CLV gate with no local threshold; no legacy 46/100 progress; live/replay
+firewall; equal visibility for losses; the four timing grades; the immutable
+snapshot crosscheck; versioned-methodology language; main-engine-only scope;
+flat-$100 P&L; no CTA; `noindex`; read-only database access; no paid services.
+All still covered by tests.
+
+**Still outstanding and outside this branch:** `track-record.html` is live and
+says of live picks *"added once, never revised"*, which the same check shows is
+not enforced on `model_picks`. Awaiting your word to fix it in a follow-up.

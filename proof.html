@@ -240,7 +240,7 @@
   <header class="head">
     <div class="eyebrow">Proof Center</div>
     <h1>The main engine's fight calls, with the receipts attached.</h1>
-    <p class="lede">Not a highlight reel. This page lists <strong>every main-engine fight call in this record</strong> — when we posted it, what number we put on it, what the price was, and what happened. <strong>Losses sit in the same list as wins, at the same size.</strong> Calls we posted before a fight and fights we re-ran through history afterwards are kept in two separate records that are never added together.</p>
+    <p class="lede">Not a highlight reel. This page lists <strong>every main-engine fight call in this record</strong> — when we posted it, what number we put on it, what the price was, and what happened. <strong>Losses sit in the same list as wins, at the same size.</strong> The calls we published as each card approached and the fights we re-ran through history afterwards are kept in two separate records that are never added together. <strong>How well each individual call's timing can be proved is graded separately, row by row</strong> — being in the live feed is not by itself proof that a call beat the first bell.</p>
     <p class="scope"><strong>What is and isn't here.</strong> This page reads four things and nothing else: the engine's graded fight calls, its graded money bets, the history replay, and the sealed pre-fight copies. It is <em>not</em> a catalogue of everything Cannon Fight Lab has ever predicted — the fight-duration and prop models run under their own research protocols, with their own records, and none of those rows appear here. Nothing on this page is claimed on their behalf.</p>
     <p class="stamp" id="stamp">Reading the database…</p>
   </header>
@@ -261,7 +261,7 @@
   <!-- ===================== 2. The live record ===================== -->
   <section id="live" aria-labelledby="h-live">
     <h2 id="h-live">The live record</h2>
-    <p class="sub">Only picks that were written to the database <strong>before the card started</strong>. Nothing here has been re-run, re-priced, or tidied up afterwards.</p>
+    <p class="sub">The prospective feed only — calls published as the card approached, <strong>never re-run, re-priced or tidied up afterwards.</strong> That is what this record is; what each row can prove about <em>when</em> it was written is a separate question, graded <a class="inl" href="#timing">below</a>.</p>
     <div class="kpis" id="liveKpis"><div class="loading">Loading the live record…</div></div>
     <div class="panel" id="moneyPanel" hidden></div>
   </section>
@@ -292,7 +292,7 @@
       <div class="fgroup">
         <span class="flabel" id="lbl-rec">Which record</span>
         <div class="seg rec" id="segRecord" role="group" aria-labelledby="lbl-rec">
-          <button type="button" data-v="live" aria-pressed="true">Posted before the fight</button>
+          <button type="button" data-v="live" aria-pressed="true">Live / prospective</button>
           <button type="button" data-v="replay" aria-pressed="false">Re-run through history</button>
         </div>
       </div>
@@ -338,11 +338,11 @@
     <p class="sub">No stats degree required. This is the whole method.</p>
     <div class="panel">
       <ol class="steps">
-        <li><div><div class="sh">We post a call, and the clock starts</div><div class="sb">Ahead of a card, the model writes a row: which fighter, what percentage we give them, and — where we flagged a bet — the price on offer at that moment. The row gets a timestamp.</div></div></li>
+        <li><div><div class="sh">We post a call, and the clock starts</div><div class="sb">As a card approaches, the model writes a row: which fighter, what percentage we give them, and — where we flagged a bet — the price on offer at that moment. The row gets a timestamp. What that timestamp can prove varies by row, so we grade it rather than wave at it.</div></div></li>
         <li><div><div class="sh">A copy gets frozen where nobody can reach it</div><div class="sb">The table holding the calls is an ordinary working table. We could edit it. So for every card we cover, a copy of what we were showing is written into a <em>separate</em> record that the database refuses to change or delete afterwards — for every account, including the one that owns the database. This page then re-compares the working row against that frozen copy in front of you. A pick that aged badly can't quietly become a different pick, because the sealed copy would stop matching and this page would say so.</div></div></li>
         <li><div><div class="sh">The fight happens, and we grade it against what actually occurred</div><div class="sb">Won, lost, or not settled yet. Nothing gets quietly dropped for being embarrassing — if a pick is missing from the archive it's because it was never posted, and you can check the count against the card.</div></div></li>
         <li><div><div class="sh">Money is counted flat: $100 a bet, every time</div><div class="sb">Same stake on every bet, no chasing, no doubling up. A win at +150 pays $150; a loss costs $100. That's it. We use the price that was on record when we posted, not a better one we found later.</div></div></li>
-        <li><div><div class="sh">A number only goes on screen once there's enough of it</div><div class="sb">Small samples lie. Each headline number has a written rule for how many calls it takes before we'll show it. The hardest one — whether we beat the market's price — isn't ours at all: it belongs to a separate research protocol that is frozen before any result can be seen, and this page just reads its verdict. Until a rule is met you get "still collecting" instead of a number. We'd rather show you an empty box than a flattering guess.</div></div></li>
+        <li><div><div class="sh">A number only goes on screen once there's enough of it</div><div class="sb">Small samples lie. Each headline number has a written rule for how many calls it takes before we'll show it. The hardest one — whether we beat the market's price — isn't ours at all: it belongs to a separate research protocol, frozen before any of its own results were computed or reviewed, and this page just reads its verdict. Until a rule is met you get "still collecting" instead of a number. We'd rather show you an empty box than a flattering guess.</div></div></li>
         <li><div><div class="sh">Rules can improve — but only forwards, and in writing</div><div class="sb">We are not going to pretend our methods are frozen forever; a model nobody is allowed to improve is a worse model. What we will not do is rewrite the past. Every change to how something is measured gets a version and a date, and results already scored stay tied to the rules they were scored under. Old numbers are never quietly re-graded under a friendlier rule, and a threshold is never moved after we've seen what it gates.</div></div></li>
         <li><div><div class="sh">Simulations stay labelled as simulations</div><div class="sb">Re-running the engine over old fights is a useful sanity check and nothing more — the model gets to be smart about a world that already happened. Those rows are marked, boxed off, and never added to the live record.</div></div></li>
       </ol>
@@ -576,12 +576,12 @@ function renderRecords() {
 
   $('recordsGrid').innerHTML = `
     <div class="rec live">
-      <div class="rh"><span class="rt">Posted before the fight</span>${chip(P.STATUS.LIVE)}</div>
+      <div class="rh"><span class="rt">Live / prospective record</span>${chip(P.STATUS.LIVE)}</div>
       <div class="rn">${LIVE_PICKS.length.toLocaleString()}</div>
       <div class="rmeta">calls on record · ${liveEvents} card${liveEvents === 1 ? '' : 's'}${liveFrom ? ' · since ' + esc(cfl.formatDate(liveFrom)) : ''}</div>
       <dl>
-        <dt>What it is</dt><dd>A row written to the database ahead of the card, carrying a timestamp and — for the cards we cover — a copy frozen into a separate record that nobody can edit.</dd>
-        <dt>What it proves</dt><dd>Depends on the row, and we grade that rather than assume it. See the timing breakdown below.</dd>
+        <dt>What it is</dt><dd>Calls from the live feed: rows written as a card approached, each carrying a timestamp, and — for the cards we cover — a copy frozen into a separate record that nobody can edit.</dd>
+        <dt>What it proves</dt><dd>That it was not produced after the fact. It does <em>not</em>, on its own, prove any given call beat the first bell — timing evidence is graded separately on every row.</dd>
         <dt>What it can't tell you yet</dt><dd>Whether the record is good. That takes a bigger pile of fights than we have.</dd>
         <dt>Model versions in this record</dt><dd><span class="mv" style="font-family:var(--font-mono);font-size:12px">${versions.length ? esc(versions.join(', ')) : '—'}</span> — shown per row in the archive, because the engine changed mid-record and pretending otherwise would be dishonest.</dd>
       </dl>
@@ -654,7 +654,8 @@ function renderTiming() {
            `<div class="t">${esc(c.label)}</div><div class="b">${esc(c.blurb)}</div></div>`;
   }).join('') +
   `<div class="tcard g4"><div class="n">${t.total.toLocaleString()}</div><div class="t">Live calls in total</div>` +
-  `<div class="b">Every row above adds up to this. ${t.sealedCovered.toLocaleString()} have a sealed copy at all — the freeze only started running partway through this record.</div></div>`;
+  `<div class="b">Every row above adds up to this. ${t.snapshotPresent.toLocaleString()} have a sealed copy at all — the freeze only started running partway through this record` +
+  `${t.snapshotMismatched ? `, and <strong style="color:var(--signal)">${t.snapshotMismatched.toLocaleString()} of those no longer match it</strong>` : ''}.</div></div>`;
 }
 
 function renderMarketGate() {
@@ -674,7 +675,7 @@ function renderMarketGate() {
     <div class="gate">
       <div class="gh"><span class="gt">Where this stands</span>${chip(g.status)}</div>
       <p class="gmsg"><strong>${esc(g.message)}</strong></p>
-      <p class="gmsg">There is no number in this box, no bar filling up, and no hint of which way it is going — because the rule that decides when this may be published is not ours. It lives in a separate research protocol (<code>${esc(g.authority)}</code>) that is frozen before any result can be seen, and it sets every condition: how many scored observations it takes, across how many separate UFC events, and how tight the range has to be before the answer means anything.</p>
+      <p class="gmsg">There is no number in this box, no bar filling up, and no hint of which way it is going — because the rule that decides when this may be published is not ours. It lives in a separate research protocol (<code>${esc(g.authority)}</code>), ${esc(P.GATES.clv.freezeNote)}, and it sets every condition: how many scored observations it takes, across how many separate UFC events, and how tight the range has to be before the answer means anything.</p>
       <p class="gmsg">Until this page can read that protocol's own verdict, it shows you this instead. <strong>We could put a rough number here today from older price fields we happen to store. We are not going to</strong> — a figure built from a shortcut, dressed up as the real test, is the exact thing this page exists to refuse.</p>
       <p class="rulecite"><strong style="color:var(--text-2)">Where the rule lives.</strong> ${esc(g.source)} Enforced in <code>proof-gates.js</code> as a deferred gate with no local threshold: there is no count this page can reach that opens it. A test asserts that no number, however large, can flip it.</p>
     </div>`;
@@ -816,7 +817,7 @@ function renderArchive() {
     `<th scope="col"${(isPicks ? [4] : [4, 5, 7]).indexOf(i) !== -1 ? ' class="num"' : ''}>${esc(h)}</th>`).join('') + '</tr>';
 
   const note = isLive
-    ? 'Every call posted before its card, newest first. Wins and losses in one list, styled the same.'
+    ? 'Calls from the live feed, newest first, each tagged with what its timing can actually be shown to support. Wins and losses in one list, styled the same.'
     : '<strong>Simulated.</strong> The engine re-run over fights that had already happened. There is no posting time because no pick was ever posted — these rows are a sanity check, not a record, and they are never added to the live numbers above.';
   $('archNote').innerHTML = note;
   $('archCaption').textContent = note.replace(/<[^>]+>/g, '');
@@ -910,12 +911,12 @@ function renderAudit() {
       backs: 'For the cards it covers, we freeze what we were showing into a separate record the database will not let anyone change afterwards — not us, not the scripts, not the account that owns the database. '
         + (cross === null
             ? 'That check could not run just now, so treat this row as unanswered rather than passed.'
-            : 'Every call covered by that frozen copy is re-compared to it here, on the fighter and on the percentage. It only reaches back to ' + FROZEN_FROM + ', when the freeze started running; earlier calls are reported as uncovered, never as passing.'),
+            : 'Every call covered by that frozen copy is re-compared to it here, on the fighter and on the percentage. Three separate facts, counted separately: whether a sealed copy exists at all (' + t.snapshotPresent + '), whether it still matches (' + t.snapshotMatched + ' yes, ' + t.snapshotMismatched + ' no), and whether it says anything about timing. A copy that exists but stops matching is reported as a mismatch, never quietly folded back into "no copy". The freeze only reaches back to ' + FROZEN_FROM + '; the ' + t.snapshotAbsent + ' earlier calls are reported as uncovered, never as passing.'),
       verdict: cross === null
         ? { ok: false, t: 'Check unavailable — not a pass' }
-        : (cross.clean
-            ? { ok: true, t: cross.matched + ' of ' + cross.covered + ' still match · ' + (LIVE_PICKS.length - cross.covered) + ' not covered' }
-            : { ok: false, t: cross.mismatched + ' of ' + cross.covered + ' no longer match — shown here rather than hidden' }),
+        : (t.snapshotMismatched === 0
+            ? { ok: true, t: t.snapshotMatched + ' of ' + t.snapshotPresent + ' sealed copies still match · ' + t.snapshotAbsent + ' calls have no sealed copy' }
+            : { ok: false, t: t.snapshotMismatched + ' of ' + t.snapshotPresent + ' are covered by a sealed copy but no longer match it — shown here rather than hidden' }),
     },
     {
       claim: 'The tables behind this page are not themselves locked',
@@ -934,7 +935,7 @@ function renderAudit() {
     },
     {
       claim: 'The market-price rule is not ours to apply',
-      backs: 'It belongs to a research protocol (<code>' + esc(clvGate.authority) + '</code>) frozen before any result is visible, which sets every condition — observations, distinct events, and how tight the range must be. This page holds no threshold of its own, derives no progress figure from the older price fields it happens to store, and has no count that can open the gate. A test asserts that.',
+      backs: 'It belongs to a research protocol (<code>' + esc(clvGate.authority) + '</code>), ' + esc(P.GATES.clv.freezeNote) + ', which sets every condition — observations, distinct events, and how tight the range must be. This page holds no threshold of its own, derives no progress figure from the older price fields it happens to store, and has no count that can open the gate. A test asserts that.',
       verdict: { ok: true, t: 'Deferred — no figure, no proxy, no progress bar' },
     },
     {

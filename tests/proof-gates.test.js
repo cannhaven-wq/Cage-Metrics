@@ -199,7 +199,8 @@ t('a same-day SEALED copy is still graded same-day, not sealed', function () {
   const e = P.timingEvidence([call(2, '2026-08-02T07:00:00Z', '2026-08-02')], [sameDaySeal]);
   eq(e.sealed, 0, 'sealed');
   eq(e.sameDay, 1, 'sameDay');
-  eq(e.sealedCovered, 1, 'still counted as covered by a sealed copy');
+  eq(e.snapshotPresent, 1, 'still counted as covered by a sealed copy');
+  eq(e.snapshotMatched, 1, 'the copy still matches — only the clock falls short');
 });
 
 t('a sealed copy taken on an earlier day reaches the strong grade', function () {
@@ -211,6 +212,61 @@ t('a sealed copy that no longer matches does not confer the sealed grade', funct
   const wrong = { fight_id: 4, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 99, engine_p_cal: 0.61 };
   const e = P.timingEvidence([call(4, '2026-07-31T06:00:00Z', '2026-08-02')], [wrong]);
   eq(e.sealed, 0, 'sealed'); eq(e.dated, 1, 'falls back to its own timestamp');
+});
+
+// ---------------------------- snapshot: presence vs match vs timing ---------
+// REGRESSION. Three separate facts. A sealed copy that exists but has stopped
+// matching must be reported as a MISMATCH, never rolled into "no sealed copy" —
+// an absence is a gap in coverage, a mismatch is a red flag, and collapsing the
+// second into the first would hide exactly the failure the crosscheck is for.
+
+t('a snapshot that exists but does not match: present, not sealed, still a mismatch', function () {
+  const row = call(4, '2026-07-31T06:00:00Z', '2026-08-02');
+  const wrong = { fight_id: 4, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 99, engine_p_cal: 0.61 };
+  const e = P.timingEvidence([row], [wrong]);
+
+  eq(e.snapshotPresent, 1, 'counts as snapshot-present');
+  eq(e.snapshotAbsent, 0, 'must NOT be counted as having no sealed copy');
+  eq(e.snapshotMatched, 0, 'matched');
+  eq(e.snapshotMismatched, 1, 'reported as a mismatch');
+  eq(e.sealed, 0, 'must not receive the sealed timing grade');
+
+  // …and the crosscheck agrees, independently.
+  const c = P.crossCheckSnapshots([row], [wrong]);
+  eq(c.covered, 1, 'crosscheck covered'); eq(c.mismatched, 1, 'crosscheck mismatched'); eq(c.clean, false, 'crosscheck clean');
+});
+
+t('a mismatch on probability alone is still present-and-mismatched', function () {
+  const row = call(5, '2026-07-31T06:00:00Z', '2026-08-02');
+  const drifted = { fight_id: 5, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 7, engine_p_cal: 0.88 };
+  const e = P.timingEvidence([row], [drifted]);
+  eq(e.snapshotPresent, 1, 'present'); eq(e.snapshotMismatched, 1, 'mismatched'); eq(e.sealed, 0, 'sealed');
+});
+
+t('the three snapshot facts stay consistent with each other', function () {
+  const rows = [
+    call(1, '2026-07-31T06:00:00Z', '2026-08-02'),   // sealed copy, matches
+    call(2, '2026-07-31T06:00:00Z', '2026-08-02'),   // sealed copy, mismatched
+    call(3, '2026-07-31T06:00:00Z', '2026-08-02'),   // no sealed copy
+  ];
+  const e = P.timingEvidence(rows, [
+    SEAL(1),
+    { fight_id: 2, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 99, engine_p_cal: 0.61 },
+  ]);
+  eq(e.snapshotPresent + e.snapshotAbsent, e.total, 'present + absent must cover every row');
+  eq(e.snapshotMatched + e.snapshotMismatched, e.snapshotPresent, 'matched + mismatched must equal present');
+  eq(e.snapshotPresent, 2, 'present'); eq(e.snapshotAbsent, 1, 'absent');
+  eq(e.snapshotMatched, 1, 'matched'); eq(e.snapshotMismatched, 1, 'mismatched');
+  eq(e.sealed, 1, 'only the matching, earlier-day copy earns the sealed grade');
+});
+
+t('snapshot presence never implies a timing grade on its own', function () {
+  // Present, matching, but taken on the card's own day: covered, not sealed.
+  const row = call(6, '2026-08-02T07:00:00Z', '2026-08-02');
+  const sameDaySeal = { fight_id: 6, snapshot_at: '2026-08-02T06:00:00Z', engine_pick_fighter_id: 7, engine_p_cal: 0.61 };
+  const e = P.timingEvidence([row], [sameDaySeal]);
+  eq(e.snapshotPresent, 1, 'present'); eq(e.snapshotMatched, 1, 'matched');
+  eq(e.sealed, 0, 'sealed'); eq(e.sameDay, 1, 'sameDay');
 });
 
 t('a row posted after its card is unverified, never dated', function () {
