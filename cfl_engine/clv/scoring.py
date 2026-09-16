@@ -48,7 +48,7 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.9"
+PROTOCOL_VERSION = "1.0.10"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
 # ---------------------------------------------------------------------------
@@ -307,6 +307,7 @@ UNSCORED_REASONS = (
     "no_previous_bout_completion",   # Amendment 5: bout 2..N with no cutoff on file
     # --- Amendment 6, provenance hardening ---
     "no_immutable_forecast_lock",    # R-07: the lock rests only on a mutable row
+    "ambiguous_edge_identity",       # R-07: the snapshot cannot say WHICH edge
     "no_publish_quote_link",         # §4 item 12: posted price has no source quote
     "incomplete_quote_provenance",   # §4: the close quotes lack required fields
     "market_identity_changed",       # Q-10 / R-06: different market or opponent
@@ -536,11 +537,52 @@ def canonical_sha256(artifact: dict) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
-def forecast_lock(edge: dict, snapshot: dict | None) -> tuple:
-    """The IMMUTABLE instant the forecast was locked, or why there isn't one.
+# The stable immutable edge id, if both sides carry one. `model_edges.id` is the
+# edge's own identity; `pre_fight_snapshots.edge_model_edge_id` is the snapshot's
+# record of WHICH edge it froze. When both are present the match is exact and
+# nothing below is needed.
+#
+# Neither existed before Amendment 7. The column is added by
+# research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (UNAPPLIED) and
+# written by cfl_engine/snapshot_predictions.py once it lands; every snapshot
+# taken before then carries NULL, and those fall to the cohort rule below.
+SNAPSHOT_EDGE_ID_FIELD = "edge_model_edge_id"
 
-    Returns `(locked_at, provenance)` on success, or `(None, detail)` where
-    `locked_at` is None and `detail` explains the refusal.
+
+def forecast_lock(edge: dict, snapshot: dict | None,
+                  edge_cohort: list | None = None) -> tuple:
+    """The IMMUTABLE instant the forecast was locked.
+
+    Returns `(locked_at, provenance)`. Raises `Unscored` with
+    `no_immutable_forecast_lock` or `ambiguous_edge_identity` when it cannot
+    establish one — never returns a guess.
+
+    IDENTIFYING THE EDGE, which is the hard half.
+
+    `pre_fight_snapshots` is unique on `fight_id`, so a row always exists for a
+    snapshotted fight and matching on the fight alone would accept a record of
+    some other forecast as this one's lock. The cross-check on side + bet
+    fighter + price is much stronger, but it is still not an identity: the same
+    fight can be republished with the same side, the same fighter and — by
+    coincidence or because the price had not moved — the same price.
+
+    That is not hypothetical here. `snapshot_predictions.py` explicitly handles
+    several live edges on one fight and keeps only the one with the latest
+    `published_at`, so the architecture does NOT guarantee one live edge per
+    fight, and the snapshot is a record of one particular publication.
+
+    Two answers, in order:
+
+      1. the shared immutable id, when both sides carry it. Exact, and the only
+         one that is an identity rather than a coincidence test;
+      2. the tuple, plus a UNIQUENESS requirement over the fight's live-edge
+         cohort: exactly one edge on that fight may match the snapshot's tuple.
+         Two matches is ambiguity, and ambiguity scores nothing.
+
+    `edge_cohort` is every live edge on this fight, this one included. `None`
+    means the caller did not establish the cohort, which is not the same as an
+    empty one and is refused — the same fail-closed treatment
+    `closing_pairs` gives a missing lock.
 
     R-07 does not merely say the forecast precedes the quote. It says: "A
     forecast whose timestamp cannot be established from an immutable record is
@@ -569,31 +611,74 @@ def forecast_lock(edge: dict, snapshot: dict | None) -> tuple:
     is also fail-closed.
     """
     if not snapshot:
-        return None, ("no pre_fight_snapshots row identifies this edge, so the "
-                      "forecast's lock instant rests only on model_edges."
-                      "published_at, which is mutable (R-07)")
+        raise Unscored("no_immutable_forecast_lock",
+                       "no pre_fight_snapshots row identifies this edge, so the "
+                       "forecast's lock instant rests only on model_edges."
+                       "published_at, which is mutable (R-07)")
 
-    for field, mine, theirs in (
-            ("side", edge.get("side"), snapshot.get("edge_side")),
-            ("bet_fighter_id", edge.get("bet_fighter_id"),
-             snapshot.get("edge_bet_fighter_id")),
-            ("odds_at_publish", edge.get("odds_at_publish"),
-             snapshot.get("edge_odds_at_publish"))):
-        if theirs is None:
-            return None, (f"the pre-fight snapshot for this fight records no "
-                          f"{field}, so it cannot be matched to this edge (R-07)")
-        if mine != theirs:
-            return None, (f"the pre-fight snapshot records {field}={theirs!r} and "
-                          f"this edge carries {mine!r}; they are records of "
-                          f"different forecasts (R-07)")
+    snapshot_edge_id = snapshot.get(SNAPSHOT_EDGE_ID_FIELD)
+    identity = None
+    if snapshot_edge_id is not None and edge.get("id") is not None:
+        if snapshot_edge_id != edge.get("id"):
+            raise Unscored(
+                "no_immutable_forecast_lock",
+                f"the pre-fight snapshot froze edge {snapshot_edge_id!r} and "
+                f"this is edge {edge.get('id')!r}; it is the record of a "
+                f"different publication (R-07)")
+        identity = "shared_edge_id"
+
+    if identity is None:
+        for field, mine, theirs in (
+                ("side", edge.get("side"), snapshot.get("edge_side")),
+                ("bet_fighter_id", edge.get("bet_fighter_id"),
+                 snapshot.get("edge_bet_fighter_id")),
+                ("odds_at_publish", edge.get("odds_at_publish"),
+                 snapshot.get("edge_odds_at_publish"))):
+            if theirs is None:
+                raise Unscored(
+                    "no_immutable_forecast_lock",
+                    f"the pre-fight snapshot for this fight records no {field}, "
+                    f"so it cannot be matched to this edge (R-07)")
+            if mine != theirs:
+                raise Unscored(
+                    "no_immutable_forecast_lock",
+                    f"the pre-fight snapshot records {field}={theirs!r} and this "
+                    f"edge carries {mine!r}; they are records of different "
+                    f"forecasts (R-07)")
+
+        # The tuple matched. That is necessary and not sufficient — it is only an
+        # identity if no OTHER live edge on this fight matches it too.
+        if edge_cohort is None:
+            raise Unscored(
+                "ambiguous_edge_identity",
+                "the snapshot carries no edge id, so this edge was matched by "
+                f"(side, bet_fighter_id, odds_at_publish) — and the fight's live "
+                f"edges were not supplied, so that match cannot be shown to be "
+                f"unique. Not established is not the same as established "
+                f"(R-07). Wiring {SNAPSHOT_EDGE_ID_FIELD} removes the question.")
+        twins = [e for e in edge_cohort
+                 if e.get("side") == snapshot.get("edge_side")
+                 and e.get("bet_fighter_id") == snapshot.get("edge_bet_fighter_id")
+                 and e.get("odds_at_publish") == snapshot.get("edge_odds_at_publish")]
+        if len(twins) > 1:
+            raise Unscored(
+                "ambiguous_edge_identity",
+                f"{len(twins)} live edges on this fight share the snapshot's "
+                f"(side, bet_fighter_id, odds_at_publish), so the snapshot "
+                f"cannot say which publication it froze. "
+                f"`snapshot_predictions.py` keeps only the latest live edge per "
+                f"fight, so several are possible and only one of them is the "
+                f"one on record. Ambiguous scores nothing (R-07).")
+        identity = "tuple_unique_in_cohort"
 
     source = "engine_published_at"
     locked_at = snapshot.get("engine_published_at")
     if locked_at is None:
         source, locked_at = "snapshot_at", snapshot.get("snapshot_at")
     if locked_at is None:
-        return None, ("the pre-fight snapshot carries neither "
-                      "engine_published_at nor snapshot_at (R-07)")
+        raise Unscored("no_immutable_forecast_lock",
+                       "the pre-fight snapshot carries neither "
+                       "engine_published_at nor snapshot_at (R-07)")
 
     published_at = edge.get("published_at")
     effective = locked_at
@@ -604,6 +689,10 @@ def forecast_lock(edge: dict, snapshot: dict | None) -> tuple:
         "immutable_locked_at": locked_at,
         "immutable_source": f"pre_fight_snapshots.{source}",
         "snapshot_id": snapshot.get("id"),
+        # HOW the snapshot was tied to this edge. 'shared_edge_id' is an
+        # identity; 'tuple_unique_in_cohort' is a match shown to be unique among
+        # the fight's live edges, which is weaker and says so on the row.
+        "edge_identity": identity,
         "model_edges_published_at": published_at,
         # TRUE when the mutable column is the later of the two and therefore the
         # binding one. Recorded rather than hidden: it is the case where the
@@ -672,6 +761,144 @@ def verify_publish_quote(quote: dict | None, edge: dict, bet_fighter_id: int,
     }, None
 
 
+# ---------------------------------------------------------------------------
+# Write-once settlement — Amendment 7
+# ---------------------------------------------------------------------------
+# The persisted result fields, paired with the key `score_row` returns them
+# under. This list IS the contract: a field stored at first scoring is a field
+# every later run must find unchanged, so adding a persisted column without
+# adding it here would create a field nobody ever checks again.
+#
+# `clv_scored_at` is deliberately ABSENT. It records when the row was first
+# scored, it is never rewritten, and comparing it to "now" on a re-run would
+# fail every time.
+VERIFIED_FIELDS = (
+    ("clv_protocol_version", "protocol_version"),
+    ("clv_return", "clv_return"),
+    ("closing_fair_probability", "closing_fair_probability"),
+    ("closing_book_count", "closing_book_count"),
+    ("clv_source_quote_ids", "quote_ids"),
+    ("clv_consensus_sha256", "consensus_sha256"),
+    ("clv_close_basis", "close_basis"),
+    ("clv_lead_time_minutes", "lead_time_minutes"),
+    ("clv_lead_time_is_lower_bound", "lead_time_is_lower_bound"),
+    ("clv_proxy_quoted_at", "proxy_quoted_at"),
+    ("clv_cutoff_at", "cutoff_at"),
+    ("clv_publish_quote_id", "publish_quote_id"),
+)
+
+# How close two numbers must be to count as the same stored value. The writer
+# rounds clv_return and the fair probability to 10 places and the lead time to
+# 4, and Postgres `numeric` round-trips as a decimal string, so an exact float
+# comparison would report drift that is only formatting.
+NUMERIC_TOLERANCE = 1e-9
+
+
+def _as_number(value):
+    if value is None or isinstance(value, bool):
+        return None
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _same_value(stored, recomputed) -> bool:
+    if stored is None or recomputed is None:
+        return stored is None and recomputed is None
+    if isinstance(stored, dt.datetime) and isinstance(recomputed, dt.datetime):
+        return abs((stored - recomputed).total_seconds()) < 1e-6
+    if isinstance(stored, (list, tuple)) or isinstance(recomputed, (list, tuple)):
+        return list(stored or []) == list(recomputed or [])
+    if isinstance(stored, bool) or isinstance(recomputed, bool):
+        return bool(stored) == bool(recomputed)
+    a, b = _as_number(stored), _as_number(recomputed)
+    if a is not None and b is not None:
+        return abs(a - b) <= NUMERIC_TOLERANCE * max(1.0, abs(a), abs(b))
+    return str(stored) == str(recomputed)
+
+
+def has_clv001_score(stored: dict) -> bool:
+    """Does this `model_edges` row already carry a CLV-001 result?
+
+    `clv_scored_at` is the marker rather than `clv_return`, because it is set on
+    exactly the rows the writer has written and on no others. Keying off
+    `clv_return` would read a NULL return as "never scored" and re-score it.
+    """
+    return bool(stored) and stored.get("clv_scored_at") is not None
+
+
+def verify_against_stored(result: dict, stored: dict) -> list:
+    """Compare a fresh scoring against the row already on file.
+
+    Returns a list of human-readable disagreements — empty means the stored row
+    reproduces exactly. It NEVER returns a patch and never suggests one: the
+    only two outcomes a caller may act on are "unchanged, write nothing" and
+    "changed, stop and say so".
+
+    Why this is not a refresh. The protocol says observations scored under a
+    version are never retroactively reinterpreted or overwritten, and a settler
+    that re-PATCHes on every run breaks that quietly: the second run sees later
+    database state — a quote inserted since, a corrected completion, a
+    reschedule — and rewrites a number that was supposed to be the record of
+    what we measured at the time. Nothing in the row would show it had moved.
+
+    So drift is an ALARM, not an update. Three things can cause it, and all
+    three are worth stopping for:
+
+      1. the evidence changed after the fact (which R-01's triggers now make
+         very hard, and which is exactly what they exist to surface);
+      2. the scorer changed without a version bump;
+      3. the stored artifact was edited directly.
+
+    A fourth is possible and is not misconduct: a float that does not survive
+    the jsonb round-trip bit for bit. It would still stop the run, and that is
+    the right default — the failure mode of this check is "a human looks", never
+    "the row is quietly rewritten". If it ever fires for that reason, the fix is
+    to make the artifact's serialisation exact, not to relax the comparison.
+    """
+    problems = []
+    if not has_clv001_score(stored):
+        return ["the row carries no CLV-001 score to verify"]
+
+    stored_version = stored.get("clv_protocol_version")
+    if stored_version != PROTOCOL_TAG:
+        # Not drift — a row from another version, which this version may not
+        # touch at all. Reported separately by the caller.
+        return [f"stored under {stored_version!r}, and this is {PROTOCOL_TAG}. "
+                f"A row scored under one version is never re-scored under "
+                f"another; it is left exactly as it is."]
+
+    if not result.get("scored"):
+        return [f"the row is scored on file but no longer scores: "
+                f"{result.get('reason')} — {result.get('detail')}"]
+
+    live = dict(result)
+    live["protocol_version"] = PROTOCOL_TAG
+    live["publish_quote_id"] = (result.get("publish_quote") or {}).get("quote_id")
+
+    for column, key in VERIFIED_FIELDS:
+        if not _same_value(stored.get(column), live.get(key)):
+            problems.append(f"{column}: stored {stored.get(column)!r}, "
+                            f"recomputed {live.get(key)!r}")
+
+    # The artifact is checked against its OWN hash as well as against the fresh
+    # one. A stored artifact edited in place would otherwise reproduce the
+    # comparison above — the recomputed hash matches the recomputed artifact,
+    # and nothing would look at the jsonb actually on the row.
+    artifact = stored.get("clv_closing_consensus")
+    if artifact is not None:
+        rehashed = canonical_sha256(artifact)
+        if rehashed != stored.get("clv_consensus_sha256"):
+            problems.append(
+                f"clv_closing_consensus no longer hashes to its own "
+                f"clv_consensus_sha256 (stored hash "
+                f"{stored.get('clv_consensus_sha256')!r}, artifact hashes to "
+                f"{rehashed!r}) — the stored artifact was edited after it was "
+                f"written")
+    return problems
+
+
 def admissible_reference(start_at: dt.datetime | None,
                          start_basis: str | None,
                          is_first_bout: bool | None = None) -> dt.datetime | None:
@@ -737,7 +964,8 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
               reference_basis: str | None = None,
               is_first_bout: bool | None = None,
               snapshot: dict | None = None,
-              publish_quote: dict | None = None) -> dict:
+              publish_quote: dict | None = None,
+              edge_cohort: list | None = None) -> dict:
     """Score one `model_edges` row under CLV-001, or say why it cannot be.
 
     Returns a dict that is always shaped the same — `scored` is True or False and
@@ -859,9 +1087,10 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
 
     # R-07, no-lookahead — and it starts with establishing the lock from an
     # IMMUTABLE record, because a lock read off a rewritable row is not one.
-    locked_at, lock_info = forecast_lock(edge, snapshot)
-    if locked_at is None:
-        return unscored("no_immutable_forecast_lock", lock_info)
+    try:
+        locked_at, lock_info = forecast_lock(edge, snapshot, edge_cohort)
+    except Unscored as e:
+        return unscored(e.reason, e.detail)
     out["forecast_lock"] = lock_info
 
     # The edge-level half of R-07: a forecast locked at or after the cutoff has

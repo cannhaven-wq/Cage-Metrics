@@ -18,17 +18,18 @@ import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLV_DIR = os.path.join(REPO_ROOT, "research", "clv")
-# The three ADDITIVE migrations: columns, indexes, NOT VALID checks, new tables.
+# The ADDITIVE migrations: columns, indexes, NOT VALID checks, new tables.
 # They change no existing behaviour, and `TestStillAdditiveOnly` holds them to
 # that.
 ADDITIVE_MIGRATIONS = [
     "proposed_2026-09-16_fight_odds_capture.sql",
     "proposed_2026-09-16_event_flow.sql",
     "proposed_2026-09-16_clv001_columns.sql",
+    "proposed_2026-09-16_snapshot_edge_identity.sql",
 ]
 
-# The fourth (Amendment 6 (g)) adds triggers to a table that is already written
-# to, so it changes what an existing writer may do. It is deliberately NOT held
+# One migration (Amendment 6 (g)) adds triggers to a table that is already
+# written to, so it changes what an existing writer may do. It is deliberately NOT held
 # to the additive-only rule — it would fail it, because it names TRUNCATE in
 # order to reject it. Everything else applies to it, and `TestRawQuoteDurability`
 # plus `tests/test_sql_behaviour.py` cover what it does instead.
@@ -134,7 +135,7 @@ class TestStillAdditiveOnly(unittest.TestCase):
 
 
 class TestAppendOnlyPreserved(unittest.TestCase):
-    """Reed asked for the append-only protections to be preserved. They are
+    """The owner asked for the append-only protections to be preserved. They are
     load-bearing for provenance, so they get their own check."""
 
     LEDGERS = ["fight_bout_order", "fight_bout_completions", "odds_api_usage"]

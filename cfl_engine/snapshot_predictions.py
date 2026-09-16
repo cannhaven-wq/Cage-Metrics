@@ -216,9 +216,18 @@ def collect(base_url, key, event, log=print):
         f"implied_prob_b,bookmaker_count,fetched_at&fight_id=in.{idl}")}
 
     # --- flagged value edges (live only) ---
+    # `id` is selected so the snapshot can record WHICH edge it froze.
+    #
+    # Several live edges can exist for one fight and only the latest is kept
+    # below, so the snapshot is a record of one particular publication. Without
+    # the id, a later reader can only match it back by (side, bet_fighter_id,
+    # odds_at_publish) — a tuple two publications can share, by coincidence or
+    # because the price had not moved. CLV-001 R-07 needs to know exactly which
+    # forecast was locked, and refuses to score an ambiguous match
+    # (`ambiguous_edge_identity`).
     edges = {}
     for e in fetch_all(base_url, key, "model_edges",
-                       "select=fight_id,side,bet_fighter_id,edge,stake_frac,"
+                       "select=id,fight_id,side,bet_fighter_id,edge,stake_frac,"
                        f"odds_at_publish,published_at&fight_id=in.{idl}&source=eq.live"):
         cur = edges.get(e["fight_id"])
         if cur is None or (e["published_at"] or "") > (cur["published_at"] or ""):
@@ -277,6 +286,12 @@ def collect(base_url, key, event, log=print):
             "bookmaker_count": od and od["bookmaker_count"],
             "odds_fetched_at": od and od["fetched_at"],
 
+            # The immutable identity of the edge this snapshot froze (CLV-001
+            # R-07, Amendment 7). Dropped from every row by `publish` when the
+            # column is not there, so this is a no-op until
+            # research/clv/proposed_2026-09-16_snapshot_edge_identity.sql is
+            # applied and never a reason for the cron to fail.
+            "edge_model_edge_id": ed and ed["id"],
             "edge_side": ed and ed["side"],
             "edge_bet_fighter_id": ed and ed["bet_fighter_id"],
             "edge_value": ed and ed["edge"],
@@ -335,11 +350,34 @@ def report(rows, log=print):
 
 
 # -------------------------------------------------------------------- publishing
+# Columns this script writes that may not exist on the table yet. Each is dropped
+# from every row when the table does not have it, so a proposed-but-unapplied
+# migration can never take the snapshot cron down — and applying it needs no
+# matching deploy here.
+OPTIONAL_COLUMNS = ("edge_model_edge_id",)
+
+
+def _drop_unknown_columns(base_url, key, rows, log=print):
+    """Remove OPTIONAL_COLUMNS the table does not have, probing once each."""
+    for column in OPTIONAL_COLUMNS:
+        try:
+            fetch_all(base_url, key, SNAP_TABLE, f"select={column}&limit=1")
+        except Exception:                       # noqa: BLE001 - unknown is absent
+            log(f"  note: {SNAP_TABLE}.{column} is not present — omitting it. "
+                f"CLV-001 will fall back to matching an edge by "
+                f"(side, bet_fighter_id, odds_at_publish) and will refuse to "
+                f"score any fight where that tuple is not unique.")
+            for r in rows:
+                r.pop(column, None)
+    return rows
+
+
 def publish(base_url, key, rows, label, log=print):
     """Insert, ignoring any fight already on record. Never updates: the table's
     triggers reject UPDATE outright, so a duplicate must be dropped, not merged."""
     for r in rows:
         r["snapshot_label"] = label
+    rows = _drop_unknown_columns(base_url, key, rows, log=log)
     inserted = _rest(base_url, key, "POST", SNAP_TABLE, rows,
                      prefer="return=representation,resolution=ignore-duplicates")
     log(f"  froze {len(inserted)} of {len(rows)} row(s) into {SNAP_TABLE} "

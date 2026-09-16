@@ -5,8 +5,8 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.9** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–6 same day). **Amendment 5 freezes the operational cutoff**: bout
+**Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–7 same day). **Amendment 5 freezes the operational cutoff**: bout
 1 takes the card's scheduled start, bouts 2..N take the exact completion of the
 immediately previous bout — **those two cases, always**, with `bell_at` retained
 as an audit field and never overriding them (5.1). The scored price is the
@@ -18,7 +18,9 @@ at **5 minutes through a live card under a hard credit ceiling**.
 that quote carries the §4 fields, never because the columns exist on the table;
 R-07 is applied per quote against an immutable lock from `pre_fight_snapshots`;
 the posted price must name and prove its source quote; the cutoff is stored and
-hashed. **Four migrations written and none applied. Publication is still shut** —
+hashed. **Amendment 7 makes settlement write-once**: an observation is written
+once and every later run verifies it and writes nothing, aborting loudly on
+drift. **Five migrations written and none applied. Publication is still shut** —
 0 of 100 observations, 0 of 20 events.
 
 **This file does not own research truth.**
@@ -35,7 +37,7 @@ disagree, the research register wins and this file is the one that is wrong.
 Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the next spec
       ↑                                                              │
       └──────────────────────────────────────────────────────────────┘
-                        Reed appears only at an L3 gate
+                       the owner appears only at an L3 gate
 ```
 
 | file | what it is for |
@@ -66,7 +68,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.9**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.10**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -120,6 +122,9 @@ One card of waiting, not a build.
 | the cutoff is stored on the row and inside the hash | **fixed**, 6 tests |
 | bout 1's cutoff comes from bout 1's own schedule | **fixed**, 4 live-SQL tests |
 | `fight_odds` observation fields immutable by trigger | **written, UNAPPLIED**, 9 live-SQL tests |
+| settlement is write-once; re-runs verify and write nothing | **fixed**, 13 tests |
+| a snapshot names WHICH edge it froze (`edge_model_edge_id`) | **written, UNAPPLIED**, 9 tests |
+| ambiguous edge identity scores nothing | **fixed**, included above |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last to apply |
 
 **Amendment 3 in one line:** the card's published start belongs to bout 1 and
@@ -133,6 +138,10 @@ recorded on every row.
 **Amendment 4.1 in one line:** and "pre-card" does not count as "late" — a quote
 before the card began is safely pre-fight and hours early on a late bout, so it
 is recognised (`only_pre_card_price`) and never scored.
+
+**Amendment 7 in one line:** an observation is written once and thereafter only
+checked — and a snapshot has to say which publication it froze, not merely one
+that looks like it.
 
 **Amendment 6 in one line:** every provenance rule already written down is now
 enforced on the ROW rather than assumed from the shape of the table — and §5 no
@@ -195,6 +204,23 @@ Historical edges have no link and are never given a fabricated one.
 and the publish quote id inside the hashed artifact: a consensus is a set of
 prices *selected by* a cutoff, so hashing the prices alone leaves the selection
 rule outside the integrity check.
+
+**Settlement is write-once.** A scored observation is written once and never
+again: a later run re-scores it only to CHECK it, field by field, and PATCHes
+nothing either way. `clv_scored_at` is never refreshed. Drift — the stored row
+no longer reproducing — aborts the whole run loudly rather than being quietly
+overwritten, because a PATCH at that moment is the one thing that would make the
+disagreement disappear. A row scored under a different protocol version is never
+touched.
+
+**A snapshot must name WHICH publication it froze.** Side + bet fighter + price
+is a cross-check, not an identity — one fight can be republished with all three
+the same, and `snapshot_predictions.py` keeps only the latest of several live
+edges per fight. `pre_fight_snapshots.edge_model_edge_id` fixes that and the
+snapshotter now writes it (probing for the column, so the migration needs no
+matching deploy). Where it is absent the tuple must be unique among the fight's
+live edges; two matches, or a cohort never established, is
+`ambiguous_edge_identity` and scores nothing.
 
 **Corrections resolve by observation.** `fight_bout_completions` is append-only,
 so a correction is a new row — and it usually moves the instant *earlier*. The
@@ -260,6 +286,12 @@ frozen file and serves DUR-001.
 3. [`proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql)
    — **last, and only when there is something to write into it.** Nothing is
    computable until a card has been captured under (1) and (2).
+
+**A fifth migration adds one column**,
+[`proposed_2026-09-16_snapshot_edge_identity.sql`](../research/clv/proposed_2026-09-16_snapshot_edge_identity.sql)
+— `pre_fight_snapshots.edge_model_edge_id`, so a snapshot names the edge it
+froze. Additive, order-independent, and it cannot be backfilled, so the sooner
+it lands the sooner snapshots stop being ambiguous.
 
 **A fourth migration is written, and it is the one that is NOT additive.**
 [`proposed_2026-09-16_fight_odds_immutability.sql`](../research/clv/proposed_2026-09-16_fight_odds_immutability.sql)

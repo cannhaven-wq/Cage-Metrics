@@ -11,6 +11,169 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.10: Amendment 7, write-once settlement
+
+**From:** Claude
+**To:** Owner → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied. No write enabled. No CLV published. No spend.**
+Five migrations now, all proposed and unapplied. **v1.0.10**, hash `b8a1f0aa…`,
+chained from `f8c6e68a…`.
+
+ChatGPT found a blocker the last handoff missed, and it was a real one.
+
+### 1. Settlement was not write-once. It is now.
+
+`clv001_main()` re-scored every historical live edge on every run and re-`PATCH`ed
+every scored result — no check for an existing `clv_protocol_version`,
+`clv_consensus_sha256`, `clv_scored_at` or stored cutoff. So a second run could
+reinterpret an earlier observation against **later database state** — a quote
+inserted since, a corrected completion, a reschedule — and refresh
+`clv_scored_at` to the moment it did. Nothing on the row would have shown it
+moved. That is the exact thing the protocol says never happens.
+
+| state of the row | what a run does now |
+|---|---|
+| no CLV-001 score | score it, write **once** |
+| scored under this version, reproduces | verify, **zero writes**, `clv_scored_at` untouched |
+| scored under this version, does **not** reproduce | **abort the whole run**, loudly |
+| scored under another version | left exactly as it is |
+
+Verification covers every persisted field — protocol version, return, fair
+probability, book count, source quote ids, consensus hash, close basis, lead time
+and its flag, proxy instant, cutoff, publish quote id — plus the stored artifact
+**re-hashed against its own recorded `clv_consensus_sha256`**, which is what
+catches a jsonb edited in place. A test asserts that every persisted column is
+either verified or explicitly exempted, so a future column cannot be added and
+then never checked again.
+
+Drift aborts *before* any PATCH, including the rows that would have been scored
+for the first time — there is a source-level test that the `sys.exit` precedes
+the write loop. A PATCH at that moment is the one thing that would make the
+disagreement disappear.
+
+Regressions, both asked for: a second identical settlement writes nothing, and
+changed evidence after scoring is a hard failure rather than a rewrite.
+
+### 2. `clv_publish_quote_id` stays fail-closed
+
+Unchanged and now written down as deliberate, in the protocol and in
+`protocol.json` (`publish_price_provenance.producer_status`). No producer
+exists, so **no edge scores, historical or future**, and nothing backfills the
+link by matching prices. A fail-closed rule with no producer looks like a bug
+until somebody records that it is not.
+
+### 3. Edge identity — you were right, and it is worse than "in principle"
+
+`snapshot_predictions.py` reads *every* live edge on a fight and keeps the one
+with the latest `published_at`:
+
+```python
+cur = edges.get(e["fight_id"])
+if cur is None or (e["published_at"] or "") > (cur["published_at"] or ""):
+    edges[e["fight_id"]] = e
+```
+
+So the architecture does **not** guarantee one live edge per fight. The snapshot
+records one particular publication chosen from several, and the tuple cannot say
+which. Both fixes are in:
+
+1. **`pre_fight_snapshots.edge_model_edge_id`** — the id of the `model_edges` row
+   the snapshot froze. A fifth migration adds it, and `snapshot_predictions.py`
+   now selects `id` and writes it. It **probes for the column and omits it when
+   absent**, so the migration and the deploy need no ordering between them and
+   an unapplied migration can never take the snapshot cron down.
+2. **Uniqueness, for every snapshot taken before that column existed.** Exactly
+   one live edge on the fight may match the snapshot's tuple. Two matches →
+   `ambiguous_edge_identity`, unscored. A cohort that was never established is
+   refused the same way: not established is not the same as established.
+
+The scored row records which applied (`forecast_lock.edge_identity` =
+`shared_edge_id` or `tuple_unique_in_cohort`), because they are not the same
+strength of evidence. No snapshot is backfilled with an inferred id.
+
+### 4. Owner naming
+
+Live coordination text — `STATE.md`, `TASK_QUEUE.md`, `CRITICAL_GATES.md`, and
+`tests/test_coordination.py`'s owner enforcement — now says **Owner** as a role
+rather than a personal name, so a change of who holds it is not a repo-wide
+rename. `DECISIONS.md`, earlier handoff entries and every amendment block keep
+the name they were written with: rewriting those would falsify who decided what.
+
+I used the role word rather than substituting a different personal name.
+`CLAUDE.md` still records the owner as Reed Cannon, and I have not changed it —
+if the name itself has changed, say so and it is a one-line edit.
+
+### On your L3 recommendation
+
+Agreed and taken: **v1.0.9 is kept**, and this pass is v1.0.10 on the same
+reasoning — the estimator did not move, the admissible observation set did.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `cfl_engine/settle_clv.py` | `_partition_for_write`; verification-only re-runs; drift abort; cohort; stored columns read back |
+| `cfl_engine/clv/scoring.py` | `verify_against_stored`, `has_clv001_score`, `VERIFIED_FIELDS`; `forecast_lock` raises and takes a cohort; v1.0.10 |
+| `cfl_engine/snapshot_predictions.py` | selects and writes `edge_model_edge_id`, behind a column probe |
+| `research/clv/proposed_2026-09-16_snapshot_edge_identity.sql` | **new** — one column on `pre_fight_snapshots` |
+| `research/clv/proposed_2026-09-16_clv001_columns.sql` | `ambiguous_edge_identity` in the closed vocabulary |
+| `research/clv/CLV_MEASUREMENT_PROTOCOL.md`, `protocol.json` | Amendment 7; v1.0.10; hash chain |
+| `cfl_engine/clv/test_scoring.py` | +22 tests (write-once, edge identity) |
+| `tests/test_sql_behaviour.py`, `tests/test_migrations_idempotent.py` | the fifth migration added to both |
+| `coordination/*`, `tests/test_coordination.py` | Owner as a role |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo) | **149 passed**, 3 skipped |
+| `cfl_engine/clv/` | **183 passed** |
+| `build/test-fetch-odds.js` (Node) | **66 passed** |
+
+398 total, all green — and still **locally reported**. See below.
+
+### On CI
+
+You are right that there are no status checks on the commit. The repo has no
+workflow that runs these suites; `.github/workflows/` covers prerender, snapshot
+and the digest. `CLAUDE.md` says not to add a test runner without asking, so I
+have not. **Say the word and it is a short workflow** — `python -m unittest
+discover -s tests` plus the two module suites plus `node --test`, on push and PR.
+The Postgres suite skips where no cluster exists, so it costs nothing until a
+service container is worth adding.
+
+### Remaining blockers
+
+1. **Nothing writes `clv_publish_quote_id`.** Still the binding one. Until the
+   edge publisher records it contemporaneously, no edge scores.
+2. **Exact bout completions have no source.**
+3. **Running order is not captured.**
+4. **Nothing is applied.**
+
+### L3 decisions
+
+1. **The two from last time stand**: v1.0.9 kept (ChatGPT recommends it, I agree,
+   the call is yours), and the immutability migration needs every external
+   `fight_odds` writer inventoried before it is applied.
+2. **New, small:** applying `..._snapshot_edge_identity.sql` touches
+   `pre_fight_snapshots`, which is the pre-fight record. It is one nullable
+   column, no trigger changed, no row read or written — but it is that table, so
+   it is named rather than slipped in.
+
+## Next action
+
+**ChatGPT:** confirm the write-once semantics — in particular whether aborting
+the entire run on any drift is the behaviour you want, versus scoring the fresh
+rows and reporting the drift separately. I chose the stricter one.
+
+**Owner:** the L3 items above, and whether to add the CI workflow. Then apply in
+order — `..._fight_odds_capture.sql`, `..._fight_odds_immutability.sql`,
+`..._event_flow.sql`, `..._snapshot_edge_identity.sql`, `..._clv001_columns.sql`.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.9: Amendment 6, provenance enforced per row
 
 **From:** Claude
@@ -411,127 +574,6 @@ amendment and hash. Flagged rather than done.
 **ChatGPT:** the final pre-migration review — items 1–5 above, and specifically
 whether the complete-card resolution in `v_clv_close_reference` and
 `attachEventFlow` agree with Event Flow's ledger semantics.
-
-**Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
-`..._event_flow.sql`, `..._clv001_columns.sql`.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.8: Amendment 5.1, four consistency fixes
-
-**From:** Claude
-**To:** Reed → ChatGPT review
-**Date:** 2026-09-16
-
-**No migration applied.** All three remain proposed and unapplied.
-
-The v1.0.7 methodology is unchanged. These make the code, schema, view, tests and
-documents agree with it.
-
-### 1. No bell override inside this version
-
-Amendment 5 admitted a confirmed bell "wherever one exists". Withdrawn. The
-cutoff is **exactly two cases, always**: card scheduled start for bout 1, exact
-previous-bout completion for bouts 2..N.
-
-The reason it mattered: a bell override would silently make one version behave as
-**two** — fights with a bell scored one way, fights without scored another,
-inside the same summary statistic. A rule that depends on which optional field
-happens to be populated is not frozen.
-
-`bell_at` is retained as an audit field (`v_clv_close_reference.actual_bell_at`,
-`fights.bell_at`) and never substituted for the cutoff. Scoring against real
-bells is a **new protocol version**. `scoring.py`, `protocol.json`, the markdown,
-the view, the tests and the comments all agree.
-
-### 2. The cutoff is no longer dressed up as a start
-
-`bout_started_at` was falling back to the previous bout's completion — asserting
-that fight N+1 began the instant fight N ended. It did not; the walkout sits
-between them, and that column's only job is to hold facts.
-
-| field | now filled by |
-|---|---|
-| `fight_odds.bout_started_at` | a **confirmed bell**, nothing else |
-| `fight_odds.is_live` | keyed to `bout_started_at`; `NULL` when unknown |
-| `fight_odds.proxy_cutoff_at` | **new** — the frozen cutoff, under its own name |
-
-CLV scoring excludes quotes at or after the cutoff **directly**, against the
-cutoff. It never reads `is_live`, so no liveness fact is manufactured to achieve
-an exclusion it can perform honestly.
-
-### 3. Corrections resolve by observation, not by clock
-
-`prev_done` used `max(completed_at)`. The ledger is append-only, so a correction
-is a new row — and a correction usually moves the instant **earlier** (9:31
-misheard, 9:30 confirmed). `max()` would keep returning the superseded 9:31
-forever, leaving a minute of in-window quotes wrongly eligible.
-
-Now `ORDER BY observed_at DESC, id DESC LIMIT 1`. **A correction from 9:31 to
-9:30 resolves to 9:30.** The capture job uses the same ordering; the running-order
-and card-schedule CTEs already did, and there are now tests for all three.
-
-### 4. Tier-4 language gone
-
-`protocol.json`'s `missing_inputs_for_tier_2` block — which still called exact
-bout completions "an IMPROVEMENT rather than a prerequisite" and carried obsolete
-Tier 4 coverage arithmetic — is replaced by `required_inputs`. Under Amendment 5
-the previous bout's exact completion **is** the cutoff for bouts 2..N, so without
-it those fights cannot be scored at all.
-
-The remaining Tier-4 mentions are inside the superseded Amendment 4/4.1/4.2
-records, which stay as filed — that is the audit trail, not live rule text.
-
-### Files changed
-
-| file | what |
-|---|---|
-| `cfl_engine/clv/scoring.py` | `bell_at` → `AUDIT_ONLY_BASES`; two-case cutoff; v1.0.8 |
-| `cfl_engine/clv/test_scoring.py` | bell-override and lead-time tests rewritten |
-| `cfl_engine/settle_clv.py` | `proxy_cutoff_at` in the capture probe; comments |
-| `build/fetch-odds.js` | `proxyCutoffAt()` split out; `boutStartedAt()` bell-only; corrections by `observed_at` |
-| `build/test-fetch-odds.js` | 10 tests for the cutoff/start split |
-| `research/clv/CLV_MEASUREMENT_PROTOCOL.md` | Amendment 5.1; v1.0.8 |
-| `research/clv/protocol.json` | `required_inputs` replaces the Tier-4 block; `bell_at_is_audit_only`; amendment 5.1 |
-| `research/clv/proposed_2026-09-16_event_flow.sql` | no bell in `reference_at`; `observed_at DESC, id DESC` |
-| `research/clv/proposed_2026-09-16_fight_odds_capture.sql` | `proxy_cutoff_at` column; corrected `bout_started_at` / `is_live` semantics |
-| `tests/test_migrations_idempotent.py` | +7 tests: correction ordering, no bell override |
-| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
-
-### Tests
-
-| suite | result |
-|---|---|
-| `tests/` (repo) | **109 passed**, 3 skipped |
-| `cfl_engine/clv/` | **112 passed** |
-| `build/test-fetch-odds.js` (Node) | **58 passed** |
-
-All green. Hash chain verified across 8 amendments; publication gate confirmed
-shut at 0 of 100 / 0 of 20.
-
-### Preserved, as instructed
-
-CFL closing-price proxy naming; full per-row provenance; the 500-credit governor
-with its STOP condition and non-raisable ceiling; migration idempotency (15 tests);
-append-only ledgers on all three tables; fail-closed publication.
-
-### Remaining blockers
-
-1. **Exact bout completions have no source** — now formally *required* for bouts
-   2..N, not an improvement. The difference between ~1 and ~12.5 observations per
-   card.
-2. **Running order is not captured** — free to fix; without it nothing scores.
-3. **Nothing is applied.**
-
-### New L3 decisions required
-
-**None new.** The bout-completions L3 is unchanged in substance and sharper in
-framing: it is now a requirement rather than an accuracy improvement. The Odds
-API allowance is untouched at the free 500.
-
-## Next action
-
-**ChatGPT:** review Amendment 5.1.
 
 **Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
 `..._event_flow.sql`, `..._clv001_columns.sql`.

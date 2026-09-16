@@ -1,7 +1,7 @@
 # Critical gates
 
 Who is allowed to decide what, and the short list of things that stop and wait
-for Reed.
+for the owner.
 
 The default is **proceed**. This file exists to name the narrow set of
 exceptions, not to add ceremony to ordinary work. If a change is revertible,
@@ -14,13 +14,13 @@ testable and already inside a written specification, no one needs to ask.
 | level | who decides | what it covers |
 |---|---|---|
 | **L0** | whoever is working | Formatting, tests, docs, debugging, refactors, read-only research. Execute; no announcement needed beyond the commit. |
-| **L1** | AI-to-AI | New features, schemas, analytics, research tooling. Claude implements, ChatGPT reviews. Reed is not needed. |
-| **L2** | AI, Reed notified | Meaningful but reversible product changes. Proceed, write it into `DECISIONS.md`, and flag it in the next handoff. Stop only if it trips a constraint below. |
-| **L3** | **Reed only** | Stop and ask. The list is below and it is closed — see "Adding a gate". |
+| **L1** | AI-to-AI | New features, schemas, analytics, research tooling. Claude implements, ChatGPT reviews. the owner is not needed. |
+| **L2** | AI, owner notified | Meaningful but reversible product changes. Proceed, write it into `DECISIONS.md`, and flag it in the next handoff. Stop only if it trips a constraint below. |
+| **L3** | **Owner only** | Stop and ask. The list is below and it is closed — see "Adding a gate". |
 
-An AI may **never** record Reed's approval from inference, silence, or a
+An AI may **never** record the owner's approval from inference, silence, or a
 general prior "go ahead". An L3 entry in [`DECISIONS.md`](DECISIONS.md) quotes
-what Reed actually said, or it is not an approval.
+what the owner actually said, or it is not an approval.
 
 ---
 
@@ -61,14 +61,14 @@ a person is watching.
 
 ## The L3 list
 
-Stop and ask Reed for:
+Stop and ask the owner for:
 
 1. **Changing a frozen specification or preregistration.** Mechanically blocked
    by `tests/test_research_state.py`; the two legal routes are a dated
    amendment or a new `model_version`. See
    [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md).
 2. **An amendment motivated by new evidence.** The amendment procedure is
-   Reed's to invoke, and `motivated_by_observed_results` must be recorded
+   the owner's to invoke, and `motivated_by_observed_results` must be recorded
    `false` *and be true*.
 3. **Recording a verdict** on an experiment. A verdict is a judgement about
    what the evidence means, which is the definition of discretion.
@@ -90,7 +90,7 @@ Stop and ask Reed for:
 
 **Routine lifecycle transitions.** `draft → frozen → armed → collecting`
 executes automatically when every frozen prerequisite passes. Record the
-transition and its provenance; do not stop for Reed.
+transition and its provenance; do not stop for the owner.
 
 The worked case is DUR-002's `armed → collecting`. Every step is already
 prescribed in [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) — record the
@@ -143,7 +143,7 @@ work on the model. Full terms at the top of
 ## Adding a gate
 
 The L3 list is closed to AI edits. Claude and ChatGPT may **propose** a gate by
-opening a task in [`TASK_QUEUE.md`](TASK_QUEUE.md) at L3; only Reed adds or
+opening a task in [`TASK_QUEUE.md`](TASK_QUEUE.md) at L3; only the owner adds or
 removes one, and the change is logged in [`DECISIONS.md`](DECISIONS.md) like
 any other L3 decision.
 

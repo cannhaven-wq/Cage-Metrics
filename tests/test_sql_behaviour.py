@@ -77,6 +77,15 @@ create table public.fight_start_estimates (
   observed_at timestamptz not null default now(),
   note text
 );
+create table public.pre_fight_snapshots (
+  id bigint generated always as identity primary key,
+  fight_id integer not null unique,
+  snapshot_at timestamptz not null default now(),
+  engine_published_at timestamptz,
+  edge_side text,
+  edge_bet_fighter_id integer,
+  edge_odds_at_publish integer
+);
 create table public.fight_odds (
   id bigint generated always as identity primary key,
   fight_id bigint not null,
@@ -381,6 +390,7 @@ class TestProposedMigrationsApply(PostgresCase):
     ORDER = ("proposed_2026-09-16_fight_odds_capture.sql",
              "proposed_2026-09-16_fight_odds_immutability.sql",
              "proposed_2026-09-16_event_flow.sql",
+             "proposed_2026-09-16_snapshot_edge_identity.sql",
              "proposed_2026-09-16_clv001_columns.sql")
 
     def setUp(self):

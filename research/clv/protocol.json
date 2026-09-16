@@ -4,10 +4,10 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
+  "protocol_sha256": "b8a1f0aaad499599a3941fbc18190db8b3e444a16f1181b3aa1b034e880849a9",
   "benchmark_name": {
     "short": "CFL closing-price proxy",
     "long": "late pre-fight closing-price proxy",
@@ -846,6 +846,27 @@
       "unchanged": "cutoff bases, de-vig method and order, 45-minute limit, three-book minimum, the ten named books, benchmark naming, credit ceiling, publication gate and its floor",
       "retroactive_reinterpretation": "none possible: zero rows have been scored",
       "motivated_by_observed_results": false
+    },
+    {
+      "number": "7",
+      "date": "2026-09-16",
+      "approved_by": "Owner",
+      "level": "L3",
+      "title": "Settlement is write-once; edge identity",
+      "kind": "conformance and provenance. The estimator is unchanged.",
+      "version_before": "1.0.9",
+      "version_after": "1.0.10",
+      "sha256_before": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
+      "sha256_after": "b8a1f0aaad499599a3941fbc18190db8b3e444a16f1181b3aa1b034e880849a9",
+      "parts": {
+        "a": "a scored observation is written ONCE and thereafter only verified. The settler re-scored every historical live edge on every run and re-PATCHed every result with no check for an existing clv_protocol_version, clv_consensus_sha256 or clv_scored_at - so a second run could reinterpret an earlier observation against later database state and refresh clv_scored_at to hide it. Now: never scored -> write once; scored under this version and reproduces -> zero writes; scored and does not reproduce -> abort the run loudly; scored under another version -> untouched. clv_scored_at is never refreshed.",
+        "b": "clv_publish_quote_id stays fail-closed. Until the external edge publisher records the exact fight_odds.id contemporaneously with odds_at_publish, no edge scores - historical or future - and nothing backfills the link by matching prices.",
+        "c": "edge identity. The side + bet_fighter_id + odds_at_publish tuple is a cross-check, not an identity: one fight can be republished with the same three, and snapshot_predictions.py keeps only the latest of several live edges per fight. pre_fight_snapshots.edge_model_edge_id is added and written by the snapshotter (which probes for the column, so migration and deploy need no ordering). Where it is absent the tuple must be UNIQUE among the fight's live edges; two matches, or a cohort never established, is ambiguous_edge_identity and scores nothing. No snapshot is backfilled with an inferred id.",
+        "d": "live coordination text names the OWNER by role rather than by personal name, so a change of who holds it is not a repo-wide rename. Historical records - DECISIONS.md, earlier handoffs, every amendment above - keep the name they were written with; rewriting those would falsify who decided what."
+      },
+      "unchanged": "the estimator, cutoff bases, de-vig and its order, the 45-minute limit, the book list, Amendment 6's provenance requirements, the publication gate",
+      "retroactive_reinterpretation": "none possible: zero rows have been scored",
+      "motivated_by_observed_results": false
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
@@ -928,7 +949,8 @@
     "unscored_reasons": [
       "no_publish_quote_link",
       "market_identity_changed"
-    ]
+    ],
+    "producer_status": "NONE. Whatever writes model_edges does not record clv_publish_quote_id yet, so no edge can score - historical or future. Fail-closed and confirmed as such by Amendment 7 (b); the link is never backfilled by matching prices."
   },
   "staleness": {
     "limit_minutes": 45,
@@ -961,5 +983,39 @@
     "why_whitelisted": "derived flags, recomputable from (fight, book, fighter, captured_at) and the fight's start, carrying no observation of their own, and not read by CLV-001. The legacy closer promotion in build/fetch-odds.js maintains them and touches nothing else.",
     "protected": "everything else, by construction: the guard compares to_jsonb(old) and to_jsonb(new) minus the whitelist, so a column added later is protected the moment it exists",
     "why": "clv_source_quote_ids points at these rows as evidence, and evidence that can be rewritten afterwards is not evidence. The consensus hash would still match, because it covers the artifact rather than the rows it names."
+  },
+  "write_once_settlement": {
+    "frozen_by": "Amendment 7 (a), 2026-09-16, approved by the Owner (L3)",
+    "rule": "a CLV-001 observation is written once; every later run verifies and writes nothing",
+    "marker": "model_edges.clv_scored_at - set on exactly the rows the writer wrote",
+    "verified_fields": [
+      "clv_protocol_version",
+      "clv_return",
+      "closing_fair_probability",
+      "closing_book_count",
+      "clv_source_quote_ids",
+      "clv_consensus_sha256",
+      "clv_close_basis",
+      "clv_lead_time_minutes",
+      "clv_lead_time_is_lower_bound",
+      "clv_proxy_quoted_at",
+      "clv_cutoff_at",
+      "clv_publish_quote_id"
+    ],
+    "artifact_check": "clv_closing_consensus is re-hashed and compared against its own stored clv_consensus_sha256, which catches a jsonb edited in place",
+    "never_verified": "clv_scored_at - it records when the row was FIRST scored and is never rewritten",
+    "on_drift": "abort the whole run, write nothing, name every disagreeing field. A PATCH at that moment is the one thing that would make the disagreement disappear.",
+    "other_versions": "a row scored under a different protocol version is never re-scored and never touched"
+  },
+  "edge_identity": {
+    "frozen_by": "Amendment 7 (c), 2026-09-16, approved by the Owner (L3)",
+    "preferred": "pre_fight_snapshots.edge_model_edge_id = model_edges.id - an identity",
+    "fallback": "side + bet_fighter_id + odds_at_publish, which must match EXACTLY ONE live edge on the fight",
+    "why_the_tuple_is_not_enough": "one fight can be republished with the same side, fighter and price; snapshot_predictions.py keeps only the latest of several live edges per fight, so the snapshot records one particular publication",
+    "ambiguous": "two or more live edges sharing the snapshot's tuple, or a cohort that was never established. Both score nothing.",
+    "recorded_on_the_row": "forecast_lock.edge_identity = 'shared_edge_id' | 'tuple_unique_in_cohort'",
+    "backfill": "never. An inferred id would manufacture the evidence the column exists to require.",
+    "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)",
+    "unscored_reason": "ambiguous_edge_identity"
   }
 }

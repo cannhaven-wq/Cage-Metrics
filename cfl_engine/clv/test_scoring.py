@@ -36,12 +36,14 @@ from scoring import (                                                # noqa: E40
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
     AUDIT_ONLY_BASES, PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
     REQUIRED_PUBLISH_PROVENANCE, REQUIRED_QUOTE_PROVENANCE,
+    SNAPSHOT_EDGE_ID_FIELD, VERIFIED_FIELDS,
     STALENESS_LIMIT_MINUTES, STALENESS_MEASURED_FROM, SUPERSEDED_START_BASES,
     UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
-    credible_capture_instant, forecast_lock, is_eligible_book,
-    lead_time_minutes, missing_quote_provenance, reference_is_lower_bound,
-    score_row, verify_publish_quote,
+    credible_capture_instant, forecast_lock, has_clv001_score,
+    is_eligible_book, lead_time_minutes, missing_quote_provenance,
+    reference_is_lower_bound, score_row, verify_against_stored,
+    verify_publish_quote,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -128,15 +130,18 @@ def edge(**over):
 
 def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW,
           basis="previous_bout_completion", first_bout=False,
-          snap=True, pub=True, **over):
-    """`snap`/`pub` accept True (the good default), None (absent) or a dict."""
-    return score_row(edge=edge(**over),
+          snap=True, pub=True, cohort=True, **over):
+    """`snap`/`pub`/`cohort` accept True (the good default), None (absent, and
+    therefore refused) or an explicit value."""
+    this_edge = edge(**over)
+    return score_row(edge=this_edge,
                      quotes=three_books() if quotes is None else quotes,
                      fight=FIGHT if fight is None else fight,
                      reference_instant=ref, now=now, eligible_book_ids=books,
                      reference_basis=basis, is_first_bout=first_bout,
                      snapshot=snapshot() if snap is True else snap,
-                     publish_quote=publish_quote() if pub is True else pub)
+                     publish_quote=publish_quote() if pub is True else pub,
+                     edge_cohort=[this_edge] if cohort is True else cohort)
 
 
 # ---------------------------------------------------------------------------
@@ -471,6 +476,7 @@ class TestClosedVocabulary(unittest.TestCase):
                 lambda: score(snap=snapshot(
                     engine_published_at=START + dt.timedelta(hours=1))),
             "no_immutable_forecast_lock": lambda: score(snap=None),
+            "ambiguous_edge_identity": lambda: score(cohort=None),
             "no_publish_quote_link": lambda: score(pub=None),
             "incomplete_quote_provenance": lambda: score(quotes=[
                 dict(q, feed_version=None) for q in three_books()]),
@@ -917,8 +923,9 @@ class TestRowLevelProvenance(unittest.TestCase):
         return out
 
     def score_june(self, quotes):
+        this_edge = edge(published_at=self.JUNE_LOCK)
         return score_row(
-            edge=edge(published_at=self.JUNE_LOCK),
+            edge=this_edge, edge_cohort=[this_edge],
             quotes=quotes, fight=FIGHT, reference_instant=self.JUNE_CUTOFF,
             now=NOW, eligible_book_ids=BOOKS,
             reference_basis="previous_bout_completion", is_first_bout=False,
@@ -1011,8 +1018,9 @@ class TestNoLookaheadPerQuote(unittest.TestCase):
 
     def score_at(self, quoted_at, locked_at=None):
         locked_at = self.LOCKED if locked_at is None else locked_at
+        this_edge = edge(published_at=locked_at)
         return score_row(
-            edge=edge(published_at=locked_at),
+            edge=this_edge, edge_cohort=[this_edge],
             quotes=three_books(at=quoted_at), fight=FIGHT,
             reference_instant=self.CUTOFF, now=NOW, eligible_book_ids=BOOKS,
             reference_basis="previous_bout_completion", is_first_bout=False,
@@ -1131,6 +1139,277 @@ class TestImmutableForecastLock(unittest.TestCase):
         info = score(published_at=LOCK + dt.timedelta(minutes=2))["forecast_lock"]
         self.assertFalse(info["agrees_with_immutable_record"])
         self.assertTrue(info["published_at_is_binding"])
+
+
+# ---------------------------------------------------------------------------
+# Amendment 7 (c) — the snapshot must identify ONE publication
+# ---------------------------------------------------------------------------
+
+class TestEdgeIdentity(unittest.TestCase):
+    """The tuple is a cross-check. Only an id is an identity.
+
+    `pre_fight_snapshots` is unique on `fight_id` and `snapshot_predictions.py`
+    keeps only the latest live edge per fight — so several live edges on one
+    fight are possible, the snapshot records one of them, and a tuple two of
+    them can share cannot say which.
+    """
+
+    def other_edge(self, **over):
+        """A second live edge on the same fight."""
+        return edge(id=8, **over)
+
+    def test_a_shared_edge_id_is_an_exact_match(self):
+        got = score(snap=snapshot(edge_model_edge_id=7))
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["forecast_lock"]["edge_identity"], "shared_edge_id")
+
+    def test_a_shared_edge_id_naming_another_edge_is_refused(self):
+        got = score(snap=snapshot(edge_model_edge_id=8))
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+        self.assertIn("different publication", got["detail"])
+
+    def test_the_edge_id_wins_over_a_tuple_that_would_be_ambiguous(self):
+        """The whole point of wiring it: ambiguity stops mattering."""
+        twins = [edge(), self.other_edge()]          # identical tuples
+        got = score(snap=snapshot(edge_model_edge_id=7), cohort=twins)
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["forecast_lock"]["edge_identity"], "shared_edge_id")
+
+    def test_two_live_edges_sharing_the_tuple_score_nothing(self):
+        """Same side, same fighter, same price — which one did the snapshot
+        freeze? Nothing on the snapshot can say, so neither scores."""
+        twins = [edge(), self.other_edge()]
+        got = score(cohort=twins)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "ambiguous_edge_identity")
+        self.assertIn("2 live edges", got["detail"])
+
+    def test_a_second_edge_with_a_different_price_is_not_a_twin(self):
+        """Ambiguity is about the tuple, not about the count. A fight with two
+        live edges at different prices is still unambiguous."""
+        got = score(cohort=[edge(), self.other_edge(odds_at_publish=-140)])
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["forecast_lock"]["edge_identity"],
+                         "tuple_unique_in_cohort")
+
+    def test_a_second_edge_on_the_other_side_is_not_a_twin(self):
+        got = score(cohort=[edge(), self.other_edge(side="b")])
+        self.assertTrue(got["scored"], got["detail"])
+
+    def test_an_unestablished_cohort_is_refused_not_assumed_unique(self):
+        """Not established is not the same as established. `None` means the
+        caller never looked, and that is exactly when a silent default would
+        assume the convenient answer."""
+        got = score(cohort=None)
+        self.assertEqual(got["reason"], "ambiguous_edge_identity")
+        self.assertIn("not supplied", got["detail"])
+
+    def test_the_row_records_how_the_edge_was_identified(self):
+        """A reader must be able to tell an identity from a unique-looking
+        tuple, because they are not the same evidence."""
+        self.assertEqual(score()["forecast_lock"]["edge_identity"],
+                         "tuple_unique_in_cohort")
+        self.assertEqual(
+            score(snap=snapshot(edge_model_edge_id=7))["forecast_lock"]
+            ["edge_identity"], "shared_edge_id")
+
+    def test_the_snapshotter_selects_and_writes_the_edge_id(self):
+        """The fix is only real if the producer records it. Pinned here because
+        the column is useless if nothing fills it — and the field name must
+        match what `forecast_lock` reads."""
+        src = (REPO_ROOT and open(os.path.join(REPO_ROOT, "cfl_engine",
+                                               "snapshot_predictions.py"),
+                                  encoding="utf-8").read())
+        self.assertIn('"select=id,fight_id,side,bet_fighter_id', src,
+                      "the snapshotter must select the edge id to record it")
+        self.assertIn(f'"{SNAPSHOT_EDGE_ID_FIELD}": ed and ed["id"]', src)
+        self.assertIn("OPTIONAL_COLUMNS", src,
+                      "writing a column the table may not have must degrade, "
+                      "not take the snapshot cron down")
+
+
+# ---------------------------------------------------------------------------
+# Amendment 7 (a) — settlement is write-once, re-runs verify
+# ---------------------------------------------------------------------------
+
+class TestWriteOnce(unittest.TestCase):
+    """A CLV-001 observation is written once and then only ever checked.
+
+    The defect: every scored row was re-PATCHed on every run, so a second
+    settlement reinterpreted an earlier observation against later database
+    state — a quote inserted since, a corrected completion, a reschedule — and
+    refreshed `clv_scored_at` so nothing on the row showed it had moved. The
+    protocol says observations are never retroactively reinterpreted or
+    overwritten; the writer did the opposite, on a cron.
+    """
+
+    SCORED_AT = dt.datetime(2026, 9, 13, 6, 0, tzinfo=dt.timezone.utc)
+
+    def stored_from(self, result, **over):
+        """The row as the writer would have left it at first scoring."""
+        row = {
+            "clv_scored_at": self.SCORED_AT,
+            "clv_protocol_version": PROTOCOL_TAG,
+            "clv_return": round(result["clv_return"], 10),
+            "closing_fair_probability": round(
+                result["closing_fair_probability"], 10),
+            "closing_book_count": result["closing_book_count"],
+            "clv_source_quote_ids": result["quote_ids"],
+            "clv_consensus_sha256": result["consensus_sha256"],
+            "clv_closing_consensus": result["consensus"],
+            "clv_close_basis": result["close_basis"],
+            "clv_lead_time_minutes": round(result["lead_time_minutes"], 4),
+            "clv_lead_time_is_lower_bound": result["lead_time_is_lower_bound"],
+            "clv_proxy_quoted_at": result["proxy_quoted_at"],
+            "clv_cutoff_at": result["cutoff_at"],
+            "clv_publish_quote_id": result["publish_quote"]["quote_id"],
+        }
+        row.update(over)
+        return row
+
+    def test_an_identical_rerun_reports_no_disagreement(self):
+        first = score()
+        self.assertTrue(first["scored"], first["detail"])
+        second = score()
+        self.assertEqual(verify_against_stored(second, self.stored_from(first)),
+                         [])
+
+    def test_an_unscored_row_is_not_treated_as_written(self):
+        """R-04: a row with no usable close stays eligible for a later run."""
+        self.assertFalse(has_clv001_score({}))
+        self.assertFalse(has_clv001_score({"clv_scored_at": None}))
+        self.assertTrue(has_clv001_score({"clv_scored_at": self.SCORED_AT}))
+
+    def test_scored_at_is_never_compared_and_so_never_refreshed(self):
+        """It records when the row was FIRST scored. Comparing it to a later run
+        would fail every time, which is how a verifier turns back into a writer."""
+        self.assertNotIn("clv_scored_at", [c for c, _ in VERIFIED_FIELDS])
+
+    def test_every_persisted_field_is_verified(self):
+        """A field stored at first scoring and never checked again is a field
+        that can drift silently."""
+        engine_dir = os.path.join(REPO_ROOT, "cfl_engine")
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import settle_clv                                            # noqa: E402
+        verified = {c for c, _ in VERIFIED_FIELDS}
+        never_checked = set(settle_clv.CLV001_COLUMNS) - verified - {
+            # Written once and legitimately not re-derived here:
+            "clv_scored_at",              # when, not what
+            "clv_unscored_reason",        # NULL on every scored row
+            "clv_closing_consensus",      # checked against its own hash instead
+            "clv_window_opened_at",       # comes from the fight, not the scoring
+        }
+        self.assertEqual(never_checked, set(),
+                         f"persisted but never verified: {never_checked}")
+
+    def test_a_changed_consensus_is_drift(self):
+        first = score()
+        moved = score(quotes=three_books(
+            pairs=((0.58, 0.50), (0.61, 0.49), (0.54, 0.50))))
+        problems = verify_against_stored(moved, self.stored_from(first))
+        self.assertTrue(problems)
+        self.assertTrue(any("closing_fair_probability" in p for p in problems))
+        self.assertTrue(any("clv_consensus_sha256" in p for p in problems))
+
+    def test_a_changed_cutoff_is_drift(self):
+        """The case the stored cutoff exists for: the schedule moved after the
+        row was scored, and the number would silently be re-based on it."""
+        first = score()
+        later = score(ref=START + dt.timedelta(minutes=20))
+        problems = verify_against_stored(later, self.stored_from(first))
+        self.assertTrue(any("clv_cutoff_at" in p for p in problems))
+
+    def test_a_row_that_no_longer_scores_is_drift_not_a_deletion(self):
+        first = score()
+        gone = score(quotes=[])
+        problems = verify_against_stored(gone, self.stored_from(first))
+        self.assertTrue(problems)
+        self.assertIn("no longer scores", problems[0])
+
+    def test_an_edited_stored_artifact_is_caught_by_its_own_hash(self):
+        """Editing the jsonb in place would otherwise reproduce every other
+        comparison — the recomputed hash matches the recomputed artifact, and
+        nothing would look at what is actually on the row."""
+        first = score()
+        stored = self.stored_from(first)
+        tampered = json.loads(json.dumps(stored["clv_closing_consensus"],
+                                         default=str))
+        tampered["median_fair_bet"] = 0.99
+        stored["clv_closing_consensus"] = tampered
+        problems = verify_against_stored(first, stored)
+        self.assertTrue(any("edited after it was written" in p
+                            for p in problems))
+
+    def test_a_row_from_another_protocol_version_is_left_alone(self):
+        first = score()
+        stored = self.stored_from(first, clv_protocol_version="CLV-001@1.0.7")
+        problems = verify_against_stored(first, stored)
+        self.assertEqual(len(problems), 1)
+        self.assertIn("never re-scored under another", problems[0])
+
+    def test_numeric_round_tripping_is_not_reported_as_drift(self):
+        """Postgres `numeric` comes back as a decimal string. Reporting that as
+        drift would fire on every run and train everyone to ignore it."""
+        first = score()
+        stored = self.stored_from(first)
+        for column in ("clv_return", "closing_fair_probability",
+                       "clv_lead_time_minutes"):
+            stored[column] = str(stored[column])
+        stored["closing_book_count"] = str(stored["closing_book_count"])
+        self.assertEqual(verify_against_stored(first, stored), [])
+
+    def test_the_settler_writes_only_rows_that_were_never_scored(self):
+        engine_dir = os.path.join(REPO_ROOT, "cfl_engine")
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import settle_clv                                            # noqa: E402
+        first = score()
+        rows = [{"id": 7, "fight_id": 1},                       # never scored
+                {"id": 8, "fight_id": 2, **self.stored_from(first)},   # scored
+                {"id": 9, "fight_id": 3, **self.stored_from(first)}]   # drifted
+        drifted_result = dict(score(ref=START + dt.timedelta(minutes=20)),
+                              edge_id=9)
+        results = [dict(first, edge_id=7), dict(first, edge_id=8),
+                   drifted_result]
+        fresh, drifted, verified, foreign = settle_clv._partition_for_write(
+            results, rows)
+        self.assertEqual([x["edge_id"] for x in fresh], [7],
+                         "only the never-scored row may be written")
+        self.assertEqual(verified, [8])
+        self.assertEqual([e for e, _ in drifted], [9])
+        self.assertEqual(foreign, [])
+
+    def test_a_second_identical_settlement_would_write_nothing(self):
+        """The regression Reed asked for, at the level the writer decides it."""
+        engine_dir = os.path.join(REPO_ROOT, "cfl_engine")
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import settle_clv                                            # noqa: E402
+        first = score()
+        rows = [{"id": 7, "fight_id": 1, **self.stored_from(first)}]
+        fresh, drifted, verified, foreign = settle_clv._partition_for_write(
+            [dict(first, edge_id=7)], rows)
+        self.assertEqual(fresh, [], "a re-run must PATCH nothing")
+        self.assertEqual(drifted, [])
+        self.assertEqual(verified, [7])
+
+    def test_the_settler_aborts_on_drift_rather_than_rewriting(self):
+        """Source-level, because the alternative is discovering it in
+        production: the drift branch must exit, and must do so before the
+        patch loop rather than after it."""
+        src = open(os.path.join(REPO_ROOT, "cfl_engine", "settle_clv.py"),
+                   encoding="utf-8").read()
+        body = src[src.index("fresh, drifted, verified, foreign ="):]
+        abort = body.index("sys.exit(")
+        patch = body.index("patch_row(")
+        self.assertLess(abort, patch,
+                        "the drift abort must come before any PATCH")
+        self.assertIn("POST-SCORE DRIFT", body)
+        # And the only write loop iterates the never-scored rows.
+        self.assertIn("for x in fresh:", body)
+        self.assertNotIn("for x in scored:", body)
 
 
 # ---------------------------------------------------------------------------

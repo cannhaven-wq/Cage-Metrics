@@ -405,6 +405,12 @@ begin
         -- published_at, which is mutable, and no pre_fight_snapshots row
         -- identifies this edge. A lock read off a rewritable row is not one.
         'no_immutable_forecast_lock',
+        -- R-07, Amendment 7: a pre-fight snapshot exists and matches on
+        -- (side, bet_fighter_id, odds_at_publish), but that tuple does not
+        -- identify ONE publication — either the fight has more than one live
+        -- edge sharing it, or the cohort was never established. Wiring
+        -- pre_fight_snapshots.edge_model_edge_id removes the question.
+        'ambiguous_edge_identity',
         -- §4 item 12: odds_at_publish names no source quote, or the row it
         -- names does not prove the price, the corners, the market or the
         -- instant. Historical edges have no link and are never given a

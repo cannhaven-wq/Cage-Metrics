@@ -117,8 +117,9 @@ from export_data import fetch_all, prob_to_american
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
 from scoring import (  # noqa: E402
     CLOSE_REFERENCE_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
-    REQUIRED_QUOTE_PROVENANCE, UNSCORED_REASONS, admissible_reference,
-    is_eligible_book, score_row,
+    REQUIRED_QUOTE_PROVENANCE, SNAPSHOT_EDGE_ID_FIELD, UNSCORED_REASONS,
+    VERIFIED_FIELDS, admissible_reference, has_clv001_score, is_eligible_book,
+    score_row, verify_against_stored,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -606,19 +607,30 @@ def clv001_main(write: bool) -> None:
     today = dt.date.today().isoformat()
     base_select = ("select=id,fight_id,event_date,side,bet_fighter_id,"
                    "odds_at_publish,published_at,source")
+    # The persisted result is read back with the edge, because a re-run must be
+    # able to VERIFY what is already there rather than decide from scratch and
+    # overwrite. Reading only the inputs is what made settlement re-writable.
+    stored_select = ",".join(("clv_publish_quote_id", "clv_scored_at") +
+                             tuple(col for col, _ in VERIFIED_FIELDS
+                                   if col != "clv_publish_quote_id") +
+                             ("clv_closing_consensus",))
     try:
         rows = fetch_all(
             base_url, key, "model_edges",
-            f"{base_select},clv_publish_quote_id&source=eq.live"
+            f"{base_select},{stored_select}&source=eq.live"
             f"&event_date=lt.{today}&order=event_date")
     except Exception as e:                      # noqa: BLE001 - unknown is failed
-        print(f"  note: model_edges has no clv_publish_quote_id ({e}) — no edge "
-              f"can name the source of its posted price, so every row will be "
-              f"unscored with no_publish_quote_link (§4 item 12). Apply "
+        print(f"  note: model_edges lacks the CLV-001 result columns ({e}) — no "
+              f"edge can name the source of its posted price, so every row will "
+              f"be unscored with no_publish_quote_link (§4 item 12). Apply "
               f"research/clv/proposed_2026-09-16_clv001_columns.sql.")
         rows = fetch_all(base_url, key, "model_edges",
                          f"{base_select}&source=eq.live"
                          f"&event_date=lt.{today}&order=event_date")
+    for r in rows:
+        for column in ("clv_scored_at", "clv_proxy_quoted_at", "clv_cutoff_at"):
+            if column in r:
+                r[column] = _iso(r.get(column))
     print(f"\nlive edges on cards before {today}: {len(rows)}")
     if not rows:
         print("nothing to score.")
@@ -635,6 +647,14 @@ def clv001_main(write: bool) -> None:
         {r["clv_publish_quote_id"] for r in rows
          if r.get("clv_publish_quote_id") is not None})
 
+    # Every live edge on a fight, so `forecast_lock` can establish that the
+    # snapshot's tuple identifies exactly one of them. `snapshot_predictions.py`
+    # keeps only the latest live edge per fight, so several per fight are
+    # possible and the snapshot froze one particular publication.
+    cohort: dict[int, list] = {}
+    for r in rows:
+        cohort.setdefault(r["fight_id"], []).append(r)
+
     results = []
     for r in rows:
         r["published_at"] = _iso(r.get("published_at"))
@@ -646,7 +666,8 @@ def clv001_main(write: bool) -> None:
             reference_basis=fight.get("start_basis"),
             is_first_bout=fight.get("is_first_bout"),
             snapshot=snapshots.get(r["fight_id"]),
-            publish_quote=publish_quotes.get(r.get("clv_publish_quote_id"))))
+            publish_quote=publish_quotes.get(r.get("clv_publish_quote_id")),
+            edge_cohort=cohort.get(r["fight_id"], [])))
 
     _report_clv001(results)
 
@@ -656,8 +677,44 @@ def clv001_main(write: bool) -> None:
               "20 distinct events with an interval excluding zero.")
         return
 
-    scored = [x for x in results if x["scored"]]
-    for x in scored:
+    fresh, drifted, verified, foreign = _partition_for_write(results, rows)
+
+    if verified:
+        print(f"\nverified : {len(verified)} row(s) already scored under "
+              f"{PROTOCOL_TAG} reproduce exactly. NOTHING was rewritten — not "
+              f"the artifact, not the cutoff, not clv_scored_at.")
+    if foreign:
+        print(f"left alone: {len(foreign)} row(s) scored under a different "
+              f"protocol version. A row scored under one version is never "
+              f"re-scored under another.")
+        for edge_id, problems in foreign[:5]:
+            print(f"    edge {edge_id}: {problems[0]}")
+
+    if drifted:
+        # LOUD, and it stops the run before any write. Drift means a stored
+        # observation no longer reproduces, and the one thing that must not
+        # happen next is a PATCH that makes the disagreement disappear.
+        print(f"\n*** POST-SCORE DRIFT on {len(drifted)} row(s) ***")
+        for edge_id, problems in drifted:
+            print(f"  edge {edge_id}:")
+            for p in problems:
+                print(f"      {p}")
+        sys.exit(
+            f"\nCLV-001 settlement ABORTED. {len(drifted)} row(s) scored earlier "
+            f"no longer reproduce from the evidence on file.\n"
+            f"Nothing was written, including the {len(fresh)} row(s) that would "
+            f"otherwise have been scored for the first time.\n\n"
+            f"This is not a condition to re-run through. A stored observation is "
+            f"the record of what was measured before the fight; if it no longer "
+            f"reproduces, either the evidence moved (R-01 exists to stop that), "
+            f"the scorer changed without a version bump, or the stored artifact "
+            f"was edited. Find out which. Do not re-score.")
+
+    if not fresh:
+        print("\nno unscored row is scorable. Nothing written.")
+        return
+
+    for x in fresh:
         patch_row(base_url, key, x["edge_id"], {
             "clv_return": round(x["clv_return"], 10),
             "closing_fair_probability": round(x["closing_fair_probability"], 10),
@@ -680,10 +737,52 @@ def clv001_main(write: bool) -> None:
                 fights.get(x["fight_id"], {}).get("window_opens_at").isoformat()
                 if fights.get(x["fight_id"], {}).get("window_opens_at") else None),
         })
-    print(f"\nWROTE {len(scored)} CLV-001 result(s). Legacy clv_pp / clv_beat "
-          f"were not read and not modified.")
+    print(f"\nWROTE {len(fresh)} CLV-001 result(s), each for the FIRST time. "
+          f"Legacy clv_pp / clv_beat were not read and not modified.")
     print("The publication gate is unchanged. Storing a number is not showing "
           "one.")
+
+
+def _partition_for_write(results: list, rows: list) -> tuple:
+    """Split this run's results into write / verify / drift / leave-alone.
+
+    WRITE-ONCE (Amendment 7). A CLV-001 observation is written once and then
+    never again. `clv_scored_at` marks a row as written, and on every later run
+    that row is re-scored only in order to CHECK it — the recomputed result is
+    compared against the stored one field by field, and nothing is PATCHed
+    either way.
+
+    The defect this replaces: every scored row was re-PATCHed on every run, so a
+    second settlement silently reinterpreted an earlier observation against
+    later database state — a quote inserted since, a corrected completion, a
+    reschedule — and refreshed `clv_scored_at` to hide that it had. The protocol
+    says observations scored under a version are never retroactively
+    reinterpreted or overwritten; the writer did the opposite, on a cron.
+
+    Returns `(fresh, drifted, verified, foreign)`:
+      fresh     scorable, never scored before -> write once
+      drifted   scored before, does NOT reproduce -> abort the whole run
+      verified  scored before, reproduces exactly -> zero writes
+      foreign   scored under another protocol version -> never touched
+    """
+    stored_by_id = {r["id"]: r for r in rows}
+    fresh, drifted, verified, foreign = [], [], [], []
+    for x in results:
+        stored = stored_by_id.get(x["edge_id"], {})
+        if not has_clv001_score(stored):
+            # Never scored. Unscorable rows stay eligible for a later run (R-04)
+            # and are reported, not written.
+            if x["scored"]:
+                fresh.append(x)
+            continue
+        problems = verify_against_stored(x, stored)
+        if not problems:
+            verified.append(x["edge_id"])
+        elif stored.get("clv_protocol_version") != PROTOCOL_TAG:
+            foreign.append((x["edge_id"], problems))
+        else:
+            drifted.append((x["edge_id"], problems))
+    return fresh, drifted, verified, foreign
 
 
 def _resolve_eligible_books(base_url: str, key: str,
@@ -822,18 +921,26 @@ def _snapshots_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
     no immutable record of what we published on it.
     """
     out: dict[int, dict] = {}
+    base = ("select=id,fight_id,snapshot_at,engine_published_at,edge_side,"
+            "edge_bet_fighter_id,edge_odds_at_publish")
     for chunk in _chunks(sorted(fight_ids), 100):
         ids = ",".join(str(i) for i in chunk)
         try:
             rows = fetch_all(base_url, key, "pre_fight_snapshots",
-                             f"select=id,fight_id,snapshot_at,engine_published_at,"
-                             f"edge_side,edge_bet_fighter_id,edge_odds_at_publish"
+                             f"{base},{SNAPSHOT_EDGE_ID_FIELD}"
                              f"&fight_id=in.({ids})")
-        except Exception as e:                  # noqa: BLE001 - unknown is failed
-            print(f"  note: pre_fight_snapshots unreadable ({e}) — no row can "
-                  f"establish an immutable forecast lock, so every row will be "
-                  f"unscored with no_immutable_forecast_lock (R-07).")
-            return out
+        except Exception:                       # noqa: BLE001 - unknown is failed
+            # The edge-id column is not applied yet. Fall back to the tuple
+            # match, which `forecast_lock` will then require to be unique among
+            # the fight's live edges.
+            try:
+                rows = fetch_all(base_url, key, "pre_fight_snapshots",
+                                 f"{base}&fight_id=in.({ids})")
+            except Exception as e:              # noqa: BLE001
+                print(f"  note: pre_fight_snapshots unreadable ({e}) — no row "
+                      f"can establish an immutable forecast lock, so every row "
+                      f"will be unscored with no_immutable_forecast_lock (R-07).")
+                return out
         for s in rows:
             s["snapshot_at"] = _iso(s.get("snapshot_at"))
             s["engine_published_at"] = _iso(s.get("engine_published_at"))

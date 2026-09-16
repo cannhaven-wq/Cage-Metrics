@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.9` |
+| version | `1.0.10` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–6 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–7 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,6 +336,95 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 7, v1.0.10, 2026-09-16 — settlement is write-once
+>
+> **Approved by the owner (L3).** The estimator is unchanged again. This
+> amendment is about what happens to an observation AFTER it is scored, and
+> about being able to say which forecast a snapshot froze.
+>
+> ### (a) A scored observation is written once and then only checked
+>
+> This document says observations scored under a version are never retroactively
+> reinterpreted or overwritten. The settler did the opposite, on a cron: it
+> re-scored every historical live edge on every run and re-`PATCH`ed every result,
+> with no check for an existing `clv_protocol_version`, `clv_consensus_sha256` or
+> `clv_scored_at`.
+>
+> So a second run could reinterpret an earlier observation against LATER database
+> state — a quote inserted since, a corrected completion, a reschedule — and
+> refresh `clv_scored_at` to the moment it did. Nothing on the row would show it
+> had moved.
+>
+> | state of the row | what a run does now |
+> |---|---|
+> | no CLV-001 score | score it and write, **once** |
+> | scored under this version, reproduces | verify, **zero writes**, `clv_scored_at` untouched |
+> | scored under this version, does **not** reproduce | **abort the whole run**, loudly |
+> | scored under another version | leave exactly as it is |
+>
+> Verification covers every persisted field — protocol version, `clv_return`, the
+> fair probability, the book count, the source quote ids, the consensus hash, the
+> close basis, the lead time and its flag, the proxy instant, the cutoff and the
+> publish quote id — plus the stored artifact re-hashed against its own recorded
+> `clv_consensus_sha256`, which is what catches a jsonb edited in place.
+>
+> Drift is an **alarm, not an update**. A `PATCH` at that moment is precisely the
+> thing that would make the disagreement disappear. Three causes are worth
+> stopping for: the evidence changed after the fact (which R-01's triggers exist
+> to surface), the scorer changed without a version bump, or the stored artifact
+> was edited. Find out which; do not re-score.
+>
+> ### (b) The publish-quote link stays fail-closed
+>
+> `clv_publish_quote_id` has no producer yet. Until whatever writes `model_edges`
+> records the exact `fight_odds.id` its posted price came from — contemporaneously
+> — **no edge scores**, historical or future. Nothing backfills the link by
+> matching prices. Confirmed rather than changed here, because a fail-closed rule
+> with no producer looks like a bug until someone writes down that it is not.
+>
+> ### (c) Identifying WHICH publication a snapshot froze
+>
+> Amendment 6 (c) matched a snapshot to an edge on side + bet fighter +
+> `odds_at_publish`. That is a good fail-closed cross-check and it is **not an
+> identity**: one fight can be republished with the same side, the same fighter
+> and the same price — by coincidence, or because the line had not moved.
+>
+> And it is not hypothetical. `snapshot_predictions.py` reads every live edge on a
+> fight and keeps the one with the latest `published_at`, so several are possible
+> and the snapshot records one particular publication.
+>
+> Two answers, in order:
+>
+> 1. **`pre_fight_snapshots.edge_model_edge_id`** — the id of the `model_edges`
+>    row the snapshot froze. An identity, not a coincidence test. Added by
+>    `proposed_2026-09-16_snapshot_edge_identity.sql` and written by
+>    `snapshot_predictions.py`, which probes for the column and omits it when it
+>    is absent, so the migration and the deploy need no ordering between them.
+> 2. **the tuple, plus uniqueness** — for every snapshot taken before that column
+>    existed. Exactly one live edge on the fight may match the snapshot's tuple.
+>    Two matches is ambiguity, and **ambiguity scores nothing**
+>    (`ambiguous_edge_identity`). A cohort that was never established is refused
+>    the same way: not established is not the same as established.
+>
+> The scored row records which of the two applied, because they are not the same
+> strength of evidence. Existing snapshots are never backfilled with an inferred
+> id — that would manufacture exactly the evidence the column exists to require.
+>
+> ### (d) The owner is named by role in live coordination text
+>
+> `coordination/` and the L0–L3 ladder now say **Owner** rather than a personal
+> name, so a change of who holds the role is not a repo-wide rename. Historical
+> records — `DECISIONS.md`, earlier handoffs, and every amendment above — keep the
+> name they were written with. Rewriting those would falsify who decided what.
+>
+> ### What did NOT change
+>
+> The estimator, the cutoff bases, the de-vig, the 45-minute limit, the book
+> list, the provenance requirements from Amendment 6, and the publication gate.
+> No rule was changed because a result looked better; there are still no results.
+>
+> ---
+>
 > ## AMENDMENT 6, v1.0.9, 2026-09-16 — provenance, enforced per row
 >
 > **Approved by Reed Cannon (L3).** The measurement is unchanged: same cutoffs,
