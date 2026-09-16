@@ -13,25 +13,27 @@ books, de-vigged **per book first** and only then median-ed (Q-02 — the order 
 not interchangeable; taking the median of vigged prices and de-vigging once
 afterwards blends the books' margins together and is a different estimator).
 
-A note on the bisection direction, because the frozen protocol gets it wrong
+A note on the bisection direction
 -----------------------------------------------------------------------------
-§1.1 specifies `q_over^(1/k) + q_under^(1/k) = 1` and says "the sum is strictly
-decreasing in k". **For that formula the sum is strictly INCREASING in k.** It
-is decreasing under the other common convention, `q^k`.
+The formula is `q_over^(1/k) + q_under^(1/k) = 1`, and for it the sum is
+strictly **increasing** in `k`: raising `k` lowers the exponent `1/k` and pushes
+each `q^(1/k)` toward 1. It is *decreasing* under the other common convention,
+`q^k`. The two are exact reparametrisations — the `q^k` root is the reciprocal
+of the `q^(1/k)` root — so they yield bit-identical fair probabilities, and both
+roots fall inside the `[0.5, 5.0]` bracket.
 
-The two are exact reparametrisations — the `q^k` root is the reciprocal of the
-`q^(1/k)` root — so they yield *bit-identical* fair probabilities, and both roots
-fall inside the protocol's `[0.5, 5.0]` bracket. No number changes either way.
+DUR-001 Amendment 1.1 originally stated the direction the wrong way round. It
+was found here, while implementing the formula, and corrected upstream by
+**DUR-001 Amendment 2**, which CLV-001 inherits as its **Amendment 1** (v1.0.0 →
+v1.0.1). Both amendments record `motivated_by_observed_results: false` and no
+de-vigged probability changed; the proposal Reed approved is kept at
+`research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md`.
 
-But an implementer who trusted the stated direction would invert their sign test
-and either converge on the bracket edge or fail. So this module does not rely on
-the claim at all: it reads the sign at the bracket ends and bisects accordingly,
-which is correct under either convention.
-
-The defect is documentation-only and is recorded for amendment in
-`research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md`. It is not
-silently corrected here — the protocol was frozen, and a frozen document is
-changed by amendment or not at all.
+`_bisect` stays **direction-agnostic** regardless: it reads the sign at both
+bracket ends rather than assuming which way `f` runs. That was written when the
+document was wrong, and it is kept now that the document is right — an
+implementation that would break if a docstring changed is an implementation
+resting on a docstring.
 """
 from __future__ import annotations
 

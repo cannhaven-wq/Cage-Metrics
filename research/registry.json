@@ -27,7 +27,7 @@
         "the lock's actual_lock_at is not after the latest closing quote"
       ],
       "preregistration_path": "cfl_engine/dur001/PREREGISTRATION.md",
-      "preregistration_sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+      "preregistration_sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
       "model_artifact_sha256": null,
       "data_artifact_sha256": "9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6",
       "freeze_timestamp": "2026-09-15T00:00:00Z",
@@ -64,7 +64,7 @@
       "frozen_files": [
         {
           "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
           "frozen_at_commit": "1bc3fdd",
           "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
           "amended": true
@@ -113,6 +113,20 @@
           "sha256_before": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
           "sha256_after": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
           "motivated_by_observed_results": false
+        },
+        {
+          "number": 2,
+          "date": "2026-09-16",
+          "approved_by": "Reed Cannon",
+          "title": "De-vig bisection direction (mathematical correction)",
+          "amends_sections": [
+            "Amendment 1.1"
+          ],
+          "sha256_before": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "sha256_after": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
+          "motivated_by_observed_results": false,
+          "severity": "documentation only - no output changes, now or retrospectively",
+          "note": "Amendment 1.1 said the sum is strictly DECREASING in k. For the formula it specifies, q^(1/k), the sum is strictly INCREASING. The two conventions are exact reparametrisations so fair probabilities are bit-identical; nothing is recomputed and no prior result is reinterpreted. Found while implementing, not by looking at a figure."
         }
       ],
       "held_amendment_clauses": {
@@ -183,7 +197,7 @@
       "frozen_files": [
         {
           "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+          "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
           "frozen_at_commit": "1bc3fdd",
           "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
           "amended": true

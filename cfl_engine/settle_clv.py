@@ -1,5 +1,60 @@
-"""Post-event CLV settlement: fill closing_odds / clv_pp / clv_beat on published
-live edges once the line has closed.
+"""Post-event CLV settlement. Two modes, chosen explicitly, that never mix.
+
+    LEGACY   (default)   fills closing_odds / clv_pp / clv_beat, the pre-CLV-001
+                         construction this script has always written. Unchanged.
+    CLV-001  (--clv001)  computes the frozen primary measure, CLV_return, into
+                         separate columns. Reports by default; writes only when
+                         every precondition holds.
+
+Usage (from repo root, PYTHONPATH=cfl_engine):
+
+    python cfl_engine/settle_clv.py                    # legacy dry-run
+    python cfl_engine/settle_clv.py --execute          # legacy write (the cron)
+    python cfl_engine/settle_clv.py --clv001 --report  # CLV-001, writes nothing
+    python cfl_engine/settle_clv.py --clv001 --write   # CLV-001, gated
+
+`--clv001` requires exactly one of `--report` / `--write`. There is no default:
+neither reporting nor writing should ever happen because someone forgot a flag.
+
+WHY TWO MODES AND NOT A REPLACEMENT
+-----------------------------------
+`clv_pp` and `clv_beat` are the raw single-side implied-probability movement,
+vigged at both ends. CLV-001 §1.2 retains them as a secondary descriptive
+figure: they are what the stored rows already mean, and silently recomputing
+them under the new definition would reinterpret history. So the legacy path
+below is untouched, keeps running on its cron, and keeps writing its own
+columns. CLV-001 lands in new columns beside it and never overwrites it.
+
+THE CLV-001 MODE FAILS CLOSED, EVERYWHERE
+-----------------------------------------
+Writing requires, all of them, with no fallback for any:
+
+  * the CLV-001 columns exist on `model_edges`
+    (research/clv/proposed_2026-09-16_clv001_columns.sql — NOT yet applied);
+  * `research/clv/protocol.json` says `frozen`, its version matches the version
+    compiled into `clv/scoring.py` EXACTLY, and the protocol markdown still
+    hashes to the sha256 the json records;
+  * Q-02's fixed named sportsbook list is present in the frozen protocol;
+  * every capture requirement the protocol names as unbackfillable is met.
+
+Miss any one and no CLV result is written for any row. Per-row obstacles — a
+one-sided close, fewer than three books, an R-13 sentinel timestamp, a stale
+quote — leave that row unscored with a reason from the closed vocabulary, never
+scored on a substitute. Unscored counts are reported beside every summary
+(R-05), because a coverage problem that hides inside a favourable average is the
+specific failure this protocol exists to prevent.
+
+Publication is a separate gate and this script does not touch it. It computes
+and stores a private number; `protocol.json` holds `publication_allowed`, which
+is false and stays false until 100 scored observations across 20 distinct events
+with a cluster interval excluding zero.
+
+----------------------------------------------------------------------------
+LEGACY MODE — the original docstring follows, unchanged.
+----------------------------------------------------------------------------
+
+Fill closing_odds / clv_pp / clv_beat on published live edges once the line has
+closed.
 
 For every model_edges row with source='live', settled_at IS NULL, and
 event_date < today, compute the closing price of the BET SIDE and score our
@@ -44,15 +99,12 @@ CLV sign convention (READ THIS — it is easy to get backwards):
 
 Credentials: env SUPABASE_URL + SUPABASE_SECRET_KEY (service key, read from env,
 never printed). --dry-run (default) prints the plan; --execute PATCHes the rows.
-
-Usage (from repo root, PYTHONPATH=cfl_engine):
-  python cfl_engine/settle_clv.py            # dry-run
-  python cfl_engine/settle_clv.py --execute  # write closing_odds/clv_pp/clv_beat
 """
 from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import json
 import os
 import sys
@@ -61,6 +113,25 @@ import urllib.request
 
 from engine import american_to_prob
 from export_data import fetch_all, prob_to_american
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
+from scoring import (  # noqa: E402
+    PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION, UNSCORED_REASONS,
+    is_eligible_book, score_row,
+)
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PROTOCOL_JSON = os.path.join(REPO_ROOT, "research", "clv", "protocol.json")
+PROTOCOL_MD = os.path.join(REPO_ROOT, "research", "clv",
+                           "CLV_MEASUREMENT_PROTOCOL.md")
+
+# The columns research/clv/proposed_2026-09-16_clv001_columns.sql adds. All of
+# them, or none: a scored row carries its whole provenance or it is not written.
+CLV001_COLUMNS = (
+    "clv_return", "closing_fair_probability", "closing_book_count",
+    "clv_protocol_version", "clv_scored_at", "clv_unscored_reason",
+    "clv_source_quote_ids", "clv_closing_consensus", "clv_consensus_sha256",
+)
 
 
 # A real two-way market never prices a side outside this band. Anything beyond
@@ -142,11 +213,31 @@ def patch_row(base_url: str, key: str, row_id: int, payload: dict) -> None:
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--execute", action="store_true",
-                    help="PATCH the rows (default: dry-run plan only)")
+                    help="LEGACY mode: PATCH the rows (default: dry-run plan only)")
     ap.add_argument("--dry-run", action="store_true", help="explicit no-op (default)")
+    ap.add_argument("--clv001", action="store_true",
+                    help="run the frozen CLV-001 measure instead of the legacy one")
+    ap.add_argument("--report", action="store_true",
+                    help="CLV-001 mode: compute and print, write nothing")
+    ap.add_argument("--write", action="store_true",
+                    help="CLV-001 mode: write, if and only if every precondition holds")
     args = ap.parse_args()
-    execute = args.execute
 
+    if args.clv001:
+        if args.report == args.write:
+            sys.exit("--clv001 needs exactly one of --report / --write. There is "
+                     "no default: neither reporting nor writing should happen "
+                     "because a flag was forgotten.")
+        if args.execute:
+            sys.exit("--execute is the LEGACY write flag. CLV-001 writes with "
+                     "--write, which is gated separately and deliberately.")
+        return clv001_main(write=args.write)
+    if args.report or args.write:
+        sys.exit("--report / --write are CLV-001 flags; pass --clv001 too.")
+    return legacy_main(execute=args.execute)
+
+
+def legacy_main(execute: bool):
     base_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
     if not base_url:
         sys.exit("SUPABASE_URL not set in env.")
@@ -200,6 +291,346 @@ def main():
         patch_row(base_url, key, row_id, payload)
     print(f"\nEXECUTED — settled {len(planned)} edge row(s).")
 
+
+
+# ===========================================================================
+# CLV-001 — the frozen measure
+# ===========================================================================
+
+def _iso(ts: str | None) -> dt.datetime | None:
+    """PostgREST timestamptz -> aware datetime. Never guesses a zone."""
+    if not ts:
+        return None
+    s = ts.strip().replace(" ", "T")
+    if s.endswith("Z"):
+        s = s[:-1] + "+00:00"
+    try:
+        out = dt.datetime.fromisoformat(s)
+    except ValueError:
+        return None
+    return out if out.tzinfo else out.replace(tzinfo=dt.timezone.utc)
+
+
+def _sha256_file(path: str) -> str:
+    with open(path, "rb") as fh:
+        return hashlib.sha256(fh.read()).hexdigest()
+
+
+def preflight(base_url: str, key: str) -> tuple[dict, list[str]]:
+    """Every condition CLV-001 requires before a single value may be written.
+
+    Returns `(conditions, blockers)`. A condition that cannot be evaluated counts
+    as NOT met — unknown is treated as failed, which is what "fail closed" means
+    here. `blockers` is the ordered list of condition names that are false, and
+    an empty list is the only thing that opens write mode.
+
+    Nothing in here is skippable with a flag. That is the point: a gate with an
+    override is not a gate, and this one guards the number the whole protocol
+    exists to make trustworthy.
+    """
+    cond: dict[str, bool] = {}
+    detail: dict[str, str] = {}
+
+    # --- the frozen protocol itself -----------------------------------------
+    protocol: dict = {}
+    try:
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            protocol = json.load(fh)
+    except (OSError, ValueError) as e:
+        detail["protocol_readable"] = str(e)
+    cond["protocol_readable"] = bool(protocol)
+    cond["protocol_frozen"] = protocol.get("status") == "frozen"
+    cond["protocol_version_matches"] = protocol.get("version") == PROTOCOL_VERSION
+    detail["protocol_version_matches"] = (
+        f"protocol.json {protocol.get('version')!r} vs scoring.py "
+        f"{PROTOCOL_VERSION!r}")
+
+    # The markdown is the protocol; the json is its mirror. If they have drifted
+    # apart, neither can be trusted to say what the rules are.
+    try:
+        on_disk = _sha256_file(PROTOCOL_MD)
+        cond["protocol_sha256_matches"] = on_disk == protocol.get("protocol_sha256")
+        detail["protocol_sha256_matches"] = f"on disk {on_disk[:16]}…"
+    except OSError as e:
+        cond["protocol_sha256_matches"] = False
+        detail["protocol_sha256_matches"] = str(e)
+
+    # --- Q-02's fixed named sportsbook list ---------------------------------
+    # Resolved as "a fixed NAMED list frozen at protocol freeze". The name of the
+    # rule is the whole rule: a list assembled now, from books that happen to be
+    # in the data, is book selection after the fact — exactly what DUR-001
+    # forbids and what freezing the list was meant to make impossible. So this
+    # script will not derive one. It reads it, or it refuses.
+    named = protocol.get("eligible_books")
+    cond["eligible_book_list_frozen"] = bool(named)
+    detail["eligible_book_list_frozen"] = (
+        f"{len(named)} book(s) named" if named else
+        "protocol.json has no `eligible_books` key. Q-02 resolved to a fixed "
+        "named list frozen AT FREEZE and the list was never written down. It "
+        "cannot be chosen now without choosing it after seeing the data.")
+
+    # --- the storage the results go into ------------------------------------
+    missing = _missing_clv_columns(base_url, key)
+    cond["schema_present"] = not missing
+    detail["schema_present"] = (
+        "all CLV-001 columns present" if not missing else
+        f"missing: {', '.join(missing)} — apply "
+        f"research/clv/proposed_2026-09-16_clv001_columns.sql")
+
+    # --- capture requirements that cannot be backfilled ---------------------
+    caps = _capture_capabilities(base_url, key)
+    cond.update(caps["conditions"])
+    detail.update(caps["detail"])
+
+    blockers = [name for name, ok in cond.items() if not ok]
+    return {"conditions": cond, "detail": detail, "protocol": protocol,
+            "eligible_books": named or []}, blockers
+
+
+def _missing_clv_columns(base_url: str, key: str) -> list[str]:
+    """Which CLV-001 columns `model_edges` does not have.
+
+    PostgREST fails the whole select on the first unknown column, so probe one
+    at a time. Slow and boring, and it names the column rather than saying
+    something went wrong.
+    """
+    missing = []
+    for col in CLV001_COLUMNS:
+        try:
+            fetch_all(base_url, key, "model_edges", f"select={col}&limit=1")
+        except urllib.error.HTTPError:
+            missing.append(col)
+        except Exception:                       # noqa: BLE001 - unknown is failed
+            missing.append(col)
+    return missing
+
+
+def _capture_capabilities(base_url: str, key: str) -> dict:
+    """What the capture path can and cannot currently supply.
+
+    These are protocol §4 requirements that cannot be backfilled. A missing one
+    is not a bug to work around — it is a fact about what the record supports,
+    and the honest response is to refuse to write a number that pretends
+    otherwise.
+    """
+    cond, detail = {}, {}
+
+    cols = set()
+    try:
+        probe = fetch_all(base_url, key, "fight_odds", "select=*&limit=1")
+        if probe:
+            cols = set(probe[0])
+    except Exception as e:                      # noqa: BLE001
+        detail["quote_provenance_present"] = str(e)
+
+    # Item 12: an immutable link from the stored consensus back to exact rows.
+    cond["quote_provenance_present"] = "id" in cols
+    detail.setdefault("quote_provenance_present",
+                      "fight_odds.id present" if "id" in cols else
+                      "fight_odds has no row id to reference")
+
+    # Item 9: provider market IDs, the only stable key across a repost or a
+    # rematch. Q-10 says matching is mechanical on fighter identity AND provider
+    # market id; without the second half, only the first can be enforced.
+    has_market_id = bool({"market_id", "provider_market_id", "event_key"} & cols)
+    cond["provider_market_ids_captured"] = has_market_id
+    detail["provider_market_ids_captured"] = (
+        "present" if has_market_id else
+        "fight_odds carries no provider market id (§4 item 9). Q-10's mechanical "
+        "match is only half-enforceable: fighter identity yes, repost/rematch no.")
+
+    # Item 7: Q-01 measures to the scheduled bout start. `events` stores a DATE
+    # and `fights.bell_at` is the only instant-grade field.
+    try:
+        rows = fetch_all(base_url, key, "fights",
+                         "select=id&bell_at=not.is.null&limit=1")
+        cond["scheduled_start_available"] = bool(rows)
+    except Exception as e:                      # noqa: BLE001
+        cond["scheduled_start_available"] = False
+        detail["scheduled_start_available"] = str(e)
+    detail.setdefault("scheduled_start_available",
+                      "bell_at populated" if cond["scheduled_start_available"] else
+                      "fights.bell_at is populated on no rows, and events stores a "
+                      "DATE with no time. Q-01's reference instant does not exist.")
+    return {"conditions": cond, "detail": detail}
+
+
+def clv001_main(write: bool) -> None:
+    base_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
+    if not base_url:
+        sys.exit("SUPABASE_URL not set in env.")
+    key = _env_key()
+    now = dt.datetime.now(dt.timezone.utc)
+
+    print(f"=== {PROTOCOL_TAG} — {'WRITE' if write else 'REPORT'} mode ===")
+    print(f"protocol : {PROTOCOL_ID} v{PROTOCOL_VERSION}")
+    print(f"run at   : {now.isoformat()}")
+    print(f"writes   : {'gated below' if write else 'NONE — report mode writes nothing'}\n")
+
+    state, blockers = preflight(base_url, key)
+    print("preflight")
+    for name, ok in state["conditions"].items():
+        mark = "ok  " if ok else "FAIL"
+        note = state["detail"].get(name, "")
+        print(f"  [{mark}] {name}" + (f"  — {note}" if note else ""))
+
+    if write and blockers:
+        print(f"\nWRITE REFUSED. {len(blockers)} precondition(s) not met: "
+              f"{', '.join(blockers)}.")
+        print("No CLV-001 value was written for any row, and nothing was "
+              "partially written. Fix the preconditions, not the gate.")
+        sys.exit(2)
+
+    # The report runs regardless, because knowing WHY nothing scores is the
+    # whole value of a dry run. Scoring below cannot write: `write_allowed` is
+    # the only thing that unlocks the PATCH, and a blocker forces it false.
+    write_allowed = write and not blockers
+    eligible_book_ids = _resolve_eligible_books(base_url, key, state["eligible_books"])
+
+    # Same population as legacy settlement: real published edges on cards that
+    # have already happened. A fight that has not been fought has no close, and
+    # scoring one against quotes taken before a future scheduled start would be
+    # measuring a market that is still moving.
+    today = dt.date.today().isoformat()
+    rows = fetch_all(
+        base_url, key, "model_edges",
+        "select=id,fight_id,event_date,side,bet_fighter_id,odds_at_publish,"
+        f"published_at,source&source=eq.live&event_date=lt.{today}"
+        "&order=event_date")
+    print(f"\nlive edges on cards before {today}: {len(rows)}")
+    if not rows:
+        print("nothing to score.")
+        return
+
+    fights = _fights_by_id(base_url, key, {r["fight_id"] for r in rows})
+    quotes = _quotes_by_fight(base_url, key, {r["fight_id"] for r in rows})
+
+    results = []
+    for r in rows:
+        r["published_at"] = _iso(r.get("published_at"))
+        fight = fights.get(r["fight_id"], {})
+        results.append(score_row(
+            edge=r, quotes=quotes.get(r["fight_id"], []), fight=fight,
+            reference_instant=fight.get("bell_at"), now=now,
+            eligible_book_ids=eligible_book_ids))
+
+    _report_clv001(results)
+
+    if not write_allowed:
+        print("\nREPORT ONLY — nothing was written, and the publication gate was "
+              "not touched. It stays shut until 100 scored observations across "
+              "20 distinct events with an interval excluding zero.")
+        return
+
+    scored = [x for x in results if x["scored"]]
+    for x in scored:
+        patch_row(base_url, key, x["edge_id"], {
+            "clv_return": round(x["clv_return"], 10),
+            "closing_fair_probability": round(x["closing_fair_probability"], 10),
+            "closing_book_count": x["closing_book_count"],
+            "clv_protocol_version": PROTOCOL_TAG,
+            "clv_scored_at": now.isoformat(),
+            "clv_unscored_reason": None,
+            "clv_source_quote_ids": x["quote_ids"],
+            "clv_closing_consensus": x["consensus"],
+            "clv_consensus_sha256": x["consensus_sha256"],
+        })
+    print(f"\nWROTE {len(scored)} CLV-001 result(s). Legacy clv_pp / clv_beat "
+          f"were not read and not modified.")
+    print("The publication gate is unchanged. Storing a number is not showing "
+          "one.")
+
+
+def _resolve_eligible_books(base_url: str, key: str,
+                            named: list) -> set[int] | None:
+    """Map Q-02's frozen NAMES onto book ids. Returns None if there is no list.
+
+    Names, not ids: ids are a database detail that can be renumbered, and the
+    protocol froze names. A named book the feed has never produced is not an
+    error — it is simply absent from the consensus for every fight.
+    """
+    if not named:
+        return None
+    try:
+        books = fetch_all(base_url, key, "odds_books", "select=id,name")
+    except Exception:                           # noqa: BLE001
+        return None
+    want = {str(n).strip().lower() for n in named}
+    return {b["id"] for b in books
+            if str(b.get("name", "")).strip().lower() in want
+            and is_eligible_book(b.get("name"))}
+
+
+def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
+    out = {}
+    for chunk in _chunks(sorted(fight_ids), 100):
+        ids = ",".join(str(i) for i in chunk)
+        for f in fetch_all(base_url, key, "fights",
+                           f"select=id,fighter_a_id,fighter_b_id,bell_at"
+                           f"&id=in.({ids})"):
+            f["bell_at"] = _iso(f.get("bell_at"))
+            out[f["id"]] = f
+    return out
+
+
+def _quotes_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
+    out: dict[int, list[dict]] = {}
+    for chunk in _chunks(sorted(fight_ids), 50):
+        ids = ",".join(str(i) for i in chunk)
+        for q in fetch_all(base_url, key, "fight_odds",
+                           f"select=id,fight_id,fighter_id,book_id,american_odds,"
+                           f"implied_prob,captured_at&fight_id=in.({ids})"):
+            q["captured_at"] = _iso(q.get("captured_at"))
+            out.setdefault(q["fight_id"], []).append(q)
+    return out
+
+
+def _chunks(seq: list, n: int):
+    for i in range(0, len(seq), n):
+        yield seq[i:i + n]
+
+
+def _report_clv001(results: list) -> None:
+    """Counts, reasons and provenance. Deliberately NOT a headline statistic.
+
+    Under R-05 the unscored count travels with any summary, so the reasons get
+    the same prominence as the scored total — not a footnote. This print is also
+    the only thing a dry run produces, so it has to be enough to act on.
+    """
+    scored = [x for x in results if x["scored"]]
+    reasons: dict[str, int] = {}
+    for x in results:
+        if not x["scored"]:
+            reasons[x["reason"]] = reasons.get(x["reason"], 0) + 1
+
+    events = {x["event_date"] for x in scored}
+    print(f"\nscored   : {len(scored)} observation(s) across {len(events)} "
+          f"distinct event date(s)")
+    print(f"unscored : {len(results) - len(scored)}")
+    for reason in UNSCORED_REASONS:             # fixed order, so runs compare
+        if reasons.get(reason):
+            print(f"    {reasons[reason]:>4}  {reason}")
+    unknown = set(reasons) - set(UNSCORED_REASONS)
+    if unknown:                                 # cannot happen; assert it anyway
+        raise AssertionError(f"reason outside the closed vocabulary: {unknown}")
+
+    example = next((x for x in results if not x["scored"] and x["detail"]), None)
+    if example:
+        print(f"\n  e.g. edge {example['edge_id']} (fight {example['fight_id']}): "
+              f"{example['detail']}")
+
+    print(f"\ngate: 100 scored observations AND 20 distinct events AND an "
+          f"event-cluster interval excluding zero.")
+    print(f"      currently {len(scored)} / 100 and {len(events)} / 20. Blocked.")
+
+    if scored:
+        print("\nprovenance of the scored rows (no summary statistic is printed "
+              "— the gate is shut):")
+        for x in scored[:10]:
+            print(f"  edge {x['edge_id']}  books={x['closing_book_count']}  "
+                  f"quotes={x['quote_ids']}  sha={x['consensus_sha256'][:16]}…")
+        if len(scored) > 10:
+            print(f"  … and {len(scored) - 10} more")
 
 
 def _summarise(planned: list) -> None:

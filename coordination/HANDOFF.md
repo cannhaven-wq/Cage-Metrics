@@ -11,6 +11,135 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.1; settle_clv reconciled; the first dry run scores nothing
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+### What changed
+
+Your four instructions, in the order you gave them.
+
+**1. Amendment 1 landed.** The de-vig direction correction is in force. It landed
+as **DUR-001 Amendment 2** — that is where the defective sentence actually lives,
+not in the CLV protocol as I first told you — and CLV-001 inherits it as its
+**Amendment 1**, v1.0.0 → v1.0.1. History was not rewritten: the v1.0.0 bytes,
+freeze instant and hash are preserved in `protocol.json` beside the chain
+`ef912fce…` → `c2e3f5aa…`. No de-vigged probability changed, because the two
+conventions are exact reparametrisations.
+
+**2. The migration is written and unapplied.**
+[`research/clv/proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql).
+Additive only — every statement is `ADD COLUMN IF NOT EXISTS` or
+`CREATE INDEX IF NOT EXISTS`, so it is idempotent; no DROP, no DELETE, no
+back-filling UPDATE, no trigger created or weakened, no existing row
+reinterpreted. Nine new columns: the measure, its inputs, and enough provenance
+to reconstruct the calculation from the raw quotes (the exact `fight_odds.id`
+array, the consensus artifact as computed, and its sha256). Five `NOT VALID`
+check constraints, so historical rows are never touched. `clv_pp` and `clv_beat`
+keep their meaning and get a comment marking them legacy.
+
+**3. `settle_clv.py` has two explicit modes.** `--clv001 --report` computes the
+frozen measure and writes nothing. `--clv001 --write` writes only if every
+precondition holds. Neither is the default and `--clv001` alone is an error —
+nothing should report or write because a flag was forgotten. The legacy path is
+untouched and its cron invocation (`--execute`) is unchanged.
+
+`preflight()` treats an unevaluable condition as failed. It checks: the CLV-001
+columns exist; `protocol.json` says frozen; its version matches the one compiled
+into `scoring.py` **exactly**; the protocol markdown still hashes to the recorded
+sha256; Q-02's named book list is present; and the unbackfillable capture
+requirements are met. Miss one and no value is written for any row. There is no
+override flag — a gate with an override is not a gate.
+
+**4. Tripwires.** 41 new tests in `cfl_engine/clv/test_scoring.py`, 74 across the
+CLV modules, 94 in `tests/`. All green. They pin each thing you named, and
+several are built so a sloppier implementation would still pass the naive
+version: the de-vig-per-book test uses a set whose *median pair is synthetic*, so
+median-then-de-vig lands on a different number and the test catches the
+reordering. Two epoch tests cover the dangerous case — an epoch stamp is always
+"before the fight", so it passes every ordering rule; two real books plus one
+epoch book must not reach three, and an epoch quote id must never reach the
+provenance array. One test scores a hundred rows and asserts `protocol.json` is
+byte-identical afterwards.
+
+### The dry run, and it is not good news
+
+[`research/clv/DRY_RUN_2026-09-16.md`](../research/clv/DRY_RUN_2026-09-16.md).
+Read-only via Supabase MCP — there is no service key in this container, so the
+script could not authenticate and the counts were re-derived query by query in
+its check order.
+
+**0 scored, 47 unscored, all for the same reason.** Write mode refuses at
+preflight on four conditions. Every row then stops at `no_scheduled_start`:
+`fights.bell_at` is populated on **0 of 8,994** fights and `events` stores a date
+with no time, so Q-01's reference instant does not exist. I did not substitute
+one. Midnight, or the card's first bout, or "that evening" would each produce a
+number under a definition chosen after the fact by whoever implemented it.
+
+**Fixing `bell_at` alone would not help.** The freshest two-sided sportsbook
+quote on any past card was captured **157.8 hours — 6.6 days — before it**,
+against a 45-minute staleness limit set from measured cadence before any result
+existed. All 47 rows would move from `no_scheduled_start` to `stale_close`.
+
+`is_closer` is flagged on exactly two books and CLV-001 excludes both: BFO
+Consensus (15,362 rows, an aggregate, and **every row epoch-stamped**) and
+Polymarket (a prediction market, Q-03). The seven real sportsbooks in
+`fight_odds` are never flagged at all.
+
+### The thing I need you to rule on
+
+**Q-02 froze the rule and not the list.** It says *"fixed **NAMED** sportsbook
+list frozen at protocol freeze"*. `protocol.json` records the resolution and no
+list. `settle_clv.py` refuses rather than deriving one from whichever books are
+in the data — that derivation is the thing Q-02 exists to prevent.
+
+Proposal, deliberately containing **no list**, is at
+[`AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md`](../research/clv/AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md).
+It sets out what is in `odds_books` and leaves the choice to you.
+
+**Now is the safest moment this will ever be.** The hazard is picking books after
+seeing which ones flatter the number. No CLV number exists, and the dry run
+establishes none is computable on the current record — so a list named today
+provably cannot be result-motivated. That stops being verifiable the moment
+near-bell capture starts producing data.
+
+### One place I departed from an approved plan
+
+The approved proposal's step 4 said to delete the `devig.py` note and
+`test_the_stated_direction_is_the_wrong_one`. I rewrote both instead. The note
+now records the correction rather than the defect, and the test is
+`test_the_sum_increases_in_k_as_amended`, asserting the property the amended text
+now claims. Deleting a passing assertion about the direction would leave the
+freshly-corrected claim resting on trust again — which is exactly how it went
+wrong the first time. The departure is recorded at the top of the proposal file.
+
+### What did not happen
+
+No migration applied. No Supabase write of any kind. No CLV statistic computed,
+and none would have printed if one were — the report prints counts, reasons and
+provenance, never a headline. The publication gate is untouched at 0 of 100 and
+0 of 20.
+
+## Next action
+
+**Reed:** two calls, in this order.
+
+1. **Name the eligible sportsbooks**, or say you want the list deferred. Nothing
+   scores until this exists, and this is the cleanest moment to fix it.
+2. **Decide whether to change the capture path.** Two-sided near-bell quotes from
+   named sportsbooks (§4 item 2), a scheduled bout-start instant (§4 item 7) and
+   provider market IDs (§4 item 9). None can be backfilled, and without item 2 in
+   particular the measure cannot produce an observation no matter what else is
+   fixed. This is a product-priority call, not a methodological one — the honest
+   framing is that CLV is currently unmeasurable and the fix is in the scraper,
+   not the protocol.
+
+The migration stays unapplied until there is something to write into it.
+
+---
+
 ## 2026-09-16 — CLV-001 FROZEN v1.0.0; one amendment proposed before settle_clv
 
 **From:** Claude

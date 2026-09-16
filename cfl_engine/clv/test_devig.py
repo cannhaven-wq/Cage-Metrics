@@ -81,12 +81,12 @@ class TestPowerDevig(unittest.TestCase):
                 self.assertAlmostEqual(fa, fa2, places=12)
 
     def test_the_two_conventions_agree_exactly(self):
-        """The frozen protocol says the sum is 'strictly decreasing in k'. For the
-        formula it specifies, q^(1/k), the sum is INCREASING; it is decreasing
-        only under q^k. The two are reparametrisations — the q^k root is the
-        reciprocal — so the fair probabilities are identical and no number is
-        affected. This test pins that equivalence, so the documentation defect
-        stays documentation-only.
+        """q^(1/k) and q^k are reparametrisations — the q^k root is the
+        reciprocal — so the fair probabilities are identical either way.
+
+        This is what made the direction defect corrected by DUR-001 Amendment 2
+        / CLV-001 Amendment 1 documentation-only: no de-vigged probability moved.
+        Kept as a standing property, not as a record of that amendment.
         """
         def devig_other_convention(q_a, q_b):
             lo, hi = K_LO, K_HI
@@ -114,15 +114,19 @@ class TestPowerDevig(unittest.TestCase):
                 self.assertAlmostEqual(1.0 / k1, k2, places=6,
                                        msg="and their roots must be reciprocals")
 
-    def test_the_stated_direction_is_the_wrong_one(self):
-        """Guards the reason `_bisect` is direction-agnostic. If this ever starts
-        failing, the protocol's claim became true and the note can go."""
+    def test_the_sum_increases_in_k_as_amended(self):
+        """The direction DUR-001 Amendment 2 corrected the documents to state.
+
+        Pinned so the claim now in the frozen text is checkable rather than taken
+        on trust — which is the whole reason it was wrong for a day without
+        anyone noticing. `_bisect` still does not depend on it.
+        """
         q_a, q_b = 0.55, 0.52
         f = lambda k: q_a ** (1.0 / k) + q_b ** (1.0 / k) - 1.0
         self.assertLess(f(K_LO), f(K_HI),
-                        "for q^(1/k) the sum is increasing in k; the protocol says "
-                        "decreasing, which is why the implementation must not rely "
-                        "on the claim")
+                        "for q^(1/k) the sum is strictly increasing in k")
+        rising = [f(k) for k in (0.5, 0.75, 1.0, 2.0, 5.0)]
+        self.assertEqual(rising, sorted(rising), "and strictly, across the bracket")
 
 
 class TestPairRejection(unittest.TestCase):

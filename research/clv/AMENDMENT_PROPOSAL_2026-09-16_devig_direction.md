@@ -1,6 +1,22 @@
 # CLV-001 amendment proposal — de-vig bisection direction
 
-**Status: PROPOSED — not in force. Needs Reed's approval.**
+> **APPROVED and IN FORCE, 2026-09-16, Reed Cannon.** Landed as **DUR-001
+> Amendment 2** (where the defective sentence actually lives) and inherited by
+> CLV-001 as its **Amendment 1**, v1.0.0 → v1.0.1. Hash chains are recorded in
+> `research/registry.json` and `research/clv/protocol.json`. History was not
+> rewritten: this proposal is kept as filed, including the parts the landing
+> departed from.
+>
+> **One step below was not followed.** Step 4 said to delete the module note in
+> `devig.py` and `test_the_stated_direction_is_the_wrong_one`. The note was
+> rewritten rather than deleted — it now records the correction instead of the
+> defect — and the test was rewritten as
+> `test_the_sum_increases_in_k_as_amended`, which asserts the same property the
+> amended text now claims. Deleting a passing assertion about the direction
+> would have left the newly-corrected claim resting on trust again, which is how
+> it went wrong the first time.
+
+**Status when written: PROPOSED — not in force. Needs Reed's approval.**
 **Raised:** 2026-09-16, hours after the freeze, while implementing §1.1.
 **Severity:** documentation only. **No number changes.**
 **Protocol version affected:** `1.0.0`, frozen 2026-09-16T10:30:00Z.

@@ -4,10 +4,10 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+  "protocol_sha256": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
   "frozen_at": "2026-09-16T10:30:00Z",
   "frozen_by": "Reed Cannon",
   "governs": [
@@ -455,9 +455,27 @@
     "note": "Complete after the second pass. Q-02, Q-10 and Q-11 - unanswered in the first pass - came back. Q-12 resolved, Q-13 recommended. Q-14 was raised by the revision after the review and has no reviewer recommendation by design: it is a product-voice decision."
   },
   "next_action": {
-    "owner": "Claude",
-    "action": "reconcile settle_clv.py with the frozen rules",
+    "owner": "Reed",
+    "action": "resolve the two blockers the 2026-09-16 dry run found: name the Q-02 eligible sportsbook list (research/clv/AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md), and decide whether to change the capture path so a scored observation becomes possible at all",
+    "done": "settle_clv.py is reconciled - it has a CLV-001 report mode and a gated write mode, and refuses to score anything until the preconditions hold",
     "not_yet": "no CLV figure may be published; the sample floor is unmet at 0 of 100"
+  },
+  "dry_run": {
+    "date": "2026-09-16",
+    "report": "research/clv/DRY_RUN_2026-09-16.md",
+    "mode": "report - read-only, nothing written, no migration applied",
+    "scored_observations": 0,
+    "unscored_observations": 47,
+    "sole_unscored_reason": "no_scheduled_start",
+    "write_mode": "refused at preflight",
+    "preflight_blockers": [
+      "eligible_book_list_frozen - Q-02 froze the RULE but the LIST was never written down",
+      "schema_present - the CLV-001 columns are proposed and unapplied",
+      "provider_market_ids_captured - fight_odds carries no provider market id",
+      "scheduled_start_available - fights.bell_at is populated on 0 of 8994 fights"
+    ],
+    "structural_finding": "Even with a scheduled start instant, 0 of 47 rows would score: the freshest two-sided sportsbook quote on any past card was captured 157.8 hours before it, against a 45-minute staleness limit. Near-card capture today is aggregate-and-exchange only, and CLV-001 excludes both by kind.",
+    "no_statistic_computed": true
   },
   "l3_approval": {
     "approved_by": "Reed Cannon",
@@ -481,5 +499,23 @@
     ],
     "r13_approved": true,
     "instruction": "do not publish the first CLV number immediately after freeze - it waits for 100 scored forecasts + 20 distinct events and the other eligibility requirements"
-  }
+  },
+  "amendments": [
+    {
+      "number": 1,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "title": "Inherited correction: de-vig bisection direction",
+      "kind": "inherited - the substantive correction is DUR-001 Amendment 2",
+      "where_the_defect_was": "cfl_engine/dur001/PREREGISTRATION.md, Amendment 1.1 - NOT in this protocol. CLV-001 Q-12 references that text for the power method, so the correction reaches CLV-001 by reference.",
+      "version_before": "1.0.0",
+      "version_after": "1.0.1",
+      "sha256_before": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+      "sha256_after": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
+      "output_change": "none - the two conventions are exact reparametrisations",
+      "motivated_by_observed_results": false
+    }
+  ],
+  "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
+  "sha256_at_v1_0_0": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a"
 }

@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.0` |
+| version | `1.0.1` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; amended to v1.0.1 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -134,8 +134,16 @@ posted and is never de-vigged. An earlier draft recorded the blocker on the wron
 side; §4 item 2 is the live requirement.
 
 The de-vig method for the closing side is the **power** method, matching
-DUR-001 Amendment 1.1 — Q-12, resolved. Proportional and Shin are frozen
-sensitivities only.
+DUR-001 Amendment 1.1 **as corrected by DUR-001 Amendment 2** — Q-12, resolved.
+Proportional and Shin are frozen sensitivities only.
+
+> **v1.0.1, 2026-09-16.** DUR-001 Amendment 1.1 stated that the bisection sum is
+> "strictly decreasing in `k`". For the formula it specifies, `q^(1/k)`, the sum
+> is strictly **increasing**. DUR-001 Amendment 2 corrects it. The two
+> conventions are exact reparametrisations, so **no de-vigged probability
+> changes** — CLV-001's own rules are untouched and this version records an
+> inherited clarification, not a change of its own. The original v1.0.0 bytes
+> and freeze record are preserved in `protocol.json`.
 
 ### 1.2 Secondary measure — `clv_pp`, the shipped construction
 

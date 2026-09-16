@@ -58,7 +58,8 @@ Last updated: 2026-09-16.
 |---|---|
 | status | **collecting**. First card (UFC 331, 2026-09-15) locked; no analysis run |
 | preregistration | [`cfl_engine/dur001/PREREGISTRATION.md`](cfl_engine/dur001/PREREGISTRATION.md), frozen 2026-09-15 UTC |
-| preregistration sha256 | `69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94` |
+| preregistration sha256 **at freeze** | `69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94` |
+| preregistration sha256 **current** (after Amendments 1–2) | `492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4` |
 | challenger | PROP-0001@v1 (see below) |
 | benchmark | vig-free consensus of sportsbook round totals at the exact locked threshold |
 | primary endpoint | out-of-sample log-loss gain `G_LL = LL_baseline − LL_challenger` |
@@ -349,7 +350,7 @@ fixable.
 
 | path | sha256 | frozen at |
 |---|---|---|
-| `cfl_engine/dur001/PREREGISTRATION.md` | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` | `1bc3fdd`, **amended 2026-09-16** |
+| `cfl_engine/dur001/PREREGISTRATION.md` | `492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4` | `1bc3fdd`, **amended 2026-09-16 (x2)** |
 | `cfl_engine/dur001/dur001_analysis.py` | `b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c` | `788386e` |
 | `dur001_migration.sql` | `c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe` | `6be7198` |
 | `cfl_engine/dur001/lock_prop0001.py` | `2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d` | `6be7198` |
@@ -359,13 +360,14 @@ fixable.
 | `cfl_engine/dur002/PREREGISTRATION.md` | `18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a` | `1337246` |
 | `cfl_engine/dur002/lock_prop0002.py` | `92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79` | `97ed4aa` |
 
-All seven were verified on 2026-09-16 to be byte-identical to their freeze
-commits. The preregistration has since been **amended once**, under its own
-documented amendment procedure:
+All eight were verified on 2026-09-16 to be byte-identical to their freeze
+commits. The DUR-001 preregistration has since been **amended twice**, under its
+own documented amendment procedure:
 
 | amendment | date | hash before | hash after |
 |---|---|---|---|
 | 1 — de-vig method (h) and historical timing rule (i) | 2026-09-16 | `69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94` | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` |
+| 2 — de-vig bisection direction (documentation only, no output change) | 2026-09-16 | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` | `492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4` |
 
 To change a frozen file there are exactly two legitimate routes, and nothing
 else:

@@ -5,11 +5,13 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.0** (2026-09-16T10:30:00Z). All
-questions resolved. **Publication is still shut** — the sample floor is 0 of 100
-observations and 0 of 20 events, and freezing deliberately did not open it.
-Waiting on Reed for one amendment (a de-vig direction error found while
-implementing) and a decision on how to reconcile `settle_clv.py`.
+**Live baton:** CLV-001 is **FROZEN at v1.0.1** (frozen 2026-09-16T10:30:00Z;
+Amendment 1 same day). `settle_clv.py` is reconciled and the first dry run is
+in. **It scores nothing, and the reason is structural**: 0 of 47 rows, all
+`no_scheduled_start`, with two-sided sportsbook capture ~6.6 days stale behind a
+45-minute limit. **Publication is still shut** — 0 of 100 observations, 0 of 20
+events. Waiting on Reed for the eligible-book list Q-02 froze but never wrote
+down, and for a call on the capture path.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -56,20 +58,31 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **draft**, with ChatGPT for methodological review before freeze. It is a
-measurement protocol, not a model experiment — no hypothesis, no challenger, no
-verdict — so it lives outside the DUR register.
+is **frozen at v1.0.1**. It is a measurement protocol, not a model experiment —
+no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
-Two gates, deliberately separate:
+Three gates, deliberately separate:
 
 | | state |
 |---|---|
 | capturing raw market quotes | **running** — does not wait for anything |
-| computing a CLV summary statistic | **blocked** until freeze |
-| putting a CLV number on a surface | **blocked** until freeze |
+| computing a CLV statistic | **open** since the freeze — and it computes nothing, see below |
+| putting a CLV number on a surface | **shut** — 0 of 100 observations, 0 of 20 events |
 
-Nothing renders CLV today; `track-record.html` carries a placeholder. Row-level
-settlement into `model_edges` continues — bookkeeping, not a published result.
+**The first dry run**
+([`DRY_RUN_2026-09-16.md`](../research/clv/DRY_RUN_2026-09-16.md)) scored **0 of
+47** eligible rows. Four preflight conditions fail, so write mode refuses
+outright; every row then stops at `no_scheduled_start`, because `fights.bell_at`
+is populated on 0 of 8,994 fights and `events` stores a date with no time. Even
+with that fixed, nothing would score: the freshest two-sided sportsbook quote on
+any past card was captured **157.8 hours** before it, against a frozen 45-minute
+staleness limit. Near-card capture today is an aggregate (all epoch-stamped) and
+a prediction market, and CLV-001 excludes both by kind.
+
+No CLV statistic was computed, and none is computable on the current record.
+Nothing renders CLV today; `track-record.html` carries a placeholder. Legacy
+`clv_pp` settlement into `model_edges` continues on its cron, untouched —
+bookkeeping under the old convention, never labelled CLV.
 
 ### Where the work moves next
 
@@ -88,10 +101,29 @@ They are explicitly *not* approved en bloc. Split by risk in the register: six
 change data eligibility, scoring, model behaviour or interpretation and get
 higher scrutiny; three are governance and monitoring only.
 
-**CLV protocol, five L3 questions** (T-007, blocked behind ChatGPT's review):
-Q-05 vigged or de-vigged · Q-06 published probability or wager price · Q-07
-aggregation and weighting · Q-08 minimum sample before display · Q-11 how
-positive CLV may be described. Each changes what a published number means.
+**CLV-001 eligible books.** Q-02 froze *"a fixed **named** sportsbook list,
+frozen at protocol freeze"* — and the list was never written down.
+`settle_clv.py` refuses to derive one, because deriving it is the thing Q-02
+exists to prevent. Proposal, with no list in it, is at
+[`AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md`](../research/clv/AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md).
+Worth settling now: zero CLV numbers exist and none is computable, so a list
+named today provably cannot be result-motivated. That window closes when
+near-bell capture starts working.
+
+**CLV-001 capture path.** Naming the books unblocks one of four preflight
+conditions. The other three — two-sided near-bell quotes from named sportsbooks,
+a scheduled bout-start instant, provider market IDs — are capture changes, and
+none can be backfilled. Whether to make them is a product-priority call, not a
+methodological one.
+
+**The proposed CLV-001 migration is unapplied.**
+[`proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql)
+is additive-only (no DROP, no DELETE, no destructive UPDATE, no trigger change)
+and filed outside the repo root so the "apply root `*.sql`" habit cannot pick it
+up. It should go last — when there is something to write into it.
+
+All five original CLV L3 questions (Q-05, Q-06, Q-07, Q-08, Q-11) are resolved
+and recorded, along with Q-12, Q-13 and Q-14.
 
 ### Site
 
