@@ -833,3 +833,56 @@ benchmark test can scope to that section instead of matching the whole page.
 1. The *"closing-price proxy"* rename above — keep or revert.
 2. The `created_at <= event_date` banner filter (revision 4): leave it as a
    labelled dataset split, or grade it like `timingEvidence`.
+
+---
+
+## Revision 6 — metadata polish (2026-09-16)
+
+Review approved the branch and flagged one non-blocking inconsistency: the
+OpenGraph and Twitter descriptions still said *"Every pick graded in public"*
+while the meta description had been corrected to *"Every main-engine fight
+call"*. Those two tags are the copy people see when the page is **shared**, so
+they carry the scope claim furthest.
+
+All three description tags now read identically:
+
+> Every main-engine fight call graded in public — simulated record labeled as
+> simulated, live prospective record since July 2026, misses included.
+
+(The OG/Twitter pair also still said *"live record"* rather than *"live
+prospective record"*; aligned in the same edit.)
+
+A test was added because this drifted once already: *every description tag on
+track-record.html carries the same scope* pulls all three tags out of the head
+and fails if any one omits the main-engine qualifier. Verified to bite by
+reverting a single tag.
+
+```
+$ node tests/proof-gates.test.js
+  40 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  30 passed — shipped copy matches what the data actually supports.
+```
+
+Files: `track-record.html` (2 meta tags), `tests/proof-copy.test.js`
+(30 assertions, was 29), `PROOF_CENTER.md`.
+
+---
+
+## Pre-deploy checklist
+
+The branch is approved. Two items are still deliberately in their
+not-yet-published state, because both were logged as Reed's call and neither is
+something a review of the code decides:
+
+| Item | Current state | Needed before this is publicly useful |
+|---|---|---|
+| `proof.html` robots tag | `<meta name="robots" content="noindex, nofollow">` | Flip to `index, follow` — it was set for an unreviewed branch |
+| `sitemap.xml` | `proof.html` absent | Add it, or let the 6-hour prerender cron pick it up |
+| Nav placement | Not in `cfl.renderNav()`; reachable only from two links on `track-record.html` | Decide whether it earns a nav slot |
+
+Merging as-is ships a working, linked-from-`track-record` Proof Center that
+search engines are told to ignore. That is a safe state, not a broken one — but
+it is probably not the intended end state, so it is worth one explicit decision
+rather than an assumption.

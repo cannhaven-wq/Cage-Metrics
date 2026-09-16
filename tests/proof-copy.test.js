@@ -382,6 +382,19 @@ t('track-record.html does not claim to hold every CFL prediction or model', func
                'a statement that other research does not appear here');
 });
 
+t('every description tag on track-record.html carries the same scope', function () {
+  // The OG and Twitter descriptions are the copy people see when the page is
+  // shared, and they drifted from the meta description once already. All three
+  // must make the same scope claim.
+  const tags = TRACK_RAW.match(/<meta [^>]*(?:name="description"|property="og:description"|name="twitter:description")[^>]*>/g) || [];
+  if (tags.length < 3) throw new Error('expected description, og:description and twitter:description — found ' + tags.length);
+  tags.forEach(function (tag) {
+    if (!/main[- ]engine/i.test(tag)) {
+      throw new Error('a description tag makes a broader claim than the page holds: ' + tag);
+    }
+  });
+});
+
 // ------------------------------------------------------------------- report
 
 if (failures.length) {
