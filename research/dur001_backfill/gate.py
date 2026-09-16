@@ -14,8 +14,9 @@ refusal without string-matching a message.
   DB_WRITE            a backfill is read-only against the database
   MODEL_VERSION       must carry a distinct, non-empty model_version
   LEAKY_ROW           training_cutoff must be strictly before fight_start
-  TIMING_RULE         must name one of the pre-registrable historical rules
-  TIMING_UNAPPROVED   and that rule must actually be approved
+  TIMING_RULE         must name the historical rule frozen by amendment 1.2
+  TIMING_REJECTED     and must not name the candidate that amendment rejected
+  TIMING_UNAPPROVED   and the spec must assert it is running under that rule
   ODDS_API            a backfill does not spend Odds API credits
   NO_ROWS             a backfill with nothing to score is a no-op, not a run
 
@@ -29,7 +30,9 @@ from __future__ import annotations
 
 from .spec import (
     FORBIDDEN_TABLES,
+    FROZEN_TIMING_RULE,
     LOCKED_MODEL_VERSION,
+    REJECTED_TIMING_RULES,
     TIMING_RULES,
     BackfillSpec,
     SpecViolation,
@@ -94,24 +97,31 @@ def check(spec: BackfillSpec) -> list[Violation]:
             f"Each one would train on the fight it is predicting. The comparison "
             f"must be strict — an equal timestamp is still a leak."))
 
-    # ---- the historical timing rule (amendment item (i))
+    # ---- the historical timing rule (frozen by preregistration amendment 1.2)
     if spec.timing_rule is None:
         v.append(Violation(
             "TIMING_RULE",
-            "no historical timing rule set. Amendment item (i) puts two candidates "
-            "to Reed; until one is chosen there is no pre-registered definition of "
-            "which historical quote is the benchmark."))
-    elif spec.timing_rule not in TIMING_RULES:
+            f"no historical timing rule set. Preregistration amendment 1.2 freezes "
+            f"it to {FROZEN_TIMING_RULE!r}; name it explicitly rather than "
+            f"defaulting into it."))
+    elif spec.timing_rule in REJECTED_TIMING_RULES:
+        v.append(Violation(
+            "TIMING_REJECTED",
+            f"timing_rule {spec.timing_rule!r} was REJECTED by preregistration "
+            f"amendment 1.2 and is not retained as a sensitivity. It excludes "
+            f"fights on a capture property, which conditions the cohort on events "
+            f"after the sampling decision. Use {FROZEN_TIMING_RULE!r}."))
+    elif spec.timing_rule != FROZEN_TIMING_RULE:
         v.append(Violation(
             "TIMING_RULE",
-            f"timing_rule {spec.timing_rule!r} is not pre-registrable. Allowed: "
-            f"{sorted(TIMING_RULES)}."))
+            f"timing_rule {spec.timing_rule!r} is not the frozen rule. Amendment "
+            f"1.2 permits exactly one: {FROZEN_TIMING_RULE!r}."))
     elif not spec.timing_rule_approved:
         v.append(Violation(
             "TIMING_UNAPPROVED",
-            f"timing_rule {spec.timing_rule!r} is named but not approved. Picking a "
-            f"rule after seeing which one flatters the result is exactly the "
-            f"selection the preregistration exists to prevent."))
+            f"timing_rule {spec.timing_rule!r} is the frozen rule but the spec does "
+            f"not assert approval. Set timing_rule_approved once you have confirmed "
+            f"you are running under amendment 1.2, not re-deciding it."))
 
     # ---- credits
     if spec.uses_odds_api:

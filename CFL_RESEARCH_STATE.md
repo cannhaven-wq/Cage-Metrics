@@ -70,12 +70,43 @@ Detail, from the 2026-09-16 audit:
 - `prop_model_locks` rejects UPDATE, DELETE and TRUNCATE by trigger for every
   role including `service_role`.
 
-### Open amendments
+### Amendments
 
-[`cfl_engine/dur001/AMENDMENT_DRAFT_2026-09-15.md`](cfl_engine/dur001/AMENDMENT_DRAFT_2026-09-15.md)
-— items (a)–(k), all **PROPOSED**, none in force. Two need a choice from Reed
-rather than a yes/no: (h) picks a de-vig sensitivity, (i) picks a historical
-timing rule. Until they are approved the preregistration stands as written.
+**In force — Amendment 1, 2026-09-16, approved by Reed Cannon:**
+
+| item | decision |
+|---|---|
+| **(h) de-vig** | **Power method** is primary. Proportional and Shin are frozen sensitivities, reported beside it. No fourth method may be introduced, and the primary may not be swapped for a sensitivity after a result is visible. |
+| **(i) historical timing** | **Candidate 1** — T−10 before the earliest provider start ever observed; moved starts **flagged and retained**; no extra Odds API credits. Candidate 2 is rejected and **not** kept as a sensitivity. |
+
+Binding text is in
+[`PREREGISTRATION.md` §Amendments](cfl_engine/dur001/PREREGISTRATION.md).
+The backfill gate enforces (i): `self_consistent_walkback` earns a dedicated
+`TIMING_REJECTED` refusal that asserting approval cannot buy past.
+
+**Held — not approved:** items (a), (b), (c), (d), (e), (f), (g), (j), (k) in
+[`AMENDMENT_DRAFT_2026-09-15.md`](cfl_engine/dur001/AMENDMENT_DRAFT_2026-09-15.md)
+remain **PROPOSED**. Nothing that changes calibration, scoring or the market
+comparison is decided while the walk-forward fold discrepancy is open; the
+governance and monitoring items can be voted on individually once it closes.
+
+### Open: the walk-forward fold discrepancy
+
+A block walk-forward of the frozen recipe reproduces the panel, the fold
+boundaries and the training sets of
+[`walkforward_report.json`](cfl_engine/harness/walkforward_report.json)
+**exactly** — every fold's `n_test` matches, and `n_train` for fold 0 is the
+panel minus the test rows to the row. Data selection is ruled out.
+
+One structural difference survives: the frozen report records folds 0 and 1 as
+`calibrated: false`. `fit_prop0001` fits isotonic on the trailing 365 days, a
+window that is never empty here, so under that recipe every fold calibrates.
+**The gate report therefore did not use the calibration recipe the live locks
+use, and cannot be cited as validation of it.** Which recipe it did use is
+unconfirmed — the generator is not in the repository.
+
+This is the blocker for the held amendment items. Nothing was tuned on either
+side.
 
 ### Forbidden changes
 
@@ -126,7 +157,7 @@ Changing any of these silently invalidates the experiments that rest on them.
 
 | path | sha256 | frozen at |
 |---|---|---|
-| `cfl_engine/dur001/PREREGISTRATION.md` | `69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94` | `1bc3fdd` |
+| `cfl_engine/dur001/PREREGISTRATION.md` | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` | `1bc3fdd`, **amended 2026-09-16** |
 | `cfl_engine/dur001/dur001_analysis.py` | `b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c` | `788386e` |
 | `dur001_migration.sql` | `c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe` | `6be7198` |
 | `cfl_engine/dur001/lock_prop0001.py` | `2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d` | `6be7198` |
@@ -134,8 +165,28 @@ Changing any of these silently invalidates the experiments that rest on them.
 | `cfl_engine/models/duration.py` | `b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b` | `90571ff` |
 | `cfl_engine/harness/walkforward_report.json` | `d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c` | `90571ff` |
 
-Every one was verified on 2026-09-16 to be byte-identical to its freeze commit.
+All seven were verified on 2026-09-16 to be byte-identical to their freeze
+commits. The preregistration has since been **amended once**, under its own
+documented amendment procedure:
 
-To change a frozen file: bump the model version, write a new preregistration,
-and add a new entry here. Do not edit in place and update the hash — that is the
-one move this table exists to prevent.
+| amendment | date | hash before | hash after |
+|---|---|---|---|
+| 1 — de-vig method (h) and historical timing rule (i) | 2026-09-16 | `69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94` | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` |
+
+To change a frozen file there are exactly two legitimate routes, and nothing
+else:
+
+1. **A dated amendment**, for the preregistration only, recorded in its own
+   `## Amendments` section with its approver, its date and its reason, and
+   logged in the table above with both hashes. The original §-text is never
+   rewritten — the amendment states what it replaces.
+2. **A new model version**, for anything else: bump `model_version`, write a new
+   preregistration, add a new entry here. Locks written under the old version
+   stay under the old version.
+
+Editing in place and quietly updating the hash is neither of those, and is the
+one move this table exists to prevent. `tests/test_research_state.py` fails on
+any hash change; an amendment is the case where you update the recorded hash
+*and* the amendment log *and* the preregistration's own `## Amendments` section
+in the same commit. A hash change with no amendment recorded is a red flag, and
+there is a test for that too.

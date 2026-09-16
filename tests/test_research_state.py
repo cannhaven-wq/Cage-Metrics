@@ -39,8 +39,13 @@ REGISTRY = REPO / "research" / "registry.json"
 
 # A sha256 is 64 lowercase hex chars; a row in the frozen-files table looks like
 #   | `path/to/file` | `<64 hex>` | `<commit>` |
+# The third cell may carry an amendment note after the commit, e.g.
+#   | `...PREREGISTRATION.md` | `<64 hex>` | `1bc3fdd`, **amended 2026-09-16** |
+# so it is matched loosely after the commit hash. The first two cells are not:
+# a row whose path or sha256 is malformed must fail to parse rather than be
+# skipped, or the tripwire goes blind exactly where it matters.
 FROZEN_ROW = re.compile(
-    r"^\|\s*`([^`]+)`\s*\|\s*`([0-9a-f]{64})`\s*\|\s*`([0-9a-f]{7,40})`\s*\|\s*$"
+    r"^\|\s*`([^`]+)`\s*\|\s*`([0-9a-f]{64})`\s*\|\s*`([0-9a-f]{7,40})`[^|]*\|\s*$"
 )
 
 
@@ -110,9 +115,15 @@ class TestFrozenFilesUnchanged(unittest.TestCase):
                     f"\n\nFROZEN FILE CHANGED: {rel}\n"
                     f"  recorded in CFL_RESEARCH_STATE.md: {recorded}\n"
                     f"  actually on disk:                  {actual}\n\n"
-                    f"Do NOT update the hash to make this pass. The hash is the "
-                    f"evidence. If this file genuinely needs to change, bump the "
-                    f"model version and write a new preregistration.\n",
+                    f"Do NOT just update the hash to make this pass. There are "
+                    f"exactly two legitimate routes:\n"
+                    f"  1. a dated amendment (preregistration only) - record it in "
+                    f"its own '## Amendments' section, in the amendment log in "
+                    f"CFL_RESEARCH_STATE.md, and in registry.json's "
+                    f"preregistration_amendments, all in the same commit;\n"
+                    f"  2. a new model_version with its own preregistration.\n"
+                    f"Anything else is a silent edit, which is what this test exists "
+                    f"to catch.\n",
                 )
 
     def test_registry_hashes_match_disk(self):
@@ -222,6 +233,122 @@ class TestRegistrySchema(unittest.TestCase):
                     exp.get("verdict_timestamp") is None,
                     "verdict and verdict_timestamp must be set together",
                 )
+
+
+class TestAmendmentsAreRecorded(unittest.TestCase):
+    """A frozen file may drift from its freeze hash ONLY via a recorded amendment.
+
+    Updating the recorded hash is the move that makes the tripwire pass, so on its
+    own it would be a way to launder a silent edit. These tests require the
+    paperwork to exist alongside it: an entry in `preregistration_amendments`,
+    matching before/after hashes, and a non-empty `## Amendments` section in the
+    preregistration itself.
+    """
+
+    def _experiments(self):
+        return json.loads(REGISTRY.read_text(encoding="utf-8"))["experiments"]
+
+    def test_drift_from_freeze_requires_an_amendment(self):
+        """Checked document-wide, not per experiment.
+
+        Experiments share one frozen-file list, but an amendment belongs to the
+        experiment that OWNS the preregistration (PROP-0001 has none of its own).
+        So the question is whether *some* experiment records an amendment for the
+        drifted path, not whether every experiment listing it does.
+        """
+        exps = self._experiments()
+        amended_paths = {
+            exp["preregistration_path"]
+            for exp in exps
+            if exp.get("preregistration_amendments") and exp.get("preregistration_path")
+        }
+        for exp in exps:
+            for f in exp.get("frozen_files") or []:
+                at_freeze = f.get("sha256_at_freeze")
+                if at_freeze is None or at_freeze == f["sha256"]:
+                    continue                      # unchanged since freeze
+                with self.subTest(experiment=exp["experiment_id"], file=f["path"]):
+                    self.assertTrue(
+                        f.get("amended"),
+                        f"{f['path']} differs from its freeze hash but is not "
+                        f"marked amended",
+                    )
+                    self.assertIn(
+                        f["path"], amended_paths,
+                        f"{f['path']} differs from its freeze hash but no "
+                        f"experiment records an amendment for it. A hash change "
+                        f"with no amendment behind it is a silent edit.",
+                    )
+
+    def test_a_file_marked_amended_actually_drifted(self):
+        """The converse: `amended` must not be set on a file that never moved."""
+        for exp in self._experiments():
+            for f in exp.get("frozen_files") or []:
+                if not f.get("amended"):
+                    continue
+                with self.subTest(experiment=exp["experiment_id"], file=f["path"]):
+                    self.assertIsNotNone(
+                        f.get("sha256_at_freeze"),
+                        f"{f['path']} is marked amended but records no freeze hash",
+                    )
+                    self.assertNotEqual(
+                        f["sha256_at_freeze"], f["sha256"],
+                        f"{f['path']} is marked amended but its hash is unchanged",
+                    )
+
+    def test_amendment_hashes_chain_correctly(self):
+        """before -> after must chain from the freeze hash to what is on disk."""
+        for exp in self._experiments():
+            ams = exp.get("preregistration_amendments")
+            path = exp.get("preregistration_path")
+            if not ams or not path:
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                ams = sorted(ams, key=lambda a: a["number"])
+                frozen = {f["path"]: f for f in exp["frozen_files"]}[path]
+                self.assertEqual(
+                    ams[0]["sha256_before"], frozen["sha256_at_freeze"],
+                    "the first amendment must start from the freeze hash",
+                )
+                for prev, nxt in zip(ams, ams[1:]):
+                    self.assertEqual(prev["sha256_after"], nxt["sha256_before"],
+                                     "amendment hashes must chain")
+                self.assertEqual(
+                    ams[-1]["sha256_after"], sha256_of(REPO / path),
+                    "the last amendment's after-hash must be the file on disk",
+                )
+
+    def test_amended_preregistration_has_a_populated_amendments_section(self):
+        for exp in self._experiments():
+            ams, path = exp.get("preregistration_amendments"), exp.get("preregistration_path")
+            if not ams or not path:
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                body = (REPO / path).read_text(encoding="utf-8")
+                self.assertIn("## Amendments", body)
+                tail = body.split("## Amendments", 1)[1]
+                self.assertNotIn(
+                    "_None._", tail,
+                    "registry records an amendment but the preregistration's "
+                    "Amendments section still says None",
+                )
+                for a in ams:
+                    self.assertIn(
+                        a["date"], tail,
+                        f"amendment {a['number']} is in the registry but its date "
+                        f"{a['date']} does not appear in the preregistration",
+                    )
+
+    def test_no_amendment_claims_to_follow_observed_results(self):
+        """The preregistration forbids amendments motivated by observed results."""
+        for exp in self._experiments():
+            for a in exp.get("preregistration_amendments") or []:
+                with self.subTest(experiment=exp["experiment_id"], amendment=a["number"]):
+                    self.assertIs(
+                        a.get("motivated_by_observed_results"), False,
+                        "an amendment motivated by observed results is not "
+                        "permitted; it must be recorded as False and be true",
+                    )
 
 
 class TestWithdrawnFigures(unittest.TestCase):

@@ -1,10 +1,22 @@
 # DUR-001 — amendment draft, 2026-09-15
 
-**Status of this file: DRAFT. Nothing here is in force.**
+**Status of this file: DRAFT, except items (h) and (i).**
 
-Every item below is marked **PROPOSED — needs Reed's approval before UFC 331
-outcomes are inspected.** None of them has been implemented. `PREREGISTRATION.md`
-is unchanged and remains binding exactly as written.
+> **Update 2026-09-16.** Reed approved **(h)** and **(i)** only. Both are now in
+> force as **Amendment 1** in
+> [`PREREGISTRATION.md`](PREREGISTRATION.md#amendments) — read that, not this
+> file, for the binding text. The versions below are kept as the record of what
+> was proposed and why.
+>
+> Every other item — (a), (b), (c), (d), (e), (f), (g), (j), (k) — remains
+> **PROPOSED** and is explicitly **not** approved. Reed's reason: nothing that
+> changes calibration, scoring, or the market comparison is decided while the
+> walk-forward fold discrepancy is open. Governance and monitoring items may be
+> voted on individually once it is closed.
+
+Items still marked **PROPOSED — needs Reed's approval before UFC 331 outcomes
+are inspected** have not been implemented, and for them `PREREGISTRATION.md`
+remains binding exactly as originally written.
 
 This draft was written before any UFC 331 fight result was read. No result,
 settled or partial, informed any item in it. That ordering is the whole point:
@@ -263,7 +275,15 @@ and `predictor.html` for "closing line" before shipping.
 
 ---
 
-## (h) De-vig method
+## (h) De-vig method — ✅ APPROVED 2026-09-16, in force as Amendment 1.1
+
+> **Reed picked the POWER method.** Binding text is in `PREREGISTRATION.md`
+> Amendment 1.1. Proportional and Shin are both retained as frozen
+> sensitivities; the primary may not be swapped for one after a result is
+> visible. His reasoning: power carries a cleaner assumption set for a
+> two-sided market — transparent, monotonic — and avoids leaning on Shin's
+> insider-trading interpretation, which CFL has no evidence for in UFC
+> round-totals markets.
 
 **Current — §6, line 79:**
 
@@ -288,7 +308,20 @@ view `v_prop_odds_devig` gains one column.
 
 ---
 
-## (i) Historical timing rule — two candidates, Reed picks one
+## (i) Historical timing rule — ✅ DECIDED 2026-09-16, in force as Amendment 1.2
+
+> **Reed picked CANDIDATE 1** (T−10 before the earliest observed provider
+> start; moved starts flagged and retained; no extra Odds API credits).
+> Binding text is in `PREREGISTRATION.md` Amendment 1.2. Candidate 2 is
+> REJECTED and is **not** retained as a sensitivity — keeping both would
+> reintroduce the choice the amendment removes. His reasoning: excluding a
+> fight because its card became chaotic conditions the dataset on events
+> that occur after the sampling decision; the cohort must stay defined
+> prospectively.
+
+> The backfill gate enforces this: `self_consistent_walkback` now earns a
+> dedicated `TIMING_REJECTED` refusal that asserting approval cannot buy
+> past.
 
 **Current — §13, lines 149–152:**
 
@@ -415,11 +448,15 @@ that records the diff hash. No change to `health.py`.
 
 ## Decisions needed from Reed
 
-| item | decision |
+| item | status |
 |---|---|
-| a–g, j, k | approve / reject / amend |
-| h | approve, **and pick**: Shin or power de-vig |
-| i | **pick Candidate 1 or Candidate 2** (recommendation above: 1) |
+| **h** | ✅ **decided** — power de-vig primary, proportional + Shin as sensitivities (Amendment 1.1) |
+| **i** | ✅ **decided** — Candidate 1, moved starts flagged not excluded (Amendment 1.2) |
+| a, b, c, d, e | ⏸ **held** — all touch scoring or the verdict; blocked until the walk-forward fold discrepancy is closed |
+| f, g, j, k | ⏸ **held** — governance and monitoring; votable individually once the discrepancy is closed |
 
-Until these are approved, `PREREGISTRATION.md` stands as written and UFC 331
-outcomes stay uninspected.
+The open blocker is the walk-forward discrepancy, not these items. It is now
+established that `walkforward_report.json` used a different calibration recipe
+from the live locks — see `research/provenance/` and `BRANCH_NOTES.md`. Until
+that is resolved, no clause that changes calibration, scoring or the market
+comparison is approved, and UFC 331 outcomes stay uninspected.

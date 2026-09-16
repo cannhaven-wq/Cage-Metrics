@@ -36,12 +36,20 @@ FORBIDDEN_TABLES = frozenset({
     "pre_fight_snapshots",  # the pre-fight record; append-only by trigger
 })
 
-# The historical timing rules that are pre-registrable. Amendment item (i) puts
-# both to Reed; until one is picked and marked approved, neither is in force.
-TIMING_RULES = frozenset({
-    "t10_earliest_observed_start",   # candidate 1 — current tool, 0 extra credits
-    "self_consistent_walkback",      # candidate 2 — up to 12 extra calls per moved fight
-})
+# The historical timing rule, FROZEN by preregistration amendment 1.2 on
+# 2026-09-16: T-10 before the earliest provider start ever observed, with moved
+# starts flagged and retained.
+#
+# This was item (i)'s candidate 1. Candidate 2 (self_consistent_walkback) was
+# REJECTED and is deliberately not retained as a sensitivity — keeping both
+# would reintroduce exactly the choice the amendment removed. It stays named
+# here only so a spec that asks for it gets a specific refusal rather than a
+# vague "unknown rule".
+FROZEN_TIMING_RULE = "t10_earliest_observed_start"
+REJECTED_TIMING_RULES = frozenset({"self_consistent_walkback"})
+
+# Everything the gate recognises at all. Only FROZEN_TIMING_RULE may be used.
+TIMING_RULES = frozenset({FROZEN_TIMING_RULE}) | REJECTED_TIMING_RULES
 
 
 @dataclasses.dataclass(frozen=True)
