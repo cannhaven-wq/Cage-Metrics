@@ -83,68 +83,63 @@ t('straightRecord refuses to total a mixed record', function () {
   }, 'mixed record');
 });
 
-t('clvPairCount ignores replay rows even when they carry both prices', function () {
-  eq(P.clvPairCount([replayWin, replayWin, replayWin]), 0, 'replay pairs');
-  eq(P.clvPairCount([liveWin, liveLoss, livePend, replayWin]), 2, 'live pairs only');
+// ----------------------------------------------- gates: CLV deferred to CLV-001
+// REGRESSION (correction 1). The CLV publication rule belongs to the CLV-001
+// protocol. Proof Center must hold no threshold of its own, must derive no
+// progress from the legacy closing_odds fields, and must have no reachable count
+// that opens the gate.
+
+t('the CLV gate holds no local threshold at all', function () {
+  const g = P.GATES.clv;
+  eq(g.deferred, true, 'deferred');
+  eq(g.authority, 'CLV-001', 'authority');
+  eq(g.minObservations, undefined, 'clv must not carry a local threshold');
+  eq(g.unit, undefined, 'clv must not carry a local unit to count');
 });
 
-// --------------------------------------------------------------------- gates
+t('no count, however large, can open the CLV gate', function () {
+  [0, 1, 46, 99, 100, 101, 1e6, Number.MAX_SAFE_INTEGER, Infinity].forEach(function (n) {
+    const g = P.evaluateGate('clv', n);
+    eq(g.publishable, false, 'publishable at have=' + n);
+    eq(g.showValue, false, 'showValue at have=' + n);
+    eq(g.status, P.STATUS.COLLECTING, 'status at have=' + n);
+  });
+});
 
-t('the CLV gate stays shut below its floor and shows no value', function () {
+t('the legacy closing-odds counter is gone, not merely unused', function () {
+  eq(typeof P.clvPairCount, 'undefined', 'clvPairCount must not exist');
+});
+
+t('a deferred gate reports no progress a page could render', function () {
   const g = P.evaluateGate('clv', 46);
-  eq(g.publishable, false, 'publishable');
-  eq(g.showValue, false, 'showValue');
-  eq(g.status, P.STATUS.COLLECTING, 'status');
-  eq(g.remaining, 54, 'remaining');
+  eq(g.have, null, 'have'); eq(g.need, null, 'need');
+  eq(g.remaining, null, 'remaining'); eq(g.pct, null, 'pct');
 });
 
-t('the CLV gate opens exactly at its floor, not before', function () {
-  eq(P.evaluateGate('clv', 99).publishable, false, 'at 99');
-  eq(P.evaluateGate('clv', 100).publishable, true, 'at 100');
-  eq(P.evaluateGate('clv', 100).status, P.STATUS.APPROVED, 'status at 100');
-});
-
-t('the pending message never hints at the unpublished number', function () {
-  const msg = P.evaluateGate('clv', 46).message.toLowerCase();
-  ['beat', 'ahead', 'positive', 'negative', 'profit', 'edge', 'winning'].forEach(function (w) {
-    ok(msg.indexOf(w) === -1, 'pending message must not contain "' + w + '"');
+t('only the owning protocol can open a deferred gate', function () {
+  eq(P.evaluateGate('clv', 0, { publication_approved: true, authority: 'CLV-001' }).publishable, true, 'real authority');
+  [
+    { publication_approved: true, authority: 'proof-center' },
+    { publication_approved: true },
+    { publication_approved: 'true', authority: 'CLV-001' },
+    { publication_approved: 1, authority: 'CLV-001' },
+    { authority: 'CLV-001' },
+    {}, null, undefined, 'yes', true,
+  ].forEach(function (a, i) {
+    eq(P.evaluateGate('clv', 1e9, a).publishable, false, 'bogus authority #' + i);
   });
 });
 
-t('an unknown gate fails closed', function () {
-  const g = P.evaluateGate('nope', 1e9);
-  eq(g.publishable, false, 'publishable');
-  eq(g.showValue, false, 'showValue');
-  eq(g.status, P.STATUS.COLLECTING, 'status');
+t('even an approved deferred gate renders no figure from this page', function () {
+  const g = P.evaluateGate('clv', 0, { publication_approved: true, authority: 'CLV-001' });
+  eq(g.publishable, true, 'publishable');
+  eq(g.showValue, false, 'showValue must stay false — surfacing it is a separate change');
 });
 
-t('rubbish counts are treated as zero, never as a pass', function () {
-  [NaN, Infinity, -5, null, undefined, 'lots'].forEach(function (v) {
-    const g = P.evaluateGate('clv', v);
-    eq(g.have, 0, 'have for ' + String(v));
-    eq(g.publishable, false, 'publishable for ' + String(v));
-  });
-});
-
-t('every defined gate is live-record only and has a written source', function () {
-  Object.keys(P.GATES).forEach(function (id) {
-    const g = P.GATES[id];
-    eq(g.record, P.RECORD.LIVE, id + '.record');
-    ok(typeof g.source === 'string' && g.source.length > 10, id + ' needs a source citation');
-    ok(typeof g.pending === 'string' && g.pending.length > 10, id + ' needs pending copy');
-    ok(g.minObservations >= 1, id + '.minObservations');
-  });
-});
-
-t('below-floor gates that do show a value are labelled provisional', function () {
-  const g = P.evaluateGate('liveRecord', 12);
-  eq(g.showValue, true, 'showValue');
-  eq(g.publishable, false, 'publishable');
-  eq(g.status, P.STATUS.PROVISIONAL, 'status');
-});
-
-t('statusCopy falls back to "still collecting" for anything unrecognised', function () {
-  eq(P.statusCopy('made-up').label, P.statusCopy(P.STATUS.COLLECTING).label, 'fallback');
+t('the CLV pending copy is the agreed fail-closed wording', function () {
+  const m = P.evaluateGate('clv', 46).message;
+  ok(/prospective market-price validation is collecting/i.test(m), 'collecting sentence');
+  ok(/no clv figure is publication-approved yet/i.test(m), 'not-approved sentence');
 });
 
 // --------------------------------------------------------------------- money
@@ -180,33 +175,84 @@ t('straightRecord counts misses at full weight', function () {
   eq(Math.round(r.hitRate * 100), 33, 'hitRate');
 });
 
-// ----------------------------------------------------------------- timestamps
+// ------------------------------------------------------------ timing evidence
+// REGRESSION (correction 3). A same-day timestamp is evidence that a row exists,
+// not evidence that it preceded the fight. It must never reach the strong grade,
+// and a sealed copy must not carry a row past the timing question either.
 
-t('timestampAudit counts a same-day post separately from a genuine day-before', function () {
-  const sameDay = { source: 'live', published_at: '2026-08-02T23:00:00Z', event_date: '2026-08-02' };
-  const a = P.timestampAudit([liveWin, sameDay]);
-  eq(a.inOrder, 2, 'inOrder');
-  eq(a.sameDay, 1, 'sameDay');
-  eq(a.dayBefore, 1, 'dayBefore');
+const SEAL = f => ({ fight_id: f, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 7, engine_p_cal: 0.61 });
+const call = (f, posted, card) => ({ source: 'live', fight_id: f, published_at: posted, event_date: card, pick_fighter_id: 7, p_cal: 0.61 });
+
+t('a same-day timestamp can NEVER produce a verified pre-fight verdict', function () {
+  const e = P.timingEvidence([call(1, '2026-08-02T23:59:00Z', '2026-08-02')], []);
+  eq(e.sameDay, 1, 'sameDay');
+  eq(e.sealed, 0, 'must not reach the sealed grade');
+  eq(e.dated, 0, 'must not reach the dated grade');
+  eq(P.timingLevel(call(1, '2026-08-02T00:00:01Z', '2026-08-02'), null), 'sameDay', 'earliest possible same-day moment');
 });
 
-t('timestampAudit flags a pick posted after its card', function () {
-  const late = { source: 'live', published_at: '2026-08-03T01:00:00Z', event_date: '2026-08-02' };
-  const a = P.timestampAudit([liveWin, late]);
-  eq(a.total, 2, 'total'); eq(a.inOrder, 1, 'inOrder'); eq(a.late, 1, 'late'); eq(a.clean, false, 'clean');
+t('a same-day SEALED copy is still graded same-day, not sealed', function () {
+  // Immutability and timing are separate claims: sealing stops a rewrite, it
+  // does not move the clock. A snapshot taken on the card's own day inherits
+  // the same-day problem.
+  const sameDaySeal = { fight_id: 2, snapshot_at: '2026-08-02T06:00:00Z', engine_pick_fighter_id: 7, engine_p_cal: 0.61 };
+  const e = P.timingEvidence([call(2, '2026-08-02T07:00:00Z', '2026-08-02')], [sameDaySeal]);
+  eq(e.sealed, 0, 'sealed');
+  eq(e.sameDay, 1, 'sameDay');
+  eq(e.sealedCovered, 1, 'still counted as covered by a sealed copy');
 });
 
-t('timestampAudit does not count an undated row as in order', function () {
-  const a = P.timestampAudit([{ source: 'live', published_at: null, event_date: '2026-08-02' }]);
-  eq(a.inOrder, 0, 'inOrder'); eq(a.undated, 1, 'undated'); eq(a.clean, false, 'clean');
+t('a sealed copy taken on an earlier day reaches the strong grade', function () {
+  const e = P.timingEvidence([call(3, '2026-07-30T06:00:00Z', '2026-08-02')], [SEAL(3)]);
+  eq(e.sealed, 1, 'sealed'); eq(e.dated, 0, 'dated'); eq(e.sameDay, 0, 'sameDay');
 });
 
-t('timestampAudit ignores replay rows entirely', function () {
-  eq(P.timestampAudit([replayWin, replayWin]).total, 0, 'replay rows audited');
+t('a sealed copy that no longer matches does not confer the sealed grade', function () {
+  const wrong = { fight_id: 4, snapshot_at: '2026-07-30T05:00:00Z', engine_pick_fighter_id: 99, engine_p_cal: 0.61 };
+  const e = P.timingEvidence([call(4, '2026-07-31T06:00:00Z', '2026-08-02')], [wrong]);
+  eq(e.sealed, 0, 'sealed'); eq(e.dated, 1, 'falls back to its own timestamp');
 });
 
-t('an empty live record is not "clean"', function () {
-  eq(P.timestampAudit([]).clean, false, 'clean on empty');
+t('a row posted after its card is unverified, never dated', function () {
+  const e = P.timingEvidence([call(5, '2026-08-03T06:00:00Z', '2026-08-02')], []);
+  eq(e.unverified, 1, 'unverified'); eq(e.dated, 0, 'dated'); eq(e.sameDay, 0, 'sameDay');
+  eq(e.unverifiedRows.length, 1, 'reported, not dropped');
+});
+
+t('a row missing either timestamp is unverified', function () {
+  eq(P.timingEvidence([call(6, null, '2026-08-02')], []).unverified, 1, 'no published_at');
+  eq(P.timingEvidence([call(7, '2026-08-01T06:00:00Z', null)], []).unverified, 1, 'no event_date');
+});
+
+t('the four grades always account for every live row exactly once', function () {
+  const rows = [
+    call(1, '2026-07-30T06:00:00Z', '2026-08-02'),   // sealed
+    call(2, '2026-07-31T06:00:00Z', '2026-08-02'),   // dated
+    call(3, '2026-08-02T20:00:00Z', '2026-08-02'),   // same day
+    call(4, null, '2026-08-02'),                     // unverified
+    call(5, '2026-08-09T06:00:00Z', '2026-08-02'),   // unverified (late)
+  ];
+  const e = P.timingEvidence(rows, [SEAL(1)]);
+  eq(e.total, 5, 'total');
+  eq(e.sealed + e.dated + e.sameDay + e.unverified, e.total, 'grades must partition the rows');
+});
+
+t('timingEvidence ignores replay rows entirely', function () {
+  eq(P.timingEvidence([replayWin, replayWin], []).total, 0, 'replay rows graded');
+});
+
+t('timingCopy fails closed to "unverified" for anything unrecognised', function () {
+  eq(P.timingCopy('made-up').label, P.timingCopy('unverified').label, 'fallback');
+  eq(P.timingCopy(undefined).label, P.timingCopy('unverified').label, 'undefined');
+});
+
+t('no timing grade describes itself as proof of pre-bell timing', function () {
+  // The same-day and unverified blurbs must not read as confirmation.
+  ['sameDay', 'unverified'].forEach(function (k) {
+    const b = P.timingCopy(k).blurb.toLowerCase();
+    ok(b.indexOf('proves') === -1 && b.indexOf('verified before') === -1 && b.indexOf('confirmed') === -1,
+       k + ' blurb must not read as proof: ' + b);
+  });
 });
 
 // ------------------------------------------------- immutable-copy crosscheck

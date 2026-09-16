@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>Proof Center — Every Prediction, Timestamped and Graded | Cannon Fight Lab</title>
-<meta name="description" content="Every CFL prediction on record: when we posted it, what we said, what happened, and what $100 a bet came to. Live picks and history replays kept separate. Losses shown at the same size as wins.">
+<title>Proof Center — The Main Engine’s Fight Calls, Graded | Cannon Fight Lab</title>
+<meta name="description" content="Every main-engine fight call in this record: when we posted it, what we said, what happened, and what $100 a bet came to. Live calls and history replays kept separate. Losses shown at the same size as wins.">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="noindex, nofollow">
 <link rel="canonical" href="https://cannonfightlab.com/proof.html">
@@ -40,6 +40,9 @@
 #pc .lede { color: var(--text-2); font-size: 16px; line-height: 1.6; margin-top: 14px; }
 #pc .lede strong { color: var(--text); }
 #pc .stamp { font-size: 12.5px; color: var(--text-3); margin-top: 12px; }
+#pc .scope { font-size: 13px; color: var(--text-2); line-height: 1.6; margin-top: 16px; padding: 13px 15px;
+  background: var(--bg-1); border: 1px solid var(--line); border-left: 3px solid var(--line-2); border-radius: var(--radius); }
+#pc .scope strong { color: var(--text); }
 
 /* ---- Seven questions ---- */
 #pc .qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin: 26px 0 8px; }
@@ -181,6 +184,20 @@
 #pc .verdict.ok { color: var(--green); }
 #pc .verdict.bad { color: var(--signal); }
 
+#pc .tgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin-top: 16px; }
+#pc .tcard { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+#pc .tcard.g1 { border-left: 3px solid var(--green); }
+#pc .tcard.g2 { border-left: 3px solid var(--probe); }
+#pc .tcard.g3 { border-left: 3px solid var(--amber); }
+#pc .tcard.g4 { border-left: 3px solid var(--text-3); }
+#pc .tcard .n { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#pc .tcard .t { font-family: var(--font-display); font-weight: 700; font-size: 14px; color: var(--text); margin-top: 5px; }
+#pc .tcard .b { font-size: 12.5px; color: var(--text-2); margin-top: 5px; line-height: 1.45; }
+#pc .tlvl { display: block; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
+#pc .tlvl.sealed { color: var(--green); }
+#pc .tlvl.dated { color: var(--probe); }
+#pc .tlvl.sameDay { color: var(--amber); }
+#pc .tlvl.unverified { color: var(--text-3); }
 #pc .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 16px; }
 #pc .legend .li { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 15px; }
 #pc .legend .li .t { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-top: 8px; }
@@ -222,8 +239,9 @@
 
   <header class="head">
     <div class="eyebrow">Proof Center</div>
-    <h1>Every call we've made, with the receipt attached.</h1>
-    <p class="lede">Not a highlight reel. This page lists <strong>every</strong> prediction in our database — when we posted it, what number we put on it, what the price was, and what happened. <strong>Losses sit in the same list as wins, at the same size.</strong> Picks we posted before a fight and fights we re-ran through history afterwards are kept in two separate records that are never added together.</p>
+    <h1>The main engine's fight calls, with the receipts attached.</h1>
+    <p class="lede">Not a highlight reel. This page lists <strong>every main-engine fight call in this record</strong> — when we posted it, what number we put on it, what the price was, and what happened. <strong>Losses sit in the same list as wins, at the same size.</strong> Calls we posted before a fight and fights we re-ran through history afterwards are kept in two separate records that are never added together.</p>
+    <p class="scope"><strong>What is and isn't here.</strong> This page reads four things and nothing else: the engine's graded fight calls, its graded money bets, the history replay, and the sealed pre-fight copies. It is <em>not</em> a catalogue of everything Cannon Fight Lab has ever predicted — the fight-duration and prop models run under their own research protocols, with their own records, and none of those rows appear here. Nothing on this page is claimed on their behalf.</p>
     <p class="stamp" id="stamp">Reading the database…</p>
   </header>
 
@@ -248,17 +266,27 @@
     <div class="panel" id="moneyPanel" hidden></div>
   </section>
 
-  <!-- ===================== 3. The price test (gated) ===================== -->
+  <!-- ===================== 2b. How good is the timing evidence? ===================== -->
+  <section id="timing" aria-labelledby="h-timing">
+    <h2 id="h-timing">How strongly can we prove <em>when</em> each call was made?</h2>
+    <p class="sub">A record is only worth anything if the calls really came first. Rather than assert that, here is what each row can actually support — <strong>graded down, not up.</strong> A call timestamped on the card's own day is not counted as proof: a card runs for hours, and the date alone can't tell you whether the row landed before the first bell or during the prelims.</p>
+    <div id="timingGrid"></div>
+    <div class="panel">
+      <p class="ps">Two different claims live here, and mixing them up is how a record starts lying. <strong style="color:var(--text-2)">Sealed</strong> means a copy exists in a record the database won't let anyone change — that is about <em>tampering</em>. <strong style="color:var(--text-2)">Dated</strong> is about <em>timing</em>. A row only reaches the top grade when both hold: a sealed copy exists, it still matches, and it was taken on an earlier day than the card. If we ever gain a trustworthy per-fight start time to compare against, the same-day rows can be graded up then — we are not going to guess one now.</p>
+    </div>
+  </section>
+
+  <!-- ============ 3. The price test — deferred to the CLV-001 protocol ============ -->
   <section id="market" aria-labelledby="h-market">
     <h2 id="h-market">Did we get a better price than the market ended up at?</h2>
-    <p class="sub">The hardest test there is, and the one we care most about. Betting -150 on a fighter who ends up at -180 means we bought low, whether or not that particular bet won. It takes a real pile of picks before that number means anything, so there is a fixed rule about when it goes on screen — written down before we could see the answer.</p>
+    <p class="sub">The hardest test there is, and the one we care most about. Betting -150 on a fighter the market ends up pricing at -180 means we bought low, whether or not that particular bet won. <strong>This page does not answer it, and does not hold the rule for when it may be answered.</strong></p>
     <div id="marketGate"></div>
   </section>
 
   <!-- ===================== 4. The archive ===================== -->
   <section id="archive" aria-labelledby="h-archive">
     <h2 id="h-archive">The archive</h2>
-    <p class="sub">Every row we have. Filter it, search it, sort it however you like — <strong>nothing is held back, and losses are not tucked away in a separate list.</strong></p>
+    <p class="sub">Every row in the two records above — main-engine fight calls and money bets, nothing withheld from either. Filter it, search it, sort it however you like. <strong>Losses are not tucked away in a separate list.</strong></p>
 
     <div class="filters">
       <div class="fgroup">
@@ -310,11 +338,12 @@
     <p class="sub">No stats degree required. This is the whole method.</p>
     <div class="panel">
       <ol class="steps">
-        <li><div><div class="sh">We post a pick, and the clock starts</div><div class="sb">Before a card, the model writes a row: which fighter, what percentage we give them, and — where we flagged a bet — the price on offer at that moment. The row gets a timestamp. That timestamp is what makes this a record instead of a story.</div></div></li>
-        <li><div><div class="sh">The row is never edited again</div><div class="sb">Once written, a pick cannot be changed or deleted. Not by us, not by a script, not by the database owner. The database itself rejects the attempt. So a pick that ages badly still sits there.</div></div></li>
+        <li><div><div class="sh">We post a call, and the clock starts</div><div class="sb">Ahead of a card, the model writes a row: which fighter, what percentage we give them, and — where we flagged a bet — the price on offer at that moment. The row gets a timestamp.</div></div></li>
+        <li><div><div class="sh">A copy gets frozen where nobody can reach it</div><div class="sb">The table holding the calls is an ordinary working table. We could edit it. So for every card we cover, a copy of what we were showing is written into a <em>separate</em> record that the database refuses to change or delete afterwards — for every account, including the one that owns the database. This page then re-compares the working row against that frozen copy in front of you. A pick that aged badly can't quietly become a different pick, because the sealed copy would stop matching and this page would say so.</div></div></li>
         <li><div><div class="sh">The fight happens, and we grade it against what actually occurred</div><div class="sb">Won, lost, or not settled yet. Nothing gets quietly dropped for being embarrassing — if a pick is missing from the archive it's because it was never posted, and you can check the count against the card.</div></div></li>
         <li><div><div class="sh">Money is counted flat: $100 a bet, every time</div><div class="sb">Same stake on every bet, no chasing, no doubling up. A win at +150 pays $150; a loss costs $100. That's it. We use the price that was on record when we posted, not a better one we found later.</div></div></li>
-        <li><div><div class="sh">A number only goes on screen once there's enough of it</div><div class="sb">Small samples lie. Each headline number has a written rule for how many picks it takes before we'll show it, and those rules were set before we could see the answer. Until a rule is met, you get "still collecting" instead of a number. We'd rather show you an empty box than a flattering guess.</div></div></li>
+        <li><div><div class="sh">A number only goes on screen once there's enough of it</div><div class="sb">Small samples lie. Each headline number has a written rule for how many calls it takes before we'll show it. The hardest one — whether we beat the market's price — isn't ours at all: it belongs to a separate research protocol that is frozen before any result can be seen, and this page just reads its verdict. Until a rule is met you get "still collecting" instead of a number. We'd rather show you an empty box than a flattering guess.</div></div></li>
+        <li><div><div class="sh">Rules can improve — but only forwards, and in writing</div><div class="sb">We are not going to pretend our methods are frozen forever; a model nobody is allowed to improve is a worse model. What we will not do is rewrite the past. Every change to how something is measured gets a version and a date, and results already scored stay tied to the rules they were scored under. Old numbers are never quietly re-graded under a friendlier rule, and a threshold is never moved after we've seen what it gates.</div></div></li>
         <li><div><div class="sh">Simulations stay labelled as simulations</div><div class="sb">Re-running the engine over old fights is a useful sanity check and nothing more — the model gets to be smart about a world that already happened. Those rows are marked, boxed off, and never added to the live record.</div></div></li>
       </ol>
     </div>
@@ -323,7 +352,7 @@
       <p class="ps">Being upfront about the limits is part of the point.</p>
       <ul class="steps" style="margin-top:6px">
         <li style="grid-template-columns:1fr"><div><div class="sh">Whether you'll make money</div><div class="sb">A record is a record. A 70% pick still loses 3 times in 10, and a good run of results can happen to a bad model. Nothing here is betting advice.</div></div></li>
-        <li style="grid-template-columns:1fr"><div><div class="sh">That we're beating the market</div><div class="sb">We're not claiming that, because we can't yet — the price test above has a rule attached and it hasn't been met. The market's price is right more often than any model. Any edge lives at the margins.</div></div></li>
+        <li style="grid-template-columns:1fr"><div><div class="sh">That we're beating the market</div><div class="sb">We're not claiming it, and we're not quietly implying it either. The rule for when that question may be answered isn't ours to apply, and it hasn't been met. The market's price is right more often than any model. Any edge lives at the margins.</div></div></li>
         <li style="grid-template-columns:1fr"><div><div class="sh">That the simulated numbers predict the live ones</div><div class="sb">They routinely don't. That gap is the single most common way a model looks better on paper than in practice, which is exactly why the two records are kept apart here.</div></div></li>
       </ul>
     </div>
@@ -332,14 +361,14 @@
   <!-- ===================== 6. Audit trail ===================== -->
   <section id="audit" aria-labelledby="h-audit">
     <h2 id="h-audit">Check it yourself</h2>
-    <p class="sub">Every claim above, with the thing that backs it. The rows with a live verdict are recomputed in your browser from the rows themselves each time this page loads — if one ever fails, this page says so instead of hiding it.</p>
+    <p class="sub">Every claim above, with the thing that backs it. The rows with a live verdict are recomputed in your browser from the rows themselves each time this page loads — if one ever fails, this page says so instead of hiding it. Where a claim would be flattering but false, the row says the unflattering true thing instead.</p>
     <div class="panel"><table class="audit" id="auditTable"><thead><tr><th>The claim</th><th>What backs it</th><th>Verdict</th></tr></thead><tbody id="auditBody"></tbody></table></div>
   </section>
 
   <!-- ===================== 7. Legend ===================== -->
   <section id="legend" aria-labelledby="h-legend">
     <h2 id="h-legend">What the labels mean</h2>
-    <p class="sub">Every number on this page carries exactly one of these.</p>
+    <p class="sub">The first five say how far a number can be trusted. The last four say how well we can prove <em>when</em> a call was made. Every number and every row carries exactly one of each that applies.</p>
     <div class="legend" id="legendGrid"></div>
   </section>
 
@@ -380,7 +409,8 @@ const usd = x => (x == null ? '—' : (x < 0 ? '−$' : '+$') + Math.abs(Math.ro
 
 // State ----------------------------------------------------------------------
 let LIVE_PICKS = [], LIVE_EDGES = [], REPLAY_PICKS = null, REPLAY_EDGES = null;
-let SNAPSHOTS = [];   // v_pre_fight_graded — the append-only copy we check ourselves against
+let SNAPSHOTS = [];        // v_pre_fight_graded — the sealed copy we check ourselves against
+let SNAP_BY_FIGHT = {};    // fight_id -> snapshot, for the per-row timing grade
 let EVENT_BY_DATE = {};
 let replayLoading = null;
 const F = { record: 'live', feed: 'picks', result: 'all', q: '' };
@@ -437,12 +467,15 @@ async function boot() {
     LIVE_PICKS = picks || [];
     LIVE_EDGES = edges || [];
     SNAPSHOTS = await loadSnapshots();
+    SNAP_BY_FIGHT = {};
+    (SNAPSHOTS || []).forEach(r => { if (r && r.fight_id != null) SNAP_BY_FIGHT[r.fight_id] = r; });
     await loadEventNames(LIVE_PICKS);
 
     renderStamp();
     renderQuestions();
     renderRecords();
     renderLive();
+    renderTiming();
     renderMarketGate();
     renderAudit();
     renderLegend();
@@ -462,7 +495,7 @@ async function boot() {
 async function loadSnapshots() {
   try {
     return await cfl.fetchAll(() => window.cflSupabase.from('v_pre_fight_graded')
-      .select('fight_id,engine_pick_fighter_id,engine_p_cal')
+      .select('fight_id,snapshot_at,engine_pick_fighter_id,engine_p_cal')
       .order('fight_id', { ascending: true }));
   } catch (e) {
     console.warn('[proof] snapshot crosscheck unavailable', e);
@@ -488,7 +521,7 @@ function failClosed(err) {
   const msg = `<div class="fail"><strong>We couldn't read the record just now.</strong> That's a problem on our end, not an empty record — rather than show you zeros that would flatter us, this page shows nothing until the database answers. Reload in a minute.${err && err.message ? '<br><span style="color:var(--text-3);font-size:12px">Technical detail: ' + esc(err.message) + '</span>' : ''}</div>`;
   $('stamp').textContent = 'The record could not be loaded.';
   $('qgrid').innerHTML = '';
-  ['recordsGrid', 'liveKpis', 'marketGate', 'auditBody', 'legendGrid'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+  ['recordsGrid', 'liveKpis', 'timingGrid', 'marketGate', 'auditBody', 'legendGrid'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
   $('archLoading').innerHTML = msg;
   $('liveKpis').innerHTML = msg;
 }
@@ -504,16 +537,17 @@ function renderStamp() {
 // SEVEN QUESTIONS — the things a sceptic wants answered before scrolling
 // =============================================================================
 function renderQuestions() {
-  const audit = P.timestampAudit(LIVE_PICKS);
+  const t = P.timingEvidence(LIVE_PICKS, SNAPSHOTS || []);
   const rec = P.straightRecord(LIVE_PICKS, { expectRecord: P.RECORD.LIVE });
   const events = new Set(LIVE_PICKS.map(r => r.event_date)).size;
-  const clvGate = P.evaluateGate('clv', P.clvPairCount(LIVE_EDGES));
   const money = P.flatStakeLedger(LIVE_EDGES, { expectRecord: P.RECORD.LIVE });
 
   const qs = [
+    // Graded, never asserted. A same-day timestamp is not proof of pre-bell
+    // timing, so it is never folded into the strong count.
     { q: 'Are these real predictions made before the fight?',
-      a: audit.clean ? 'Yes — all ' + audit.total + ' timestamped, none after its card' : audit.total + ' live picks · ' + audit.inOrder + ' dated on or before the card',
-      cls: audit.clean ? 'good' : '', href: '#audit' },
+      a: t.sealed + ' sealed, ' + t.dated + ' dated ahead — ' + t.sameDay + ' only same-day',
+      cls: '', href: '#timing' },
     { q: 'Can I see all of them, including losses?',
       a: 'Yes — ' + rec.misses + ' losses in the same list', cls: 'good', href: '#archive' },
     { q: 'Is this live performance or historical testing?',
@@ -521,11 +555,11 @@ function renderQuestions() {
     { q: 'How much would the picks have made or lost?',
       a: money.settled ? usd(money.pnl) + ' on ' + money.settled + ' flat bets' : 'No settled bets yet', cls: '', href: '#live' },
     { q: 'Is the model beating market prices?',
-      a: clvGate.publishable ? 'See the price test' : 'Unknown — still collecting', cls: clvGate.publishable ? '' : 'wait', href: '#market' },
+      a: 'Not established — validation still collecting', cls: 'wait', href: '#market' },
     { q: 'How big is the sample?',
       a: LIVE_PICKS.length + ' live calls across ' + events + ' cards', cls: '', href: '#live' },
     { q: 'Can CFL change the rules after seeing results?',
-      a: 'No — rows are locked, floors are pre-set', cls: 'good', href: '#how' },
+      a: 'Rules can change — but only versioned and dated, never backwards', cls: '', href: '#how' },
   ];
   $('qgrid').innerHTML = qs.map(x =>
     `<a class="qcard" href="${x.href}"><div class="q">${esc(x.q)}</div><div class="a ${x.cls}">${esc(x.a)}</div></a>`
@@ -546,8 +580,8 @@ function renderRecords() {
       <div class="rn">${LIVE_PICKS.length.toLocaleString()}</div>
       <div class="rmeta">calls on record · ${liveEvents} card${liveEvents === 1 ? '' : 's'}${liveFrom ? ' · since ' + esc(cfl.formatDate(liveFrom)) : ''}</div>
       <dl>
-        <dt>What it is</dt><dd>A row written to the database before the card, with a timestamp, that can never be edited afterwards.</dd>
-        <dt>What it proves</dt><dd>That we said it in advance. Nothing here benefits from hindsight.</dd>
+        <dt>What it is</dt><dd>A row written to the database ahead of the card, carrying a timestamp and — for the cards we cover — a copy frozen into a separate record that nobody can edit.</dd>
+        <dt>What it proves</dt><dd>Depends on the row, and we grade that rather than assume it. See the timing breakdown below.</dd>
         <dt>What it can't tell you yet</dt><dd>Whether the record is good. That takes a bigger pile of fights than we have.</dd>
         <dt>Model versions in this record</dt><dd><span class="mv" style="font-family:var(--font-mono);font-size:12px">${versions.length ? esc(versions.join(', ')) : '—'}</span> — shown per row in the archive, because the engine changed mid-record and pretending otherwise would be dishonest.</dd>
       </dl>
@@ -604,27 +638,45 @@ function renderLive() {
 // =============================================================================
 // THE PRICE TEST — gated, and gated shut today
 // =============================================================================
-function renderMarketGate() {
-  const have = P.clvPairCount(LIVE_EDGES);
-  const g = P.evaluateGate('clv', have);
+// The timing grades, strongest first, each with its own count.
+function renderTiming() {
+  const t = P.timingEvidence(LIVE_PICKS, SNAPSHOTS || []);
+  const levels = [
+    { k: 'sealed', n: t.sealed, cls: 'g1' },
+    { k: 'dated', n: t.dated, cls: 'g2' },
+    { k: 'sameDay', n: t.sameDay, cls: 'g3' },
+    { k: 'unverified', n: t.unverified, cls: 'g4' },
+  ];
+  $('timingGrid').className = 'tgrid';
+  $('timingGrid').innerHTML = levels.map(l => {
+    const c = P.timingCopy(l.k);
+    return `<div class="tcard ${l.cls}"><div class="n">${l.n.toLocaleString()}</div>` +
+           `<div class="t">${esc(c.label)}</div><div class="b">${esc(c.blurb)}</div></div>`;
+  }).join('') +
+  `<div class="tcard g4"><div class="n">${t.total.toLocaleString()}</div><div class="t">Live calls in total</div>` +
+  `<div class="b">Every row above adds up to this. ${t.sealedCovered.toLocaleString()} have a sealed copy at all — the freeze only started running partway through this record.</div></div>`;
+}
 
-  // The gate is shut: render the rule and the progress, never an estimate of
-  // the number underneath it. If it opens, this still does not print a figure —
-  // wiring the measurement itself is a separate, reviewed change.
+function renderMarketGate() {
+  // DEFERRED. The publication rule for this measurement belongs to the CLV-001
+  // research protocol, which is not integrated here. We pass no count: there is
+  // no local observation that counts toward it, and passing one would invite
+  // exactly the proxy this gate exists to refuse.
+  //
+  // model_edges does carry legacy closing_odds fields. They are NOT CLV-001
+  // observations, they are not counted here, and no progress figure is derived
+  // from them. When CLV-001 is integrated, the authoritative publication state
+  // it produces is what gets passed as the third argument — Proof Center will
+  // read that status, never re-derive it.
+  const g = P.evaluateGate('clv', null, null);
+
   $('marketGate').innerHTML = `
     <div class="gate">
-      <div class="gh"><span class="gt">${esc(g.title)}</span>${chip(g.status)}</div>
-      <p class="gmsg">${g.publishable
-        ? '<strong>The rule has been met.</strong> ' + esc(g.message) + ' The measurement itself is not switched on yet — turning it on is a reviewed change, not something this page does on its own.'
-        : '<strong>' + esc(g.message) + '</strong> We could put a number here today. It would rest on ' + g.have + ' picks, which is not enough to tell a real result from a lucky run, so you get this box instead.'}</p>
-      <div class="prog">
-        <div class="bar"><i style="width:${Math.round(g.pct * 100)}%"></i></div>
-        <div class="cap">
-          <span><strong>${g.have}</strong> of <strong>${g.need}</strong> ${esc(g.unit)}</span>
-          <span>${g.remaining ? g.remaining + ' to go' : 'rule met'}</span>
-        </div>
-      </div>
-      <p class="rulecite"><strong style="color:var(--text-2)">The rule, and where it came from.</strong> ${esc(g.source)}. It was written down before the answer could be seen, it counts only picks posted before a fight, and it is enforced in <code>proof-gates.js</code> with a test that fails if the threshold moves. Moving a floor after seeing the number it gates is the one move this setup exists to prevent.</p>
+      <div class="gh"><span class="gt">Where this stands</span>${chip(g.status)}</div>
+      <p class="gmsg"><strong>${esc(g.message)}</strong></p>
+      <p class="gmsg">There is no number in this box, no bar filling up, and no hint of which way it is going — because the rule that decides when this may be published is not ours. It lives in a separate research protocol (<code>${esc(g.authority)}</code>) that is frozen before any result can be seen, and it sets every condition: how many scored observations it takes, across how many separate UFC events, and how tight the range has to be before the answer means anything.</p>
+      <p class="gmsg">Until this page can read that protocol's own verdict, it shows you this instead. <strong>We could put a rough number here today from older price fields we happen to store. We are not going to</strong> — a figure built from a shortcut, dressed up as the real test, is the exact thing this page exists to refuse.</p>
+      <p class="rulecite"><strong style="color:var(--text-2)">Where the rule lives.</strong> ${esc(g.source)} Enforced in <code>proof-gates.js</code> as a deferred gate with no local threshold: there is no count this page can reach that opens it. A test asserts that no number, however large, can flip it.</p>
     </div>`;
 }
 
@@ -719,6 +771,16 @@ function pickedName(r) {
   return null;
 }
 
+// What this row's timestamp can actually support, graded by the same rules as
+// the section above. Shown per row so a reader can see which calls carry the
+// strong evidence and which only carry a same-day timestamp.
+function timingTag(r) {
+  if (P.recordKind(r) !== P.RECORD.LIVE) return '';
+  const lvl = P.timingLevel(r, SNAP_BY_FIGHT[r.fight_id]);
+  const c = P.timingCopy(lvl);
+  return `<span class="tlvl ${esc(lvl)}" title="${esc(c.blurb)}">${esc(c.label)}</span>`;
+}
+
 // A call is right or wrong; a money bet is won or lost. Both chips are the same
 // size and weight — that is deliberate and is not a styling accident to tidy up.
 function resultCell(r) {
@@ -780,7 +842,11 @@ function renderArchive() {
     const name = cardName(r.event_date);
     const p = isPicks ? r.p_cal : r.p_blend;
     const cells = [
-      `<td class="ts">${stamp ? esc(stamp) + (lead ? '<br><span style="color:var(--text-3)">' + esc(lead) + '</span>' : '') : '<span title="A replay has no posting time — it was never posted.">re-run, not posted</span>'}</td>`,
+      `<td class="ts">${stamp
+          ? esc(stamp)
+            + (lead ? '<br><span style="color:var(--text-3)">' + esc(lead) + '</span>' : '')
+            + timingTag(r)
+          : '<span title="A replay has no posting time — it was never posted.">re-run, not posted</span>'}</td>`,
       `<td>${esc(cfl.formatDateShort(r.event_date))}${name ? '<span class="vs">' + esc(name) + '</span>' : ''}</td>`,
       `<td>${esc(r.fighter_a_name || '—')}<span class="vs">vs ${esc(r.fighter_b_name || '—')}</span></td>`,
       `<td class="pickcell">${esc(pickedName(r) || '—')}</td>`,
@@ -820,54 +886,66 @@ function renderArchive() {
 const FROZEN_FROM = 'August 2026';
 
 function renderAudit() {
-  const audit = P.timestampAudit(LIVE_PICKS);
+  const t = P.timingEvidence(LIVE_PICKS, SNAPSHOTS || []);
   const cross = SNAPSHOTS === null ? null : P.crossCheckSnapshots(LIVE_PICKS, SNAPSHOTS);
+  const clvGate = P.evaluateGate('clv', null, null);
   const mixed = (() => {
     try { P.assertOneRecord(LIVE_PICKS, P.RECORD.LIVE); P.assertOneRecord(LIVE_EDGES, P.RECORD.LIVE); return false; }
     catch (e) { return true; }
   })();
-  const clvGate = P.evaluateGate('clv', P.clvPairCount(LIVE_EDGES));
 
   const rows = [
     {
-      claim: 'No live pick was posted after its card',
-      backs: 'Checked in your browser against each row’s own posting time and card date — not asserted, recomputed. '
-        + audit.dayBefore + ' landed on an earlier day; ' + audit.sameDay + ' landed on the day of the card itself, which a date alone cannot place before the first bell.',
-      verdict: audit.clean
-        ? { ok: true, t: audit.inOrder + ' of ' + audit.total + ' dated on or before the card' }
-        : { ok: false, t: audit.late + ' posted late, ' + audit.undated + ' undated — shown here rather than hidden' },
+      claim: 'We can prove when each call was made — to different degrees',
+      backs: 'Graded in your browser from each row\u2019s own timestamp and its sealed copy, not asserted. '
+        + t.sealed + ' sealed and dated ahead of the card day; ' + t.dated + ' dated ahead on our timestamp alone; '
+        + t.sameDay + ' carrying only a same-day timestamp, which cannot place them before the first bell; '
+        + t.unverified + ' with no usable timing evidence.',
+      verdict: t.unverified === 0
+        ? { ok: true, t: t.sealed + ' strongest grade · ' + t.sameDay + ' not counted as proof' }
+        : { ok: false, t: t.unverified + ' unverified — shown here rather than hidden' },
     },
     {
       claim: 'The picks still match a copy nobody can edit',
-      backs: 'Before each card we freeze what we were showing into a separate record that the database will not let anyone change afterwards — not us, not the scripts, not the account that owns the database. '
+      backs: 'For the cards it covers, we freeze what we were showing into a separate record the database will not let anyone change afterwards — not us, not the scripts, not the account that owns the database. '
         + (cross === null
             ? 'That check could not run just now, so treat this row as unanswered rather than passed.'
-            : 'Every pick covered by that frozen copy is re-compared to it here, on the fighter and on the percentage. It only reaches back to ' + FROZEN_FROM + ', when the freeze started running; earlier picks are not covered and are not counted as passing.'),
+            : 'Every call covered by that frozen copy is re-compared to it here, on the fighter and on the percentage. It only reaches back to ' + FROZEN_FROM + ', when the freeze started running; earlier calls are reported as uncovered, never as passing.'),
       verdict: cross === null
         ? { ok: false, t: 'Check unavailable — not a pass' }
         : (cross.clean
-            ? { ok: true, t: cross.matched + ' of ' + cross.covered + ' still match the frozen copy exactly' }
+            ? { ok: true, t: cross.matched + ' of ' + cross.covered + ' still match · ' + (LIVE_PICKS.length - cross.covered) + ' not covered' }
             : { ok: false, t: cross.mismatched + ' of ' + cross.covered + ' no longer match — shown here rather than hidden' }),
     },
     {
       claim: 'The tables behind this page are not themselves locked',
-      backs: 'Said plainly because the opposite would be a better story. The picks table is only ever inserted into, and the bets table is updated once after a card to fill in the closing price — that is the settlement step, not a revision of the pick. Neither is sealed by the database. The frozen copy above is what makes that checkable instead of something you have to take on trust.',
+      backs: 'Said plainly because the opposite would be a better story. The table holding the calls is an ordinary working table, and the bets table is updated once after a card to fill in the closing price — that is settlement, not a revision of the call. Neither is sealed by the database. The frozen copy above is what makes that checkable instead of something you have to take on trust, and the calls it does not cover are counted separately for exactly that reason.',
       verdict: { ok: true, t: 'Stated, not glossed over' },
+    },
+    {
+      claim: 'A sealed copy is not by itself proof of timing',
+      backs: 'Two different claims, kept apart on purpose. Sealing stops a row being rewritten; it says nothing about the clock. Some sealed copies were taken on the card\u2019s own day, and those are graded down to same-day like any other row rather than riding the sealed label.',
+      verdict: { ok: true, t: 'Graded separately, never merged' },
     },
     {
       claim: 'Live and simulated rows are never added together',
       backs: 'Every total on this page runs through <code>proof-gates.js</code>, which throws rather than sum a mixed list. Covered by <code>tests/proof-gates.test.js</code>.',
-      verdict: { ok: !mixed, t: mixed ? 'A mixed set reached a total — this page is wrong, tell us' : 'No mixed total reached the screen' },
+      verdict: { ok: !mixed, t: mixed ? 'A mixed total reached the screen — this page is wrong, tell us' : 'No mixed total reached the screen' },
     },
     {
-      claim: 'The rule for publishing the price test was set in advance',
-      backs: 'Floor of ' + clvGate.need + ' ' + clvGate.unit + ', recorded at <code>proof-gates.js → GATES.clv</code> with the source it came from, and pinned by a test that fails if the number moves.',
-      verdict: { ok: true, t: 'Currently at ' + clvGate.have + ' — gate shut, no figure shown' },
+      claim: 'The market-price rule is not ours to apply',
+      backs: 'It belongs to a research protocol (<code>' + esc(clvGate.authority) + '</code>) frozen before any result is visible, which sets every condition — observations, distinct events, and how tight the range must be. This page holds no threshold of its own, derives no progress figure from the older price fields it happens to store, and has no count that can open the gate. A test asserts that.',
+      verdict: { ok: true, t: 'Deferred — no figure, no proxy, no progress bar' },
     },
     {
-      claim: 'The engine build behind each pick is on the row',
-      backs: 'Shown per row in the archive. The engine changed during the live record; rolling it into one label would hide that.',
-      verdict: { ok: true, t: Array.from(new Set(LIVE_PICKS.map(r => r.model_version).filter(Boolean))).sort().join(', ') || '—' },
+      claim: 'Methods can change, but never backwards',
+      backs: 'A model nobody may improve is a worse model, so we do not claim ours is frozen forever. What is fixed is the direction: changes are versioned and dated, results stay tied to the rules they were scored under, and nothing already graded is re-graded under a friendlier rule. A threshold is never moved after anyone has seen what it gates.',
+      verdict: { ok: true, t: 'Versioned and dated, not retroactive' },
+    },
+    {
+      claim: 'This page does not speak for the rest of the lab',
+      backs: 'It reads the engine\u2019s graded calls, its graded bets, the history replay and the sealed copies. The fight-duration and prop models run under their own protocols with their own records, and none of their rows are here or counted in anything above.',
+      verdict: { ok: true, t: 'Main-engine fight calls only' },
     },
     {
       claim: 'Nothing on this page reruns or reinterprets the model',
@@ -884,10 +962,15 @@ function renderAudit() {
 
 function renderLegend() {
   const order = [P.STATUS.LIVE, P.STATUS.REPLAY, P.STATUS.PROVISIONAL, P.STATUS.COLLECTING, P.STATUS.APPROVED];
-  $('legendGrid').innerHTML = order.map(s => {
+  const statuses = order.map(s => {
     const c = P.statusCopy(s);
     return `<div class="li">${chip(s)}<div class="t">${esc(c.blurb)}</div></div>`;
   }).join('');
+  const timings = ['sealed', 'dated', 'sameDay', 'unverified'].map(k => {
+    const c = P.timingCopy(k);
+    return `<div class="li"><span class="tlvl ${esc(k)}" style="margin-top:0">${esc(c.label)}</span><div class="t">${esc(c.blurb)}</div></div>`;
+  }).join('');
+  $('legendGrid').innerHTML = statuses + timings;
 }
 
 boot();

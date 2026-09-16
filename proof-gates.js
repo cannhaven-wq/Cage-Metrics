@@ -112,32 +112,45 @@
   // it gates is the exact move this file exists to prevent. Change a gate in a
   // commit of its own, before the number is visible, and say why.
   const GATES = {
-    // The market test. Already the site's published stance, shipped on
-    // track-record.html: "these numbers go up here once 100+ locked picks have
-    // both a posted price and a closing price on record."
+    // The market-price test. NOT OURS TO EVALUATE.
+    //
+    // The publication rule for CLV belongs to the CLV-001 research protocol, and
+    // that protocol is not in this repository yet. Its conditions — how many
+    // scored observations, across how many distinct events, under what
+    // uncertainty condition, and whatever else the freeze names — are a frozen
+    // methodology. Proof Center must never reproduce, approximate or simplify
+    // them, and must never substitute a proxy it happens to be able to count.
+    //
+    // In particular: the legacy `closing_odds` / `odds_at_publish` pairs on
+    // model_edges are NOT CLV-001 observations and counting them is NOT progress
+    // toward this gate. An earlier cut of this file did exactly that and showed
+    // "46 of 100". That was wrong and the count has been removed outright rather
+    // than left available to be re-wired by accident.
+    //
+    // Until Proof Center can read authoritative CLV-001 publication state, this
+    // gate is DEFERRED: it has no local threshold, no progress, and no path to
+    // opening from anything measured here.
     clv: {
       id: 'clv',
-      title: 'Did we get a better price than the market closed at?',
-      minObservations: 100,
-      record: RECORD.LIVE,           // replay rows can never satisfy this gate
-      unit: 'picks with both a posted price and a closing price',
-      source: 'track-record.html, shipped stance: "100+ locked picks have both a posted price and a closing price on record"',
-      // What the surface says while the gate is shut. It does not hint at the
-      // direction of the unpublished number.
-      pending: 'Prospective data collecting. We are not putting a number here until enough picks have both prices on record.',
+      title: 'Did we get a better price than the market ended up at?',
+      deferred: true,
+      authority: 'CLV-001',
+      record: RECORD.LIVE,
+      source: 'The CLV publication rule is owned by the CLV-001 research protocol, which is not integrated here. Proof Center holds no CLV threshold of its own and computes no CLV figure.',
+      pending: 'Prospective market-price validation is collecting. No CLV figure is publication-approved yet.',
     },
 
-    // The live straight-up record. Shown below the floor — it is the record
-    // itself, not a claim about the future — but labelled as too early to read.
+    // The live straight-up record. Ours, and a plain count of what happened —
+    // shown below its floor but labelled as too early to read.
     liveRecord: {
       id: 'liveRecord',
-      title: 'How often the live picks won',
+      title: 'How often the live calls were right',
       minObservations: 100,
       record: RECORD.LIVE,
-      unit: 'settled live picks',
+      unit: 'settled live calls',
       source: 'track-record.html honesty box: "Anything under ~100 picks in a bucket is noise."',
       showBelowFloor: true,
-      pending: 'Shown as it stands, but there are too few settled picks to read anything into it.',
+      pending: 'Shown as it stands, but there are too few settled calls to read anything into it.',
     },
 
     // Flat-stake money. Same floor, same treatment: the running total is a fact
@@ -147,7 +160,7 @@
       title: 'What $100 a bet came to',
       minObservations: 100,
       record: RECORD.LIVE,
-      unit: 'settled live value picks',
+      unit: 'settled live bets',
       source: 'track-record.html honesty box: "Anything under ~100 picks in a bucket is noise."',
       showBelowFloor: true,
       pending: 'A running total of what is on record — not a rate to expect going forward.',
@@ -157,20 +170,50 @@
   // Decide what a surface may show. `have` is the count of verified observations
   // of the gate's own unit; anything non-finite is treated as zero.
   //
-  // Returns { status, publishable, showValue, have, need, remaining, pct, ... }.
-  // `publishable` means the gate has passed. `showValue` means the page may
-  // render the figure at all — true below the floor only for gates that
-  // explicitly opt in, and then always alongside the 'provisional' status.
-  function evaluateGate(gateId, have) {
+  // `authority` is the ONLY thing that can open a deferred gate: an object from
+  // the protocol that owns it, whose `publication_approved` is exactly true and
+  // whose `authority` names the owning protocol. `have` is ignored entirely for
+  // a deferred gate — no local count, however large, can open it.
+  //
+  // Returns { status, publishable, showValue, have, need, ... }. `publishable`
+  // means the gate has passed. `showValue` means the page may render the figure
+  // at all — true below the floor only for gates that explicitly opt in, and
+  // then always alongside the 'provisional' status.
+  function evaluateGate(gateId, have, authority) {
     const gate = GATES[gateId];
     if (!gate) {
       // Unknown gate: fail closed, and say so rather than rendering nothing.
       return {
         id: String(gateId), title: '', status: STATUS.COLLECTING, publishable: false,
-        showValue: false, have: 0, need: Infinity, remaining: Infinity, pct: 0,
+        showValue: false, deferred: false, have: 0, need: null, remaining: null, pct: null,
         unit: '', source: 'no gate defined', message: 'No publication rule is defined for this number, so it is not shown.',
       };
     }
+
+    if (gate.deferred) {
+      const approved = !!(authority &&
+        authority.publication_approved === true &&
+        authority.authority === gate.authority);
+      return {
+        id: gate.id,
+        title: gate.title,
+        status: approved ? STATUS.APPROVED : STATUS.COLLECTING,
+        publishable: approved,
+        // Even when the owning protocol says approved, this file renders no
+        // figure — surfacing one is a separate, reviewed integration.
+        showValue: false,
+        deferred: true,
+        authority: gate.authority,
+        have: null, need: null, remaining: null, pct: null,
+        unit: '',
+        record: gate.record,
+        source: gate.source,
+        message: approved
+          ? gate.authority + ' reports this measurement as publication-approved. Displaying it is a separate change.'
+          : gate.pending,
+      };
+    }
+
     const n = (typeof have === 'number' && isFinite(have) && have > 0) ? Math.floor(have) : 0;
     const need = gate.minObservations;
     const passed = n >= need;
@@ -181,6 +224,7 @@
       status: status,
       publishable: passed,
       showValue: passed || gate.showBelowFloor === true,
+      deferred: false,
       have: n,
       need: need,
       remaining: Math.max(0, need - n),
@@ -253,52 +297,84 @@
              hitRate: settled ? hits / settled : null };
   }
 
-  // ------------------------------------------------------------- clv counting
-  // The gate's unit: a live row carrying BOTH a posted price and a closing
-  // price. Counting only — the CLV value itself is never computed here, and
-  // this file has no opinion on how CLV is scored. That definition lives in
-  // cfl_engine/settle_clv.py and is not ours to restate.
-  function clvPairCount(rows) {
-    const live = splitByRecord(rows).live;
-    return live.filter(function (r) {
-      return r.odds_at_publish != null && r.closing_odds != null;
-    }).length;
+  // --------------------------------------------------------- timing evidence
+  // What we can actually prove about WHEN a call was made, graded honestly.
+  //
+  // The mistake this replaces: treating "published_at falls on or before the
+  // card's date" as proof the call preceded the fight. It is not. A card runs
+  // for hours, and a row written at 9pm on fight night carries the same date as
+  // one written at dawn. Same-day is a timestamp, not a proof.
+  //
+  // A sealed snapshot is not automatically timing evidence either. Immutability
+  // and timing are separate claims: the snapshot table proves the row has not
+  // been revised, and its own snapshot_at says when it was taken. A snapshot
+  // taken on the card's own day inherits the same-day problem.
+  //
+  // Four levels, strongest first. Every live row lands in exactly one:
+  //
+  //   sealed      a sealed pre-fight copy exists, still matches this row, AND
+  //               was taken on an earlier calendar day than the card
+  //   dated       posted on an earlier calendar day than the card
+  //   sameDay     a timestamp exists but falls on the card's own day — the date
+  //               alone cannot place it before the first bell
+  //   unverified  posted after the card's date, or missing a timestamp entirely
+  //
+  // If an authoritative per-fight cutoff ever becomes available, sameDay rows
+  // can be upgraded by comparing against it. Nothing here invents one.
+  function timingEvidence(rows, snapshots) {
+    const byFight = {};
+    (snapshots || []).forEach(function (s) {
+      if (s && s.fight_id != null) byFight[s.fight_id] = s;
+    });
+
+    const out = { total: 0, sealed: 0, dated: 0, sameDay: 0, unverified: 0,
+                  sealedCovered: 0, unverifiedRows: [] };
+
+    splitByRecord(rows).live.forEach(function (r) {
+      out.total++;
+      const card = r.event_date ? String(r.event_date).slice(0, 10) : null;
+      const posted = r.published_at ? String(r.published_at).slice(0, 10) : null;
+      const snap = byFight[r.fight_id];
+
+      if (snap && card) {
+        const snapDay = snap.snapshot_at ? String(snap.snapshot_at).slice(0, 10) : null;
+        const samePick = String(snap.engine_pick_fighter_id) === String(r.pick_fighter_id);
+        const sameProb = snap.engine_p_cal != null && r.p_cal != null &&
+          Math.abs(Number(snap.engine_p_cal) - Number(r.p_cal)) < 1e-6;
+        if (samePick && sameProb) {
+          out.sealedCovered++;
+          if (snapDay && snapDay < card) { out.sealed++; return; }
+        }
+      }
+
+      if (!posted || !card) { out.unverified++; out.unverifiedRows.push(r); return; }
+      if (posted < card) { out.dated++; return; }
+      if (posted === card) { out.sameDay++; return; }
+      out.unverified++; out.unverifiedRows.push(r);   // posted after the card
+    });
+
+    return out;
   }
 
-  // ---------------------------------------------------------- timestamp audit
-  // The claim the whole page rests on: every live pick was on record before its
-  // card. This checks it against the rows themselves rather than asserting it,
-  // and reports failures so the page can print them.
-  //
-  // A row is IN ORDER when published_at falls on or before the card's date. It
-  // is counted as UNDATED when either timestamp is missing — undated is not
-  // treated as in order.
-  //
-  // SAME-DAY rows are counted separately and are a subset of inOrder. The card
-  // date alone does not prove a pick landed before the first bell, so the page
-  // states the day-of count rather than folding it into a stronger claim.
-  function timestampAudit(rows) {
-    const live = splitByRecord(rows).live;
-    let inOrder = 0, undated = 0, sameDay = 0;
-    const late = [];
-    live.forEach(function (r) {
-      if (!r.published_at || !r.event_date) { undated++; return; }
-      const posted = String(r.published_at).slice(0, 10);
-      const card = String(r.event_date).slice(0, 10);
-      if (posted < card) inOrder++;
-      else if (posted === card) { inOrder++; sameDay++; }
-      else late.push(r);
-    });
-    return {
-      total: live.length,
-      inOrder: inOrder,
-      sameDay: sameDay,
-      dayBefore: inOrder - sameDay,
-      undated: undated,
-      late: late.length,
-      lateRows: late,
-      clean: live.length > 0 && late.length === 0 && undated === 0,
-    };
+  // The level a single row sits at, for per-row display in the archive. Same
+  // rules as timingEvidence, one row at a time.
+  function timingLevel(row, snapshot) {
+    const e = timingEvidence([row], snapshot ? [snapshot] : []);
+    if (e.sealed) return 'sealed';
+    if (e.dated) return 'dated';
+    if (e.sameDay) return 'sameDay';
+    return 'unverified';
+  }
+
+  const TIMING_COPY = {
+    sealed:     { label: 'Sealed before the card', blurb: 'A copy of this call was frozen into a record nobody can edit, on a day earlier than the card.' },
+    dated:      { label: 'Dated before the card',  blurb: 'Posted on an earlier day than the card. Strong, but it rests on our own timestamp.' },
+    sameDay:    { label: 'Same-day timestamp',     blurb: 'Timestamped on the card\u2019s own day. That cannot prove it landed before the fight started.' },
+    unverified: { label: 'Timing unverified',      blurb: 'No usable timestamp, or one dated after the card. Not counted as evidence of anything.' },
+  };
+
+  function timingCopy(level) {
+    return TIMING_COPY[level] || TIMING_COPY.unverified;   // fail closed
   }
 
   // ------------------------------------------------------- immutable crosscheck
@@ -351,8 +427,10 @@
     winProfit: winProfit,
     flatStakeLedger: flatStakeLedger,
     straightRecord: straightRecord,
-    clvPairCount: clvPairCount,
-    timestampAudit: timestampAudit,
+    timingEvidence: timingEvidence,
+    timingLevel: timingLevel,
+    timingCopy: timingCopy,
+    TIMING_COPY: TIMING_COPY,
     crossCheckSnapshots: crossCheckSnapshots,
   };
 }));

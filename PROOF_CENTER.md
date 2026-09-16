@@ -304,3 +304,194 @@ hold:
    the same test I had to apply to myself: for each row, what would have to be
    true in the database for it to be false, and has anyone actually looked?
 5. **Do not merge, deploy, index, or add to the nav** as part of the review.
+
+---
+
+## Revision 2 — the four required corrections (2026-09-16)
+
+Architecture approved; these are the trust-critical fixes applied on top. Still
+not merged, not deployed, not indexed, not in the nav.
+
+### 1. The market-price gate now defers to CLV-001
+
+The previous cut counted legacy `closing_odds` pairs and rendered **"46 of
+100"** as progress. That was Proof Center inventing its own CLV rule, which it
+has no standing to do.
+
+- `GATES.clv` is now a **deferred** gate: `deferred: true`, `authority:
+  'CLV-001'`, **no `minObservations`, no `unit`, nothing countable**.
+- `evaluateGate` ignores `have` entirely for a deferred gate. No number reaches
+  it, and there is a test over `0 … Number.MAX_SAFE_INTEGER` and `Infinity`
+  confirming none of them opens it.
+- **`clvPairCount()` was deleted, not left unused.** A helper that computes the
+  wrong thing is a helper someone re-wires.
+- The panel renders **no figure, no count and no progress bar** — a test asserts
+  no `.prog` element exists inside `#marketGate`.
+- The shipped sentence is the agreed one, verbatim: *"Prospective market-price
+  validation is collecting. No CLV figure is publication-approved yet."*
+- **Integration path, without implementing any CLV rule.** `evaluateGate('clv',
+  null, authority)` opens only when `authority.publication_approved === true`
+  **and** `authority.authority === 'CLV-001'`. Ten malformed authority objects
+  are tested and all fail closed. Even when approved, `showValue` stays `false`
+  — surfacing a figure is a separate reviewed change, not something this branch
+  can switch on.
+
+CLV-001 does not exist in this repository yet (`grep` finds nothing, and
+`research/registry.json` holds only DUR-001, DUR-002 and PROP-0001), so today the
+gate is simply shut with no authority available.
+
+### 2. False immutability claims removed
+
+Every absolute claim is gone — *"rows are locked"*, *"can never be edited
+afterwards"*, *"the row is never edited again"*, *"once written, a pick cannot be
+changed or deleted"*. The page now tells the true version:
+
+- the working tables are ordinary tables and we could edit them;
+- for covered cards a copy is frozen into `pre_fight_snapshots`, which **is**
+  trigger-sealed against UPDATE and DELETE for every role;
+- this page re-compares the working row to that sealed copy in front of the
+  reader — **67 of 67 still match** on fighter and percentage;
+- the **84 live calls with no sealed copy are reported as uncovered**, never as
+  passing. The audit verdict reads `67 of 67 still match · 84 not covered`.
+
+The existing disclosure row was not weakened; the rest of the page was brought
+into line with it.
+
+### 3. Timing is graded, not asserted
+
+`timestampAudit()` is replaced by `timingEvidence()`, which sorts every live call
+into exactly one of four levels and never rounds upward:
+
+| Grade | Count | What it means |
+|---|---|---|
+| Sealed before the card | **54** | Sealed copy exists, still matches, and was taken on an **earlier calendar day** than the card |
+| Dated before the card | **70** | Posted on an earlier day, on our own timestamp |
+| Same-day timestamp | **27** | Timestamped on the card's own day — cannot place it before the first bell |
+| Timing unverified | **0** | No usable timestamp, or one dated after the card |
+
+Verified against SQL: `54 / 70 / 27 / 0`, summing to 151.
+
+The old answer *"Yes — all 151 timestamped, none after its card"* is gone. The
+page now reads *"54 sealed, 70 dated ahead — 27 only same-day"*, there is a
+dedicated `#timing` section, and **every archive row carries its own grade**.
+
+**On reviewing `pre_fight_snapshots` itself, as instructed:** a snapshot is
+*not* automatically timing evidence. Checked against the table — **13 of its 67
+rows were taken on the card's own day.** Those are graded down to `same-day`
+like any other row rather than riding the sealed label, and an audit row states
+outright that *"a sealed copy is not by itself proof of timing"*. Two tests pin
+this: a same-day seal must never produce the sealed grade, and a same-day
+timestamp must never produce a verified verdict at any hour of the day.
+
+If an authoritative per-fight cutoff ever arrives, `timingEvidence` is where
+same-day rows get upgraded. Nothing invents one now.
+
+### 4. "CFL cannot change the rules" replaced
+
+The seven-questions answer now reads **"Rules can change — but only versioned
+and dated, never backwards"**, with a matching step in the method section and an
+audit row: changes are versioned and dated, results stay tied to the rules they
+were scored under, nothing already graded is re-graded under a friendlier rule,
+and a threshold is never moved after anyone has seen what it gates.
+
+### 5. Scope tightened
+
+*"every prediction in our database"* is gone. The page is now *"the main
+engine's fight calls"*, with a scope panel in the header naming the four things
+it reads and stating that the fight-duration and prop models run under their own
+protocols with their own records, none of which appear here or are counted in
+anything above. An audit row repeats it: *"This page does not speak for the rest
+of the lab."*
+
+### Preserved, as required
+
+Live/replay separation, losses at equal prominence, replay rows never receiving a
+publication timestamp, flat-$100 P&L, fail-closed load, no CTA, `noindex`,
+read-only access, no model/research/CLV/ingestion/odds-capture change, no paid
+services. All still covered by tests.
+
+---
+
+## Revision 2 — tests
+
+```
+$ node tests/proof-gates.test.js
+  36 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  17 passed — shipped copy matches what the data actually supports.
+```
+
+`tests/proof-copy.test.js` is new. It reads the shipped strings from
+`proof.html` **and** `proof-gates.js` (both hold user-facing copy), strips the
+stylesheet and all code comments so a comment explaining a forbidden claim
+cannot trip its own test, and strips markup before substring checks.
+
+The five required regressions, and where they live:
+
+| # | Requirement | Test |
+|---|---|---|
+| 1 | Same-day timestamp can never produce a "verified pre-fight" verdict | `proof-gates`: *a same-day timestamp can NEVER produce a verified pre-fight verdict*, *a same-day SEALED copy is still graded same-day* |
+| 2 | Legacy `closing_odds` count can never open the CLV-001 gate | `proof-gates`: *no count, however large, can open the CLV gate*, *the legacy closing-odds counter is gone, not merely unused*, *only the owning protocol can open a deferred gate* |
+| 3 | No rendered copy claims `model_picks`/`model_edges` are immutable | `proof-copy`: *no copy claims a posted row can never be edited*, *the page states outright that the source tables are not locked* |
+| 4 | Methodology described as versioned, not impossible | `proof-copy`: *the rules question is not answered "No"*, *methodology change is described as versioned and dated* |
+| 5 | Scope claims only what it queries | `proof-copy`: *the page does not claim to hold every prediction CFL has made*, *the page names its scope and what it excludes* |
+
+**Both suites verified to bite.** Re-introducing `"No — rows are locked"` fails 2
+copy tests; restoring the old `"every prediction in our database"` claim fails
+the scope test; lowering a gate floor fails the gate tests. The markup-stripping
+step was added *because* the first version of the scope test could be evaded by
+splitting the phrase with an inline `<strong>`.
+
+Re-rendered headless against the real rows at 1360px and 390px: no page errors,
+no horizontal overflow, per-row grades spot-checked (a Sep 12 call with a
+day-before snapshot renders **Sealed**; a Sep 26 call with no snapshot yet
+renders **Dated**; UFC 330 calls, whose snapshots were taken on card day, render
+**Dated** rather than Sealed).
+
+---
+
+## Revision 2 — files changed
+
+```
+edit   proof.html                    scope, timing section, deferred gate, audit rows, per-row grades
+edit   proof-gates.js                clv deferred to CLV-001; clvPairCount deleted;
+                                     timestampAudit -> timingEvidence/timingLevel/timingCopy
+edit   tests/proof-gates.test.js     36 assertions (was 33)
+new    tests/proof-copy.test.js      17 assertions on shipped copy
+edit   PROOF_CENTER.md               this section
+```
+
+`track-record.html` is unchanged from revision 1 (+1 link line). No frozen file,
+no migration, no engine file, no shared script, no stylesheet.
+
+---
+
+## Revision 2 — one thing outside this branch that Reed should see
+
+`track-record.html` — a **live, shipped page** — currently says of live picks:
+*"added once, never revised"*, and its pledge box says picks are *"added once,
+never revised"* again. By the same check that caught the Proof Center claim,
+that is not enforced by the database on `model_picks`.
+
+I did not edit it. It is outside this branch's stated scope, it is live to real
+users, and quietly rewording a shipped trust claim is exactly the kind of change
+that should be a decision rather than a drive-by. **It should be corrected, and
+I can do it in a follow-up on your word.**
+
+---
+
+## Revision 2 — next action for ChatGPT
+
+1. **`proof-gates.js` `GATES.clv` and `evaluateGate`.** Is there any argument
+   shape that opens the deferred gate other than a genuine CLV-001 approval? Is
+   `showValue` reachable as `true` for it?
+2. **`timingEvidence`.** Do the four grades partition every live row exactly
+   once, under every combination of missing snapshot, missing timestamp,
+   non-matching snapshot and same-day snapshot? Can any path grade a row *up*?
+3. **`tests/proof-copy.test.js`.** It asserts on strings, which is brittle by
+   nature — is there a rewording that would restore a false claim while keeping
+   all 17 green?
+4. **The audit table's nine rows** against the database, not against the
+   migration files. That distinction is what caught the immutability bug.
+5. **Do not merge, deploy, index, or add to the nav.**
