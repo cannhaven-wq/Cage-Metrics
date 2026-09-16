@@ -285,10 +285,29 @@
       ],
       "lock_script": {
         "path": "cfl_engine/dur002/lock_prop0002.py",
-        "exists": false,
-        "note": "Not yet written. A mechanical port of the v1 lock path with calibrated=False and MODEL_VERSION='PROP-0001@v2'; contains no modelling decisions. Until it exists DUR-002 is frozen but collecting nothing."
+        "exists": true,
+        "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+        "written": "2026-09-16",
+        "frozen": false,
+        "freezes_at_first_collection": true,
+        "role": "Operational implementation of the already-frozen DUR-002 specification. Contains no modelling decisions. A thin wrapper: PITWorld, fit_prop0001, serve_fight, build_lock_rows, the loaders and the threshold mapping are all imported from the frozen lock_prop0001.py, which is neither modified nor copied. The only behavioural difference is model.iso_ = None, so every prediction is the raw hazard.",
+        "conformance_tests": "cfl_engine/dur002/test_lock_prop0002.py",
+        "guards": [
+          "MODEL_VERSION hard-coded to PROP-0001@v2; assert_v2_only aborts the run on any row carrying another version, checked twice including immediately before the insert",
+          "never updates, replaces or regrades a v1 row; no UPDATE or DELETE is ever attempted",
+          "refuses to write from a dirty working tree (git status --porcelain, so untracked files count) unless --allow-dirty, which records the tree-state hash on every row",
+          "every row records lock_prop0002.py's own sha256 in notes, so the implementation behind any v2 forecast is identifiable from the row alone"
+        ],
+        "note": "Section 0.3 of the frozen preregistration says this script does not exist. That is a true statement about the state AT FREEZE and is deliberately not updated - the preregistration is not altered to reflect a file created after it was frozen. Current state lives here."
       },
-      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration."
+      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration.",
+      "first_collection": {
+        "status": "not started",
+        "first_v2_lock_at": null,
+        "first_v2_lock_commit": null,
+        "procedure": "When the first PROP-0001@v2 row lands in prop_model_locks: record the timestamp and the commit of lock_prop0002.py here, move the script into DUR-002's frozen_files, and set lock_script.frozen = true. From that point a substantive change to it requires an amendment or a new model version.",
+        "expected_via": ".github/workflows/prop-locks.yml, daily 11:00 UTC, as a separate step after the v1 lock step"
+      }
     }
   ]
 }

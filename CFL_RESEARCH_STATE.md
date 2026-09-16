@@ -203,16 +203,37 @@ version** it tests. Not interchangeable, and never used as synonyms.
 5. **Permanent separation from `PROP-0001@v1`** — no retroactive regrading, no
    replacement of v1 probabilities, no migration of v1 rows.
 
-### Not yet collecting
+### The lock path
 
-`PROP-0001@v2` has **no lock script**. `lock_prop0001.py` is frozen and writes
-v1 only. A v2 script belongs at `cfl_engine/dur002/lock_prop0002.py` and is a
-mechanical port carrying no modelling decisions — every such decision is already
-fixed by the preregistration.
+[`cfl_engine/dur002/lock_prop0002.py`](cfl_engine/dur002/lock_prop0002.py),
+written 2026-09-16, sha256 `92d28d86…`. **Implementation only — it contains no
+modelling decisions**; every one was fixed by the freeze.
 
-Until it exists DUR-002 is frozen but collecting nothing. The freeze is still
-what matters: it fixes the specification before any v2 observation exists, and
-that property cannot be recovered later.
+It is a thin wrapper: `PITWorld`, `fit_prop0001`, `serve_fight`,
+`build_lock_rows`, the loaders and the threshold mapping are all imported from
+the frozen `lock_prop0001.py`, which is neither modified nor copied. The only
+behavioural difference is one line — `model.iso_ = None` — so every prediction
+is the raw hazard.
+
+24 conformance tests in
+[`test_lock_prop0002.py`](cfl_engine/dur002/test_lock_prop0002.py) prove v2's
+probability equals the raw pre-calibration probability of the existing pipeline
+for the same input, at hazard, distribution and threshold level, with exact
+equality. Each is paired with a check that the isotonic map being bypassed is
+non-trivial, so they cannot pass vacuously.
+
+Wired into `.github/workflows/prop-locks.yml` as a **separate step after** the
+v1 lock, never instead of it — a v2 failure must not cost the v1 lock.
+
+**Status: not yet collecting.** The first `PROP-0001@v2` row lands on the next
+scheduled run. When it does, record its timestamp and commit in
+`research/registry.json`, move the script into DUR-002's frozen files, and set
+`lock_script.frozen = true`; from then a substantive change needs an amendment
+or a new model version.
+
+Note §0.3 of the frozen preregistration says this script does not exist. That is
+true **of the state at freeze** and is deliberately not updated — the
+preregistration is not altered to reflect a file created after it was frozen.
 
 ### Why v2 is specified this way
 

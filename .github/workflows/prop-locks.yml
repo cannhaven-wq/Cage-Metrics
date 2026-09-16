@@ -1,4 +1,4 @@
-name: DUR-001 — lock PROP-0001 duration predictions
+name: DUR-001 / DUR-002 — lock PROP-0001 duration predictions
 
 # Writes immutable PROP-0001 prediction locks (prop_model_locks) for every
 # eligible 3-round fight on any card in the next 8 days. First lock wins:
@@ -47,5 +47,28 @@ jobs:
             exit 1
           fi
 
-      - name: Lock PROP-0001 for the next 8 days of cards
+      - name: Lock PROP-0001@v1 for the next 8 days of cards (DUR-001)
         run: python cfl_engine/dur001/lock_prop0001.py --within-days 8 --execute
+
+      # DUR-002: the same fights locked under PROP-0001@v2, the uncalibrated
+      # hazard. Specification frozen 2026-09-16T01:03:45Z, before this step
+      # existed and before any v2 prediction was made.
+      #
+      # Runs as a SEPARATE step after v1, never instead of it. The two versions
+      # coexist in prop_model_locks under different model_version values and are
+      # never merged, reconciled or substituted for one another. v2 failing must
+      # not cost us the v1 lock, which is why it does not share a step.
+      #
+      # continue-on-error is deliberate in the other direction too: a v2 failure
+      # is surfaced (the job is marked failed by the check below) but only after
+      # v1 has already been written.
+      - name: Lock PROP-0001@v2 for the next 8 days of cards (DUR-002)
+        id: lock_v2
+        continue-on-error: true
+        run: python cfl_engine/dur002/lock_prop0002.py --within-days 8 --execute
+
+      - name: Surface a v2 failure without having blocked v1
+        if: steps.lock_v2.outcome == 'failure'
+        run: |
+          echo "::error::PROP-0001@v2 locking failed; PROP-0001@v1 locks were written first."
+          exit 1
