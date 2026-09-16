@@ -621,3 +621,110 @@ All still covered by tests.
 **Still outstanding and outside this branch:** `track-record.html` is live and
 says of live picks *"added once, never revised"*, which the same check shows is
 not enforced on `model_picks`. Awaiting your word to fix it in a follow-up.
+
+---
+
+## Revision 4 — `track-record.html` brought in line (2026-09-16)
+
+Proof Center approved. This revision fixes the adjacent page so it stops
+contradicting the evidence model. **Copy consistency only** — no calculation,
+query, model, styling, methodology or CLV behaviour was touched. Verified: the
+diff contains no changed line matching `const|let|=>|function|filter(|map(|
+reduce(|.from(|select(|querySelector`. 25 insertions, 21 deletions, all strings
+plus one explanatory comment.
+
+### What was claimed, and what it is now
+
+| Was | Now |
+|---|---|
+| *"added once, never revised"* (pledge, ×2 in JS) | *"recorded with a timestamp… never re-run or re-priced"* |
+| *"added once, never edited"* (archive banner) | *"recorded with a timestamp dated on or before the card"* |
+| *"Locked before the bell — our real pre-fight record"* (h2) | *"The live record — our prospective calls, graded"* |
+| *"Every pick below was saved with a timestamp before the card started"* | *"Every call below was recorded with a timestamp as its card approached… how strongly each row's timing can be proved varies"* |
+| *"Live · locked before fight night"* (banner) | *"Live · prospective record"* |
+| *"picks were locked live: written to the database before fight night"* | *"come from the live feed: recorded with a timestamp as each card approached"* |
+| *"bets were locked live before fight night and added once, never re-priced"* | *"come from the live feed, priced as each card approached and never re-priced"* |
+| *"models with locked-before-the-fight picks"* | *"models with calls on the live feed"* |
+| *"The one genuinely locked-before-the-bell record…"* | *"The one genuinely prospective record…"* |
+| *"not picks locked before fights"* | *"not calls published as a card approached"* |
+| *"Complete pre-fight record"*, *"the pre-fight record is being rebuilt"* | *"Complete live record"*, *"the live record is being rebuilt"* |
+
+Every rewritten passage now uses the Proof Center framing — live/prospective
+record, calls recorded with timestamps, timing evidence varies by row, sealed
+copies exist for part of the record — and points at `proof.html` for the
+row-level grades. Three links to the Proof Center now exist on the page.
+
+### One thing found while doing it, and NOT changed
+
+The legacy archive banner splits live from simulated with:
+
+```js
+const liveRows = picks.filter(r => r.created_at && r.created_at.slice(0, 10) <= r.event_date);
+```
+
+That is a comparison against the card's **date**, so it includes same-day rows —
+the exact conflation Proof Center corrected. Calculations were explicitly out of
+scope, so **the filter is untouched**. Instead:
+
+- the copy beside it now says so outright: *"That date includes same-day rows,
+  so it is not by itself proof a given call beat the first bell"*, with a link
+  to the Proof Center;
+- a comment above the filter records what it does and does not establish;
+- a test asserts that disclosure cannot be removed.
+
+**This is worth a decision separately from this branch.** The honest options are
+to leave it (a dataset split, now labelled as one) or to grade it the way
+`timingEvidence` does. I have not assumed either.
+
+### Revision 4 — tests
+
+```
+$ node tests/proof-gates.test.js
+  40 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  24 passed — shipped copy matches what the data actually supports.
+```
+
+Four new tests in `proof-copy`, scanning `track-record.html`:
+
+- *track-record.html does not claim rows are written once and never revised* —
+  five banned phrasings;
+- *track-record.html makes no wholesale pre-bell claim* — nine banned phrasings
+  including *"locked before the bell"*, *"locked live"*, *"our real pre-fight
+  record"*;
+- *track-record.html uses the same framing and points at the row-level grades*;
+- *the same-day banner split on track-record.html is described honestly*.
+
+**A hole in my own test, found and fixed.** The presence checks originally ran
+against the raw file, so a **code comment satisfied them** — dropping the
+same-day disclosure from the visible copy still passed. The scanner now keeps
+three views of the file: markup (for `href` checks), text (tags stripped — where
+prose must be proved), and lowercased text (for banned phrases). That is the
+same failure mode these tests exist to catch, so it is worth naming.
+
+All four verified to bite: reinstating *"added once, never revised"*, reinstating
+the *"Locked before the bell"* heading, deleting the same-day disclosure, and
+removing the Proof Center link each fail their test.
+
+Re-rendered `track-record.html` headless: no page errors, all sections render,
+counts unchanged (the numbers come from untouched code).
+
+### Revision 4 — files changed
+
+```
+edit   track-record.html             copy only + one explanatory comment (25 ins, 21 del)
+edit   tests/proof-copy.test.js      24 assertions (was 20); three-view scanner
+edit   PROOF_CENTER.md               this section
+```
+
+`proof.html` and `proof-gates.js` unchanged this revision.
+
+### Revision 4 — next action for ChatGPT
+
+1. Read the rewritten `track-record.html` strings against the data: does any
+   surviving sentence claim more than a timestamp plus a partial sealed copy
+   supports?
+2. Decide on the `created_at <= event_date` banner filter — leave it as a
+   labelled dataset split, or grade it like `timingEvidence`. Out of scope here.
+3. Do not deploy.

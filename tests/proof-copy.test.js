@@ -32,6 +32,22 @@ const strip = src => src
   .replace(/\s+/g, ' ');
 const COPY = strip(RAW) + ' ' + strip(read('proof-gates.js'));
 
+// track-record.html is the adjacent summary page. It is not the Proof Center,
+// but it describes the SAME rows, so a timing claim it makes that the data
+// cannot support contradicts everything above. Scanned separately so its
+// findings name the right file.
+const TRACK_RAW = read('track-record.html');
+// Three views, because they answer different questions:
+//   MARKUP — comments gone, tags kept: for attribute checks such as an href.
+//   TEXT   — tags gone too: the actual prose a reader sees. Presence of a claim
+//            must be proved HERE, never in the raw source — an earlier version
+//            of this file was satisfied by a code comment, which is the whole
+//            failure mode these tests exist to catch.
+//   LOWER  — TEXT lowercased, for banned-phrase matching.
+const TRACK_MARKUP = strip(TRACK_RAW);
+const TRACK_TEXT = TRACK_MARKUP.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+const TRACK = TRACK_TEXT.toLowerCase();
+
 // Banned-phrase checks run against copy with the MARKUP REMOVED. A claim split
 // by an inline <strong> is the same claim to a reader, and an earlier version of
 // this file could be evaded by exactly that.
@@ -223,6 +239,70 @@ t('the page is still noindex', function () {
 
 t('replay rows still never get a publication timestamp', function () {
   present(/re-run, not posted/, 'the replay timestamp placeholder');
+});
+
+// ------------------- track-record.html must not contradict this page --------
+// REGRESSION. track-record.html shipped "added once, never revised" and "Locked
+// before the bell — our real pre-fight record" while describing rows in tables
+// that carry no such guarantee, and while splitting live-vs-simulated on a date
+// comparison that includes same-day rows. Neither claim may come back.
+
+function trackAbsent(phrase, why) {
+  if (TRACK.indexOf(phrase.toLowerCase()) !== -1) {
+    throw new Error('track-record.html must not contain ' + JSON.stringify(phrase) + ' — ' + why);
+  }
+}
+// Prose the reader actually sees.
+function trackPresent(re, why) {
+  if (!re.test(TRACK_TEXT)) throw new Error('track-record.html is missing: ' + why);
+}
+// Markup-level, for links and attributes that tag-stripping would eat.
+function trackLinks(re, why) {
+  if (!re.test(TRACK_MARKUP)) throw new Error('track-record.html is missing: ' + why);
+}
+
+t('track-record.html does not claim rows are written once and never revised', function () {
+  [
+    'added once, never revised',
+    'added once, never edited',
+    'added once, never re-priced',
+    'never revised',
+    'never edited',
+  ].forEach(function (p) {
+    trackAbsent(p, 'model_picks and model_edges carry no append-only guarantee');
+  });
+});
+
+t('track-record.html makes no wholesale pre-bell claim', function () {
+  [
+    'locked before the bell',
+    'locked-before-the-bell',
+    'locked before fight night',
+    'locked-before-the-fight',
+    'locked live',
+    'before the card started',
+    'written to the database before the event',
+    'written to the database before fight night',
+    'our real pre-fight record',
+  ].forEach(function (p) {
+    trackAbsent(p, 'the live bucket is a dataset, not a per-row timing proof');
+  });
+});
+
+t('track-record.html uses the same framing and points at the row-level grades', function () {
+  trackPresent(/prospective/i, 'the live record described as prospective');
+  trackPresent(/recorded with a timestamp|recorded with timestamps/i,
+               'calls described as recorded with timestamps rather than proven pre-bell');
+  trackPresent(/graded (row by row|per row|each row)|grades each row|varies/i,
+               'a statement that timing evidence varies by row');
+  trackLinks(/href="proof\.html"/, 'a link to the Proof Center for the row-level grades');
+});
+
+t('the same-day banner split on track-record.html is described honestly', function () {
+  // The split itself is a date comparison that includes same-day rows. The copy
+  // beside it must say so rather than imply the rows beat the first bell.
+  trackPresent(/includes same-day rows/i,
+               'a disclosure that the live/simulated split includes same-day rows');
 });
 
 // ------------------------------------------------------------------- report
