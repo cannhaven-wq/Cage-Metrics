@@ -242,8 +242,30 @@ t('the no-CTA rule still holds on the proof page', function () {
   });
 });
 
-t('the page is still noindex', function () {
-  present(/<meta name="robots" content="noindex, nofollow">/, 'the noindex directive');
+t('the page is indexable, and every description tag agrees on its scope', function () {
+  // Was noindex while the branch was unreviewed. Now published, so the check
+  // flips: an accidental noindex would silently delist the trust page.
+  if (/content="noindex/i.test(RAW)) throw new Error('proof.html is noindex — it is meant to be published');
+  present(/<meta name="robots" content="index, follow/, 'an explicit index directive');
+  present(/<link rel="canonical" href="https:\/\/cannonfightlab\.com\/proof\.html">/, 'the canonical URL');
+  const tags = RAW.match(/<meta [^>]*(?:name="description"|property="og:description"|name="twitter:description")[^>]*>/g) || [];
+  if (tags.length < 3) throw new Error('expected description, og:description and twitter:description — found ' + tags.length);
+  tags.forEach(function (tag) {
+    if (!/main[- ]engine/i.test(tag)) throw new Error('a description tag overstates the page scope: ' + tag);
+  });
+});
+
+t('proof.html is in the sitemap and in the generator that rebuilds it', function () {
+  // The sitemap is regenerated every 6 hours, so a hand-added entry alone would
+  // be wiped. Both have to carry it.
+  const map = read('sitemap.xml');
+  if (map.indexOf('https://cannonfightlab.com/proof.html') === -1) {
+    throw new Error('proof.html is missing from sitemap.xml');
+  }
+  const gen = read('build/prerender.js');
+  if (!/\{\s*loc:\s*'\/proof\.html'/.test(gen)) {
+    throw new Error("proof.html is missing from build/prerender.js staticPages — the next cron run would drop it from the sitemap");
+  }
 });
 
 t('replay rows still never get a publication timestamp', function () {

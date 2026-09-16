@@ -886,3 +886,47 @@ Merging as-is ships a working, linked-from-`track-record` Proof Center that
 search engines are told to ignore. That is a safe state, not a broken one — but
 it is probably not the intended end state, so it is worth one explicit decision
 rather than an assumption.
+
+---
+
+## Revision 7 — publish (option 1: index, sitemap, no nav change)
+
+| Item | Done |
+|---|---|
+| `proof.html` robots | `noindex, nofollow` → **`index, follow, max-image-preview:large`** |
+| Social tags | Added OG + Twitter card. The page had none — fine while `noindex`, but it is the most shareable page on the site, and without them a shared link unfurls bare. Matches the site's existing tag block. |
+| `sitemap.xml` | `/proof.html` added at priority 0.8, weekly, immediately after `track-record.html` |
+| `build/prerender.js` | `/proof.html` added to `staticPages` |
+| Nav | **Unchanged**, as instructed. Reachable from two links on `track-record.html`, plus search. |
+
+**The generator edit is the load-bearing half.** `sitemap.xml` is rebuilt from
+`build/prerender.js` every 6 hours by `.github/workflows/prerender.yml`, so a
+hand-added entry alone would have been silently deleted on the next cron run. A
+test now asserts both carry it.
+
+`SEO_PER_PAGE.md` was also updated. It is the file people copy meta tags *from*,
+and its `track-record.html` entry still contained *"Every pick locked before the
+event"*, *"never edited"* and *"the live record starts July 2026"* — the exact
+claims this branch removed. Left stale, it would have re-seeded them. It now
+carries the corrected tags, a `proof.html` entry, and a note on each saying which
+wording is test-enforced and why.
+
+### Revision 7 — tests
+
+```
+$ node tests/proof-gates.test.js
+  40 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  31 passed — shipped copy matches what the data actually supports.
+```
+
+The `the page is still noindex` test was **inverted rather than deleted** — it
+now fails if `proof.html` ever goes `noindex` again, which would silently delist
+the trust page, and it checks the canonical plus all three description tags for
+the main-engine scope. A second new test covers sitemap + generator. Both
+verified to bite: dropping `/proof.html` from `staticPages` fails one; restoring
+`noindex` fails the other.
+
+Re-rendered: `index, follow, max-image-preview:large`, OG tags present, timing
+grades unchanged at 54 / 70 / 27 / 0, no page errors.
