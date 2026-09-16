@@ -38,7 +38,13 @@ STATUSES = ("draft", "under-review", "frozen")
 LEVELS = {"L0", "L1", "L2", "L3"}
 
 # | Q-01 | what "closing line" means | L2 |   (level may be bolded)
-Q_ROW = re.compile(r"^\|\s*(Q-\d{2})\s*\|\s*(.+?)\s*\|\s*\*{0,2}(L[0-3])\*{0,2}\s*\|\s*$")
+# The §8 row is `| Q-nn | question | level |`, optionally followed by one more
+# cell carrying review status. The trailing cell is tolerated but NOT captured:
+# the level group stays anchored to the third column, so a row that loses its
+# level or gains a column in the wrong place still fails to parse rather than
+# being silently skipped — a skipped row is invisible to the agreement check.
+Q_ROW = re.compile(
+    r"^\|\s*(Q-\d{2})\s*\|\s*(.+?)\s*\|\s*\*{0,2}(L[0-3])\*{0,2}\s*\|(?:[^|]*\|)?\s*$")
 # ### R-01 — Raw capture is immediate...
 R_HEAD = re.compile(r"^###\s+(R-\d{2})\s")
 
@@ -253,3 +259,104 @@ class TestCaptureRequirements(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestReviewCoverage(unittest.TestCase):
+    """The audit of what the external review actually answered.
+
+    A review that comes back short is normal. A review recorded as if it had
+    answered everything is not, and the failure mode is silent: a question with
+    no resolution and no flag reads exactly like a question nobody has got to
+    yet. These tests keep the audit honest against the questions themselves.
+    """
+
+    def _audit(self):
+        return doc().get("review_coverage_audit") or {}
+
+    def test_audit_exists(self):
+        self.assertTrue(self._audit(), "protocol.json records no review_coverage_audit")
+
+    def test_outstanding_questions_are_still_open(self):
+        """Anything the audit lists as unaddressed must not be marked resolved."""
+        audit = self._audit()
+        outstanding = set(audit.get("l2_outstanding", []) + audit.get("l3_outstanding", []))
+        for q in doc()["open_questions"]:
+            if q["id"] not in outstanding:
+                continue
+            with self.subTest(question=q["id"]):
+                self.assertEqual(
+                    q.get("status"), "open",
+                    f"{q['id']} is listed as unaddressed by the review but is marked "
+                    f"{q.get('status')!r}",
+                )
+
+    def test_outstanding_questions_say_so_on_themselves(self):
+        """The flag lives on the question too, not only in the summary — whoever
+        reads a single question must see that silence was not agreement."""
+        audit = self._audit()
+        for qid in audit.get("l2_outstanding", []) + audit.get("l3_outstanding", []):
+            q = next(x for x in doc()["open_questions"] if x["id"] == qid)
+            with self.subTest(question=qid):
+                self.assertIn(
+                    "NOT ADDRESSED", (q.get("review_coverage") or "").upper(),
+                    f"{qid} is outstanding in the audit but carries no "
+                    f"review_coverage note",
+                )
+
+    def test_audit_counts_match_the_questions(self):
+        audit = self._audit()
+        levels = {}
+        for q in doc()["open_questions"]:
+            levels.setdefault(q["level"], []).append(q["id"])
+        # questions raised BY the revision were never part of the review's remit
+        raised_later = {q["id"] for q in doc()["open_questions"] if q.get("raised_by")}
+        for lvl, asked_key, out_key in (("L2", "l2_asked", "l2_outstanding"),
+                                        ("L3", "l3_asked", "l3_outstanding")):
+            with self.subTest(level=lvl):
+                in_remit = [i for i in levels.get(lvl, []) if i not in raised_later]
+                self.assertEqual(
+                    audit.get(asked_key), len(in_remit),
+                    f"audit says {audit.get(asked_key)} {lvl} questions were asked, "
+                    f"but {len(in_remit)} were in the review's remit: {in_remit}",
+                )
+                self.assertTrue(set(audit.get(out_key, [])) <= set(in_remit))
+
+    def test_a_resolved_question_names_who_resolved_it(self):
+        for q in doc()["open_questions"]:
+            if q.get("status") != "resolved":
+                continue
+            with self.subTest(question=q["id"]):
+                self.assertTrue((q.get("resolution") or "").strip(),
+                                f"{q['id']} is resolved but records no resolution")
+                self.assertTrue((q.get("resolved_by") or "").strip(),
+                                f"{q['id']} is resolved but records no resolver")
+
+
+class TestPrimaryDefinition(unittest.TestCase):
+    """The headline measure. A protocol whose primary number is implicit is a
+    protocol that will acquire one by accident."""
+
+    def _pd(self):
+        return doc().get("primary_definition") or {}
+
+    def test_primary_definition_exists_and_is_not_frozen(self):
+        pd = self._pd()
+        self.assertTrue(pd.get("formula", "").strip())
+        self.assertIn("proposed", pd.get("status", ""),
+                      "the primary definition must not claim frozen status while the "
+                      "protocol is a draft")
+
+    def test_the_two_sides_are_treated_differently_and_say_so(self):
+        """Vigged at publish, de-vigged at close. If this ever collapses into one
+        treatment the measure silently changes meaning."""
+        pd = self._pd()
+        self.assertIn("posted", pd.get("publish_side", "").lower())
+        self.assertIn("de-vig", pd.get("closing_side", "").lower())
+
+    def test_the_conservative_asymmetry_is_recorded(self):
+        self.assertTrue((self._pd().get("conservative_by_construction") or "").strip(),
+                        "the vigged-publish asymmetry must be stated, or the figure "
+                        "will eventually be described as fair-versus-fair")
+
+    def test_blocking_dependency_is_named(self):
+        self.assertIn("close", (self._pd().get("blocking_dependency") or "").lower())

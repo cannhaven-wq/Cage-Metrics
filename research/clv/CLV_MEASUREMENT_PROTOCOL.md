@@ -6,9 +6,11 @@ draft.**
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `0.1.0-draft` |
+| version | `0.2.0-draft` |
+| revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
+| next action | **second-pass ChatGPT review.** Reed does not see the L3 set before it |
 | frozen at | — |
 | frozen by | — |
 | machine mirror | [`protocol.json`](protocol.json) |
@@ -88,6 +90,46 @@ So, binding for the draft period:
 ---
 
 ## 1. What is being measured
+
+> **Revised 2026-09-16 (v0.2.0-draft)** against
+> [ChatGPT's methodological review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).
+> The primary measure below replaces raw implied-probability movement. The
+> `clv_pp` construction that follows it is retained because it is what
+> `settle_clv.py` ships today and what the stored rows mean — it is now a
+> secondary descriptive figure, not the headline.
+
+### 1.1 Primary measure — `CLV_return` *(proposed, not frozen)*
+
+```
+CLV_return = closing_fair_probability × decimal_odds_at_publish − 1
+```
+
+Read it as: **the expected return per unit staked at the price CFL actually
+posted, evaluated against the market's de-vigged closing fair probability.** It
+answers the economically meaningful question — was the price CFL posted better
+than the later fair closing market?
+
+| side | treatment |
+|---|---|
+| **publish** | the **actual posted price**, vigged, exactly as a bettor would take it. Never de-vigged. |
+| **close** | **de-vigged fair probability**, which requires both sides at close |
+
+**It is conservative by construction, and that must be said out loud.** Because
+the publish side keeps the book's margin, the bar is *fair closing probability >
+**vigged** implied probability at publish*. So `CLV_return = 0` does not mean
+"no edge either way" — it means CFL obtained exactly fair closing value *after
+paying the posted price*. This figure may never be described as though it were a
+fair-versus-fair comparison.
+
+**Blocking dependency, and it is not the one v0.1.0 recorded.** The draft said
+de-vig was blocked until two-sided capture existed *at publish*. Under
+`CLV_return` the publish side is used as posted and is never de-vigged, so what
+is required is two-sided capture **at close**. That is a different and more
+achievable blocker, and it is item 2 in §4.
+
+The de-vig method for the closing side is **not yet chosen** — see Q-12.
+
+### 1.2 Secondary measure — `clv_pp`, the shipped construction
 
 For a published pick on a fighter, at a price we could have taken:
 
@@ -242,6 +284,14 @@ published number means.
 
 ### Q-01 — What "closing line" means · proposed **L2**
 
+> **RESOLVED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** Last quote before **scheduled** start, named a
+> **scheduled-close proxy** and never "the closing line". Staleness limit
+> still set from capture cadence.
+>
+> Independently corroborated: `fights.bell_at` is populated on **0 of 8,992**
+> fights, so no row in the database currently supports a literal closing
+> line. The proxy naming is forced by the data, not merely prudent.
+
 | option | definition | cost |
 |---|---|---|
 | **A** | last eligible quote strictly before the **scheduled** card/bout start | scheduled times slip; a delayed card closes early |
@@ -283,6 +333,9 @@ score, and whether that minimum applies per-side.
 
 ### Q-03 — Exchanges and prediction markets · proposed **L2** (**L3** if admitted as primary)
 
+> **RESOLVED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** Exchanges and prediction markets are **excluded from
+> the primary metric**.
+
 Betfair, Polymarket and Kalshi price differently from sportsbooks: commission
 rather than vig, and depth that varies with stake. Including them changes what
 "the market" denotes.
@@ -299,6 +352,11 @@ branch is L3.
 ---
 
 ### Q-04 — How multiple books become one probability · proposed **L2**
+
+> **RESOLVED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** **Median** across eligible sportsbooks stays the
+> primary aggregation. The review was asked to attack the rejection of
+> "best available price" rather than agree with it, and rejected it on the
+> same grounds.
 
 Options: **median across eligible books** (what ships today); **mean**;
 **best available price** (the most favourable to the bet side); **liquidity- or
@@ -318,6 +376,18 @@ argument, and not later.
 ---
 
 ### Q-05 — Vigged or de-vigged · proposed **L3**
+
+> **RECOMMENDATION REPLACED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** **Vigged at publish, de-vigged at
+> close.** This is a **fourth option**, not one of the three below: the
+> posted price is used exactly as posted and only the closing side is
+> de-vigged.
+>
+> The prior recommendation — raw primary, de-vigged sensitivity — is
+> superseded. The review's judgement is that it **deferred** the
+> contradiction rather than resolving it, which is what the handoff asked
+> to be checked.
+>
+> Which de-vig method applies at close is **still unchosen** — see Q-12.
 
 The sharpest methodological question here, and the one where the shipped
 implementation and the rest of the repo point in different directions.
@@ -355,6 +425,14 @@ reason to settle this question early even though publication is far off.
 
 ### Q-06 — Published probability, or hypothetical wager price · proposed **L3**
 
+> **RECOMMENDATION REPLACED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** The bettor's CLV on the **posted
+> price** is the primary and **sole headline** number. Market anticipation
+> of the published probability may still be reported separately and may
+> **never** carry the CLV label.
+>
+> The prior recommendation — "both, reported separately" — is superseded:
+> the review makes the price measure primary rather than co-equal.
+
 Reed's question, and it needs a distinction stated plainly first.
 
 CFL publishes a **probability**. A bettor takes a **price**. These support two
@@ -381,6 +459,11 @@ This is L3 because it decides what the headline number *is*.
 
 ### Q-07 — Aggregation and weighting · proposed **L3**
 
+> **RECOMMENDATION CONFIRMED AND TIGHTENED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** **Equal weight per
+> scored fight.** No Kelly or stake weighting **without a separately frozen
+> staking system** — the weighting may not be invented as part of the
+> scoring.
+
 How per-fight observations become a card number and a lifetime number.
 
 | option | reading |
@@ -406,6 +489,13 @@ event as its cluster unit; using the same unit here keeps the two comparable.
 
 ### Q-08 — Minimum sample before any summary is displayed · proposed **L3**
 
+> **RECOMMENDATION EXTENDED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** Keep the **100 scored-observation
+> floor** and **add a minimum number of distinct events**, so one or two
+> cards cannot dominate the published figure.
+>
+> The event minimum is **not numerically specified** by the review — see
+> Q-13, where the number is the whole content of the rule.
+
 `track-record.html` already promises, in shipped copy: *"these numbers go up
 here once 100+ locked picks have both a posted price and a closing price on
 record."* That is a published commitment, so the protocol either adopts 100 or
@@ -425,6 +515,16 @@ as a finding.
 ---
 
 ### Q-09 — Uncertainty · proposed **L2**
+
+> **RESOLVED — [ChatGPT review, 2026-09-16](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).** The **event-cluster bootstrap is primary**; the Wilson
+> interval on the beat rate is demoted to a secondary descriptive figure.
+>
+> Reason: fights on the same card are correlated, so an interval treating
+> them as independent overstates precision. This matches DUR-001 §8, which
+> already resamples whole events and never individual fights. DUR-001
+> amendment (e) would further gate cluster intervals as descriptive-only
+> below 20 cards — (e) is still **HELD**, so it is a precedent to weigh, not
+> a rule to inherit. See Q-13.
 
 A mean CLV with no interval invites reading noise as edge.
 
@@ -485,20 +585,88 @@ The claim rules, not the computation. Proposed, for review:
 
 ---
 
+### Q-12 — Which de-vig method applies at close · proposed **L2**
+
+*Raised by the revision, not by the review.*
+
+`CLV_return` needs a **de-vigged closing fair probability**, and the review says
+"de-vigged" without naming a method. The repo already has a frozen precedent:
+DUR-001 Amendment 1.1 froze the **power** method as this project's primary
+de-vig, with proportional and Shin as frozen sensitivities.
+
+| option | note |
+|---|---|
+| power, matching DUR-001 Amendment 1.1 | consistent with the house method |
+| proportional | under-prices favourites, over-prices longshots |
+| Shin | leans on an insider-trading interpretation CFL has no evidence for |
+| a CLV-specific method with a stated reason | permitted, but the reason has to exist |
+
+**Recommendation: power**, for consistency, with proportional and Shin as frozen
+sensitivities on the same pattern.
+
+Diverging from the frozen house method needs a reason. Adopting it silently is
+*also* a choice, and one that would be invisible later — which is why this is a
+question rather than an assumption.
+
+---
+
+### Q-13 — Minimum distinct events before a summary displays · proposed **L3**
+
+*Raised by the revision, not by the review.*
+
+**Why L3:** the floor is the number itself. It decides when a public CLV figure
+may appear at all.
+
+The review requires a distinct-event minimum but gives no number. It is also not
+independent of Q-09: an event-cluster bootstrap over very few clusters has
+coverage well below nominal, so the floor and the interval method are **one
+decision, not two**. DUR-001 hit exactly this and proposed 20 completed cards in
+amendment (e), which is still held.
+
+| option | note |
+|---|---|
+| set from the cluster bootstrap's coverage requirement | derived rather than chosen |
+| 20 completed events, matching DUR-001 amendment (e) | consistent, but (e) is not in force |
+| a fixed small floor such as 8 or 10 | a round number with nothing behind it |
+
+**Recommendation:** set it from the bootstrap's coverage rather than picking a
+round number, and report the figure as **descriptive-only** below the floor
+rather than withholding it entirely — withholding invites the question of what
+is being hidden, whereas a labelled descriptive number invites none.
+
+---
+
 ## 4. Raw capture requirements
 
 Binding on the capture path **now**, because these cannot be backfilled:
 
-| requirement | why it cannot wait |
-|---|---|
-| book, fighter, American price, UTC capture instant on every quote | R-02; a quote without them is permanently unscorable |
-| **both sides** captured at the publish instant | Q-05 option B is impossible retroactively |
-| every quote retained raw, append-only | R-01 |
-| capture cadence recorded, including gaps | Q-01b's staleness limit needs to be set from real cadence |
-| provider and feed version stored per quote | provenance; a feed change that shifts timing must be detectable |
+> **Extended 2026-09-16.** Items 7–12 come from the
+> [ChatGPT review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md),
+> which was asked what the list was missing. Item 2 is promoted by the
+> `CLV_return` definition in §1.1 and **replaces** the previous blocker.
+
+| # | requirement | why it cannot wait |
+|---|---|---|
+| 1 | book, fighter, American price, UTC capture instant on every quote | R-02; a quote without them is permanently unscorable |
+| 2 | **both sides captured AT CLOSE** | the primary measure de-vigs the closing side; one-sided closes are unscorable under it |
+| 3 | both sides captured at the publish instant | retained — enables a fair-to-fair sensitivity. **No longer the blocker**: `CLV_return` uses the publish price as posted |
+| 4 | every quote retained raw, append-only | R-01 |
+| 5 | capture cadence recorded, including gaps | Q-01's staleness limit must be set from real cadence |
+| 6 | provider and feed version stored per quote | provenance; a feed change that shifts timing must be detectable |
+| 7 | **scheduled and actual bout-start timing**, wherever available | Q-01 resolved to a *scheduled*-close proxy; only actual start times can ever upgrade it, and `bell_at` is populated on 0 of 8,992 fights today |
+| 8 | **market suspension / takedown status** | a market removed before the bell is a different object from one still quoting; indistinguishable after the fact |
+| 9 | **provider market IDs** | the only stable key when a market is reposted or a fight is rematched |
+| 10 | **opponent identity at quote time** | a late opponent change silently redefines what the quote referred to — Q-10 |
+| 11 | **provider timestamp AND retrieval timestamp, separately** | collapsing them hides feed lag, and feed lag is exactly what a staleness limit is measuring |
+| 12 | **an immutable link from CFL's posted price to the exact source quote** | without it the publish side of `CLV_return` is an assertion rather than a record |
 
 Anything captured without these is not lost — it simply cannot be used for the
 definitions that need them.
+
+Item 12 is the direct analogue of the lesson from the PROP-0001 provenance
+audit: every v1 lock recorded `code_version` as `…-dirty` with no record of what
+dirty was, and the fix was to make each row carry the exact identity of what
+produced it. A posted price with no link to its source quote has the same defect.
 
 ---
 
@@ -550,19 +718,32 @@ amendment records `motivated_by_observed_results: false` — and it must be true
 
 ## 8. Open questions summary
 
-| id | question | level |
-|---|---|---|
-| Q-01 | what "closing line" means (+ staleness limit) | L2 |
-| Q-02 | eligible books and exclusion rules | L2 |
-| Q-03 | exchanges and prediction markets | L2 |
-| Q-04 | how multiple books become one probability | L2 |
-| Q-05 | vigged or de-vigged | **L3** |
-| Q-06 | published probability or hypothetical wager price | **L3** |
-| Q-07 | aggregation and weighting | **L3** |
-| Q-08 | minimum sample before display | **L3** |
-| Q-09 | uncertainty | L2 |
-| Q-10 | cancellation, rescheduling, opponent change | L2 |
-| Q-11 | how positive CLV may be described | **L3** |
+| id | question | level | status after the 2026-09-16 review |
+|---|---|---|---|
+| Q-01 | what "closing line" means (+ staleness limit) | L2 | **resolved** — scheduled-close *proxy*, never "the closing line" |
+| Q-02 | eligible books and exclusion rules | L2 | open — **not addressed by the review** |
+| Q-03 | exchanges and prediction markets | L2 | **resolved** — excluded from the primary |
+| Q-04 | how multiple books become one probability | L2 | **resolved** — median across eligible sportsbooks |
+| Q-05 | vigged or de-vigged | **L3** | recommendation: **vigged at publish, de-vigged at close** (a fourth option) |
+| Q-06 | published probability or hypothetical wager price | **L3** | recommendation: the **posted price** is the sole headline |
+| Q-07 | aggregation and weighting | **L3** | recommendation: equal weight per scored fight; no stake/Kelly weighting |
+| Q-08 | minimum sample before display | **L3** | recommendation: keep 100 **and** add a distinct-event minimum |
+| Q-09 | uncertainty | L2 | **resolved** — event-cluster bootstrap primary, Wilson demoted |
+| Q-10 | cancellation, rescheduling, opponent change | L2 | open — **not addressed by the review** |
+| Q-11 | how positive CLV may be described | **L3** | open — **not addressed by the review** |
+| Q-12 | which de-vig method applies at close | L2 | open — **raised by the revision** |
+| Q-13 | minimum distinct events before a summary displays | **L3** | open — **raised by the revision** |
+
+### Review coverage
+
+The handoff asked for a resolution on all six L2 questions and a recommendation
+on all five L3. **Four of six L2 and four of five L3 came back.** Q-02, Q-10 and
+Q-11 were not addressed and are carried forward — silence is not a resolution.
+
+Q-12 and Q-13 are new, and both are consequences of adopting `CLV_return` rather
+than fresh proposals: the recommendation says "de-vigged" without naming a
+method, and "a minimum number of distinct events" without giving a number. In
+each case the missing part is the whole content of the rule.
 
 ---
 

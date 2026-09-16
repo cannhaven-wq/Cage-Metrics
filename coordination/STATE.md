@@ -5,6 +5,10 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
+**Live baton:** CLV-001 is at **v0.2.0-draft**, revised against ChatGPT's
+review and returned to ChatGPT for a second pass. Reed does not see the L3 set
+until that pass is done.
+
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
 experiment, freeze, hash and verdict, and `tests/test_research_state.py` checks

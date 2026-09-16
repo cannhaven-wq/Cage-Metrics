@@ -4,7 +4,7 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "draft",
-  "version": "0.1.0-draft",
+  "version": "0.2.0-draft",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
   "protocol_sha256": null,
@@ -26,7 +26,7 @@
       "any CLV figure in a post, email or digest",
       "any CLV summary statistic computed from captured quotes"
     ],
-    "not_covered": "Row-level settlement into model_edges.clv_pp continues — it is bookkeeping under the already-shipped convention, not a published result."
+    "not_covered": "Row-level settlement into model_edges.clv_pp continues \u2014 it is bookkeeping under the already-shipped convention, not a published result."
   },
   "results_computed_before_freeze": false,
   "disclosure": "No historical CLV comparison was run while drafting. No alternative definition was evaluated against captured data. Every recommendation rests on argument from principle or precedent, never on which option produced a better number.",
@@ -68,7 +68,7 @@
     },
     {
       "id": "R-08",
-      "title": "Outcome independence — void and no-contest retained and scored; cancelled-before-close excluded, not scored zero",
+      "title": "Outcome independence \u2014 void and no-contest retained and scored; cancelled-before-close excluded, not scored zero",
       "basis": "CLV measures price, not result; scoring zero would pull summaries toward the middle"
     },
     {
@@ -78,17 +78,17 @@
     },
     {
       "id": "R-10",
-      "title": "Publication gate — nothing on a surface until frozen",
+      "title": "Publication gate \u2014 nothing on a surface until frozen",
       "basis": "Reed, 2026-09-16"
     },
     {
       "id": "R-11",
-      "title": "Provenance — a published figure names its protocol version and the script that produced it",
+      "title": "Provenance \u2014 a published figure names its protocol version and the script that produced it",
       "basis": "inherits the research register's standing rule"
     },
     {
       "id": "R-12",
-      "title": "Copy governance — CLV wording follows COPY_STYLE.md",
+      "title": "Copy governance \u2014 CLV wording follows COPY_STYLE.md",
       "basis": "Q-11 fixes substance, COPY_STYLE.md fixes wording"
     }
   ],
@@ -105,7 +105,10 @@
       ],
       "recommendation": "last quote before scheduled start, subject to a staleness limit set from capture cadence",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "last quote before SCHEDULED start, named a 'scheduled-close proxy' and never 'the closing line'. A staleness limit is still set from capture cadence.",
+      "resolved_by": "ChatGPT review 2026-09-16",
+      "note": "Corroborated independently: fights.bell_at is populated on 0 of 8,992 fights, so no row in the database currently supports a literal closing line. The proxy naming is forced by the data, not just prudent."
     },
     {
       "id": "Q-02",
@@ -118,7 +121,8 @@
       ],
       "recommendation": "fixed named list; DUR-001 already forbids selecting books after results are visible, and a fixed list makes that unbreakable rather than merely prohibited",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L2 - eligible books and exclusion rules)"
     },
     {
       "id": "Q-03",
@@ -132,7 +136,9 @@
       ],
       "recommendation": "exclude from the primary; commission-based pricing mixed into a vig-based consensus is cleanly neither",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "exclude exchanges and prediction markets from the primary metric",
+      "resolved_by": "ChatGPT review 2026-09-16"
     },
     {
       "id": "Q-04",
@@ -144,10 +150,12 @@
         "best available price",
         "liquidity-weighted"
       ],
-      "recommendation": "median — robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
-      "note": "best available price is the option that would most flatter CLV; that asymmetry is why it must be settled by argument now",
+      "recommendation": "median \u2014 robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
+      "note": "The review was explicitly asked to challenge the rejection of 'best available price' rather than agree with it, and rejected it on the same grounds.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "median across eligible sportsbooks remains the primary aggregation",
+      "resolved_by": "ChatGPT review 2026-09-16"
     },
     {
       "id": "Q-05",
@@ -157,12 +165,16 @@
       "options": [
         "raw vigged both ends (ships today)",
         "power de-vig both ends per DUR-001 Amendment 1",
-        "raw as primary, de-vigged as a frozen sensitivity"
+        "raw as primary, de-vigged as a frozen sensitivity",
+        "vigged at publish, de-vigged at close (the CLV_return construction)"
       ],
-      "recommendation": "raw as primary, de-vigged as a frozen sensitivity once two-sided publish capture exists",
-      "blocks": "two-sided capture at publish time must start immediately — the de-vigged variant can never be backfilled",
+      "recommendation": "vigged at publish, de-vigged at close. This is a FOURTH option, not one of the original three: the posted price is used as posted and only the closing side is de-vigged.",
+      "blocks": "two-sided capture at publish time must start immediately \u2014 the de-vigged variant can never be backfilled",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "supersedes_prior_recommendation": "'raw as primary, de-vigged as a frozen sensitivity' - the review's judgement is that this deferred the contradiction rather than resolving it",
+      "still_open": "which de-vig method applies at close - see Q-12"
     },
     {
       "id": "Q-06",
@@ -174,9 +186,11 @@
         "market anticipation of the published probability",
         "both, reported separately"
       ],
-      "recommendation": "both, with the term CLV reserved strictly for the price measure; market anticipation is a different quantity and must never carry the CLV label",
+      "recommendation": "the bettor's CLV on the POSTED PRICE is the primary and sole headline number. Market anticipation of the published probability may still be reported separately and may never carry the CLV label.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "supersedes_prior_recommendation": "'both, reported separately' - the review makes the price measure primary rather than co-equal"
     },
     {
       "id": "Q-07",
@@ -188,10 +202,11 @@
         "stake or Kelly weighted",
         "liquidity weighted"
       ],
-      "recommendation": "equal weight per fight; a stake weighting invents a staking strategy CFL does not publish in order to score it",
+      "recommendation": "equal weight per scored fight. No Kelly or stake weighting without a SEPARATELY FROZEN staking system - the weighting may not be invented as part of the scoring.",
       "cluster_unit": "the UFC event, matching DUR-001",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "recommended_by": "ChatGPT review 2026-09-16"
     },
     {
       "id": "Q-08",
@@ -203,9 +218,11 @@
         "a different floor",
         "per-breakout floors as well as overall"
       ],
-      "recommendation": "100 scored observations overall and the same floor on any breakout, following Factor Lab's MIN_SAMPLE pattern including its explicit 'not enough data yet' state",
+      "recommendation": "keep the 100 scored-observation floor AND add a minimum number of DISTINCT EVENTS, so one or two cards cannot dominate the published figure",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "still_open": "the distinct-event minimum is not numerically specified - see Q-13"
     },
     {
       "id": "Q-09",
@@ -218,7 +235,11 @@
       ],
       "recommendation": "report a cluster-robust interval on mean clv_pp and a Wilson interval on the beat rate; they answer different questions and the pair is harder to cherry-pick",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "event-cluster bootstrap is PRIMARY; Wilson on the beat rate is demoted to a secondary descriptive figure",
+      "resolved_by": "ChatGPT review 2026-09-16",
+      "rationale": "fights on the same card are correlated, so an interval that treats them as independent overstates precision",
+      "note": "Matches DUR-001 section 8, which already resamples whole events and never individual fights. DUR-001 amendment (e) would further gate cluster intervals as descriptive-only below 20 cards; (e) is still HELD, so it is a precedent to consider, not a rule to inherit."
     },
     {
       "id": "Q-10",
@@ -231,7 +252,8 @@
       ],
       "recommendation": "score neither for a rescheduled fight, and exclude a fight whose opponent changed after the forecast lock; keyed mechanically on whether either fighter id changed",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "open",
+      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L2 - cancellation, rescheduling, late opponent change)"
     },
     {
       "id": "Q-11",
@@ -239,9 +261,9 @@
       "level": "L3",
       "why_l3": "it is the claim itself",
       "options": [
-        "adopt the may / may-never list in §3 Q-11 as written",
-        "stricter — descriptive reporting only, with no comparative framing of any kind",
-        "more permissive — allow comparison against public benchmarks once past the Q-08 floor"
+        "adopt the may / may-never list in \u00a73 Q-11 as written",
+        "stricter \u2014 descriptive reporting only, with no comparative framing of any kind",
+        "more permissive \u2014 allow comparison against public benchmarks once past the Q-08 floor"
       ],
       "recommendation": "adopt the list as written; it permits the measurement to be stated plainly with its interval and n, and forbids every phrasing that converts a price measurement into a claim about winning money",
       "never_permitted": [
@@ -249,18 +271,59 @@
         "'beats the market', 'proven edge', or any phrasing converting a price measurement into a claim about winning money",
         "a positive figure without its interval and its n",
         "a favourable subset presented without the overall number beside it",
-        "any claim at all while the interval crosses zero — reported as 'we can't tell yet'"
+        "any claim at all while the interval crosses zero \u2014 reported as 'we can't tell yet'"
       ],
       "chosen_by_historical_comparison": false,
+      "status": "open",
+      "review_coverage": "NOT ADDRESSED by the ChatGPT review 2026-09-16 (L3 - how positive CLV may be described publicly)"
+    },
+    {
+      "id": "Q-12",
+      "question": "which de-vig method applies to the closing side of CLV_return",
+      "level": "L2",
+      "raised_by": "Claude, revising against the review",
+      "why": "the review says 'de-vigged' without naming a method, and the repo already has a frozen precedent",
+      "options": [
+        "power, matching DUR-001 Amendment 1.1",
+        "proportional",
+        "Shin",
+        "a CLV-specific method with a stated reason"
+      ],
+      "recommendation": "power, for consistency with DUR-001 Amendment 1.1, with proportional and Shin as frozen sensitivities on the same pattern. Diverging from the frozen house method needs a reason; adopting it silently is also a choice and should be recorded.",
+      "chosen_by_historical_comparison": false,
       "status": "open"
+    },
+    {
+      "id": "Q-13",
+      "question": "the minimum number of distinct events before a CLV summary is displayed",
+      "level": "L3",
+      "raised_by": "Claude, revising against the review",
+      "why": "the review requires a distinct-event minimum but does not give a number, and the number is the whole content of the rule",
+      "interacts_with": "Q-09 - an event-cluster bootstrap over very few clusters has coverage well below nominal, so the floor and the interval method are one decision, not two",
+      "options": [
+        "a number set by the cluster-bootstrap coverage requirement",
+        "20 completed events, matching DUR-001 amendment (e)",
+        "a fixed small floor such as 8 or 10"
+      ],
+      "recommendation": "set it from the cluster bootstrap's coverage rather than picking a round number; report the figure as descriptive-only below the floor rather than withholding it entirely",
+      "chosen_by_historical_comparison": false,
+      "status": "open",
+      "why_l3": "the floor is the number itself: it decides when a public CLV figure may appear at all"
     }
   ],
   "capture_requirements_that_cannot_be_backfilled": [
     "book, fighter, American price and UTC capture instant on every quote",
-    "both sides captured at the publish instant",
+    "BOTH SIDES AT CLOSE - required by the primary definition's de-vig",
+    "both sides captured at the publish instant (retained: enables the fair-to-fair sensitivity)",
     "every quote retained raw, append-only",
     "capture cadence recorded, including gaps",
-    "provider and feed version stored per quote"
+    "provider and feed version stored per quote",
+    "scheduled AND actual bout-start timing wherever available",
+    "market suspension / takedown status",
+    "provider market IDs",
+    "opponent identities at quote time",
+    "provider timestamp AND retrieval timestamp, stored as separate fields",
+    "an immutable link from CFL's posted price to the exact source quote"
   ],
   "freeze_procedure": [
     "status becomes frozen, with the UTC instant and Reed as approver",
@@ -272,5 +335,47 @@
   "post_freeze_change_routes": [
     "a dated amendment recorded with both hashes and a reason, motivated_by_observed_results false and true",
     "a new protocol version"
-  ]
+  ],
+  "revised": "2026-09-16",
+  "revision_note": "Revised against ChatGPT's methodological review of 2026-09-16, recorded at coordination/reviews/2026-09-16-chatgpt-clv-review.md. Still DRAFT: the review's own instruction is that the revision returns to ChatGPT before Reed sees the L3 choices.",
+  "primary_definition": {
+    "name": "CLV_return",
+    "formula": "CLV_return = closing_fair_probability * decimal_odds_at_publish - 1",
+    "reads_as": "expected return per unit staked at the price CFL actually posted, evaluated against the de-vigged closing fair probability",
+    "publish_side": "the ACTUAL posted price, vigged, exactly as a bettor would take it",
+    "closing_side": "de-vigged fair probability, which requires both sides at close",
+    "sign_convention": "positive means CFL's posted price beat the market's later fair value; zero means exactly fair closing value was obtained after paying the posted price",
+    "conservative_by_construction": "Because the publish side keeps the book's margin, the bar is fair-closing probability > VIGGED implied probability at publish. CLV_return = 0 is not 'no edge' in a fair-to-fair sense - it is 'exactly fair value after paying the vig'. This must never be described as a fair-versus-fair comparison.",
+    "source": "ChatGPT review 2026-09-16",
+    "status": "proposed, not frozen",
+    "supersedes": "raw implied-probability movement, the construction settle_clv.py ships today",
+    "blocking_dependency": "two-sided capture AT CLOSE. The publish side is used as posted and is never de-vigged, so two-sided capture at PUBLISH is not required - this differs from the blocker the 0.1.0 draft recorded."
+  },
+  "capture_requirements_source": "Items 7-12 added from the ChatGPT review of 2026-09-16. Item 2 promoted from the definition change. Capture starts immediately under R-01; none of this waits on the freeze, because none of it can be recreated later.",
+  "review_coverage_audit": {
+    "reviewed_by": "ChatGPT review 2026-09-16",
+    "l2_asked": 6,
+    "l2_resolved": 4,
+    "l2_outstanding": [
+      "Q-02",
+      "Q-10"
+    ],
+    "l3_asked": 5,
+    "l3_recommended": 4,
+    "l3_outstanding": [
+      "Q-11"
+    ],
+    "note": "The handoff asked for a resolution on all six L2 questions and a recommendation on all five L3. Three came back unaddressed and are carried forward rather than treated as settled by silence."
+  },
+  "next_action": {
+    "owner": "ChatGPT",
+    "action": "second-pass review of this revision, then Reed sees the L3 set. Reed does NOT see them before that pass.",
+    "carry_forward": [
+      "Q-02",
+      "Q-10",
+      "Q-11",
+      "Q-12",
+      "Q-13"
+    ]
+  }
 }
