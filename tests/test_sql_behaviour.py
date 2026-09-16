@@ -417,6 +417,90 @@ class TestProposedMigrationsApply(PostgresCase):
             with self.subTest(migration=name, run=2):
                 self.psql_file(os.path.join(CLV, name), db=self.db)
 
+    def test_the_compare_and_set_write_lets_exactly_one_settler_win(self):
+        """Amendment 7 (a), the race half.
+
+        `_partition_for_write` reads `clv_scored_at IS NULL` and the write
+        happens later, so two settlers overlapping — a cron firing while someone
+        runs it by hand, a retry on a slow run — can both classify the same row
+        as fresh. The application logic is write-once; the DATABASE write has to
+        be too, or "written once" holds only while nothing races it.
+
+        This is the statement the settler issues, run twice against a real
+        Postgres. The filter is evaluated as part of the UPDATE, so the second
+        one matches no row and comes back empty — which is the settler's signal
+        to go and verify what the winner wrote, never to write over it.
+        """
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        self.psql("insert into public.model_edges (fight_id, side, "
+                  "odds_at_publish, source) values (1, 'a', 150, 'live')",
+                  db=self.db)
+        # Wrapped in a CTE so psql returns the ROW COUNT alone; a bare
+        # UPDATE ... RETURNING also prints its command tag, which is not data.
+        claim = """
+          with claimed as (
+          update public.model_edges
+             set clv_return = %s, closing_fair_probability = 0.51,
+                 closing_book_count = 3, clv_protocol_version = 'CLV-001@1.0.10',
+                 clv_scored_at = %s, clv_source_quote_ids = '{1,2}',
+                 clv_closing_consensus = '{}'::jsonb, clv_consensus_sha256 = 'abc',
+                 clv_close_basis = 'scheduled_first_bout',
+                 clv_lead_time_minutes = 10, clv_lead_time_is_lower_bound = false,
+                 clv_proxy_quoted_at = '2026-09-12T21:50:00+00',
+                 clv_cutoff_at = '2026-09-12T22:00:00+00',
+                 clv_publish_quote_id = %s
+           where id = 1 and clv_scored_at is null
+          returning id)
+          select count(*) from claimed
+        """
+        first = self.psql(claim % ("0.02", "'2026-09-13T06:00:00+00'", "9001"),
+                          db=self.db)
+        self.assertEqual(first, "1", "the first settler must claim the row")
+
+        second = self.psql(claim % ("0.99", "'2026-09-14T06:00:00+00'", "9999"),
+                           db=self.db)
+        self.assertEqual(second, "0", "the second settler must match NO row")
+
+        kept = self.psql("select clv_return, clv_scored_at, clv_publish_quote_id "
+                         "from public.model_edges where id = 1", db=self.db)
+        value, scored_at, quote_id = kept.split("|")
+        self.assertEqual(float(value), 0.02,
+                         "the first settler's observation must survive")
+        self.assertEqual(quote_id, "9001")
+        self.assertIn("2026-09-13", scored_at,
+                      "clv_scored_at records when the row was FIRST scored and "
+                      "must not be refreshed by a later run")
+
+    def test_an_unconditional_patch_by_id_would_have_overwritten_it(self):
+        """The control. Without the filter the second write wins, silently, and
+        `clv_scored_at` moves with it — which is exactly what was happening."""
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        # A complete scored row: the completeness constraint is NOT VALID but it
+        # binds new rows, so a half-filled one is rejected before this test can
+        # make its point.
+        self.psql("""
+          insert into public.model_edges (fight_id, side, odds_at_publish, source,
+            clv_return, closing_fair_probability, closing_book_count,
+            clv_protocol_version, clv_scored_at, clv_source_quote_ids,
+            clv_closing_consensus, clv_consensus_sha256, clv_close_basis,
+            clv_lead_time_minutes, clv_lead_time_is_lower_bound,
+            clv_proxy_quoted_at, clv_cutoff_at, clv_publish_quote_id)
+          values (1, 'a', 150, 'live', 0.02, 0.51, 3, 'CLV-001@1.0.10',
+                  '2026-09-13T06:00:00+00', '{1,2}', '{}'::jsonb, 'abc',
+                  'scheduled_first_bout', 10, false,
+                  '2026-09-12T21:50:00+00', '2026-09-12T22:00:00+00', 9001)
+        """, db=self.db)
+        self.psql("update public.model_edges set clv_return = 0.99, "
+                  "clv_scored_at = '2026-09-14T06:00:00+00' where id = 1",
+                  db=self.db)
+        self.assertEqual(
+            float(self.psql("select clv_return from public.model_edges "
+                            "where id = 1", db=self.db)), 0.99,
+            "an unconditional PATCH by id overwrites a scored row — the reason "
+            "the settler no longer issues one")
+
     def test_a_scored_row_cannot_omit_the_cutoff_it_was_scored_against(self):
         """Amendment 6 (e), enforced by the database rather than only by the
         writer. The completeness constraint is NOT VALID, so it binds new rows

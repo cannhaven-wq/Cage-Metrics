@@ -11,6 +11,143 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — Amendment 7 hardened, and marked PROPOSED
+
+**From:** Claude
+**To:** Owner → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied. No write enabled. No CLV published. No spend.**
+Hash `6a009c49…`, re-chained from `f8c6e68a…`.
+
+### 1. The first write is now atomic
+
+You were right: `_partition_for_write` read `clv_scored_at IS NULL` and the write
+happened a round trip later, so two overlapping settlers could both call a row
+fresh and the second would overwrite the first, `clv_scored_at` included. The
+application logic was write-once; the database write was not.
+
+`claim_and_write_clv001()` issues
+
+```
+PATCH /model_edges?id=eq.<X>&clv_scored_at=is.null
+Prefer: return=representation
+```
+
+and requires **exactly one** row back. The filter is evaluated by Postgres as
+part of the UPDATE, under the row lock, so exactly one of two racing writers
+matches and the other matches none.
+
+Zero rows back is not an error to retry — it means somebody else got there
+first. The settler then **re-reads those rows and verifies them** exactly as a
+re-run would: agreement means the race was harmless, disagreement is reported
+loudly with nothing written over. More than one row back exits rather than
+guessing.
+
+Both regressions run against a real Postgres: the same claim issued twice
+returns `1` then `0`, and the first settler's `clv_return` and `clv_scored_at`
+survive. There is a control test showing the unconditional PATCH by id **does**
+overwrite, so the pair documents the bug as well as the fix.
+
+The DB-guard version you mention — CLV result columns immutable once
+`clv_scored_at` is set — is stronger and I have not written it: it is
+non-additive, it would collide with the legacy settlement path on the same
+table, and it is a separate L3. Flagged, not done.
+
+### 2. Amendment 7 is PROPOSED, not approved
+
+You are right, and the contradiction was mine. Fixed in both copies and enforced:
+
+- `protocol.json`: `approved_by: null`, `approval_status: "PROPOSED — not
+  owner-approved"`, `last_ratified_version: "1.0.9"`, and a `version_status`
+  saying 1.0.10 is proposed.
+- The markdown carries a **⚠ PROPOSED — NOT APPROVED** block at the top of
+  Amendment 7 and a line in the status banner. The approval line is gone.
+- **`preflight` now refuses write mode while any amendment lacks an approver**
+  (`all_amendments_approved`). Not a note in a handoff — a condition, and
+  `blockers` forces `write_allowed` false. Reporting is untouched, which is how
+  you see what you are being asked to approve.
+
+Six tests pin the discipline: an amendment either names an approver or says
+PROPOSED; a pending one cannot be recorded as the ratified version; the markdown
+must mark it near its heading and must not carry an approval line there; and a
+pending amendment must hold write mode shut.
+
+v1.0.10 stays as the version number, per your read — the bump is reasonable, the
+false approval was the problem.
+
+### 3. The publish quote must predate publication
+
+`verify_publish_quote` proved price, corners, market, provenance and a credible
+instant — and would accept a quote captured *after* the edge was published. That
+is the routine case, not the exotic one: a book that has not moved for an hour
+leaves several rows at the same price and only one of them precedes publication.
+
+Now `captured_at <= published_at`, where the bound is the **earlier** of the
+edge's `published_at` and the immutable snapshot instant. That is the opposite
+choice from the effective lock, deliberately: the lock takes the later of the
+two because a later lock only shrinks the closing window, but here the
+comparison runs the other way, so the later instant is the permissive one and a
+`published_at` edited forwards would admit a quote captured after the real
+publication. There is a test for that specific direction.
+
+Consequence, also tested: the publish side can never be drawn from inside the
+window the closing side is measured over.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `cfl_engine/settle_clv.py` | `claim_and_write_clv001` compare-and-set; lost-race verification; `all_amendments_approved` preflight |
+| `cfl_engine/clv/scoring.py` | `verify_publish_quote` temporal bound, anchored to the earlier instant |
+| `cfl_engine/clv/test_scoring.py` | +4 tests on the temporal bound |
+| `tests/test_sql_behaviour.py` | +2 live-Postgres race tests, fix and control |
+| `tests/test_clv_protocol.py` | +6 approval-discipline tests |
+| `research/clv/CLV_MEASUREMENT_PROTOCOL.md`, `protocol.json` | Amendment 7 marked PROPOSED; hash re-chained |
+| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo) | **156 passed**, 3 skipped |
+| `cfl_engine/clv/` | **187 passed** |
+| `build/test-fetch-odds.js` (Node) | **66 passed** |
+
+409 total, all green — still locally reported; the CI offer from the last
+handoff stands.
+
+### Remaining blockers
+
+Unchanged: nothing writes `clv_publish_quote_id`; exact bout completions have no
+source; running order is not captured; nothing is applied. And now one more, by
+construction: **Amendment 7 is unratified, so write mode is shut** — which is
+the intended state, not a defect.
+
+### L3 decisions waiting
+
+1. **Ratify or withdraw Amendment 7 / v1.0.10.** Until then the code runs in
+   report mode only.
+2. Amendments 1–6 and the v1.0.9 bump — ChatGPT recommends keeping it, I agree.
+3. Every external `fight_odds` writer inventoried before
+   `..._fight_odds_immutability.sql` is applied.
+4. `..._snapshot_edge_identity.sql` touches `pre_fight_snapshots`. One nullable
+   column, no trigger changed, no row read or written — but it is that table.
+5. Optional, mentioned by ChatGPT: a DB guard making CLV result columns immutable
+   after `clv_scored_at` is set. Stronger than the compare-and-set, non-additive,
+   and its own decision.
+
+## Next action
+
+**ChatGPT:** confirm the three fixes, in particular whether anchoring the
+publish-quote bound to the *earlier* of the two publication instants is right —
+I went stricter than the literal `captured_at <= published_at` you specified,
+and stricter is not automatically correct.
+
+**Owner:** the L3 list above, starting with whether Amendment 7 is ratified.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.10: Amendment 7, write-once settlement
 
 **From:** Claude
@@ -416,166 +553,6 @@ whether the `is_opener` / `is_closer` whitelist is the right cut.
 
 **Reed:** the two L3 items above. Then apply in order —
 `..._fight_odds_capture.sql`, `..._fight_odds_immutability.sql`,
-`..._event_flow.sql`, `..._clv001_columns.sql`.
-
----
-
-## 2026-09-16 — Event Flow's ledger design integrated into CLV-001
-
-**From:** Claude
-**To:** Reed → ChatGPT review
-**Date:** 2026-09-16
-
-**No migration applied.** All three remain proposed and unapplied. **No protocol
-version bump** — v1.0.8 is unchanged, hash `a009bb17…` intact. Everything below
-makes the implementation match the rule that was already frozen.
-
-Integrates the sibling Event Flow session's `MIGRATION_ADJUSTMENT.md`, which
-passed its own review, plus four consistency items.
-
-### 1. History must never constrain what can be observed next
-
-`UNIQUE (fight_id, source, bout_order)` is gone from `fight_bout_order`. A card
-reordered and then reordered back is a truthful second observation, and Event
-Flow re-appends the whole card on every change — under a value-unique index every
-one of those rows would be rejected and an append-only ledger would quietly
-refuse to record reality.
-
-The same principle now applies to `fight_bout_completions`: nothing is unique on
-the completed_at **value**, because a correction may return to an instant already
-observed.
-
-| index | shape | why |
-|---|---|---|
-| `*_latest_idx` | `(fight_id, source, observed_at desc, id desc)` | non-unique; serves every read |
-| `*_one_per_instant_idx` | `UNIQUE (fight_id, source, observed_at)` | genuinely non-recurring: one statement per source per instant |
-| `fight_bout_order_card_idx` | `(event_id, source, observed_at desc, id desc)` | resolving a whole card |
-
-### 2. The running order resolves as a COMPLETE CARD, not per fight
-
-This was a real bug, not a tidy-up. Event Flow appends the whole UFCStats card as
-one observation sharing one `observed_at`. Resolving the latest row per **fight**
-leaves a scratched booking's old position alive beside the current card: two
-current bout 1s, a wrong `is_first_bout`, and a previous-bout lookup that walks
-into a dead booking — silently.
-
-Both consumers now resolve the latest complete card as a unit, scoped to
-`source = 'ufcstats_card'`:
-
-- `v_clv_close_reference` — new `latest_card` CTE (`distinct on (event_id)`,
-  `order by event_id, observed_at desc, id desc`); `ord` joins to it on the
-  instant.
-- `build/fetch-odds.js` — new exported `resolveCurrentCard()`; `attachEventFlow`
-  queries by `event_id` rather than by fight id, because resolving the card needs
-  rows for bouts outside our candidate set. `card_complete` counts only fights on
-  the current card, so a dead booking can no longer keep a finished night looking
-  unfinished and burning credits.
-
-**Reed's regression scenario, now a test.** Initial card A=1, B=2, C=3; latest
-card B=1, C=2. Result: **B=1, C=2**; A absent from the current card; position 1
-resolves to B and never to A; C's previous bout is B and never A; exactly one
-fight is bout 1. Older rows stay in the ledger, readable as history — nothing is
-erased.
-
-### 3. The last `bell_at` remnants in the scoring schema
-
-- `proposed_2026-09-16_clv001_columns.sql` — `clv_close_basis` is now exactly
-  `'scheduled_first_bout'` / `'previous_bout_completion'`; stale comments
-  rewritten.
-- `cfl_engine/settle_clv.py` — `_fights_by_id`'s docstring still described the
-  three-tier "actual bell → previous completion → scheduled start" resolution.
-  Rewritten to the two cases, with the bell named as audit-only.
-- Leftover Tier-era wording ("which tier answered", "a fourth tier") replaced.
-
-Remaining bell-as-cutoff text sits inside the superseded Amendment 3/4/4.1/4.2
-blockquotes, which stay as filed — audit trail, not live rule text.
-
-### 4. The 20-event floor counts EVENTS, by `event_id`
-
-The UFC runs two cards on one date regularly. Counting `event_date` would let the
-gate open on 19 real events. `event_id` is now selected in `_fights_by_id`,
-carried onto every scored row by `score_row`, and counted in `_report_clv001`;
-rows with no `event_id` are reported as a warning and never counted.
-
-This is not a rule change — Q-13 already said "20 distinct completed UFC events".
-It is the implementation finally counting what the rule says.
-
-### 5. A direct call cannot score against a bell
-
-`admissible_reference` was the only gate, but `score_row` takes the instant and
-the basis as separate arguments — a caller that resolved the reference itself
-would hand in a real instant labelled `bell_at` and get a valid-looking score
-back. The refusal now lives inside `score_row`, and its message names the
-version and the two bases it permits. `scheduled_first_bout` on a non-first bout
-is refused the same way.
-
-### Files changed
-
-| file | what |
-|---|---|
-| `research/clv/proposed_2026-09-16_event_flow.sql` | value-unique indexes removed; `latest_card` CTE; complete-card `ord` |
-| `research/clv/proposed_2026-09-16_clv001_columns.sql` | `clv_close_basis` vocabulary reduced to two |
-| `build/fetch-odds.js` | `resolveCurrentCard()` exported; `attachEventFlow` queries by event |
-| `build/test-fetch-odds.js` | +6 tests — Reed's A/B/C scenario and its corollaries |
-| `cfl_engine/clv/scoring.py` | basis guard in `score_row`; `event_id` on every row |
-| `cfl_engine/clv/test_scoring.py` | +10 tests — the basis guard and the event count |
-| `cfl_engine/settle_clv.py` | `event_id` plumbed through; distinct events by id; docstring |
-| `tests/test_migrations_idempotent.py` | +8 tests — ledger index shape, complete-card rule |
-| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
-
-### Tests
-
-| suite | result |
-|---|---|
-| `tests/` (repo) | **115 passed**, 3 skipped |
-| `cfl_engine/clv/test_scoring.py` | **89 passed** |
-| `cfl_engine/clv/test_devig.py` | **33 passed** |
-| `build/test-fetch-odds.js` (Node) | **64 passed** |
-
-All green, 301 tests. Three fixtures in `tests/` skip by design once the protocol
-is frozen. Hash chain verified across 8 amendments; publication gate confirmed
-shut at 0 of 100 / 0 of 20.
-
-**One test was wrong and is fixed, not worked around.** A regex in
-`test_migrations_idempotent.py` matched the view statement only up to the first
-`;` — and a semicolon inside a SQL comment ended it early, so three assertions
-were passing on text they had never read. They now run against comment-stripped
-SQL.
-
-### Preserved, as instructed
-
-The approved closing-price proxy methodology and naming; the 45-minute freshness
-rule; ≥3 eligible two-sided books; power de-vig per book then median; the ten
-named books; append-only provenance; the 500-credit ceiling with its STOP
-condition and non-raisable cap; the fail-closed publication gate; no paid
-services; no production migrations.
-
-### Remaining blockers
-
-1. **Exact bout completions have no source.** Unchanged and still the binding
-   one: required for bouts 2..N, the difference between ~1 and ~12.5 scorable
-   observations per card.
-2. **Running order is not captured.** Free to fix. Event Flow's ledger is the
-   destination; nothing writes to it yet.
-3. **Nothing is applied.**
-
-### New L3 decisions required
-
-**None.** No rule changed, no version bumped, no spend enabled.
-
-One **optional** editorial amendment for Reed to consider, deliberately not made:
-Amendments 3, 4 and 4.1 carry no "superseded" stamp the way 4.2 does, so their
-bell-as-cutoff tables read as current to someone who starts in the middle of the
-file. Stamping them would edit a frozen document and therefore needs its own
-amendment and hash. Flagged rather than done.
-
-## Next action
-
-**ChatGPT:** the final pre-migration review — items 1–5 above, and specifically
-whether the complete-card resolution in `v_clv_close_reference` and
-`attachEventFlow` agree with Event Flow's ledger semantics.
-
-**Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
 `..._event_flow.sql`, `..._clv001_columns.sql`.
 
 ---

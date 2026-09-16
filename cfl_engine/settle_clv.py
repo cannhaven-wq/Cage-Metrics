@@ -233,6 +233,42 @@ def patch_row(base_url: str, key: str, row_id: int, payload: dict) -> None:
         resp.read()
 
 
+def claim_and_write_clv001(base_url: str, key: str, row_id: int,
+                           payload: dict) -> list:
+    """The FIRST CLV-001 write for one row, as a compare-and-set.
+
+    `PATCH ...?id=eq.X&clv_scored_at=is.null`, and the caller checks that exactly
+    one row came back.
+
+    Why a plain PATCH by id is not enough. `_partition_for_write` decides a row
+    is fresh by reading `clv_scored_at IS NULL`, and the write happens later. Two
+    settlers overlapping — a cron firing while someone runs it by hand, a retry
+    on a slow run — can both read the row as fresh, and the second then
+    overwrites the first, including `clv_scored_at`. The application logic is
+    write-once; the database write was not, so "written once" held only while
+    nothing raced it.
+
+    The filter closes that: `clv_scored_at IS NULL` is evaluated by Postgres as
+    part of the UPDATE, under the row lock, so exactly one of two racing writers
+    matches a row and the other matches none. Zero rows back is not an error to
+    retry — it means somebody else got there first, and the caller must go and
+    VERIFY what they wrote rather than write over it.
+
+    Returns the list of updated rows, so the caller can count them. `Prefer:
+    return=representation` is what makes the count available at all.
+    """
+    body = json.dumps(payload).encode()
+    req = urllib.request.Request(
+        f"{base_url}/rest/v1/model_edges?id=eq.{row_id}&clv_scored_at=is.null",
+        data=body, method="PATCH",
+        headers={"apikey": key, "Authorization": f"Bearer {key}",
+                 "Content-Type": "application/json",
+                 "Prefer": "return=representation"},
+    )
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        return json.loads(resp.read() or b"[]")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--execute", action="store_true",
@@ -377,6 +413,23 @@ def preflight(base_url: str, key: str) -> tuple[dict, list[str]]:
     except OSError as e:
         cond["protocol_sha256_matches"] = False
         detail["protocol_sha256_matches"] = str(e)
+
+    # --- every amendment is ratified -----------------------------------------
+    # An amendment that has been WRITTEN is not an amendment that has been
+    # APPROVED. Recording an approval the owner has not given is the one failure
+    # this whole apparatus of hashes and chains exists to prevent, so a pending
+    # amendment holds write mode shut rather than being a note in a handoff.
+    #
+    # Reporting is unaffected: a dry run against a proposed amendment is exactly
+    # how the owner sees what they are being asked to approve.
+    pending = [str(a.get("number")) for a in protocol.get("amendments", [])
+               if not a.get("approved_by")]
+    cond["all_amendments_approved"] = not pending
+    detail["all_amendments_approved"] = (
+        "every amendment records an approver" if not pending else
+        f"amendment(s) {', '.join(pending)} are PROPOSED and not owner-approved. "
+        f"Write mode stays shut until they are ratified or withdrawn — "
+        f"reporting is unaffected.")
 
     # --- Q-02's fixed named sportsbook list ---------------------------------
     # Resolved as "a fixed NAMED list frozen at protocol freeze". The name of the
@@ -714,8 +767,9 @@ def clv001_main(write: bool) -> None:
         print("\nno unscored row is scorable. Nothing written.")
         return
 
+    written, lost_the_race = 0, []
     for x in fresh:
-        patch_row(base_url, key, x["edge_id"], {
+        claimed = claim_and_write_clv001(base_url, key, x["edge_id"], {
             "clv_return": round(x["clv_return"], 10),
             "closing_fair_probability": round(x["closing_fair_probability"], 10),
             "closing_book_count": x["closing_book_count"],
@@ -737,7 +791,53 @@ def clv001_main(write: bool) -> None:
                 fights.get(x["fight_id"], {}).get("window_opens_at").isoformat()
                 if fights.get(x["fight_id"], {}).get("window_opens_at") else None),
         })
-    print(f"\nWROTE {len(fresh)} CLV-001 result(s), each for the FIRST time. "
+        if len(claimed) == 1:
+            written += 1
+        elif not claimed:
+            # Another settler wrote this row between our read and our write. Not
+            # an error, and emphatically not something to retry without the
+            # filter: the row now holds somebody else's observation and ours
+            # must give way to it.
+            lost_the_race.append(x)
+        else:
+            sys.exit(f"CLV-001 write matched {len(claimed)} rows for edge "
+                     f"{x['edge_id']}. `id=eq.` must match at most one row; "
+                     f"stopping rather than guessing which was written.")
+
+    if lost_the_race:
+        # Verify what the winner wrote, exactly as a re-run would. If it agrees
+        # with what we computed, the race was harmless and the row is simply
+        # already scored. If it does not, that is drift and it is reported the
+        # same way — loudly, with nothing rewritten.
+        print(f"\n{len(lost_the_race)} row(s) were scored by another settler "
+              f"while this run was working. Verifying what it wrote; nothing of "
+              f"ours is written over it.")
+        ids = ",".join(str(x["edge_id"]) for x in lost_the_race)
+        current = {r["id"]: r for r in fetch_all(
+            base_url, key, "model_edges",
+            f"select=id,{stored_select}&id=in.({ids})")}
+        conflicts = []
+        for x in lost_the_race:
+            stored = current.get(x["edge_id"], {})
+            for column in ("clv_scored_at", "clv_proxy_quoted_at", "clv_cutoff_at"):
+                if column in stored:
+                    stored[column] = _iso(stored.get(column))
+            problems = verify_against_stored(x, stored)
+            if problems:
+                conflicts.append((x["edge_id"], problems))
+        if conflicts:
+            for edge_id, problems in conflicts:
+                print(f"  edge {edge_id}:")
+                for p in problems:
+                    print(f"      {p}")
+            sys.exit(f"\n{len(conflicts)} row(s) written by a concurrent settler "
+                     f"do not match what this run computed. Two settlers "
+                     f"disagreeing about the same observation is a real problem "
+                     f"and not one to paper over by rewriting one of them.")
+        print("  all of them reproduce exactly. Nothing to do.")
+
+    print(f"\nWROTE {written} CLV-001 result(s), each for the FIRST time and "
+          f"each claimed atomically (id AND clv_scored_at IS NULL). "
           f"Legacy clv_pp / clv_beat were not read and not modified.")
     print("The publication gate is unchanged. Storing a number is not showing "
           "one.")

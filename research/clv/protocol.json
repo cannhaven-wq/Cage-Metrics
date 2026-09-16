@@ -7,7 +7,7 @@
   "version": "1.0.10",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "b8a1f0aaad499599a3941fbc18190db8b3e444a16f1181b3aa1b034e880849a9",
+  "protocol_sha256": "6a009c495e1067fb36ac073bd1726f6efb4d74c34102e0a78212e842f9e21e1a",
   "benchmark_name": {
     "short": "CFL closing-price proxy",
     "long": "late pre-fight closing-price proxy",
@@ -850,14 +850,14 @@
     {
       "number": "7",
       "date": "2026-09-16",
-      "approved_by": "Owner",
+      "approved_by": null,
       "level": "L3",
-      "title": "Settlement is write-once; edge identity",
+      "title": "Settlement is write-once; edge identity (PROPOSED)",
       "kind": "conformance and provenance. The estimator is unchanged.",
       "version_before": "1.0.9",
       "version_after": "1.0.10",
       "sha256_before": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
-      "sha256_after": "b8a1f0aaad499599a3941fbc18190db8b3e444a16f1181b3aa1b034e880849a9",
+      "sha256_after": "6a009c495e1067fb36ac073bd1726f6efb4d74c34102e0a78212e842f9e21e1a",
       "parts": {
         "a": "a scored observation is written ONCE and thereafter only verified. The settler re-scored every historical live edge on every run and re-PATCHed every result with no check for an existing clv_protocol_version, clv_consensus_sha256 or clv_scored_at - so a second run could reinterpret an earlier observation against later database state and refresh clv_scored_at to hide it. Now: never scored -> write once; scored under this version and reproduces -> zero writes; scored and does not reproduce -> abort the run loudly; scored under another version -> untouched. clv_scored_at is never refreshed.",
         "b": "clv_publish_quote_id stays fail-closed. Until the external edge publisher records the exact fight_odds.id contemporaneously with odds_at_publish, no edge scores - historical or future - and nothing backfills the link by matching prices.",
@@ -866,7 +866,8 @@
       },
       "unchanged": "the estimator, cutoff bases, de-vig and its order, the 45-minute limit, the book list, Amendment 6's provenance requirements, the publication gate",
       "retroactive_reinterpretation": "none possible: zero rows have been scored",
-      "motivated_by_observed_results": false
+      "motivated_by_observed_results": false,
+      "approval_status": "PROPOSED - not owner-approved. Written, implemented and under review; the L3 ratification has not been given. settle_clv.preflight holds write mode shut while any amendment is in this state."
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
@@ -985,7 +986,7 @@
     "why": "clv_source_quote_ids points at these rows as evidence, and evidence that can be rewritten afterwards is not evidence. The consensus hash would still match, because it covers the artifact rather than the rows it names."
   },
   "write_once_settlement": {
-    "frozen_by": "Amendment 7 (a), 2026-09-16, approved by the Owner (L3)",
+    "frozen_by": "Amendment 7 (a), 2026-09-16, PROPOSED, pending owner approval (L3)",
     "rule": "a CLV-001 observation is written once; every later run verifies and writes nothing",
     "marker": "model_edges.clv_scored_at - set on exactly the rows the writer wrote",
     "verified_fields": [
@@ -1008,7 +1009,7 @@
     "other_versions": "a row scored under a different protocol version is never re-scored and never touched"
   },
   "edge_identity": {
-    "frozen_by": "Amendment 7 (c), 2026-09-16, approved by the Owner (L3)",
+    "frozen_by": "Amendment 7 (c), 2026-09-16, PROPOSED, pending owner approval (L3)",
     "preferred": "pre_fight_snapshots.edge_model_edge_id = model_edges.id - an identity",
     "fallback": "side + bet_fighter_id + odds_at_publish, which must match EXACTLY ONE live edge on the fight",
     "why_the_tuple_is_not_enough": "one fight can be republished with the same side, fighter and price; snapshot_predictions.py keeps only the latest of several live edges per fight, so the snapshot records one particular publication",
@@ -1017,5 +1018,7 @@
     "backfill": "never. An inferred id would manufacture the evidence the column exists to require.",
     "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)",
     "unscored_reason": "ambiguous_edge_identity"
-  }
+  },
+  "version_status": "1.0.10 is PROPOSED. Amendment 7 is written and implemented but not owner-approved, so the last RATIFIED version is 1.0.9. Write mode is fail-closed until it is ratified or withdrawn; reporting is unaffected.",
+  "last_ratified_version": "1.0.9"
 }

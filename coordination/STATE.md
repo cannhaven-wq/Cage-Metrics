@@ -5,8 +5,10 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–7 same day). **Amendment 5 freezes the operational cutoff**: bout
+**Live baton:** CLV-001 is **FROZEN at v1.0.9**, with **v1.0.10 PROPOSED and not ratified**
+(frozen 2026-09-16T10:30:00Z; Amendments 1–6 approved, 7 awaiting the owner).
+**CLV write mode is held shut while any amendment is unratified** — a preflight
+condition, not a note. **Amendment 5 freezes the operational cutoff**: bout
 1 takes the card's scheduled start, bouts 2..N take the exact completion of the
 immediately previous bout — **those two cases, always**, with `bell_at` retained
 as an audit field and never overriding them (5.1). The scored price is the
@@ -68,7 +70,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.10**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.9**, with **Amendment 7 (v1.0.10) proposed**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -123,6 +125,9 @@ One card of waiting, not a build.
 | bout 1's cutoff comes from bout 1's own schedule | **fixed**, 4 live-SQL tests |
 | `fight_odds` observation fields immutable by trigger | **written, UNAPPLIED**, 9 live-SQL tests |
 | settlement is write-once; re-runs verify and write nothing | **fixed**, 13 tests |
+| the first write is an atomic compare-and-set, not a PATCH by id | **fixed**, 2 live-SQL tests |
+| the linked publish quote must predate publication | **fixed**, 4 tests |
+| an unratified amendment holds write mode shut | **fixed**, 6 tests |
 | a snapshot names WHICH edge it froze (`edge_model_edge_id`) | **written, UNAPPLIED**, 9 tests |
 | ambiguous edge identity scores nothing | **fixed**, included above |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last to apply |
@@ -205,13 +210,29 @@ and the publish quote id inside the hashed artifact: a consensus is a set of
 prices *selected by* a cutoff, so hashing the prices alone leaves the selection
 rule outside the integrity check.
 
+**An amendment written is not an amendment approved.** Amendment 7 is
+implemented on the branch and marked PROPOSED in both copies —
+`approved_by: null`, `last_ratified_version: 1.0.9`, and a ⚠ block at the top of
+its markdown. `preflight` refuses write mode while any amendment is in that
+state. Reporting is unaffected: a dry run against a proposed amendment is how
+the owner sees what they are being asked to approve.
+
 **Settlement is write-once.** A scored observation is written once and never
 again: a later run re-scores it only to CHECK it, field by field, and PATCHes
 nothing either way. `clv_scored_at` is never refreshed. Drift — the stored row
 no longer reproducing — aborts the whole run loudly rather than being quietly
 overwritten, because a PATCH at that moment is the one thing that would make the
 disagreement disappear. A row scored under a different protocol version is never
-touched.
+touched. The first write is an atomic compare-and-set —
+`id = X AND clv_scored_at IS NULL`, exactly one row expected — because the
+freshness read and the write are separate round trips and two overlapping
+settlers could otherwise both call a row fresh. Zero rows back means somebody
+else won: the settler verifies what they wrote and never writes over it.
+
+**The publish quote must predate publication.** A row can carry the right price,
+corners, market and a credible instant and still have been captured *after* the
+edge was published — a later quote that agrees with the posted price, not its
+source. A book that has not moved for an hour leaves several such rows.
 
 **A snapshot must name WHICH publication it froze.** Side + bet fighter + price
 is a cross-check, not an identity — one fight can be republished with all three

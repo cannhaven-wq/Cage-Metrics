@@ -704,7 +704,8 @@ def forecast_lock(edge: dict, snapshot: dict | None,
 
 
 def verify_publish_quote(quote: dict | None, edge: dict, bet_fighter_id: int,
-                         opp_fighter_id: int, now: dt.datetime) -> tuple:
+                         opp_fighter_id: int, now: dt.datetime,
+                         published_at: dt.datetime) -> tuple:
     """§4 item 12. Returns `(provenance, None)` or `(None, detail)`.
 
     `odds_at_publish` is one side of `CLV_return`, and without a link to the
@@ -717,8 +718,22 @@ def verify_publish_quote(quote: dict | None, edge: dict, bet_fighter_id: int,
         to this price;
       * fighter and opponent identity (Q-10);
       * the provider's market id (R-06 — the stable key across a repost);
-      * the quote instant, credible under R-13;
+      * the quote instant, credible under R-13 **and at or before publication**;
       * provider and feed provenance, `raw` included.
+
+    The temporal check is the one a price match hides. A row can carry the right
+    price, the right corners, the right market and a perfectly credible
+    `captured_at` and still have been captured AFTER the edge was published — in
+    which case it is not the source of the posted price, it is a later quote that
+    happens to agree with it. A book that does not move for an hour produces
+    several such rows, so "the price matches" selects the wrong one routinely
+    rather than rarely.
+
+    `published_at` is the publication instant: the edge's own column when it has
+    one, and the immutable snapshot instant otherwise. It is never later than the
+    effective forecast lock, so a quote at or before it is also strictly before
+    the cutoff — the publish side of `CLV_return` cannot come from inside the
+    window the closing side is measured over.
 
     Historical edges have no such link and are not given one. Fabricating it —
     "find the row whose price matches" — invents the record R-07 and §4 item 12
@@ -745,6 +760,16 @@ def verify_publish_quote(quote: dict | None, edge: dict, bet_fighter_id: int,
     if not credible_capture_instant(quote.get("captured_at"), now):
         return None, ("the linked publish quote's capture instant is not credible "
                       "(R-13), so it cannot place the posted price in time")
+    if published_at is None:
+        return None, ("no publication instant can be established, so the linked "
+                      "quote cannot be shown to have existed when the price was "
+                      "posted")
+    if quote["captured_at"] > published_at:
+        return None, (f"the linked publish quote was captured at "
+                      f"{quote['captured_at'].isoformat()}, AFTER the edge was "
+                      f"published at {published_at.isoformat()}. It cannot be "
+                      f"the source of a price posted before it existed — a "
+                      f"matching price is not a source (§4 item 12)")
     missing = missing_quote_provenance(quote, REQUIRED_PUBLISH_PROVENANCE)
     if missing:
         return None, (f"the linked publish quote is missing required §4 "
@@ -1104,8 +1129,22 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
                         f"{reference_instant.isoformat()}")
 
     # §4 item 12. The publish side of CLV_return must be a record.
+    #
+    # THE EARLIEST publication instant on record, which is the opposite choice
+    # from the effective lock and is conservative in the same direction.
+    #
+    # The lock takes the LATER of `published_at` and the immutable instant,
+    # because a later lock can only shrink the closing window. Here the
+    # comparison runs the other way — a quote must be at or before publication —
+    # so the later instant is the permissive one, and a `published_at` edited
+    # forwards would admit a quote captured after the real publication. Taking
+    # the earlier of the two makes an edit in either direction cost rows rather
+    # than admit them.
+    published_at = min(t for t in (edge.get("published_at"),
+                                   lock_info["immutable_locked_at"])
+                       if t is not None)
     publish_info, publish_detail = verify_publish_quote(
-        publish_quote, edge, bet_fighter_id, opp_fighter_id, now)
+        publish_quote, edge, bet_fighter_id, opp_fighter_id, now, published_at)
     if publish_info is None:
         return unscored("no_publish_quote_link", publish_detail)
     out["publish_quote"] = publish_info

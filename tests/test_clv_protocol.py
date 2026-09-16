@@ -668,3 +668,80 @@ class TestScorerTextIsNotStale(unittest.TestCase):
                "proposed_2026-09-16_fight_odds_capture.sql").read_text(encoding="utf-8")
         self.assertIn("NOT the staleness clock", sql)
         self.assertIn("measured from captured_at", sql)
+
+
+class TestAmendmentApprovalIsNotClaimed(unittest.TestCase):
+    """An amendment that has been WRITTEN is not one that has been APPROVED.
+
+    Recording an approval the owner did not give is the single failure the hash
+    chain, the two-route rule and the whole L3 ladder exist to prevent: a
+    protocol nobody agreed to, wearing the marks of one they did. It is also the
+    easiest mistake to make in good faith, because writing the amendment and
+    believing it is correct feel like the same act as it being ratified.
+    """
+
+    def amendments(self):
+        return doc()["amendments"]
+
+    def test_an_amendment_either_names_an_approver_or_says_it_is_proposed(self):
+        for a in self.amendments():
+            with self.subTest(amendment=a["number"]):
+                if a.get("approved_by"):
+                    self.assertIsInstance(a["approved_by"], str)
+                    self.assertTrue(a["approved_by"].strip())
+                else:
+                    self.assertIn("approval_status", a,
+                                  "an amendment with no approver must say so "
+                                  "explicitly, not leave the field blank")
+                    self.assertIn("PROPOSED", a["approval_status"])
+
+    def test_the_version_matches_the_last_amendment_either_way(self):
+        """A proposed amendment still chains — what is pending is the approval,
+        not the bookkeeping."""
+        last = self.amendments()[-1]
+        self.assertEqual(last["version_after"], doc()["version"])
+        self.assertEqual(last["sha256_after"], doc()["protocol_sha256"])
+
+    def test_a_pending_amendment_is_not_recorded_as_the_ratified_version(self):
+        pending = [a for a in self.amendments() if not a.get("approved_by")]
+        if not pending:
+            return
+        self.assertIn("last_ratified_version", doc(),
+                      "with an amendment pending, the document must say which "
+                      "version actually carries approval")
+        ratified = doc()["last_ratified_version"]
+        self.assertNotEqual(ratified, doc()["version"])
+        self.assertEqual(ratified, pending[0]["version_before"],
+                         "the last ratified version is the one before the first "
+                         "pending amendment")
+        self.assertIn("PROPOSED", doc().get("version_status", ""))
+
+    def test_the_markdown_marks_a_pending_amendment_at_its_top(self):
+        pending = [a for a in self.amendments() if not a.get("approved_by")]
+        if not pending:
+            return
+        md = markdown()
+        for a in pending:
+            head = md.index(f"## AMENDMENT {a['number']}, v{a['version_after']}")
+            block = md[head:head + 1200]
+            with self.subTest(amendment=a["number"]):
+                self.assertIn("PROPOSED", block)
+                self.assertIn("NOT APPROVED", block)
+                self.assertNotIn("Approved by", block,
+                                 "a pending amendment must not carry an "
+                                 "approval line anywhere near its heading")
+
+    def test_a_pending_amendment_holds_clv_write_mode_shut(self):
+        """Not a note in a handoff — a precondition the writer evaluates.
+
+        Reporting is deliberately unaffected: a dry run against a proposed
+        amendment is how the owner sees what they are being asked to approve.
+        """
+        src = (REPO / "cfl_engine" / "settle_clv.py").read_text(encoding="utf-8")
+        self.assertIn('cond["all_amendments_approved"]', src)
+        self.assertIn('if not a.get("approved_by")', src)
+        # And it is a real blocker: preflight's blockers are every false
+        # condition, and blockers force write_allowed false.
+        self.assertIn("blockers = [name for name, ok in cond.items() if not ok]",
+                      src)
+        self.assertIn("write_allowed = write and not blockers", src)

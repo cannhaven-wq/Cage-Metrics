@@ -1121,7 +1121,13 @@ class TestImmutableForecastLock(unittest.TestCase):
                          "a later published_at must bind")
 
         earlier = LOCK - dt.timedelta(days=30)
-        got = score(published_at=earlier)
+        # The linked publish quote moves with the stated publication instant: a
+        # quote captured a month AFTER publication is not its source, and that
+        # is a different refusal (Amendment 7 (c)) from the one under test.
+        got = score(published_at=earlier,
+                    pub=publish_quote(captured_at=earlier,
+                                      provider_last_update=earlier,
+                                      retrieved_at=earlier))
         self.assertTrue(got["scored"], got["detail"])
         self.assertEqual(got["forecast_lock"]["locked_at"], LOCK,
                          "an earlier published_at must NOT loosen the immutable "
@@ -1403,7 +1409,7 @@ class TestWriteOnce(unittest.TestCase):
                    encoding="utf-8").read()
         body = src[src.index("fresh, drifted, verified, foreign ="):]
         abort = body.index("sys.exit(")
-        patch = body.index("patch_row(")
+        patch = body.index("claim_and_write_clv001(")
         self.assertLess(abort, patch,
                         "the drift abort must come before any PATCH")
         self.assertIn("POST-SCORE DRIFT", body)
@@ -1445,6 +1451,60 @@ class TestPublishQuoteLink(unittest.TestCase):
                 # corner rather than the column.
                 self.assertIn("opponent" if field == "opponent_fighter_id"
                               else field, got["detail"])
+
+    def test_a_quote_captured_after_publication_is_not_the_source(self):
+        """Amendment 7 (c). The price matches, the corners match, the market
+        matches, the instant is credible — and the quote did not exist when the
+        edge was published, so it is a later quote that agrees with the posted
+        price rather than the row it came from.
+
+        This is the routine case, not the exotic one: a book that has not moved
+        for an hour leaves several rows at the same price, and only one of them
+        precedes publication.
+        """
+        after = LOCK + dt.timedelta(minutes=30)
+        self.assertLess(after, FRESH, "the quote must still be pre-cutoff, or "
+                                      "the test proves something else")
+        got = score(pub=publish_quote(captured_at=after,
+                                      provider_last_update=after,
+                                      retrieved_at=after))
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+        self.assertIn("AFTER the edge was published", got["detail"])
+        self.assertIn("a matching price is not a source", got["detail"])
+
+    def test_a_quote_captured_at_the_publication_instant_is_accepted(self):
+        """At or before, not strictly before: the quote we published from can
+        legitimately carry the same instant the publication is stamped with."""
+        got = score(pub=publish_quote(captured_at=LOCK,
+                                      provider_last_update=LOCK,
+                                      retrieved_at=LOCK))
+        self.assertTrue(got["scored"], got["detail"])
+
+    def test_the_publication_instant_is_not_the_effective_lock(self):
+        """The effective lock is the LATER of published_at and the immutable
+        instant. Anchoring the temporal check to it would let a late
+        `published_at` admit a quote captured after the real publication —
+        exactly backwards, since taking the later instant is supposed to be the
+        conservative direction."""
+        late = LOCK + dt.timedelta(hours=2)
+        got = score(published_at=late,
+                    pub=publish_quote(captured_at=LOCK + dt.timedelta(hours=1),
+                                      provider_last_update=LOCK,
+                                      retrieved_at=LOCK))
+        self.assertFalse(got["scored"],
+                         "the immutable instant, not the effective lock, bounds "
+                         "the publish quote")
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+
+    def test_a_pre_publication_quote_is_also_pre_cutoff(self):
+        """The consequence worth stating: the publish side can never be drawn
+        from inside the window the closing side is measured over."""
+        got = score()
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertLessEqual(got["publish_quote"]["captured_at"],
+                             got["forecast_lock"]["locked_at"])
+        self.assertLess(got["publish_quote"]["captured_at"], got["cutoff_at"])
 
     def test_the_link_must_carry_a_credible_instant(self):
         got = score(pub=publish_quote(captured_at=EPOCH))
