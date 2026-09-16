@@ -745,3 +745,39 @@ class TestAmendmentApprovalIsNotClaimed(unittest.TestCase):
         self.assertIn("blockers = [name for name, ok in cond.items() if not ok]",
                       src)
         self.assertIn("write_allowed = write and not blockers", src)
+
+    def test_a_ratified_amendment_records_who_and_when(self):
+        """The mirror of the pending case. An approval is only evidence if it
+        says who gave it — `approved_by: true` would be a rumour."""
+        for a in self.amendments():
+            if not a.get("approved_by"):
+                continue
+            with self.subTest(amendment=a["number"]):
+                self.assertRegex(a["date"], r"^\d{4}-\d{2}-\d{2}$")
+                self.assertTrue(a["approved_by"].strip())
+                # `level` arrived with the later amendments; where it is
+                # recorded it must say L3, because an amendment is always one.
+                if "level" in a:
+                    self.assertEqual(a["level"], "L3")
+                self.assertIs(a["motivated_by_observed_results"], False)
+
+    def test_amendment_7_records_the_approved_substance_not_just_a_yes(self):
+        """The owner approved a RULE, not a commit. What was approved has to be
+        recoverable from the record, or a later reader has an approval attached
+        to whatever the code happens to do now."""
+        a7 = next(a for a in self.amendments() if a["number"] == "7")
+        self.assertTrue(a7.get("approved_by"))
+        substance = a7.get("approved_substance", "")
+        self.assertIn("permanent", substance)
+        self.assertIn("never overwrite", substance.replace("overwritten", "overwrite"))
+        self.assertIn("superseding", substance)
+        self.assertIn("superseding_mechanism", a7,
+                      "the deferral of the correction-ledger design is part of "
+                      "what was approved and must be on the record")
+
+    def test_the_write_mode_gate_survives_ratification(self):
+        """The condition is not deleted once it stops firing. It governs the
+        NEXT unratified amendment, and a gate removed the moment it first goes
+        green was never a gate."""
+        src = (REPO / "cfl_engine" / "settle_clv.py").read_text(encoding="utf-8")
+        self.assertIn('cond["all_amendments_approved"]', src)

@@ -4,7 +4,7 @@ What is queued, who owns it, and what level it sits at. One row per task.
 
 **Levels** are defined in [`CRITICAL_GATES.md`](CRITICAL_GATES.md): `L0`
 execute, `L1` AI-to-AI, `L2` proceed and notify, `L3` owner only.
-**Owners**: `Claude` (build), `ChatGPT` (spec / review), `Owner` (Reed Cannon, per CLAUDE.md).
+**Owners**: `Claude` (build), `ChatGPT` (spec / review), `Owner` (Michael Cannon).
 **Status**: `proposed`, `queued`, `in-progress`, `blocked`, `done`, `dropped`.
 
 An `L3` task cannot be marked `done` until [`DECISIONS.md`](DECISIONS.md)

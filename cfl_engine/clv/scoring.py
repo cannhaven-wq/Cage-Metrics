@@ -548,6 +548,21 @@ def canonical_sha256(artifact: dict) -> str:
 # taken before then carries NULL, and those fall to the cohort rule below.
 SNAPSHOT_EDGE_ID_FIELD = "edge_model_edge_id"
 
+# When that edge was published, frozen at snapshot time. Added by the same
+# migration and written by the same producer.
+#
+# Deliberately NOT `engine_published_at`. That column holds
+# `model_picks.published_at` — the MODEL PICK's publication — and a pick and a
+# value edge are different records published at different times. CLV-001 scores
+# the EDGE, so R-07's "forecast" is the edge, and the pick's instant is not a
+# stand-in for it in any branch.
+SNAPSHOT_EDGE_PUBLISHED_FIELD = "edge_published_at"
+
+# Never admissible as the edge's lock, under any circumstances. Named so the
+# exclusion is a value in the module rather than an absence somebody has to
+# notice.
+NOT_AN_EDGE_LOCK_FIELDS = frozenset({"engine_published_at"})
+
 
 def forecast_lock(edge: dict, snapshot: dict | None,
                   edge_cohort: list | None = None) -> tuple:
@@ -671,14 +686,42 @@ def forecast_lock(edge: dict, snapshot: dict | None,
                 f"one on record. Ambiguous scores nothing (R-07).")
         identity = "tuple_unique_in_cohort"
 
-    source = "engine_published_at"
-    locked_at = snapshot.get("engine_published_at")
-    if locked_at is None:
+    # THE EDGE'S OWN PUBLICATION INSTANT, and nothing else.
+    #
+    # `engine_published_at` is NOT it. That column is `model_picks.published_at` —
+    # the MODEL PICK's publication — and a pick and a value edge are different
+    # records published at different times: the engine posts a pick, and the edge
+    # derived from it appears later, when the price has moved far enough to flag
+    # one. Using the pick's instant as the edge's places the lock early and admits
+    # quotes from before the edge existed. That is a lookahead violation wearing
+    # an immutable record's clothes, which is the worst kind, because everything
+    # about it looks audited.
+    #
+    # So: `edge_published_at` when the snapshot carries it, and `snapshot_at`
+    # otherwise. `snapshot_at` is not the publication instant either — it is
+    # LATER than it — but that is the safe direction: it proves the edge existed
+    # by then, and a later lock can only narrow the eligible window. It is
+    # labelled a fallback on the row so nobody reads it as the real thing.
+    #
+    # `engine_published_at` never appears here in any branch. It stays on the
+    # snapshot as provenance for the main model prediction, which is what it is.
+    # Both fields together, never one alone: a publication instant with no edge
+    # id beside it cannot be attached to a particular publication, and would be
+    # indistinguishable from the pick timestamp it exists to displace.
+    if (snapshot.get(SNAPSHOT_EDGE_PUBLISHED_FIELD) is not None
+            and snapshot.get(SNAPSHOT_EDGE_ID_FIELD) is not None):
+        source = SNAPSHOT_EDGE_PUBLISHED_FIELD
+        locked_at = snapshot[SNAPSHOT_EDGE_PUBLISHED_FIELD]
+    else:
         source, locked_at = "snapshot_at", snapshot.get("snapshot_at")
     if locked_at is None:
-        raise Unscored("no_immutable_forecast_lock",
-                       "the pre-fight snapshot carries neither "
-                       "engine_published_at nor snapshot_at (R-07)")
+        raise Unscored(
+            "no_immutable_forecast_lock",
+            f"the pre-fight snapshot carries neither {SNAPSHOT_EDGE_PUBLISHED_FIELD} "
+            f"nor snapshot_at, so nothing immutable says when the EDGE was "
+            f"published. engine_published_at is the model pick's instant and is "
+            f"not a substitute (R-07).")
+    is_fallback = source == "snapshot_at"
 
     published_at = edge.get("published_at")
     effective = locked_at
@@ -688,6 +731,15 @@ def forecast_lock(edge: dict, snapshot: dict | None,
         "locked_at": effective,
         "immutable_locked_at": locked_at,
         "immutable_source": f"pre_fight_snapshots.{source}",
+        # TRUE when the immutable instant is `snapshot_at` rather than the edge's
+        # own publication time — a conservative bound, not a record of when the
+        # edge was published. Labelled rather than smoothed over: a reader
+        # comparing two scored rows needs to know which one rests on the weaker
+        # evidence, and the weaker one is systematically late.
+        "immutable_is_conservative_fallback": is_fallback,
+        # Carried for audit, never used as the lock. This is the MODEL PICK's
+        # publication, which is a different event from the edge's.
+        "engine_published_at": snapshot.get("engine_published_at"),
         "snapshot_id": snapshot.get("id"),
         # HOW the snapshot was tied to this edge. 'shared_edge_id' is an
         # identity; 'tuple_unique_in_cohort' is a match shown to be unique among
@@ -1130,16 +1182,20 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
 
     # §4 item 12. The publish side of CLV_return must be a record.
     #
-    # THE EARLIEST publication instant on record, which is the opposite choice
-    # from the effective lock and is conservative in the same direction.
+    # THE BOUND ON THE PUBLISH QUOTE: the immutable edge instant, and the
+    # mutable `published_at` only when it is EARLIER.
     #
-    # The lock takes the LATER of `published_at` and the immutable instant,
-    # because a later lock can only shrink the closing window. Here the
+    # The immutable side is `edge_published_at` when the snapshot carries it, and
+    # `snapshot_at` as the conservative fallback otherwise — the same instant the
+    # lock uses, never `engine_published_at`.
+    #
+    # Why the mutable column may only tighten this. The lock takes the LATER of
+    # the two, because a later lock can only shrink the closing window. Here the
     # comparison runs the other way — a quote must be at or before publication —
     # so the later instant is the permissive one, and a `published_at` edited
     # forwards would admit a quote captured after the real publication. Taking
-    # the earlier of the two makes an edit in either direction cost rows rather
-    # than admit them.
+    # the earlier makes an edit in either direction cost rows rather than admit
+    # them, which is the same asymmetry read from the other end.
     published_at = min(t for t in (edge.get("published_at"),
                                    lock_info["immutable_locked_at"])
                        if t is not None)

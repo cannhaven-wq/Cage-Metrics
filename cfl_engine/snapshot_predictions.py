@@ -292,6 +292,12 @@ def collect(base_url, key, event, log=print):
             # research/clv/proposed_2026-09-16_snapshot_edge_identity.sql is
             # applied and never a reason for the cron to fail.
             "edge_model_edge_id": ed and ed["id"],
+            # WHEN THE EDGE WAS PUBLISHED - not engine_published_at above, which
+            # is the model PICK's publication. The engine can post a pick on
+            # Monday and the edge derived from it on Tuesday, when the price has
+            # moved far enough to flag one; CLV-001 scores the edge, so R-07
+            # locks the edge's own instant. Same optional-column treatment.
+            "edge_published_at": ed and ed["published_at"],
             "edge_side": ed and ed["side"],
             "edge_bet_fighter_id": ed and ed["bet_fighter_id"],
             "edge_value": ed and ed["edge"],
@@ -354,7 +360,7 @@ def report(rows, log=print):
 # from every row when the table does not have it, so a proposed-but-unapplied
 # migration can never take the snapshot cron down — and applying it needs no
 # matching deploy here.
-OPTIONAL_COLUMNS = ("edge_model_edge_id",)
+OPTIONAL_COLUMNS = ("edge_model_edge_id", "edge_published_at")
 
 
 def _drop_unknown_columns(base_url, key, rows, log=print):
@@ -364,9 +370,10 @@ def _drop_unknown_columns(base_url, key, rows, log=print):
             fetch_all(base_url, key, SNAP_TABLE, f"select={column}&limit=1")
         except Exception:                       # noqa: BLE001 - unknown is absent
             log(f"  note: {SNAP_TABLE}.{column} is not present — omitting it. "
-                f"CLV-001 will fall back to matching an edge by "
-                f"(side, bet_fighter_id, odds_at_publish) and will refuse to "
-                f"score any fight where that tuple is not unique.")
+                f"CLV-001 then falls back to matching an edge by "
+                f"(side, bet_fighter_id, odds_at_publish), refuses to score any "
+                f"fight where that tuple is not unique, and uses snapshot_at as "
+                f"the conservative edge lock rather than engine_published_at.")
             for r in rows:
                 r.pop(column, None)
     return rows

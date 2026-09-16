@@ -11,6 +11,160 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — Amendment 7 RATIFIED; the edge publication instant fixed
+
+**From:** Claude
+**To:** Owner → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied. No production write. No CLV published. No paid API call.**
+Five migrations, all proposed and unapplied.
+
+**v1.0.10 is ratified.** Approved by **Michael Cannon (owner, L3), 2026-09-16**.
+Hash `df5ce2a5…`, chained from `f8c6e68a…`. The chain verifies across ten
+amendments and every one now records an approver, a date and
+`motivated_by_observed_results: false`.
+
+### The defect: the lock was the model pick's timestamp, not the edge's
+
+ChatGPT was right, and it was a live lookahead hole.
+
+`pre_fight_snapshots.engine_published_at` is `model_picks.published_at` —
+`snapshot_predictions.py` fills it from the **pick** row, and separately reads
+the **edge** row for side, fighter and price without ever storing the edge's own
+`published_at`. `forecast_lock` then read the pick's instant as the edge's.
+
+A pick and a value edge are different records published at different times: the
+engine posts a pick, and the edge derived from it appears later, once the price
+has moved far enough to flag one. So the lock sat early, and quotes from before
+the edge existed were eligible. A lookahead violation wearing an immutable
+record's clothes — the worst kind, because everything about it looks audited.
+
+| | now |
+|---|---|
+| modern snapshot | `edge_published_at`, required together with `edge_model_edge_id` |
+| historical snapshot | `snapshot_at` — later than publication, therefore conservative, and flagged `immutable_is_conservative_fallback` on the row |
+| `engine_published_at` | **never a lock, in any branch.** Carried as provenance for the main model prediction, which is what it is |
+
+The publish-quote bound follows the same instant, tightened by
+`model_edges.published_at` when that is earlier. A mutable timestamp may narrow
+the window; it may never widen it.
+
+Two database constraints keep the column honest: an edge instant requires an
+edge id beside it (an instant with no id cannot be attached to a publication,
+and would be indistinguishable from the pick's), and an edge cannot have been
+published after the snapshot that froze it.
+
+**ChatGPT's scenario, run:** pick Monday, edge Tuesday, snapshot Wednesday,
+`published_at` later edited back to **Sunday**, matching quote Monday evening.
+
+- Monday quote **refused** — `forecast_not_before_close`, all six books.
+- Immutable lock stays **Tuesday** (modern) or **Wednesday** (legacy fallback).
+- **Never Monday.**
+- The backdated Sunday *tightens* the publish-quote bound rather than widening
+  it, so the Monday quote is refused on that side too.
+
+I reverted the lock resolution to the old behaviour to confirm the regression
+has teeth: **7 of its 10 tests fail** against the pre-fix code.
+
+### Amendment 7 ratification
+
+Recorded in both copies, with the approved substance rather than just a yes:
+
+> Once a CLV-001 result is officially scored, it is permanent and may never be
+> overwritten. If a genuine error is later discovered, the correction must be
+> appended/superseded with an audit trail rather than silently replacing the
+> original record.
+
+**The superseding mechanism is deliberately not designed here**, per the owner's
+instruction, and `protocol.json` records that deferral as part of what was
+approved. Zero observations have been scored, so there is nothing to correct;
+the half that cannot wait is guaranteed — nothing overwrites an observation — so
+whatever the correction ledger turns out to be, it inherits an intact record.
+
+The `all_amendments_approved` preflight condition **stays**. It no longer fires,
+and it governs the next unratified amendment. A gate deleted the moment it first
+goes green was never a gate, and there is a test saying so.
+
+### Owner naming
+
+`TASK_QUEUE.md` now names **Michael Cannon** as the Owner; the rest of live
+coordination text uses the role. Historical records — `DECISIONS.md`, earlier
+handoffs, Amendments 1–6 — keep their original attribution.
+
+**One inconsistency I did not silently resolve:** `CLAUDE.md` still records the
+owner as Reed Cannon. That is the repo's canonical config, not coordination
+text, and renaming a person there on my own initiative seemed like the wrong
+call. Say the word and it is a one-line edit.
+
+### Everything preserved
+
+Re-verified by the suites, not by assertion: atomic compare-and-set first write,
+lost-race re-read and verification, post-score drift abort, `clv_scored_at` never
+refreshed, exact `edge_model_edge_id`, ambiguous historical identity fails
+closed, no fabricated `clv_publish_quote_id`, row-level quote provenance,
+`forecast_locked_at < quote_at < cutoff`, stored and hashed cutoff, bout-1
+schedule resolution, whole-card event-flow resolution, raw quote immutability,
+`captured_at` 45-minute staleness, event-ID publication counting, bell audit-only,
+publication gate shut.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `cfl_engine/clv/scoring.py` | `SNAPSHOT_EDGE_PUBLISHED_FIELD`, `NOT_AN_EDGE_LOCK_FIELDS`; lock resolution rewritten; publish bound follows it |
+| `cfl_engine/snapshot_predictions.py` | writes `edge_published_at` from the EDGE row, behind the same column probe |
+| `cfl_engine/settle_clv.py` | fetches and normalises the new column, with a fallback |
+| `research/clv/proposed_2026-09-16_snapshot_edge_identity.sql` | `edge_published_at` + 2 constraints |
+| `research/clv/CLV_MEASUREMENT_PROTOCOL.md`, `protocol.json` | Amendment 7 (e); ratification; `edge_publication_instant`; hash re-chained |
+| `cfl_engine/clv/test_scoring.py` | `legacy_snapshot()` fixture; +10 tests for the calendar scenario; ~20 rewired |
+| `tests/test_sql_behaviour.py` | +4 behavioural tests on the new column and constraints |
+| `tests/test_clv_protocol.py` | +3 ratification-discipline tests |
+| `coordination/STATE.md`, `coordination/TASK_QUEUE.md`, `coordination/HANDOFF.md` | this |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo, incl. static migration + Postgres behavioural) | **163 passed**, 3 skipped |
+| `cfl_engine/clv/` | **199 passed** |
+| `build/test-fetch-odds.js` (Node) | **66 passed** |
+
+**428 total, all green.** The 3 skips are frozen-protocol fixtures that skip by
+design. Still locally reported — no CI workflow exists and `CLAUDE.md` says not
+to add one without asking; the offer stands.
+
+### Remaining blockers
+
+1. **Nothing writes `clv_publish_quote_id`.** Still the binding one: until the
+   edge publisher records it contemporaneously, no edge scores.
+2. **Exact bout completions have no source.**
+3. **Running order is not captured.**
+4. **Nothing is applied.**
+
+### L3 decisions waiting
+
+1. Apply the five migrations, in order.
+2. Inventory every external `fight_odds` writer before
+   `..._fight_odds_immutability.sql` — it is the one that is not additive.
+3. `..._snapshot_edge_identity.sql` touches `pre_fight_snapshots`: two nullable
+   columns and two NOT VALID checks, no trigger created or altered (there is a
+   behavioural test asserting the trigger count on that table is unchanged).
+4. Optional, raised by ChatGPT: a DB guard making CLV result columns immutable
+   once `clv_scored_at` is set — stronger than the compare-and-set, non-additive,
+   its own decision.
+5. Whether to add the CI workflow.
+
+## Next action
+
+**ChatGPT:** confirm the edge-publication fix, and in particular that
+`snapshot_at` is the right conservative fallback for historical snapshots rather
+than refusing them outright.
+
+**Owner:** the L3 list above.
+
+---
+
 ## 2026-09-16 — Amendment 7 hardened, and marked PROPOSED
 
 **From:** Claude
@@ -308,252 +462,6 @@ rows and reporting the drift separately. I chose the stricter one.
 **Owner:** the L3 items above, and whether to add the CI workflow. Then apply in
 order — `..._fight_odds_capture.sql`, `..._fight_odds_immutability.sql`,
 `..._event_flow.sql`, `..._snapshot_edge_identity.sql`, `..._clv001_columns.sql`.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.9: Amendment 6, provenance enforced per row
-
-**From:** Claude
-**To:** Reed → ChatGPT review
-**Date:** 2026-09-16
-
-**No migration applied. No production write. No paid API call. No publication.**
-Four migrations now, all proposed and unapplied.
-
-**Version bumped to v1.0.9**, hash `f8c6e68a…`, chained from `a009bb17…`. The
-measurement did not change — same cutoffs, same de-vig, same 45-minute limit,
-same books, same gate. What changed is that rules already written down are
-enforced where they apply. It is recorded as an amendment anyway, because it
-changes which rows can score and because §5 of a frozen document had to be
-corrected. `motivated_by_observed_results: false`, and trivially so: nothing has
-been scored.
-
-### 1. Eligibility is a property of the ROW, not of the schema
-
-The settler checked that the CLV-001 **columns existed** and then scored on
-whatever `fight_odds` held. Those are different tests, and the gap opens the day
-the capture migration lands: a June quote with a credible `captured_at` — R-13
-passes it, live capture began 2026-05-22 — and NULL in every new column becomes
-scorable.
-
-A quote is now eligible only if **that quote** carries `source_event_id`,
-`feed_version`, `opponent_fighter_id`, `provider_last_update`, `retrieved_at`,
-`market_status` and `raw`. Present means populated: an empty string and an empty
-jsonb record nothing and do not count. The settler selects all of them, and a
-test pins the select list against the required set so the check can never pass on
-what the query asked for rather than on what the row holds.
-
-Pre-migration rows stay permanently unscorable — a coverage fact under R-05.
-
-### 2. R-07 is applied per quote, as written
-
-`forecast_locked_at < close_quoted_at`, strictly. The implementation checked
-`published_at < cutoff`.
-
-**A forecast locked at 9:28 could be scored against a 9:20 book quote, because
-the cutoff was 9:30.** That price was on the screen before the forecast existed.
-Reed's case is now a test, along with the assertion that the check it replaced
-would have passed exactly this arrangement.
-
-`closing_pairs` takes the lock as a required argument with **no default** — a
-default of None would be a silent bypass of R-07, the same shape of hole
-Amendment 5.1 closed in `score_row`. Passing None drops every quote.
-
-### 3. The lock comes from an immutable record
-
-R-07: "A forecast whose timestamp cannot be established from an immutable record
-is not eligible." `model_edges` has no append-only trigger.
-
-**No new ledger was needed.** `pre_fight_snapshots` already is one — unique on
-`fight_id`, UPDATE and DELETE rejected by trigger for every role including
-`service_role` — and it carries `edge_side`, `edge_bet_fighter_id` and
-`edge_odds_at_publish`, so it matches **this edge** rather than merely its fight.
-All three must agree. It predates CLV-001, which is what makes it good evidence.
-
-The effective lock is the **later** of the immutable instant and `published_at`.
-Later is strictly harder, so an edited `published_at` can only ever cost
-observations — never admit a quote the immutable record would have excluded.
-There is a test for that direction specifically.
-
-### 4. The posted price must name and prove its source quote
-
-§4 item 12. `clv_publish_quote_id` records the exact `fight_odds` row, and the
-scorer **verifies** it: same American price, the bet fighter, the opponent
-(Q-10), the provider market id (R-06), a credible instant (R-13), full §4
-provenance. The closing quotes must name the same market and the same opponent —
-a repost or a rematch is a different market, not a later quote on the same one.
-
-Historical edges have no link and are not given one. Searching for "the row whose
-price matches" manufactures the record the rule exists to require.
-
-### 5. The cutoff is stored, and hashed
-
-`clv_cutoff_at` is added and required on every scored row. For bouts 2..N the
-cutoff coincides with `clv_window_opened_at` so it looked recoverable; for **bout
-1** — the only bout this version can currently score — nothing held it.
-
-The cutoff, the forecast lock and the publish quote id go **inside the hashed
-artifact**. A consensus is a set of prices *selected by* a cutoff: hashing the
-prices alone means the same books at the same median hash identically whether
-they were selected against a 22:00 cutoff or a 23:00 one. There is a test that
-constructs exactly that pair.
-
-### 6. Bout 1's cutoff comes from bout 1's own schedule
-
-`v_clv_close_reference` resolved the card's scheduled start from the latest
-`odds_api_commence` observation belonging to **any** fight on the event. The
-provider publishes a commence time per market and the tail of a card is
-re-estimated as the night is rebuilt, so the newest observation usually belongs
-to another fight.
-
-**Measured on a real Postgres, not asserted:** with bout 1 at 22:00 and bout 12
-at 04:30, the old view gave bout 1 a cutoff of **04:30** — six and a half hours
-late, which would have made every in-play price on the card eligible as its
-close. It now resolves the bout-1 fight's own latest observation within the
-latest complete card snapshot, and the view reports `card_start_fight_id` so a
-reader can check whose schedule it is.
-
-I ran the regression against the pre-Amendment-6 view to confirm it fails there:
-`'12' != '1'`.
-
-### 7. The raw quote evidence is made durable
-
-R-01 requires the raw quote store to reject UPDATE and DELETE by trigger for
-every role including `service_role`. `fight_odds` did not — the legacy
-`is_closer` promotion UPDATEs it after every card — so `clv_source_quote_ids`
-pointed at rows whose price, timestamp, identity or provenance could be rewritten
-afterwards, with the consensus hash still matching, because the hash covers the
-artifact rather than the rows it names.
-
-New migration, and **it is the one that is not additive-only**:
-`proposed_2026-09-16_fight_odds_immutability.sql`. DELETE and TRUNCATE refused
-outright; UPDATE refused for anything but `is_opener` / `is_closer`. Whitelist by
-construction — it compares `to_jsonb(old)` and `to_jsonb(new)` minus those keys,
-so a column added later is protected the moment it exists (there is a test that
-adds one and checks).
-
-The legacy promotion still works, verified against a live trigger. A Node test
-pins that `fetch-odds.js` writes no other column, so a future edit fails the
-suite rather than the cron at 23:00 UTC on a card night.
-
-### 8. The staleness clock is named, and left alone
-
-The frozen 45 minutes came from CFL's own observation cadence, so it stays
-measured from `captured_at`. `provider_last_update` is required provenance and
-explicitly **not** the clock. Recorded as `STALENESS_MEASURED_FROM`, documented
-on both columns, and tested in both directions: a nine-hour-old book move does
-not make a fresh capture stale, and a fresh book move does not rescue a stale
-capture.
-
-### 9. Stale live documentation
-
-- **§5 no longer says freezing opens the gate.** It listed
-  "`publication_allowed` becomes `true`" among the things that happen at freeze —
-  the one sentence in the document that could be read as authorising a number to
-  appear. Replaced with the actual rule, as a dated correction rather than a
-  silent rewrite. (`protocol.json`'s `freeze_procedure` was already correct; the
-  markdown was the stale one.)
-- **Capture-column comments** now name v1.0.8-onward's two cutoff bases instead
-  of the Amendment 2 (b) era "bell_at and provider_commence" rule.
-- **Scorer text** no longer offers "or a confirmed bell" as a cutoff.
-- Superseded amendment blocks are untouched. A test strips the blockquotes and
-  asserts the **live** text only, so history stays auditable.
-
-### New: behavioural SQL tests
-
-`tests/test_sql_behaviour.py` runs the DDL against a throwaway Postgres cluster
-(`initdb` into a temp dir, unix socket, `listen_addresses` empty, destroyed in
-teardown). It **skips** where no local Postgres exists, so it costs nothing in CI
-or on a laptop. `SUPABASE_DB_URL` is never read and no production database is
-touched.
-
-It proves what static analysis cannot: all four migrations apply in the
-documented order, apply twice unchanged, the bout-1 schedule resolves correctly,
-the immutability trigger allows exactly the right UPDATE and refuses the rest,
-and the `model_edges` completeness constraint actually rejects a row missing its
-cutoff.
-
-### Files changed
-
-| file | what |
-|---|---|
-| `cfl_engine/clv/scoring.py` | row-level provenance; per-quote R-07; `forecast_lock`; `verify_publish_quote`; cutoff stored and hashed; v1.0.9 |
-| `cfl_engine/settle_clv.py` | provenance columns fetched; snapshots and publish quotes resolved; `clv_cutoff_at` written; new precondition |
-| `cfl_engine/clv/test_scoring.py` | +39 tests across the six new rules |
-| `research/clv/proposed_2026-09-16_fight_odds_immutability.sql` | **new** — R-01 triggers, not additive-only |
-| `research/clv/proposed_2026-09-16_clv001_columns.sql` | `clv_cutoff_at`, `clv_publish_quote_id`, 4 reasons, 2 constraints |
-| `research/clv/proposed_2026-09-16_event_flow.sql` | bout-1 schedule resolution; `card_start_fight_id` |
-| `research/clv/proposed_2026-09-16_fight_odds_capture.sql` | comments corrected; staleness clock documented |
-| `research/clv/CLV_MEASUREMENT_PROTOCOL.md` | Amendment 6; §5 corrected; v1.0.9 |
-| `research/clv/protocol.json` | amendment 6 + hash chain; 5 new sections |
-| `tests/test_sql_behaviour.py` | **new** — 17 behavioural tests |
-| `tests/test_clv_protocol.py` | +8 documentation regressions |
-| `tests/test_migrations_idempotent.py` | +12 tests; `__main__` block moved to the end |
-| `build/test-fetch-odds.js` | +2 tests pinning the UPDATE whitelist |
-| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
-
-### Tests
-
-| suite | result |
-|---|---|
-| `tests/` (repo) | **149 passed**, 3 skipped |
-| `cfl_engine/clv/test_scoring.py` + `test_devig.py` | **161 passed** |
-| `build/test-fetch-odds.js` (Node) | **66 passed** |
-
-376 total, all green. The 3 skips are the frozen-protocol fixtures that skip by
-design. Hash chain verified across 9 amendments; publication gate confirmed shut
-at 0 of 100 / 0 of 20.
-
-**One pre-existing defect found and fixed in passing.**
-`tests/test_migrations_idempotent.py` had its `if __name__ == "__main__"` block
-in the middle of the file, so running it directly collected only the first three
-classes and silently skipped the rest. Moved to the end; direct invocation now
-collects all 31.
-
-### Preserved, as instructed
-
-The closing-price proxy methodology and naming; the 45-minute freshness rule;
-≥3 eligible two-sided books; power de-vig per book then median; the ten named
-books; append-only provenance; the 500-credit ceiling; the fail-closed
-publication gate; no paid services; no production migrations.
-
-### Remaining blockers
-
-1. **Exact bout completions have no source.** Unchanged and still binding.
-2. **Running order is not captured.** Free to fix; nothing writes the ledger yet.
-3. **Nothing publishes `clv_publish_quote_id`.** New, and it is a real one: the
-   edge publisher lives outside this repo (`cfl-snapshotter` / the engine), and
-   until it records which `fight_odds` row a posted price came from, **no future
-   edge can score either**. This is not a migration — it is a change to whatever
-   writes `model_edges`. Flagged rather than guessed at.
-4. **Nothing is applied.**
-
-### New L3 decisions required
-
-**Two, both small and both stated rather than assumed:**
-
-1. **The version bump itself.** Items 1–8 are conformance with rules already
-   frozen, but they change which rows can score, and item 9 edits a frozen
-   document. I recorded it as Amendment 6 / v1.0.9 rather than as a silent fix.
-   If you would rather it were not a version bump, say so and it reverts to
-   v1.0.8 with the §5 correction carried as an erratum.
-2. **`proposed_2026-09-16_fight_odds_immutability.sql` is not additive.** It
-   constrains an existing writer. Before it is applied, any writer to
-   `fight_odds` outside this repo needs inventorying — inside this repo there is
-   exactly one, and it is covered.
-
-Still not required: no spend, no paid tier, no publication.
-
-## Next action
-
-**ChatGPT:** review Amendment 6 — in particular (c), whether
-`pre_fight_snapshots` is the right immutable lock and whether matching on side +
-bet fighter + price is a tight enough identification of the edge; and (g),
-whether the `is_opener` / `is_closer` whitelist is the right cut.
-
-**Reed:** the two L3 items above. Then apply in order —
-`..._fight_odds_capture.sql`, `..._fight_odds_immutability.sql`,
-`..._event_flow.sql`, `..._clv001_columns.sql`.
 
 ---
 

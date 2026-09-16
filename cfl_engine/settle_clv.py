@@ -117,9 +117,10 @@ from export_data import fetch_all, prob_to_american
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
 from scoring import (  # noqa: E402
     CLOSE_REFERENCE_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
-    REQUIRED_QUOTE_PROVENANCE, SNAPSHOT_EDGE_ID_FIELD, UNSCORED_REASONS,
-    VERIFIED_FIELDS, admissible_reference, has_clv001_score, is_eligible_book,
-    score_row, verify_against_stored,
+    REQUIRED_QUOTE_PROVENANCE, SNAPSHOT_EDGE_ID_FIELD,
+    SNAPSHOT_EDGE_PUBLISHED_FIELD, UNSCORED_REASONS, VERIFIED_FIELDS,
+    admissible_reference, has_clv001_score, is_eligible_book, score_row,
+    verify_against_stored,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -1023,16 +1024,20 @@ def _snapshots_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
     out: dict[int, dict] = {}
     base = ("select=id,fight_id,snapshot_at,engine_published_at,edge_side,"
             "edge_bet_fighter_id,edge_odds_at_publish")
+    # Both optional columns move together: the same migration adds them and the
+    # same producer writes them, so one select covers both and one fallback
+    # covers their absence.
+    optional = f"{SNAPSHOT_EDGE_ID_FIELD},{SNAPSHOT_EDGE_PUBLISHED_FIELD}"
     for chunk in _chunks(sorted(fight_ids), 100):
         ids = ",".join(str(i) for i in chunk)
         try:
             rows = fetch_all(base_url, key, "pre_fight_snapshots",
-                             f"{base},{SNAPSHOT_EDGE_ID_FIELD}"
-                             f"&fight_id=in.({ids})")
+                             f"{base},{optional}&fight_id=in.({ids})")
         except Exception:                       # noqa: BLE001 - unknown is failed
-            # The edge-id column is not applied yet. Fall back to the tuple
-            # match, which `forecast_lock` will then require to be unique among
-            # the fight's live edges.
+            # The edge-identity columns are not applied yet. Fall back to the
+            # tuple match, which `forecast_lock` will then require to be unique
+            # among the fight's live edges, and to `snapshot_at` as the
+            # conservative edge lock — never to engine_published_at.
             try:
                 rows = fetch_all(base_url, key, "pre_fight_snapshots",
                                  f"{base}&fight_id=in.({ids})")
@@ -1044,6 +1049,8 @@ def _snapshots_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
         for s in rows:
             s["snapshot_at"] = _iso(s.get("snapshot_at"))
             s["engine_published_at"] = _iso(s.get("engine_published_at"))
+            s[SNAPSHOT_EDGE_PUBLISHED_FIELD] = _iso(
+                s.get(SNAPSHOT_EDGE_PUBLISHED_FIELD))
             out[s["fight_id"]] = s
     return out
 

@@ -68,6 +68,25 @@ begin;
 alter table public.pre_fight_snapshots
   add column if not exists edge_model_edge_id bigint;
 
+-- WHEN THAT EDGE WAS PUBLISHED, frozen at snapshot time.
+--
+-- The column this replaces the misuse of is `engine_published_at`, which is
+-- `model_picks.published_at` — the MODEL PICK's publication. A pick and a value
+-- edge are different records published at different times: the engine can post a
+-- pick on Monday and the edge derived from it on Tuesday, when the price moved
+-- far enough to flag one.
+--
+-- R-07 is about the FORECAST BEING SCORED, and CLV-001 scores the edge. Reading
+-- the pick's timestamp as the edge's would place the lock hours or days early and
+-- admit quotes from before the edge existed — a lookahead violation wearing an
+-- immutable record's clothes, which is the worst kind because it looks audited.
+--
+-- NULL on every snapshot taken before this column existed, and never backfilled.
+-- Those rows fall back to `snapshot_at` — later than publication, therefore
+-- conservative — and never to `engine_published_at`.
+alter table public.pre_fight_snapshots
+  add column if not exists edge_published_at timestamptz;
+
 -- Matching a snapshot back to its edge, which is the only read this serves.
 create index if not exists pre_fight_snapshots_edge_idx
   on public.pre_fight_snapshots (edge_model_edge_id)
@@ -89,6 +108,44 @@ begin
                  and edge_odds_at_publish is not null)) not valid;
   end if;
 end $$;
+
+-- An edge publication instant belongs to an identified edge. A timestamp with no
+-- edge id beside it cannot be attached to a particular publication, and would be
+-- indistinguishable from the pick timestamp this column exists to displace.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'pre_fight_snapshots_edge_published_needs_an_id'
+                    and conrelid = 'public.pre_fight_snapshots'::regclass) then
+    alter table public.pre_fight_snapshots
+      add constraint pre_fight_snapshots_edge_published_needs_an_id
+      check (edge_published_at is null or edge_model_edge_id is not null)
+      not valid;
+  end if;
+end $$;
+
+-- The edge cannot have been published after the snapshot that froze it.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'pre_fight_snapshots_edge_published_before_snapshot'
+                    and conrelid = 'public.pre_fight_snapshots'::regclass) then
+    alter table public.pre_fight_snapshots
+      add constraint pre_fight_snapshots_edge_published_before_snapshot
+      check (edge_published_at is null or edge_published_at <= snapshot_at)
+      not valid;
+  end if;
+end $$;
+
+comment on column public.pre_fight_snapshots.edge_published_at is
+  'When the VALUE EDGE named by edge_model_edge_id was published, frozen at '
+  'snapshot time. NOT engine_published_at, which is model_picks.published_at - '
+  'the MODEL PICK''s publication, a different record published at a different '
+  'time. CLV-001 R-07 locks the forecast being scored, and CLV-001 scores the '
+  'edge; reading the pick''s timestamp as the edge''s places the lock early and '
+  'admits quotes from before the edge existed. NULL before this column existed '
+  'and never backfilled: those rows fall back to snapshot_at, which is later '
+  'than publication and therefore conservative.';
 
 comment on column public.pre_fight_snapshots.edge_model_edge_id is
   'Which model_edges row this snapshot froze. CLV-001 R-07 needs to know WHICH '

@@ -5,10 +5,11 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.9**, with **v1.0.10 PROPOSED and not ratified**
-(frozen 2026-09-16T10:30:00Z; Amendments 1–6 approved, 7 awaiting the owner).
-**CLV write mode is held shut while any amendment is unratified** — a preflight
-condition, not a note. **Amendment 5 freezes the operational cutoff**: bout
+**Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
+owner, 2026-09-16**). **CLV write mode is held shut while any amendment is
+unratified** — a preflight condition, not a note. It no longer fires, and it
+stays, because a gate deleted the moment it first goes green was never a gate. **Amendment 5 freezes the operational cutoff**: bout
 1 takes the card's scheduled start, bouts 2..N take the exact completion of the
 immediately previous bout — **those two cases, always**, with `bell_at` retained
 as an audit field and never overriding them (5.1). The scored price is the
@@ -70,7 +71,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.9**, with **Amendment 7 (v1.0.10) proposed**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.10**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -127,7 +128,8 @@ One card of waiting, not a build.
 | settlement is write-once; re-runs verify and write nothing | **fixed**, 13 tests |
 | the first write is an atomic compare-and-set, not a PATCH by id | **fixed**, 2 live-SQL tests |
 | the linked publish quote must predate publication | **fixed**, 4 tests |
-| an unratified amendment holds write mode shut | **fixed**, 6 tests |
+| an unratified amendment holds write mode shut | **fixed**, 9 tests |
+| the lock is the EDGE's publication, never the model pick's | **fixed**, 10 tests + 4 live-SQL |
 | a snapshot names WHICH edge it froze (`edge_model_edge_id`) | **written, UNAPPLIED**, 9 tests |
 | ambiguous edge identity scores nothing | **fixed**, included above |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last to apply |
@@ -216,6 +218,25 @@ implemented on the branch and marked PROPOSED in both copies —
 its markdown. `preflight` refuses write mode while any amendment is in that
 state. Reporting is unaffected: a dry run against a proposed amendment is how
 the owner sees what they are being asked to approve.
+
+**The lock is the EDGE's publication instant, never the model pick's.**
+`pre_fight_snapshots.engine_published_at` is `model_picks.published_at` — a
+different record, published earlier: the engine posts a pick, and the edge
+derived from it appears later, once the price has moved far enough to flag one.
+Reading the pick's instant as the edge's placed the lock early and admitted
+quotes from before the edge existed. `edge_published_at` is added beside
+`edge_model_edge_id` (both required together) and written by the snapshotter.
+Historical snapshots fall back to `snapshot_at` only — later than publication,
+therefore conservative, and labelled as a fallback on the row — and never to
+`engine_published_at`, which stays as provenance for the main model prediction.
+
+**Amendment 7 is ratified.** Approved substance: *a scored CLV-001 observation is
+permanent; later runs may verify it but never overwrite it, and a genuine
+correction is a new auditable superseding record rather than a mutation of the
+original.* The superseding **mechanism** is deliberately not designed yet —
+nothing has been scored, so there is nothing to correct, and the half that
+cannot wait is guaranteed: nothing overwrites an observation, so whatever the
+correction ledger turns out to be, it inherits an intact record.
 
 **Settlement is write-once.** A scored observation is written once and never
 again: a later run re-scores it only to CHECK it, field by field, and PATCHes

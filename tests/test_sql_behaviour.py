@@ -501,6 +501,71 @@ class TestProposedMigrationsApply(PostgresCase):
             "an unconditional PATCH by id overwrites a scored row — the reason "
             "the settler no longer issues one")
 
+    def test_the_snapshot_edge_columns_land_nullable_and_paired(self):
+        """Amendment 7 (e). `edge_published_at` is the EDGE's publication
+        instant; `engine_published_at` is the model PICK's and is a different
+        record. The two constraints keep the new column honest."""
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+
+        # A pre-existing snapshot: NULL in both new columns, untouched.
+        self.psql("insert into public.pre_fight_snapshots (fight_id, snapshot_at,"
+                  " engine_published_at) values (1, '2026-09-09T12:00:00+00',"
+                  " '2026-09-07T12:00:00+00')", db=self.db)
+        self.assertEqual(
+            self.psql("select coalesce(edge_model_edge_id::text,'null'), "
+                      "coalesce(edge_published_at::text,'null') "
+                      "from public.pre_fight_snapshots where fight_id = 1",
+                      db=self.db), "null|null")
+
+        # A modern one: both present, and consistent.
+        self.psql("""
+          insert into public.pre_fight_snapshots (fight_id, snapshot_at,
+            engine_published_at, edge_model_edge_id, edge_published_at,
+            edge_side, edge_bet_fighter_id, edge_odds_at_publish)
+          values (2, '2026-09-09T12:00:00+00', '2026-09-07T12:00:00+00',
+                  7, '2026-09-08T12:00:00+00', 'a', 101, 150)
+        """, db=self.db)
+
+    def test_an_edge_instant_without_an_edge_id_is_rejected(self):
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        err = self.psql("insert into public.pre_fight_snapshots (fight_id, "
+                        "snapshot_at, edge_published_at) values "
+                        "(3, '2026-09-09T12:00:00+00', '2026-09-08T12:00:00+00')",
+                        db=self.db, expect_error=True)
+        self.assertIn("pre_fight_snapshots_edge_published_needs_an_id", err)
+
+    def test_an_edge_cannot_be_published_after_the_snapshot_that_froze_it(self):
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        err = self.psql("""
+          insert into public.pre_fight_snapshots (fight_id, snapshot_at,
+            edge_model_edge_id, edge_published_at, edge_side,
+            edge_bet_fighter_id, edge_odds_at_publish)
+          values (4, '2026-09-09T12:00:00+00', 7, '2026-09-10T12:00:00+00',
+                  'a', 101, 150)
+        """, db=self.db, expect_error=True)
+        self.assertIn("pre_fight_snapshots_edge_published_before_snapshot", err)
+
+    def test_the_append_only_triggers_on_snapshots_are_untouched(self):
+        """The migration is additive on the pre-fight record. ADD COLUMN is DDL
+        and the triggers do not block it — but they must still be there
+        afterwards, doing their job."""
+        for name in self.ORDER:
+            self.psql_file(os.path.join(CLV, name), db=self.db)
+        self.psql("insert into public.pre_fight_snapshots (fight_id, snapshot_at)"
+                  " values (5, '2026-09-09T12:00:00+00')", db=self.db)
+        # The stub table has no triggers of its own — production does — so this
+        # asserts the migration added none and removed none.
+        self.assertEqual(
+            self.psql("select count(*) from pg_trigger t "
+                      "join pg_class c on c.oid = t.tgrelid "
+                      "where c.relname = 'pre_fight_snapshots' "
+                      "and not t.tgisinternal", db=self.db), "0",
+            "the migration must not create, alter or drop a trigger on the "
+            "pre-fight record")
+
     def test_a_scored_row_cannot_omit_the_cutoff_it_was_scored_against(self):
         """Amendment 6 (e), enforced by the database rather than only by the
         writer. The completeness constraint is NOT VALID, so it binds new rows

@@ -1,9 +1,10 @@
 # CLV measurement protocol
 
 **Status: FROZEN — 2026-09-16, approved by the owner.**
-**Amendment 7 (v1.0.10) is PROPOSED and not ratified.** The last approved version
-is v1.0.9. Its rules are implemented on the branch and CLV-001 write mode is
-held shut until it is ratified or withdrawn.
+**Amendment 7 (v1.0.10) is APPROVED**, 2026-09-16, by Michael Cannon (owner).
+The approved substance: *a scored CLV-001 observation is permanent; later runs
+may verify it but never overwrite it, and a genuine correction is a new
+auditable superseding record rather than a mutation of the original.*
 
 **Frozen is not publishable.** The measurement rules are settled; the publication
 gate is still **shut**. The sample floor is 100 scored observations across 20
@@ -13,12 +14,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.10` — **PROPOSED**; last ratified `1.0.9` |
+| version | `1.0.10` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–6 ratified same day; **7 proposed**) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–7 ratified same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -341,27 +342,27 @@ published number means.
 
 > ## AMENDMENT 7, v1.0.10, 2026-09-16 — settlement is write-once
 >
-> ### ⚠ PROPOSED — NOT APPROVED
+> **Approved by Michael Cannon (owner, L3), 2026-09-16.** The approved
+> substance, in his words:
 >
-> **This amendment has not been ratified by the owner.** It is written,
-> implemented and under review; the L3 approval has not been given. It is filed
-> here rather than kept elsewhere so the review has the real text in front of it,
-> and it is marked at the top so nobody reads it as settled.
+> > Once a CLV-001 result is officially scored, it is permanent and may never be
+> > overwritten. If a genuine error is later discovered, the correction must be
+> > appended/superseded with an audit trail rather than silently replacing the
+> > original record.
 >
-> Recording an approval that was not given is the one failure the hash chain, the
-> two-route rule and this whole apparatus exist to prevent — a protocol nobody
-> agreed to, wearing the marks of one they did. So:
+> **The superseding mechanism is not designed here, deliberately.** The approved
+> principle is that a correction is a NEW auditable record rather than a mutation
+> of the old one; what that record looks like is a separate design, and there is
+> nothing to correct yet — zero observations have been scored. Writing the ledger
+> now would be building the shape of a problem nobody has met. What this version
+> guarantees is the half that cannot wait: nothing overwrites an observation, so
+> whatever the correction mechanism turns out to be, it inherits an intact record
+> to supersede.
 >
-> - `protocol.json` carries `approved_by: null` and `last_ratified_version:
->   1.0.9`;
-> - `settle_clv.preflight` **holds write mode shut** while any amendment is in
->   this state (`all_amendments_approved`), so the code on the branch cannot
->   write a number under an unratified rule;
-> - reporting is unaffected, which is how the owner sees what they are being
->   asked to approve.
->
-> When it is ratified, this block records the date and the approver, and the
-> preflight condition turns itself off.
+> This amendment was filed PROPOSED and carried a ⚠ block until ratification, and
+> `settle_clv.preflight` held write mode shut while it did
+> (`all_amendments_approved`). That condition is still there and still governs
+> the next unratified amendment; it simply no longer fires for this one.
 >
 > The estimator is unchanged again. This amendment is about what happens to an
 > observation AFTER it is scored, and about being able to say which forecast a

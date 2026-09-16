@@ -36,7 +36,8 @@ from scoring import (                                                # noqa: E40
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
     AUDIT_ONLY_BASES, PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
     REQUIRED_PUBLISH_PROVENANCE, REQUIRED_QUOTE_PROVENANCE,
-    SNAPSHOT_EDGE_ID_FIELD, VERIFIED_FIELDS,
+    NOT_AN_EDGE_LOCK_FIELDS, SNAPSHOT_EDGE_ID_FIELD,
+    SNAPSHOT_EDGE_PUBLISHED_FIELD, VERIFIED_FIELDS,
     STALENESS_LIMIT_MINUTES, STALENESS_MEASURED_FROM, SUPERSEDED_START_BASES,
     UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
@@ -60,8 +61,12 @@ BET, OPP = 101, 202
 FIGHT = {"id": 1, "fighter_a_id": BET, "fighter_b_id": OPP}
 BOOKS = {1, 3, 9, 10, 11}
 
-# The forecast lock. Days before the card, as a real one is.
+# The forecast lock: when the VALUE EDGE was published. Days before the card.
 LOCK = START - dt.timedelta(days=5)
+# When the MODEL PICK was published — earlier, and a different record. The engine
+# posts a pick, and the edge derived from it appears later, once the price has
+# moved far enough to flag one. Never the edge's lock.
+PICK_PUBLISHED = LOCK - dt.timedelta(days=2)
 MARKET = "odds-api-evt-7f3"                      # the provider's market id
 PUBLISH_QUOTE_ID = 9001
 
@@ -100,10 +105,30 @@ def publish_quote(**over):
 
 
 def snapshot(**over):
-    """The immutable pre-fight record that establishes the lock (R-07)."""
+    """The immutable pre-fight record that establishes the lock (R-07).
+
+    The MODERN shape, carrying the edge's own identity and publication instant.
+    `engine_published_at` is deliberately set to a DIFFERENT, earlier instant
+    than `edge_published_at`: it is the model PICK's publication, and every test
+    that would pass with the two equal proves nothing about which one is read.
+    """
     row = {"id": 55, "fight_id": 1, "snapshot_at": LOCK + dt.timedelta(hours=1),
-           "engine_published_at": LOCK, "edge_side": "a",
-           "edge_bet_fighter_id": BET, "edge_odds_at_publish": 150}
+           "engine_published_at": PICK_PUBLISHED, "edge_side": "a",
+           "edge_bet_fighter_id": BET, "edge_odds_at_publish": 150,
+           "edge_model_edge_id": 7, "edge_published_at": LOCK}
+    row.update(over)
+    return row
+
+
+def legacy_snapshot(**over):
+    """A snapshot taken before the edge-identity columns existed.
+
+    No edge id, no edge publication instant — and `engine_published_at` sitting
+    there looking like one. Every historical row has this shape.
+    """
+    row = snapshot(**over)
+    row.pop("edge_model_edge_id", None)
+    row.pop("edge_published_at", None)
     row.update(over)
     return row
 
@@ -474,9 +499,11 @@ class TestClosedVocabulary(unittest.TestCase):
             "insufficient_books": lambda: score(quotes=three_books()[:4]),
             "forecast_not_before_close":
                 lambda: score(snap=snapshot(
-                    engine_published_at=START + dt.timedelta(hours=1))),
+                    edge_published_at=START + dt.timedelta(hours=1),
+                    snapshot_at=START + dt.timedelta(hours=1))),
             "no_immutable_forecast_lock": lambda: score(snap=None),
-            "ambiguous_edge_identity": lambda: score(cohort=None),
+            "ambiguous_edge_identity":
+                lambda: score(snap=legacy_snapshot(), cohort=None),
             "no_publish_quote_link": lambda: score(pub=None),
             "incomplete_quote_provenance": lambda: score(quotes=[
                 dict(q, feed_version=None) for q in three_books()]),
@@ -929,7 +956,7 @@ class TestRowLevelProvenance(unittest.TestCase):
             quotes=quotes, fight=FIGHT, reference_instant=self.JUNE_CUTOFF,
             now=NOW, eligible_book_ids=BOOKS,
             reference_basis="previous_bout_completion", is_first_bout=False,
-            snapshot=snapshot(engine_published_at=self.JUNE_LOCK,
+            snapshot=snapshot(edge_published_at=self.JUNE_LOCK,
                               snapshot_at=self.JUNE_LOCK),
             publish_quote=publish_quote(captured_at=self.JUNE_LOCK,
                                         provider_last_update=self.JUNE_LOCK,
@@ -1024,7 +1051,7 @@ class TestNoLookaheadPerQuote(unittest.TestCase):
             quotes=three_books(at=quoted_at), fight=FIGHT,
             reference_instant=self.CUTOFF, now=NOW, eligible_book_ids=BOOKS,
             reference_basis="previous_bout_completion", is_first_bout=False,
-            snapshot=snapshot(engine_published_at=locked_at,
+            snapshot=snapshot(edge_published_at=locked_at,
                               snapshot_at=locked_at),
             publish_quote=publish_quote(
                 captured_at=locked_at - dt.timedelta(minutes=1),
@@ -1093,23 +1120,56 @@ class TestImmutableForecastLock(unittest.TestCase):
                              ("edge_bet_fighter_id", 999),
                              ("edge_odds_at_publish", -140)):
             with self.subTest(field=field):
-                got = score(snap=snapshot(**{field: wrong}))
+                # A LEGACY snapshot: with an edge id present the tuple is not
+                # consulted at all, which is the whole point of wiring the id.
+                got = score(snap=legacy_snapshot(**{field: wrong}))
                 self.assertEqual(got["reason"], "no_immutable_forecast_lock")
                 self.assertIn(field.replace("edge_", ""), got["detail"])
 
     def test_a_snapshot_missing_the_edge_fields_cannot_match(self):
-        got = score(snap=snapshot(edge_odds_at_publish=None))
+        got = score(snap=legacy_snapshot(edge_odds_at_publish=None))
         self.assertEqual(got["reason"], "no_immutable_forecast_lock")
 
-    def test_snapshot_at_is_the_fallback_when_the_publish_instant_is_absent(self):
-        got = score(snap=snapshot(engine_published_at=None))
+    def test_snapshot_at_is_the_only_fallback_and_is_labelled_as_one(self):
+        """A historical snapshot carries no edge publication instant. It falls
+        back to `snapshot_at` — later than publication, therefore conservative —
+        and NEVER to `engine_published_at`, which belongs to the model pick."""
+        got = score(snap=legacy_snapshot())
+        self.assertTrue(got["scored"], got["detail"])
+        lock = got["forecast_lock"]
+        self.assertEqual(lock["immutable_source"],
+                         "pre_fight_snapshots.snapshot_at")
+        self.assertTrue(lock["immutable_is_conservative_fallback"],
+                        "a fallback must say it is one; a reader comparing two "
+                        "scored rows needs to know which rests on weaker "
+                        "evidence, and this one is systematically late")
+        self.assertEqual(lock["immutable_locked_at"], LOCK + dt.timedelta(hours=1))
+        self.assertNotEqual(lock["immutable_locked_at"], PICK_PUBLISHED)
+
+    def test_the_modern_snapshot_locks_on_the_edges_own_instant(self):
+        got = score()
+        self.assertTrue(got["scored"], got["detail"])
+        lock = got["forecast_lock"]
+        self.assertEqual(lock["immutable_source"],
+                         "pre_fight_snapshots.edge_published_at")
+        self.assertEqual(lock["immutable_locked_at"], LOCK)
+        self.assertFalse(lock["immutable_is_conservative_fallback"])
+
+    def test_an_edge_instant_without_an_edge_id_is_not_used(self):
+        """A publication instant with no edge id beside it cannot be attached to
+        a particular publication, and would be indistinguishable from the pick
+        timestamp it exists to displace. The database enforces the same pairing."""
+        snap = snapshot()
+        del snap["edge_model_edge_id"]
+        got = score(snap=snap, cohort=[edge()])
         self.assertTrue(got["scored"], got["detail"])
         self.assertEqual(got["forecast_lock"]["immutable_source"],
                          "pre_fight_snapshots.snapshot_at")
 
     def test_a_snapshot_with_neither_instant_cannot_lock(self):
-        got = score(snap=snapshot(engine_published_at=None, snapshot_at=None))
+        got = score(snap=legacy_snapshot(snapshot_at=None))
         self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+        self.assertIn("engine_published_at is the model pick", got["detail"])
 
     def test_the_effective_lock_is_the_later_of_the_two(self):
         """A mutated published_at can only ever COST observations. It cannot
@@ -1137,9 +1197,12 @@ class TestImmutableForecastLock(unittest.TestCase):
         info = score()["forecast_lock"]
         self.assertEqual(info["snapshot_id"], 55)
         self.assertEqual(info["immutable_source"],
-                         "pre_fight_snapshots.engine_published_at")
+                         "pre_fight_snapshots.edge_published_at")
         self.assertTrue(info["agrees_with_immutable_record"])
         self.assertFalse(info["published_at_is_binding"])
+        self.assertEqual(info["engine_published_at"], PICK_PUBLISHED,
+                         "the pick's instant is carried for audit and is not "
+                         "the lock")
 
     def test_a_disagreement_is_recorded_rather_than_hidden(self):
         info = score(published_at=LOCK + dt.timedelta(minutes=2))["forecast_lock"]
@@ -1186,7 +1249,7 @@ class TestEdgeIdentity(unittest.TestCase):
         """Same side, same fighter, same price — which one did the snapshot
         freeze? Nothing on the snapshot can say, so neither scores."""
         twins = [edge(), self.other_edge()]
-        got = score(cohort=twins)
+        got = score(snap=legacy_snapshot(), cohort=twins)
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "ambiguous_edge_identity")
         self.assertIn("2 live edges", got["detail"])
@@ -1194,31 +1257,33 @@ class TestEdgeIdentity(unittest.TestCase):
     def test_a_second_edge_with_a_different_price_is_not_a_twin(self):
         """Ambiguity is about the tuple, not about the count. A fight with two
         live edges at different prices is still unambiguous."""
-        got = score(cohort=[edge(), self.other_edge(odds_at_publish=-140)])
+        got = score(snap=legacy_snapshot(),
+                    cohort=[edge(), self.other_edge(odds_at_publish=-140)])
         self.assertTrue(got["scored"], got["detail"])
         self.assertEqual(got["forecast_lock"]["edge_identity"],
                          "tuple_unique_in_cohort")
 
     def test_a_second_edge_on_the_other_side_is_not_a_twin(self):
-        got = score(cohort=[edge(), self.other_edge(side="b")])
+        got = score(snap=legacy_snapshot(),
+                    cohort=[edge(), self.other_edge(side="b")])
         self.assertTrue(got["scored"], got["detail"])
 
     def test_an_unestablished_cohort_is_refused_not_assumed_unique(self):
         """Not established is not the same as established. `None` means the
         caller never looked, and that is exactly when a silent default would
         assume the convenient answer."""
-        got = score(cohort=None)
+        got = score(snap=legacy_snapshot(), cohort=None)
         self.assertEqual(got["reason"], "ambiguous_edge_identity")
         self.assertIn("not supplied", got["detail"])
 
     def test_the_row_records_how_the_edge_was_identified(self):
         """A reader must be able to tell an identity from a unique-looking
         tuple, because they are not the same evidence."""
-        self.assertEqual(score()["forecast_lock"]["edge_identity"],
-                         "tuple_unique_in_cohort")
         self.assertEqual(
-            score(snap=snapshot(edge_model_edge_id=7))["forecast_lock"]
-            ["edge_identity"], "shared_edge_id")
+            score(snap=legacy_snapshot())["forecast_lock"]["edge_identity"],
+            "tuple_unique_in_cohort")
+        self.assertEqual(score()["forecast_lock"]["edge_identity"],
+                         "shared_edge_id")
 
     def test_the_snapshotter_selects_and_writes_the_edge_id(self):
         """The fix is only real if the producer records it. Pinned here because
@@ -1233,6 +1298,181 @@ class TestEdgeIdentity(unittest.TestCase):
         self.assertIn("OPTIONAL_COLUMNS", src,
                       "writing a column the table may not have must degrade, "
                       "not take the snapshot cron down")
+
+
+# ---------------------------------------------------------------------------
+# Amendment 7 (e) — the edge's lock is the EDGE's publication, not the pick's
+# ---------------------------------------------------------------------------
+
+class TestEdgePublicationInstant(unittest.TestCase):
+    """`engine_published_at` is `model_picks.published_at`.
+
+    A model pick and a value edge are different records published at different
+    times: the engine posts a pick, and the edge derived from it appears later,
+    once the price has moved far enough to flag one. R-07 locks the forecast
+    being scored, and CLV-001 scores the EDGE — so reading the pick's instant as
+    the edge's places the lock early and admits quotes from before the edge
+    existed. A lookahead violation wearing an immutable record's clothes, which
+    is the worst kind, because everything about it looks audited.
+
+    ChatGPT's scenario, on the calendar it specified.
+    """
+
+    # Monday the pick, Tuesday the edge, Wednesday the snapshot.
+    MONDAY = dt.datetime(2026, 9, 7, 12, 0, tzinfo=dt.timezone.utc)
+    MONDAY_EVENING = dt.datetime(2026, 9, 7, 20, 0, tzinfo=dt.timezone.utc)
+    TUESDAY = dt.datetime(2026, 9, 8, 12, 0, tzinfo=dt.timezone.utc)
+    WEDNESDAY = dt.datetime(2026, 9, 9, 12, 0, tzinfo=dt.timezone.utc)
+    # …and `model_edges.published_at`, later edited backwards to Sunday.
+    SUNDAY = dt.datetime(2026, 9, 6, 12, 0, tzinfo=dt.timezone.utc)
+
+    def modern(self, **over):
+        row = snapshot(engine_published_at=self.MONDAY,
+                       edge_published_at=self.TUESDAY,
+                       snapshot_at=self.WEDNESDAY)
+        row.update(over)
+        return row
+
+    def legacy(self, **over):
+        row = legacy_snapshot(engine_published_at=self.MONDAY,
+                              snapshot_at=self.WEDNESDAY)
+        row.update(over)
+        return row
+
+    def score_with(self, snap, quotes_at, published_at=None, cohort=True):
+        published_at = self.SUNDAY if published_at is None else published_at
+        this_edge = edge(published_at=published_at)
+        return score_row(
+            edge=this_edge,
+            edge_cohort=[this_edge] if cohort is True else cohort,
+            quotes=three_books(at=quotes_at), fight=FIGHT,
+            reference_instant=START, now=NOW, eligible_book_ids=BOOKS,
+            reference_basis="previous_bout_completion", is_first_bout=False,
+            snapshot=snap,
+            # Captured at or before the EARLIEST publication instant on record —
+            # here the backdated Sunday, which tightens the bound. The publish
+            # side is not what these tests are about; the closing side is.
+            publish_quote=publish_quote(captured_at=published_at,
+                                        provider_last_update=published_at,
+                                        retrieved_at=published_at))
+
+    def test_a_monday_quote_is_not_eligible_after_published_at_is_backdated(self):
+        """THE regression. The pick went out Monday, the edge Tuesday, the
+        snapshot Wednesday — and `model_edges.published_at` has since been edited
+        back to Sunday. A Monday-evening quote must still be refused: it existed
+        before the edge did, whatever the mutable column now says."""
+        got = self.score_with(self.modern(), self.MONDAY_EVENING)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "forecast_not_before_close")
+        self.assertEqual(got["diagnostics"]["before_forecast_lock"], 6)
+
+    def test_the_immutable_lock_stays_tuesday_for_a_modern_snapshot(self):
+        got = self.score_with(self.modern(), FRESH)
+        self.assertTrue(got["scored"], got["detail"])
+        lock = got["forecast_lock"]
+        self.assertEqual(lock["immutable_locked_at"], self.TUESDAY)
+        self.assertEqual(lock["locked_at"], self.TUESDAY,
+                         "a published_at edited backwards must not move the "
+                         "lock earlier — the later of the two binds")
+        self.assertFalse(lock["immutable_is_conservative_fallback"])
+
+    def test_the_legacy_fallback_is_wednesday_not_monday(self):
+        """With no `edge_published_at` on file the lock is `snapshot_at` —
+        Wednesday, which is late and therefore safe. NEVER Monday: that is the
+        pick's instant, and using it would be exactly the defect."""
+        got = self.score_with(self.legacy(), FRESH)
+        self.assertTrue(got["scored"], got["detail"])
+        lock = got["forecast_lock"]
+        self.assertEqual(lock["immutable_locked_at"], self.WEDNESDAY)
+        self.assertNotEqual(lock["immutable_locked_at"], self.MONDAY)
+        self.assertTrue(lock["immutable_is_conservative_fallback"])
+
+    def test_the_monday_quote_is_refused_under_the_legacy_fallback_too(self):
+        got = self.score_with(self.legacy(), self.MONDAY_EVENING)
+        self.assertEqual(got["reason"], "forecast_not_before_close")
+
+    def test_engine_published_at_can_never_satisfy_the_edge_lock(self):
+        """Stated as its own property: there is no combination of inputs under
+        which the pick's instant becomes the edge's lock."""
+        self.assertIn("engine_published_at", NOT_AN_EDGE_LOCK_FIELDS)
+        for snap in (self.modern(), self.legacy(),
+                     self.legacy(snapshot_at=None)):
+            with self.subTest(snapshot=snap.get("edge_published_at")):
+                try:
+                    locked_at, info = forecast_lock(
+                        edge(published_at=self.SUNDAY), snap, [edge()])
+                except Unscored:
+                    continue                     # refused outright is also fine
+                self.assertNotEqual(info["immutable_locked_at"], self.MONDAY)
+                self.assertNotIn("engine_published_at",
+                                 info["immutable_source"])
+
+    def test_the_pick_instant_is_still_carried_for_audit(self):
+        info = self.score_with(self.modern(), FRESH)["forecast_lock"]
+        self.assertEqual(info["engine_published_at"], self.MONDAY,
+                         "it is provenance for the main model prediction — "
+                         "retained, never promoted")
+
+    def test_the_publish_quote_is_bounded_by_the_edge_instant(self):
+        """A quote captured Wednesday carries the right price and a credible
+        instant, and still postdates the Tuesday publication."""
+        got = self.score_with(self.modern(), FRESH)
+        self.assertTrue(got["scored"], got["detail"])   # Monday quote: fine
+
+        wednesday_quote = publish_quote(captured_at=self.WEDNESDAY,
+                                        provider_last_update=self.WEDNESDAY,
+                                        retrieved_at=self.WEDNESDAY)
+        this_edge = edge(published_at=self.SUNDAY)
+        late = score_row(
+            edge=this_edge, edge_cohort=[this_edge], quotes=three_books(),
+            fight=FIGHT, reference_instant=START, now=NOW,
+            eligible_book_ids=BOOKS,
+            reference_basis="previous_bout_completion", is_first_bout=False,
+            snapshot=self.modern(), publish_quote=wednesday_quote)
+        self.assertFalse(late["scored"])
+        self.assertEqual(late["reason"], "no_publish_quote_link")
+        self.assertIn("AFTER the edge was published", late["detail"])
+
+    def test_a_backdated_published_at_cannot_widen_the_publish_quote_bound(self):
+        """Sunday is earlier than Tuesday, so it TIGHTENS the bound — a Monday
+        quote is refused on the publish side as well as the closing side. A
+        mutable column may narrow this window; it may never widen it."""
+        this_edge = edge(published_at=self.SUNDAY)
+        got = score_row(
+            edge=this_edge, edge_cohort=[this_edge], quotes=three_books(),
+            fight=FIGHT, reference_instant=START, now=NOW,
+            eligible_book_ids=BOOKS,
+            reference_basis="previous_bout_completion", is_first_bout=False,
+            snapshot=self.modern(),
+            publish_quote=publish_quote(
+                captured_at=self.MONDAY_EVENING,
+                provider_last_update=self.MONDAY_EVENING,
+                retrieved_at=self.MONDAY_EVENING))
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+
+    def test_the_producer_writes_the_edge_publication_instant(self):
+        """The column is useless if nothing fills it, and it must come from the
+        EDGE row rather than the pick."""
+        src = open(os.path.join(REPO_ROOT, "cfl_engine",
+                                "snapshot_predictions.py"), encoding="utf-8").read()
+        self.assertIn(f'"{SNAPSHOT_EDGE_PUBLISHED_FIELD}": ed and ed["published_at"]',
+                      src, "the edge instant must come from the edge row `ed`")
+        self.assertIn('"engine_published_at": pk and pk["published_at"]', src,
+                      "and the pick instant must keep coming from the pick row")
+        self.assertIn(SNAPSHOT_EDGE_PUBLISHED_FIELD,
+                      src[src.index("OPTIONAL_COLUMNS"):
+                          src.index("OPTIONAL_COLUMNS") + 200],
+                      "it must degrade when the column is absent, like the id")
+
+    def test_the_migration_adds_the_column_and_pairs_it_with_the_id(self):
+        sql = open(os.path.join(REPO_ROOT, "research", "clv",
+                                "proposed_2026-09-16_snapshot_edge_identity.sql"),
+                   encoding="utf-8").read()
+        self.assertIn(f"add column if not exists {SNAPSHOT_EDGE_PUBLISHED_FIELD} "
+                      f"timestamptz", sql)
+        self.assertIn("pre_fight_snapshots_edge_published_needs_an_id", sql)
+        self.assertIn("pre_fight_snapshots_edge_published_before_snapshot", sql)
 
 
 # ---------------------------------------------------------------------------
@@ -1585,7 +1825,8 @@ class TestCutoffIsPersisted(unittest.TestCase):
         # Later, not earlier: an earlier immutable instant is overridden by the
         # mutable published_at under the take-the-later rule, so it would leave
         # the effective lock — and therefore the artifact — unchanged.
-        b = score(snap=snapshot(engine_published_at=LOCK + dt.timedelta(days=1)))
+        later = LOCK + dt.timedelta(days=1)
+        b = score(snap=snapshot(edge_published_at=later, snapshot_at=later))
         self.assertEqual(a["closing_fair_probability"],
                          b["closing_fair_probability"])
         self.assertNotEqual(a["consensus_sha256"], b["consensus_sha256"])
