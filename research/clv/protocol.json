@@ -4,10 +4,45 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
+  "protocol_sha256": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+  "eligible_books": [
+    "FanDuel",
+    "DraftKings",
+    "BetMGM",
+    "Caesars",
+    "BetRivers",
+    "BetWay",
+    "Unibet",
+    "BetOnline.ag",
+    "Bovada",
+    "BetUS"
+  ],
+  "eligible_books_provenance": {
+    "frozen_by": "Amendment 2, 2026-09-16, approved by Reed Cannon",
+    "source": "the membership of v_odds_books_sportsbooks, a view shipped in dur001_migration.sql BEFORE CLV-001 existed: every odds_books row whose name does not contain 'consensus' and is not Polymarket or Kalshi",
+    "why_that_matters": "the list was not assembled by looking at which books would suit a CLV number - it already existed in the repo, for the totals market, under a rule anyone can read",
+    "verifiable_not_result_motivated": "no CLV figure has ever been computed, and the 2026-09-16 dry run establishes none is computable on the present record. A list frozen in that state cannot have been chosen for its effect on a result.",
+    "coverage_deliberately_not_a_criterion": "Caesars, BetWay and Unibet have not appeared in the feed since 2026-05-31 and are on the list anyway. Dropping a book for thin coverage is a judgement about which prices count, made now, which is what freezing forecloses. A book that never quotes never enters a consensus.",
+    "excluded_by_kind_not_by_this_list": {
+      "aggregates": ["BFO Consensus", "CFL Consensus (Odds API)"],
+      "aggregates_why": "a consensus row is already a blend of other books' margins, so de-vigging it is a different operation, and counting it toward the three-book floor would double-count its constituents",
+      "prediction_markets": ["Polymarket", "Kalshi"],
+      "prediction_markets_why": "Q-03 - commission rather than vig",
+      "enforced_by": "is_eligible_book in cfl_engine/clv/scoring.py, by name, so neither can re-enter through a book-id renumbering"
+    },
+    "additions_require": "a dated amendment of their own"
+  },
+  "admissible_start_bases": {
+    "source_view": "v_fight_start_best (dur001_migration.sql)",
+    "admissible": ["bell_at", "provider_commence"],
+    "inadmissible": ["event_date_fallback"],
+    "why": "the fallback is the event date at 18:00 UTC - a placeholder, not a schedule, wrong by hours in both directions. Accepting it would put a fabricated instant at the centre of the measure and make a quote look fresh or stale according to a constant nobody chose for this purpose.",
+    "treatment": "a fight whose only basis is the fallback is unscored with reason no_scheduled_start, the same treatment a missing instant gets, because that is what it is",
+    "frozen_by": "Amendment 2 (b), 2026-09-16"
+  },
   "frozen_at": "2026-09-16T10:30:00Z",
   "frozen_by": "Reed Cannon",
   "governs": [
@@ -514,6 +549,24 @@
       "sha256_after": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
       "output_change": "none - the two conventions are exact reparametrisations",
       "motivated_by_observed_results": false
+    },
+    {
+      "number": 2,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "title": "Freeze the Q-02 eligible sportsbook list, and fix which start bases count",
+      "kind": "closes a gap in the freeze - Q-02 froze the RULE and the LIST was never written down",
+      "version_before": "1.0.1",
+      "version_after": "1.0.2",
+      "sha256_before": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
+      "sha256_after": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+      "parts": {
+        "a": "ten named sportsbooks frozen as eligible_books, taken from v_odds_books_sportsbooks, which predates CLV-001",
+        "b": "only bell_at and provider_commence are admissible as a scheduled start; event_date_fallback is not, and a fight resting on it is unscored"
+      },
+      "output_change": "none yet - zero observations were scorable before this amendment and zero are scorable after it. It removes a blocker, it does not produce a number.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record, so neither part can have been chosen for its effect on a result"
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",

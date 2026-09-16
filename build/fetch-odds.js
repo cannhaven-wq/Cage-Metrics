@@ -52,16 +52,27 @@ const SOURCE_TAG = 'the-odds-api:mma_mixed_martial_arts';
 // A fixture replay is always a dry run: synthetic quotes must never be stored.
 const DRY_RUN = !!process.env.DRY_RUN || !!process.env.ODDS_FIXTURE;
 
-if (!ODDS_API_KEY && !process.env.ODDS_FIXTURE) {
-  console.error('ODDS_API_KEY missing. Set it in GitHub Secrets (or env for local runs).');
-  process.exit(1);
-}
-if (!SUPABASE_SERVICE_KEY) {
-  console.error('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) missing.');
-  process.exit(1);
+// Which feed and response shape produced a row. Bumped when the request or the
+// parsing changes in a way that could shift timings without changing a price —
+// CLV-001 §4 item 6 exists because that has to be detectable afterwards.
+const FEED_VERSION = 'odds-api-v4:h2h:2026-09-16';
+
+// Credentials are checked inside main(), not at module load, so this file can be
+// require()d by build/test-fetch-odds.js to exercise the pure row builders with
+// no key and no network. A script that cannot be tested without credentials
+// tends not to be tested.
+function requireCredentials() {
+  if (!ODDS_API_KEY && !process.env.ODDS_FIXTURE) {
+    console.error('ODDS_API_KEY missing. Set it in GitHub Secrets (or env for local runs).');
+    process.exit(1);
+  }
+  if (!SUPABASE_SERVICE_KEY) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) missing.');
+    process.exit(1);
+  }
 }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || 'no-key-required-for-require', {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 
@@ -110,7 +121,57 @@ const CONSENSUS_BOOK_NAME = 'CFL Consensus (Odds API)';
 
 const BASELINE_HOUR_UTC = 8;
 
-async function shouldSpendCredit() {
+// CLV-001's staleness limit is 45 minutes, and it was derived from a MEASURED
+// 30-minute near-card capture interval plus 15 minutes of grace. An hourly
+// capture cannot satisfy it: a bell at :59 leaves the freshest quote 59 minutes
+// old, and the observation is unscored on a stale price.
+//
+// So near a bell the job captures every 30 minutes, which is the cadence the
+// frozen limit already assumes. Worst case becomes 29 minutes and change, and
+// the limit is satisfiable by construction rather than by luck.
+//
+// The workflow wakes every 15 minutes; shouldCaptureNow() decides, before any
+// API call, whether the wake is worth a credit. Quiet wakes cost nothing.
+const NEAR_BELL_WINDOW_H = Number(process.env.NEAR_BELL_WINDOW_H || 3);
+const NEAR_BELL_INTERVAL_MIN = 30;
+
+// Does any candidate fight start within the near-bell window?
+// ONLY a real schedule counts — CLV-001 Amendment 2 (b). v_fight_start_best
+// always answers, falling back to the event date at 18:00 UTC, so a caller that
+// reads start_at without start_basis gets a plausible instant for every fight
+// ever recorded and would burst-capture against a placeholder.
+function nearBellWindow(candidateFights, now = new Date(), windowH = NEAR_BELL_WINDOW_H) {
+  const t = now.getTime();
+  return (candidateFights || []).some(f => {
+    if (!f.start_at) return false;
+    if (!['bell_at', 'provider_commence'].includes(f.start_basis)) return false;
+    const s = new Date(f.start_at).getTime();
+    return s > t - 3600000 && s < t + windowH * 3600000;
+  });
+}
+
+// The cadence decision for one wake-up. Pure, so build/test-fetch-odds.js can
+// walk a whole card day through it and count the credits.
+function shouldCaptureNow(candidateFights, now, hasCardInWindow) {
+  const min = now.getUTCMinutes();
+  if (nearBellWindow(candidateFights, now)) {
+    // :00 and :30 — a 30-minute interval, matching the limit's derivation.
+    if (min % NEAR_BELL_INTERVAL_MIN < 15) {
+      return { yes: true, why: `a bell is within ${NEAR_BELL_WINDOW_H}h — ${NEAR_BELL_INTERVAL_MIN}-minute cadence` };
+    }
+    return { yes: false, why: `near a bell but off the ${NEAR_BELL_INTERVAL_MIN}-minute beat` };
+  }
+  if (hasCardInWindow) {
+    if (min < 15) return { yes: true, why: 'card today or tomorrow — hourly cadence' };
+    return { yes: false, why: 'card window but not the top of the hour' };
+  }
+  if (now.getUTCHours() === BASELINE_HOUR_UTC && min < 15) {
+    return { yes: true, why: 'daily baseline capture' };
+  }
+  return { yes: false, why: 'no card today or tomorrow and not the baseline hour' };
+}
+
+async function shouldSpendCredit(candidateFights) {
   if (process.env.FORCE) {
     console.log('[cadence] FORCE set — capturing regardless of schedule');
     return true;
@@ -126,16 +187,9 @@ async function shouldSpendCredit() {
     .lte('event_date', tomorrow);
   if (error) throw new Error(`cadence events check: ${error.message}`);
 
-  if (near && near.length) {
-    console.log(`[cadence] card window (${near.map(e => `${e.name} ${e.event_date}`).join('; ')}) — hourly capture`);
-    return true;
-  }
-  if (now.getUTCHours() === BASELINE_HOUR_UTC) {
-    console.log('[cadence] no card today or tomorrow — taking the daily baseline capture');
-    return true;
-  }
-  console.log(`[cadence] no card today or tomorrow and it is not the ${BASELINE_HOUR_UTC}:00 UTC baseline hour — skipping (0 credits)`);
-  return false;
+  const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length));
+  console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}`);
+  return decision.yes;
 }
 
 // -----------------------------------------------------------------------------
@@ -514,6 +568,143 @@ function buildTotalsRows(e, fight, bookId, captured_at) {
   return rows;
 }
 
+// -----------------------------------------------------------------------------
+// 3e. Moneyline rows (CLV-001) — one row per (fight, fighter, book)
+// -----------------------------------------------------------------------------
+// Pure: no database, no clock of its own, no network. build/test-fetch-odds.js
+// exercises it against a fixture, which is how the capture path gets verified
+// before the migration that stores its output is applied anywhere.
+//
+// The h2h path used to throw away everything the totals path keeps. Same loop,
+// same payload, same provider metadata — and the moneyline rows recorded a price
+// and a timestamp and nothing else. That asymmetry is the whole reason CLV-001's
+// capture requirements read as unmet: the mechanism was already running in the
+// next table over. These fields are named exactly as prop_odds names them.
+//
+// Columns added by research/clv/proposed_2026-09-16_fight_odds_capture.sql. Until
+// that is applied, CAPTURE_COLUMNS are stripped before the insert — see
+// detectCaptureColumns(). The capture degrades, it never fails and it never
+// half-writes.
+
+const CAPTURE_COLUMNS = [
+  'source_event_id', 'feed_version', 'source_commence_at', 'is_live',
+  'provider_last_update', 'retrieved_at', 'opponent_fighter_id',
+  'market_status', 'raw',
+];
+
+function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
+  const rows = [];
+  const commence = e.commence_time ? new Date(e.commence_time).toISOString() : null;
+  const is_live = commence ? captured_at >= commence : null;
+
+  const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
+  const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
+
+  for (const bm of e.bookmakers || []) {
+    const h2h = (bm.markets || []).find(m => m.key === 'h2h');
+    if (!h2h || !Array.isArray(h2h.outcomes)) continue;
+    const bid = bookId.get((bm.title || '').trim().toLowerCase());
+    if (!bid) continue;
+
+    // Map each outcome to our canonical A/B by NAME, not by the provider's
+    // home/away order, tolerating middle-name drift via the first+last fallback.
+    for (const o of h2h.outcomes) {
+      if (o.price == null) continue;
+      const n = normalizeName(o.name);
+      let side, fighter_id, opponent_fighter_id;
+      if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) {
+        side = 'A'; fighter_id = fight.fighter_a_id; opponent_fighter_id = fight.fighter_b_id;
+      } else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) {
+        side = 'B'; fighter_id = fight.fighter_b_id; opponent_fighter_id = fight.fighter_a_id;
+      } else {
+        continue; // draw / unexpected label
+      }
+      rows.push({
+        fight_id: fight.id,
+        fighter_id,
+        book_id: bid,
+        side,
+        american_odds: Math.round(o.price),
+        implied_prob: Number(americanToImplied(o.price).toFixed(6)),
+        captured_at,
+        source_url: SOURCE_TAG,
+        // Explicit on EVERY row. PostgREST bulk inserts union the keys of all
+        // rows and send NULL for any a row lacks, which overrides the column
+        // default and trips NOT NULL — this is what killed every scheduled run
+        // from 2026-07-31 to 2026-09-15 (rows flipped to true later in main).
+        is_opener: false,
+
+        // ---- CLV-001 §4 capture requirements, none of them backfillable ----
+        source_event_id: e.id || null,              // item 9  — provider market id
+        feed_version: FEED_VERSION,                 // item 6  — feed + shape
+        source_commence_at: commence,               // item 7  — schedule at capture
+        is_live,                                    //         — in-play, never a close
+        provider_last_update: bm.last_update        // item 11 — when the BOOK moved
+          ? new Date(bm.last_update).toISOString() : null,
+        retrieved_at,                               // item 11 — when WE looked
+        opponent_fighter_id,                        // item 10 — what the price referred to
+        market_status: marketStatusOf(bm, h2h),     // item 8  — open/suspended/taken down
+        raw: {                                      // item 12 — link back to the source
+          bookmaker_key: bm.key || null,
+          bookmaker_last_update: bm.last_update || null,
+          market_last_update: h2h.last_update || null,
+          home_team: e.home_team,
+          away_team: e.away_team,
+          outcome_name: o.name,
+        },
+      });
+    }
+  }
+  return rows;
+}
+
+// The Odds API does not report suspension directly: a book that has pulled a
+// market simply stops appearing in the payload. So the only honest values here
+// are 'open' (it quoted) and null (it said nothing) — 'suspended' and
+// 'taken_down' are in the constraint's vocabulary for a provider that does
+// report them, and are never guessed from an absence. Inferring 'taken_down'
+// from a missing bookmaker would turn "we did not see it" into "it was pulled",
+// which is exactly the kind of manufactured fact R-13 is about.
+function marketStatusOf(bm, market) {
+  if (!market || !Array.isArray(market.outcomes) || market.outcomes.length === 0) return null;
+  return 'open';
+}
+
+// Strip the CLV-001 capture keys when the migration has not been applied, so an
+// un-migrated database keeps capturing exactly what it captured before. Returns
+// a NEW array; the originals are left intact for the dry-run printout, which
+// should always show what we would ideally store.
+function stripUnsupported(rows, supported) {
+  const drop = CAPTURE_COLUMNS.filter(c => !supported.has(c));
+  if (!drop.length) return rows;
+  return rows.map(r => {
+    const out = { ...r };
+    for (const c of drop) delete out[c];
+    return out;
+  });
+}
+
+// One probe, before any write: which of the capture columns does fight_odds
+// actually have? PostgREST rejects a select naming an unknown column, so ask for
+// them one at a time and believe the answer.
+async function detectCaptureColumns() {
+  const supported = new Set();
+  for (const col of CAPTURE_COLUMNS) {
+    const { error } = await sb.from('fight_odds').select(col).limit(1);
+    if (!error) supported.add(col);
+  }
+  if (supported.size === CAPTURE_COLUMNS.length) {
+    console.log('[capture] all CLV-001 capture columns present');
+  } else {
+    const missing = CAPTURE_COLUMNS.filter(c => !supported.has(c));
+    console.warn(`[capture] fight_odds is missing ${missing.length} capture column(s): ` +
+      `${missing.join(', ')} — apply research/clv/proposed_2026-09-16_fight_odds_capture.sql. ` +
+      `Capturing the legacy columns only; every quote taken meanwhile is ` +
+      `permanently unscorable under CLV-001 and cannot be backfilled.`);
+  }
+  return supported;
+}
+
 async function writePropOdds(rows) {
   if (!rows.length) return 0;
   const CHUNK = 500;
@@ -528,13 +719,15 @@ async function writePropOdds(rows) {
 // 4. Main: fetch, match, build per-book snapshot rows, insert
 // -----------------------------------------------------------------------------
 
-(async () => {
+async function main() {
   try {
-    if (!(await shouldSpendCredit())) return;
+    requireCredentials();
 
-    // Candidate fights first: wantTotals() needs their start times to decide
-    // whether this call should spend the extra credit on the totals market.
+    // Candidate fights FIRST, and free — they come from Supabase, not the Odds
+    // API. The cadence gate needs their start times to know whether a bell is
+    // near, and wantTotals() needs them to decide on the extra totals credit.
     const candidateFights = await loadCandidateFights();
+    if (!(await shouldSpendCredit(candidateFights))) return;
     const totals = wantTotals(candidateFights);
     console.log(`[totals] ${totals.yes ? 'requesting' : 'skipping'} fight totals — ${totals.why}`);
     const oddsEvents = await fetchOddsFromApi(totals.yes ? 'h2h,totals' : 'h2h');
@@ -542,7 +735,12 @@ async function writePropOdds(rows) {
     const fightIndex = buildFightIndex(candidateFights);
     const bookId = await resolveBooks(oddsEvents);
 
-    const captured_at = new Date().toISOString();
+    // retrieved_at is when the payload came back; captured_at stays the row's
+    // canonical instant. They are the same value on a normal run and diverge
+    // only if the write is delayed — which is exactly the case §4 item 11 wants
+    // legible rather than hidden.
+    const retrieved_at = new Date().toISOString();
+    const captured_at = retrieved_at;
     const rows = [];
     const unmatched = [];
     const commenceByFight = new Map(); // fight_id -> provider commence_time (ISO)
@@ -561,43 +759,9 @@ async function writePropOdds(rows) {
         console.log(`[match] API "${e.home_team} vs ${e.away_team}" -> fight ${fight.id} (${fight.fighter_a_name} vs ${fight.fighter_b_name})`);
       }
 
-      const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
-      const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
-      let wrote = 0;
-
-      for (const bm of e.bookmakers || []) {
-        const h2h = (bm.markets || []).find(m => m.key === 'h2h');
-        if (!h2h || !Array.isArray(h2h.outcomes)) continue;
-        const bid = bookId.get((bm.title || '').trim().toLowerCase());
-        if (!bid) continue;
-
-        // Map each outcome to our canonical A/B by name (not by home/away order),
-        // tolerating middle-name drift via the first+last fallback.
-        for (const o of h2h.outcomes) {
-          if (o.price == null) continue;
-          const n = normalizeName(o.name);
-          let side, fighter_id;
-          if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) { side = 'A'; fighter_id = fight.fighter_a_id; }
-          else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) { side = 'B'; fighter_id = fight.fighter_b_id; }
-          else continue; // draw / unexpected label
-          rows.push({
-            fight_id: fight.id,
-            fighter_id,
-            book_id: bid,
-            side,
-            american_odds: Math.round(o.price),
-            implied_prob: Number(americanToImplied(o.price).toFixed(6)),
-            captured_at,
-            source_url: SOURCE_TAG,
-            // Explicit on EVERY row. PostgREST bulk inserts union the keys of all
-            // rows and send NULL for any a row lacks, which overrides the column
-            // default and trips NOT NULL — this is what killed every scheduled
-            // run from 2026-07-31 to 2026-09-15 (rows flipped to true below).
-            is_opener: false,
-          });
-          wrote++;
-        }
-      }
+      const mlRows = buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at);
+      rows.push(...mlRows);
+      const wrote = mlRows.length;
       // Fight totals (DUR-001) — independent of whether h2h matched a price.
       if (totals.yes) totalsRows.push(...buildTotalsRows(e, fight, bookId, captured_at));
 
@@ -741,15 +905,35 @@ async function writePropOdds(rows) {
     }
 
     // Snapshot insert (append-only, like the BFO cron). Chunk to stay safe.
+    // Capture columns are stripped if the migration has not been applied, so an
+    // un-migrated database keeps working exactly as before rather than failing
+    // every run on an unknown column.
+    const supported = await detectCaptureColumns();
+    const toInsert = stripUnsupported(rows, supported);
     const CHUNK = 500;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const { error: insErr } = await sb.from('fight_odds').insert(rows.slice(i, i + CHUNK));
+    for (let i = 0; i < toInsert.length; i += CHUNK) {
+      const { error: insErr } = await sb.from('fight_odds').insert(toInsert.slice(i, i + CHUNK));
       if (insErr) throw new Error(`fight_odds insert: ${insErr.message}`);
     }
 
-    console.log(`[done] inserted ${rows.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}`);
+    const scorable = supported.size === CAPTURE_COLUMNS.length;
+    console.log(`[done] inserted ${toInsert.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}` +
+      (scorable ? ' — CLV-001 capture complete' : ' — CLV-001 capture INCOMPLETE, these quotes can never be scored'));
   } catch (err) {
     console.error('[fetch-odds] failed:', err.message);
     process.exit(1);
   }
-})();
+}
+
+// Run when invoked, export when required. build/test-fetch-odds.js requires this
+// file to check the pure row builders against a fixture — with no API key, no
+// Supabase key and no network — which is how the capture path is verified before
+// the migration that stores its output is applied to anything.
+if (require.main === module) main();
+
+module.exports = {
+  buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
+  nearBellWindow, shouldCaptureNow,
+  CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
+  normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
+};

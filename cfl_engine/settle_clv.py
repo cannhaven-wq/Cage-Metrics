@@ -116,8 +116,8 @@ from export_data import fetch_all, prob_to_american
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
 from scoring import (  # noqa: E402
-    PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION, UNSCORED_REASONS,
-    is_eligible_book, score_row,
+    ADMISSIBLE_START_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
+    UNSCORED_REASONS, admissible_reference, is_eligible_book, score_row,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -432,26 +432,56 @@ def _capture_capabilities(base_url: str, key: str) -> dict:
     # Item 9: provider market IDs, the only stable key across a repost or a
     # rematch. Q-10 says matching is mechanical on fighter identity AND provider
     # market id; without the second half, only the first can be enforced.
-    has_market_id = bool({"market_id", "provider_market_id", "event_key"} & cols)
+    # `source_event_id` is the name prop_odds already uses for this, and
+    # research/clv/proposed_2026-09-16_fight_odds_capture.sql adds it here.
+    has_market_id = "source_event_id" in cols
     cond["provider_market_ids_captured"] = has_market_id
     detail["provider_market_ids_captured"] = (
-        "present" if has_market_id else
-        "fight_odds carries no provider market id (§4 item 9). Q-10's mechanical "
-        "match is only half-enforceable: fighter identity yes, repost/rematch no.")
+        "fight_odds.source_event_id present" if has_market_id else
+        "fight_odds carries no provider market id (§4 item 9) — apply "
+        "research/clv/proposed_2026-09-16_fight_odds_capture.sql. Q-10's "
+        "mechanical match is half-enforceable meanwhile: fighter identity yes, "
+        "repost/rematch no.")
 
-    # Item 7: Q-01 measures to the scheduled bout start. `events` stores a DATE
-    # and `fights.bell_at` is the only instant-grade field.
+    # Item 11: the provider's own timestamp separately from ours. Collapsing them
+    # hides feed lag, and feed lag is what the staleness limit measures.
+    has_split_time = {"provider_last_update", "retrieved_at"} <= cols
+    cond["provider_and_retrieval_times_split"] = has_split_time
+    detail["provider_and_retrieval_times_split"] = (
+        "present" if has_split_time else
+        "fight_odds has captured_at only (§4 item 11) — a price we retrieved 5 "
+        "minutes before the bell that the book last moved 4 hours earlier is a "
+        "stale price wearing a fresh timestamp, and nothing on the row says so.")
+
+    # Item 10: what the quote referred to. A late opponent change silently
+    # redefines a price and is invisible afterwards.
+    cond["opponent_at_quote_time_captured"] = "opponent_fighter_id" in cols
+    detail["opponent_at_quote_time_captured"] = (
+        "present" if "opponent_fighter_id" in cols else
+        "fight_odds does not record the opposing corner at quote time (§4 item "
+        "10), so Q-10's opponent-change exclusion rests on today's corners.")
+
+    # Item 7: Q-01 measures to the scheduled bout start. The mechanism is
+    # v_fight_start_best + the fight_start_estimates ledger, both shipped by
+    # DUR-001. What matters is whether it is producing an ADMISSIBLE basis —
+    # the view always answers, falling back to the event date at 18:00 UTC, and
+    # that fallback is not a schedule (Amendment 2 (b)).
+    bases = ",".join(sorted(ADMISSIBLE_START_BASES))
     try:
-        rows = fetch_all(base_url, key, "fights",
-                         "select=id&bell_at=not.is.null&limit=1")
+        rows = fetch_all(base_url, key, "v_fight_start_best",
+                         f"select=fight_id&start_basis=in.({bases})&limit=1")
         cond["scheduled_start_available"] = bool(rows)
     except Exception as e:                      # noqa: BLE001
         cond["scheduled_start_available"] = False
-        detail["scheduled_start_available"] = str(e)
-    detail.setdefault("scheduled_start_available",
-                      "bell_at populated" if cond["scheduled_start_available"] else
-                      "fights.bell_at is populated on no rows, and events stores a "
-                      "DATE with no time. Q-01's reference instant does not exist.")
+        detail["scheduled_start_available"] = (
+            f"v_fight_start_best unreadable ({e}) — apply dur001_migration.sql")
+    detail.setdefault(
+        "scheduled_start_available",
+        f"v_fight_start_best resolves an admissible basis ({bases})"
+        if cond["scheduled_start_available"] else
+        "v_fight_start_best resolves only event_date_fallback — the event date at "
+        "18:00 UTC, which is a placeholder and not a schedule. The ledger works; "
+        "it has not been collecting long enough to cover a settled card.")
     return {"conditions": cond, "detail": detail}
 
 
@@ -511,7 +541,7 @@ def clv001_main(write: bool) -> None:
         fight = fights.get(r["fight_id"], {})
         results.append(score_row(
             edge=r, quotes=quotes.get(r["fight_id"], []), fight=fight,
-            reference_instant=fight.get("bell_at"), now=now,
+            reference_instant=fight.get("start_at"), now=now,
             eligible_book_ids=eligible_book_ids))
 
     _report_clv001(results)
@@ -562,6 +592,15 @@ def _resolve_eligible_books(base_url: str, key: str,
 
 
 def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
+    """Corners plus the Q-01 reference instant, per fight.
+
+    The reference comes from `v_fight_start_best` (dur001_migration.sql), which
+    resolves bell_at -> latest provider commence -> an event-date fallback, and
+    reports which tier answered in `start_basis`. Amendment 2 (b) admits only the
+    first two, so the basis is read and acted on rather than discarded — the view
+    ALWAYS returns an instant, and taking it at face value would hand every fight
+    in the database, back to 1994, a plausible-looking schedule.
+    """
     out = {}
     for chunk in _chunks(sorted(fight_ids), 100):
         ids = ",".join(str(i) for i in chunk)
@@ -569,7 +608,24 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
                            f"select=id,fighter_a_id,fighter_b_id,bell_at"
                            f"&id=in.({ids})"):
             f["bell_at"] = _iso(f.get("bell_at"))
+            f["start_at"], f["start_basis"] = None, None
             out[f["id"]] = f
+
+        try:
+            starts = fetch_all(base_url, key, "v_fight_start_best",
+                               f"select=fight_id,start_at,start_basis"
+                               f"&fight_id=in.({ids})")
+        except Exception as e:                  # noqa: BLE001 - unknown is failed
+            print(f"  note: v_fight_start_best unavailable ({e}) — every row will "
+                  f"be unscored for want of a schedule. Apply dur001_migration.sql.")
+            starts = []
+        for s in starts:
+            f = out.get(s["fight_id"])
+            if f is None:
+                continue
+            f["start_basis"] = s.get("start_basis")
+            f["start_at"] = admissible_reference(_iso(s.get("start_at")),
+                                                 s.get("start_basis"))
     return out
 
 

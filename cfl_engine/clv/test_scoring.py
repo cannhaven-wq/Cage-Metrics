@@ -31,10 +31,10 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from devig import median, power_devig                                # noqa: E402
 from scoring import (                                                # noqa: E402
-    LIVE_CAPTURE_ERA_START, MIN_BOOKS, PROTOCOL_TAG, PROTOCOL_VERSION,
-    STALENESS_LIMIT_MINUTES, UNSCORED_REASONS, Unscored, canonical_sha256,
-    closing_pairs, consensus, credible_capture_instant, is_eligible_book,
-    score_row,
+    ADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START, MIN_BOOKS, PROTOCOL_TAG,
+    PROTOCOL_VERSION, STALENESS_LIMIT_MINUTES, UNSCORED_REASONS, Unscored,
+    admissible_reference, canonical_sha256, closing_pairs, consensus,
+    credible_capture_instant, is_eligible_book, score_row,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -446,12 +446,102 @@ class TestClosedVocabulary(unittest.TestCase):
         self.assertEqual(ctx.exception.reason, "insufficient_books")
 
 
+class TestStartBasis(unittest.TestCase):
+    """Amendment 2 (b). `v_fight_start_best` ALWAYS returns an instant — it falls
+    back to the event date at 18:00 UTC — so reading `start_at` without reading
+    `start_basis` hands every fight since 1994 a plausible-looking schedule.
+    That is the same shape of defect as R-13: a populated placeholder sailing
+    through a presence check."""
+
+    def test_a_real_bell_is_admissible(self):
+        self.assertEqual(admissible_reference(START, "bell_at"), START)
+
+    def test_a_provider_commence_is_admissible(self):
+        self.assertEqual(admissible_reference(START, "provider_commence"), START)
+
+    def test_the_event_date_fallback_is_not(self):
+        self.assertIsNone(admissible_reference(START, "event_date_fallback"),
+                          "18:00 UTC on the event date is a placeholder, not a "
+                          "schedule, and it is wrong by hours in both directions")
+
+    def test_an_unknown_basis_is_not(self):
+        for basis in (None, "", "guess", "BELL_AT"):
+            with self.subTest(basis=basis):
+                self.assertIsNone(admissible_reference(START, basis))
+
+    def test_a_missing_instant_is_not_rescued_by_a_good_basis(self):
+        self.assertIsNone(admissible_reference(None, "bell_at"))
+
+    def test_a_fallback_only_fight_is_unscored_not_scored_on_the_placeholder(self):
+        got = score(ref=admissible_reference(START, "event_date_fallback"))
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_scheduled_start")
+
+    def test_the_admissible_set_is_the_frozen_two(self):
+        self.assertEqual(ADMISSIBLE_START_BASES, {"bell_at", "provider_commence"})
+
+
+class TestFrozenBookList(unittest.TestCase):
+    """Amendment 2 (a). Q-02 froze the rule at the freeze and the list was never
+    written down; the dry run found it and this is what stops it recurring."""
+
+    def test_the_protocol_now_carries_a_named_list(self):
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            books = json.load(fh).get("eligible_books")
+        self.assertTrue(books, "Q-02 requires a fixed NAMED list; it is missing")
+        self.assertEqual(len(books), len(set(books)), "duplicate book name")
+
+    def test_no_aggregate_or_prediction_market_is_on_the_list(self):
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            books = json.load(fh)["eligible_books"]
+        for name in books:
+            with self.subTest(book=name):
+                self.assertTrue(is_eligible_book(name),
+                                f"{name} is excluded by kind and cannot be named "
+                                f"eligible")
+
+    def test_freezing_the_list_did_not_open_publication(self):
+        """The whole point of the separation. Amendment 2 removes a blocker from
+        the WRITE path; it must not touch the PUBLISH path."""
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            gate = json.load(fh)["publication_gate"]
+        self.assertFalse(gate["publication_allowed"])
+        self.assertIn("sample_floor_met", gate["blocked_by"])
+        self.assertIn("interval_excludes_zero", gate["blocked_by"])
+        self.assertEqual(gate["sample_floor"]["scored_observations_current"], 0)
+
+    def test_the_amendment_chain_is_intact(self):
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            protocol = json.load(fh)
+        chain = protocol["amendments"]
+        self.assertEqual(chain[0]["sha256_before"], protocol["sha256_at_v1_0_0"])
+        for a, b in zip(chain, chain[1:]):
+            self.assertEqual(a["sha256_after"], b["sha256_before"],
+                             "an amendment must chain from the one before it")
+            self.assertEqual(a["version_after"], b["version_before"])
+        self.assertEqual(chain[-1]["sha256_after"], protocol["protocol_sha256"])
+        self.assertEqual(chain[-1]["version_after"], protocol["version"])
+        for a in chain:
+            self.assertFalse(a["motivated_by_observed_results"])
+
+
 class TestProtocolPinning(unittest.TestCase):
     def test_the_module_version_matches_the_frozen_protocol(self):
         with open(PROTOCOL_JSON, encoding="utf-8") as fh:
             protocol = json.load(fh)
         self.assertEqual(protocol["version"], PROTOCOL_VERSION)
         self.assertEqual(protocol["status"], "frozen")
+
+    def test_the_recorded_hash_matches_the_protocol_on_disk(self):
+        import hashlib
+        md = os.path.join(REPO_ROOT, "research", "clv",
+                          "CLV_MEASUREMENT_PROTOCOL.md")
+        with open(md, "rb") as fh:
+            on_disk = hashlib.sha256(fh.read()).hexdigest()
+        with open(PROTOCOL_JSON, encoding="utf-8") as fh:
+            self.assertEqual(on_disk, json.load(fh)["protocol_sha256"],
+                             "the protocol was edited without recording an "
+                             "amendment, or the amendment forgot the hash")
 
     def test_closing_pairs_reports_rather_than_raises(self):
         """The diagnostics are what tell a dry run WHY nothing scored, so this

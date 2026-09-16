@@ -12,15 +12,31 @@ name: Fetch UFC odds
 # Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
 # whole MMA slate.
 #
-# CADENCE (2026-08-30): wakes hourly; build/fetch-odds.js decides whether the run
-# is worth a credit BEFORE calling the API (shouldSpendCredit). A card today or
-# tomorrow (UTC) => capture every hour, so the last price on file before a bell
-# is at most ~60 min old instead of up to ~24h. Otherwise => one baseline
-# capture a day at 08:00 UTC. ~215 credits/month, inside the 500 free-tier cap.
+# CADENCE (2026-09-16, CLV-001): wakes every 15 minutes; build/fetch-odds.js
+# decides whether the wake is worth a credit BEFORE calling the API
+# (shouldCaptureNow). Three tiers:
 #
-# Why this matters: settle_clv.py scores every published edge against the last
-# capture on file. A once-a-day line is not a close, so CLV computed off it is
-# noise. Density near the bell is the whole point of this job.
+#   * a real bell within 3 hours  -> every 30 minutes
+#   * a card today or tomorrow    -> hourly
+#   * otherwise                   -> one baseline capture a day at 08:00 UTC
+#
+# ~33 credits on a card day, ~286/month, inside the 500 free-tier cap.
+#
+# Why 30 minutes and not 60. CLV-001's staleness limit is 45 minutes, and it was
+# derived from a MEASURED 30-minute near-card interval plus 15 minutes of grace.
+# Hourly capture cannot satisfy it: a bell at :59 leaves the freshest quote 59
+# minutes old and the observation goes unscored on a stale price. At 30 minutes
+# the worst case is 29, so the frozen limit is satisfiable by construction.
+# build/test-fetch-odds.js checks that exhaustively, for every bell minute.
+#
+# "A real bell" means start_basis bell_at or provider_commence only. The
+# event-date fallback in v_fight_start_best is the event date at 18:00 UTC — a
+# placeholder — and bursting against it would spend credits on nothing
+# (CLV-001 Amendment 2 (b)).
+#
+# Why this matters: CLV is scored against the last capture before the scheduled
+# start. A once-a-day line is not a close, so CLV computed off it is noise.
+# Density near the bell is the whole point of this job.
 #
 # DUR-001 (2026-09-14): the same call also carries the fight TOTALS market when
 # build/fetch-odds.js::wantTotals() says so (+1 credit per call), appended to the
@@ -30,7 +46,10 @@ name: Fetch UFC odds
 
 on:
   schedule:
-    - cron: '0 * * * *'   # hourly wake-up; the script self-gates on card proximity
+    # Wake every 15 minutes; build/fetch-odds.js::shouldCaptureNow() decides,
+    # before any API call, whether the wake is worth a credit. A quiet wake costs
+    # nothing — it queries Supabase and exits.
+    - cron: '*/15 * * * *'
   workflow_dispatch:
 
 permissions:

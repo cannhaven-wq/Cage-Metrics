@@ -5,13 +5,13 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.1** (frozen 2026-09-16T10:30:00Z;
-Amendment 1 same day). `settle_clv.py` is reconciled and the first dry run is
-in. **It scores nothing, and the reason is structural**: 0 of 47 rows, all
-`no_scheduled_start`, with two-sided sportsbook capture ~6.6 days stale behind a
-45-minute limit. **Publication is still shut** — 0 of 100 observations, 0 of 20
-events. Waiting on Reed for the eligible-book list Q-02 froze but never wrote
-down, and for a call on the capture path.
+**Live baton:** CLV-001 is **FROZEN at v1.0.2** (frozen 2026-09-16T10:30:00Z;
+Amendments 1 and 2 same day). The eligible-book list is named and frozen, and the
+capture path is written and verified offline — **but nothing is applied**. The
+two migrations wait, in order, until one real card has been captured.
+**Publication is still shut** — 0 of 100 observations, 0 of 20 events, and
+freezing a book list does not move that. Waiting on Reed to apply
+`proposed_2026-09-16_fight_odds_capture.sql`.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -71,17 +71,32 @@ Three gates, deliberately separate:
 
 **The first dry run**
 ([`DRY_RUN_2026-09-16.md`](../research/clv/DRY_RUN_2026-09-16.md)) scored **0 of
-47** eligible rows. Four preflight conditions fail, so write mode refuses
-outright; every row then stops at `no_scheduled_start`, because `fights.bell_at`
-is populated on 0 of 8,994 fights and `events` stores a date with no time. Even
-with that fixed, nothing would score: the freshest two-sided sportsbook quote on
-any past card was captured **157.8 hours** before it, against a frozen 45-minute
-staleness limit. Near-card capture today is an aggregate (all epoch-stamped) and
-a prediction market, and CLV-001 excludes both by kind.
+47** eligible rows, every one at `no_scheduled_start`. Nothing on a settled card
+can ever score: the freshest two-sided sportsbook quote on any past card was
+captured **157.8 hours** before it, against a frozen 45-minute limit, and
+near-card capture was an aggregate (all epoch-stamped) plus a prediction market,
+both excluded by kind.
 
-No CLV statistic was computed, and none is computable on the current record.
-Nothing renders CLV today; `track-record.html` carries a placeholder. Legacy
-`clv_pp` settlement into `model_edges` continues on its cron, untouched —
+**That report carried an error, corrected at the top of it.** It said the
+scheduled-start mechanism did not exist. It does — `fight_start_estimates` and
+`v_fight_start_best`, from `dur001_migration.sql`, collecting since 2026-09-14
+and already resolving `provider_commence` for 16 future fights. The 47 rows fail
+because the ledger started after those cards, not because the field is missing.
+One card of waiting, not a build.
+
+**What shipped 2026-09-16, and what it needs:**
+
+| | state |
+|---|---|
+| Q-02 eligible book list, ten sportsbooks | **frozen**, Amendment 2 (a) |
+| only `bell_at` / `provider_commence` count as a schedule | **frozen**, Amendment 2 (b) |
+| `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
+| 30-minute near-bell cadence in `build/fetch-odds.js` | **written**, verified offline, degrades if un-migrated |
+| `model_edges` CLV-001 result columns | **written, UNAPPLIED** — second of the two |
+
+No CLV statistic was computed, and none is computable until a card is captured
+under the new path. Nothing renders CLV today; `track-record.html` carries a
+placeholder. Legacy `clv_pp` settlement continues on its cron, untouched —
 bookkeeping under the old convention, never labelled CLV.
 
 ### Where the work moves next
@@ -101,29 +116,29 @@ They are explicitly *not* approved en bloc. Split by risk in the register: six
 change data eligibility, scoring, model behaviour or interpretation and get
 higher scrutiny; three are governance and monitoring only.
 
-**CLV-001 eligible books.** Q-02 froze *"a fixed **named** sportsbook list,
-frozen at protocol freeze"* — and the list was never written down.
-`settle_clv.py` refuses to derive one, because deriving it is the thing Q-02
-exists to prevent. Proposal, with no list in it, is at
-[`AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md`](../research/clv/AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md).
-Worth settling now: zero CLV numbers exist and none is computable, so a list
-named today provably cannot be result-motivated. That window closes when
-near-bell capture starts working.
+**Two CLV-001 migrations are written and unapplied, and the order matters.**
+Both are additive-only — no DROP, no DELETE, no destructive UPDATE, no trigger
+change — and both are filed outside the repo root so the "apply root `*.sql`"
+habit cannot pick them up.
 
-**CLV-001 capture path.** Naming the books unblocks one of four preflight
-conditions. The other three — two-sided near-bell quotes from named sportsbooks,
-a scheduled bout-start instant, provider market IDs — are capture changes, and
-none can be backfilled. Whether to make them is a product-priority call, not a
-methodological one.
+1. [`proposed_2026-09-16_fight_odds_capture.sql`](../research/clv/proposed_2026-09-16_fight_odds_capture.sql)
+   — **first.** Nine capture columns on `fight_odds`, copied name-for-name from
+   `prop_odds`, which has carried them since DUR-001. Every quote captured before
+   this lands is permanently unscorable, so the cost of waiting is measured in
+   cards.
+2. [`proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql)
+   — **second, and only when there is something to write into it.** Nothing is
+   computable until a card has been captured under (1).
 
-**The proposed CLV-001 migration is unapplied.**
-[`proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql)
-is additive-only (no DROP, no DELETE, no destructive UPDATE, no trigger change)
-and filed outside the repo root so the "apply root `*.sql`" habit cannot pick it
-up. It should go last — when there is something to write into it.
+**The odds cadence changed with them.** `odds.yml` now wakes every 15 minutes and
+`shouldCaptureNow()` gates each wake: 30 minutes near a real bell, hourly on a
+card day, once daily otherwise. ~33 credits on a card day, ~286/month, inside the
+500 free tier. The 30-minute figure is not a preference — the frozen 45-minute
+staleness limit was derived from a measured 30-minute interval, and hourly
+capture cannot satisfy it.
 
 All five original CLV L3 questions (Q-05, Q-06, Q-07, Q-08, Q-11) are resolved
-and recorded, along with Q-12, Q-13 and Q-14.
+and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.
 
 ### Site
 

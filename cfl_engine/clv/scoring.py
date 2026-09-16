@@ -42,8 +42,16 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.1"
+PROTOCOL_VERSION = "1.0.2"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
+
+# Amendment 2 (b). The reference instant comes from `v_fight_start_best`, which
+# resolves bell_at -> latest provider commence -> an event-date fallback. Only
+# the first two are a schedule. The fallback is the event date at 18:00 UTC: a
+# placeholder, wrong by hours in both directions, and accepting it would put a
+# fabricated instant at the centre of the measure and decide staleness by a
+# constant nobody chose for this purpose.
+ADMISSIBLE_START_BASES = frozenset({"bell_at", "provider_commence"})
 
 # R-13. Live capture begins 2026-05-22; everything stamped before it is a
 # historical import whose capture instant was never recorded and defaulted to
@@ -277,6 +285,22 @@ def canonical_sha256(artifact: dict) -> str:
     blob = json.dumps(artifact, sort_keys=True, separators=(",", ":"),
                       default=str).encode()
     return hashlib.sha256(blob).hexdigest()
+
+
+def admissible_reference(start_at: dt.datetime | None,
+                         start_basis: str | None) -> dt.datetime | None:
+    """The Q-01 reference instant, or None if what we hold is not a schedule.
+
+    Amendment 2 (b). `v_fight_start_best` always answers — it falls back to the
+    event date at 18:00 UTC when it has nothing better — so a caller that reads
+    `start_at` without reading `start_basis` gets a plausible-looking instant for
+    every fight in the database, including fights from 1994. That is the failure
+    this function exists to prevent, and it is the same shape as R-13: a
+    populated placeholder passing a presence check.
+    """
+    if start_at is None or start_basis not in ADMISSIBLE_START_BASES:
+        return None
+    return start_at
 
 
 def score_row(edge: dict, quotes: list[dict], fight: dict,

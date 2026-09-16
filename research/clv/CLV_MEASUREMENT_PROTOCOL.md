@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.1` |
+| version | `1.0.2` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; amended to v1.0.1 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1 and 2 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,6 +336,29 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> **AMENDMENT 2 (b), v1.0.2, 2026-09-16 — which start bases count.** The
+> reference instant is read from `v_fight_start_best` (`dur001_migration.sql`),
+> which resolves `bell_at` → latest provider commence → an event-date fallback.
+> **Only the first two are admissible here.**
+>
+> | `start_basis` | admissible as a scheduled start? |
+> |---|---|
+> | `bell_at` | yes — an actual confirmed bell |
+> | `provider_commence` | yes — the provider's scheduled start, which is what Q-01 asks for |
+> | `event_date_fallback` | **no** |
+>
+> The fallback is the event date at 18:00 UTC. It is a placeholder, not a
+> schedule, and it is wrong by hours in both directions. Accepting it would put a
+> fabricated instant at the centre of the measure and would make a quote look
+> fresh or stale according to a constant nobody chose for this purpose. A fight
+> whose only basis is the fallback is **unscored** (`no_scheduled_start`), which
+> is the same treatment a missing instant gets, because that is what it is.
+>
+> Recorded because the 2026-09-16 dry-run report first stated that no scheduled
+> start instant existed at all. That was wrong: the ledger exists and works, and
+> had simply not been collecting long enough to cover any settled card. See the
+> correction in [`DRY_RUN_2026-09-16.md`](DRY_RUN_2026-09-16.md).
+
 | option | definition | cost |
 |---|---|---|
 | **A** | last eligible quote strictly before the **scheduled** card/bout start | scheduled times slip; a delayed card closes early |
@@ -359,6 +382,57 @@ result.
 ---
 
 ### Q-02 — Eligible books and exclusion rules · proposed **L2**
+
+> **RESOLVED** — named list, ≥3 books, de-vig per book *then* median (ChatGPT
+> second-pass review, 2026-09-16).
+>
+> **THE LIST ITSELF IS FROZEN BY AMENDMENT 2 (v1.0.2), 2026-09-16, approved by
+> Reed Cannon.** The 2026-09-16 dry run found that the *rule* had been frozen
+> and the *list* had never been written down, which left the discretion sitting
+> exactly where a named list exists to remove it.
+
+#### The frozen list
+
+Ten sportsbooks, by name. Names and not ids: an id is a database detail that can
+be renumbered, and what is frozen here is which businesses' prices count.
+
+| | | |
+|---|---|---|
+| FanDuel | DraftKings | BetMGM |
+| Caesars | BetRivers | BetWay |
+| Unibet | BetOnline.ag | Bovada |
+| BetUS | | |
+
+**Where the list came from, which matters more than its contents.** It is the
+membership of `v_odds_books_sportsbooks`, a view shipped in `dur001_migration.sql`
+**before CLV-001 existed**, defined as *every row of `odds_books` whose name does
+not contain "consensus" and is not Polymarket or Kalshi*. It was written to keep
+aggregates and prediction markets out of the **totals** market's de-vig, and it
+selects the same ten businesses here for the same structural reason. The list was
+therefore not assembled by looking at which books would suit a CLV number — it
+was already in the repo, for another purpose, under a rule anyone can read.
+
+Two further facts make that checkable rather than merely asserted: **no CLV
+figure has ever been computed**, and the same dry run establishes that none is
+computable on the present record at all. A list frozen in that state cannot have
+been chosen for its effect on a result, because there is no result.
+
+**Coverage was deliberately not a criterion.** Caesars, BetWay and Unibet have
+not appeared in the feed since 2026-05-31; they are on the list anyway. Dropping
+a book for thin coverage is a judgement made now about which prices count, and
+it is the exact judgement freezing is meant to foreclose. A book that never
+quotes simply never enters a consensus, which costs nothing. Adding or removing
+a name requires its own dated amendment.
+
+Excluded by kind, and not by this list: **aggregates** (`BFO Consensus`,
+`CFL Consensus (Odds API)`) — a consensus row is already a blend of other books'
+margins, so de-vigging it is a different operation and counting it toward the
+three-book floor would double-count its constituents; and **prediction markets**
+(Polymarket, Kalshi) under Q-03. `is_eligible_book` in
+`cfl_engine/clv/scoring.py` enforces both by name, so neither can re-enter
+through a renumbering.
+
+#### The options, as they stood
 
 Options: a **fixed named list** frozen now; a **rule-based** list (any book
 meeting stated coverage and cadence criteria); or **all books the feed returns**,

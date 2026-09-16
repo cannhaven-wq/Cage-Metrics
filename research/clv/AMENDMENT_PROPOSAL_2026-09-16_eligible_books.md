@@ -1,6 +1,29 @@
 # CLV-001 amendment proposal — the eligible-book list was never written down
 
-**Status: PROPOSED — not in force. Needs Reed's approval.**
+> **APPROVED and IN FORCE, 2026-09-16, Reed Cannon.** Landed as **CLV-001
+> Amendment 2 (a)**, v1.0.1 → v1.0.2. Ten sportsbooks are named in
+> `protocol.json` under `eligible_books`, with `eligible_books_provenance`
+> recording where the list came from. The hash chain is
+> `c2e3f5aa…` → `06fa587a…`.
+>
+> **The list came from somewhere better than this proposal expected.** This file
+> said the choice was Reed's and listed `odds_books` as raw material. The landing
+> instead used the membership of **`v_odds_books_sportsbooks`** — a view shipped
+> in `dur001_migration.sql` *before CLV-001 existed*, defined as every book whose
+> name does not contain "consensus" and is not Polymarket or Kalshi. It was
+> written for the totals market and selects the same ten businesses for the same
+> structural reason. A list that already existed in the repo, for another
+> purpose, under a rule anyone can read, has better provenance than one chosen
+> today however carefully.
+>
+> Amendment 2 also carries a **(b)**, which this proposal did not anticipate:
+> only `bell_at` and `provider_commence` count as a scheduled start, never
+> `v_fight_start_best`'s event-date fallback.
+>
+> History is not rewritten — the proposal stands as filed below, including the
+> table of `odds_books` it declined to choose from.
+
+**Status when written: PROPOSED — not in force. Needs Reed's approval.**
 **Raised:** 2026-09-16, by the dry run ([`DRY_RUN_2026-09-16.md`](DRY_RUN_2026-09-16.md)).
 **Severity:** blocking. No observation can score until this is resolved.
 **Protocol version affected:** `1.0.1`.
