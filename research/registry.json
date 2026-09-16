@@ -114,7 +114,26 @@
           "sha256_after": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
           "motivated_by_observed_results": false
         }
-      ]
+      ],
+      "held_amendment_clauses": {
+        "status": "HELD - not approved en bloc; each requires an individual vote on its actual clause text",
+        "in_force": [
+          "h (power de-vig)",
+          "i (Candidate 1 timing rule)"
+        ],
+        "held": [
+          "a",
+          "b",
+          "c",
+          "d",
+          "e",
+          "f",
+          "g",
+          "j",
+          "k"
+        ],
+        "note": "The calibration blocker is closed, which does not make the remaining clauses automatically sound. Any clause changing data eligibility, scoring, model behaviour or claim interpretation gets an individual vote; pure governance/monitoring clauses are lower risk."
+      }
     },
     {
       "experiment_id": "PROP-0001",
@@ -192,7 +211,53 @@
           "frozen_at_commit": "90571ff"
         }
       ],
-      "preregistration_amendments": null
+      "preregistration_amendments": null,
+      "results_artifact_measures": "the RAW hazard model, isotonic step bypassed - NOT the complete PROP-0001 locking pipeline. Established 2026-09-16, see research/provenance/CALIBRATION_FINDING.md and cfl_engine/harness/README.md.",
+      "historical_validation_scope": "Historical walk-forward testing supports the underlying raw hazard model. The calibration layer used in live PROP-0001 forecasts was not validated by that historical artifact."
+    },
+    {
+      "experiment_id": "DUR-002",
+      "status": "draft",
+      "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
+      "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
+      "population": "identical to DUR-001",
+      "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
+      "challenger_model": "PROP-0001@v2",
+      "market_benchmark": "inherited from DUR-001 section 6 as amended by Amendment 1.1: power de-vig primary, proportional and Shin as frozen sensitivities",
+      "prediction_time_rule": "identical to DUR-001: lock written before the fight's best-known start, enforced by insert trigger; training_cutoff precedes actual_lock_at",
+      "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
+      "minimum_useful_effect": 0.003,
+      "observation_unit": "one (fight, threshold) row",
+      "cluster_unit": "UFC event",
+      "eligibility_rules": [
+        "inherited unchanged from DUR-001 sections 4 and 5, as amended by Amendment 1"
+      ],
+      "preregistration_path": "cfl_engine/dur002/PREREGISTRATION.md",
+      "preregistration_sha256": "4d65b5ba4f25bcd27d13eb5c2c03722de66cb53f082199565ae23619858733e0",
+      "preregistration_amendments": null,
+      "model_artifact_sha256": null,
+      "data_artifact_sha256": null,
+      "freeze_timestamp": null,
+      "formal_analysis_points": [
+        "no number is computed until the preregistration is frozen and eligible fights have settled"
+      ],
+      "kill_rule": "checkpoint at the earlier of 2027-09-16 or 500 valid prospective observations; then HOLD-PASSIVE if not PROMOTE",
+      "allowed_sensitivities": [
+        "de-vig sensitivities inherited from DUR-001 Amendment 1.1: proportional and Shin"
+      ],
+      "forbidden_changes": [
+        "reintroducing isotonic or any other post-hoc calibration to PROP-0001@v2",
+        "citing any historical performance figure for v2 as evidence for or against it",
+        "modifying PROP-0001@v1, its locks, or DUR-001's preregistration",
+        "writing a v2 backfill into prop_model_locks",
+        "comparing v1 and v2 head-to-head without a separate preregistration",
+        "any amendment motivated by an observed result"
+      ],
+      "results_artifact": null,
+      "verdict": null,
+      "verdict_timestamp": null,
+      "frozen_files": [],
+      "draft_notes": "NOT FROZEN. Takes effect only when Reed dates and signs section 0. Until then no PROP-0001@v2 lock may be written and no DUR-002 number computed. The historical comparison that prompted this specification was seen before drafting and is disclosed in section 2; it is explicitly not the basis for the specification and may not be cited as evidence for it."
     }
   ]
 }

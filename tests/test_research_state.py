@@ -146,8 +146,17 @@ class TestRegistriesAgree(unittest.TestCase):
     """The two registries are written by hand and by script. They must not drift."""
 
     def test_same_files_and_hashes(self):
+        """Experiments that declare frozen files must agree with the markdown table.
+
+        A DRAFT experiment legitimately declares none — nothing is frozen until
+        its preregistration is signed — so it is skipped here. It is not skipped
+        by `test_only_a_draft_may_declare_no_frozen_files` below, which is what
+        stops this exemption from being a way to opt out of the tripwire.
+        """
         md = frozen_from_markdown()
         for exp_id, files in sorted(frozen_from_registry().items()):
+            if not files:
+                continue
             with self.subTest(experiment=exp_id):
                 self.assertEqual(
                     set(md), set(files),
@@ -159,6 +168,36 @@ class TestRegistriesAgree(unittest.TestCase):
                         md[rel], files[rel],
                         f"hash disagreement for {rel} between the two registries",
                     )
+
+    def test_only_a_draft_may_declare_no_frozen_files(self):
+        """An experiment in force with no frozen files would be outside the tripwire."""
+        doc = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        for exp in doc["experiments"]:
+            if exp.get("frozen_files"):
+                continue
+            with self.subTest(experiment=exp.get("experiment_id")):
+                self.assertEqual(
+                    exp.get("status"), "draft",
+                    f"{exp.get('experiment_id')} declares no frozen files but is not "
+                    f"a draft. Only a draft may sit outside the frozen-file tripwire.",
+                )
+
+    def test_a_draft_experiment_has_no_freeze_timestamp(self):
+        """Draft means not frozen. A freeze timestamp on a draft is a contradiction
+        that would let an unsigned preregistration look binding."""
+        doc = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        for exp in doc["experiments"]:
+            if exp.get("status") != "draft":
+                continue
+            with self.subTest(experiment=exp.get("experiment_id")):
+                self.assertIsNone(
+                    exp.get("freeze_timestamp"),
+                    "a draft experiment must not carry a freeze_timestamp",
+                )
+                self.assertIsNone(
+                    exp.get("verdict"),
+                    "a draft experiment cannot have a verdict",
+                )
 
 
 class TestRegistrySchema(unittest.TestCase):
