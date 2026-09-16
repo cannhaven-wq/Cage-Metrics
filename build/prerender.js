@@ -379,6 +379,7 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
     { loc: '/',                priority: '1.0', changefreq: 'daily' },
     { loc: '/card-lab.html',   priority: '0.9', changefreq: 'daily' },
     { loc: '/track-record.html', priority: '0.9', changefreq: 'weekly' },
+    { loc: '/proof.html',      priority: '0.8', changefreq: 'weekly' },
     { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },
     { loc: '/stats.html',      priority: '0.9', changefreq: 'weekly' },
     { loc: '/fighters.html',   priority: '0.9', changefreq: 'daily' },

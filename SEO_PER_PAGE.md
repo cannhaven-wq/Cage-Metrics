@@ -22,14 +22,34 @@ values in the `<head>` (everything else stays identical).
 <meta property="og:description" content="Every fight ranked by model edge, confidence, and dog value. Model vs market on one screen.">
 ```
 
-## track-record.html (Proof Center)
+## track-record.html (the summary record)
+> **Timing and immutability wording is load-bearing here.** `model_picks` and
+> `model_edges` are not append-only, and `source='live'` does not by itself
+> prove a call preceded its fight. Do not reintroduce "locked before the bell",
+> "never edited" or "every pick" — `tests/proof-copy.test.js` fails on all
+> three. Per-row timing grades live on `proof.html`.
+
 ```
-<title>UFC Model Track Record — Every Pick Graded in Public | Cannon Fight Lab</title>
-<meta name="description" content="Every CFL pick locked before the event and graded after — wins, losses, and dollar returns at real prices. Backtest results are labeled simulated; the live record starts July 2026.">
+<title>UFC Model Track Record, Graded in Public — Cannon Fight Lab</title>
+<meta name="description" content="Every main-engine fight call graded in public — simulated record labeled as simulated, live prospective record since July 2026, misses included. Accuracy, calibration, and profit at the prices on record.">
 <link rel="canonical" href="https://cannonfightlab.com/track-record.html">
 <meta property="og:url" content="https://cannonfightlab.com/track-record.html">
-<meta property="og:title" content="UFC Model Track Record — Every Pick Graded in Public">
-<meta property="og:description" content="Every pick locked, graded, never edited — misses included. Simulated results labeled simulated; live record since July 2026.">
+<meta property="og:title" content="UFC Model Track Record, Graded in Public — Cannon Fight Lab">
+<meta property="og:description" content="Every main-engine fight call graded in public — simulated record labeled as simulated, live prospective record since July 2026, misses included.">
+```
+
+## proof.html (Proof Center — the row-level evidence layer)
+> Scope wording is enforced: every description tag must say **main-engine**, and
+> the page must stay `index, follow`. Both are covered by
+> `tests/proof-copy.test.js`.
+
+```
+<title>Proof Center — The Main Engine's Fight Calls, Graded | Cannon Fight Lab</title>
+<meta name="description" content="Every main-engine fight call in this record: when we posted it, what we said, what happened, and what $100 a bet came to. Live calls and history replays kept separate. Losses shown at the same size as wins.">
+<link rel="canonical" href="https://cannonfightlab.com/proof.html">
+<meta property="og:url" content="https://cannonfightlab.com/proof.html">
+<meta property="og:title" content="Proof Center — Every Main-Engine Fight Call, Timestamped and Graded">
+<meta property="og:description" content="Every main-engine fight call in this record: when we posted it, the price, the result, and what $100 a bet came to. Live and replayed records never mixed. Losses shown at the same size as wins.">
 ```
 
 ## cardio.html
