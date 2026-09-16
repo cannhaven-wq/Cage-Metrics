@@ -188,12 +188,18 @@ def run_walkforward(pp, fdf, cov, phi, folds, log=print):
 
         model, meta = fit_prop0001(train, cov, lo.date(), log=lambda *_: None)
         h = model.predict_hazard(test, calibrated=True)
+        # Same model, isotonic bypassed. Keeping both is what makes the
+        # calibration step auditable: if raw and calibrated agree, the isotonic
+        # map did nothing, and any metric difference against another harness is
+        # not a calibration difference.
+        h_raw = model.predict_hazard(test, calibrated=False)
         base_rate = float(train["event"].mean())
 
         preds.append(pd.DataFrame({
             "fold": k, "fight_id": test.fight_id.to_numpy(),
             "event_date": test.event_date.to_numpy(), "round": test["round"].to_numpy(),
-            "event": test["event"].to_numpy(), "p_hazard": h, "p_const": base_rate,
+            "event": test["event"].to_numpy(),
+            "p_raw": h_raw, "p_hazard": h, "p_const": base_rate,
         }))
 
         # one row per test fight, hazards evaluated at all three rounds
@@ -203,13 +209,28 @@ def run_walkforward(pp, fdf, cov, phi, folds, log=print):
             "fold": k, "fight_id": dist["fight_id"].to_numpy(),
             "p_gtd": dist["p_decision"].to_numpy(),
         }))
+        ll_cal = logloss(test["event"], h)
+        ll_raw = logloss(test["event"], h_raw)
         fold_meta.append({
             "fold": k, "start": str(lo.date()), "end": str(hi.date()),
+            # training window: everything before the fold boundary
+            "train_from": str(train.event_date.min().date()),
+            "train_to_exclusive": str(lo.date()),
             "n_train_fights": meta["n_train_fights"], "n_train_rows": meta["n_train_rows"],
-            "n_cal_rows": meta["n_cal_rows"], "calibrated": meta["n_cal_rows"] > 0,
+            # calibration: how many rows fed isotonic, from when, and did it run
+            "cal_start": meta["cal_start"],
+            "n_cal_rows": meta["n_cal_rows"],
+            "calibrated": meta["n_cal_rows"] > 0,
             "n_test_rows": int(len(test)), "n_test_fights": int(test.fight_id.nunique()),
-            "test_logloss": round(logloss(test["event"], h), 4),
+            # raw vs calibrated, so the isotonic step's effect is visible
+            "mean_p_raw": round(float(np.mean(h_raw)), 6),
+            "mean_p_calibrated": round(float(np.mean(h)), 6),
+            "mean_event_rate": round(float(test["event"].mean()), 6),
+            "raw_logloss": round(ll_raw, 4),
+            "test_logloss": round(ll_cal, 4),
+            "calibration_gain": round(ll_raw - ll_cal, 4),
             "const_logloss": round(logloss(test["event"], np.full(len(test), base_rate)), 4),
+            "const_rate": round(base_rate, 6),
             "regularized_fallback": meta["regularized_fallback"],
         })
         log(f"  fold {k} [{lo.date()} → {hi.date()}]: train {meta['n_train_fights']} fights, "
@@ -328,7 +349,14 @@ def main() -> None:
         "const_logloss": round(logloss(pred.event, pred.p_const), 4),
         "model_brier": round(brier(pred.event, pred.p_hazard), 4),
         "const_brier": round(brier(pred.event, pred.p_const), 4),
+        # The same hazards with the isotonic map bypassed. Reported so the cost
+        # or benefit of the frozen calibration step is always visible next to the
+        # headline number, rather than something you have to go and derive.
+        "model_logloss_raw": round(logloss(pred.event, pred.p_raw), 4),
+        "model_brier_raw": round(brier(pred.event, pred.p_raw), 4),
     }
+    pooled["calibration_gain_pooled"] = round(
+        pooled["model_logloss_raw"] - pooled["model_logloss"], 4)
     cal_tbl, cal_max = calibration_table(pred.event, pred.p_hazard)
     pooled["cal_max_abs_dev"] = round(cal_max, 4) if cal_max is not None else None
 
