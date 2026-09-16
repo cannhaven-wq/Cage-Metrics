@@ -34,7 +34,7 @@ from scoring import (                                                # noqa: E40
     BENCHMARK_NAME, BENCHMARK_NAME_LONG, CLOSE_REFERENCE_BASES,
     EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
-    PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
+    AUDIT_ONLY_BASES, PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
     STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
     credible_capture_instant, is_eligible_book, lead_time_minutes,
@@ -465,10 +465,22 @@ class TestCloseReference(unittest.TestCase):
     basis hands every fight since 1994 a plausible-looking schedule — the same
     defect shape as R-13, a populated placeholder passing a presence check."""
 
-    def test_a_real_bell_is_admissible_for_any_bout(self):
-        self.assertEqual(admissible_reference(START, "bell_at"), START)
-        self.assertEqual(admissible_reference(START, "bell_at", is_first_bout=False),
-                         START)
+    def test_a_real_bell_does_NOT_override_the_frozen_cutoff(self):
+        """Amendment 5.1. A bell override would silently make one version behave
+        as two — fights with a bell scored one way, fights without scored another,
+        inside the same summary statistic. A rule that depends on which optional
+        field happens to be populated is not frozen."""
+        self.assertNotIn("bell_at", CLOSE_REFERENCE_BASES)
+        self.assertIn("bell_at", AUDIT_ONLY_BASES)
+        self.assertIsNone(admissible_reference(START, "bell_at"))
+        self.assertIsNone(admissible_reference(START, "bell_at", is_first_bout=True))
+        self.assertIsNone(admissible_reference(START, "bell_at", is_first_bout=False))
+
+    def test_scoring_against_real_bells_would_be_a_new_version(self):
+        """Stated as a test so the boundary is checkable: the audit field exists,
+        and admitting it is a version bump rather than a code change here."""
+        self.assertTrue(AUDIT_ONLY_BASES.isdisjoint(CLOSE_REFERENCE_BASES))
+        self.assertIn("bell_at", SUPERSEDED_START_BASES)
 
     def test_the_previous_bouts_completion_IS_the_cutoff_for_later_bouts(self):
         """Amendment 5. Bout 2..N's cutoff is the exact completion of the bout
@@ -485,9 +497,10 @@ class TestCloseReference(unittest.TestCase):
     def test_that_cutoff_is_marked_as_preceding_the_bell(self):
         self.assertIn("previous_bout_completion", PRECEDES_BELL_BASES)
         self.assertIs(reference_is_lower_bound("previous_bout_completion"), True)
-        for basis in ("bell_at", "scheduled_first_bout"):
-            with self.subTest(basis=basis):
-                self.assertIs(reference_is_lower_bound(basis), False)
+        self.assertIs(reference_is_lower_bound("scheduled_first_bout"), False)
+        self.assertIsNone(reference_is_lower_bound("bell_at"),
+                          "bell_at is not a cutoff in this version, so it has no "
+                          "lead-time character here — null, not False")
 
     def test_the_scheduled_start_is_admissible_for_the_first_bout_only(self):
         self.assertEqual(
@@ -536,10 +549,11 @@ class TestCloseReference(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_three(self):
+    def test_the_admissible_set_is_the_frozen_two(self):
         self.assertEqual(CLOSE_REFERENCE_BASES,
-                         {"bell_at", "scheduled_first_bout",
-                          "previous_bout_completion"})
+                         {"scheduled_first_bout", "previous_bout_completion"},
+                         "exactly two cases, always — no third, and nothing "
+                         "overrides them inside this version")
 
     def test_the_pre_card_price_is_still_never_a_cutoff(self):
         self.assertEqual(NON_SCORING_REFERENCE_BASES, {"card_scheduled_start"})
@@ -614,7 +628,8 @@ class TestLatePreFightProxy(unittest.TestCase):
     def test_every_scored_row_records_its_lead_time_to_the_cutoff(self):
         for basis in sorted(CLOSE_REFERENCE_BASES):
             with self.subTest(basis=basis):
-                got = score(basis=basis, first_bout=(basis != "previous_bout_completion"))
+                got = score(basis=basis,
+                            first_bout=(basis == "scheduled_first_bout"))
                 self.assertTrue(got["scored"], got["reason"])
                 self.assertAlmostEqual(got["lead_time_minutes"], 10.0, places=6)
                 self.assertIs(got["lead_time_is_lower_bound"],

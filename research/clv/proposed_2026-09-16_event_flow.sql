@@ -241,10 +241,10 @@ revoke all on public.odds_api_usage from anon, authenticated;
 --
 --   bout 1      cutoff = the card's SCHEDULED START
 --   bout 2..N   cutoff = the EXACT COMPLETION of the immediately previous bout
---   plus        a confirmed bell wherever one exists, which outranks both
 --
 -- and the scored price is the latest eligible sportsbook snapshot strictly
--- before that cutoff.
+-- before that cutoff. Those two cases, always. bell_at is an AUDIT field and
+-- never overrides the cutoff inside this version (Amendment 5.1).
 --
 -- For bouts after the first the cutoff precedes the bell by the walkout
 -- interval, so the proxy can sit several minutes early. That is accepted and
@@ -290,13 +290,22 @@ with ord as (
 ),
 prev_done as (
   -- The completion of the bout immediately before this one, same card.
+  --
+  -- LATEST OBSERVATION, not max(completed_at). The ledger is append-only, so a
+  -- correction is a NEW row rather than an edit — and a correction usually moves
+  -- the instant EARLIER (9:31 misheard, 9:30 confirmed). max() would keep
+  -- returning the superseded 9:31 forever, which is the opposite of what an
+  -- append-only correction is for, and it would leave a minute of in-window
+  -- quotes wrongly eligible.
   select o.fight_id,
-         (select max(c.completed_at)
+         (select c.completed_at
             from public.fight_bout_completions c
             join ord p on p.fight_id = c.fight_id
            where p.event_id = o.event_id
              and p.bout_order = o.bout_order - 1
-             and c.is_exact) as prev_completed_at
+             and c.is_exact
+           order by c.observed_at desc, c.id desc
+           limit 1) as prev_completed_at
   from ord o
 ),
 sched as (
@@ -319,21 +328,24 @@ select f.id                                   as fight_id,
        f.event_id,
        o.bout_order,
        (o.bout_order = 1)                     as is_first_bout,
-       -- THE CUTOFF (Amendment 5).
+       -- THE CUTOFF (Amendment 5). Exactly two cases, always:
        --   bout 1    -> the card's scheduled start
        --   bout 2..N -> the exact completion of the immediately previous bout
-       --   plus      -> a confirmed bell wherever one exists, which outranks both
+       --
+       -- bell_at does NOT appear here (Amendment 5.1). Letting a confirmed bell
+       -- override the frozen cutoff "where one exists" would make this one
+       -- version behave as two - fights with a bell scored one way, fights
+       -- without scored another, inside the same summary statistic. A rule that
+       -- depends on which optional field happens to be populated is not frozen.
+       -- Scoring against real bells is a NEW protocol version.
        --
        -- For bouts after the first the cutoff PRECEDES the bell by the walkout
-       -- interval. That is accepted and declared: it is the most consistent,
-       -- observable and reproducible cutoff available, it is the same rule for
-       -- every such observation, and reference_is_lower_bound marks it.
-       coalesce(f.bell_at,
-                case when o.bout_order = 1 then s.card_start_at
-                     else pd.prev_completed_at end)
-                                              as reference_at,
+       -- interval. Accepted and declared: it is the most consistent, observable
+       -- and reproducible cutoff available, it is the same rule for every such
+       -- observation, and reference_is_lower_bound marks it.
+       case when o.bout_order = 1 then s.card_start_at
+            else pd.prev_completed_at end     as reference_at,
        case
-         when f.bell_at is not null            then 'bell_at'
          when o.bout_order = 1
           and s.card_start_at is not null      then 'scheduled_first_bout'
          when o.bout_order > 1
@@ -353,8 +365,11 @@ select f.id                                   as fight_id,
        -- TRUE when the cutoff PRECEDES the bell, so the recorded lead time is a
        -- lower bound on the true gap to the fight starting. Exactly the
        -- previous-bout-completion case.
-       (f.bell_at is null and o.bout_order > 1
+       (o.bout_order > 1
         and pd.prev_completed_at is not null)  as reference_is_lower_bound,
+       -- AUDIT ONLY. Carried so a confirmed bell is visible beside the cutoff it
+       -- did NOT set, and so a future protocol version can score against it.
+       -- Never substituted for reference_at inside this version.
        f.bell_at                              as actual_bell_at,
        s.card_start_at                        as card_scheduled_start_at,
        s.observed_at                          as card_start_observed_at
@@ -364,9 +379,10 @@ left join prev_done pd on pd.fight_id = f.id
 left join sched s      on s.event_id = f.event_id;
 
 comment on view public.v_clv_close_reference is
-  'CLV-001 Amendment 5. reference_at is the scoring CUTOFF: the card''s '
-  'scheduled start for bout 1, the previous bout''s exact completion for bouts '
-  '2..N, or a confirmed bell where one exists. reference_is_lower_bound is TRUE '
+  'CLV-001 Amendment 5 (as corrected by 5.1). reference_at is the scoring '
+  'CUTOFF: the card''s scheduled start for bout 1, the previous bout''s exact '
+  'completion for bouts 2..N. Those two, always - actual_bell_at is an audit '
+  'field and never overrides them inside this version. reference_is_lower_bound is TRUE '
   'when the cutoff precedes the bell, which is the previous-bout case. This is a '
   'CFL closing-price proxy, never the exact sportsbook closing line. Separate '
   'from DUR-001''s v_fight_start_best on purpose: that view is defined in a '
@@ -379,16 +395,17 @@ comment on column public.v_clv_close_reference.reference_is_lower_bound is
   'bound on the gap to the bell. FALSE when the cutoff is the start itself.';
 
 comment on column public.v_clv_close_reference.prev_bout_completed_at is
-  'When the bout before this one ended. Under Amendment 5 this is the same '
-  'instant as reference_at for bouts 2..N - it is both the cutoff and the '
-  'capture trigger. Carried separately so a future protocol version with real '
-  'bell times can still see where the window opened.';
+  'When the bout before this one ended, resolved as the LATEST OBSERVATION '
+  '(observed_at DESC, id DESC) so an append-only correction supersedes rather '
+  'than losing to max(). Under Amendment 5 this is the same instant as '
+  'reference_at for bouts 2..N - it is both the cutoff and the capture trigger. '
+  'It is NOT a claim that this fight began then; the walkout sits between.';
 
--- Note the LEFT JOIN on running order, changed by Amendment 4. Under Amendment 3
--- a fight with no order row could not appear at all, because tiers 1-3 all need
--- one. Tier 4 does not: the card's scheduled start bounds every fight on the
--- card regardless of where in the running order it sits. Order still improves
--- the answer; it is no longer required to get one.
+-- The LEFT JOIN on running order lets a fight without one still appear, so the
+-- report can say WHY it is unscorable rather than silently omitting it. It can
+-- never be scored in that state: under Amendment 5 the cutoff needs bout_order
+-- to know whether this is bout 1 or which bout precedes it, so reference_at
+-- comes back NULL and settle_clv.py reports no_scheduled_start.
 
 commit;
 

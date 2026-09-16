@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.7` |
+| version | `1.0.8` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–5 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–5.1 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,7 +336,76 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 5.1, v1.0.8, 2026-09-16 — consistency fixes to Amendment 5
+>
+> **Approved by Reed Cannon (L3).** The v1.0.7 methodology stands; these make the
+> code, schema, tests and documents agree with it.
+>
+> ### (a) No bell override inside this version
+>
+> Amendment 5 admitted a confirmed bell as a cutoff "wherever one exists". That
+> is withdrawn. **This version's cutoff is exactly two cases, always:**
+>
+> | | cutoff |
+> |---|---|
+> | bout 1 | the card's scheduled start |
+> | bouts 2..N | the exact completion of the immediately previous bout |
+>
+> A bell override would silently make one version behave as two — fights with a
+> bell scored one way, fights without scored another, inside the same summary
+> statistic. A rule that depends on which optional field happens to be populated
+> is not frozen.
+>
+> `fights.bell_at` is **retained as an audit field**, carried on the row and in
+> `v_clv_close_reference.actual_bell_at`, and never substituted for the cutoff.
+> **Scoring against real bells is a NEW protocol version**, not a per-row upgrade
+> inside this one.
+>
+> ### (b) The cutoff is not a claim about when the fight started
+>
+> Previous-bout completion is an **operational proxy cutoff**. It is not an
+> assertion that the next fight began the instant the last one ended — the
+> walkout sits between them.
+>
+> So the fields that state facts now only hold facts:
+>
+> | field | filled by |
+> |---|---|
+> | `fight_odds.bout_started_at` | a **confirmed bell**, and nothing else |
+> | `fight_odds.is_live` | keyed to `bout_started_at`; `NULL` when unknown |
+> | `fight_odds.proxy_cutoff_at` | **new** — the frozen cutoff, under its own name |
+>
+> CLV scoring **excludes quotes at or after the frozen cutoff directly**, against
+> `proxy_cutoff_at`. It never reads `is_live`, and it never manufactures a
+> liveness fact to achieve an exclusion it can perform honestly.
+>
+> ### (c) Corrections resolve by observation, not by clock
+>
+> `fight_bout_completions` is append-only, so a correction is a **new row**. A
+> correction typically moves the instant **earlier** — 9:31 misheard, 9:30
+> confirmed — and `max(completed_at)` would keep returning the superseded 9:31
+> forever, leaving a minute of in-window quotes wrongly eligible.
+>
+> `v_clv_close_reference` therefore resolves the latest applicable completion by
+> **`observed_at DESC, id DESC`**. A correction from 9:31 to 9:30 resolves to
+> 9:30. The capture job uses the same ordering.
+>
+> ### (d) Exact bout completions are REQUIRED, not an improvement
+>
+> All remaining Tier-4-era language is removed. Under Amendment 5 the previous
+> bout's exact completion **is the scoring cutoff** for bouts 2..N, so without it
+> those fights cannot be scored at all. It is a requirement.
+>
+> | input | state | required for |
+> |---|---|---|
+> | running order | absent; **free** to obtain | everything — bout 1 identification and "the previous bout" |
+> | exact bout completions | absent; **no free source** | bouts 2..N, entirely |
+>
+> ---
+>
 > ## AMENDMENT 5, v1.0.7, 2026-09-16 — the operational cutoff, frozen
+>
+> *The bell-override clause below is withdrawn by Amendment 5.1. The rest stands.*
 >
 > **Approved by Reed Cannon (L3). Supersedes Amendment 4.2.**
 >
@@ -346,7 +415,7 @@ published number means.
 > |---|---|
 > | **bout 1** | the card's **scheduled start time** |
 > | **bouts 2..N** | the **exact completion time of the immediately previous bout** |
-> | any bout with a confirmed bell | the **bell**, which outranks both |
+> | ~~any bout with a confirmed bell~~ | ~~the bell, which outranks both~~ — **withdrawn by Amendment 5.1** |
 >
 > **The scored price is the latest eligible sportsbook snapshot strictly before
 > that cutoff.**
@@ -382,7 +451,7 @@ published number means.
 > | | |
 > |---|---|
 > | cutoff timestamp | the instant the window closed |
-> | cutoff basis | `scheduled_first_bout`, `previous_bout_completion`, or `bell_at` |
+> | cutoff basis | `scheduled_first_bout` or `previous_bout_completion` |
 > | selected quote timestamp | `clv_proxy_quoted_at` |
 > | lead time | selected quote → cutoff, **exact**, plus a flag saying whether the cutoff itself precedes the bell |
 > | source quote IDs and provenance | `clv_source_quote_ids`, `clv_closing_consensus`, `clv_consensus_sha256` |

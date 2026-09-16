@@ -335,20 +335,35 @@ function currentBout(cardFights, now = new Date()) {
   return null;                                   // every bout on the card is done
 }
 
-// The best account, at capture time, of when a fight began — the value stamped
-// into fight_odds.bout_started_at, and what is_live is keyed to.
+// WHEN THIS FIGHT ACTUALLY BEGAN — a fact, or null.
 //
-//   1. an actual confirmed bell
-//   2. the previous bout's exact completion
-//   3. the card's scheduled start — FIRST BOUT ONLY
-//   else null, meaning unknown. Never a guess, and never the card's scheduled
-//   start applied to a later bout: that would sit hours early and mark every
-//   real quote in between as in-play.
-function boutStartedAt(fight, prevCompletedAt, scheduledFirstBoutAt) {
+// Only a confirmed bell qualifies. This field, and the is_live flag keyed to it,
+// are claims about what happened; nothing else may fill them.
+//
+// It used to fall back to the previous bout's completion, which asserted that
+// fight N+1 began the instant fight N ended. It did not — the walkout sits
+// between them — so that was a manufactured fact in a column whose only job is
+// to hold real ones. CLV scoring never needed it: it excludes quotes at or after
+// the frozen cutoff directly, against proxyCutoffAt below.
+function boutStartedAt(fight) {
   if (fight && fight.bell_at) return new Date(fight.bell_at).toISOString();
-  if (prevCompletedAt) return new Date(prevCompletedAt).toISOString();
-  if (fight && fight.bout_order === 1 && scheduledFirstBoutAt) {
-    return new Date(scheduledFirstBoutAt).toISOString();
+  return null;
+}
+
+// THE FROZEN OPERATIONAL CUTOFF for this fight — CLV-001 v1.0.8.
+//
+//   bout 1      the card's scheduled start
+//   bout 2..N   the exact completion of the immediately previous bout
+//
+// A cutoff, not a start. For later bouts it precedes the bell by the walkout
+// interval, which is exactly why it is stored under its own name rather than
+// borrowing bout_started_at's.
+function proxyCutoffAt(fight, prevCompletedAt, scheduledFirstBoutAt) {
+  if (fight && fight.bout_order === 1) {
+    return scheduledFirstBoutAt ? new Date(scheduledFirstBoutAt).toISOString() : null;
+  }
+  if (fight && fight.bout_order > 1 && prevCompletedAt) {
+    return new Date(prevCompletedAt).toISOString();
   }
   return null;
 }
@@ -681,17 +696,23 @@ async function attachEventFlow(fights) {
   // late and admit in-play quotes as its close.
   const { data: done, error: cErr } = await sb
     .from('fight_bout_completions')
-    .select('fight_id, completed_at')
+    .select('fight_id, completed_at, observed_at, id')
     .in('fight_id', ids)
-    .eq('is_exact', true);
+    .eq('is_exact', true)
+    .order('observed_at', { ascending: false })
+    .order('id', { ascending: false });
   if (cErr) {
     console.warn(`[flow] fight_bout_completions unavailable (${cErr.message}) — ` +
       `no bout completions, so only a card's first bout can ever be scored.`);
   }
+  // LATEST OBSERVATION wins, not the latest instant. The ledger is append-only,
+  // so a correction is a new row — and a correction usually moves the instant
+  // EARLIER (9:31 misheard, 9:30 confirmed). Taking the max would keep the
+  // superseded 9:31 forever, which is the opposite of what the correction is
+  // for. Rows arrive ordered observed_at DESC, id DESC, so the first wins.
   const doneBy = new Map();
   for (const c of done || []) {
-    const prev = doneBy.get(c.fight_id);
-    if (!prev || c.completed_at > prev) doneBy.set(c.fight_id, c.completed_at);
+    if (!doneBy.has(c.fight_id)) doneBy.set(c.fight_id, c.completed_at);
   }
 
   // event -> bout_order -> fight_id, so "the bout before this one" is a lookup
@@ -1041,26 +1062,26 @@ function buildTotalsRows(e, fight, bookId, captured_at) {
 
 const CAPTURE_COLUMNS = [
   'source_event_id', 'feed_version', 'source_commence_at', 'bout_started_at',
-  'is_live', 'provider_last_update', 'retrieved_at', 'opponent_fighter_id',
-  'market_status', 'raw',
+  'proxy_cutoff_at', 'is_live', 'provider_last_update', 'retrieved_at',
+  'opponent_fighter_id', 'market_status', 'raw',
 ];
 
 function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
   const rows = [];
   const commence = e.commence_time ? new Date(e.commence_time).toISOString() : null;
 
-  // Amendment 3: liveness is PER FIGHT, keyed to when THIS bout began — not to
-  // the card's commence time. Keying it to the card would mark every quote taken
-  // after the first bell as in-play for all thirteen fights and throw away
-  // exactly the quotes the later fights close on.
-  //
-  // null is a third state and means "we do not know when this fight started",
-  // which on a card whose running order or bout completions are unrecorded is
-  // the truth. It is never collapsed to false: false asserts the quote was
-  // pre-start, and that is a fact we would not have.
-  const bout_started_at = boutStartedAt(fight, fight.prev_completed_at,
-                                        fight.bout_order === 1 ? commence : null);
+  // Liveness is a FACT about this fight, so it is keyed only to a confirmed
+  // bell. null is a third state meaning "we do not know when this fight
+  // started", which is the truth on every card until bells are captured, and it
+  // is never collapsed to false — false asserts the quote was pre-start.
+  const bout_started_at = boutStartedAt(fight);
   const is_live = bout_started_at ? captured_at >= bout_started_at : null;
+
+  // The frozen operational cutoff, stored separately because it is a rule and
+  // not an observation. CLV scoring excludes quotes at or after it directly;
+  // nothing infers a start from it.
+  const proxy_cutoff_at = proxyCutoffAt(
+    fight, fight.prev_completed_at, fight.bout_order === 1 ? commence : null);
 
   const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
   const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
@@ -1103,7 +1124,8 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
         source_event_id: e.id || null,              // item 9  — provider market id
         feed_version: FEED_VERSION,                 // item 6  — feed + shape
         source_commence_at: commence,               // item 7  — the CARD's schedule
-        bout_started_at,                            // item 7  — when THIS bout began
+        bout_started_at,                            // item 7  — a CONFIRMED bell only
+        proxy_cutoff_at,                            //         — the frozen v1.0.8 cutoff
         is_live,                                    //         — in-play, never a close
         provider_last_update: bm.last_update        // item 11 — when the BOOK moved
           ? new Date(bm.last_update).toISOString() : null,
@@ -1403,7 +1425,7 @@ if (require.main === module) main();
 
 module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
-  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
+  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
   planLiveCadence, minutesRemainingInCard, wantTotals,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,

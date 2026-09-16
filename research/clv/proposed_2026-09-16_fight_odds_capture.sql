@@ -44,7 +44,8 @@
 -- Mapping to CLV-001 §4, the capture requirements that cannot be backfilled:
 --   item  9  provider market IDs                -> source_event_id
 --   item  7  scheduled AND actual bout timing   -> source_commence_at (card),
---                                                  bout_started_at (this fight)
+--                                                  bout_started_at (confirmed bell),
+--                                                  proxy_cutoff_at (frozen cutoff)
 --   item 11  provider AND retrieval timestamps  -> provider_last_update + retrieved_at
 --   item 10  opponent identity at quote time    -> opponent_fighter_id
 --   item  8  market suspension / takedown       -> market_status
@@ -94,25 +95,36 @@ alter table public.fight_odds
 alter table public.fight_odds
   add column if not exists source_commence_at timestamptz;
 
--- The best account, at capture time, of when THIS fight began: an actual bell,
--- else the previous bout's completion, else (bout 1 only) the card's scheduled
--- start. NULL when none is known, which is not the same as "it had not started".
--- Under Amendment 5 this is also the scoring cutoff for bouts 2..N.
+-- WHEN THIS FIGHT ACTUALLY BEGAN — a fact, or NULL. Only a confirmed bell fills
+-- it. NULL means "we do not know", which is not the same as "it had not
+-- started".
 --
--- Amendment 3. Separate from source_commence_at because on a thirteen-fight card
--- they are the same instant for one fight and wrong for twelve: the card has one
--- published start, and every later bout begins when the one before it ends.
+-- Amendment 5.1. It briefly fell back to the previous bout's completion, which
+-- asserted that fight N+1 began the instant fight N ended. It did not — the
+-- walkout sits between them — and this column's only job is to hold facts. The
+-- operational cutoff lives in proxy_cutoff_at below, under its own name.
 alter table public.fight_odds
   add column if not exists bout_started_at timestamptz;
 
--- True when the quote was captured at or after THIS FIGHT started — an in-play
--- price, never eligible as a close. NULL means we do not know, and that is a
--- third state, not a synonym for false.
+-- THE FROZEN OPERATIONAL CUTOFF for this fight, as it stood at capture:
+--   bout 1     the card's scheduled start
+--   bout 2..N  the exact completion of the immediately previous bout
 --
--- It is keyed to bout_started_at and NOT to source_commence_at. Keying it to the
--- card's commence time would mark every quote taken after the first bell as
--- in-play for all thirteen fights, discarding exactly the quotes the later
--- fights close on. That was the bug this column had before Amendment 3.
+-- A cutoff, not a start. For later bouts it precedes the bell by the walkout
+-- interval, which is precisely why it is not stored as bout_started_at. CLV
+-- scoring excludes quotes at or after it directly; nothing infers a start from
+-- it. See CLV-001 Amendment 5 as corrected by 5.1.
+alter table public.fight_odds
+  add column if not exists proxy_cutoff_at timestamptz;
+
+-- True when the quote was captured at or after THIS FIGHT actually started — an
+-- in-play price. NULL means we do not know, and that is a third state, not a
+-- synonym for false.
+--
+-- Keyed to bout_started_at, which only a confirmed bell fills, so this is a
+-- claim about what happened and never an inference from the cutoff. CLV scoring
+-- does not read it: it excludes quotes at or after proxy_cutoff_at directly,
+-- rather than manufacturing a liveness fact to achieve the same exclusion.
 alter table public.fight_odds
   add column if not exists is_live boolean;
 
@@ -186,7 +198,8 @@ end $$;
 -- a disagreement to resolve later — it is a bug, and it would present an in-play
 -- price as a close.
 --
--- Against bout_started_at, per Amendment 3, never against source_commence_at.
+-- Against bout_started_at (a confirmed bell), never against source_commence_at
+-- and never against proxy_cutoff_at.
 do $$
 begin
   if not exists (select 1 from pg_constraint

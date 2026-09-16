@@ -147,3 +147,73 @@ class TestAppendOnlyPreserved(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestCompletionCorrectionSemantics(unittest.TestCase):
+    """fight_bout_completions is append-only, so a correction is a NEW row.
+
+    A correction typically moves the instant EARLIER — 9:31 misheard, 9:30
+    confirmed. `max(completed_at)` would keep returning the superseded 9:31
+    forever, which is the opposite of what an append-only correction is for and
+    would leave a minute of in-window quotes wrongly eligible.
+    """
+
+    def setUp(self):
+        self.sql = read("proposed_2026-09-16_event_flow.sql")
+
+    def test_the_previous_completion_resolves_by_latest_observation(self):
+        block = re.search(r"prev_done as \((.*?)\n\),", self.sql, re.S)
+        self.assertIsNotNone(block, "the prev_done CTE is gone")
+        body = block.group(1)
+        self.assertIn("order by c.observed_at desc, c.id desc", body,
+                      "a correction must resolve by the latest OBSERVATION")
+        self.assertNotIn("max(c.completed_at)", body,
+                         "max() keeps the superseded value when a correction "
+                         "moves the instant earlier")
+
+    def test_only_exact_completions_are_eligible(self):
+        block = re.search(r"prev_done as \((.*?)\n\),", self.sql, re.S).group(1)
+        self.assertIn("c.is_exact", block,
+                      "an upper bound from the result scraper must never become "
+                      "a cutoff")
+
+    def test_the_running_order_also_resolves_by_latest_observation(self):
+        block = re.search(r"ord as \((.*?)\n\),", self.sql, re.S).group(1)
+        self.assertIn("observed_at desc", block)
+
+    def test_the_card_schedule_also_resolves_by_latest_observation(self):
+        block = re.search(r"sched as \((.*?)\n\)\n", self.sql, re.S).group(1)
+        self.assertIn("observed_at desc", block)
+        self.assertNotIn("max(e.start_at)", block,
+                         "a reschedule can move a card EARLIER; max() keeps the "
+                         "superseded later time")
+
+
+class TestNoBellOverrideInTheView(unittest.TestCase):
+    """Amendment 5.1: this version's cutoff is exactly two cases, always."""
+
+    def setUp(self):
+        self.sql = read("proposed_2026-09-16_event_flow.sql")
+        self.view = re.search(
+            r"create or replace view public\.v_clv_close_reference(.*?);",
+            self.sql, re.S).group(1)
+
+    def test_reference_at_has_no_bell_fallback(self):
+        select = self.view[self.view.find("as reference_at") - 400:
+                           self.view.find("as reference_at")]
+        self.assertNotIn("f.bell_at", select,
+                         "a bell override makes one version behave as two — "
+                         "fights with a bell scored one way, fights without "
+                         "scored another, inside the same statistic")
+
+    def test_bell_is_still_carried_as_an_audit_field(self):
+        self.assertIn("as actual_bell_at", self.view,
+                      "the audit field is retained; only the override is gone")
+
+    def test_the_basis_vocabulary_excludes_bell(self):
+        bases = set(re.findall(r"then '(\w+)'", self.view))
+        self.assertNotIn("bell_at", bases)
+        self.assertEqual(
+            bases,
+            {"scheduled_first_bout", "previous_bout_completion",
+             "card_scheduled_start"})

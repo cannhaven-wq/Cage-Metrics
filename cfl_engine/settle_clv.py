@@ -138,8 +138,9 @@ CLV001_COLUMNS = (
 
 # Capture columns on fight_odds that the close depends on
 # (research/clv/proposed_2026-09-16_fight_odds_capture.sql).
-CAPTURE_COLUMNS = ("source_event_id", "bout_started_at", "is_live",
-                   "provider_last_update", "retrieved_at", "opponent_fighter_id")
+CAPTURE_COLUMNS = ("source_event_id", "bout_started_at", "proxy_cutoff_at",
+                   "is_live", "provider_last_update", "retrieved_at",
+                   "opponent_fighter_id")
 
 
 # A real two-way market never prices a side outside this band. Anything beyond
@@ -692,8 +693,8 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
             # comparable even if the reference tier later changes.
             f["actual_bell_at"] = _iso(s.get("actual_bell_at"))
             # When the bout before this one ended. Under Amendment 5 this IS the
-            # cutoff for bouts 2..N; carried separately so a future protocol
-            # version with real bell times can still see where the window opened.
+            # cutoff for bouts 2..N — carried separately for provenance, and
+            # never read as a claim that this fight began then.
             f["window_opens_at"] = _iso(s.get("prev_bout_completed_at"))
             f["start_at"] = admissible_reference(_iso(s.get("reference_at")),
                                                  s.get("reference_basis"),

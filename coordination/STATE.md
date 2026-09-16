@@ -5,11 +5,12 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.7** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–5 same day). **Amendment 5 freezes the operational cutoff**: bout 1
-takes the card's scheduled start, bouts 2..N take the exact completion of the
-immediately previous bout, and the scored price is the latest eligible
-sportsbook snapshot strictly before it. This is the **CFL closing-price proxy**,
+**Live baton:** CLV-001 is **FROZEN at v1.0.8** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–5.1 same day). **Amendment 5 freezes the operational cutoff**: bout
+1 takes the card's scheduled start, bouts 2..N take the exact completion of the
+immediately previous bout — **those two cases, always**, with `bell_at` retained
+as an audit field and never overriding them (5.1). The scored price is the
+latest eligible sportsbook snapshot strictly before the cutoff. This is the **CFL closing-price proxy**,
 never the exact sportsbook closing line — for later bouts it sits several
 minutes before the bell, which is accepted and recorded per row. Capture stays
 at **5 minutes through a live card under a hard credit ceiling**.
@@ -61,7 +62,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.7**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.8**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -96,6 +97,7 @@ One card of waiting, not a build.
 | the late pre-fight closing-price proxy + lead-time reporting | **frozen**, Amendment 4 |
 | a pre-card price is recognised, never scored | **frozen**, Amendment 4.1 |
 | the operational cutoff (scheduled start / previous-bout completion) | **frozen**, Amendment 5 |
+| no bell override; cutoff ≠ start; corrections by `observed_at` | **frozen**, Amendment 5.1 |
 | the free allowance is hard-coded, env cannot widen it | **frozen**, Amendment 4.2 |
 | month-to-date spend counted from our own ledger, not the provider's balance | **fixed** |
 | all three migrations genuinely re-runnable (DO-block guards) | **fixed**, 8 tests |
@@ -124,9 +126,21 @@ precedes the bell by the walkout interval — accepted, because it is the most
 consistent, observable and reproducible cutoff available, and because waiting
 for a confirmed bell means scoring nothing.
 
-**Scoring cutoffs:** `scheduled_first_bout` (bout 1), `previous_bout_completion`
-(bouts 2..N), `bell_at` where one exists. `card_scheduled_start` stays reported
-and never scored. Unscorable states are told apart: `no_previous_bout_completion`
+**Scoring cutoffs:** `scheduled_first_bout` (bout 1) and
+`previous_bout_completion` (bouts 2..N) — exactly those.
+`card_scheduled_start` stays reported and never scored; `bell_at` is an audit
+field, and scoring against real bells would be a **new protocol version**.
+
+**The cutoff is not a claim about when a fight started.**
+`fight_odds.bout_started_at` and `is_live` are filled only by a confirmed bell;
+the frozen cutoff lives in its own column, `proxy_cutoff_at`. Scoring excludes
+quotes at or after the cutoff directly rather than manufacturing a liveness
+fact.
+
+**Corrections resolve by observation.** `fight_bout_completions` is append-only,
+so a correction is a new row — and it usually moves the instant *earlier*. The
+view takes `observed_at DESC, id DESC`, so a correction from 9:31 to 9:30
+resolves to 9:30. Unscorable states are told apart: `no_previous_bout_completion`
 (record one completion and the captured snapshots become scorable),
 `only_pre_card_price`, `no_scheduled_start`.
 

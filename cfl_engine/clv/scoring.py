@@ -42,7 +42,7 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.7"
+PROTOCOL_VERSION = "1.0.8"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
 # ---------------------------------------------------------------------------
@@ -78,7 +78,8 @@ BENCHMARK_NAME_LONG = "late pre-fight closing-price proxy"
 #   bout 2..N   cutoff = the EXACT COMPLETION of the immediately previous bout
 #
 # and the scored price is the latest eligible sportsbook snapshot strictly
-# before that cutoff.
+# before that cutoff. Those two, always — no third case, and nothing overrides
+# them inside this version.
 #
 # WHAT THIS IS AND IS NOT. For bouts after the first the cutoff is the previous
 # bout's completion, not the bell, so the proxy can sit several minutes before
@@ -93,6 +94,11 @@ BENCHMARK_NAME_LONG = "late pre-fight closing-price proxy"
 #   1. it is this protocol version's scoring cutoff for the next fight;
 #   2. it triggers aggressive card-night capture for that fight.
 #
+# It is NOT a claim about when the next fight began. The next fight began at its
+# bell, some minutes later, and nothing here pretends otherwise: the cutoff is
+# named a cutoff, quotes at or after it are excluded directly, and no
+# "the fight had started" fact is asserted from it.
+#
 # An earlier draft (Amendment 4.2) treated role 2 as the only legitimate one and
 # refused role 1, on the grounds that the cutoff precedes the bell. Amendment 5
 # supersedes that: waiting for a confirmed bell means scoring nothing, and a
@@ -100,18 +106,32 @@ BENCHMARK_NAME_LONG = "late pre-fight closing-price proxy"
 # than no measurement — provided it is named as a proxy and its lead time is
 # recorded, which it is.
 #
-# IF RELIABLE BELL TIMESTAMPS ARRIVE, that is a NEW PROTOCOL VERSION. Rows scored
-# under this one are never retroactively reinterpreted or overwritten, which is
-# why every scored row carries its own `clv_protocol_version`.
+# IF RELIABLE BELL TIMESTAMPS ARRIVE, that is a NEW PROTOCOL VERSION — not a
+# per-row upgrade inside this one. Rows scored under this version are never
+# retroactively reinterpreted or overwritten, which is why every scored row
+# carries its own `clv_protocol_version`.
 CLOSE_REFERENCE_BASES = frozenset({
     "scheduled_first_bout",      # bout 1 — the card's scheduled start.
     "previous_bout_completion",  # bouts 2..N — the exact completion before it.
-    "bell_at",                   # an actual confirmed bell, where one exists.
 })
 
-# Bases whose cutoff IS the fight's start, so the recorded lead time is also the
-# true gap to the bell.
-EXACT_REFERENCE_BASES = frozenset({"bell_at", "scheduled_first_bout"})
+# `bell_at` IS NOT HERE, and that is deliberate (Amendment 5.1).
+#
+# An earlier draft let a confirmed bell outrank the frozen cutoff "where one
+# exists". That silently makes this version two protocols: fights with a bell
+# scored one way, fights without scored another, inside the same version and the
+# same summary statistic. A version whose rule depends on which optional field
+# happens to be populated is not frozen.
+#
+# So the cutoff for this version is exactly the two above, always. `bell_at`
+# remains an AUDIT field — carried on the row, never substituted for the cutoff —
+# and scoring against real bells is a NEW PROTOCOL VERSION whenever reliable ones
+# arrive.
+AUDIT_ONLY_BASES = frozenset({"bell_at"})
+
+# Bases whose cutoff is intended to BE the fight's start, so the recorded lead
+# time is also, as far as this version can tell, the gap to the start.
+EXACT_REFERENCE_BASES = frozenset({"scheduled_first_bout"})
 
 # Bases whose cutoff PRECEDES the bell. The lead time to the cutoff is exact;
 # the gap to the actual bell is larger by the walkout interval, so the recorded
@@ -128,11 +148,11 @@ NON_SCORING_REFERENCE_BASES = frozenset({"card_scheduled_start"})
 # true gap to it.
 LOWER_BOUND_REFERENCE_BASES = PRECEDES_BELL_BASES
 
-# `provider_commence` and `bell_at` were the admissible pair under Amendment 2
-# (b). Amendment 3 keeps `bell_at`, narrows `provider_commence` to the first bout
-# (where it is renamed `scheduled_first_bout`, because that is what it is), and
-# adds the queue rule for everything after it. Narrowing, never widening.
-SUPERSEDED_START_BASES = frozenset({"provider_commence"})
+# Bases that were admissible under an earlier amendment and are not now.
+# `provider_commence` was narrowed to the first bout by Amendment 3 and renamed
+# `scheduled_first_bout` there. `bell_at` was admitted by Amendment 5 as an
+# override and withdrawn by 5.1 — it stays an audit field.
+SUPERSEDED_START_BASES = frozenset({"provider_commence", "bell_at"})
 
 # Still inadmissible, unchanged: the event date at 18:00 UTC is a placeholder,
 # wrong by hours in both directions, and would decide staleness by a constant

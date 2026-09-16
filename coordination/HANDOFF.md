@@ -11,6 +11,127 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.8: Amendment 5.1, four consistency fixes
+
+**From:** Claude
+**To:** Reed → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied.** All three remain proposed and unapplied.
+
+The v1.0.7 methodology is unchanged. These make the code, schema, view, tests and
+documents agree with it.
+
+### 1. No bell override inside this version
+
+Amendment 5 admitted a confirmed bell "wherever one exists". Withdrawn. The
+cutoff is **exactly two cases, always**: card scheduled start for bout 1, exact
+previous-bout completion for bouts 2..N.
+
+The reason it mattered: a bell override would silently make one version behave as
+**two** — fights with a bell scored one way, fights without scored another,
+inside the same summary statistic. A rule that depends on which optional field
+happens to be populated is not frozen.
+
+`bell_at` is retained as an audit field (`v_clv_close_reference.actual_bell_at`,
+`fights.bell_at`) and never substituted for the cutoff. Scoring against real
+bells is a **new protocol version**. `scoring.py`, `protocol.json`, the markdown,
+the view, the tests and the comments all agree.
+
+### 2. The cutoff is no longer dressed up as a start
+
+`bout_started_at` was falling back to the previous bout's completion — asserting
+that fight N+1 began the instant fight N ended. It did not; the walkout sits
+between them, and that column's only job is to hold facts.
+
+| field | now filled by |
+|---|---|
+| `fight_odds.bout_started_at` | a **confirmed bell**, nothing else |
+| `fight_odds.is_live` | keyed to `bout_started_at`; `NULL` when unknown |
+| `fight_odds.proxy_cutoff_at` | **new** — the frozen cutoff, under its own name |
+
+CLV scoring excludes quotes at or after the cutoff **directly**, against the
+cutoff. It never reads `is_live`, so no liveness fact is manufactured to achieve
+an exclusion it can perform honestly.
+
+### 3. Corrections resolve by observation, not by clock
+
+`prev_done` used `max(completed_at)`. The ledger is append-only, so a correction
+is a new row — and a correction usually moves the instant **earlier** (9:31
+misheard, 9:30 confirmed). `max()` would keep returning the superseded 9:31
+forever, leaving a minute of in-window quotes wrongly eligible.
+
+Now `ORDER BY observed_at DESC, id DESC LIMIT 1`. **A correction from 9:31 to
+9:30 resolves to 9:30.** The capture job uses the same ordering; the running-order
+and card-schedule CTEs already did, and there are now tests for all three.
+
+### 4. Tier-4 language gone
+
+`protocol.json`'s `missing_inputs_for_tier_2` block — which still called exact
+bout completions "an IMPROVEMENT rather than a prerequisite" and carried obsolete
+Tier 4 coverage arithmetic — is replaced by `required_inputs`. Under Amendment 5
+the previous bout's exact completion **is** the cutoff for bouts 2..N, so without
+it those fights cannot be scored at all.
+
+The remaining Tier-4 mentions are inside the superseded Amendment 4/4.1/4.2
+records, which stay as filed — that is the audit trail, not live rule text.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `cfl_engine/clv/scoring.py` | `bell_at` → `AUDIT_ONLY_BASES`; two-case cutoff; v1.0.8 |
+| `cfl_engine/clv/test_scoring.py` | bell-override and lead-time tests rewritten |
+| `cfl_engine/settle_clv.py` | `proxy_cutoff_at` in the capture probe; comments |
+| `build/fetch-odds.js` | `proxyCutoffAt()` split out; `boutStartedAt()` bell-only; corrections by `observed_at` |
+| `build/test-fetch-odds.js` | 10 tests for the cutoff/start split |
+| `research/clv/CLV_MEASUREMENT_PROTOCOL.md` | Amendment 5.1; v1.0.8 |
+| `research/clv/protocol.json` | `required_inputs` replaces the Tier-4 block; `bell_at_is_audit_only`; amendment 5.1 |
+| `research/clv/proposed_2026-09-16_event_flow.sql` | no bell in `reference_at`; `observed_at DESC, id DESC` |
+| `research/clv/proposed_2026-09-16_fight_odds_capture.sql` | `proxy_cutoff_at` column; corrected `bout_started_at` / `is_live` semantics |
+| `tests/test_migrations_idempotent.py` | +7 tests: correction ordering, no bell override |
+| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo) | **109 passed**, 3 skipped |
+| `cfl_engine/clv/` | **112 passed** |
+| `build/test-fetch-odds.js` (Node) | **58 passed** |
+
+All green. Hash chain verified across 8 amendments; publication gate confirmed
+shut at 0 of 100 / 0 of 20.
+
+### Preserved, as instructed
+
+CFL closing-price proxy naming; full per-row provenance; the 500-credit governor
+with its STOP condition and non-raisable ceiling; migration idempotency (15 tests);
+append-only ledgers on all three tables; fail-closed publication.
+
+### Remaining blockers
+
+1. **Exact bout completions have no source** — now formally *required* for bouts
+   2..N, not an improvement. The difference between ~1 and ~12.5 observations per
+   card.
+2. **Running order is not captured** — free to fix; without it nothing scores.
+3. **Nothing is applied.**
+
+### New L3 decisions required
+
+**None new.** The bout-completions L3 is unchanged in substance and sharper in
+framing: it is now a requirement rather than an accuracy improvement. The Odds
+API allowance is untouched at the free 500.
+
+## Next action
+
+**ChatGPT:** review Amendment 5.1.
+
+**Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
+`..._event_flow.sql`, `..._clv001_columns.sql`.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.7: the operational cutoff frozen, plus four implementation fixes
 
 **From:** Claude
@@ -234,112 +355,6 @@ minutes. The 5-minute cadence starts when that lands.
 The open L3 is now the whole remaining question for scoring coverage: a confirmed
 bell time per fight is what turns `fight_start_unverified` into scored
 observations, and the snapshots to score are already being collected.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.5: tier 4 withdrawn, governor hole closed, ledgers sealed
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-**No migration has been applied.** All three remain proposed and unapplied, as
-instructed.
-
-### 1. Tier 4 is withdrawn from scoring
-
-You were right that it overreached. The argument held — a fight cannot begin
-before its card does — but the conclusion did not follow: such a quote is safely
-pre-fight and **not late**. Scoring it would have made the benchmark mean five
-minutes before the bell on bout one and four hours before it on bout twelve,
-both under one name. That is not a consistently measured benchmark.
-
-`card_scheduled_start` is now **recognised and never scored**. A fight in that
-state reports a new unscored reason, `only_pre_card_price`, kept distinct from
-`no_scheduled_start` on purpose: "we hold a verifiably pre-fight price that is
-not late enough" and "we hold nothing" are different problems with different
-fixes, and collapsing them would hide which one is in front of you.
-
-`LOWER_BOUND_REFERENCE_BASES` is now empty, with a test asserting it, so
-re-admitting a bounded basis is a deliberate act that fails a test rather than a
-quiet widening. The migration's constraint enforces the same thing at the
-storage layer: a scored row cannot carry a lower-bound lead time.
-
-**The cost, plainly:** scoring coverage returns to ~1 observation per card until
-a running order and exact completions exist — on the order of 100 cards for 100
-observations, not the ~8 I projected under Amendment 4. That is the price of a
-consistent benchmark and it is recorded in the protocol, the migration and the
-handoff rather than left implicit.
-
-### 2. Capture is unchanged, and that is the point
-
-Five-minute capture runs through the whole card and **every snapshot is stored**.
-Nothing is discarded. The dense snapshots are exactly what makes a genuinely late
-proxy available the moment a fight's start becomes verifiable — including
-retrospectively, for cards already captured. The stored history is the asset; the
-scoring rule is what stays strict.
-
-### 3. The governor no longer has a hole in it
-
-`planLiveCadence` used to fall through to the coarsest rung when nothing fitted,
-which turned "we cannot afford any cadence" into "spend at 30 minutes anyway" —
-and it did so exactly when the budget was tightest. It now returns **null / STOP**.
-
-`test_when_NO_cadence_fits_the_budget_the_governor_returns_STOP_not_30_minutes`
-is the specific test you asked for. It constructs a balance **above** the hard
-floor — so the earlier guard cannot mask the result — and asserts the fixture is
-genuinely one where even the coarsest rung is unaffordable before checking that
-`planLiveCadence` returns null and `shouldCaptureNow` declines.
-
-One branch still returns the coarsest rung without a fit check: an **unknown**
-budget, on a fresh database or the first run of a month. That is not "the budget
-says 30 does not fit", it is "the budget says nothing". I added
-`the coarsest rung alone can never exhaust the allowance`, which walks months of
-1 to 8 cards entirely at 30 minutes and proves the branch is safe by
-construction rather than by hope.
-
-### 4. The three ledgers are genuinely append-only
-
-`fight_bout_order`, `fight_bout_completions` and `odds_api_usage` each get a
-`BEFORE UPDATE` / `BEFORE DELETE` trigger that raises for **every role,
-service_role included**, plus RLS enabled and `revoke all from anon,
-authenticated` — the same shape as `fight_start_estimates`, `prop_odds`,
-`prop_model_locks` and `pre_fight_snapshots`. RLS alone would not do it: the
-scripts that write these hold service_role, which bypasses policies.
-
-`odds_api_usage` matters most here. A quota reading that can be edited after the
-fact is a budget that can be talked into allowing one more call, and one more
-call past a free tier is paid usage.
-
-### 5. Reschedules are read by `observed_at`, not `max(start_at)`
-
-The `sched` CTE took `max(start_at)`, which breaks precisely when a card is moved
-**earlier**: the superseded later time keeps winning, and a quote taken after the
-new start still looks pre-fight. It is now `DISTINCT ON (event_id) … ORDER BY
-observed_at DESC`, which takes what the provider most recently said and survives
-a reschedule in either direction.
-
-### Still true
-
-Publication untouched and fail-closed — 100 observations, 20 distinct events,
-interval excluding zero, currently 0 and 0. No paid tier, no incremental cost,
-nothing bought or enabled. `v_fight_start_best` untouched.
-
-Tests rerun: **105 CLV Python, 94 repo Python, 47 Node. All green.**
-
-## Next action
-
-**Reed:** review, then apply in order when you're ready —
-`proposed_2026-09-16_fight_odds_capture.sql`,
-`proposed_2026-09-16_event_flow.sql`, and
-`proposed_2026-09-16_clv001_columns.sql` last.
-
-Note the sequencing: `odds_api_usage` is created by the second migration, and
-until it exists the governor reads the budget as unknown and holds at 30 minutes.
-The 5-minute cadence starts when that migration lands.
-
-The open L3 is unchanged: exact bout completions have no free source, and they
-are now what makes bouts 2..N scorable at all.
 
 ---
 

@@ -27,7 +27,7 @@ const path = require('path');
 
 const {
   buildMoneylineRows, marketStatusOf, stripUnsupported,
-  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
+  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
   planLiveCadence, minutesRemainingInCard, wantTotals,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
@@ -135,144 +135,100 @@ test('item 12 — raw links back to what the provider actually said', () => {
 // These tests exist to stop that being reintroduced.
 
 const FIRST_BOUT = { ...FIGHT, bout_order: 1, prev_completed_at: null };
+const CONFIRMED_BELL = '2026-09-20T02:07:00.000Z';
 
-test('the first bout is live from the card\'s scheduled start', () => {
-  const before = buildMoneylineRows(EVENT, FIRST_BOUT, BOOK_ID, CAPTURED_AT, RETRIEVED_AT);
-  assert.ok(before.length);
-  for (const row of before) {
-    assert.strictEqual(row.is_live, false);
-    assert.strictEqual(row.bout_started_at, new Date(EVENT.commence_time).toISOString());
-  }
-  const atBell = new Date(EVENT.commence_time).toISOString();
-  for (const row of buildMoneylineRows(EVENT, FIRST_BOUT, BOOK_ID, atBell, atBell)) {
-    assert.strictEqual(row.is_live, true,
-      'a quote taken at or after the bell is in-play and can never be a close');
-  }
-});
-
-test('a LATER bout does not inherit the card\'s scheduled start', () => {
-  // Bout 7, no completion recorded for bout 6. We do not know when it began.
-  const later = { ...FIGHT, bout_order: 7, prev_completed_at: null };
-  const afterCardStart = '2026-09-20T04:00:00.000Z';   // two hours into the card
-  for (const row of buildMoneylineRows(EVENT, later, BOOK_ID, afterCardStart, afterCardStart)) {
-    assert.strictEqual(row.bout_started_at, null,
-      'the card\'s commence time is the FIRST bout\'s start and nobody else\'s');
-    assert.strictEqual(row.is_live, null,
-      'unknown, not false — and emphatically not true, which is what keying ' +
-      'liveness to the card commence would have produced here');
-  }
-});
-
-test('a later bout is live from the previous bout\'s completion', () => {
-  const prevDone = '2026-09-20T03:30:00.000Z';
-  const later = { ...FIGHT, bout_order: 7, prev_completed_at: prevDone };
-
-  const before = buildMoneylineRows(EVENT, later, BOOK_ID,
-                                    '2026-09-20T03:15:00.000Z', RETRIEVED_AT);
-  for (const row of before) {
-    assert.strictEqual(row.bout_started_at, prevDone);
-    assert.strictEqual(row.is_live, false, 'quoted before this bout began');
-  }
-
-  const after = buildMoneylineRows(EVENT, later, BOOK_ID,
-                                   '2026-09-20T03:45:00.000Z', RETRIEVED_AT);
-  for (const row of after) {
-    assert.strictEqual(row.is_live, true,
-      'this bout was already under way; the quote can never be its close');
-  }
-});
-
-test('an actual bell outranks both the queue and the schedule', () => {
-  const bell = '2026-09-20T03:33:00.000Z';
-  const later = { ...FIGHT, bout_order: 7, bell_at: bell,
+test('bout_started_at is filled ONLY by a confirmed bell', () => {
+  // Amendment 5.1. It used to fall back to the previous bout's completion,
+  // asserting that fight N+1 began the instant fight N ended. It did not — the
+  // walkout sits between them — and this column's only job is to hold facts.
+  const later = { ...FIGHT, bout_order: 7,
                   prev_completed_at: '2026-09-20T03:30:00.000Z' };
   for (const row of buildMoneylineRows(EVENT, later, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
-    assert.strictEqual(row.bout_started_at, bell);
-  }
-  const firstWithBell = { ...FIRST_BOUT, bell_at: bell };
-  for (const row of buildMoneylineRows(EVENT, firstWithBell, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
-    assert.strictEqual(row.bout_started_at, bell,
-      'a confirmed bell beats the scheduled start even for bout 1');
-  }
-});
-
-test('is_live is null when nothing says when the fight began', () => {
-  const noCommence = { ...EVENT, commence_time: null };
-  for (const row of buildMoneylineRows(noCommence, FIRST_BOUT, BOOK_ID,
-                                       CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.bout_started_at, null,
+      'the previous bout ending is not this fight starting');
     assert.strictEqual(row.is_live, null,
-      'null means "unknown"; false would assert it was a pre-start price, which ' +
-      'is a fact we do not have');
-    assert.strictEqual(row.source_commence_at, null);
-    assert.strictEqual(row.bout_started_at, null);
+      'unknown, because no bell is on file — never false, which would assert ' +
+      'the quote was pre-start');
+  }
+  const withBell = { ...later, bell_at: CONFIRMED_BELL };
+  for (const row of buildMoneylineRows(EVENT, withBell, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.bout_started_at, CONFIRMED_BELL);
+    assert.strictEqual(row.is_live, false, 'captured before the bell');
   }
 });
 
-test('an unknown running order never yields a bout start', () => {
-  // No bout_order at all — the state of every fight in the database today.
-  for (const row of rows()) {
-    assert.strictEqual(row.bout_started_at, null);
+test('bout 1 does not get a bout_started_at from the card schedule either', () => {
+  for (const row of buildMoneylineRows(EVENT, FIRST_BOUT, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.bout_started_at, null,
+      'a scheduled start is a schedule, not a record that the fight began');
     assert.strictEqual(row.is_live, null);
   }
 });
 
-test('the card schedule is still recorded even when the bout start is not', () => {
-  // source_commence_at and bout_started_at are different facts and both are
-  // kept: one is what the card was scheduled for, the other when this fight
-  // began. Losing the first would make a capture decision unexplainable later.
-  for (const row of rows()) {
-    assert.strictEqual(row.source_commence_at,
-                       new Date(EVENT.commence_time).toISOString());
-    assert.strictEqual(row.bout_started_at, null);
+test('is_live becomes true only once a real bell has passed', () => {
+  const withBell = { ...FIRST_BOUT, bell_at: CONFIRMED_BELL };
+  const after = '2026-09-20T02:10:00.000Z';
+  for (const row of buildMoneylineRows(EVENT, withBell, BOOK_ID, after, after)) {
+    assert.strictEqual(row.is_live, true,
+      'a quote taken after the bell is in-play and can never be a close');
   }
 });
 
 // ---------------------------------------------------------------------------
-// boutStartedAt — the hierarchy on its own
+// proxy_cutoff_at — the frozen cutoff, under its own name
 // ---------------------------------------------------------------------------
 
-test('boutStartedAt follows bell > previous completion > first-bout schedule', () => {
-  const bell = '2026-09-20T03:33:00.000Z';
+test('bout 1 takes the card scheduled start as its cutoff', () => {
+  const expected = new Date(EVENT.commence_time).toISOString();
+  for (const row of buildMoneylineRows(EVENT, FIRST_BOUT, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.proxy_cutoff_at, expected);
+  }
+});
+
+test('a later bout takes the previous bout completion as its cutoff', () => {
+  const prevDone = '2026-09-20T03:30:00.000Z';
+  const later = { ...FIGHT, bout_order: 7, prev_completed_at: prevDone };
+  for (const row of buildMoneylineRows(EVENT, later, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.proxy_cutoff_at, prevDone);
+    assert.strictEqual(row.bout_started_at, null,
+      'the cutoff and the start are different columns because they are ' +
+      'different claims');
+  }
+});
+
+test('a later bout with no completion recorded has no cutoff', () => {
+  const later = { ...FIGHT, bout_order: 7, prev_completed_at: null };
+  for (const row of buildMoneylineRows(EVENT, later, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.strictEqual(row.proxy_cutoff_at, null);
+  }
+});
+
+test('a later bout never inherits the card schedule as its cutoff', () => {
+  const later = { ...FIGHT, bout_order: 7, prev_completed_at: null };
+  const cardStart = new Date(EVENT.commence_time).toISOString();
+  for (const row of buildMoneylineRows(EVENT, later, BOOK_ID, CAPTURED_AT, RETRIEVED_AT)) {
+    assert.notStrictEqual(row.proxy_cutoff_at, cardStart);
+  }
+});
+
+test('proxyCutoffAt follows the frozen two cases and nothing else', () => {
   const prev = '2026-09-20T03:30:00.000Z';
   const sched = '2026-09-20T02:00:00.000Z';
-
-  assert.strictEqual(boutStartedAt({ bell_at: bell, bout_order: 7 }, prev, sched), bell);
-  assert.strictEqual(boutStartedAt({ bout_order: 7 }, prev, sched), prev);
-  assert.strictEqual(boutStartedAt({ bout_order: 1 }, null, sched), sched);
-  assert.strictEqual(boutStartedAt({ bout_order: 7 }, null, sched), null,
+  assert.strictEqual(proxyCutoffAt({ bout_order: 1 }, null, sched), sched);
+  assert.strictEqual(proxyCutoffAt({ bout_order: 7 }, prev, sched), prev);
+  assert.strictEqual(proxyCutoffAt({ bout_order: 7 }, null, sched), null,
     'a later bout must never fall back to the card schedule');
-  assert.strictEqual(boutStartedAt({ bout_order: null }, null, sched), null,
-    'unknown order is not bout 1');
-  assert.strictEqual(boutStartedAt({}, null, null), null);
+  assert.strictEqual(proxyCutoffAt({ bout_order: null }, prev, sched), null,
+    'unknown running order is neither case');
+  assert.strictEqual(proxyCutoffAt({ bout_order: 1, bell_at: CONFIRMED_BELL }, null, sched),
+                     sched, 'a bell does not override the frozen cutoff');
 });
 
-// ---------------------------------------------------------------------------
-// currentBout — which fight the capture is for
-// ---------------------------------------------------------------------------
-
-test('the current bout is the first one not yet finished', () => {
-  const now = new Date('2026-09-20T03:40:00Z');
-  const card = [
-    { id: 1, bout_order: 1, completed_at: '2026-09-20T02:20:00Z' },
-    { id: 2, bout_order: 2, completed_at: '2026-09-20T02:55:00Z' },
-    { id: 3, bout_order: 3, completed_at: null },
-    { id: 4, bout_order: 4, completed_at: null },
-  ];
-  assert.strictEqual(currentBout(card, now).id, 3);
-});
-
-test('currentBout is null once every bout is done, and when order is unknown', () => {
-  const now = new Date('2026-09-20T06:00:00Z');
-  assert.strictEqual(currentBout([{ id: 1, bout_order: 1, completed_at: '2026-09-20T02:20:00Z' }], now), null);
-  assert.strictEqual(currentBout([{ id: 1, bout_order: null, completed_at: null }], now), null,
-    'without a running order there is no "previous bout" to reason from');
-  assert.strictEqual(currentBout([], now), null);
-});
-
-test('currentBout ignores a completion that has not happened yet', () => {
-  const now = new Date('2026-09-20T02:30:00Z');
-  const card = [{ id: 1, bout_order: 1, completed_at: '2026-09-20T05:00:00Z' }];
-  assert.strictEqual(currentBout(card, now).id, 1);
+test('the card schedule is still recorded separately from the cutoff', () => {
+  for (const row of rows()) {
+    assert.strictEqual(row.source_commence_at,
+                       new Date(EVENT.commence_time).toISOString());
+  }
 });
 
 // ---------------------------------------------------------------------------

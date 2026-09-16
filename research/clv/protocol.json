@@ -4,10 +4,10 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
+  "protocol_sha256": "a009bb17f298d92443f7a2ed8da8d82b49c82501250c0fc54a9a6c1b7c515923",
   "benchmark_name": {
     "short": "CFL closing-price proxy",
     "long": "late pre-fight closing-price proxy",
@@ -82,13 +82,8 @@
     "frozen_by": "Amendment 5, 2026-09-16, approved by Reed Cannon (L3)",
     "source_view": "v_clv_close_reference (research/clv/proposed_2026-09-16_event_flow.sql, NOT APPLIED)",
     "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
-    "principle": "bout 1's cutoff is the card's scheduled start; bouts 2..N take the exact completion of the immediately previous bout; a confirmed bell outranks both. The scored price is the latest eligible sportsbook snapshot strictly before that cutoff.",
+    "principle": "bout 1's cutoff is the card's scheduled start; bouts 2..N take the exact completion of the immediately previous bout. Those two, always. The scored price is the latest eligible sportsbook snapshot strictly before that cutoff.",
     "tiers": [
-      {
-        "basis": "bell_at",
-        "applies_to": "any bout",
-        "note": "an actual confirmed bell; outranks the others"
-      },
       {
         "basis": "scheduled_first_bout",
         "applies_to": "the card's FIRST bout",
@@ -103,7 +98,6 @@
     "lead_time": {
       "recorded": "selected quote -> cutoff, exact, on every scored row",
       "exact_bases": [
-        "bell_at",
         "scheduled_first_bout"
       ],
       "precedes_bell_bases": [
@@ -152,31 +146,24 @@
         "reason": "no_scheduled_start",
         "meaning": "no cutoff of any kind"
       }
-    ]
+    ],
+    "bell_at_is_audit_only": {
+      "withdrawn_by": "Amendment 5.1, 2026-09-16",
+      "why": "an earlier draft let a confirmed bell outrank the frozen cutoff 'where one exists'. That silently makes one version behave as two - fights with a bell scored one way, fights without scored another, inside the same summary statistic. A rule that depends on which optional field happens to be populated is not frozen.",
+      "treatment": "carried on the row and in v_clv_close_reference.actual_bell_at; never substituted for the cutoff",
+      "scoring_against_real_bells": "a NEW protocol version, not a per-row upgrade inside this one"
+    },
+    "completion_corrections": "fight_bout_completions is append-only, so a correction is a new row. v_clv_close_reference resolves the LATEST OBSERVATION (observed_at DESC, id DESC), not max(completed_at) - a correction usually moves the instant EARLIER, and max() would keep the superseded value forever.",
+    "not_a_claim_about_the_start": "the previous bout's completion is an operational proxy CUTOFF, never a claim that the next fight began then. fight_odds.bout_started_at and is_live are filled only by a confirmed bell; the cutoff lives in fight_odds.proxy_cutoff_at, and scoring excludes quotes at or after it directly rather than manufacturing a liveness fact."
   },
   "trigger_is_not_the_close": {
     "superseded_by": "Amendment 5",
-    "note": "the previous bout's completion is BOTH this version's scoring cutoff for the next fight AND the capture trigger for it. Earlier language calling it 'only an opener, never a cutoff' is stale and has been removed."
+    "note": "the previous bout's completion is BOTH this version's scoring cutoff for the next fight AND the capture trigger for it. It is not a claim about when that fight began."
   },
   "audit_fields": {
     "fights.bell_at": "the record of when a fight ACTUALLY began. Reserved for a confirmed bell, never written by the odds job, never synthesised.",
     "fight_odds.bout_started_at": "the capture-time BELIEF about when this bout began, stamped per quote so the close a quote was judged against stays recoverable if a better account arrives later.",
     "kept_apart_because": "a correction to one must never silently rewrite the other"
-  },
-  "missing_inputs_for_tier_2": {
-    "running_order": {
-      "state": "absent - `fights` has no order column, only is_main_event (the LAST bout)",
-      "why_not_id_order": "sorting by id is an inference dressed as a record, and it breaks exactly when a card is reshuffled, which is when getting it wrong costs most",
-      "cost_to_obtain": "free - ufcstats lists a card in order and the existing event scraper can write fight_bout_order on the same pass"
-    },
-    "exact_bout_completions": {
-      "state": "absent - nothing records when a bout ended",
-      "why_the_result_scraper_will_not_do": "it yields completion PLUS unknown lag, an upper bound. Used as the next bout's start it would sit too late and admit in-play quotes as that fight's close. fight_bout_completions.is_exact=false marks such rows and v_clv_close_reference ignores them.",
-      "cost_to_obtain": "a paid live-data feed or a person entering times during the card - both new standing commitments",
-      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed",
-      "status_after_amendment_4": "still open, but an IMPROVEMENT rather than a prerequisite - it upgrades a later bout from a lower-bound lead time to an exact one"
-    },
-    "consequence_superseded_by_amendment_4": "under Amendment 3 only the FIRST bout of each card was scorable - roughly one observation per event, so 100 observations meant about 100 cards. Tier 4 makes every fight on a card scorable, about 12.5 measured, so the floor becomes bound by the event count: roughly 20 cards."
   },
   "frozen_at": "2026-09-16T10:30:00Z",
   "frozen_by": "Reed Cannon",
@@ -812,6 +799,27 @@
       "output_change": "none yet - the publication gate is unchanged and still at 0. It restores scoring for bouts 2..N once bout completions are recorded.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "5.1",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "Consistency fixes to Amendment 5: no bell override, cutoff is not a start, corrections by observation",
+      "kind": "corrects Amendment 5; the v1.0.7 methodology stands",
+      "version_before": "1.0.7",
+      "version_after": "1.0.8",
+      "sha256_before": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
+      "sha256_after": "a009bb17f298d92443f7a2ed8da8d82b49c82501250c0fc54a9a6c1b7c515923",
+      "parts": {
+        "a": "bell_at withdrawn as a cutoff. This version's cutoff is exactly two cases, always. A bell override would silently make one version behave as two - fights with a bell scored one way, fights without another, inside the same summary statistic. bell_at is retained as an audit field; scoring against real bells is a NEW version.",
+        "b": "the cutoff is not a claim about when the fight started. fight_odds.bout_started_at and is_live are filled only by a confirmed bell; the frozen cutoff moves to its own column, fight_odds.proxy_cutoff_at. CLV scoring excludes quotes at or after the cutoff directly rather than manufacturing a liveness fact.",
+        "c": "v_clv_close_reference resolves the latest applicable completion by observed_at DESC, id DESC, not max(completed_at). A correction from 9:31 to 9:30 resolves to 9:30; max() would keep the superseded 9:31 forever, leaving a minute of in-window quotes wrongly eligible. The capture job uses the same ordering.",
+        "d": "all Tier-4-era language removed. Exact previous-bout completions are REQUIRED for bouts 2..N under Amendment 5, not an improvement."
+      },
+      "output_change": "none - the publication gate is unchanged and still at 0. No CLV figure has ever been computed.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
@@ -828,5 +836,22 @@
     "frozen_by": "Amendment 4.2, 2026-09-16",
     "accounting": "month-to-date spend is the SUM of odds_api_usage.credits_charged for the current month - our own count, which nothing upstream can reset. The provider's remaining-balance header is a cross-check and is believed only when SMALLER. Clamping a large provider balance to 500 on every run was a bug: it made the budget read 500 every time, so it never declined and the ceiling was decorative.",
     "priority": "lower priority than the methodology; must not block it"
+  },
+  "required_inputs": {
+    "running_order": {
+      "state": "absent - `fights` has no order column, only is_main_event (the LAST bout)",
+      "required_for": "everything: without it no fight is identifiable as bout 1 and no bout has a \"previous\" one",
+      "cost_to_obtain": "free - ufcstats lists a card in order and the existing event scraper can write fight_bout_order on the same pass",
+      "why_not_id_order": "sorting by id is an inference dressed as a record, and it breaks exactly when a card is reshuffled"
+    },
+    "exact_bout_completions": {
+      "state": "absent - nothing records when a bout ended",
+      "required_for": "bouts 2..N. Under Amendment 5 the previous bout's exact completion IS the scoring cutoff, so without it those fights cannot be scored at all - this is a REQUIREMENT, not an accuracy improvement.",
+      "why_the_result_scraper_will_not_do": "it yields completion PLUS unknown lag, an upper bound. fight_bout_completions.is_exact=false marks such rows and v_clv_close_reference ignores them.",
+      "corrections": "append-only: a correction is a NEW row and v_clv_close_reference resolves the latest observation by observed_at DESC, id DESC. A correction from 9:31 to 9:30 resolves to 9:30.",
+      "cost_to_obtain": "a live feed or a person entering times during the card - both new standing commitments",
+      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed"
+    },
+    "coverage": "bout 1 of every card once running order exists; bouts 2..N only where an exact previous-bout completion is recorded. Roughly 1 versus roughly 12.5 observations per card."
   }
 }
