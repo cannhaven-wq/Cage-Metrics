@@ -145,29 +145,46 @@ class TestFrozenFilesUnchanged(unittest.TestCase):
 class TestRegistriesAgree(unittest.TestCase):
     """The two registries are written by hand and by script. They must not drift."""
 
-    def test_same_files_and_hashes(self):
-        """Experiments that declare frozen files must agree with the markdown table.
+    def test_every_registry_frozen_file_is_in_the_markdown_table(self):
+        """Checked as a subset, not an equality.
 
-        A DRAFT experiment legitimately declares none — nothing is frozen until
-        its preregistration is signed — so it is skipped here. It is not skipped
-        by `test_only_a_draft_may_declare_no_frozen_files` below, which is what
-        stops this exemption from being a way to opt out of the tripwire.
+        Experiments do not all freeze the same set — DUR-001 and PROP-0001 freeze
+        the DUR-001 preregistration, DUR-002 freezes its own — so the markdown
+        table is the UNION across experiments. What must hold is that every file
+        an experiment freezes appears there with the same hash.
+
+        A DRAFT experiment legitimately declares none; it is skipped here and
+        caught by `test_only_a_draft_may_declare_no_frozen_files`.
         """
         md = frozen_from_markdown()
         for exp_id, files in sorted(frozen_from_registry().items()):
             if not files:
                 continue
-            with self.subTest(experiment=exp_id):
-                self.assertEqual(
-                    set(md), set(files),
-                    f"CFL_RESEARCH_STATE.md and registry.json list different frozen "
-                    f"files for {exp_id}",
-                )
-                for rel in sorted(files):
+            for rel in sorted(files):
+                with self.subTest(experiment=exp_id, file=rel):
+                    self.assertIn(
+                        rel, md,
+                        f"{exp_id} freezes {rel} but it is missing from the "
+                        f"'Frozen files' table in CFL_RESEARCH_STATE.md",
+                    )
                     self.assertEqual(
                         md[rel], files[rel],
                         f"hash disagreement for {rel} between the two registries",
                     )
+
+    def test_the_markdown_table_has_no_orphan_rows(self):
+        """The other direction: a row nobody freezes is stale, and a stale row is
+        how a file quietly stops being anyone's responsibility."""
+        claimed = set()
+        for files in frozen_from_registry().values():
+            claimed |= set(files)
+        for rel in sorted(frozen_from_markdown()):
+            with self.subTest(file=rel):
+                self.assertIn(
+                    rel, claimed,
+                    f"{rel} is listed in CFL_RESEARCH_STATE.md but no experiment in "
+                    f"registry.json freezes it",
+                )
 
     def test_only_a_draft_may_declare_no_frozen_files(self):
         """An experiment in force with no frozen files would be outside the tripwire."""

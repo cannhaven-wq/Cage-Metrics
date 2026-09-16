@@ -217,7 +217,7 @@
     },
     {
       "experiment_id": "DUR-002",
-      "status": "draft",
+      "status": "collecting",
       "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
       "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
       "population": "identical to DUR-001",
@@ -233,11 +233,11 @@
         "inherited unchanged from DUR-001 sections 4 and 5, as amended by Amendment 1"
       ],
       "preregistration_path": "cfl_engine/dur002/PREREGISTRATION.md",
-      "preregistration_sha256": "4d65b5ba4f25bcd27d13eb5c2c03722de66cb53f082199565ae23619858733e0",
+      "preregistration_sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
       "preregistration_amendments": null,
       "model_artifact_sha256": null,
       "data_artifact_sha256": null,
-      "freeze_timestamp": null,
+      "freeze_timestamp": "2026-09-16T01:03:45Z",
       "formal_analysis_points": [
         "no number is computed until the preregistration is frozen and eligible fights have settled"
       ],
@@ -256,8 +256,39 @@
       "results_artifact": null,
       "verdict": null,
       "verdict_timestamp": null,
-      "frozen_files": [],
-      "draft_notes": "NOT FROZEN. Takes effect only when Reed dates and signs section 0. Until then no PROP-0001@v2 lock may be written and no DUR-002 number computed. The historical comparison that prompted this specification was seen before drafting and is disclosed in section 2; it is explicitly not the basis for the specification and may not be cited as evidence for it."
+      "frozen_files": [
+        {
+          "path": "cfl_engine/dur002/PREREGISTRATION.md",
+          "sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
+          "frozen_at_commit": "133724676bc55e9429aa3dae5b833358cd557315"
+        },
+        {
+          "path": "cfl_engine/models/duration.py",
+          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+          "frozen_at_commit": "90571ff1b6de74079e87946c1e7f6e705f85cf5c"
+        },
+        {
+          "path": "cfl_engine/features/build_features.py",
+          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+          "frozen_at_commit": "6be7198ebe4d56b27366268318b757e99e3074c5"
+        }
+      ],
+      "approved_by": "Reed Cannon",
+      "main_commit_at_freeze": "133724676bc55e9429aa3dae5b833358cd557315",
+      "naming": "DUR-002 is the EXPERIMENT; PROP-0001@v2 is the MODEL VERSION it tests. They are not interchangeable and must not be used as synonyms.",
+      "freeze_establishes": [
+        "PROP-0001@v2 uses the raw hazard-derived probability; no isotonic or other post-hoc calibration is fitted, attached or consulted",
+        "the historical raw-vs-calibrated comparison was already observed and cannot be used as evidence for DUR-002",
+        "no parameter, eligibility rule, feature definition, timing rule, scoring rule or threshold may change after freeze without a formally versioned dated amendment",
+        "prospective observations after the freeze are authoritative even where they contradict the historical artifact",
+        "DUR-002 stays separate from PROP-0001@v1 forever: no retroactive regrading, no replacement of v1 probabilities, no migration of v1 rows"
+      ],
+      "lock_script": {
+        "path": "cfl_engine/dur002/lock_prop0002.py",
+        "exists": false,
+        "note": "Not yet written. A mechanical port of the v1 lock path with calibrated=False and MODEL_VERSION='PROP-0001@v2'; contains no modelling decisions. Until it exists DUR-002 is frozen but collecting nothing."
+      },
+      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration."
     }
   ]
 }
