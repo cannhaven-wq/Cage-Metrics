@@ -46,6 +46,19 @@ Fail any one of those and it is at least L2, and probably L3.
 
 ---
 
+## The test: discretion, not consequence
+
+L3 is for decisions that require **judgement**. A step can be consequential and
+still not be L3, if what to do is already written down and a machine can check
+that it was done right.
+
+> A transition that is fully prescribed and machine-verifiable is not a
+> decision. It is execution, and it executes.
+
+Stopping on those does not add safety — it adds a queue. The thing that makes
+them safe is the specification and the test, both of which exist whether or not
+a person is watching.
+
 ## The L3 list
 
 Stop and ask Reed for:
@@ -54,18 +67,54 @@ Stop and ask Reed for:
    by `tests/test_research_state.py`; the two legal routes are a dated
    amendment or a new `model_version`. See
    [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md).
-2. **Moving an experiment's lifecycle state** — `draft → frozen → armed →
-   collecting` — or recording a verdict.
-3. **Merging a major architectural change.**
-4. **Applying a production DB migration** with real risk: anything touching
-   RLS, triggers on append-only tables, or a column another surface reads.
-5. **Spending money or enabling paid infrastructure**, including additional
+2. **An amendment motivated by new evidence.** The amendment procedure is
+   Reed's to invoke, and `motivated_by_observed_results` must be recorded
+   `false` *and be true*.
+3. **Recording a verdict** on an experiment. A verdict is a judgement about
+   what the evidence means, which is the definition of discretion.
+4. **Merging a major architectural change.**
+5. **Applying a production or destructive DB migration**: anything touching
+   RLS, triggers on append-only tables, a column another surface reads, or any
+   `DROP` / `DELETE` / destructive `UPDATE`.
+6. **Spending money or enabling paid infrastructure**, including additional
    Odds API credits.
-6. **Changing monetisation, pricing, or any public performance claim.**
-7. **Legal or compliance choices**, including anything on `disclaimer.html`.
-8. **A statistical decision with more than one defensible path.** Do not pick
-   the one that looks better. Write both up and hand them over.
-9. **Anything irreversible** by the four-part test above.
+7. **Changing monetisation, pricing, or payments.**
+8. **Any public performance claim** — a new number on a surface, or a change to
+   how an existing one is described.
+9. **Legal or compliance choices**, including anything on `disclaimer.html`.
+10. **A statistical decision with more than one defensible path.** Do not pick
+    the one that looks better. Write the options up and hand them over.
+11. **Anything materially irreversible** by the four-part test above.
+
+## What is *not* L3
+
+**Routine lifecycle transitions.** `draft → frozen → armed → collecting`
+executes automatically when every frozen prerequisite passes. Record the
+transition and its provenance; do not stop for Reed.
+
+The worked case is DUR-002's `armed → collecting`. Every step is already
+prescribed in [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) — record the
+first-lock UTC timestamp, the workflow run id and commit SHA,
+`lock_prop0002.py`'s sha256 and the row count; set `lock_script.frozen = true`;
+move the script into DUR-002's frozen files; rerun the guards. And every step is
+already checked by `tests/test_research_state.py`:
+
+| prerequisite | enforced by |
+|---|---|
+| `armed` implies zero observations | `test_armed_means_zero_observations` |
+| `collecting` implies observations recorded | `test_collecting_means_observations_are_recorded` |
+| the lock script is frozen at first collection | `test_an_unfrozen_lock_script_means_not_yet_collecting` |
+| frozen files still match their bytes on disk | `test_registry_hashes_match_disk` |
+| the two registries agree | `test_every_registry_frozen_file_is_in_the_markdown_table` |
+
+There is no judgement left in it. A human approval step there approves nothing;
+it just delays the record of an event that already happened.
+
+**The limit.** This covers transitions whose preconditions are written down
+*and* checkable. A transition that needs someone to decide whether a condition
+is met is not prescribed, and is L3 under item 10. If a guard fails, the
+transition does not happen and does not get forced — a failing guard is a stop,
+and working around one is itself an L3 change.
 
 ### The standing prohibition
 

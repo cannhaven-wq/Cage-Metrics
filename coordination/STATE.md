@@ -47,22 +47,45 @@ Git history is the audit trail. These files are the working surface.
 **The duration model is read-only.** Development on it is finished; both
 experiments run untouched until their evaluation points.
 
+### CLV — the active line
+
+[`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
+is **draft**, with ChatGPT for methodological review before freeze. It is a
+measurement protocol, not a model experiment — no hypothesis, no challenger, no
+verdict — so it lives outside the DUR register.
+
+Two gates, deliberately separate:
+
+| | state |
+|---|---|
+| capturing raw market quotes | **running** — does not wait for anything |
+| computing a CLV summary statistic | **blocked** until freeze |
+| putting a CLV number on a surface | **blocked** until freeze |
+
+Nothing renders CLV today; `track-record.html` carries a placeholder. Row-level
+settlement into `model_edges` continues — bookkeeping, not a published result.
+
 ### Where the work moves next
 
 Stated in the research register, in priority order:
 
 1. **Market / closing-price capture and CLV** — the biggest statistical
-   dependency for showing CFL has an economically meaningful edge.
+   dependency for showing CFL has an economically meaningful edge. *Active.*
 2. Customer monetisation.
 3. The win-probability engine.
 
 ### Open owner decisions
 
-Nine held amendment clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k) — remain
-PROPOSED and each needs an individual vote on its actual clause text. They are
-explicitly *not* approved en bloc. Split by risk in the register: six change
-data eligibility, scoring, model behaviour or interpretation and get higher
-scrutiny; three are governance and monitoring only.
+**DUR-001 amendments.** Nine held clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k)
+— remain PROPOSED and each needs an individual vote on its actual clause text.
+They are explicitly *not* approved en bloc. Split by risk in the register: six
+change data eligibility, scoring, model behaviour or interpretation and get
+higher scrutiny; three are governance and monitoring only.
+
+**CLV protocol, five L3 questions** (T-007, blocked behind ChatGPT's review):
+Q-05 vigged or de-vigged · Q-06 published probability or wager price · Q-07
+aggregation and weighting · Q-08 minimum sample before display · Q-11 how
+positive CLV may be described. Each changes what a published number means.
 
 ### Site
 

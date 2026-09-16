@@ -1,0 +1,276 @@
+{
+  "protocol_id": "CLV-001",
+  "title": "CLV measurement protocol",
+  "kind": "measurement_protocol",
+  "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
+  "status": "draft",
+  "version": "0.1.0-draft",
+  "created": "2026-09-16",
+  "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
+  "protocol_sha256": null,
+  "frozen_at": null,
+  "frozen_by": null,
+  "governs": [
+    "cfl_engine/settle_clv.py",
+    ".github/workflows/settle-clv.yml"
+  ],
+  "capture_gate": {
+    "capture_allowed": true,
+    "rationale": "Raw quotes begin and continue capturing immediately. Collecting early loses nothing; deciding early is the disciplined part."
+  },
+  "publication_gate": {
+    "publication_allowed": false,
+    "blocked_until": "status == 'frozen'",
+    "covers": [
+      "any CLV figure on a user-facing page",
+      "any CLV figure in a post, email or digest",
+      "any CLV summary statistic computed from captured quotes"
+    ],
+    "not_covered": "Row-level settlement into model_edges.clv_pp continues — it is bookkeeping under the already-shipped convention, not a published result."
+  },
+  "results_computed_before_freeze": false,
+  "disclosure": "No historical CLV comparison was run while drafting. No alternative definition was evaluated against captured data. Every recommendation rests on argument from principle or precedent, never on which option produced a better number.",
+  "decided_rules": [
+    {
+      "id": "R-01",
+      "title": "Raw capture is immediate, immutable and append-only",
+      "basis": "matches prop_model_locks and pre_fight_snapshots trigger enforcement"
+    },
+    {
+      "id": "R-02",
+      "title": "A quote without a timestamp is not eligible",
+      "basis": "cannot be placed relative to forecast or close"
+    },
+    {
+      "id": "R-03",
+      "title": "Non-market price guard, implied probability in [0.03, 0.97]",
+      "basis": "added 2026-08-19 after a sentinel row flipped the sign of mean CLV across the first settleable batch"
+    },
+    {
+      "id": "R-04",
+      "title": "No substitution, no imputation for a missing close",
+      "basis": "shipped convention in settle_clv.py"
+    },
+    {
+      "id": "R-05",
+      "title": "One-sided or missing markets leave the observation unscored, and unscored counts are reported",
+      "basis": "a coverage problem must not hide inside a favourable average"
+    },
+    {
+      "id": "R-06",
+      "title": "Duplicate and reposted markets deduplicate on (book, fight_id, fighter_id, quoted_at)",
+      "basis": "all postings retained raw, distinguished by capture time"
+    },
+    {
+      "id": "R-07",
+      "title": "forecast_locked_at < close_quoted_at, strictly, in UTC",
+      "basis": "no-lookahead; pre_fight_snapshots makes the publish-time forecast recoverable"
+    },
+    {
+      "id": "R-08",
+      "title": "Outcome independence — void and no-contest retained and scored; cancelled-before-close excluded, not scored zero",
+      "basis": "CLV measures price, not result; scoring zero would pull summaries toward the middle"
+    },
+    {
+      "id": "R-09",
+      "title": "No CLV summary statistic before freeze",
+      "basis": "a definition chosen after looking at data is not a preregistered definition"
+    },
+    {
+      "id": "R-10",
+      "title": "Publication gate — nothing on a surface until frozen",
+      "basis": "Reed, 2026-09-16"
+    },
+    {
+      "id": "R-11",
+      "title": "Provenance — a published figure names its protocol version and the script that produced it",
+      "basis": "inherits the research register's standing rule"
+    },
+    {
+      "id": "R-12",
+      "title": "Copy governance — CLV wording follows COPY_STYLE.md",
+      "basis": "Q-11 fixes substance, COPY_STYLE.md fixes wording"
+    }
+  ],
+  "open_questions": [
+    {
+      "id": "Q-01",
+      "question": "what \"closing line\" means (+ staleness limit)",
+      "level": "L2",
+      "options": [
+        "last quote before scheduled start",
+        "last quote before actual walkout",
+        "last quote before the book takes the market down",
+        "consensus at a fixed offset from scheduled start"
+      ],
+      "recommendation": "last quote before scheduled start, subject to a staleness limit set from capture cadence",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-02",
+      "question": "eligible books and exclusion rules",
+      "level": "L2",
+      "options": [
+        "fixed named list frozen at protocol freeze",
+        "rule-based eligibility criteria",
+        "all books the feed returns"
+      ],
+      "recommendation": "fixed named list; DUR-001 already forbids selecting books after results are visible, and a fixed list makes that unbreakable rather than merely prohibited",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-03",
+      "question": "treatment of exchanges and prediction markets",
+      "level": "L2",
+      "escalates_to": "L3 if admitted to the primary consensus",
+      "options": [
+        "exclude entirely",
+        "include as a frozen sensitivity",
+        "include in the primary consensus"
+      ],
+      "recommendation": "exclude from the primary; commission-based pricing mixed into a vig-based consensus is cleanly neither",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-04",
+      "question": "how multiple books become one market probability",
+      "level": "L2",
+      "options": [
+        "median across eligible books",
+        "mean",
+        "best available price",
+        "liquidity-weighted"
+      ],
+      "recommendation": "median — robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
+      "note": "best available price is the option that would most flatter CLV; that asymmetry is why it must be settled by argument now",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-05",
+      "question": "vigged or de-vigged",
+      "level": "L3",
+      "why_l3": "changes both the magnitude and the meaning of the published number, and conflicts with the shipped implementation",
+      "options": [
+        "raw vigged both ends (ships today)",
+        "power de-vig both ends per DUR-001 Amendment 1",
+        "raw as primary, de-vigged as a frozen sensitivity"
+      ],
+      "recommendation": "raw as primary, de-vigged as a frozen sensitivity once two-sided publish capture exists",
+      "blocks": "two-sided capture at publish time must start immediately — the de-vigged variant can never be backfilled",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-06",
+      "question": "does CFL evaluate its published probability or a hypothetical wager price",
+      "level": "L3",
+      "why_l3": "decides what the headline number is",
+      "options": [
+        "bettor's CLV on the posted price",
+        "market anticipation of the published probability",
+        "both, reported separately"
+      ],
+      "recommendation": "both, with the term CLV reserved strictly for the price measure; market anticipation is a different quantity and must never carry the CLV label",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-07",
+      "question": "aggregation and weighting across fights and cards",
+      "level": "L3",
+      "why_l3": "equal-weight and stake-weight are different public claims, not different estimators of one thing",
+      "options": [
+        "equal weight per fight",
+        "stake or Kelly weighted",
+        "liquidity weighted"
+      ],
+      "recommendation": "equal weight per fight; a stake weighting invents a staking strategy CFL does not publish in order to score it",
+      "cluster_unit": "the UFC event, matching DUR-001",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-08",
+      "question": "minimum sample before a summary is displayed",
+      "level": "L3",
+      "why_l3": "track-record.html already publishes a commitment to 100+ locked picks, so the protocol either adopts it or the copy changes",
+      "options": [
+        "adopt 100 scored observations",
+        "a different floor",
+        "per-breakout floors as well as overall"
+      ],
+      "recommendation": "100 scored observations overall and the same floor on any breakout, following Factor Lab's MIN_SAMPLE pattern including its explicit 'not enough data yet' state",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-09",
+      "question": "confidence intervals and uncertainty",
+      "level": "L2",
+      "options": [
+        "cluster-robust interval on mean clv_pp",
+        "cluster bootstrap over events",
+        "Wilson interval on the beat rate"
+      ],
+      "recommendation": "report a cluster-robust interval on mean clv_pp and a Wilson interval on the beat rate; they answer different questions and the pair is harder to cherry-pick",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-10",
+      "question": "cancellation, rescheduling and late opponent change",
+      "level": "L2",
+      "options": [
+        "score the original close",
+        "score the rescheduled market",
+        "score neither"
+      ],
+      "recommendation": "score neither for a rescheduled fight, and exclude a fight whose opponent changed after the forecast lock; keyed mechanically on whether either fighter id changed",
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    },
+    {
+      "id": "Q-11",
+      "question": "how positive CLV may and may not be described publicly",
+      "level": "L3",
+      "why_l3": "it is the claim itself",
+      "options": [
+        "adopt the may / may-never list in §3 Q-11 as written",
+        "stricter — descriptive reporting only, with no comparative framing of any kind",
+        "more permissive — allow comparison against public benchmarks once past the Q-08 floor"
+      ],
+      "recommendation": "adopt the list as written; it permits the measurement to be stated plainly with its interval and n, and forbids every phrasing that converts a price measurement into a claim about winning money",
+      "never_permitted": [
+        "any projection of profit, ROI or bankroll growth from a CLV figure",
+        "'beats the market', 'proven edge', or any phrasing converting a price measurement into a claim about winning money",
+        "a positive figure without its interval and its n",
+        "a favourable subset presented without the overall number beside it",
+        "any claim at all while the interval crosses zero — reported as 'we can't tell yet'"
+      ],
+      "chosen_by_historical_comparison": false,
+      "status": "open"
+    }
+  ],
+  "capture_requirements_that_cannot_be_backfilled": [
+    "book, fighter, American price and UTC capture instant on every quote",
+    "both sides captured at the publish instant",
+    "every quote retained raw, append-only",
+    "capture cadence recorded, including gaps",
+    "provider and feed version stored per quote"
+  ],
+  "freeze_procedure": [
+    "status becomes frozen, with the UTC instant and Reed as approver",
+    "the sha256 of the protocol markdown is recorded here and in the frozen-file tripwire",
+    "publication_gate.publication_allowed becomes true",
+    "every open question is resolved in place, with rejected options retained as rejected",
+    "settle_clv.py is reconciled with the frozen rules"
+  ],
+  "post_freeze_change_routes": [
+    "a dated amendment recorded with both hashes and a reason, motivated_by_observed_results false and true",
+    "a new protocol version"
+  ]
+}

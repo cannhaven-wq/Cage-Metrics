@@ -1,0 +1,578 @@
+# CLV measurement protocol
+
+**Status: DRAFT — not frozen. No CLV number may be published while this says
+draft.**
+
+| field | value |
+|---|---|
+| protocol id | `CLV-001` |
+| version | `0.1.0-draft` |
+| created | 2026-09-16 |
+| author | Claude, for ChatGPT methodological review |
+| frozen at | — |
+| frozen by | — |
+| machine mirror | [`protocol.json`](protocol.json) |
+
+---
+
+## Plain version
+
+When CFL posts a pick, it also posts the price. Later the fight starts and the
+market stops moving. If the price moved toward our side after we posted, we got
+a better price than the people who bet at the close — that is closing line
+value, and it is the one measurement that separates a model that knows
+something from a model that had a good weekend.
+
+This document fixes exactly how that gets measured, **before** any number is
+calculated for publication. The order matters. If you measure first and define
+afterwards, you end up defining it whichever way makes the number look best, and
+nobody — including you — can tell whether you did that on purpose.
+
+Two things are separately gated, and the distinction is the whole design:
+
+| | allowed now? |
+|---|---|
+| capturing raw market quotes | **yes** — starts immediately, keeps running |
+| computing a CLV statistic | **no** — blocked until this is frozen |
+| putting a CLV number on a surface | **no** — blocked until this is frozen |
+
+Collecting early costs nothing and loses nothing. Deciding early is the part
+that has to be disciplined.
+
+---
+
+## 0. Scope and standing
+
+CLV is **not** a predictive-model experiment. It has no hypothesis, no
+challenger model and no verdict, so it does not go in the DUR register and does
+not get a `model_version`. It is a **measurement protocol**: the rules by which
+an already-published number is scored against the market.
+
+What it borrows from DUR-001 and DUR-002 is the only part that transfers — the
+rules are fixed before any result is computed, and a rule may not be swapped
+after a result is visible.
+
+### Relationship to what already ships
+
+`cfl_engine/settle_clv.py` already computes CLV daily into
+`model_edges.closing_odds` / `clv_pp` / `clv_beat`, under
+`.github/workflows/settle-clv.yml`. It is a working implementation with
+conventions already chosen — and several of them are good enough that this
+protocol adopts them outright (§2). Nothing on a user-facing surface renders
+those values today; `track-record.html` carries a placeholder that says the
+sample is too small.
+
+**This protocol governs that script.** Where the two disagree once frozen, the
+script changes. Until then the script keeps running and keeps writing — it is
+capture and computation into a private column, not publication.
+
+### The pre-freeze firewall
+
+Reed's instruction is to capture raw quotes immediately and freeze the protocol
+before publishing. That is right, and it has one exposure worth naming: **data
+that exists can be looked at, and a definition chosen after looking is not a
+preregistered definition.**
+
+So, binding for the draft period:
+
+1. No CLV summary statistic is computed from captured quotes before freeze. Row-level
+   settlement into `model_edges` continues — that is bookkeeping under the
+   already-shipped convention, not a result.
+2. No alternative definition in §3 is evaluated against captured data to decide
+   between options. This draft was written without running any such comparison,
+   and says so in §9.
+3. If anyone does compute one, it is **disclosed** in this document the way
+   DUR-002's preregistration §2 discloses its prior comparison — recorded, and
+   explicitly not usable as evidence for the choice.
+
+---
+
+## 1. What is being measured
+
+For a published pick on a fighter, at a price we could have taken:
+
+```
+p_publish = implied probability of the bet side at the price CFL posted
+p_close   = implied probability of the bet side at the close
+clv_pp    = p_close - p_publish
+beat      = clv_pp > 0
+```
+
+American odds convert to implied probability as
+
+```
+odds < 0 :  p = |odds| / (|odds| + 100)      e.g. -200 -> 0.6667
+odds > 0 :  p = 100    / (odds  + 100)       e.g. +150 -> 0.4000
+```
+
+**Sign convention, which is easy to get backwards.** You beat the close when the
+market's closing implied probability of your fighter is *higher* than the
+implied probability at the price you locked — the line moved toward you and you
+hold the longer price.
+
+| | at publish | at close | clv_pp | reading |
+|---|---|---|---|---|
+| dog | +150 → 0.4000 | +120 → 0.4545 | **+0.0545** | beat the close |
+| favourite | −200 → 0.6667 | −300 → 0.7500 | **+0.0833** | beat the close |
+
+Positive `clv_pp` always means beat. Reported in probability points; a
+price/cents presentation is a display choice, never the stored unit.
+
+---
+
+## 2. Decided rules
+
+These are settled: each has one defensible answer, or a binding precedent in the
+repo. They are not open for review unless the reviewer thinks one is *wrong*, in
+which case say so.
+
+### R-01 — Raw capture is immediate, immutable and append-only
+
+Every quote is stored as captured. The raw quote store rejects `UPDATE` and
+`DELETE` by trigger for every role including `service_role`, matching
+`prop_model_locks` and `pre_fight_snapshots`. A quote that turns out to be
+garbage is **excluded at scoring time by a written rule**, never deleted.
+
+Rationale: the whole value of a closing line is that it was observed before the
+bell. A store that can be edited afterwards is not evidence, which is the same
+argument the pre-fight snapshot table rests on.
+
+### R-02 — A quote without a timestamp is not eligible
+
+Every captured quote carries the book, the fighter, the price, and the UTC
+instant of capture. A quote missing any of those cannot be placed relative to
+the forecast or the close, and is excluded from scoring — retained in raw, never
+scored.
+
+### R-03 — Non-market price guard
+
+A capture whose implied probability falls outside **[0.03, 0.97]** is not a
+bettable price and is excluded from scoring.
+
+This is not a theoretical precaution. The feed emits sentinels near ±199900
+(implied ≈0.9995 / 0.0005) when a book pulls a fight or the capture lands after
+settlement. One such row was, on its own, responsible for the entire positive
+mean CLV across the first batch of settleable edges — the sign of the headline
+metric flipped when it was removed. The guard was added 2026-08-19 after that
+near-miss and is recorded here so it cannot be quietly relaxed.
+
+### R-04 — No substitution, no imputation
+
+If no usable closing price is on file, the observation is left **unscored**. It
+stays eligible for a later run if a real price arrives. A stale snapshot, a
+de-vigged reconstruction or a modelled price is never substituted for an
+observed close.
+
+### R-05 — One-sided or missing markets
+
+An observation is scored only if the bet side has an observed, in-band closing
+quote from an eligible book. A market quoted on one side only is scored if that
+side is the bet side and the definition chosen in Q-05 does not require the
+opposite side; otherwise unscored. Unscored observations are **counted and
+reported** — the count of unscored observations appears beside any summary, so
+a coverage problem cannot hide inside a favourable average.
+
+### R-06 — Duplicate and reposted markets
+
+Deduplicate on `(book, fight_id, fighter_id, quoted_at)`. Where a book reposts a
+market — takes it down and puts it back, or reopens after a fighter change —
+each posting is retained in raw and distinguished by capture time. Scoring uses
+the latest eligible quote satisfying the closing-line definition (Q-01). A
+repost after the scheduled start is subject to R-03 and generally excluded.
+
+### R-07 — The forecast precedes the market quote, always
+
+A scored observation requires `forecast_locked_at < close_quoted_at`, strictly,
+in UTC. A forecast whose timestamp cannot be established from an immutable
+record is not eligible.
+
+This is the no-lookahead rule, and it is the one an implementation is most
+likely to violate by accident — for instance by re-reading a "current" forecast
+at settlement time instead of the one on record when the price was posted.
+`pre_fight_snapshots` exists precisely to make the publish-time forecast
+recoverable.
+
+### R-08 — Outcome independence: void and no-contest
+
+CLV measures **price, not result**. A fight that ends in a no-contest, or whose
+result is overturned, still had a closing line, so the observation is
+**retained and scored**. Whether the bet would have been refunded is a
+bankroll question and belongs in My Book, not here.
+
+A fight **cancelled before a close exists** has no closing line and is
+**excluded** — not scored zero. Scoring it zero would silently pull every
+summary toward the middle.
+
+### R-09 — No CLV statistic before freeze
+
+Per §0. Row-level settlement continues; summaries do not.
+
+### R-10 — Publication gate
+
+No CLV figure appears on any user-facing surface — page, post, email, digest —
+until this protocol is frozen. `protocol.json` carries
+`publication_gate.publication_allowed`, which is `false` while status is not
+`frozen`, and `tests/test_clv_protocol.py` asserts it.
+
+### R-11 — Provenance
+
+Inherits the research register's standing rule: a number does not appear on a
+CFL surface unless it traces to a named artifact. For CLV that means the
+published figure names the protocol version it was computed under and the query
+or script that produced it.
+
+### R-12 — Copy governance
+
+Any CLV wording follows [`COPY_STYLE.md`](../../COPY_STYLE.md) — plain English,
+anti-tout, losses at equal prominence. Q-11 fixes what may and may not be
+claimed; `COPY_STYLE.md` governs how it is said.
+
+---
+
+## 3. Open questions
+
+Each has more than one defensible answer. **None was chosen by computing which
+performs better historically** — no such comparison was run (§9).
+
+Levels are proposed, per D-003: **L1/L2** goes to ChatGPT for methodological
+review; **L3** escalates to Reed because the choice materially changes what a
+published number means.
+
+---
+
+### Q-01 — What "closing line" means · proposed **L2**
+
+| option | definition | cost |
+|---|---|---|
+| **A** | last eligible quote strictly before the **scheduled** card/bout start | scheduled times slip; a delayed card closes early |
+| **B** | last eligible quote strictly before the **actual** walkout | needs a reliable walkout timestamp we do not currently store |
+| **C** | last eligible quote before the book **takes the market down** | per-book, so different books close at different instants |
+| **D** | consensus at a fixed offset (e.g. T−5 min from scheduled start) | uniform and reproducible; discards genuine late movement |
+
+**Recommendation on principle: A**, with the quote required to be within the
+staleness limit of Q-01b. It is reproducible from data we already hold, it does
+not depend on a field we do not capture, and "before the fight was scheduled to
+start" is a sentence a bettor understands. B is the most faithful and should be
+revisited if walkout timestamps ever become reliable.
+
+**Q-01b — staleness limit.** A "last quote before start" that was captured
+eleven hours earlier is not a closing line. Proposed: a maximum age, measured
+from the quote to the reference instant, beyond which the observation is
+unscored rather than scored on a stale price. The **value** of that limit is
+open; it should be set from capture cadence, not from what it does to the
+result.
+
+---
+
+### Q-02 — Eligible books and exclusion rules · proposed **L2**
+
+Options: a **fixed named list** frozen now; a **rule-based** list (any book
+meeting stated coverage and cadence criteria); or **all books the feed returns**,
+filtered only by R-03.
+
+**Recommendation on principle: a fixed named list, frozen at protocol freeze**,
+with additions requiring a dated amendment. DUR-001 already forbids selecting
+sportsbooks after results are visible; a fixed list makes that unbreakable
+rather than merely prohibited. A rule-based list sounds cleaner but moves the
+discretion into the thresholds.
+
+Also to fix: the **minimum number of eligible books** for an observation to
+score, and whether that minimum applies per-side.
+
+---
+
+### Q-03 — Exchanges and prediction markets · proposed **L2** (**L3** if admitted as primary)
+
+Betfair, Polymarket and Kalshi price differently from sportsbooks: commission
+rather than vig, and depth that varies with stake. Including them changes what
+"the market" denotes.
+
+Options: **exclude entirely**; **include as a frozen sensitivity** reported
+beside the primary; **include in the primary consensus**.
+
+**Recommendation on principle: exclude from the primary, admit as a frozen
+sensitivity if included at all.** Mixing a commission-based exchange price into
+a vig-based consensus produces a number that is not cleanly either. Admitting
+them to the primary changes what a published claim refers to, which is why that
+branch is L3.
+
+---
+
+### Q-04 — How multiple books become one probability · proposed **L2**
+
+Options: **median across eligible books** (what ships today); **mean**;
+**best available price** (the most favourable to the bet side); **liquidity- or
+coverage-weighted**.
+
+**Recommendation on principle: median.** It is what the current implementation
+uses, it is robust to a single mispriced book in a way the mean is not, and
+`settle_clv.py` already takes the median book's *own booked price* rather than
+reconstructing an American price from an aggregate — which matters, because a
+reconstructed price may be one no book ever offered.
+
+**Best available price is the option to argue about.** It is arguably the more
+honest benchmark for a bettor who shops lines, and it is also the option that
+most flatters CLV. That asymmetry is exactly why it should be settled now, by
+argument, and not later.
+
+---
+
+### Q-05 — Vigged or de-vigged · proposed **L3**
+
+The sharpest methodological question here, and the one where the shipped
+implementation and the rest of the repo point in different directions.
+
+`settle_clv.py` deliberately compares **raw single-side implied probabilities at
+both ends**. Its reasoning is sound: `odds_at_publish` is a single-side American
+price, and de-vigging it after the fact would require the opposite side at the
+same instant, which was not captured. Comparing raw-to-raw is at least
+unit-consistent.
+
+But DUR-001 Amendment 1 froze the **power method** as the primary de-vig for
+this project, with proportional and Shin as frozen sensitivities. And a raw
+single-side implied probability is not a probability — it is a price with the
+book's margin inside it. Describing a raw-to-raw difference as a probability
+gain would be a mislabelled claim.
+
+| option | what it measures | requires |
+|---|---|---|
+| **A** | price CLV, vigged both ends — what ships today | nothing new |
+| **B** | probability CLV, power de-vig both ends, per DUR-001 | **both sides captured at the publish instant** |
+| **C** | A as primary, B as a frozen sensitivity once two-sided publish capture exists | two-sided capture going forward |
+
+**Recommendation on principle: C.** A is what a bettor actually experiences and
+is computable on the existing record. B is what a probability claim requires and
+is only honestly computable prospectively, from the date two-sided capture at
+publish is guaranteed. Reporting both, with the primary named in advance and
+never swapped after a result is visible, is the same discipline DUR-001 applies
+to its de-vig sensitivities.
+
+**Implication if C is adopted:** two-sided capture at publish time becomes a
+capture requirement immediately, because B can never be backfilled. That is a
+reason to settle this question early even though publication is far off.
+
+---
+
+### Q-06 — Published probability, or hypothetical wager price · proposed **L3**
+
+Reed's question, and it needs a distinction stated plainly first.
+
+CFL publishes a **probability**. A bettor takes a **price**. These support two
+different statistics, and only one of them is CLV:
+
+- **A — bettor's CLV.** Score the price CFL posted against the close, per §1.
+  This is the standard quantity, comparable to what everyone else calls CLV. It
+  requires a defensible answer to "what price could a reader actually have
+  taken?" — which book, at what moment, at what stake.
+- **B — market anticipation.** Ask whether the market moved *toward* CFL's
+  published probability between posting and the close. This is honest about what
+  CFL actually publishes, but **it is not CLV** and must never carry that label.
+  It is a statement about agreement with subsequent market movement.
+
+**Recommendation on principle: C — compute both, report them separately, and
+reserve the term "CLV" strictly for A.** B is the more defensible description of
+what CFL does; A is the number readers will compare against other sources.
+Publishing B under the name CLV would be the single easiest way to make a claim
+that is technically computed and substantively misleading.
+
+This is L3 because it decides what the headline number *is*.
+
+---
+
+### Q-07 — Aggregation and weighting · proposed **L3**
+
+How per-fight observations become a card number and a lifetime number.
+
+| option | reading |
+|---|---|
+| **equal weight per fight** | "our average pick beats the close by X" |
+| **weight by stake or Kelly fraction** | "a bettor following us would have beaten the close by X" |
+| **weight by market liquidity** | "we beat the close where it mattered" |
+
+These are **different public claims**, not different estimators of one thing.
+The stake-weighted version in particular implies a betting strategy CFL does not
+publish, and would need one defined before it could be honest.
+
+**Recommendation on principle: equal weight per fight as primary**, because it
+matches what CFL actually publishes — a set of picks, not a staking plan — and
+because introducing a stake weighting invents a strategy in order to score it.
+
+**Clustering, not weighting, but decided alongside:** the observation unit is one
+scored pick; the cluster unit is the **event**. Picks on the same card share
+line-movement drivers and are not independent. DUR-001 already uses the UFC
+event as its cluster unit; using the same unit here keeps the two comparable.
+
+---
+
+### Q-08 — Minimum sample before any summary is displayed · proposed **L3**
+
+`track-record.html` already promises, in shipped copy: *"these numbers go up
+here once 100+ locked picks have both a posted price and a closing price on
+record."* That is a published commitment, so the protocol either adopts 100 or
+the copy changes with it.
+
+Open: whether 100 is the right floor; whether it counts **scored** observations
+or **eligible** ones; whether it applies per-breakout (favourites vs dogs) as
+well as overall. The Factor Lab precedent is `MIN_SAMPLE = 100` on market-even
+fights, with an explicit `unproven` verdict below it — a good pattern to reuse,
+including the part where the surface says "not enough data yet" rather than
+going quiet.
+
+**Recommendation on principle: adopt 100 scored observations overall, and apply
+the same floor to any breakout**, so a 12-fight dog subset cannot be presented
+as a finding.
+
+---
+
+### Q-09 — Uncertainty · proposed **L2**
+
+A mean CLV with no interval invites reading noise as edge.
+
+Options: **cluster-robust interval** with the event as cluster (consistent with
+Q-07 and DUR-001); **cluster bootstrap over events**; **Wilson interval** on the
+beat rate — which is well-behaved at small n and is the interval Factor Lab
+already uses.
+
+**Recommendation on principle: report both** — a cluster-robust interval on mean
+`clv_pp`, and a Wilson interval on the beat rate — since they answer different
+questions ("by how much" and "how often") and the pair is harder to
+cherry-pick than either alone.
+
+---
+
+### Q-10 — Cancellation, rescheduling and line movement after the fact · proposed **L2**
+
+R-08 settles the simple cases. The residue is genuinely open:
+
+- A fight **rescheduled to a later card**: is the original market's close scored,
+  the new one, or neither? Proposed: **neither** — the original close priced a
+  fight that did not happen, and the new market is a different market. The
+  forecast is re-locked for the new date if the pick is re-published.
+- A fight surviving a **late opponent change**: proposed **exclude** — the
+  market after the change prices a different fight from the one the forecast
+  was made on, which violates the spirit of R-07 even where the timestamps pass.
+- **Post-start quotes**: excluded by Q-01 and R-03.
+
+Needs a reviewer because "different fight" is a judgement the protocol should
+make mechanical — probably keyed on whether either fighter id changed after the
+forecast lock.
+
+---
+
+### Q-11 — How positive CLV may and may not be described · proposed **L3**
+
+The claim rules, not the computation. Proposed, for review:
+
+**May be said**, once frozen and past the Q-08 floor:
+
+- what was measured, over how many picks, with the interval;
+- that CLV is about price, not about winning — a pick can beat the close and
+  lose;
+- the count of unscored observations alongside (R-05).
+
+**May never be said**, at any sample size:
+
+- any projection of profit, ROI or bankroll growth from a CLV figure;
+- "beats the market", "proven edge", or any phrasing that converts a price
+  measurement into a claim about winning money;
+- a positive CLV figure without its interval and its n;
+- a favourable subset (one card, one weight class, favourites only) presented
+  without the overall number beside it;
+- anything at all while the interval crosses zero — that is reported as
+  *"we can't tell yet"*, in those words, matching how Factor Lab reports `lean`.
+
+`COPY_STYLE.md` governs the wording; this fixes the substance.
+
+---
+
+## 4. Raw capture requirements
+
+Binding on the capture path **now**, because these cannot be backfilled:
+
+| requirement | why it cannot wait |
+|---|---|
+| book, fighter, American price, UTC capture instant on every quote | R-02; a quote without them is permanently unscorable |
+| **both sides** captured at the publish instant | Q-05 option B is impossible retroactively |
+| every quote retained raw, append-only | R-01 |
+| capture cadence recorded, including gaps | Q-01b's staleness limit needs to be set from real cadence |
+| provider and feed version stored per quote | provenance; a feed change that shifts timing must be detectable |
+
+Anything captured without these is not lost — it simply cannot be used for the
+definitions that need them.
+
+---
+
+## 5. What freezing means
+
+At freeze:
+
+1. status becomes `frozen`, with the UTC instant and Reed as approver;
+2. the sha256 of this file is recorded in `protocol.json` and in the frozen-file
+   tripwire, the same mechanism `CFL_RESEARCH_STATE.md` uses;
+3. `publication_gate.publication_allowed` becomes `true`;
+4. every open question in §3 is resolved to a single rule, in place, with the
+   rejected options retained as rejected — not deleted;
+5. `settle_clv.py` is reconciled with the frozen rules.
+
+After freeze, changes follow the register's two routes and nothing else: a
+**dated amendment** recorded with both hashes and a reason, or a **new protocol
+version**. A rule may not be changed because a result looks better, and an
+amendment records `motivated_by_observed_results: false` — and it must be true.
+
+---
+
+## 6. What this protocol does not cover
+
+- **Bet sizing, staking or bankroll.** My Book's territory.
+- **Whether CFL's picks win.** That is the graded record on `track-record.html`.
+  CLV and accuracy are separate claims and are never combined into one headline.
+- **Prop and duration markets.** DUR-001 and DUR-002 own those, under their own
+  frozen preregistrations. If CLV is ever extended to props it needs its own
+  version of this document — the market structure is different.
+
+---
+
+## 7. Review checklist for ChatGPT
+
+1. Are the twelve decided rules in §2 actually settled, or is one of them a
+   disguised choice?
+2. Q-05 and Q-06 are the two that determine what the published number *means*.
+   Is the reasoning right, and is the price/probability distinction in Q-06
+   drawn correctly?
+3. Q-04's "best available price" and Q-07's stake weighting are the two options
+   that would most flatter the result. Are they rejected for the right reasons,
+   or merely rejected?
+4. Is anything in §3 missing an option that a statistician would insist on?
+5. Does §4 capture everything that cannot be backfilled? An omission there is
+   the only error in this document that cannot be fixed later.
+
+---
+
+## 8. Open questions summary
+
+| id | question | level |
+|---|---|---|
+| Q-01 | what "closing line" means (+ staleness limit) | L2 |
+| Q-02 | eligible books and exclusion rules | L2 |
+| Q-03 | exchanges and prediction markets | L2 |
+| Q-04 | how multiple books become one probability | L2 |
+| Q-05 | vigged or de-vigged | **L3** |
+| Q-06 | published probability or hypothetical wager price | **L3** |
+| Q-07 | aggregation and weighting | **L3** |
+| Q-08 | minimum sample before display | **L3** |
+| Q-09 | uncertainty | L2 |
+| Q-10 | cancellation, rescheduling, opponent change | L2 |
+| Q-11 | how positive CLV may be described | **L3** |
+
+---
+
+## 9. Disclosure
+
+**No historical CLV comparison was run in the course of writing this draft.** No
+alternative definition in §3 was evaluated against captured data, and no CLV
+summary statistic was computed. Every recommendation above rests on an argument
+from principle, precedent in this repository, or a stated property of the
+data — never on which option produced a better number.
+
+If that ever stops being true, it gets recorded here, and the affected choice
+becomes unusable as a preregistered decision.
