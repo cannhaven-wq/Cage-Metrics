@@ -205,32 +205,63 @@ A predicted goes-the-distance rate agreeing to three decimals says the feature
 build, the point-in-time panel and the fitted model are reproducing. The
 divergence is downstream of that, in how the per-round hazards are **calibrated**.
 
-### Leading hypothesis — two different calibration recipes
+### Data selection is ruled out — the frozen report's own fold table says so
 
-`n_calibrated_folds` is 18 here and 16 in the frozen report, and that gap is the
-tell. This harness calls `fit_prop0001`, whose frozen recipe fits isotonic on
-the **trailing 365 days** — which is always non-empty, so every fold calibrates.
-The repo's other walk-forward, `cfl_engine/train.py`, documents a different
-convention:
+`walkforward_report.json` carries a `folds` array. Comparing it row by row
+against this run:
+
+| | |
+|---|---|
+| `n_test` per fold, folds 0–16 | **identical, all 17** |
+| `n_test` fold 17 | 94 frozen vs 193 here — this run's data ends 2026-08-30, the gate is dated 2026-08-06 |
+| total | 9,030 + 99 = **9,129**, exactly |
+| `n_train` fold 0 | 6,724 frozen = this run's panel rows minus its test rows, **exactly** |
+| `n_train` growth | grows by precisely the previous fold's `n_test`, in both |
+
+Identical panel, identical fold boundaries, identical training sets. The extra
+99 rows are the later data cut and nothing else. **Whatever the difference is,
+it is not data selection, not the feature build, and not the panel.**
+
+### Established: the gate report did not use the locks' calibration recipe
+
+One structural difference survives. The frozen report records folds 0 and 1 as
+`calibrated: false`; here all 18 calibrate.
+
+This harness calls `fit_prop0001`, whose frozen recipe fits isotonic on the
+**trailing 365 days** before the fold boundary. That window is never empty —
+the panel starts in 2010 and the first fold boundary is 2018-01-01 — so under
+that recipe **every fold necessarily calibrates**. A run with two uncalibrated
+folds cannot have used it.
+
+So this is no longer a hypothesis: **`walkforward_report.json` was produced by a
+different calibration recipe from the one the live locks use.** The locks call
+`fit_prop0001`; the gate report demonstrably did not.
+
+The likely alternative is the convention `cfl_engine/train.py` documents for the
+other walk-forward in this codebase:
 
 > The isotonic calibrator for fold k is fit only on out-of-sample predictions
 > from folds < k. Same for the market-blend logistic regression.
 > …Fold 0 stays raw.
 
-Under that scheme the earliest folds have no calibrator, which is exactly how
-you get 16 of 18. If the gate report was produced by a harness using that
-convention, the two were never going to agree.
+That leaves the earliest folds without a calibrator, which is how you get 16 of
+18. *Which* alternative it was remains unconfirmed — the generator is not in the
+repository — but that it was not `fit_prop0001` is settled.
 
-If that holds, it is worth knowing on its own: **`walkforward_report.json` would
-not be a validation of the calibration recipe the locks actually use.** The
-locks call `fit_prop0001`; the gate appears not to have.
+**What this means:** `walkforward_report.json` cannot be cited as validation of
+the recipe that writes the locks. It validates a neighbouring recipe. Nothing
+about the locks or the data is wrong; the report needs relabelling and the
+live-lock recipe needs its own prospective validation.
 
-A second, smaller contributor: this run's data ends 2026-08-30 and the gate is
-dated 2026-08-06, which accounts for extra rows in the final fold (+99 overall).
+### A second, smaller implementation difference
 
-Both are hypotheses. The generator for the frozen report is not in the
-repository, so neither can be confirmed from here, and nothing was changed on
-either side.
+`const_logloss` also differs per fold (0.5212 vs 0.5289 on fold 0) even though
+the training sets are identical, so the two harnesses define the constant
+baseline differently. This run uses a single pooled event rate; the frozen
+report's lower figure is what a per-round constant hazard would give. That is a
+difference in *this* harness's baseline choice, not evidence about the model.
+
+Nothing was changed on either side to close any of these gaps.
 
 ### Event mode was not run
 

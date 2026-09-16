@@ -10,23 +10,39 @@ were read.
 
 ---
 
-## Plain-English summary
+## Finding
 
-**The locks were written from a tree that had uncommitted model code in it —
-including the lock script itself, which did not exist in git at that moment.
-So yes, "dirty" covered model-generating code.**
+> **The 48 forecasts have verified prediction provenance and append-only
+> integrity. Exact source-code provenance is incomplete because
+> model-generating code was untracked at lock time.**
 
-But the change is almost certainly harmless, and the rows check out:
+That sentence is the whole audit. Everything below is the evidence for it, and
+the two halves should not be collapsed into each other.
 
-- The one frozen model file involved (`build_features.py`) was changed in a way
-  that moves code around without changing any number it produces.
+**Verified.** The locks were on record before the bell, they have not been
+touched since, and they are arithmetically coherent:
+
 - All 48 rows reproduce their own stated probability from their own stored
   hazards to seven decimal places.
+- The ledger hash in the preregistration **reproduces exactly**, so the 48 rows
+  are byte-for-byte what was hashed when DUR-001 was frozen.
 - The table physically cannot be edited after the fact — the database rejects
   UPDATE, DELETE and TRUNCATE for every role, including `service_role`.
 
-- The ledger hash in the preregistration **reproduces exactly**, so the 48 rows
-  are byte-for-byte what was hashed when DUR-001 was frozen.
+**Incomplete.** What cannot be established is exactly which source code
+produced them:
+
+- The locks were written from a tree with uncommitted model code in it,
+  including `lock_prop0001.py` itself, which was untracked at that moment and
+  so has no recorded content for that run.
+- The one frozen model file involved (`build_features.py`) was changed in a way
+  that moves code around without changing any number it produces — but that is
+  a statement about the *committed* refactor, not proof that the tree at lock
+  time held only that refactor.
+
+The honest reading: these are valid live locks whose forecasts are trustworthy,
+carrying a documented gap in code provenance. Not "the locks are fine" and not
+"the locks are compromised" — the first overclaims and the second is false.
 
 ---
 
