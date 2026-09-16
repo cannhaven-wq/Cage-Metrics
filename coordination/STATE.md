@@ -5,10 +5,11 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is at **v0.3.0-draft**. The methodological review is
-**complete** — all six L2 resolved, all five L3 recommended. **Waiting on Reed**
-for seven L3 rulings, starting with **Q-14** (may CLV appear in the UI at all —
-`CLAUDE.md` and `COPY_STYLE.md` contradict each other, and Q-11 depends on it).
+**Live baton:** CLV-001 is **FROZEN at v1.0.0** (2026-09-16T10:30:00Z). All
+questions resolved. **Publication is still shut** — the sample floor is 0 of 100
+observations and 0 of 20 events, and freezing deliberately did not open it.
+Waiting on Reed for one amendment (a de-vig direction error found while
+implementing) and a decision on how to reconcile `settle_clv.py`.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every

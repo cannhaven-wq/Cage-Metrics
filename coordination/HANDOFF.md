@@ -11,6 +11,98 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 FROZEN v1.0.0; one amendment proposed before settle_clv
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+### What changed
+
+Your L3 approvals are recorded and **CLV-001 is frozen at v1.0.0**
+(2026-09-16T10:30:00Z, sha256 `ef912fce…`). Q-14 recorded first, `CLAUDE.md`
+amended with your exact replacement rule, then Q-05/06/07/08/11/13 resolved.
+
+**Freezing did not open publication, and I had to restructure the gate to keep
+it that way.** The freeze procedure literally said *"publication_gate.
+publication_allowed becomes true"* — following it would have published on a
+sample of zero, against your explicit instruction. The gate is now the AND of
+three conditions:
+
+| condition | state |
+|---|---|
+| `protocol_frozen` | **true** |
+| `sample_floor_met` | **false** — 0 of 100 observations, 0 of 20 events |
+| `interval_excludes_zero` | **false** — unevaluable, and fail-closed |
+
+Three of the original gate tests *skip* once frozen — they policed the run-up to
+a freeze. That meant freezing would silently remove every check on publication
+at the exact moment publication becomes conceivable. Eight new tests cover the
+frozen state; flipping `publication_allowed` to true now fails with
+`CLV publication is ALLOWED at 0/100 observations and 0/20 events`.
+
+### The thing I need you to rule on
+
+**Implementing the power de-vig found a mathematical error in the protocol you
+froze this morning.** §6 says *"the sum is strictly decreasing in k"*. For the
+formula it specifies, `q^(1/k)`, the sum is strictly **increasing** in k. It
+decreases only under the other convention, `q^k`.
+
+**No number changes.** The two are exact reparametrisations — the `q^k` root is
+the reciprocal — so the fair probabilities are bit-identical, and both roots sit
+inside the stated `[0.5, 5.0]` bracket. Verified on three pairs.
+
+It still matters: an implementer trusting the stated direction inverts their sign
+test and fails to converge. And it is a false statement inside a document whose
+value is that you do not have to re-derive its claims.
+
+Proposal at
+[`research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md`](../research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md).
+
+**I did not quietly fix it.** The protocol was frozen hours earlier, and
+correcting a frozen document silently — even for something numerically inert —
+is the exact habit the freeze exists to prevent. Afterwards it would be
+indistinguishable from quietly correcting something that *did* change a number.
+
+The implementation does not depend on the claim either way: `_bisect` reads the
+sign at both bracket ends. Two tests pin the equivalence, and one is written to
+start **failing** if the protocol's claim ever becomes true, so the note cannot
+outlive its cause.
+
+### What shipped
+
+`cfl_engine/clv/devig.py` — the frozen arithmetic as pure functions: power
+de-vig (primary), proportional and Shin (frozen sensitivities), the ≥3-book
+consensus with per-book de-vig *then* median, and `CLV_return`. 33 tests, no DB.
+
+One test earned its place immediately: **de-vig-then-median and
+median-then-de-vig can coincide**, when one book is median on both sides. My
+first version of that test asserted they always differ and failed. They differ
+only when the median pair is *synthetic* — a pair no book quoted — which is the
+situation Q-02's ordering exists to rule out. Both directions are now pinned.
+
+### What I did NOT do
+
+**`settle_clv.py` is untouched.** Two reasons, and I want you to pick:
+
+1. `model_edges` has **no column** for `clv_return`, the closing fair
+   probability, the book count, or an unscored reason. Writing the frozen
+   measure needs a migration, and I do not apply migrations.
+2. I cannot run it — no service key here — and it is a live daily writer.
+   Shipping an unverified rewrite of it blind is how the 1970-timestamp class of
+   defect gets introduced rather than found.
+
+### Next action
+
+**Reed: approve or reject the de-vig amendment, and say how you want
+`settle_clv.py` reconciled** — a proposed-unapplied migration plus a
+column-detecting script that reports `CLV_return` until the columns exist, or
+wait until you can run it yourself.
+
+Publication stays shut either way. 0 of 100.
+
+---
+
 ## 2026-09-16 — CLV-001 v0.3.0-draft: review complete, L3 set ready for Reed
 
 **From:** Claude

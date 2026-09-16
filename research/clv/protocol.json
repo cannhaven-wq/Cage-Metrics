@@ -3,13 +3,13 @@
   "title": "CLV measurement protocol",
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
-  "status": "draft",
-  "version": "0.3.0-draft",
+  "status": "frozen",
+  "version": "1.0.0",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": null,
-  "frozen_at": null,
-  "frozen_by": null,
+  "protocol_sha256": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+  "frozen_at": "2026-09-16T10:30:00Z",
+  "frozen_by": "Reed Cannon",
   "governs": [
     "cfl_engine/settle_clv.py",
     ".github/workflows/settle-clv.yml"
@@ -20,13 +20,31 @@
   },
   "publication_gate": {
     "publication_allowed": false,
-    "blocked_until": "status == 'frozen'",
+    "evaluation": "publication_allowed is the AND of every condition below. Any condition false, or not yet evaluable, blocks publication. Fail-closed: unknown is treated as not satisfied.",
+    "conditions": {
+      "protocol_frozen": true,
+      "sample_floor_met": false,
+      "interval_excludes_zero": false
+    },
+    "blocked_by": [
+      "sample_floor_met",
+      "interval_excludes_zero"
+    ],
+    "why_still_blocked": "Reed, on approving the freeze: 'do not publish the first CLV number immediately after freeze.' Freezing settles HOW the number is measured. It does not create a number worth showing. Zero scored observations exist.",
+    "sample_floor": {
+      "scored_observations_required": 100,
+      "distinct_events_required": 20,
+      "scored_observations_current": 0,
+      "distinct_events_current": 0,
+      "applies_to_breakouts": true,
+      "source": "Q-08 and Q-13, both approved 2026-09-16"
+    },
     "covers": [
       "any CLV figure on a user-facing page",
       "any CLV figure in a post, email or digest",
       "any CLV summary statistic computed from captured quotes"
     ],
-    "not_covered": "Row-level settlement into model_edges.clv_pp continues \u2014 it is bookkeeping under the already-shipped convention, not a published result."
+    "not_covered": "Row-level settlement into model_edges continues - bookkeeping, not a published result."
   },
   "results_computed_before_freeze": false,
   "disclosure": "No historical CLV comparison was run while drafting. No alternative definition was evaluated against captured data. Every recommendation rests on argument from principle or precedent, never on which option produced a better number.",
@@ -193,11 +211,13 @@
       "recommendation": "vigged at publish, de-vigged at close. This is a FOURTH option, not one of the original three: the posted price is used as posted and only the closing side is de-vigged.",
       "blocks": "two-sided capture AT CLOSE must start immediately - the closing side is de-vigged and can never be backfilled. NOTE: this corrects v0.2.0, which still said 'at publish time'. Under CLV_return the publish side is used as posted and is never de-vigged.",
       "chosen_by_historical_comparison": false,
-      "status": "open",
+      "status": "resolved",
       "recommended_by": "ChatGPT review 2026-09-16",
       "supersedes_prior_recommendation": "'raw as primary, de-vigged as a frozen sensitivity' - the review's judgement is that this deferred the contradiction rather than resolving it",
       "still_open": "which de-vig method applies at close - see Q-12",
-      "blocks_corrected": "2026-09-16, flagged by ChatGPT second-pass review 2026-09-16"
+      "blocks_corrected": "2026-09-16, flagged by ChatGPT second-pass review 2026-09-16",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: CLV_return = closing_fair_probability * decimal_odds_at_publish - 1. Real posted price at publish; power-de-vigged fair probability at close."
     },
     {
       "id": "Q-06",
@@ -211,9 +231,11 @@
       ],
       "recommendation": "the bettor's CLV on the POSTED PRICE is the primary and sole headline number. Market anticipation of the published probability may still be reported separately and may never carry the CLV label.",
       "chosen_by_historical_comparison": false,
-      "status": "open",
+      "status": "resolved",
       "recommended_by": "ChatGPT review 2026-09-16",
-      "supersedes_prior_recommendation": "'both, reported separately' - the review makes the price measure primary rather than co-equal"
+      "supersedes_prior_recommendation": "'both, reported separately' - the review makes the price measure primary rather than co-equal",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: bettor-price CLV is the sole headline CLV metric. Model probability vs market movement is separately named 'market anticipation / convergence' and is never called CLV."
     },
     {
       "id": "Q-07",
@@ -228,8 +250,10 @@
       "recommendation": "equal weight per scored fight. No Kelly or stake weighting without a SEPARATELY FROZEN staking system - the weighting may not be invented as part of the scoring.",
       "cluster_unit": "the UFC event, matching DUR-001",
       "chosen_by_historical_comparison": false,
-      "status": "open",
-      "recommended_by": "ChatGPT review 2026-09-16"
+      "status": "resolved",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: equal weight per scored forecast. No Kelly or stake weighting unless a separate staking protocol is frozen first."
     },
     {
       "id": "Q-08",
@@ -243,9 +267,11 @@
       ],
       "recommendation": "keep the 100 scored-observation floor AND add a minimum number of DISTINCT EVENTS, so one or two cards cannot dominate the published figure",
       "chosen_by_historical_comparison": false,
-      "status": "open",
+      "status": "resolved",
       "recommended_by": "ChatGPT review 2026-09-16",
-      "still_open": "the distinct-event minimum is not numerically specified - see Q-13"
+      "still_open": "the distinct-event minimum is not numerically specified - see Q-13",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: 100 scored observations, subject also to Q-13. The same thresholds apply to any breakout shown as a finding."
     },
     {
       "id": "Q-09",
@@ -302,9 +328,10 @@
         "any claim at all while the interval crosses zero \u2014 reported as 'we can't tell yet'"
       ],
       "chosen_by_historical_comparison": false,
-      "status": "open",
+      "status": "resolved",
       "recommended_by": "ChatGPT second-pass review 2026-09-16",
-      "blocked_by": "Q-14 - whether CLV may appear in the user interface at all"
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED with the stricter language: may report 'positive closing-line value over this sample' with n, event count, interval and unscored count. Never 'proven edge', 'beats the market', expected profit, ROI or bankroll growth."
     },
     {
       "id": "Q-12",
@@ -338,10 +365,12 @@
       ],
       "recommendation": "100 scored picks AND 20 distinct UFC events before any headline CLV summary",
       "chosen_by_historical_comparison": false,
-      "status": "open",
+      "status": "resolved",
       "why_l3": "the floor is the number itself: it decides when a public CLV figure may appear at all",
       "recommended_by": "ChatGPT second-pass review 2026-09-16",
-      "note": "20 events matches DUR-001 amendment (e)'s proposed cluster-CI floor, which is still held - the two now agree, which is worth more than either alone."
+      "note": "20 events matches DUR-001 amendment (e)'s proposed cluster-CI floor, which is still held - the two now agree, which is worth more than either alone.",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: 20 distinct completed UFC events in addition to 100 scored observations."
     },
     {
       "id": "Q-14",
@@ -360,8 +389,18 @@
       ],
       "recommendation": "no recommendation - this is a product-voice decision that belongs to Reed, and the two documents he owns disagree. Whichever way it goes, ONE of them must be amended so they stop contradicting.",
       "chosen_by_historical_comparison": false,
-      "status": "open",
-      "blocks": "Q-11"
+      "status": "resolved",
+      "resolved_by": "Reed Cannon",
+      "resolution": "YES - CLV may appear in the UI, but only under the currently frozen protocol with every publication threshold satisfied. CLAUDE.md's absolute prohibition is amended; COPY_STYLE.md rule 3 wins on direction.",
+      "amended_claude_md": true,
+      "replacement_rule": "No CLV figure may appear on a user-facing surface unless it was produced under the currently frozen CLV measurement protocol and every publication threshold in that protocol is satisfied.",
+      "preserved_prohibitions": [
+        "vague 'edge percentages'",
+        "unsupported market claims"
+      ],
+      "rationale": "the prohibition was useful when CFL had no defensible CLV measurement system; it should not permanently forbid the metric the project is explicitly building as its primary credibility measure. Authorising ONE narrowly defined auditable metric is not opening the door to sportsbook-style marketing.",
+      "blocked_before_resolution": "Q-11",
+      "blocking_history": "Q-14 blocked Q-11 until 2026-09-16: Q-11 governs how a CLV figure may be phrased on a surface, which presupposed Q-14's answer that one may appear at all. Both resolved together."
     }
   ],
   "capture_requirements_that_cannot_be_backfilled": [
@@ -380,8 +419,8 @@
   ],
   "freeze_procedure": [
     "status becomes frozen, with the UTC instant and Reed as approver",
-    "the sha256 of the protocol markdown is recorded here and in the frozen-file tripwire",
-    "publication_gate.publication_allowed becomes true",
+    "the sha256 of the protocol markdown is recorded in protocol.json",
+    "publication_gate.conditions.protocol_frozen becomes true - publication_allowed does NOT, because the sample floor is a separate condition. Corrected 2026-09-16: the earlier procedure said publication_allowed becomes true, which would have published on a sample of zero.",
     "every open question is resolved in place, with rejected options retained as rejected",
     "settle_clv.py is reconciled with the frozen rules"
   ],
@@ -416,9 +455,14 @@
     "note": "Complete after the second pass. Q-02, Q-10 and Q-11 - unanswered in the first pass - came back. Q-12 resolved, Q-13 recommended. Q-14 was raised by the revision after the review and has no reviewer recommendation by design: it is a product-voice decision."
   },
   "next_action": {
-    "owner": "Reed",
-    "action": "L3 approval. The methodological review is complete; these are owner-level choices.",
-    "l3_set": [
+    "owner": "Claude",
+    "action": "reconcile settle_clv.py with the frozen rules",
+    "not_yet": "no CLV figure may be published; the sample floor is unmet at 0 of 100"
+  },
+  "l3_approval": {
+    "approved_by": "Reed Cannon",
+    "approved_at": "2026-09-16T10:30:00Z",
+    "questions": [
       "Q-05",
       "Q-06",
       "Q-07",
@@ -427,6 +471,15 @@
       "Q-13",
       "Q-14"
     ],
-    "note": "Q-14 blocks Q-11 and should be taken first."
+    "l2_also_approved": [
+      "fixed eligible sportsbook list with >= 3 valid books",
+      "power de-vig",
+      "event-cluster bootstrap",
+      "median consensus",
+      "scheduled-close proxy",
+      "reschedule / opponent-change exclusions"
+    ],
+    "r13_approved": true,
+    "instruction": "do not publish the first CLV number immediately after freeze - it waits for 100 scored forecasts + 20 distinct events and the other eligibility requirements"
   }
 }

@@ -460,3 +460,115 @@ class TestSentinelTimestampRule(unittest.TestCase):
         contradict it."""
         text = json.dumps(self._r13() or {}).lower()
         self.assertIn("never deleted", text)
+
+
+class TestPublicationGateAfterFreeze(unittest.TestCase):
+    """The gate that matters once the protocol IS frozen.
+
+    Three of the original gate tests skip in the frozen state — they were written
+    to police the run-up to a freeze. Without these, freezing would silently
+    remove every check on publication at the exact moment publication becomes
+    conceivable.
+
+    Reed, approving the freeze: "do not publish the first CLV number immediately
+    after freeze." Freezing settled how the number is measured. It did not create
+    a number worth showing.
+    """
+
+    def _gate(self):
+        return doc()["publication_gate"]
+
+    def test_publication_allowed_is_the_and_of_its_conditions(self):
+        """The headline boolean must be derivable, not asserted. If it can drift
+        from the conditions, it is decoration."""
+        g = self._gate()
+        conds = g.get("conditions") or {}
+        self.assertTrue(conds, "the publication gate records no conditions")
+        self.assertEqual(
+            g["publication_allowed"], all(conds.values()),
+            f"publication_allowed is {g['publication_allowed']} but the conditions "
+            f"are {conds}. The flag must be the AND of them.",
+        )
+
+    def test_every_unmet_condition_is_listed_in_blocked_by(self):
+        g = self._gate()
+        unmet = {k for k, v in (g.get("conditions") or {}).items() if not v}
+        self.assertEqual(
+            unmet, set(g.get("blocked_by") or []),
+            "blocked_by must name exactly the conditions that are false, so a "
+            "reader is never left to diff two structures by eye",
+        )
+
+    def test_publication_is_shut_while_the_sample_floor_is_unmet(self):
+        """The check that survives the freeze."""
+        g = self._gate()
+        floor = g.get("sample_floor") or {}
+        obs, ev = floor.get("scored_observations_current"), floor.get("distinct_events_current")
+        need_obs, need_ev = floor.get("scored_observations_required"), floor.get("distinct_events_required")
+        for name, cur, need in (("observations", obs, need_obs), ("events", ev, need_ev)):
+            self.assertIsNotNone(cur, f"the {name} counter is not recorded")
+            self.assertIsNotNone(need, f"the {name} requirement is not recorded")
+        if obs < need_obs or ev < need_ev:
+            self.assertFalse(
+                g["publication_allowed"],
+                f"\n\nCLV publication is ALLOWED at {obs}/{need_obs} observations and "
+                f"{ev}/{need_ev} events.\nThe floor is not advisory — see Q-08 and "
+                f"Q-13, both approved 2026-09-16.\n",
+            )
+            self.assertIs(g["conditions"].get("sample_floor_met"), False)
+
+    def test_the_sample_floor_matches_the_approved_numbers(self):
+        """100 and 20 were approved explicitly. Silently lowering either would be
+        the cheapest possible way to publish early."""
+        floor = self._gate().get("sample_floor") or {}
+        self.assertEqual(floor.get("scored_observations_required"), 100)
+        self.assertEqual(floor.get("distinct_events_required"), 20)
+        self.assertIs(floor.get("applies_to_breakouts"), True,
+                      "Q-08: the same thresholds apply to any breakout shown as a finding")
+
+    def test_the_freeze_procedure_states_that_publication_does_not_open(self):
+        """The original procedure said publication_allowed becomes true at freeze.
+        Following it literally would have published on a sample of zero.
+
+        Asserted positively rather than as a forbidden substring: the procedure
+        now *quotes* the old wrong rule in order to retract it, and a negative
+        substring check cannot tell an instruction from a correction. Requiring
+        the explicit denial is both stricter and not fooled by its own footnote.
+        """
+        text = " ".join(doc().get("freeze_procedure") or []).lower()
+        self.assertIn(
+            "publication_allowed does not", text,
+            "the freeze procedure must say outright that publication does NOT open "
+            "on freeze — it is the step most likely to be followed mechanically",
+        )
+        self.assertIn("sample floor", text)
+
+    def test_a_frozen_protocol_says_so_where_a_reader_looks(self):
+        """Replaces the draft-banner check, which skips once frozen."""
+        d = doc()
+        if d["status"] != "frozen":
+            self.skipTest("protocol is not frozen")
+        md = markdown()
+        self.assertIn("Status: FROZEN", md)
+        self.assertIn("Frozen is not publishable", md,
+                      "the banner must say that freezing did not open publication — "
+                      "that is the single most misreadable fact about this document")
+
+    def test_every_question_is_resolved_in_a_frozen_protocol(self):
+        d = doc()
+        if d["status"] != "frozen":
+            self.skipTest("protocol is not frozen")
+        unresolved = [q["id"] for q in d["open_questions"] if q.get("status") != "resolved"]
+        self.assertEqual(unresolved, [],
+                         f"the protocol is frozen but {unresolved} are still open")
+
+    def test_every_l3_resolution_names_its_approver(self):
+        d = doc()
+        if d["status"] != "frozen":
+            self.skipTest("protocol is not frozen")
+        for q in d["open_questions"]:
+            if q["level"] != "L3":
+                continue
+            with self.subTest(question=q["id"]):
+                self.assertTrue((q.get("resolved_by") or "").strip(),
+                                f"{q['id']} is L3 and resolved but names no approver")

@@ -1,6 +1,14 @@
 # CLAUDE.md
 
-> Every feature, every explanation, and every task must be understandable by a UFC bettor with no stats background. Plain verdict first, plain reason second, math only in a collapsed block if at all. No closing line value, no edge percentages, and no market language anywhere in the user interface. If Reed can't explain it to a friend in one sentence, it does not ship.
+> Every feature, every explanation, and every task must be understandable by a UFC bettor with no stats background. Plain verdict first, plain reason second, math only in a collapsed block if at all. No edge percentages and no unsupported market claims anywhere in the user interface. If Reed can't explain it to a friend in one sentence, it does not ship.
+
+> **CLV, amended 2026-09-16 (Q-14).** This line used to read "no closing line value ... anywhere in the user interface". That absolute prohibition is lifted, and replaced by a narrower rule that is harder to misuse:
+>
+> **No CLV figure may appear on a user-facing surface unless it was produced under the currently frozen CLV measurement protocol and every publication threshold in that protocol is satisfied.**
+>
+> The protocol is [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](research/clv/CLV_MEASUREMENT_PROTOCOL.md), frozen 2026-09-16, and `tests/test_clv_protocol.py` enforces the gate. The prohibition on vague **edge percentages** and unsupported market claims above is untouched — this authorises **one** narrowly defined, auditable metric, not sportsbook-style marketing.
+>
+> **Frozen is not publishable.** As of the freeze the gate is still shut: the sample floor is 100 scored observations across 20 distinct events, and it stands at 0. Freezing settled *how* the number is measured; it did not create a number worth showing.
 
 > Before writing any code, state the task in plain English: what changes, why it matters, and what the user sees differently. Reed approves the plain version first. No task starts from jargon.
 

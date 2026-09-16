@@ -1,18 +1,22 @@
 # CLV measurement protocol
 
-**Status: DRAFT — not frozen. No CLV number may be published while this says
-draft.**
+**Status: FROZEN — 2026-09-16, approved by Reed Cannon.**
+
+**Frozen is not publishable.** The measurement rules are settled; the publication
+gate is still **shut**. The sample floor is 100 scored observations across 20
+distinct events and it currently stands at **0**. Freezing settled *how* the
+number is measured — it did not create a number worth showing.
 
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `0.3.0-draft` |
+| version | `1.0.0` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
-| next action | **Reed — L3 approval.** The methodological review is complete |
-| frozen at | — |
-| frozen by | — |
+| next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
+| frozen at | **2026-09-16T10:30:00Z** |
+| frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
 ---
@@ -35,8 +39,12 @@ Two things are separately gated, and the distinction is the whole design:
 | | allowed now? |
 |---|---|
 | capturing raw market quotes | **yes** — starts immediately, keeps running |
-| computing a CLV statistic | **no** — blocked until this is frozen |
-| putting a CLV number on a surface | **no** — blocked until this is frozen |
+| computing a CLV statistic | **yes**, as of the freeze |
+| putting a CLV number on a surface | **no** — the sample floor is unmet, 0 of 100 |
+
+Freezing opened the second row and **not** the third. They were never the same
+gate, and an earlier draft of the freeze procedure wrongly said publication opens
+on freeze — corrected, because that would have published on a sample of zero.
 
 Collecting early costs nothing and loses nothing. Deciding early is the part
 that has to be disciplined.
@@ -91,14 +99,13 @@ So, binding for the draft period:
 
 ## 1. What is being measured
 
-> **Revised 2026-09-16 (v0.3.0-draft)** against
-> [ChatGPT's methodological review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md).
-> The primary measure below replaces raw implied-probability movement. The
-> `clv_pp` construction that follows it is retained because it is what
-> `settle_clv.py` ships today and what the stored rows mean — it is now a
-> secondary descriptive figure, not the headline.
+> **FROZEN 2026-09-16, approved by Reed Cannon (Q-05, Q-06).** The primary
+> measure below replaces raw implied-probability movement. The `clv_pp`
+> construction that follows it is retained because it is what `settle_clv.py`
+> ships today and what the stored rows mean — it is a secondary descriptive
+> figure, never the headline, and it is never called CLV on a surface.
 
-### 1.1 Primary measure — `CLV_return` *(proposed, not frozen)*
+### 1.1 Primary measure — `CLV_return` **(frozen)**
 
 ```
 CLV_return = closing_fair_probability × decimal_odds_at_publish − 1
@@ -121,11 +128,10 @@ the publish side keeps the book's margin, the bar is *fair closing probability >
 paying the posted price*. This figure may never be described as though it were a
 fair-versus-fair comparison.
 
-**Blocking dependency, and it is not the one v0.1.0 recorded.** The draft said
-de-vig was blocked until two-sided capture existed *at publish*. Under
-`CLV_return` the publish side is used as posted and is never de-vigged, so what
-is required is two-sided capture **at close**. That is a different and more
-achievable blocker, and it is item 2 in §4.
+**Blocking dependency.** Two-sided capture **at close** — the closing side is
+de-vigged and cannot be backfilled. Not at *publish*: the publish side is used as
+posted and is never de-vigged. An earlier draft recorded the blocker on the wrong
+side; §4 item 2 is the live requirement.
 
 The de-vig method for the closing side is the **power** method, matching
 DUR-001 Amendment 1.1 — Q-12, resolved. Proportional and Shin are frozen
@@ -793,16 +799,16 @@ amendment records `motivated_by_observed_results: false` — and it must be true
 | Q-02 | eligible books and exclusion rules | L2 | **resolved** — named list, ≥3 books, de-vig per book *then* median |
 | Q-03 | exchanges and prediction markets | L2 | **resolved** — excluded from the primary |
 | Q-04 | how multiple books become one probability | L2 | **resolved** — median across eligible sportsbooks |
-| Q-05 | vigged or de-vigged | **L3** | recommendation: **vigged at publish, de-vigged at close** (a fourth option) |
-| Q-06 | published probability or hypothetical wager price | **L3** | recommendation: the **posted price** is the sole headline |
-| Q-07 | aggregation and weighting | **L3** | recommendation: equal weight per scored fight; no stake/Kelly weighting |
-| Q-08 | minimum sample before display | **L3** | recommendation: keep 100 **and** add a distinct-event minimum |
+| Q-05 | vigged or de-vigged | **L3** | **APPROVED** — vigged at publish, power-de-vigged at close |
+| Q-06 | published probability or hypothetical wager price | **L3** | **APPROVED** — posted price is the sole headline CLV |
+| Q-07 | aggregation and weighting | **L3** | **APPROVED** — equal weight; no stake/Kelly without a frozen staking protocol |
+| Q-08 | minimum sample before display | **L3** | **APPROVED** — 100 scored observations, breakouts included |
 | Q-09 | uncertainty | L2 | **resolved** — event-cluster bootstrap primary, Wilson demoted |
 | Q-10 | cancellation, rescheduling, opponent change | L2 | **resolved** — unscored unless re-locked; match on fighter + provider market ID |
-| Q-11 | how positive CLV may be described | **L3** | recommendation attached — **blocked by Q-14** |
+| Q-11 | how positive CLV may be described | **L3** | **APPROVED** — stricter wording; n, events, interval and unscored count always |
 | Q-12 | which de-vig method applies at close | L2 | **resolved** — power, matching DUR-001 Amendment 1.1 |
-| Q-13 | minimum distinct events before a summary displays | **L3** | recommendation: **100 picks AND 20 events** |
-| Q-14 | may CLV appear in the user interface at all | **L3** | open — **raised by the revision; blocks Q-11** |
+| Q-13 | minimum distinct events before a summary displays | **L3** | **APPROVED** — 20 distinct completed UFC events |
+| Q-14 | may CLV appear in the user interface at all | **L3** | **APPROVED — YES**, under the frozen protocol and its thresholds |
 
 ### Review coverage — complete
 
