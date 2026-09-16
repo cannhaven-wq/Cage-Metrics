@@ -45,6 +45,15 @@ const TRACK_RAW = read('track-record.html');
 //            failure mode these tests exist to catch.
 //   LOWER  — TEXT lowercased, for banned-phrase matching.
 const TRACK_MARKUP = strip(TRACK_RAW);
+// The market-price section alone. Scoped so that describing the REPLAY's
+// grading price elsewhere on the page does not read as a claim about CLV-001's
+// benchmark — those are different things and only one is under CLV-001.
+const CLV_BLOCK = (function () {
+  const i = TRACK_MARKUP.indexOf('id="clvStatus"');
+  if (i === -1) return '';
+  const j = TRACK_MARKUP.indexOf('<!-- Honesty box', i);
+  return TRACK_MARKUP.slice(i, j === -1 ? i + 4000 : j).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+})();
 const TRACK_TEXT = TRACK_MARKUP.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
 const TRACK = TRACK_TEXT.toLowerCase();
 
@@ -303,6 +312,74 @@ t('the same-day banner split on track-record.html is described honestly', functi
   // beside it must say so rather than imply the rows beat the first bell.
   trackPresent(/includes same-day rows/i,
                'a disclosure that the live/simulated split includes same-day rows');
+});
+
+// ------------- track-record.html defers to CLV-001 the same way -------------
+// REGRESSION. track-record.html shipped its own CLV methodology: a 100-pick
+// threshold and a benchmark described as "the closing price". Both are
+// CLV-001's to define. Neither may live on this page.
+
+t('track-record.html has a market-price section that defers to CLV-001', function () {
+  if (!CLV_BLOCK) throw new Error('track-record.html is missing its #clvStatus section');
+  [
+    /Prospective market-price validation is collecting/i,
+    /CLV-001/,
+    /No CLV figure is publication-approved yet/i,
+    /only when CLV-001's own publication gate is satisfied/i,
+  ].forEach(function (re) {
+    if (!re.test(CLV_BLOCK)) throw new Error('the CLV section is missing: ' + re);
+  });
+});
+
+t('track-record.html states no CLV threshold of its own', function () {
+  [
+    '100+ locked picks',
+    '100 locked picks',
+    'once 100',
+    'both a posted price and a closing price',
+    'both a posted and closing price',
+  ].forEach(function (p) {
+    trackAbsent(p, 'the CLV publication threshold belongs to CLV-001, not this page');
+  });
+  // And no bare number-plus-pick threshold anywhere in the CLV section.
+  if (/\b\d{2,}\s*(\+\s*)?(locked\s+)?(picks|bets|observations)\b/i.test(CLV_BLOCK)) {
+    throw new Error('the CLV section must not state a local observation threshold: ' + CLV_BLOCK.slice(0, 200));
+  }
+});
+
+t('track-record.html does not call the CLV benchmark the literal closing price', function () {
+  ['the closing price', 'the closing line', 'beat the closing'].forEach(function (p) {
+    if (CLV_BLOCK.toLowerCase().indexOf(p) !== -1) {
+      throw new Error('the CLV section must not name the benchmark ' + JSON.stringify(p) +
+                      ' — CLV-001 owns that definition; use "CFL closing-price proxy" if naming it');
+    }
+  });
+  // Where the page does name the stored field, it is a proxy, not a verified close.
+  if (/(at|to) the (real )?closing price/i.test(TRACK_TEXT)) {
+    throw new Error('track-record.html presents a stored field as the literal closing price');
+  }
+});
+
+t('track-record.html contains no "live locked record" wording', function () {
+  ['live locked record', 'locked record'].forEach(function (p) {
+    trackAbsent(p, "source='live' and a date-level split do not prove pre-bell timing");
+  });
+});
+
+t('track-record.html does not claim to hold every CFL prediction or model', function () {
+  [
+    "every pick we've made",
+    "every model we've ever run",
+    "every model we've run",
+    'every cfl prediction',
+    'every prediction we',
+    'all of our models',
+  ].forEach(function (p) {
+    trackAbsent(p, 'duration and prop research run under separate protocols and are not on this page');
+  });
+  trackPresent(/main[- ]engine/i, 'the main-engine scope wording');
+  trackPresent(/own protocols and appear nowhere on this page|their own protocols/i,
+               'a statement that other research does not appear here');
 });
 
 // ------------------------------------------------------------------- report

@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>UFC Model Track Record, Graded in Public — Cannon Fight Lab</title>
-<meta name="description" content="Every CFL pick graded in public — simulated record labeled as simulated, live prospective record since July 2026, misses included. Accuracy, calibration, and profit at the prices on record.">
+<meta name="description" content="Every main-engine fight call graded in public — simulated record labeled as simulated, live prospective record since July 2026, misses included. Accuracy, calibration, and profit at the prices on record.">
 <meta name="keywords" content="UFC prediction track record, verified UFC model accuracy, MMA betting model ROI, UFC model calibration">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -212,12 +212,12 @@
 
   <div class="page-head">
     <div class="eyebrow">Proof Center</div>
-    <h1>Every pick we've made. Wins and losses.</h1>
+    <h1>The main engine's fight calls — wins and losses.</h1>
     <p class="lede">This page is built live from the same database our picks are saved to — nothing here is typed in by hand. One engine, two jobs: <strong>Fight IQ</strong> calls a winner in every fight from fighter data alone, and <strong>Value</strong> flags the fights where the odds disagree with the model. Being right isn't enough, so we also show whether <strong>our percentages hold up</strong> — when we say 70%, does it hit about 7 times in 10? — and every miss.</p>
     <div class="updated" id="lastUpdated">Loading latest data…</div>
     <div class="pledge">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-      <div class="tx"><strong>Two records, clearly labeled.</strong> The live record is the prospective feed: calls published as each card approached, recorded with a timestamp, their percentage and their price. How strongly any individual call's timing can be proved varies row by row, and for part of the record a sealed copy exists that nobody can edit — the <a href="proof.html" style="color:var(--probe)">Proof Center</a> grades every row and shows you which is which. Everything else is the replay: we re-ran the engine through history year by year, only ever letting it pick fights it had never seen, and graded it at the closing price. The replay's first year is excluded from everything published — the engine wasn't calibrated yet that early, and an uncalibrated number isn't one we'd have shown you. We never show a simulation as if it were live.</div>
+      <div class="tx"><strong>Two records, clearly labeled.</strong> The live record is the prospective feed: calls published as each card approached, recorded with a timestamp, their percentage and their price. How strongly any individual call's timing can be proved varies row by row, and for part of the record a sealed copy exists that nobody can edit — the <a href="proof.html" style="color:var(--probe)">Proof Center</a> grades every row and shows you which is which. Everything else is the replay: we re-ran the engine through history year by year, only ever letting it pick fights it had never seen, and graded it at our closing-price proxy. The replay's first year is excluded from everything published — the engine wasn't calibrated yet that early, and an uncalibrated number isn't one we'd have shown you. We never show a simulation as if it were live.</div>
     </div>
     <p class="updated" style="margin-top:12px">Want the raw rows instead of the summary? <a href="proof.html" style="color:var(--probe);text-decoration:none;border-bottom:1px solid rgba(47,220,203,.35)">Open the Proof Center</a> — every call with its timestamp, its timing grade, price and result, filterable, losses included.</p>
   </div>
@@ -285,9 +285,9 @@
   <!-- ===== Retired models — archived record ===== -->
   <details class="section" id="legacyArchive" style="margin-top:10px">
     <summary style="cursor:pointer; font-family:var(--font-display); font-weight:800; font-size:22px; color:var(--text-2);">
-      Every model we've run — archived simulations
+      Every main-engine model represented in this archive — simulations
     </summary>
-    <div class="window-note" style="margin-top:10px">Every model we've ever run, oldest to newest. These records are <strong>simulations</strong> — each model re-run over history, not calls published as a card approached — so we grade each only on fights <em>after</em> it was finished, the ones it never trained on. Where a model's exact cutoff isn't confirmed, we start it at Jan 2025 to be safe, so no model can score itself on data it already saw. The one genuinely prospective record is the live section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or graded themselves partly on fights they trained on — the exact cheating we walked away from. The engine's lower, honest number is the one we stand behind.</div>
+    <div class="window-note" style="margin-top:10px">Every main-engine model represented in this archive, oldest to newest. Fight-duration and prop research run under their own protocols and appear nowhere on this page. These records are <strong>simulations</strong> — each model re-run over history, not calls published as a card approached — so we grade each only on fights <em>after</em> it was finished, the ones it never trained on. Where a model's exact cutoff isn't confirmed, we start it at Jan 2025 to be safe, so no model can score itself on data it already saw. The one genuinely prospective record is the live section at the top of this page.<br><br><strong>Read the high numbers with suspicion, not pride.</strong> The models that score highest here (v5 and v6) do so because our own audit found they leaned on the closing betting line or graded themselves partly on fights they trained on — the exact cheating we walked away from. The engine's lower, honest number is the one we stand behind.</div>
 
   <!-- Model selector -->
   <div class="model-tabs" id="modelTabs"></div>
@@ -350,12 +350,14 @@
 
   </details>
 
-  <!-- CLV -->
-  <div class="section">
-    <div class="sec-head"><h2>Did we beat the closing price?</h2>
-      <div class="sub">The toughest test of a betting model: we take -150, it closes at -180, we got the better price. Do our picks do that over and over?</div></div>
+  <!-- Market-price validation — deferred in full to the CLV-001 protocol.
+       No threshold, no benchmark definition and no figure belongs on this page.
+       Mirrors proof.html's deferred gate; see proof-gates.js GATES.clv. -->
+  <div class="section" id="clvStatus">
+    <div class="sec-head"><h2>Did we get a better price than the market ended up at?</h2>
+      <div class="sub">The toughest test of a betting model, and not one this page is allowed to answer.</div></div>
     <div class="panel" style="margin-top:14px">
-      <div class="ps" style="margin-bottom:0">Every live Value pick locks its price the moment we post it, and we compare it to the closing price after the card. That sample is still too small to mean anything, so we're not going to dress it up as proof — <strong style="color:var(--text)">these numbers go up here once 100+ locked picks have both a posted price and a closing price on record.</strong> Until then, judge us on the graded record above.</div>
+      <div class="ps" style="margin-bottom:0"><strong style="color:var(--text)">Prospective market-price validation is collecting.</strong> CFL measures this under the separately frozen <strong style="color:var(--text)">CLV-001</strong> protocol, which owns every condition — how many scored observations it takes, across how many separate UFC events, and how tight the range must be. <strong style="color:var(--text)">No CLV figure is publication-approved yet.</strong> This page holds no threshold of its own and computes nothing here. The <a href="proof.html" style="color:var(--probe)">Proof Center</a> will display it only when CLV-001's own publication gate is satisfied. Until then, judge us on the graded record above.</div>
     </div>
   </div>
 
@@ -597,10 +599,10 @@ function renderEngineEdges() {
   $('engNote').innerHTML =
     `<strong>${cfl.escapeHtml(cfl.ENGINE.roi.name)}</strong> — ${cfl.escapeHtml(cfl.ENGINE.roi.tagline)} ` +
     `A bet is flagged only when the model's percentage beats the market's true price — the book's cut removed — by at least 4 points. We size each bet to the edge, capped at 2% of your bankroll. ` +
-    `Simulated bets are graded at the closing price. Live bets grade at the price on record when we posted them.`;
+    `Simulated bets are graded at our closing-price proxy. Live bets grade at the price on record when we posted them.`;
 
   engBanner(graded, pending.length,
-    'Every bet the history replay would have flagged, priced at the real closing price. A simulation, labeled as one.',
+    'Every bet the history replay would have flagged, priced at our closing-price proxy. A simulation, labeled as one.',
     'Flagged and priced from the live feed as each card approached, never re-priced afterwards. Timing evidence is graded per row in the Proof Center. This record is just getting started.');
 
   const n = graded.length;
@@ -691,7 +693,7 @@ function renderEngineEdges() {
   const live = graded.filter(r => r.source === 'live');
   $('lockedSplitNote').innerHTML =
     `<strong>Simulated vs live.</strong> ` +
-    `${(graded.length - live.length).toLocaleString()} graded bets are the history replay, priced at the real closing price. ` +
+    `${(graded.length - live.length).toLocaleString()} graded bets are the history replay, priced at our closing-price proxy. ` +
     `${live.length.toLocaleString()} bets come from the live feed, priced as each card approached and never re-priced. How strongly each one's timing can be proved is graded row by row in the Proof Center. ` +
     `The live record is still small — treat the simulated numbers as a simulation, not a live betting history.`;
 }
@@ -793,7 +795,7 @@ function renderAll() {
     `<strong>${cfl.escapeHtml(cfl.modelName(_activeModel, m && m.name))}</strong> — stats shown only for fights from ` +
     `<strong>${cfl.escapeHtml(cfl.formatDate(start))}</strong> onward, after the model's training cutoff. ` +
     `Picks dated before July 2026 are simulations: the model re-run on fights it never trained on, priced at the opening line. ` +
-    `The live locked record starts July 2026. Widening the window would mix in training data and inflate the numbers, so we don't.`;
+    `The live / prospective record starts July 2026. Widening the window would mix in training data and inflate the numbers, so we don't.`;
 
   // ---- Two-state record banner ----
   // NOTE: this splits on created_at falling on or before the card's DATE, which

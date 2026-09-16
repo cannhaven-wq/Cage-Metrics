@@ -728,3 +728,108 @@ edit   PROOF_CENTER.md               this section
 2. Decide on the `created_at <= event_date` banner filter — leave it as a
    labelled dataset split, or grade it like `timingEvidence`. Out of scope here.
 3. Do not deploy.
+
+---
+
+## Revision 5 — `track-record.html` site-consistency pass (2026-09-16)
+
+Three stale claims removed. **Copy only** — verified: no changed line touches a
+calculation, query, selector or model output. 16 insertions, 14 deletions on
+`track-record.html`.
+
+### 1. The CLV section defers entirely to CLV-001
+
+Deleted the local methodology — the 100-pick threshold *and* the benchmark
+definition. Both belong to CLV-001. The section (now `id="clvStatus"`, added so
+tests can scope to it) reads:
+
+> **Prospective market-price validation is collecting.** CFL measures this under
+> the separately frozen **CLV-001** protocol, which owns every condition — how
+> many scored observations it takes, across how many separate UFC events, and
+> how tight the range must be. **No CLV figure is publication-approved yet.**
+> This page holds no threshold of its own and computes nothing here. The Proof
+> Center will display it only when CLV-001's own publication gate is satisfied.
+
+The heading changed too: *"Did we beat the closing price?"* → *"Did we get a
+better price than the market ended up at?"*, matching `proof.html`.
+
+**Also renamed, and worth a veto if you disagree.** Four other places described
+the replay's grading price as *"the closing price"* / *"the real closing
+price"*. Those describe `edgeOdds()` grading simulated bets off the stored
+`closing_odds` field — a different thing from CLV-001's benchmark, so strictly
+outside instruction 1. But it is the *same stored field* CLV-001 would draw on,
+and calling it a verified close overstates it. They now read **"our
+closing-price proxy"**. The calculation is untouched. Say the word and I'll
+revert the wording.
+
+Left alone deliberately: the v5 audit note *"they leaned on the closing betting
+line"*. That describes a model's training input, not a CLV benchmark, and it is
+accurate. The benchmark test is scoped to the `#clvStatus` block so this cannot
+be confused with it.
+
+### 2. "live locked record" gone
+
+*"The live locked record starts July 2026"* → *"The live / prospective record
+starts July 2026."*
+
+### 3. Scope narrowed to the main engine
+
+| Was | Now |
+|---|---|
+| h1: *"Every pick we've made. Wins and losses."* | *"The main engine's fight calls — wins and losses."* |
+| Archive summary: *"Every model we've run — archived simulations"* | *"Every main-engine model represented in this archive — simulations"* |
+| Archive note: *"Every model we've ever run, oldest to newest."* | *"Every main-engine model represented in this archive, oldest to newest. Fight-duration and prop research run under their own protocols and appear nowhere on this page."* |
+| meta description: *"Every CFL pick graded in public"* | *"Every main-engine fight call graded in public"* |
+
+### Revision 5 — tests
+
+```
+$ node tests/proof-gates.test.js
+  40 passed — replay/live separation and publication gating hold.
+
+$ node tests/proof-copy.test.js
+  29 passed — shipped copy matches what the data actually supports.
+```
+
+Five new, covering all four required regressions:
+
+- *track-record.html has a market-price section that defers to CLV-001*;
+- *track-record.html states no CLV threshold of its own* — five banned phrasings
+  plus a regex that rejects **any** `NN picks/bets/observations` threshold
+  appearing in the CLV block, so a different number is caught too;
+- *track-record.html does not call the CLV benchmark the literal closing price*
+  — scoped to the `#clvStatus` block, plus a page-wide check that no stored
+  field is presented as *"the real closing price"*;
+- *track-record.html contains no "live locked record" wording*;
+- *track-record.html does not claim to hold every CFL prediction or model*.
+
+**All five verified to bite**, by re-introducing each original claim in turn:
+the 100-pick gate fails 2 tests, the old heading fails 1, *"live locked
+record"* fails 1, the every-model claim fails 1, and presenting the proxy as a
+real closing price fails 1.
+
+Re-rendered headless: no page errors, every section renders, all counts
+unchanged.
+
+### Revision 5 — files changed
+
+```
+edit   track-record.html             copy only (16 ins, 14 del) + id="clvStatus" hook for tests
+edit   tests/proof-copy.test.js      29 assertions (was 24)
+edit   PROOF_CENTER.md               this section
+```
+
+`proof.html` and `proof-gates.js` unchanged since revision 3.
+
+### Revision 5 — preserved
+
+Every calculation, query, model output, timing grade, Proof Center gate, style
+rule and pre-existing test behaviour. The only structural edit to
+`track-record.html` is the `id="clvStatus"` attribute, added purely so the
+benchmark test can scope to that section instead of matching the whole page.
+
+### Still open for you
+
+1. The *"closing-price proxy"* rename above — keep or revert.
+2. The `created_at <= event_date` banner filter (revision 4): leave it as a
+   labelled dataset split, or grade it like `timingEvidence`.
