@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO ===== -->
+<title>Proof Center — Every Prediction, Timestamped and Graded | Cannon Fight Lab</title>
+<meta name="description" content="Every CFL prediction on record: when we posted it, what we said, what happened, and what $100 a bet came to. Live picks and history replays kept separate. Losses shown at the same size as wins.">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/proof.html">
+
+<meta name="theme-color" content="#060708">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=flag3">
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+
+<style>
+/* =====================================================================
+   PROOF CENTER — scoped under #pc. Shared design tokens only.
+   ===================================================================== */
+#pc { max-width: 1180px; margin: 0 auto; padding: 0 20px 56px; }
+
+#pc .head { padding: 40px 0 6px; max-width: 800px; }
+#pc .eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
+  letter-spacing: .12em; text-transform: uppercase; color: var(--signal); margin-bottom: 14px; }
+#pc .eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--signal); }
+#pc h1 { font-family: var(--font-display); font-weight: 800; font-size: 44px; line-height: 1.05; color: #fff; }
+#pc .lede { color: var(--text-2); font-size: 16px; line-height: 1.6; margin-top: 14px; }
+#pc .lede strong { color: var(--text); }
+#pc .stamp { font-size: 12.5px; color: var(--text-3); margin-top: 12px; }
+
+/* ---- Seven questions ---- */
+#pc .qgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px; margin: 26px 0 8px; }
+#pc .qcard { display: block; background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 13px 15px; text-decoration: none; transition: .15s; }
+#pc .qcard:hover { border-color: var(--line-2); background: var(--bg-2); }
+#pc .qcard .q { font-size: 12.5px; color: var(--text-3); line-height: 1.4; }
+#pc .qcard .a { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text); margin-top: 5px; line-height: 1.25; }
+#pc .qcard .a.good { color: var(--green); }
+#pc .qcard .a.wait { color: var(--amber); }
+
+/* ---- Sections ---- */
+#pc section { padding-top: 38px; scroll-margin-top: 80px; }
+#pc h2 { font-family: var(--font-display); font-weight: 800; font-size: 27px; color: #fff; line-height: 1.15; }
+#pc .sub { font-size: 13.5px; color: var(--text-3); margin-top: 6px; max-width: 760px; line-height: 1.55; }
+#pc .sub strong { color: var(--text-2); }
+#pc .panel { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-top: 16px; }
+#pc .panel h3 { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: #fff; }
+#pc .panel .ps { font-size: 12.5px; color: var(--text-3); line-height: 1.55; margin-top: 4px; }
+
+/* ---- Status chips: the four words every number carries ---- */
+#pc .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 10.5px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase; padding: 3px 9px; border-radius: 999px; white-space: nowrap;
+  border: 1px solid transparent; font-family: var(--font-display); }
+#pc .chip::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+#pc .chip.s-live        { color: var(--green); background: rgba(63,208,122,.10); border-color: rgba(63,208,122,.35); }
+#pc .chip.s-approved    { color: var(--green); background: rgba(63,208,122,.10); border-color: rgba(63,208,122,.35); }
+#pc .chip.s-replay      { color: var(--text-3); background: var(--bg-3); border-color: var(--line-2); }
+#pc .chip.s-provisional { color: var(--amber); background: rgba(255,181,71,.10); border-color: rgba(255,181,71,.35); }
+#pc .chip.s-collecting  { color: var(--probe); background: rgba(47,220,203,.09); border-color: rgba(47,220,203,.32); }
+
+/* ---- The two records ---- */
+#pc .records { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+#pc .rec { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; }
+#pc .rec.live { border-left: 3px solid var(--green); }
+#pc .rec.replay { border-left: 3px solid var(--text-3); }
+#pc .rec .rh { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+#pc .rec .rt { font-family: var(--font-display); font-weight: 800; font-size: 19px; color: #fff; }
+#pc .rec .rn { font-family: var(--font-display); font-weight: 800; font-size: 34px; color: #fff; margin-top: 10px;
+  font-variant-numeric: tabular-nums; line-height: 1; }
+#pc .rec .rmeta { font-size: 12.5px; color: var(--text-3); margin-top: 6px; }
+#pc .rec dl { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; }
+#pc .rec dt { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3); font-weight: 700; margin-top: 10px; }
+#pc .rec dt:first-child { margin-top: 0; }
+#pc .rec dd { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-top: 3px; }
+#pc .firewall { display: flex; gap: 10px; align-items: flex-start; background: var(--bg-2); border: 1px solid var(--line);
+  border-radius: var(--radius); padding: 13px 15px; margin-top: 14px; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+#pc .firewall strong { color: var(--text); }
+
+/* ---- KPI strip ---- */
+#pc .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; margin-top: 16px; }
+#pc .kpi { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+#pc .kpi .v { font-family: var(--font-display); font-weight: 800; font-size: 27px; color: #fff; line-height: 1.1; font-variant-numeric: tabular-nums; }
+#pc .kpi .v.good { color: var(--green); }
+#pc .kpi .v.bad  { color: var(--signal); }
+#pc .kpi .l { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .07em; font-weight: 700; margin-top: 5px; }
+#pc .kpi .d { font-size: 12px; color: var(--text-2); margin-top: 5px; line-height: 1.4; }
+#pc .kpi .chip { margin-top: 9px; }
+
+/* ---- Gate panel ---- */
+#pc .gate { background: var(--bg-1); border: 1px solid var(--line); border-left: 3px solid var(--probe);
+  border-radius: var(--radius); padding: 18px 20px; margin-top: 16px; }
+#pc .gate .gh { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#pc .gate .gt { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff; }
+#pc .gate .gmsg { font-size: 13.5px; color: var(--text-2); line-height: 1.6; margin-top: 10px; }
+#pc .gate .gmsg strong { color: var(--text); }
+#pc .prog { margin-top: 14px; }
+#pc .prog .bar { height: 10px; background: var(--bg-3); border-radius: 5px; overflow: hidden; }
+#pc .prog .bar > i { display: block; height: 100%; border-radius: 5px; background: linear-gradient(90deg, var(--probe-dim), var(--probe)); }
+#pc .prog .cap { display: flex; justify-content: space-between; gap: 10px; font-size: 12px; color: var(--text-3); margin-top: 7px; font-variant-numeric: tabular-nums; }
+#pc .prog .cap strong { color: var(--text); font-variant-numeric: tabular-nums; }
+#pc .rulecite { font-size: 11.5px; color: var(--text-3); line-height: 1.5; margin-top: 12px; border-top: 1px solid var(--line); padding-top: 10px; }
+#pc .rulecite code { font-family: var(--font-mono); font-size: 11px; color: var(--text-2); }
+
+/* ---- Filters ---- */
+#pc .filters { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end; margin-top: 16px;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; }
+#pc .fgroup { display: flex; flex-direction: column; gap: 7px; }
+#pc .fgroup > .flabel { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--text-3); font-weight: 700; }
+#pc .seg { display: flex; gap: 4px; background: var(--bg-3); border-radius: 9px; padding: 3px; flex-wrap: wrap; }
+#pc .seg button { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--text-2);
+  background: transparent; border: 1px solid transparent; padding: 7px 13px; border-radius: 7px; cursor: pointer; transition: .12s; }
+#pc .seg button:hover { color: #fff; }
+#pc .seg button[aria-pressed="true"] { background: var(--bg-1); border-color: var(--line-2); color: #fff; }
+#pc .seg.rec button[aria-pressed="true"][data-v="live"]   { border-color: rgba(63,208,122,.5); color: var(--green); }
+#pc .seg.rec button[aria-pressed="true"][data-v="replay"] { border-color: var(--line-2); color: var(--text); }
+#pc input[type="search"] { font-family: var(--font-body); font-size: 13.5px; color: var(--text); background: var(--bg-3);
+  border: 1px solid var(--line-2); border-radius: 9px; padding: 9px 12px; min-width: 210px; }
+#pc input[type="search"]::placeholder { color: var(--text-3); }
+#pc .fcount { font-size: 12.5px; color: var(--text-3); margin-left: auto; padding-bottom: 8px; }
+#pc .fcount strong { color: var(--text); }
+
+/* ---- Archive table ---- */
+#pc .tablewrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg-1); }
+#pc table.arch { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 860px; }
+#pc .tnote { font-size: 12.5px; color: var(--text-3); line-height: 1.55; margin-top: 14px; }
+#pc .tnote strong { color: var(--amber); }
+#pc .swipe { display: none; font-size: 12px; color: var(--text-3); margin-top: 8px; }
+#pc .tablewrap:focus-visible { outline: 2px solid var(--probe); outline-offset: 2px; }
+#pc table.arch th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3);
+  font-weight: 700; padding: 11px 12px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+#pc table.arch td { padding: 11px 12px; border-bottom: 1px solid var(--line); color: var(--text-2); vertical-align: top; }
+#pc table.arch tr:last-child td { border-bottom: none; }
+#pc table.arch td.num, #pc table.arch th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+#pc table.arch td.ts { font-family: var(--font-mono); font-size: 11.5px; color: var(--text-3); white-space: nowrap; }
+#pc table.arch td.pickcell { color: var(--text); font-weight: 600; }
+#pc table.arch td .vs { display: block; font-size: 11.5px; color: var(--text-3); font-weight: 400; margin-top: 2px; }
+#pc table.arch td .mv { font-family: var(--font-mono); font-size: 11px; color: var(--text-3); }
+/* Result chips — won and lost are the SAME size and weight, deliberately. */
+#pc .res { display: inline-block; font-family: var(--font-display); font-size: 11.5px; font-weight: 700; letter-spacing: .05em;
+  text-transform: uppercase; padding: 3px 9px; border-radius: 6px; white-space: nowrap; }
+#pc .res.won  { color: var(--green);  background: rgba(63,208,122,.11); }
+#pc .res.lost { color: var(--signal); background: rgba(255,77,61,.11); }
+#pc .res.pend { color: var(--text-3); background: var(--bg-3); }
+#pc .money.pos { color: var(--green); font-weight: 600; }
+#pc .money.neg { color: var(--signal); font-weight: 600; }
+#pc .more { display: block; width: 100%; font-family: var(--font-display); font-weight: 600; font-size: 13.5px; color: var(--text);
+  background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 9px; padding: 12px; margin-top: 12px; cursor: pointer; }
+#pc .more:hover { background: var(--bg-3); }
+#pc .empty { padding: 34px 16px; text-align: center; color: var(--text-3); font-size: 13.5px; }
+
+/* ---- Explainer + audit ---- */
+#pc .steps { counter-reset: st; margin-top: 4px; }
+#pc .steps li { list-style: none; counter-increment: st; display: grid; grid-template-columns: 30px 1fr; gap: 12px; padding: 12px 0;
+  border-bottom: 1px solid var(--line); }
+#pc .steps li:last-child { border-bottom: none; }
+#pc .steps li::before { content: counter(st); font-family: var(--font-display); font-weight: 800; font-size: 13px; color: var(--signal);
+  background: var(--bg-3); border-radius: 7px; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; }
+#pc .steps .sh { font-family: var(--font-display); font-weight: 700; font-size: 15px; color: var(--text); }
+#pc .steps .sb { font-size: 13.5px; color: var(--text-2); line-height: 1.6; margin-top: 3px; }
+#pc table.audit { width: 100%; border-collapse: collapse; font-size: 13px; }
+#pc table.audit th { text-align: left; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-3);
+  font-weight: 700; padding: 9px 10px; border-bottom: 1px solid var(--line-2); }
+#pc table.audit td { padding: 11px 10px; border-bottom: 1px solid var(--line); color: var(--text-2); line-height: 1.55; vertical-align: top; }
+#pc table.audit tr:last-child td { border-bottom: none; }
+#pc table.audit td:first-child { color: var(--text); font-weight: 600; width: 30%; }
+#pc table.audit code { font-family: var(--font-mono); font-size: 11.5px; color: var(--probe); word-break: break-all; }
+#pc .verdict { font-weight: 700; }
+#pc .verdict.ok { color: var(--green); }
+#pc .verdict.bad { color: var(--signal); }
+
+#pc .legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-top: 16px; }
+#pc .legend .li { background: var(--bg-1); border: 1px solid var(--line); border-radius: var(--radius); padding: 13px 15px; }
+#pc .legend .li .t { font-size: 13px; color: var(--text-2); line-height: 1.5; margin-top: 8px; }
+
+#pc .loading { padding: 50px 0; text-align: center; color: var(--text-3); font-size: 14px; }
+#pc .fail { background: rgba(255,77,61,.07); border: 1px solid rgba(255,77,61,.3); border-radius: var(--radius);
+  padding: 16px 18px; margin-top: 16px; font-size: 13.5px; color: var(--text-2); line-height: 1.6; }
+#pc .fail strong { color: var(--text); }
+#pc .fine { font-size: 11.5px; color: var(--text-3); line-height: 1.6; margin-top: 34px; max-width: 840px; }
+#pc a.inl { color: var(--probe); text-decoration: none; border-bottom: 1px solid rgba(47,220,203,.3); }
+#pc a.inl:hover { border-bottom-color: var(--probe); }
+#pc .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+@media (max-width: 880px) {
+  #pc { padding: 0 16px 48px; }
+  #pc h1 { font-size: 33px; }
+  #pc .records { grid-template-columns: 1fr; }
+  #pc .kpis { grid-template-columns: repeat(2, 1fr); }
+  #pc .filters { gap: 13px; }
+  #pc .fcount { margin-left: 0; width: 100%; padding-bottom: 0; }
+  #pc input[type="search"] { min-width: 0; width: 100%; }
+  #pc .fgroup { width: 100%; }
+  #pc table.audit td:first-child { width: auto; }
+  #pc table.audit, #pc table.audit tbody, #pc table.audit tr, #pc table.audit td { display: block; width: 100%; }
+  #pc table.audit thead { display: none; }
+  #pc table.audit tr { border-bottom: 1px solid var(--line-2); padding: 6px 0; }
+  #pc table.audit td { border-bottom: none; padding: 4px 0; }
+  #pc table.audit td[data-h]::before { content: attr(data-h); display: block; font-size: 10px; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--text-3); font-weight: 700; margin-bottom: 2px; }
+}
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+<div class="lab-bg" aria-hidden="true"><div class="grid"></div><div class="scan"></div></div>
+
+<main id="pc">
+
+  <header class="head">
+    <div class="eyebrow">Proof Center</div>
+    <h1>Every call we've made, with the receipt attached.</h1>
+    <p class="lede">Not a highlight reel. This page lists <strong>every</strong> prediction in our database — when we posted it, what number we put on it, what the price was, and what happened. <strong>Losses sit in the same list as wins, at the same size.</strong> Picks we posted before a fight and fights we re-ran through history afterwards are kept in two separate records that are never added together.</p>
+    <p class="stamp" id="stamp">Reading the database…</p>
+  </header>
+
+  <!-- Seven questions, answered at a glance -->
+  <div class="qgrid" id="qgrid" aria-label="Quick answers"></div>
+
+  <!-- ===================== 1. The two records ===================== -->
+  <section id="records" aria-labelledby="h-records">
+    <h2 id="h-records">Two records. Never added together.</h2>
+    <p class="sub">The single easiest way to make a model look good is to mix what it actually called before a fight with what it "would have" called looking backwards. So we keep them in separate boxes, and the code refuses to total them together.</p>
+    <div class="records" id="recordsGrid"></div>
+    <div class="firewall">
+      <div><strong>Why the split is enforced in code, not just in copy.</strong> Every total on this page runs through one file, <code style="font-family:var(--font-mono);font-size:12px;color:var(--probe)">proof-gates.js</code>, which throws an error rather than sum a list containing both kinds. A row whose origin we can't identify is counted as neither. There is a test for it — <code style="font-family:var(--font-mono);font-size:12px;color:var(--probe)">node tests/proof-gates.test.js</code>.</div>
+    </div>
+  </section>
+
+  <!-- ===================== 2. The live record ===================== -->
+  <section id="live" aria-labelledby="h-live">
+    <h2 id="h-live">The live record</h2>
+    <p class="sub">Only picks that were written to the database <strong>before the card started</strong>. Nothing here has been re-run, re-priced, or tidied up afterwards.</p>
+    <div class="kpis" id="liveKpis"><div class="loading">Loading the live record…</div></div>
+    <div class="panel" id="moneyPanel" hidden></div>
+  </section>
+
+  <!-- ===================== 3. The price test (gated) ===================== -->
+  <section id="market" aria-labelledby="h-market">
+    <h2 id="h-market">Did we get a better price than the market ended up at?</h2>
+    <p class="sub">The hardest test there is, and the one we care most about. Betting -150 on a fighter who ends up at -180 means we bought low, whether or not that particular bet won. It takes a real pile of picks before that number means anything, so there is a fixed rule about when it goes on screen — written down before we could see the answer.</p>
+    <div id="marketGate"></div>
+  </section>
+
+  <!-- ===================== 4. The archive ===================== -->
+  <section id="archive" aria-labelledby="h-archive">
+    <h2 id="h-archive">The archive</h2>
+    <p class="sub">Every row we have. Filter it, search it, sort it however you like — <strong>nothing is held back, and losses are not tucked away in a separate list.</strong></p>
+
+    <div class="filters">
+      <div class="fgroup">
+        <span class="flabel" id="lbl-rec">Which record</span>
+        <div class="seg rec" id="segRecord" role="group" aria-labelledby="lbl-rec">
+          <button type="button" data-v="live" aria-pressed="true">Posted before the fight</button>
+          <button type="button" data-v="replay" aria-pressed="false">Re-run through history</button>
+        </div>
+      </div>
+      <div class="fgroup">
+        <span class="flabel" id="lbl-feed">Which list</span>
+        <div class="seg" id="segFeed" role="group" aria-labelledby="lbl-feed">
+          <button type="button" data-v="picks" aria-pressed="true">Every fight we called</button>
+          <button type="button" data-v="edges" aria-pressed="false">Money bets only</button>
+        </div>
+      </div>
+      <div class="fgroup">
+        <span class="flabel" id="lbl-res">Result</span>
+        <div class="seg" id="segResult" role="group" aria-labelledby="lbl-res">
+          <button type="button" data-v="all" aria-pressed="true">All</button>
+          <button type="button" data-v="won" aria-pressed="false">Won / right</button>
+          <button type="button" data-v="lost" aria-pressed="false">Lost / wrong</button>
+          <button type="button" data-v="pending" aria-pressed="false">Not settled</button>
+        </div>
+      </div>
+      <div class="fgroup">
+        <label class="flabel" for="q">Search a fighter, card or date</label>
+        <input type="search" id="q" placeholder="e.g. Holloway, UFC 330, 2026-08" autocomplete="off">
+      </div>
+      <p class="fcount" id="fcount" role="status" aria-live="polite">—</p>
+    </div>
+
+    <p class="tnote" id="archNote"></p>
+    <p class="swipe">Swipe the table sideways for the rest of the columns.</p>
+    <div class="tablewrap" id="archWrap" role="region" tabindex="0" aria-label="Prediction archive, scrollable">
+      <div class="loading" id="archLoading">Loading the archive…</div>
+      <table class="arch" id="archTable" hidden>
+        <caption id="archCaption" class="sr-only"></caption>
+        <thead id="archHead"></thead>
+        <tbody id="archBody"></tbody>
+      </table>
+    </div>
+    <button class="more" id="moreBtn" hidden type="button"></button>
+  </section>
+
+  <!-- ===================== 5. How we measure ===================== -->
+  <section id="how" aria-labelledby="h-how">
+    <h2 id="h-how">How we measure ourselves, in plain English</h2>
+    <p class="sub">No stats degree required. This is the whole method.</p>
+    <div class="panel">
+      <ol class="steps">
+        <li><div><div class="sh">We post a pick, and the clock starts</div><div class="sb">Before a card, the model writes a row: which fighter, what percentage we give them, and — where we flagged a bet — the price on offer at that moment. The row gets a timestamp. That timestamp is what makes this a record instead of a story.</div></div></li>
+        <li><div><div class="sh">The row is never edited again</div><div class="sb">Once written, a pick cannot be changed or deleted. Not by us, not by a script, not by the database owner. The database itself rejects the attempt. So a pick that ages badly still sits there.</div></div></li>
+        <li><div><div class="sh">The fight happens, and we grade it against what actually occurred</div><div class="sb">Won, lost, or not settled yet. Nothing gets quietly dropped for being embarrassing — if a pick is missing from the archive it's because it was never posted, and you can check the count against the card.</div></div></li>
+        <li><div><div class="sh">Money is counted flat: $100 a bet, every time</div><div class="sb">Same stake on every bet, no chasing, no doubling up. A win at +150 pays $150; a loss costs $100. That's it. We use the price that was on record when we posted, not a better one we found later.</div></div></li>
+        <li><div><div class="sh">A number only goes on screen once there's enough of it</div><div class="sb">Small samples lie. Each headline number has a written rule for how many picks it takes before we'll show it, and those rules were set before we could see the answer. Until a rule is met, you get "still collecting" instead of a number. We'd rather show you an empty box than a flattering guess.</div></div></li>
+        <li><div><div class="sh">Simulations stay labelled as simulations</div><div class="sb">Re-running the engine over old fights is a useful sanity check and nothing more — the model gets to be smart about a world that already happened. Those rows are marked, boxed off, and never added to the live record.</div></div></li>
+      </ol>
+    </div>
+    <div class="panel">
+      <h3>What this page will not tell you</h3>
+      <p class="ps">Being upfront about the limits is part of the point.</p>
+      <ul class="steps" style="margin-top:6px">
+        <li style="grid-template-columns:1fr"><div><div class="sh">Whether you'll make money</div><div class="sb">A record is a record. A 70% pick still loses 3 times in 10, and a good run of results can happen to a bad model. Nothing here is betting advice.</div></div></li>
+        <li style="grid-template-columns:1fr"><div><div class="sh">That we're beating the market</div><div class="sb">We're not claiming that, because we can't yet — the price test above has a rule attached and it hasn't been met. The market's price is right more often than any model. Any edge lives at the margins.</div></div></li>
+        <li style="grid-template-columns:1fr"><div><div class="sh">That the simulated numbers predict the live ones</div><div class="sb">They routinely don't. That gap is the single most common way a model looks better on paper than in practice, which is exactly why the two records are kept apart here.</div></div></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================== 6. Audit trail ===================== -->
+  <section id="audit" aria-labelledby="h-audit">
+    <h2 id="h-audit">Check it yourself</h2>
+    <p class="sub">Every claim above, with the thing that backs it. The rows with a live verdict are recomputed in your browser from the rows themselves each time this page loads — if one ever fails, this page says so instead of hiding it.</p>
+    <div class="panel"><table class="audit" id="auditTable"><thead><tr><th>The claim</th><th>What backs it</th><th>Verdict</th></tr></thead><tbody id="auditBody"></tbody></table></div>
+  </section>
+
+  <!-- ===================== 7. Legend ===================== -->
+  <section id="legend" aria-labelledby="h-legend">
+    <h2 id="h-legend">What the labels mean</h2>
+    <p class="sub">Every number on this page carries exactly one of these.</p>
+    <div class="legend" id="legendGrid"></div>
+  </section>
+
+  <p class="fine">Model percentages are statistical estimates, not guarantees. A past record does not predict future results, and a run of wins is not evidence of an edge. Cannon Fight Lab is an analytics publication, not a sportsbook, and nothing on this page is betting advice. 21+ only. Problem gambling? Call 1-800-GAMBLER.</p>
+
+</main>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rd16"></script>
+<script src="_auth.js"></script>
+<script src="proof-gates.js"></script>
+<script>
+// =============================================================================
+// PROOF CENTER — the trust and evidence surface.
+//
+// READ-ONLY. This page selects from the graded views and renders what is there.
+// It runs no model, recomputes no research figure, and reinterprets nothing.
+//   v_model_picks_graded — one row per call + outcome (hit true/false/null)
+//   v_model_edges_graded — one row per money bet + outcome (won true/false/null)
+//   events               — card names, mapped by date for display only
+//
+// Every total goes through cflProof (proof-gates.js), which owns the two rules
+// this page exists to keep: the live record and the history replay are never
+// summed together, and a number without a passed publication gate is not shown.
+//
+// FAILS CLOSED. A load error renders an honest failure, never a zero. A gate
+// with no data renders "still collecting", never a placeholder figure.
+// =============================================================================
+cfl.renderNav();
+cfl.renderFooter();
+
+const P = window.cflProof;
+const $ = id => document.getElementById(id);
+const esc = s => cfl.escapeHtml(s == null ? '' : String(s));
+const pct = x => (x == null ? '—' : Math.round(x * 100) + '%');
+const usd = x => (x == null ? '—' : (x < 0 ? '−$' : '+$') + Math.abs(Math.round(x)).toLocaleString());
+
+// State ----------------------------------------------------------------------
+let LIVE_PICKS = [], LIVE_EDGES = [], REPLAY_PICKS = null, REPLAY_EDGES = null;
+let SNAPSHOTS = [];   // v_pre_fight_graded — the append-only copy we check ourselves against
+let EVENT_BY_DATE = {};
+let replayLoading = null;
+const F = { record: 'live', feed: 'picks', result: 'all', q: '' };
+let shown = 50;
+const PAGE = 50;   // keep the first paint light on a phone; 'Show more' pages the rest
+
+// American price, as a bettor writes it.
+const priceStr = o => (o == null || o === '' ? '—' : (Number(o) > 0 ? '+' : '') + Number(o));
+
+// Card name for a date, when exactly one card sits on that date. Display only —
+// nothing is computed from it, so an unresolved date just shows the date.
+function cardName(date) {
+  const names = EVENT_BY_DATE[date];
+  return (names && names.length === 1) ? names[0] : null;
+}
+
+function chip(status) {
+  const c = P.statusCopy(status);
+  return `<span class="chip s-${esc(status)}" title="${esc(c.blurb)}">${esc(c.label)}</span>`;
+}
+
+// Timestamp, in the reader's own timezone. Replay rows never get one — their
+// published_at is when the backfill ran, which is not a prediction time and
+// must never be presented as one.
+function stampOf(row) {
+  if (P.recordKind(row) !== P.RECORD.LIVE || !row.published_at) return null;
+  const d = new Date(row.published_at);
+  if (isNaN(d)) return null;
+  return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+}
+
+// How far ahead of the card the pick landed, in plain words.
+function leadOf(row) {
+  if (!row.published_at || !row.event_date) return null;
+  const posted = new Date(row.published_at);
+  const card = new Date(row.event_date + 'T00:00:00Z');
+  if (isNaN(posted) || isNaN(card)) return null;
+  const days = Math.round((card - posted) / 86400000);
+  if (days > 1) return days + ' days before the card';
+  if (days === 1) return '1 day before the card';
+  if (days === 0) return 'on the day of the card';
+  return null;
+}
+
+// =============================================================================
+// LOAD
+// =============================================================================
+async function boot() {
+  try {
+    const [picks, edges] = await Promise.all([
+      cfl.fetchEnginePicks(q => q.eq('source', 'live')),
+      cfl.fetchEngineEdges(q => q.eq('source', 'live')),
+    ]);
+    LIVE_PICKS = picks || [];
+    LIVE_EDGES = edges || [];
+    SNAPSHOTS = await loadSnapshots();
+    await loadEventNames(LIVE_PICKS);
+
+    renderStamp();
+    renderQuestions();
+    renderRecords();
+    renderLive();
+    renderMarketGate();
+    renderAudit();
+    renderLegend();
+    wireFilters();
+    renderArchive();
+  } catch (err) {
+    console.warn('[proof] load failed', err);
+    failClosed(err);
+  }
+}
+
+// The append-only pre-fight record. Its table rejects UPDATE and DELETE for
+// every role, so it is the one copy nobody can revise — including us. We read it
+// only to check our own picks against it, never to render a number from it. A
+// failure here is not fatal: the audit row says the check could not run, which
+// is different from saying it passed.
+async function loadSnapshots() {
+  try {
+    return await cfl.fetchAll(() => window.cflSupabase.from('v_pre_fight_graded')
+      .select('fight_id,engine_pick_fighter_id,engine_p_cal')
+      .order('fight_id', { ascending: true }));
+  } catch (e) {
+    console.warn('[proof] snapshot crosscheck unavailable', e);
+    return null;
+  }
+}
+
+// Card names for display. One query, only the dates we actually show.
+async function loadEventNames(rows) {
+  const dates = Array.from(new Set(rows.map(r => r.event_date).filter(Boolean)));
+  if (!dates.length) return;
+  try {
+    const { data } = await window.cflSupabase.from('events').select('name,event_date').in('event_date', dates);
+    (data || []).forEach(e => {
+      (EVENT_BY_DATE[e.event_date] = EVENT_BY_DATE[e.event_date] || []).push(e.name);
+    });
+  } catch (e) { /* names are decoration; the date always stands on its own */ }
+}
+
+// A failure shows as a failure. Never as zeros, never as an empty record that
+// could read as "we have no losses".
+function failClosed(err) {
+  const msg = `<div class="fail"><strong>We couldn't read the record just now.</strong> That's a problem on our end, not an empty record — rather than show you zeros that would flatter us, this page shows nothing until the database answers. Reload in a minute.${err && err.message ? '<br><span style="color:var(--text-3);font-size:12px">Technical detail: ' + esc(err.message) + '</span>' : ''}</div>`;
+  $('stamp').textContent = 'The record could not be loaded.';
+  $('qgrid').innerHTML = '';
+  ['recordsGrid', 'liveKpis', 'marketGate', 'auditBody', 'legendGrid'].forEach(id => { const el = $(id); if (el) el.innerHTML = ''; });
+  $('archLoading').innerHTML = msg;
+  $('liveKpis').innerHTML = msg;
+}
+
+function renderStamp() {
+  const settled = LIVE_PICKS.filter(r => r.hit != null);
+  const latest = settled.reduce((mx, r) => (r.event_date > mx ? r.event_date : mx), '');
+  $('stamp').innerHTML = 'Recomputed from the database every time this page loads'
+    + (latest ? ' · most recent graded card: <strong style="color:var(--text-2)">' + esc(cfl.formatDate(latest)) + '</strong>' : '');
+}
+
+// =============================================================================
+// SEVEN QUESTIONS — the things a sceptic wants answered before scrolling
+// =============================================================================
+function renderQuestions() {
+  const audit = P.timestampAudit(LIVE_PICKS);
+  const rec = P.straightRecord(LIVE_PICKS, { expectRecord: P.RECORD.LIVE });
+  const events = new Set(LIVE_PICKS.map(r => r.event_date)).size;
+  const clvGate = P.evaluateGate('clv', P.clvPairCount(LIVE_EDGES));
+  const money = P.flatStakeLedger(LIVE_EDGES, { expectRecord: P.RECORD.LIVE });
+
+  const qs = [
+    { q: 'Are these real predictions made before the fight?',
+      a: audit.clean ? 'Yes — all ' + audit.total + ' timestamped, none after its card' : audit.total + ' live picks · ' + audit.inOrder + ' dated on or before the card',
+      cls: audit.clean ? 'good' : '', href: '#audit' },
+    { q: 'Can I see all of them, including losses?',
+      a: 'Yes — ' + rec.misses + ' losses in the same list', cls: 'good', href: '#archive' },
+    { q: 'Is this live performance or historical testing?',
+      a: 'Both, in two boxes that never mix', cls: '', href: '#records' },
+    { q: 'How much would the picks have made or lost?',
+      a: money.settled ? usd(money.pnl) + ' on ' + money.settled + ' flat bets' : 'No settled bets yet', cls: '', href: '#live' },
+    { q: 'Is the model beating market prices?',
+      a: clvGate.publishable ? 'See the price test' : 'Unknown — still collecting', cls: clvGate.publishable ? '' : 'wait', href: '#market' },
+    { q: 'How big is the sample?',
+      a: LIVE_PICKS.length + ' live calls across ' + events + ' cards', cls: '', href: '#live' },
+    { q: 'Can CFL change the rules after seeing results?',
+      a: 'No — rows are locked, floors are pre-set', cls: 'good', href: '#how' },
+  ];
+  $('qgrid').innerHTML = qs.map(x =>
+    `<a class="qcard" href="${x.href}"><div class="q">${esc(x.q)}</div><div class="a ${x.cls}">${esc(x.a)}</div></a>`
+  ).join('');
+}
+
+// =============================================================================
+// THE TWO RECORDS
+// =============================================================================
+function renderRecords() {
+  const liveEvents = new Set(LIVE_PICKS.map(r => r.event_date)).size;
+  const liveFrom = LIVE_PICKS.reduce((mn, r) => (!mn || r.event_date < mn) ? r.event_date : mn, '');
+  const versions = Array.from(new Set(LIVE_PICKS.map(r => r.model_version).filter(Boolean))).sort();
+
+  $('recordsGrid').innerHTML = `
+    <div class="rec live">
+      <div class="rh"><span class="rt">Posted before the fight</span>${chip(P.STATUS.LIVE)}</div>
+      <div class="rn">${LIVE_PICKS.length.toLocaleString()}</div>
+      <div class="rmeta">calls on record · ${liveEvents} card${liveEvents === 1 ? '' : 's'}${liveFrom ? ' · since ' + esc(cfl.formatDate(liveFrom)) : ''}</div>
+      <dl>
+        <dt>What it is</dt><dd>A row written to the database before the card, with a timestamp, that can never be edited afterwards.</dd>
+        <dt>What it proves</dt><dd>That we said it in advance. Nothing here benefits from hindsight.</dd>
+        <dt>What it can't tell you yet</dt><dd>Whether the record is good. That takes a bigger pile of fights than we have.</dd>
+        <dt>Model versions in this record</dt><dd><span class="mv" style="font-family:var(--font-mono);font-size:12px">${versions.length ? esc(versions.join(', ')) : '—'}</span> — shown per row in the archive, because the engine changed mid-record and pretending otherwise would be dishonest.</dd>
+      </dl>
+    </div>
+    <div class="rec replay">
+      <div class="rh"><span class="rt">Re-run through history</span>${chip(P.STATUS.REPLAY)}</div>
+      <div class="rn" id="replayN">—</div>
+      <div class="rmeta" id="replayMeta">Loaded on demand — open the archive's history tab to pull it in.</div>
+      <dl>
+        <dt>What it is</dt><dd>The engine stepped forward through old cards, only ever calling fights it hadn't been trained on yet, graded against what really happened.</dd>
+        <dt>What it proves</dt><dd>That the method isn't obviously broken. That's genuinely all.</dd>
+        <dt>What it can't tell you</dt><dd>How we'll do next Saturday. A replay has no posting time, no real price to take, and no way to have been wrong in public.</dd>
+        <dt>Why it's not added to the live record</dt><dd>Because a bigger number built that way would be a worse number. The code refuses the sum.</dd>
+      </dl>
+    </div>`;
+}
+
+// =============================================================================
+// LIVE RECORD
+// =============================================================================
+function renderLive() {
+  const rec = P.straightRecord(LIVE_PICKS, { expectRecord: P.RECORD.LIVE });
+  const money = P.flatStakeLedger(LIVE_EDGES, { expectRecord: P.RECORD.LIVE });
+  const events = new Set(LIVE_PICKS.map(r => r.event_date)).size;
+
+  const recGate = P.evaluateGate('liveRecord', rec.settled);
+  const moneyGate = P.evaluateGate('liveMoney', money.settled);
+
+  const kpis = [
+    { v: rec.hits + '–' + rec.misses, l: 'Live calls, right–wrong',
+      d: rec.pending ? rec.pending + ' not settled yet' : 'every posted call graded', status: recGate.status },
+    { v: pct(rec.hitRate), l: 'How often the call was right',
+      d: rec.settled + ' settled call' + (rec.settled === 1 ? '' : 's'), status: recGate.status },
+    { v: money.settled ? usd(money.pnl) : '—', cls: money.settled ? (money.pnl >= 0 ? 'good' : 'bad') : '',
+      l: '$100 a bet, flat', d: money.settled ? money.wins + ' won, ' + money.losses + ' lost' : 'no settled bets yet', status: moneyGate.status },
+    { v: String(events), l: 'Cards covered', d: 'one row per fight on each', status: P.STATUS.LIVE },
+  ];
+
+  $('liveKpis').innerHTML = kpis.map(k =>
+    `<div class="kpi"><div class="v ${k.cls || ''}">${esc(k.v)}</div><div class="l">${esc(k.l)}</div><div class="d">${esc(k.d)}</div>${chip(k.status)}</div>`
+  ).join('');
+
+  // The money panel says what the dollar figure is and — louder — what it isn't.
+  const mp = $('moneyPanel');
+  mp.hidden = false;
+  mp.innerHTML = `
+    <h3>About that dollar figure</h3>
+    <p class="ps">${moneyGate.publishable
+      ? esc(moneyGate.message)
+      : '<strong style="color:var(--text)">Read it as a running tally, not as a rate to expect.</strong> Our floor for treating a money number as meaningful is ' + moneyGate.need + ' settled bets, and we are at ' + moneyGate.have + '. Below that, a single card can swing it either way.'}</p>
+    <p class="ps" style="margin-top:9px">It counts a flat $100 on every bet we flagged, at <strong style="color:var(--text-2)">the price that was showing when we posted it</strong> — not a better price found later, and not a closing price we couldn't have taken. A win at +150 adds $150. A loss costs $100, every time.${money.unpriced ? ' ' + money.unpriced + ' settled bet' + (money.unpriced === 1 ? ' is' : 's are') + ' left out of the total because no posted price is on record for ' + (money.unpriced === 1 ? 'it' : 'them') + ' — counted here rather than quietly dropped.' : ''}</p>`;
+}
+
+// =============================================================================
+// THE PRICE TEST — gated, and gated shut today
+// =============================================================================
+function renderMarketGate() {
+  const have = P.clvPairCount(LIVE_EDGES);
+  const g = P.evaluateGate('clv', have);
+
+  // The gate is shut: render the rule and the progress, never an estimate of
+  // the number underneath it. If it opens, this still does not print a figure —
+  // wiring the measurement itself is a separate, reviewed change.
+  $('marketGate').innerHTML = `
+    <div class="gate">
+      <div class="gh"><span class="gt">${esc(g.title)}</span>${chip(g.status)}</div>
+      <p class="gmsg">${g.publishable
+        ? '<strong>The rule has been met.</strong> ' + esc(g.message) + ' The measurement itself is not switched on yet — turning it on is a reviewed change, not something this page does on its own.'
+        : '<strong>' + esc(g.message) + '</strong> We could put a number here today. It would rest on ' + g.have + ' picks, which is not enough to tell a real result from a lucky run, so you get this box instead.'}</p>
+      <div class="prog">
+        <div class="bar"><i style="width:${Math.round(g.pct * 100)}%"></i></div>
+        <div class="cap">
+          <span><strong>${g.have}</strong> of <strong>${g.need}</strong> ${esc(g.unit)}</span>
+          <span>${g.remaining ? g.remaining + ' to go' : 'rule met'}</span>
+        </div>
+      </div>
+      <p class="rulecite"><strong style="color:var(--text-2)">The rule, and where it came from.</strong> ${esc(g.source)}. It was written down before the answer could be seen, it counts only picks posted before a fight, and it is enforced in <code>proof-gates.js</code> with a test that fails if the threshold moves. Moving a floor after seeing the number it gates is the one move this setup exists to prevent.</p>
+    </div>`;
+}
+
+// =============================================================================
+// ARCHIVE
+// =============================================================================
+function wireFilters() {
+  const seg = (el, key, after) => {
+    el.addEventListener('click', e => {
+      const b = e.target.closest('button'); if (!b) return;
+      F[key] = b.dataset.v;
+      el.querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+      shown = PAGE;
+      if (after) after(); else renderArchive();
+    });
+  };
+  seg($('segRecord'), 'record', onRecordChange);
+  seg($('segFeed'), 'feed');
+  seg($('segResult'), 'result');
+
+  let timer = null;
+  $('q').addEventListener('input', e => {
+    clearTimeout(timer);
+    timer = setTimeout(() => { F.q = e.target.value.trim().toLowerCase(); shown = PAGE; renderArchive(); }, 180);
+  });
+
+  $('moreBtn').addEventListener('click', () => { shown += PAGE; renderArchive(); });
+}
+
+// The replay record is thousands of rows. It is fetched only when someone asks
+// for it, so the live record — the one that matters — loads fast on a phone.
+async function onRecordChange() {
+  if (F.record === 'replay' && REPLAY_PICKS == null) {
+    $('archTable').hidden = true;
+    $('archLoading').textContent = 'Pulling in the history replay — this one is big…';
+    $('archLoading').style.display = '';
+    if (!replayLoading) {
+      replayLoading = Promise.all([
+        cfl.fetchEnginePicks(q => q.eq('source', 'backtest')),
+        cfl.fetchEngineEdges(q => q.eq('source', 'backtest')),
+      ]).then(([p, e]) => { REPLAY_PICKS = p || []; REPLAY_EDGES = e || []; });
+    }
+    try { await replayLoading; renderReplayCount(); }
+    catch (err) {
+      replayLoading = null;
+      $('archLoading').innerHTML = '<div class="fail"><strong>The history replay didn\'t load.</strong> The live record above is unaffected — it came from a separate query.</div>';
+      return;
+    }
+  }
+  renderArchive();
+}
+
+function renderReplayCount() {
+  if (REPLAY_PICKS == null) return;
+  const from = REPLAY_PICKS.reduce((mn, r) => (!mn || r.event_date < mn) ? r.event_date : mn, '');
+  const to = REPLAY_PICKS.reduce((mx, r) => (r.event_date > mx ? r.event_date : mx), '');
+  $('replayN').textContent = REPLAY_PICKS.length.toLocaleString();
+  $('replayMeta').textContent = 'simulated calls' + (from ? ' · ' + from.slice(0, 4) + '–' + to.slice(0, 4) : '');
+}
+
+function activeRows() {
+  if (F.record === 'live') return F.feed === 'picks' ? LIVE_PICKS : LIVE_EDGES;
+  return (F.feed === 'picks' ? REPLAY_PICKS : REPLAY_EDGES) || [];
+}
+
+// One result accessor for both feeds: picks grade on `hit`, bets on `won`.
+const outcomeOf = r => (F.feed === 'picks' ? r.hit : r.won);
+
+function matchesFilters(r) {
+  const o = outcomeOf(r);
+  if (F.result === 'won' && o !== true) return false;
+  if (F.result === 'lost' && o !== false) return false;
+  if (F.result === 'pending' && o != null) return false;
+  if (F.q) {
+    const hay = [r.fighter_a_name, r.fighter_b_name, r.event_date, cardName(r.event_date), r.model_version]
+      .filter(Boolean).join(' ').toLowerCase();
+    if (hay.indexOf(F.q) === -1) return false;
+  }
+  return true;
+}
+
+function pickedName(r) {
+  if (F.feed === 'picks') {
+    if (r.pick_side === 'a') return r.fighter_a_name;
+    if (r.pick_side === 'b') return r.fighter_b_name;
+    if (r.pick_fighter_id && r.pick_fighter_id === r.fighter_a_id) return r.fighter_a_name;
+    if (r.pick_fighter_id && r.pick_fighter_id === r.fighter_b_id) return r.fighter_b_name;
+  } else {
+    if (r.side === 'a') return r.fighter_a_name;
+    if (r.side === 'b') return r.fighter_b_name;
+  }
+  return null;
+}
+
+// A call is right or wrong; a money bet is won or lost. Both chips are the same
+// size and weight — that is deliberate and is not a styling accident to tidy up.
+function resultCell(r) {
+  const o = outcomeOf(r);
+  const isPicks = F.feed === 'picks';
+  if (o == null) return '<span class="res pend">Not settled</span>';
+  return o === true
+    ? '<span class="res won">' + (isPicks ? 'Right' : 'Won') + '</span>'
+    : '<span class="res lost">' + (isPicks ? 'Wrong' : 'Lost') + '</span>';
+}
+
+function renderArchive() {
+  const isLive = F.record === 'live';
+  const isPicks = F.feed === 'picks';
+  const rows = activeRows().filter(matchesFilters).slice().sort((a, b) => {
+    if (a.event_date !== b.event_date) return a.event_date < b.event_date ? 1 : -1;  // newest card first
+    return (b.id || 0) - (a.id || 0);
+  });
+
+  // Counts for the live-region line, computed on the unfiltered feed so the
+  // reader can see how much the filter is hiding.
+  const all = activeRows();
+  const won = all.filter(r => outcomeOf(r) === true).length;
+  const lost = all.filter(r => outcomeOf(r) === false).length;
+  const pend = all.filter(r => outcomeOf(r) == null).length;
+  const wonWord = isPicks ? 'right' : 'won', lostWord = isPicks ? 'wrong' : 'lost';
+  $('fcount').innerHTML = `Showing <strong>${rows.length.toLocaleString()}</strong> of <strong>${all.length.toLocaleString()}</strong> · ${won} ${wonWord} · ${lost} ${lostWord} · ${pend} not settled`;
+
+  const head = isPicks
+    ? ['When we posted it', 'Card', 'Fight', 'Our call', 'Our number', 'Result', 'Engine build']
+    : ['When we posted it', 'Card', 'Fight', 'Our bet', 'Our number', 'Price we posted', 'Result', '$100 flat', 'Engine build'];
+  $('archHead').innerHTML = '<tr>' + head.map((h, i) =>
+    `<th scope="col"${(isPicks ? [4] : [4, 5, 7]).indexOf(i) !== -1 ? ' class="num"' : ''}>${esc(h)}</th>`).join('') + '</tr>';
+
+  const note = isLive
+    ? 'Every call posted before its card, newest first. Wins and losses in one list, styled the same.'
+    : '<strong>Simulated.</strong> The engine re-run over fights that had already happened. There is no posting time because no pick was ever posted — these rows are a sanity check, not a record, and they are never added to the live numbers above.';
+  $('archNote').innerHTML = note;
+  $('archCaption').textContent = note.replace(/<[^>]+>/g, '');
+
+  if (!rows.length) {
+    $('archBody').innerHTML = '';
+    $('archTable').hidden = true;
+    $('archLoading').style.display = '';
+    // An empty record and an over-tight filter are different facts. Saying
+    // "nothing matches" when the record itself is empty would hide the emptier,
+    // more important one.
+    $('archLoading').innerHTML = all.length
+      ? `<div class="empty">Nothing matches that filter. ${F.q ? 'Try a different fighter, card or date.' : 'Try another result.'}</div>`
+      : `<div class="empty">There is nothing in this list yet — no rows of this kind are on record.</div>`;
+    $('moreBtn').hidden = true;
+    return;
+  }
+
+  const slice = rows.slice(0, shown);
+  $('archBody').innerHTML = slice.map(r => {
+    const stamp = stampOf(r);
+    const lead = isLive ? leadOf(r) : null;
+    const name = cardName(r.event_date);
+    const p = isPicks ? r.p_cal : r.p_blend;
+    const cells = [
+      `<td class="ts">${stamp ? esc(stamp) + (lead ? '<br><span style="color:var(--text-3)">' + esc(lead) + '</span>' : '') : '<span title="A replay has no posting time — it was never posted.">re-run, not posted</span>'}</td>`,
+      `<td>${esc(cfl.formatDateShort(r.event_date))}${name ? '<span class="vs">' + esc(name) + '</span>' : ''}</td>`,
+      `<td>${esc(r.fighter_a_name || '—')}<span class="vs">vs ${esc(r.fighter_b_name || '—')}</span></td>`,
+      `<td class="pickcell">${esc(pickedName(r) || '—')}</td>`,
+      `<td class="num">${p == null ? '—' : pct(Number(p))}</td>`,
+    ];
+    if (!isPicks) {
+      const price = r.odds_at_publish;
+      cells.push(`<td class="num">${esc(priceStr(price))}</td>`);
+    }
+    cells.push(`<td>${resultCell(r)}</td>`);
+    if (!isPicks) {
+      const o = outcomeOf(r);
+      let money = null;
+      if (o != null) {
+        const profit = P.winProfit(r.odds_at_publish, 100);
+        if (profit != null) money = (o === true) ? profit : -100;
+      }
+      cells.push(`<td class="num">${money == null ? '<span style="color:var(--text-3)">—</span>' : '<span class="money ' + (money >= 0 ? 'pos' : 'neg') + '">' + esc(usd(money)) + '</span>'}</td>`);
+    }
+    cells.push(`<td><span class="mv">${esc(r.model_version || '—')}</span></td>`);
+    return '<tr>' + cells.join('') + '</tr>';
+  }).join('');
+
+  $('archLoading').style.display = 'none';
+  $('archTable').hidden = false;
+  const rest = rows.length - slice.length;
+  $('moreBtn').hidden = rest <= 0;
+  if (rest > 0) $('moreBtn').textContent = 'Show ' + Math.min(PAGE, rest).toLocaleString() + ' more (' + rest.toLocaleString() + ' left)';
+}
+
+// =============================================================================
+// AUDIT TRAIL
+// =============================================================================
+// The date the pre-fight freeze started running. Picks older than this have no
+// frozen copy to check against, and the audit row says so rather than counting
+// them as passes.
+const FROZEN_FROM = 'August 2026';
+
+function renderAudit() {
+  const audit = P.timestampAudit(LIVE_PICKS);
+  const cross = SNAPSHOTS === null ? null : P.crossCheckSnapshots(LIVE_PICKS, SNAPSHOTS);
+  const mixed = (() => {
+    try { P.assertOneRecord(LIVE_PICKS, P.RECORD.LIVE); P.assertOneRecord(LIVE_EDGES, P.RECORD.LIVE); return false; }
+    catch (e) { return true; }
+  })();
+  const clvGate = P.evaluateGate('clv', P.clvPairCount(LIVE_EDGES));
+
+  const rows = [
+    {
+      claim: 'No live pick was posted after its card',
+      backs: 'Checked in your browser against each row’s own posting time and card date — not asserted, recomputed. '
+        + audit.dayBefore + ' landed on an earlier day; ' + audit.sameDay + ' landed on the day of the card itself, which a date alone cannot place before the first bell.',
+      verdict: audit.clean
+        ? { ok: true, t: audit.inOrder + ' of ' + audit.total + ' dated on or before the card' }
+        : { ok: false, t: audit.late + ' posted late, ' + audit.undated + ' undated — shown here rather than hidden' },
+    },
+    {
+      claim: 'The picks still match a copy nobody can edit',
+      backs: 'Before each card we freeze what we were showing into a separate record that the database will not let anyone change afterwards — not us, not the scripts, not the account that owns the database. '
+        + (cross === null
+            ? 'That check could not run just now, so treat this row as unanswered rather than passed.'
+            : 'Every pick covered by that frozen copy is re-compared to it here, on the fighter and on the percentage. It only reaches back to ' + FROZEN_FROM + ', when the freeze started running; earlier picks are not covered and are not counted as passing.'),
+      verdict: cross === null
+        ? { ok: false, t: 'Check unavailable — not a pass' }
+        : (cross.clean
+            ? { ok: true, t: cross.matched + ' of ' + cross.covered + ' still match the frozen copy exactly' }
+            : { ok: false, t: cross.mismatched + ' of ' + cross.covered + ' no longer match — shown here rather than hidden' }),
+    },
+    {
+      claim: 'The tables behind this page are not themselves locked',
+      backs: 'Said plainly because the opposite would be a better story. The picks table is only ever inserted into, and the bets table is updated once after a card to fill in the closing price — that is the settlement step, not a revision of the pick. Neither is sealed by the database. The frozen copy above is what makes that checkable instead of something you have to take on trust.',
+      verdict: { ok: true, t: 'Stated, not glossed over' },
+    },
+    {
+      claim: 'Live and simulated rows are never added together',
+      backs: 'Every total on this page runs through <code>proof-gates.js</code>, which throws rather than sum a mixed list. Covered by <code>tests/proof-gates.test.js</code>.',
+      verdict: { ok: !mixed, t: mixed ? 'A mixed set reached a total — this page is wrong, tell us' : 'No mixed total reached the screen' },
+    },
+    {
+      claim: 'The rule for publishing the price test was set in advance',
+      backs: 'Floor of ' + clvGate.need + ' ' + clvGate.unit + ', recorded at <code>proof-gates.js → GATES.clv</code> with the source it came from, and pinned by a test that fails if the number moves.',
+      verdict: { ok: true, t: 'Currently at ' + clvGate.have + ' — gate shut, no figure shown' },
+    },
+    {
+      claim: 'The engine build behind each pick is on the row',
+      backs: 'Shown per row in the archive. The engine changed during the live record; rolling it into one label would hide that.',
+      verdict: { ok: true, t: Array.from(new Set(LIVE_PICKS.map(r => r.model_version).filter(Boolean))).sort().join(', ') || '—' },
+    },
+    {
+      claim: 'Nothing on this page reruns or reinterprets the model',
+      backs: 'This page only selects from the graded views and renders what is there. Model logic lives in the engine and the frozen research files, which this branch does not touch.',
+      verdict: { ok: true, t: 'Read-only' },
+    },
+  ];
+
+  $('auditBody').innerHTML = rows.map(r =>
+    `<tr><td data-h="The claim">${esc(r.claim)}</td><td data-h="What backs it">${r.backs}</td>` +
+    `<td data-h="Verdict"><span class="verdict ${r.verdict.ok ? 'ok' : 'bad'}">${esc(r.verdict.t)}</span></td></tr>`
+  ).join('');
+}
+
+function renderLegend() {
+  const order = [P.STATUS.LIVE, P.STATUS.REPLAY, P.STATUS.PROVISIONAL, P.STATUS.COLLECTING, P.STATUS.APPROVED];
+  $('legendGrid').innerHTML = order.map(s => {
+    const c = P.statusCopy(s);
+    return `<div class="li">${chip(s)}<div class="t">${esc(c.blurb)}</div></div>`;
+  }).join('');
+}
+
+boot();
+</script>
+</body>
+</html>
