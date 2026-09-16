@@ -2,7 +2,7 @@
 -- PROPOSED MIGRATION — NOT APPLIED
 --
 -- Event flow: the running order of a card, when each bout ended, and the close
--- reference CLV-001 derives from them. Implements Amendments 3, 4 and 4.1.
+-- reference CLV-001 derives from them. Implements Amendments 3, 4, 4.1 and 4.2.
 --
 -- STATUS: draft. Apply AFTER proposed_2026-09-16_fight_odds_capture.sql and
 -- BEFORE proposed_2026-09-16_clv001_columns.sql.
@@ -41,12 +41,13 @@
 -- fight_start_estimates: observations with a source, never a computed guess
 -- overwriting an observation.
 --
--- THE TRIGGER IS NOT THE CLOSE. Recording a bout's completion helps identify
--- event flow and sharpens which fight the capture is for. It does not define
--- that fight's closing price. The close is the last valid pre-live quote for the
--- upcoming fight, and any quote at or after that fight started is excluded.
--- v_clv_close_reference below supplies the cutoff; the exclusion is enforced in
--- cfl_engine/clv/scoring.py.
+-- THE TRIGGER IS NOT THE CLOSE, and Amendment 4.2 makes the schema say so
+-- rather than only the prose. A bout's completion OPENS the next fight's window
+-- and triggers aggressive capture; it is carried in window_opens_at. The CUTOFF
+-- is reference_at, and only an instant marking THIS fight's start may fill it.
+-- Scoring against an opener would select a price quoted while the PREVIOUS bout
+-- was still being fought. The exclusion of at-or-after-start quotes is enforced
+-- in cfl_engine/clv/scoring.py.
 -- ============================================================================
 
 begin;
@@ -98,8 +99,11 @@ create table if not exists public.fight_bout_completions (
 );
 
 comment on table public.fight_bout_completions is
-  'Append-only record of when a bout ended. Feeds the NEXT fight''s close '
-  'reference, and helps identify event flow for the capture window.';
+  'Append-only record of when a bout ended. OPENS the next fight''s pre-fight '
+  'window and triggers aggressive capture. It is never that fight''s close '
+  'reference - an opener is a lower bound on the next start, and scoring against '
+  'it would select a price quoted while THIS bout was still being fought '
+  '(Amendment 4.2).';
 
 comment on column public.fight_bout_completions.is_exact is
   'TRUE only for an observed completion instant. FALSE for an upper bound - '
@@ -226,12 +230,32 @@ revoke all on public.odds_api_usage from anon, authenticated;
 -- ---------------------------------------------------------------------------
 -- 4. The close reference — Amendments 3 and 4, in one view
 -- ---------------------------------------------------------------------------
---   1. bell_at                   an actual confirmed bell. Audit-grade.
---   2. previous_bout_completion  the bout before this one ended (is_exact only).
---   3. scheduled_first_bout      the card's scheduled start - BOUT 1 ONLY.
+-- A pre-fight window has two ends and only one of them is the close:
+--
+--   * it OPENS when the previous bout finishes. From that instant the market is
+--     pricing the next fight in earnest, and that is when capture goes
+--     aggressive. An opener is a LOWER bound on this fight's start.
+--   * it CLOSES when THIS fight starts. That is the cutoff.
+--
+-- reference_at is the CUTOFF only:
+--   1. bell_at              an actual confirmed bell for this fight. Audit-grade.
+--   2. scheduled_first_bout the card's scheduled start - BOUT 1 ONLY, where the
+--                           card's start IS this fight's start.
 --   else NULL, and the fight is unscored.
 --
--- AMENDMENT 4.1 withdrew a fourth tier. Amendment 4 had admitted the card's
+-- AMENDMENT 4.2 removed previous_bout_completion from this list. Using an opener
+-- as a cutoff inverts the rule: if bout 4 ends at 9:30 and bout 5 walks out at
+-- 9:38, taking 9:30 as bout 5's cutoff selects the last quote before 9:30 - a
+-- price quoted while bout 4 was still being fought - and discards every quote
+-- from the eight minutes that actually priced bout 5. It would also make the
+-- 5-minute capture self-defeating: the job would collect precisely the snapshots
+-- the scorer then threw away.
+--
+-- window_opens_at carries the opener instead, so the snapshots taken inside the
+-- window are identifiable and become scorable the moment a confirmed bell for
+-- this fight arrives - retrospectively, on cards already captured.
+--
+-- AMENDMENT 4.1 separately withdrew a fourth tier. Amendment 4 had admitted the card's
 -- scheduled start as a LOWER BOUND for every fight on the card, reasoning that a
 -- fight cannot begin before its card does. The reasoning is sound; the
 -- conclusion overreached. Such a quote is safely pre-fight but not LATE - on the
@@ -290,23 +314,33 @@ select f.id                                   as fight_id,
        f.event_id,
        o.bout_order,
        (o.bout_order = 1)                     as is_first_bout,
-       -- Amendment 4.1: the card's scheduled start is a reference for the FIRST
-       -- bout only. For a later bout it is hours early, and an hours-early
-       -- pre-card price is not a late pre-fight proxy.
-       coalesce(f.bell_at, pd.prev_completed_at,
+       -- THE CUTOFF. Only an instant that marks THIS fight's start qualifies.
+       --
+       -- Amendment 4.2: the previous bout's completion is deliberately ABSENT
+       -- here. It opens the window, it does not close it. Amendment 4.1: the
+       -- card's scheduled start is a cutoff for the FIRST bout only, where the
+       -- card's start IS this fight's start.
+       coalesce(f.bell_at,
                 case when o.bout_order = 1 then s.card_start_at end)
                                               as reference_at,
        case
          when f.bell_at is not null            then 'bell_at'
-         when pd.prev_completed_at is not null then 'previous_bout_completion'
          when o.bout_order = 1
           and s.card_start_at is not null      then 'scheduled_first_bout'
-         -- Recognised, never scored. A fight here HAS a verifiably pre-fight
-         -- price; it is just not a late one. Reported so the dry run can tell
-         -- "only a pre-card price" apart from "no price at all".
+         -- Below here: reported, never scored. Both are window OPENERS - lower
+         -- bounds on this fight's start - and the report distinguishes them
+         -- because they are different distances from a scorable state.
+         when pd.prev_completed_at is not null then 'previous_bout_completion'
          when s.card_start_at is not null      then 'card_scheduled_start'
          else null
        end                                    as reference_basis,
+       -- WHEN THE WINDOW OPENED. The capture trigger, and the lower end of the
+       -- range a future bell time will select from. Stored so that when a
+       -- confirmed bell arrives, the already-captured 5-minute snapshots between
+       -- this instant and that bell become scorable retrospectively.
+       coalesce(pd.prev_completed_at,
+                case when o.bout_order = 1 then s.card_start_at end)
+                                              as window_opens_at,
        -- No scoring basis bounds rather than names a start any more, so this is
        -- FALSE for everything scorable. Retained so re-admitting a bounded tier
        -- is a deliberate act rather than a quiet widening.
@@ -320,21 +354,29 @@ left join prev_done pd on pd.fight_id = f.id
 left join sched s      on s.event_id = f.event_id;
 
 comment on view public.v_clv_close_reference is
-  'CLV-001 Amendments 3 and 4. Per fight: the instant used as the pre-fight '
-  'cutoff, by the best available account - actual bell, else the previous bout''s '
-  'exact completion, else (bout 1) the card''s scheduled start, else the card''s '
-  'scheduled start as a LOWER BOUND on any fight''s start. '
-  'reference_is_lower_bound says which, and a lower-bound row must never be '
-  'described as a closing line - it is the late pre-fight price proxy. '
-  'Separate from DUR-001''s v_fight_start_best on purpose: that view is defined '
-  'in a frozen file and serves a running experiment. actual_bell_at is carried '
-  'through as the audit field and is never synthesised.';
+  'CLV-001 Amendments 3, 4, 4.1 and 4.2. reference_at is the pre-fight CUTOFF '
+  'and is filled only by an instant marking THIS fight''s start: an actual bell, '
+  'or (bout 1 only) the card''s scheduled start. window_opens_at carries the '
+  'other end - the previous bout''s completion - which triggers aggressive '
+  'capture and is never a cutoff. reference_basis reports window openers too, so '
+  'a fight that is one confirmed bell away from being scorable is '
+  'distinguishable from one with nothing. Separate from DUR-001''s '
+  'v_fight_start_best on purpose: that view is defined in a frozen file and '
+  'serves a running experiment. actual_bell_at is the audit field and is never '
+  'synthesised.';
 
 comment on column public.v_clv_close_reference.reference_is_lower_bound is
-  'TRUE when reference_at bounds the fight''s start rather than naming it. The '
-  'quote is verifiably pre-fight either way; only the LEAD TIME is uncertain, '
-  'and under TRUE it is a lower bound - the real gap to the bell may be hours '
-  'larger on a late-card fight.';
+  'Always FALSE. Every basis that can fill reference_at NAMES this fight''s '
+  'start, so a scored row''s lead time is exact. Retained so that re-admitting a '
+  'bounded basis is a deliberate act against a column that already says it is '
+  'not one.';
+
+comment on column public.v_clv_close_reference.window_opens_at is
+  'When the pre-fight window OPENED - the previous bout''s exact completion, or '
+  'the card''s scheduled start for bout 1. The capture trigger, and the lower '
+  'end of the range a future confirmed bell will select from: the 5-minute '
+  'snapshots already stored between this instant and that bell become scorable '
+  'retrospectively. Never a cutoff (Amendment 4.2).';
 
 -- Note the LEFT JOIN on running order, changed by Amendment 4. Under Amendment 3
 -- a fight with no order row could not appear at all, because tiers 1-3 all need
@@ -352,11 +394,11 @@ commit;
 --     running order reconstructed today is not what we observed on the night,
 --     and a completion time we never recorded cannot be recovered by inference.
 --   * v_clv_close_reference resolves a SCORING basis only for fights with a
---     confirmed bell, an exact previous-bout completion, or bout-1 status on a
---     card whose provider commence time is on file. Every other fight reports
---     reference_basis 'card_scheduled_start' with a NULL reference_at and is
---     unscored with reason only_pre_card_price - it has a verifiably pre-fight
---     price that is simply not late enough to be a proxy.
+--     confirmed bell, or bout-1 status on a card whose provider commence time is
+--     on file. Every other fight gets a NULL reference_at and is unscored:
+--     'previous_bout_completion' -> fight_start_unverified (the window opened and
+--     the snapshots exist; nothing says where it closed), 'card_scheduled_start'
+--     -> only_pre_card_price (safely pre-fight, hours early).
 --   * the publication gate is untouched: 0 of 100 scored observations, 0 of 20
 --     distinct events, fail-closed.
 --

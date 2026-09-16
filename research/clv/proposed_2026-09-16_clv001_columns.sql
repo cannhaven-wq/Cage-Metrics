@@ -1,7 +1,7 @@
 -- ============================================================================
 -- PROPOSED MIGRATION — NOT APPLIED
 --
--- CLV-001 v1.0.1 storage for model_edges.
+-- CLV-001 storage for model_edges.
 -- See research/clv/CLV_MEASUREMENT_PROTOCOL.md (frozen 2026-09-16T10:30:00Z).
 --
 -- STATUS: draft. Reed approves application, and only after the dry-run report
@@ -53,7 +53,7 @@ alter table public.model_edges
 alter table public.model_edges
   add column if not exists closing_book_count integer;
 
--- Exact protocol version that produced the row, e.g. 'CLV-001@1.0.1'. A row
+-- Exact protocol version that produced the row, e.g. 'CLV-001@1.0.6'. A row
 -- whose version does not match the currently frozen protocol is not comparable
 -- with one that does, and the writer refuses to mix them.
 alter table public.model_edges
@@ -77,10 +77,19 @@ alter table public.model_edges
 -- once in a document.
 -- ---------------------------------------------------------------------------
 
--- Which tier established that the quote was pre-fight: 'bell_at',
--- 'previous_bout_completion', 'scheduled_first_bout' or 'card_scheduled_start'.
+-- Which instant CLOSED the pre-fight window for this fight: 'bell_at', or
+-- 'scheduled_first_bout' for the card's opening bout. Only instants that mark
+-- THIS fight's start qualify; see the vocabulary constraint below for what is
+-- deliberately absent and why.
 alter table public.model_edges
   add column if not exists clv_close_basis text;
+
+-- When the pre-fight window OPENED — the previous bout's exact completion, or
+-- the card's scheduled start for bout 1. Recorded beside the cutoff so the range
+-- a proxy was chosen from is legible on the row, and so a future confirmed bell
+-- can be checked against the window it claims to close.
+alter table public.model_edges
+  add column if not exists clv_window_opened_at timestamptz;
 
 -- Minutes from the proxy quote to the reference instant. Under a five-minute
 -- capture cadence this should normally read in single digits; a large value is
@@ -88,10 +97,11 @@ alter table public.model_edges
 alter table public.model_edges
   add column if not exists clv_lead_time_minutes numeric;
 
--- TRUE when the lead time is a LOWER BOUND rather than the real gap to the bell
--- — i.e. tier 4, where the reference is the card's scheduled start and the fight
--- may have walked out hours later. NULL means the basis is unknown; it is never
--- FALSE by default, because FALSE asserts the lead time is exact.
+-- TRUE would mean the lead time only BOUNDS the gap to the bell rather than
+-- measuring it. After Amendments 4.1 and 4.2 no scoring basis is bounded, so on
+-- a scored row this is always FALSE and a constraint below enforces it. NULL
+-- means the basis is unknown — never FALSE by default, because FALSE asserts the
+-- lead time is exact.
 alter table public.model_edges
   add column if not exists clv_lead_time_is_lower_bound boolean;
 
@@ -126,7 +136,7 @@ alter table public.model_edges
 --              "fair_bet":0.5155,"k":0.9023,
 --              "quote_ids":[123,124]}, ...],
 --    "median_fair_bet":0.5155,"n_books":3,
---    "devig":"power","protocol":"CLV-001@1.0.1"}
+--    "devig":"power","protocol":"CLV-001@<version>"}
 alter table public.model_edges
   add column if not exists clv_closing_consensus jsonb;
 
@@ -174,14 +184,21 @@ alter table public.model_edges
   ) not valid;
 
 -- The close basis vocabulary for a SCORED row, matching CLOSE_REFERENCE_BASES
--- in cfl_engine/clv/scoring.py. 'card_scheduled_start' is deliberately absent:
--- Amendment 4.1 recognises it as a state a fight can be in and refuses it as a
--- basis to score on, so it can never reach a scored row.
+-- in cfl_engine/clv/scoring.py. Two entries, and the absences are the point:
+--
+--   'card_scheduled_start'       withdrawn by Amendment 4.1 - safely pre-fight
+--                                but hours early on a late bout.
+--   'previous_bout_completion'   withdrawn by Amendment 4.2 - it OPENS the
+--                                window rather than closing it, and scoring
+--                                against it would select a price quoted while
+--                                the PREVIOUS bout was still being fought.
+--
+-- Both remain reportable as a reference_basis in v_clv_close_reference; neither
+-- can ever reach a scored row.
 alter table public.model_edges
   add constraint model_edges_clv_close_basis_known
   check (clv_close_basis is null or clv_close_basis in (
     'bell_at',
-    'previous_bout_completion',
     'scheduled_first_bout'
   )) not valid;
 
@@ -197,6 +214,13 @@ alter table public.model_edges
 alter table public.model_edges
   add constraint model_edges_clv_lead_time_positive
   check (clv_lead_time_minutes is null or clv_lead_time_minutes > 0) not valid;
+
+-- A window cannot close before it opens. If these ever invert, an opener has
+-- been used as a cutoff — the exact defect Amendment 4.2 removed.
+alter table public.model_edges
+  add constraint model_edges_clv_window_opens_before_it_closes
+  check (clv_window_opened_at is null or clv_proxy_quoted_at is null
+         or clv_window_opened_at <= clv_proxy_quoted_at) not valid;
 
 -- The frozen minimum book count (Q-02). A scored row below it is impossible.
 alter table public.model_edges
@@ -235,7 +259,13 @@ alter table public.model_edges
     -- hours early. Safely pre-fight is not LATE. Distinct from
     -- no_scheduled_start, which means we hold nothing at all — two different
     -- problems with two different fixes.
-    'only_pre_card_price'
+    'only_pre_card_price',
+    -- Amendment 4.2: the previous bout's completion is on file, so capture
+    -- opened at the right moment and the snapshots exist — but nothing verifies
+    -- when THIS fight started, so the window has no end. The opener is not a
+    -- cutoff. This is the state closest to scorable: one confirmed bell makes
+    -- the already-stored snapshots scorable retrospectively.
+    'fight_start_unverified'
   )) not valid;
 
 -- This list and UNSCORED_REASONS in cfl_engine/clv/scoring.py must stay

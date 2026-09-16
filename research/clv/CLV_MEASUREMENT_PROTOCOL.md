@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.5` |
+| version | `1.0.6` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4.1 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4.2 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,6 +336,69 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 4.2, v1.0.6, 2026-09-16 — an opener is not a cutoff
+>
+> **Approved by Reed Cannon (L3).** Removes `previous_bout_completion` from the
+> scoring references. Everything else stands.
+>
+> ### The bug
+>
+> A pre-fight window has two ends and only one of them is the close.
+>
+> - It **OPENS** when the previous bout finishes. From that instant the market is
+>   pricing the next fight in earnest, and that is when capture goes aggressive.
+> - It **CLOSES** when *this* fight starts. That is the cutoff, and the close is
+>   the last eligible quote strictly before it.
+>
+> Amendment 3 used the opener as the cutoff. **If bout 4 ends at 9:30 and bout 5
+> walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote before
+> 9:30 — a price quoted while bout 4 was still being fought — and discards every
+> quote from the eight minutes that actually priced bout 5.**
+>
+> It also made the five-minute capture self-defeating: the job would have
+> collected exactly the snapshots the scorer then threw away. The documentation
+> already said *the trigger is not the close*; the rule did not.
+>
+> ### The rule
+>
+> | | |
+> |---|---|
+> | scoring cutoffs | **`bell_at`** (any bout) and **`scheduled_first_bout`** (bout 1 only, where the card's start *is* this fight's start) |
+> | window openers | **`previous_bout_completion`** and **`card_scheduled_start`** — capture triggers, reported, never cutoffs |
+>
+> An opener is a **lower** bound on this fight's start. It is safe to capture
+> from and can never be scored against. Only an instant that marks *this* fight's
+> start may close its window.
+>
+> `window_opens_at` is stored beside the cutoff, so the snapshots taken inside
+> the window are identifiable and become scorable **retrospectively** the moment
+> a confirmed bell for that fight arrives — including on cards already captured.
+>
+> ### The three unscorable states are told apart
+>
+> | reason | meaning | distance from scorable |
+> |---|---|---|
+> | `fight_start_unverified` | the window opened, the snapshots exist, nothing says where it closed | **one confirmed bell** |
+> | `only_pre_card_price` | only the card's scheduled start is on file; hours early on a late bout | needs order *and* a bell |
+> | `no_scheduled_start` | nothing at all | furthest |
+>
+> ### What is not done
+>
+> **No end-of-window marker is manufactured to raise coverage.** Until there is a
+> defensible way to identify when a fight actually started, bouts 2..N stay
+> unscored. The snapshots keep accumulating; the scoring rule stays strict.
+>
+> ### Spending
+>
+> Tightened in the same pass: the approved free allowance is a hard constant in
+> code. An environment variable may **lower** the cap and never raise it, may
+> **raise** the reserve and never lower it, and a provider quota reading above
+> the ceiling is clamped and flagged rather than spent. A larger quota upstream
+> is not authorisation for this job to spend; any increase above the approved
+> free-credit ceiling is **L3**.
+>
+> ---
+>
 > ## AMENDMENT 4.1, v1.0.5, 2026-09-16 — a pre-card price is not a late one
 >
 > **Approved by Reed Cannon (L3).** Withdraws tier 4 from scoring. Everything

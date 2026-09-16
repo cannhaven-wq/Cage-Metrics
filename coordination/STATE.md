@@ -5,15 +5,14 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.5** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–4.1 same day). The benchmark is the **late pre-fight price proxy**,
-never "the closing line". **Amendment 4.1 withdrew tier 4**: a quote taken before
-the card began is safely pre-fight but not *late*, and scoring it would make the
-benchmark mean five minutes before the bell on bout one and four hours before it
-on bout twelve. Capture stays at **5 minutes through a live card under a hard
-credit ceiling** and every snapshot is stored. **Three migrations written and
-none applied. Publication is still shut** — 0 of 100 observations, 0 of 20
-events.
+**Live baton:** CLV-001 is **FROZEN at v1.0.6** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–4.2 same day). The benchmark is the **late pre-fight price proxy**,
+never "the closing line". **Amendment 4.2 fixed a methodological bug**: the
+previous bout's completion OPENS a fight's window and never closes it, so it is
+no longer a scoring cutoff. Capture stays at **5 minutes through a live card
+under a hard credit ceiling** — now hard-coded so no environment variable or
+provider quota can widen it. **Three migrations written and none applied.
+Publication is still shut** — 0 of 100 observations, 0 of 20 events.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -60,7 +59,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.5**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.6**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -95,6 +94,8 @@ One card of waiting, not a build.
 | trigger ≠ close, stated so it cannot be collapsed | **frozen**, Amendment 3 (b) |
 | the late pre-fight price proxy + lead-time reporting | **frozen**, Amendment 4 |
 | a pre-card price is recognised, never scored | **frozen**, Amendment 4.1 |
+| an opener is never a cutoff | **frozen**, Amendment 4.2 |
+| the free allowance is hard-coded, env cannot widen it | **frozen**, Amendment 4.2 |
 | 5-minute live capture under a hard credit governor | **written**, verified offline |
 | the three ledgers are append-only, trigger-enforced | **written, UNAPPLIED** |
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
@@ -112,9 +113,22 @@ its lead time recorded on every row.
 
 **Amendment 4.1 in one line:** and "pre-card" does not count as "late" — a quote
 before the card began is safely pre-fight and hours early on a late bout, so it
-is recognised (`only_pre_card_price`) and never scored. Scoring coverage stays at
-~1 observation per card until a running order and exact bout completions exist;
-**capture coverage is unaffected and every snapshot is kept.**
+is recognised (`only_pre_card_price`) and never scored.
+
+**Amendment 4.2 in one line:** a window has two ends and only one is the close —
+the previous bout finishing *opens* the next fight's window, so using it as the
+cutoff would pick a price quoted while the previous bout was still being fought,
+and would make the 5-minute capture self-defeating.
+
+**Scoring cutoffs** are now `bell_at` (any bout) and `scheduled_first_bout`
+(bout 1 only). **Window openers** — `previous_bout_completion` and
+`card_scheduled_start` — are capture triggers, reported, never cutoffs. Three
+unscorable states are told apart: `fight_start_unverified` (one confirmed bell
+away), `only_pre_card_price`, `no_scheduled_start`.
+
+**Capture coverage is unaffected and every snapshot is kept.** `window_opens_at`
+is stored so the snapshots inside a window become scorable **retrospectively**
+once a confirmed bell arrives — including on cards already captured.
 
 **What the proxy may be called:** the *late pre-fight price proxy* (long form,
 *scheduled/late closing-price proxy*). **Never "the closing line."** Every row

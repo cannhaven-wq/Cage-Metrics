@@ -42,7 +42,7 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.5"
+PROTOCOL_VERSION = "1.0.6"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
 # ---------------------------------------------------------------------------
@@ -61,36 +61,54 @@ BENCHMARK_NAME = "late pre-fight price proxy"
 BENCHMARK_NAME_LONG = "scheduled/late closing-price proxy"
 
 # ---------------------------------------------------------------------------
-# The close reference — Amendment 3, approved by Reed Cannon 2026-09-16
+# The close reference — Amendments 3, 4.1 and 4.2
 # ---------------------------------------------------------------------------
 # A UFC card is one scheduled start and then a queue. Only the FIRST bout begins
 # at a time anybody published; every later bout begins when the one before it
-# ends. So a single card-level "commence time" applied to all thirteen fights is
-# wrong for twelve of them — and wrong in the expensive direction, because it
-# would mark every quote after the card's first bell as in-play and throw away
-# exactly the quotes that matter for the later fights.
+# ends (Amendment 3). A single card-level "commence time" applied to all thirteen
+# fights is therefore wrong for twelve of them.
 #
-# THE TRIGGER IS NOT THE CLOSE. This is the distinction the amendment turns on
-# and it is easy to collapse by accident:
+# OPENERS AND CUTOFFS — the distinction Amendment 4.2 turns on
+# ---------------------------------------------------------------------------
+# The pre-fight window for a fight has two ends, and only one of them is the
+# close.
 #
-#   * the previous bout ending is a CAPTURE trigger — it helps identify event
-#     flow and sharpens which fight the capture is for. It affects how much data
-#     exists and nothing else. Capture heuristics are not frozen, because they
-#     cannot change what a number means.
-#   * the CLOSE is the last valid pre-live quote for the upcoming fight, and any
-#     quote at or after that fight actually started is excluded. That is a
-#     frozen rule and it is what `closing_pairs` enforces.
+#   * the window OPENS when the previous bout finishes. From that instant the
+#     market is pricing the next fight in earnest, and that is when capture goes
+#     aggressive. An opener is a LOWER bound on this fight's start.
+#   * the window CLOSES when THIS fight starts. That is the cutoff, and the close
+#     is the last eligible quote strictly before it.
 #
-# Getting those the wrong way round would let a quote taken during a fight score
-# as its closing price.
+# Using an opener as a cutoff inverts the whole thing. If bout 4 ends at 9:30 and
+# bout 5 walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote
+# before 9:30 — a price quoted while bout 4 was still being fought — and discards
+# every quote from the eight minutes that actually priced bout 5. It would also
+# make the five-minute capture pointless: the job would collect exactly the
+# snapshots the scorer then threw away.
+#
+# So openers are capture triggers and never references. Only an instant that
+# marks THIS fight's start may be a cutoff.
 CLOSE_REFERENCE_BASES = frozenset({
-    "bell_at",                   # an actual confirmed bell. Best, and audit-grade.
-    "previous_bout_completion",  # the bout before this one ended. Later bouts.
-    "scheduled_first_bout",      # the card's scheduled start — FIRST BOUT ONLY.
+    "bell_at",               # an actual confirmed bell for THIS fight. Audit-grade.
+    "scheduled_first_bout",  # the card's scheduled start — FIRST BOUT ONLY, where
+                             # the card's start IS this fight's start.
 })
 
 # Every scoring basis NAMES the fight's start, so lead time against it is exact.
 EXACT_REFERENCE_BASES = frozenset(CLOSE_REFERENCE_BASES)
+
+# Instants that OPEN the window. Both are lower bounds on this fight's start, so
+# both are safe to capture from and neither may be scored against.
+#
+#   previous_bout_completion — a tight lower bound, minutes before the bell. This
+#     is the one that matters operationally: it is the capture trigger, and the
+#     snapshots taken after it are the ones a real bell time would let us score.
+#   card_scheduled_start — a loose lower bound, hours before a late bout's bell.
+#     Withdrawn from scoring by Amendment 4.1 for being early rather than wrong.
+WINDOW_OPENER_BASES = frozenset({
+    "previous_bout_completion",
+    "card_scheduled_start",
+})
 
 # ---------------------------------------------------------------------------
 # Withdrawn by Amendment 4.1 — a pre-card price is not a late pre-fight proxy
@@ -115,7 +133,7 @@ EXACT_REFERENCE_BASES = frozenset(CLOSE_REFERENCE_BASES)
 # precisely so that when a fight's start can be verified, a genuinely late
 # snapshot is already on file to choose — rather than a pre-card one being the
 # only thing available.
-NON_SCORING_REFERENCE_BASES = frozenset({"card_scheduled_start"})
+NON_SCORING_REFERENCE_BASES = WINDOW_OPENER_BASES
 
 # Nothing currently scored rests on a bounded start. Kept as a concept, and
 # asserted empty, so re-admitting one is a deliberate act with a failing test
@@ -191,6 +209,7 @@ UNSCORED_REASONS = (
     "insufficient_books",            # fewer than MIN_BOOKS survived
     "forecast_not_before_close",     # R-07: no-lookahead violated
     "only_pre_card_price",           # Amendment 4.1: safely pre-fight, not late
+    "fight_start_unverified",        # Amendment 4.2: window opened, end unknown
 )
 
 
@@ -479,18 +498,30 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
         return unscored("one_sided_close", "the fight has no recorded opponent")
 
     if reference_instant is None:
-        if reference_basis in NON_SCORING_REFERENCE_BASES:
+        if reference_basis == "previous_bout_completion":
+            # The best case short of a bell, and still not scorable. We know when
+            # the window OPENED and have dense snapshots inside it; what is
+            # missing is where it CLOSED. Scoring against the opener would pick a
+            # quote from while the previous bout was still being fought — see the
+            # comment on WINDOW_OPENER_BASES.
+            return unscored(
+                "fight_start_unverified",
+                "the previous bout's completion is on file, so capture opened at "
+                "the right moment and the snapshots exist — but nothing verifies "
+                "when THIS fight started, so there is no end to the window. The "
+                "opener is not a cutoff (Amendment 4.2). A confirmed bell would "
+                "make these snapshots scorable retrospectively.")
+        if reference_basis in WINDOW_OPENER_BASES:
             return unscored(
                 "only_pre_card_price",
-                "the only verifiable cutoff for this fight is the card's "
-                "scheduled start, which on a later bout is hours before the "
-                "bell. Safely pre-fight, but not a LATE pre-fight price, so it "
-                "is not scored (Amendment 4.1). The snapshots are kept.")
+                "the only instant on file for this fight is the card's scheduled "
+                "start, which on a later bout is hours before the bell. Safely "
+                "pre-fight, but not a LATE pre-fight price, so it is not scored "
+                "(Amendment 4.1). The snapshots are kept.")
         return unscored("no_scheduled_start",
                         "no admissible close reference for this fight: needs an "
-                        "actual bell, the previous bout's completion, or — for "
-                        "the card's first bout only — its scheduled start "
-                        "(Amendment 3)")
+                        "actual bell, or — for the card's first bout only — the "
+                        "card's scheduled start (Amendments 3, 4.1, 4.2)")
 
     # R-07, no-lookahead. Strict, in UTC.
     published_at = edge.get("published_at")

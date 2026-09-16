@@ -11,6 +11,101 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.6: an opener is not a cutoff, and the allowance is hard-coded
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+**No migration applied.** All three remain proposed and unapplied.
+
+### The bug, and you were right about it
+
+A pre-fight window has two ends and only one of them is the close. It **opens**
+when the previous bout finishes — that is when the market starts pricing the next
+fight in earnest, and when capture goes aggressive. It **closes** when *this*
+fight starts.
+
+Amendment 3 used the opener as the cutoff. Bout 4 ends at 9:30, bout 5 walks out
+at 9:38 — taking 9:30 as bout 5's cutoff selects the last quote **before** 9:30, a
+price quoted while bout 4 was still being fought, and throws away the eight
+minutes that actually priced bout 5.
+
+Worse, it made the five-minute capture self-defeating: the job would have
+collected precisely the snapshots the scorer then discarded. The docs said "the
+trigger is not the close"; the rule did not.
+
+### What changed
+
+| | |
+|---|---|
+| **scoring cutoffs** | `bell_at` (any bout), `scheduled_first_bout` (bout 1 only, where the card's start *is* this fight's start) |
+| **window openers** | `previous_bout_completion`, `card_scheduled_start` — capture triggers, reported, never cutoffs |
+
+`previous_bout_completion` is out of `CLOSE_REFERENCE_BASES` and out of
+`v_clv_close_reference.reference_at`. A new `window_opens_at` column carries it
+instead, so the snapshots taken inside the window stay identifiable and become
+scorable **retrospectively** the moment a confirmed bell arrives — including on
+cards already captured. The migration also constrains
+`clv_window_opened_at <= clv_proxy_quoted_at`, so if a window ever closes before
+it opens, that is this defect coming back and the database refuses it.
+
+### The three unscorable states are now told apart
+
+| reason | meaning | distance from scorable |
+|---|---|---|
+| `fight_start_unverified` | window opened, snapshots exist, nothing says where it closed | **one confirmed bell** |
+| `only_pre_card_price` | only the card's scheduled start on file; hours early on a late bout | needs order *and* a bell |
+| `no_scheduled_start` | nothing at all | furthest |
+
+That distinction is the operationally useful one: it tells you exactly how many
+observations a bell-time source would unlock, rather than lumping everything
+under "no data".
+
+**And nothing was manufactured to compensate.** Bouts 2..N stay unscored. Per
+your instruction, no end-of-window marker was invented to raise coverage.
+
+### The money safeguard
+
+`ODDS_MONTHLY_CAP` can no longer widen anything. The approved allowance is a hard
+constant:
+
+- an environment variable may **lower** the cap, never raise it;
+- it may **raise** the reserve, never lower it — lowering a reserve frees credits
+  the governor was told to hold back, which is the same decision as raising the
+  cap wearing a different hat;
+- a **provider quota above the ceiling** is clamped and flagged, not spent. If
+  someone attaches a paid plan upstream, the job treats the balance as 500 and
+  says so. A larger quota is not authorisation.
+
+Seven tests cover it, including one end-to-end: an inflated quota must not buy a
+finer cadence than the real allowance would.
+
+### Still true
+
+Publication untouched and fail-closed — 0 of 100 observations, 0 of 20 events.
+No paid tier, no incremental cost, nothing bought or enabled.
+`v_fight_start_best` untouched.
+
+Tests rerun: **108 CLV Python, 94 repo Python, 54 Node. All green.**
+
+## Next action
+
+**Reed:** review. When you're satisfied, apply in order —
+`proposed_2026-09-16_fight_odds_capture.sql`,
+`proposed_2026-09-16_event_flow.sql`, then
+`proposed_2026-09-16_clv001_columns.sql` last.
+
+Sequencing note unchanged: `odds_api_usage` is created by the second migration,
+and until it exists the governor reads the budget as unknown and holds at 30
+minutes. The 5-minute cadence starts when that lands.
+
+The open L3 is now the whole remaining question for scoring coverage: a confirmed
+bell time per fight is what turns `fight_start_unverified` into scored
+observations, and the snapshots to score are already being collected.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.5: tier 4 withdrawn, governor hole closed, ledgers sealed
 
 **From:** Claude
@@ -227,128 +322,6 @@ cadence at 30 minutes. That is safe but it is not what you asked for, so the
 
 `proposed_2026-09-16_clv001_columns.sql` stays last, for after the first card is
 captured.
-
-I have not applied any migration, called The Odds API, written to Supabase, or
-enabled any paid service.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.3: the event-flow rule, and one L3 back to you
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-### What your decision fixed
-
-Amendment 2 (b), frozen an hour earlier, admitted `provider_commence` — the
-card-level commence time — as the close reference for **every** fight on the
-card. Your rule makes that right for one fight in thirteen and wrong for the
-rest, which is what it always was.
-
-Wrong in the expensive direction, too. Keyed to the card's commence time,
-`is_live` would have marked **every quote taken after the first bell as in-play
-for all thirteen fights** — discarding exactly the quotes the later fights close
-on. Caught before a single such quote exists, because none of this is applied.
-
-### Amendment 3, as implemented
-
-**The close reference, per fight:**
-
-| tier | basis | applies to |
-|---|---|---|
-| 1 | actual confirmed bell | any bout |
-| 2 | the previous bout's **exact** completion | any bout after the first |
-| 3 | the card's scheduled start | **the first bout only** |
-| — | anything else | nothing — the fight is unscored |
-
-A fight whose running order is unknown has no admissible reference at all:
-without an order there is no "previous bout", and no fight can be identified as
-the card's first. `is_first_bout` is `None` in that state and `None` is not a
-yes — there is a test named for it.
-
-**The trigger is not the close.** Your distinction, encoded in three places so it
-cannot be collapsed by accident: the previous bout ending starts the 30-minute
-capture window and governs only how much data exists; the close is the last valid
-pre-live quote for the upcoming fight, and any quote at or after that fight
-started is excluded, strictly. Four tests under `TestTriggerIsNotTheClose`,
-including one that proves a late-card fight's quotes — which only exist *because*
-the trigger fired — still score.
-
-**The audit field stays separate.** `fights.bell_at` remains the record of when a
-fight actually began, reserved for a confirmed bell and never written by the odds
-job. `fight_odds.bout_started_at` is a different thing: the capture-time *belief*,
-stamped per quote so the close a quote was judged against stays recoverable if a
-better account arrives later. A correction to one never rewrites the other.
-
-**Capture.** `odds.yml` wakes every 15 minutes; a card is "in flow" from 3h
-before its scheduled start until every bout has an exact completion or 7h passes,
-and capture runs every 30 minutes throughout. Previously the window was anchored
-to the single published commence time, which would have given bout 1 a fresh
-quote and left the other twelve closing on a line hours stale.
-
-**No spend increase.** Still ~33 credits on a card day, ~286/month, inside the
-500 free tier — the test asserts the ceiling. So nothing to escalate for the
-cadence itself.
-
-`v_fight_start_best` is untouched. It lives in `dur001_migration.sql`, a frozen
-file serving a running experiment, so CLV-001 got its own `v_clv_close_reference`
-rather than a `create or replace` on DUR-001's view.
-
-### The L3 back to you
-
-[`L3_ESCALATION_2026-09-16_bout_completions.md`](../research/clv/L3_ESCALATION_2026-09-16_bout_completions.md).
-**Nothing has been bought, priced, signed up for or enabled.**
-
-Tier 2 needs two things the database does not have:
-
-- **Running order** — `fights` has no order column, only `is_main_event` (the
-  last bout). Sorting by id would be an inference dressed as a record, and it
-  breaks exactly when a card is reshuffled. **Free to fix**: ufcstats lists a
-  card in order and the event scraper can write `fight_bout_order` on the pass it
-  already makes. No L3 needed.
-- **Exact bout completions** — nothing records when a bout ended, and the result
-  scraper cannot stand in. It gives *completion plus unknown lag*: an upper
-  bound, and used as the next bout's start it would admit in-play prices as that
-  fight's close, invisibly. `is_exact = false` marks such rows and the view
-  ignores them.
-
-Options are A do nothing (bout 1 only), B manual entry during the card, C a paid
-live feed, D derive it from market disappearance. **I did not implement D**,
-though it is free and uses data the new capture already produces — "the market
-disappeared" is not "the fight started", and adding a new measurement definition
-to a protocol frozen this morning, to relieve a coverage problem I reported this
-afternoon, is the move the freeze exists to stop. It is a fresh L3 if you want it.
-
-**Recommendation: take the free half now, decide the paid half later.** Populate
-`fight_bout_order`, let a few cards of real coverage accumulate, then decide with
-a real count in front of you rather than my estimate.
-
-### The number that matters most
-
-Until exact completions exist, **only the first bout of each card is scorable** —
-about one observation per event, against a floor of 100 across 20 distinct
-events. That is roughly 100 cards. It is the single biggest fact about the CLV
-timeline and it is now recorded in the protocol, the migration and the preflight
-rather than living in my head.
-
-### Publication
-
-Untouched and fail-closed. 0 of 100 observations, 0 of 20 events, still blocked
-on `sample_floor_met` and `interval_excludes_zero`. Nothing in Amendment 3 moves
-it — it changes how fast observations accumulate, never whether one may be shown.
-
-Tests: 93 CLV Python, 94 repo Python, 36 Node. All green.
-
-## Next action
-
-**Reed:** two things, independent of each other.
-
-1. **Answer the L3** on bout completions — or say "A for now", which is a
-   complete answer and needs nothing built.
-2. **Apply `proposed_2026-09-16_fight_odds_capture.sql`**, then
-   `proposed_2026-09-16_event_flow.sql`. Both additive-only, both unapplied.
-   Every card that passes before they land is permanently unscorable.
 
 I have not applied any migration, called The Odds API, written to Supabase, or
 enabled any paid service.

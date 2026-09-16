@@ -157,7 +157,33 @@ const NEAR_BELL_INTERVAL_MIN = 30;
 //
 // No paid tier, ever, without an L3. The governor exists so that stays true
 // without anyone having to watch it.
-const MONTHLY_CREDIT_CAP = Number(process.env.ODDS_MONTHLY_CAP || 500);
+// THE APPROVED FREE ALLOWANCE. A hard constant, deliberately not configurable
+// upward.
+//
+// Any spend above this is money, and money is an L3 decision. An automated job
+// must never be able to authorise one — not through an environment variable, and
+// not by noticing that the provider is willing to sell more. Both of those look
+// like "more headroom" to a naive governor and neither is permission.
+//
+// So: env may LOWER the cap (useful for a dry month or extra caution) and can
+// never raise it, and a provider quota reading above the ceiling is clamped to
+// it and flagged rather than spent.
+const FREE_TIER_CREDIT_CAP = 500;
+
+function resolveMonthlyCap(envValue) {
+  const requested = Number(envValue);
+  if (!Number.isFinite(requested) || requested <= 0) return FREE_TIER_CREDIT_CAP;
+  if (requested > FREE_TIER_CREDIT_CAP) {
+    console.warn(`[budget] ODDS_MONTHLY_CAP=${requested} exceeds the approved ` +
+      `free allowance of ${FREE_TIER_CREDIT_CAP} — ignoring it and holding at ` +
+      `${FREE_TIER_CREDIT_CAP}. Raising the ceiling is an L3 decision, not an ` +
+      `environment variable.`);
+    return FREE_TIER_CREDIT_CAP;
+  }
+  return requested;
+}
+
+const MONTHLY_CREDIT_CAP = resolveMonthlyCap(process.env.ODDS_MONTHLY_CAP);
 // Standing reserve: one baseline capture a day for a whole month (~30) plus
 // headroom for retries and manual FORCE runs. Held back before any card is
 // budgeted, so a busy month cannot eat the days between cards.
@@ -166,7 +192,25 @@ const MONTHLY_CREDIT_CAP = Number(process.env.ODDS_MONTHLY_CAP || 500);
 // goes eight credits over the allowance at seven cards; 75 leaves a worst case
 // of +19. The cost of the larger reserve is that a busy month coarsens its
 // cadence sooner — lead time, not correctness.
-const CREDIT_RESERVE = Number(process.env.ODDS_CREDIT_RESERVE || 75);
+const APPROVED_CREDIT_RESERVE = 75;
+
+// Env may RAISE the reserve (spend less) and never lower it. Lowering a reserve
+// is the same act as raising a cap wearing a different hat: it frees credits the
+// governor had been told to hold back.
+function resolveReserve(envValue) {
+  const requested = Number(envValue);
+  if (!Number.isFinite(requested) || requested < 0) return APPROVED_CREDIT_RESERVE;
+  if (requested < APPROVED_CREDIT_RESERVE) {
+    console.warn(`[budget] ODDS_CREDIT_RESERVE=${requested} is below the ` +
+      `approved reserve of ${APPROVED_CREDIT_RESERVE} — ignoring it. Lowering ` +
+      `the reserve frees credits the governor was told to hold back, which is ` +
+      `the same decision as raising the cap.`);
+    return APPROVED_CREDIT_RESERVE;
+  }
+  return requested;
+}
+
+const CREDIT_RESERVE = resolveReserve(process.env.ODDS_CREDIT_RESERVE);
 const CREDIT_HARD_FLOOR = 10;
 const LIVE_CADENCE_LADDER = [5, 10, 15, 30];
 const WAKE_INTERVAL_MIN = 5;              // must match the cron in odds.yml
@@ -368,6 +412,22 @@ function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
 // header. Each run stores it so the NEXT run — a separate Actions invocation
 // with no shared memory — can gate BEFORE calling. An unreadable or empty ledger
 // yields null, which planLiveCadence treats as tight rather than unlimited.
+// A provider quota larger than the approved free allowance means somebody has a
+// paid plan attached — deliberately or by a provider promotion. Either way it is
+// NOT permission for this job to spend more: the extra credits are money, and
+// money is L3. Clamp, say so loudly, and carry on inside the approved ceiling.
+function clampToFreeAllowance(remaining) {
+  if (!Number.isFinite(remaining)) return undefined;
+  if (remaining > MONTHLY_CREDIT_CAP) {
+    console.warn(`[budget] the provider reports ${remaining} credits remaining, ` +
+      `above the approved free allowance of ${MONTHLY_CREDIT_CAP}. Treating the ` +
+      `balance as ${MONTHLY_CREDIT_CAP}. A larger quota is not authorisation to ` +
+      `spend more — raising the ceiling is an L3 decision.`);
+    return MONTHLY_CREDIT_CAP;
+  }
+  return remaining;
+}
+
 async function readCreditBudget(now) {
   const { data, error } = await sb
     .from('odds_api_usage')
@@ -387,7 +447,7 @@ async function readCreditBudget(now) {
   let creditsRemaining;
   if (last && last.observed_at &&
       last.observed_at.slice(0, 7) === now.toISOString().slice(0, 7)) {
-    creditsRemaining = Number(last.requests_remaining);
+    creditsRemaining = clampToFreeAllowance(Number(last.requests_remaining));
   } else if (last) {
     console.log('[budget] last usage reading is from a previous month — the ' +
       'allowance has reset; assuming a full cap until this month\'s first call.');
@@ -1311,6 +1371,8 @@ module.exports = {
   planLiveCadence, minutesRemainingInCard, wantTotals,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
   EVENT_FLOW_MAX_H, MONTHLY_CREDIT_CAP, CREDIT_RESERVE, CREDIT_HARD_FLOOR,
+  FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
+  resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
   normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
 };

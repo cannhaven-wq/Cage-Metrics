@@ -4,10 +4,10 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
+  "protocol_sha256": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
   "benchmark_name": {
     "short": "late pre-fight price proxy",
     "long": "scheduled/late closing-price proxy",
@@ -31,7 +31,8 @@
       "reserve": 75,
       "hard_floor": 10,
       "paid_tier": "never, without an L3",
-      "reserve_note": "75, not 45. Walked across months of 1 to 8 cards, a 45-credit reserve goes 8 credits over at seven cards; 75 leaves a worst case of +19."
+      "reserve_note": "75, not 45. Walked across months of 1 to 8 cards, a 45-credit reserve goes 8 credits over at seven cards; 75 leaves a worst case of +19.",
+      "env_cannot_raise": true
     },
     "measured_basis": {
       "events_per_month_avg": 3.7,
@@ -81,17 +82,12 @@
     "frozen_by": "Amendment 3, 2026-09-16, approved by Reed Cannon (L3)",
     "source_view": "v_clv_close_reference (research/clv/proposed_2026-09-16_event_flow.sql, NOT APPLIED)",
     "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
-    "principle": "a UFC card is one scheduled start and then a queue. Only the first bout begins at a time anybody published; every later bout begins when the one before it ends.",
+    "principle": "a pre-fight window has two ends and only one is the close. It OPENS when the previous bout finishes - that is when capture goes aggressive - and CLOSES when THIS fight starts. Only an instant marking this fight's start may be a cutoff.",
     "tiers": [
       {
         "basis": "bell_at",
         "applies_to": "any bout",
         "note": "an actual confirmed bell; audit-grade"
-      },
-      {
-        "basis": "previous_bout_completion",
-        "applies_to": "any bout after the first",
-        "note": "exact observations only - never the result scraper's upper bound"
       },
       {
         "basis": "scheduled_first_bout",
@@ -102,7 +98,6 @@
     "lead_time": {
       "exact_bases": [
         "bell_at",
-        "previous_bout_completion",
         "scheduled_first_bout"
       ],
       "lower_bound_bases": [],
@@ -116,13 +111,35 @@
     "unknown_running_order": "no admissible SCORING reference. Tier 4 was withdrawn by Amendment 4.1, so a fight without a running order, a bell or an exact previous-bout completion is unscored - it reports only_pre_card_price when a card start exists, no_scheduled_start otherwise.",
     "supersedes": "Amendment 2 (b), which admitted provider_commence for EVERY fight on the card - right for one fight in thirteen and wrong in the expensive direction, since it would mark every quote after the first bell as in-play for all of them",
     "narrowing_not_widening": true,
-    "recognised_but_never_scored": {
-      "basis": "card_scheduled_start",
-      "withdrawn_by": "Amendment 4.1, 2026-09-16",
-      "why": "a quote before the card's scheduled start is safely pre-fight but not LATE - on the twelfth bout it sits hours before the bell. Scoring it would make the benchmark mean five minutes before the bell for bout one and four hours before it for bout twelve, both under one name.",
-      "treatment": "reported as a reference_basis with a NULL reference_at; the row is unscored with reason only_pre_card_price",
-      "snapshots": "kept. Five-minute capture runs through the whole card and every snapshot is stored, so a genuinely late proxy is on file the moment a fight start becomes verifiable - including retrospectively."
-    }
+    "window_openers": {
+      "bases": [
+        "previous_bout_completion",
+        "card_scheduled_start"
+      ],
+      "what_they_are": "LOWER bounds on this fight's start. Safe to capture from, never scored against.",
+      "previous_bout_completion": "removed from scoring by Amendment 4.2. If bout 4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote before 9:30 - a price quoted while bout 4 was still being fought - and discards the eight minutes that actually priced bout 5. It also made the 5-minute capture self-defeating: the job would collect precisely the snapshots the scorer threw away.",
+      "card_scheduled_start": "removed from scoring by Amendment 4.1 - safely pre-fight but hours early on a late bout",
+      "stored_as": "v_clv_close_reference.window_opens_at and model_edges.clv_window_opened_at",
+      "why_stored": "so the snapshots inside the window are identifiable and become scorable RETROSPECTIVELY the moment a confirmed bell for that fight arrives, including on cards already captured"
+    },
+    "unscorable_states": [
+      {
+        "reason": "fight_start_unverified",
+        "meaning": "the window opened, the snapshots exist, nothing says where it closed",
+        "distance_from_scorable": "one confirmed bell"
+      },
+      {
+        "reason": "only_pre_card_price",
+        "meaning": "only the card's scheduled start is on file; hours early on a late bout",
+        "distance_from_scorable": "needs running order and a bell"
+      },
+      {
+        "reason": "no_scheduled_start",
+        "meaning": "nothing at all",
+        "distance_from_scorable": "furthest"
+      }
+    ],
+    "no_manufactured_end_of_window": "until there is a defensible way to identify when a fight actually started, bouts 2..N stay unscored. No marker is invented to raise coverage."
   },
   "trigger_is_not_the_close": {
     "capture_trigger": "the previous bout ending helps identify event flow and sharpens which fight the capture is for. It governs how much data exists and nothing else. Capture cadence is NOT frozen - it cannot change what a number means, only how many numbers there are.",
@@ -738,8 +755,42 @@
       "cost_stated_plainly": "100 observations returns to the order of 100 cards rather than the ~8 Amendment 4 projected. That is the price of a consistently measured benchmark: an hours-early pre-card price and a five-minute-old price cannot both be called the same thing.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "4.2",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "An opener is not a cutoff: previous_bout_completion removed from scoring",
+      "kind": "corrects a methodological bug introduced by Amendment 3",
+      "version_before": "1.0.5",
+      "version_after": "1.0.6",
+      "sha256_before": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
+      "sha256_after": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
+      "parts": {
+        "a": "previous_bout_completion removed from CLOSE_REFERENCE_BASES and from v_clv_close_reference.reference_at",
+        "b": "window_opens_at added, carrying the opener so snapshots inside the window become scorable retrospectively once a confirmed bell arrives",
+        "c": "new unscored reason fight_start_unverified, distinguishing the one-bell-away state from only_pre_card_price and no_scheduled_start",
+        "d": "the approved free allowance is hard-coded; env may lower the cap and raise the reserve but never the reverse, and a provider quota above the ceiling is clamped and flagged"
+      },
+      "the_bug": "Amendment 3 used the window OPENER as the cutoff. If bout 4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote before 9:30 - quoted while bout 4 was still being fought - and discards the eight minutes that actually priced bout 5. The documentation already said 'the trigger is not the close'; the rule did not.",
+      "output_change": "none - the publication gate is unchanged and still at 0. No CLV figure has ever been computed.",
+      "coverage_change": "bouts 2..N become unscored rather than wrongly scored. No end-of-window marker is manufactured to compensate.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
-  "sha256_at_v1_0_0": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a"
+  "sha256_at_v1_0_0": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+  "spending_rule": {
+    "approved_free_allowance": 500,
+    "hard_coded": true,
+    "env_may_lower_the_cap": true,
+    "env_may_raise_the_cap": false,
+    "env_may_raise_the_reserve": true,
+    "env_may_lower_the_reserve": false,
+    "provider_quota_above_the_ceiling": "clamped to the ceiling and flagged, never spent",
+    "rationale": "any spend above the approved free allowance is money, and money is L3. An automated job must never be able to authorise one - not through an environment variable, and not by noticing the provider is willing to sell more. Both look like extra headroom to a naive governor and neither is permission.",
+    "frozen_by": "Amendment 4.2, 2026-09-16"
+  }
 }

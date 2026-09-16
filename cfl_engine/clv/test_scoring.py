@@ -34,7 +34,7 @@ from scoring import (                                                # noqa: E40
     BENCHMARK_NAME, BENCHMARK_NAME_LONG, CLOSE_REFERENCE_BASES,
     EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
-    PROTOCOL_TAG, PROTOCOL_VERSION,
+    WINDOW_OPENER_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
     STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
     credible_capture_instant, is_eligible_book, lead_time_minutes,
@@ -416,6 +416,8 @@ class TestClosedVocabulary(unittest.TestCase):
                 lambda: score(published_at=START + dt.timedelta(hours=1)),
             "only_pre_card_price":
                 lambda: score(ref=None, basis="card_scheduled_start"),
+            "fight_start_unverified":
+                lambda: score(ref=None, basis="previous_bout_completion"),
             # In band on both sides, but summing BELOW one: there is no vig to
             # remove, no root in the bracket, and it is not a coherent two-way
             # market. The band guard does not catch this, which is why the
@@ -468,10 +470,22 @@ class TestCloseReference(unittest.TestCase):
         self.assertEqual(admissible_reference(START, "bell_at", is_first_bout=False),
                          START)
 
-    def test_the_previous_bouts_completion_is_admissible(self):
-        self.assertEqual(
-            admissible_reference(START, "previous_bout_completion", is_first_bout=False),
-            START)
+    def test_the_previous_bouts_completion_is_NOT_a_cutoff(self):
+        """Amendment 4.2 — the bug this closes.
+
+        The previous bout ending OPENS the window; it does not close it. If bout
+        4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's
+        cutoff selects the last quote before 9:30 — a price quoted while bout 4
+        was still being fought — and discards the eight minutes that actually
+        priced bout 5. It would also make the 5-minute capture self-defeating.
+        """
+        self.assertNotIn("previous_bout_completion", CLOSE_REFERENCE_BASES)
+        self.assertIn("previous_bout_completion", WINDOW_OPENER_BASES)
+        self.assertIsNone(
+            admissible_reference(START, "previous_bout_completion"))
+        self.assertIsNone(
+            admissible_reference(START, "previous_bout_completion",
+                                 is_first_bout=False))
 
     def test_the_scheduled_start_is_admissible_for_the_first_bout_only(self):
         self.assertEqual(
@@ -520,10 +534,14 @@ class TestCloseReference(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_three(self):
+    def test_the_admissible_set_is_the_frozen_two(self):
         self.assertEqual(CLOSE_REFERENCE_BASES,
-                         {"bell_at", "previous_bout_completion",
-                          "scheduled_first_bout"})
+                         {"bell_at", "scheduled_first_bout"})
+
+    def test_openers_and_cutoffs_never_overlap(self):
+        self.assertTrue(CLOSE_REFERENCE_BASES.isdisjoint(WINDOW_OPENER_BASES),
+                        "an instant cannot both open and close the same window")
+        self.assertEqual(NON_SCORING_REFERENCE_BASES, WINDOW_OPENER_BASES)
 
     def test_every_scoring_basis_names_the_start_exactly(self):
         self.assertEqual(EXACT_REFERENCE_BASES, CLOSE_REFERENCE_BASES)
@@ -565,6 +583,25 @@ class TestLatePreFightProxy(unittest.TestCase):
         self.assertIsNone(admissible_reference(START, "card_scheduled_start"))
         self.assertIsNone(
             admissible_reference(START, "card_scheduled_start", is_first_bout=False))
+
+    def test_a_window_opener_leaves_the_fight_unscored_with_its_own_reason(self):
+        """The best case short of a bell: capture opened at the right moment and
+        the snapshots exist. Still unscored, because nothing says where the
+        window closed — and reported distinctly, because it is one confirmed bell
+        away from scorable while only_pre_card_price is much further."""
+        got = score(ref=None, basis="previous_bout_completion")
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "fight_start_unverified")
+
+    def test_the_three_unscorable_states_are_told_apart(self):
+        cases = {
+            "previous_bout_completion": "fight_start_unverified",
+            "card_scheduled_start": "only_pre_card_price",
+            None: "no_scheduled_start",
+        }
+        for basis, reason in cases.items():
+            with self.subTest(basis=basis):
+                self.assertEqual(score(ref=None, basis=basis)["reason"], reason)
 
     def test_every_scored_row_has_an_exact_lead_time(self):
         for basis in sorted(CLOSE_REFERENCE_BASES):

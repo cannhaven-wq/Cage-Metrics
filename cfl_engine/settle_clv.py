@@ -133,7 +133,7 @@ CLV001_COLUMNS = (
     "clv_source_quote_ids", "clv_closing_consensus", "clv_consensus_sha256",
     # Amendment 4 — how late the proxy was, and whether that is exact.
     "clv_close_basis", "clv_lead_time_minutes", "clv_lead_time_is_lower_bound",
-    "clv_proxy_quoted_at",
+    "clv_proxy_quoted_at", "clv_window_opened_at",
 )
 
 # Capture columns on fight_odds that the close depends on
@@ -608,6 +608,9 @@ def clv001_main(write: bool) -> None:
             "clv_lead_time_minutes": round(x["lead_time_minutes"], 4),
             "clv_lead_time_is_lower_bound": x["lead_time_is_lower_bound"],
             "clv_proxy_quoted_at": x["proxy_quoted_at"].isoformat(),
+            "clv_window_opened_at": (
+                fights.get(x["fight_id"], {}).get("window_opens_at").isoformat()
+                if fights.get(x["fight_id"], {}).get("window_opens_at") else None),
         })
     print(f"\nWROTE {len(scored)} CLV-001 result(s). Legacy clv_pp / clv_beat "
           f"were not read and not modified.")
@@ -667,7 +670,8 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
         try:
             refs = fetch_all(base_url, key, "v_clv_close_reference",
                              f"select=fight_id,reference_at,reference_basis,"
-                             f"bout_order,is_first_bout,actual_bell_at"
+                             f"bout_order,is_first_bout,actual_bell_at,"
+                             f"window_opens_at"
                              f"&fight_id=in.({ids})")
         except Exception as e:                  # noqa: BLE001 - unknown is failed
             print(f"  note: v_clv_close_reference unavailable ({e}) — every row "
@@ -685,6 +689,10 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
             # field records when the fight actually began, which stays
             # comparable even if the reference tier later changes.
             f["actual_bell_at"] = _iso(s.get("actual_bell_at"))
+            # The OPENER. Carried for provenance and never used as a cutoff —
+            # scoring against it would select a price quoted while the previous
+            # bout was still being fought (Amendment 4.2).
+            f["window_opens_at"] = _iso(s.get("window_opens_at"))
             f["start_at"] = admissible_reference(_iso(s.get("reference_at")),
                                                  s.get("reference_basis"),
                                                  s.get("is_first_bout"))

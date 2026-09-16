@@ -31,6 +31,8 @@ const {
   planLiveCadence, minutesRemainingInCard, wantTotals,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
   MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, CREDIT_RESERVE, LIVE_CADENCE_LADDER,
+  FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
+  resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
   normalizeName,
 } = require('./fetch-odds');
@@ -613,4 +615,66 @@ test('minutesRemainingInCard ignores a placeholder start', () => {
                           start_basis: 'event_date_fallback' }];
   assert.strictEqual(minutesRemainingInCard(fallbackOnly, BELL), 0);
   assert.ok(minutesRemainingInCard(CARD, BELL) > 0);
+});
+
+// ---------------------------------------------------------------------------
+// The spending rule cannot be widened from outside (Amendment 4.2)
+// ---------------------------------------------------------------------------
+// Any spend above the approved free allowance is money, and money is L3. An
+// automated job must never be able to authorise one — not through an
+// environment variable, and not by noticing the provider is willing to sell
+// more. Both look like "more headroom" to a naive governor; neither is
+// permission.
+
+test('an environment variable cannot raise the credit cap', () => {
+  assert.strictEqual(resolveMonthlyCap('5000'), FREE_TIER_CREDIT_CAP);
+  assert.strictEqual(resolveMonthlyCap(String(FREE_TIER_CREDIT_CAP + 1)),
+                     FREE_TIER_CREDIT_CAP);
+  assert.strictEqual(resolveMonthlyCap('999999'), FREE_TIER_CREDIT_CAP);
+});
+
+test('an environment variable CAN lower the credit cap', () => {
+  assert.strictEqual(resolveMonthlyCap('200'), 200,
+    'spending less is always allowed without an L3');
+});
+
+test('a missing or nonsense cap falls back to the approved allowance', () => {
+  for (const v of [undefined, '', 'abc', '0', '-5']) {
+    assert.strictEqual(resolveMonthlyCap(v), FREE_TIER_CREDIT_CAP);
+  }
+});
+
+test('an environment variable cannot lower the reserve', () => {
+  assert.strictEqual(resolveReserve('0'), APPROVED_CREDIT_RESERVE);
+  assert.strictEqual(resolveReserve('10'), APPROVED_CREDIT_RESERVE,
+    'lowering a reserve frees credits the governor was told to hold back — the ' +
+    'same decision as raising the cap, wearing a different hat');
+  assert.strictEqual(resolveReserve('150'), 150, 'raising it is always allowed');
+});
+
+test('a provider quota above the free allowance is clamped, not spent', () => {
+  assert.strictEqual(clampToFreeAllowance(20000), MONTHLY_CREDIT_CAP,
+    'a paid plan attached upstream is not authorisation for this job to spend');
+  assert.strictEqual(clampToFreeAllowance(MONTHLY_CREDIT_CAP + 1),
+                     MONTHLY_CREDIT_CAP);
+  assert.strictEqual(clampToFreeAllowance(120), 120, 'a normal balance passes');
+  assert.strictEqual(clampToFreeAllowance(undefined), undefined,
+    'unknown stays unknown, which the governor treats as tight');
+});
+
+test('the live cap and reserve are the approved values', () => {
+  assert.strictEqual(MONTHLY_CREDIT_CAP, FREE_TIER_CREDIT_CAP);
+  assert.strictEqual(CREDIT_RESERVE, APPROVED_CREDIT_RESERVE);
+});
+
+test('a clamped quota cannot buy a finer cadence than the real allowance would', () => {
+  // The whole point, end to end: an inflated balance must not translate into
+  // more spending.
+  const inflated = planLiveCadence({
+    creditsRemaining: clampToFreeAllowance(20000),
+    cardsRemaining: 1, minutesRemainingInCard: 600 });
+  const honest = planLiveCadence({
+    creditsRemaining: MONTHLY_CREDIT_CAP,
+    cardsRemaining: 1, minutesRemainingInCard: 600 });
+  assert.strictEqual(inflated, honest);
 });
