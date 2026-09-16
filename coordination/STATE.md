@@ -344,6 +344,16 @@ frozen file and serves DUR-001.
 froze. Additive, order-independent, and it cannot be backfilled, so the sooner
 it lands the sooner snapshots stop being ambiguous.
 
+**Every `fight_odds` writer is now inventoried** —
+[`FIGHT_ODDS_WRITER_INVENTORY.md`](../research/clv/FIGHT_ODDS_WRITER_INVENTORY.md),
+read-only across all five repositories on the account. One blocker:
+`cage-metrics-odds-scrapper`'s `backfill_odds.py` deletes opener/closer rows
+before re-inserting them, which an append-only table cannot allow. Seven other
+write sites are compatible, and the four UPDATE sites touch only `is_opener` /
+`is_closer` — independent confirmation that the trigger's whitelist is the right
+cut. **`cage-metrics-odds-scrapper` is missing from `CLAUDE.md`'s related-repos
+list**, and it is the repository that writes most to `fight_odds`.
+
 **A fourth migration is written, and it is the one that is NOT additive.**
 [`proposed_2026-09-16_fight_odds_immutability.sql`](../research/clv/proposed_2026-09-16_fight_odds_immutability.sql)
 makes `fight_odds` observation fields immutable by trigger (R-01) — DELETE and

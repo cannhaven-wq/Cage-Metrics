@@ -81,22 +81,72 @@ the right trade against losing the snapshot.
 | suite | result |
 |---|---|
 | `tests/` (repo, incl. static migration + Postgres behavioural) | **171 passed**, 3 skipped |
-| `cfl_engine/clv/` | **199 passed** |
+| `cfl_engine/clv/` | **200 passed** (`test_scoring` 167 + `test_devig` 33) |
 | `build/test-fetch-odds.js` (Node) | **66 passed** |
 
-**436 total, all green.** Still locally reported; no CI workflow exists and
-`CLAUDE.md` says not to add one without asking.
+**437 total, all green.** Corrected 2026-09-16: this entry first read 199 / 436,
+written before the last test in the pass was added. The commit message for
+`49eca588` had it right and this table was the stale copy — the same
+two-copies-drifting failure the mirror tripwires now guard against, one level up.
+Still locally reported; no CI workflow exists and `CLAUDE.md` says not to add one
+without asking.
+
+### Operational item 1 is done: every `fight_odds` writer is inventoried
+
+[`research/clv/FIGHT_ODDS_WRITER_INVENTORY.md`](../research/clv/FIGHT_ODDS_WRITER_INVENTORY.md).
+Read-only: all five repositories on the account cloned shallow and grepped, every
+hit classified by verb. No database queried, nothing modified.
+
+**One blocker**, and it is in a repository `CLAUDE.md` does not list.
+
+`cage-metrics-odds-scrapper` — `backfill_odds.py:457` **deletes**
+opener/closer rows for a (fight, book) and re-inserts them. That is what makes
+the backfill re-runnable, and an append-only table cannot offer it. Three ways
+forward — retire it, make it append-only, or apply knowing it breaks — and the
+choice is the owner's. Worth knowing while deciding: that function stamps
+`captured_at` as the Unix epoch by design ("placeholder; opener time isn't
+precisely known"), which is where R-13's 30,724 sentinel rows come from. Nothing
+it writes can ever be scored, so this is about not breaking a tool, not about the
+measurement.
+
+**Everything else is compatible.** Seven other write sites across the odds
+scrapper and this repo: four INSERTs, and four UPDATEs that touch `is_opener` /
+`is_closer` **and nothing else**. That last part is the useful part — the
+whitelist was chosen from first principles, and code written by somebody who had
+never heard of this migration independently agrees with it. If the whitelist were
+wrong, that is where it would have shown.
+
+`cage-metrics-scrapper`, `cage-metrics-event-scrapper` and `cfl-snapshotter` do
+not write to `fight_odds` at all.
+
+**A finding that is not about this migration.** `cage-metrics-odds-scrapper` is
+absent from `CLAUDE.md`'s "Related repos" list — and it is the repository that
+does most of the writing to `fight_odds`. Every step in this project that started
+from "the repos are X, Y and Z" was working from an incomplete list. Nothing
+downstream turned out wrong, but that was luck rather than method. One-line edit,
+left to the owner since that file is the project's canonical description.
+
+What a grep cannot see is stated in the inventory: a SQL editor session, a manual
+`psql`, a Railway console, an Edge Function. The migration is the backstop —
+an unknown writer errors loudly instead of quietly rewriting evidence — but loud
+on a Tuesday afternoon beats loud at 23:00 UTC on a card night, which argues for
+landing it between cards.
 
 ### Remaining blockers — operational, not evidential
 
-1. The real edge publisher must write `clv_publish_quote_id`.
-2. Running order is not captured.
-3. Exact bout completions have no source.
-4. The five migrations must be deliberately applied.
+1. ~~Inventory every `fight_odds` writer.~~ **Done**, above — one decision falls
+   out of it.
+2. The real edge publisher must write `clv_publish_quote_id`.
+3. Running order is not captured.
+4. Exact bout completions have no source.
+5. The five migrations must be deliberately applied.
+6. A real event must run through the pipeline before CLV-001 collection is
+   relied on.
 
 ## Next action
 
-**Owner:** the migration-application decision. Order:
+**Owner:** `backfill_odds.py` — retire it, make it append-only, or accept that
+it breaks — and then the migration-application decision. Order:
 `..._fight_odds_capture.sql`, `..._fight_odds_immutability.sql`,
 `..._event_flow.sql`, `..._snapshot_edge_identity.sql`,
 `..._clv001_columns.sql`. The second is the one that is not additive and needs
