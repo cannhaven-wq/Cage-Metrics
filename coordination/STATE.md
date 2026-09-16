@@ -106,6 +106,10 @@ One card of waiting, not a build.
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
 | event-flow cadence in `build/fetch-odds.js` | **written**, verified offline, degrades if un-migrated |
 | `fight_bout_order` + `fight_bout_completions` + `v_clv_close_reference` | **written, UNAPPLIED** |
+| both ledgers unconstrained by history — nothing unique on the *value* | **fixed**, 3 tests |
+| the running order resolves as a **complete card**, not per fight | **fixed**, 9 tests |
+| the 20-event floor counts `event_id`, never `event_date` | **fixed**, 5 tests |
+| `score_row` refuses a cutoff basis this version does not permit | **fixed**, 4 tests |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last of the three |
 
 **Amendment 3 in one line:** the card's published start belongs to bout 1 and
@@ -136,6 +140,23 @@ field, and scoring against real bells would be a **new protocol version**.
 the frozen cutoff lives in its own column, `proxy_cutoff_at`. Scoring excludes
 quotes at or after the cutoff directly rather than manufacturing a liveness
 fact.
+
+**History must never constrain what can be observed next.** Both event-flow
+ledgers are observation ledgers: nothing is unique on the *value* (a bout order,
+a completion instant), only one statement per source per instant. A card
+reordered back to a position it held before, or a completion corrected to an
+instant already seen, is a truthful new observation and has to be recordable.
+
+**The running order is a COMPLETE CARD observation.** Event Flow appends the
+whole UFCStats card at one `observed_at`, so both `v_clv_close_reference` and
+`build/fetch-odds.js` resolve the latest observation **as a unit**. Resolving the
+latest row per *fight* would leave a scratched booking's old position alive —
+two current bout 1s, a wrong `is_first_bout`, and a previous-bout lookup into a
+dead booking. Older rows stay in the ledger as history; nothing is erased.
+
+**The 20-event floor counts `event_id`.** The UFC runs two cards on one date
+regularly, so counting `event_date` would open the gate on 19 real events. A
+scored row with no `event_id` is warned about and never counted.
 
 **Corrections resolve by observation.** `fight_bout_completions` is append-only,
 so a correction is a new row — and it usually moves the instant *earlier*. The

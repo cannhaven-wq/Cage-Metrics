@@ -80,9 +80,12 @@ alter table public.model_edges
 -- records, honestly, that a bout-2..N cutoff precedes the bell.
 -- ---------------------------------------------------------------------------
 
--- Which instant was the CUTOFF for this fight: 'scheduled_first_bout' (bout 1),
--- 'previous_bout_completion' (bouts 2..N), or 'bell_at' where a confirmed bell
--- exists. Amendment 5.
+-- Which instant was the CUTOFF for this fight: 'scheduled_first_bout' (bout 1)
+-- or 'previous_bout_completion' (bouts 2..N). Those two, always.
+--
+-- 'bell_at' is NOT one of them. A confirmed bell is an AUDIT field in v1.0.8 and
+-- never supplies the cutoff; scoring against real bells requires a new protocol
+-- version (Amendment 5.1).
 alter table public.model_edges
   add column if not exists clv_close_basis text;
 
@@ -99,8 +102,8 @@ alter table public.model_edges
 alter table public.model_edges
   add column if not exists clv_lead_time_minutes numeric;
 
--- TRUE when the CUTOFF precedes the bell — the 'previous_bout_completion' case
--- under Amendment 5. The lead time above is then the exact gap to the cutoff and
+-- TRUE when the CUTOFF precedes the bell — the 'previous_bout_completion' case,
+-- which under Amendment 5 is every bout after the first. The lead time above is then the exact gap to the cutoff and
 -- a LOWER BOUND on the gap to the fight actually starting. FALSE when the cutoff
 -- is the start itself. NULL when the basis is unknown; never FALSE by default,
 -- because FALSE asserts the cutoff was the start.
@@ -200,10 +203,18 @@ end $$;
 -- The close basis vocabulary for a SCORED row, matching CLOSE_REFERENCE_BASES
 -- in cfl_engine/clv/scoring.py (Amendment 5).
 --
--- 'card_scheduled_start' is deliberately absent: applied to a later bout it sits
--- hours early, so the proxy would mean something different on every fight of the
--- card (Amendment 4.1). It remains reportable as a reference_basis in
--- v_clv_close_reference and can never reach a scored row.
+-- Two entries, and the absences are load-bearing:
+--
+--   'card_scheduled_start'  applied to a later bout it sits hours early, so the
+--                           proxy would mean something different on every fight
+--                           of the card (Amendment 4.1).
+--   'bell_at'               audit-only in v1.0.8. Letting a bell supply the
+--                           cutoff "where one exists" would make one version
+--                           behave as two (Amendment 5.1). Scoring against real
+--                           bells is a NEW protocol version.
+--
+-- Both remain reportable as a reference_basis in v_clv_close_reference; neither
+-- can ever reach a scored row.
 do $$
 begin
   if not exists (select 1 from pg_constraint
@@ -211,7 +222,6 @@ begin
                     and conrelid = 'public.model_edges'::regclass) then
     alter table public.model_edges add constraint model_edges_clv_close_basis_known
       check (clv_close_basis is null or clv_close_basis in (
-        'bell_at',
         'scheduled_first_bout',
         'previous_bout_completion'
       )) not valid;

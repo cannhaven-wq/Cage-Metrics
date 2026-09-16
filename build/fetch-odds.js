@@ -666,6 +666,40 @@ async function loadCandidateFights() {
   return fights || [];
 }
 
+// THE LATEST COMPLETE CARD OBSERVATION, per event.
+//
+// Event Flow appends the WHOLE UFCStats card as one observation whenever the
+// order changes, every row sharing one `observed_at`. The current order is a
+// SNAPSHOT and has to be resolved as a unit.
+//
+// Taking the latest row per FIGHT — which this did — leaves a removed booking's
+// stale order alive beside the current card: a fight that was bout 1 in an older
+// observation and is absent from the newest one still resolves to bout 1, so the
+// card has two current bout 1s, `is_first_bout` is wrong for one of them, and the
+// previous-bout lookup walks into a dead booking. Silently.
+//
+// `rows` must arrive ordered observed_at DESC, id DESC. Returns fight_id ->
+// {fight_id, event_id, bout_order}, containing ONLY fights in the latest
+// observation. Older rows are untouched in the ledger and readable as history.
+//
+// Scoped to 'ufcstats_card': that is the source with complete-card semantics, and
+// mixing a partial observation from another source in here would truncate the
+// current card. Mirrors the `latest_card` CTE in v_clv_close_reference.
+function resolveCurrentCard(rows, source = 'ufcstats_card') {
+  const latestInstant = new Map();          // event_id -> observed_at of the newest
+  for (const r of rows) {
+    if (r.source && r.source !== source) continue;
+    if (!latestInstant.has(r.event_id)) latestInstant.set(r.event_id, r.observed_at);
+  }
+  const current = new Map();
+  for (const r of rows) {
+    if (r.source && r.source !== source) continue;
+    if (r.observed_at !== latestInstant.get(r.event_id)) continue;
+    if (!current.has(r.fight_id)) current.set(r.fight_id, r);
+  }
+  return current;
+}
+
 // Running order and bout completions (CLV-001 Amendment 3). Both ledgers are
 // append-only and both may be absent — the migration that creates them is
 // proposed, not applied — so every field here degrades to null and the capture
@@ -676,20 +710,22 @@ async function attachEventFlow(fights) {
   if (!fights.length) return;
   const ids = fights.map(f => f.id);
 
+  // Every order row for these fights' EVENTS, not just these fights — resolving
+  // the latest complete card needs the whole observation, including bouts that
+  // are not in our candidate set.
+  const eventIds = [...new Set(fights.map(f => f.event_id).filter(Boolean))];
   const { data: order, error: oErr } = await sb
     .from('fight_bout_order')
-    .select('fight_id, event_id, bout_order, observed_at')
-    .in('fight_id', ids)
-    .order('observed_at', { ascending: false });
+    .select('id, fight_id, event_id, bout_order, observed_at, source')
+    .in('event_id', eventIds)
+    .order('observed_at', { ascending: false })
+    .order('id', { ascending: false });
   if (oErr) {
     console.warn(`[flow] fight_bout_order unavailable (${oErr.message}) — running ` +
       `order unknown, so no fight can be identified as the card's first bout. ` +
       `Apply research/clv/proposed_2026-09-16_event_flow.sql.`);
   }
-  const orderBy = new Map();
-  for (const o of order || []) {
-    if (!orderBy.has(o.fight_id)) orderBy.set(o.fight_id, o);  // latest wins
-  }
+  const orderBy = resolveCurrentCard(order || []);
 
   // is_exact only. The result scraper's "we first saw a winner at T" is
   // completion PLUS unknown lag; using it would place the next bout's start too
@@ -733,14 +769,18 @@ async function attachEventFlow(fights) {
     }
   }
 
-  // A card is finished when every bout on it has an exact completion. Used only
-  // to stop spending credits on a night that is over.
+  // A card is finished when every bout ON THE CURRENT CARD has an exact
+  // completion. Only fights in the latest complete-card observation count — a
+  // dead booking left behind in `fights` must not keep a finished night looking
+  // unfinished and burning credits. Used only to stop spending.
   const cardFights = new Map();
   for (const f of fights) {
     if (!f.event_id) continue;
+    if (!orderBy.has(f.id)) continue;            // not on the current card
     if (!cardFights.has(f.event_id)) cardFights.set(f.event_id, []);
     cardFights.get(f.event_id).push(f);
   }
+  for (const f of fights) f.card_complete = false;
   for (const [, group] of cardFights) {
     const complete = group.length > 0 && group.every(f => f.completed_at);
     for (const f of group) f.card_complete = complete;
@@ -1426,7 +1466,7 @@ if (require.main === module) main();
 module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
-  planLiveCadence, minutesRemainingInCard, wantTotals,
+  planLiveCadence, minutesRemainingInCard, wantTotals, resolveCurrentCard,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
   EVENT_FLOW_MAX_H, MONTHLY_CREDIT_CAP, CREDIT_RESERVE, CREDIT_HARD_FLOOR,

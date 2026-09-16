@@ -11,6 +11,166 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — Event Flow's ledger design integrated into CLV-001
+
+**From:** Claude
+**To:** Reed → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied.** All three remain proposed and unapplied. **No protocol
+version bump** — v1.0.8 is unchanged, hash `a009bb17…` intact. Everything below
+makes the implementation match the rule that was already frozen.
+
+Integrates the sibling Event Flow session's `MIGRATION_ADJUSTMENT.md`, which
+passed its own review, plus four consistency items.
+
+### 1. History must never constrain what can be observed next
+
+`UNIQUE (fight_id, source, bout_order)` is gone from `fight_bout_order`. A card
+reordered and then reordered back is a truthful second observation, and Event
+Flow re-appends the whole card on every change — under a value-unique index every
+one of those rows would be rejected and an append-only ledger would quietly
+refuse to record reality.
+
+The same principle now applies to `fight_bout_completions`: nothing is unique on
+the completed_at **value**, because a correction may return to an instant already
+observed.
+
+| index | shape | why |
+|---|---|---|
+| `*_latest_idx` | `(fight_id, source, observed_at desc, id desc)` | non-unique; serves every read |
+| `*_one_per_instant_idx` | `UNIQUE (fight_id, source, observed_at)` | genuinely non-recurring: one statement per source per instant |
+| `fight_bout_order_card_idx` | `(event_id, source, observed_at desc, id desc)` | resolving a whole card |
+
+### 2. The running order resolves as a COMPLETE CARD, not per fight
+
+This was a real bug, not a tidy-up. Event Flow appends the whole UFCStats card as
+one observation sharing one `observed_at`. Resolving the latest row per **fight**
+leaves a scratched booking's old position alive beside the current card: two
+current bout 1s, a wrong `is_first_bout`, and a previous-bout lookup that walks
+into a dead booking — silently.
+
+Both consumers now resolve the latest complete card as a unit, scoped to
+`source = 'ufcstats_card'`:
+
+- `v_clv_close_reference` — new `latest_card` CTE (`distinct on (event_id)`,
+  `order by event_id, observed_at desc, id desc`); `ord` joins to it on the
+  instant.
+- `build/fetch-odds.js` — new exported `resolveCurrentCard()`; `attachEventFlow`
+  queries by `event_id` rather than by fight id, because resolving the card needs
+  rows for bouts outside our candidate set. `card_complete` counts only fights on
+  the current card, so a dead booking can no longer keep a finished night looking
+  unfinished and burning credits.
+
+**Reed's regression scenario, now a test.** Initial card A=1, B=2, C=3; latest
+card B=1, C=2. Result: **B=1, C=2**; A absent from the current card; position 1
+resolves to B and never to A; C's previous bout is B and never A; exactly one
+fight is bout 1. Older rows stay in the ledger, readable as history — nothing is
+erased.
+
+### 3. The last `bell_at` remnants in the scoring schema
+
+- `proposed_2026-09-16_clv001_columns.sql` — `clv_close_basis` is now exactly
+  `'scheduled_first_bout'` / `'previous_bout_completion'`; stale comments
+  rewritten.
+- `cfl_engine/settle_clv.py` — `_fights_by_id`'s docstring still described the
+  three-tier "actual bell → previous completion → scheduled start" resolution.
+  Rewritten to the two cases, with the bell named as audit-only.
+- Leftover Tier-era wording ("which tier answered", "a fourth tier") replaced.
+
+Remaining bell-as-cutoff text sits inside the superseded Amendment 3/4/4.1/4.2
+blockquotes, which stay as filed — audit trail, not live rule text.
+
+### 4. The 20-event floor counts EVENTS, by `event_id`
+
+The UFC runs two cards on one date regularly. Counting `event_date` would let the
+gate open on 19 real events. `event_id` is now selected in `_fights_by_id`,
+carried onto every scored row by `score_row`, and counted in `_report_clv001`;
+rows with no `event_id` are reported as a warning and never counted.
+
+This is not a rule change — Q-13 already said "20 distinct completed UFC events".
+It is the implementation finally counting what the rule says.
+
+### 5. A direct call cannot score against a bell
+
+`admissible_reference` was the only gate, but `score_row` takes the instant and
+the basis as separate arguments — a caller that resolved the reference itself
+would hand in a real instant labelled `bell_at` and get a valid-looking score
+back. The refusal now lives inside `score_row`, and its message names the
+version and the two bases it permits. `scheduled_first_bout` on a non-first bout
+is refused the same way.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `research/clv/proposed_2026-09-16_event_flow.sql` | value-unique indexes removed; `latest_card` CTE; complete-card `ord` |
+| `research/clv/proposed_2026-09-16_clv001_columns.sql` | `clv_close_basis` vocabulary reduced to two |
+| `build/fetch-odds.js` | `resolveCurrentCard()` exported; `attachEventFlow` queries by event |
+| `build/test-fetch-odds.js` | +6 tests — Reed's A/B/C scenario and its corollaries |
+| `cfl_engine/clv/scoring.py` | basis guard in `score_row`; `event_id` on every row |
+| `cfl_engine/clv/test_scoring.py` | +10 tests — the basis guard and the event count |
+| `cfl_engine/settle_clv.py` | `event_id` plumbed through; distinct events by id; docstring |
+| `tests/test_migrations_idempotent.py` | +8 tests — ledger index shape, complete-card rule |
+| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo) | **115 passed**, 3 skipped |
+| `cfl_engine/clv/test_scoring.py` | **89 passed** |
+| `cfl_engine/clv/test_devig.py` | **33 passed** |
+| `build/test-fetch-odds.js` (Node) | **64 passed** |
+
+All green, 301 tests. Three fixtures in `tests/` skip by design once the protocol
+is frozen. Hash chain verified across 8 amendments; publication gate confirmed
+shut at 0 of 100 / 0 of 20.
+
+**One test was wrong and is fixed, not worked around.** A regex in
+`test_migrations_idempotent.py` matched the view statement only up to the first
+`;` — and a semicolon inside a SQL comment ended it early, so three assertions
+were passing on text they had never read. They now run against comment-stripped
+SQL.
+
+### Preserved, as instructed
+
+The approved closing-price proxy methodology and naming; the 45-minute freshness
+rule; ≥3 eligible two-sided books; power de-vig per book then median; the ten
+named books; append-only provenance; the 500-credit ceiling with its STOP
+condition and non-raisable cap; the fail-closed publication gate; no paid
+services; no production migrations.
+
+### Remaining blockers
+
+1. **Exact bout completions have no source.** Unchanged and still the binding
+   one: required for bouts 2..N, the difference between ~1 and ~12.5 scorable
+   observations per card.
+2. **Running order is not captured.** Free to fix. Event Flow's ledger is the
+   destination; nothing writes to it yet.
+3. **Nothing is applied.**
+
+### New L3 decisions required
+
+**None.** No rule changed, no version bumped, no spend enabled.
+
+One **optional** editorial amendment for Reed to consider, deliberately not made:
+Amendments 3, 4 and 4.1 carry no "superseded" stamp the way 4.2 does, so their
+bell-as-cutoff tables read as current to someone who starts in the middle of the
+file. Stamping them would edit a frozen document and therefore needs its own
+amendment and hash. Flagged rather than done.
+
+## Next action
+
+**ChatGPT:** the final pre-migration review — items 1–5 above, and specifically
+whether the complete-card resolution in `v_clv_close_reference` and
+`attachEventFlow` agree with Event Flow's ledger semantics.
+
+**Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
+`..._event_flow.sql`, `..._clv001_columns.sql`.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.8: Amendment 5.1, four consistency fixes
 
 **From:** Claude
@@ -260,101 +420,6 @@ allowance is unchanged at the free 500.
 
 **Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
 `..._event_flow.sql`, `..._clv001_columns.sql`.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.6: an opener is not a cutoff, and the allowance is hard-coded
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-**No migration applied.** All three remain proposed and unapplied.
-
-### The bug, and you were right about it
-
-A pre-fight window has two ends and only one of them is the close. It **opens**
-when the previous bout finishes — that is when the market starts pricing the next
-fight in earnest, and when capture goes aggressive. It **closes** when *this*
-fight starts.
-
-Amendment 3 used the opener as the cutoff. Bout 4 ends at 9:30, bout 5 walks out
-at 9:38 — taking 9:30 as bout 5's cutoff selects the last quote **before** 9:30, a
-price quoted while bout 4 was still being fought, and throws away the eight
-minutes that actually priced bout 5.
-
-Worse, it made the five-minute capture self-defeating: the job would have
-collected precisely the snapshots the scorer then discarded. The docs said "the
-trigger is not the close"; the rule did not.
-
-### What changed
-
-| | |
-|---|---|
-| **scoring cutoffs** | `bell_at` (any bout), `scheduled_first_bout` (bout 1 only, where the card's start *is* this fight's start) |
-| **window openers** | `previous_bout_completion`, `card_scheduled_start` — capture triggers, reported, never cutoffs |
-
-`previous_bout_completion` is out of `CLOSE_REFERENCE_BASES` and out of
-`v_clv_close_reference.reference_at`. A new `window_opens_at` column carries it
-instead, so the snapshots taken inside the window stay identifiable and become
-scorable **retrospectively** the moment a confirmed bell arrives — including on
-cards already captured. The migration also constrains
-`clv_window_opened_at <= clv_proxy_quoted_at`, so if a window ever closes before
-it opens, that is this defect coming back and the database refuses it.
-
-### The three unscorable states are now told apart
-
-| reason | meaning | distance from scorable |
-|---|---|---|
-| `fight_start_unverified` | window opened, snapshots exist, nothing says where it closed | **one confirmed bell** |
-| `only_pre_card_price` | only the card's scheduled start on file; hours early on a late bout | needs order *and* a bell |
-| `no_scheduled_start` | nothing at all | furthest |
-
-That distinction is the operationally useful one: it tells you exactly how many
-observations a bell-time source would unlock, rather than lumping everything
-under "no data".
-
-**And nothing was manufactured to compensate.** Bouts 2..N stay unscored. Per
-your instruction, no end-of-window marker was invented to raise coverage.
-
-### The money safeguard
-
-`ODDS_MONTHLY_CAP` can no longer widen anything. The approved allowance is a hard
-constant:
-
-- an environment variable may **lower** the cap, never raise it;
-- it may **raise** the reserve, never lower it — lowering a reserve frees credits
-  the governor was told to hold back, which is the same decision as raising the
-  cap wearing a different hat;
-- a **provider quota above the ceiling** is clamped and flagged, not spent. If
-  someone attaches a paid plan upstream, the job treats the balance as 500 and
-  says so. A larger quota is not authorisation.
-
-Seven tests cover it, including one end-to-end: an inflated quota must not buy a
-finer cadence than the real allowance would.
-
-### Still true
-
-Publication untouched and fail-closed — 0 of 100 observations, 0 of 20 events.
-No paid tier, no incremental cost, nothing bought or enabled.
-`v_fight_start_best` untouched.
-
-Tests rerun: **108 CLV Python, 94 repo Python, 54 Node. All green.**
-
-## Next action
-
-**Reed:** review. When you're satisfied, apply in order —
-`proposed_2026-09-16_fight_odds_capture.sql`,
-`proposed_2026-09-16_event_flow.sql`, then
-`proposed_2026-09-16_clv001_columns.sql` last.
-
-Sequencing note unchanged: `odds_api_usage` is created by the second migration,
-and until it exists the governor reads the budget as unknown and holds at 30
-minutes. The 5-minute cadence starts when that lands.
-
-The open L3 is now the whole remaining question for scoring coverage: a confirmed
-bell time per fight is what turns `fight_start_unverified` into scored
-observations, and the snapshots to score are already being collected.
 
 ---
 

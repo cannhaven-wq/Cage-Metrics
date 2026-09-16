@@ -28,7 +28,7 @@ const path = require('path');
 const {
   buildMoneylineRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
-  planLiveCadence, minutesRemainingInCard, wantTotals,
+  planLiveCadence, minutesRemainingInCard, wantTotals, resolveCurrentCard,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
   MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, CREDIT_RESERVE, LIVE_CADENCE_LADDER,
@@ -229,6 +229,100 @@ test('the card schedule is still recorded separately from the cutoff', () => {
     assert.strictEqual(row.source_commence_at,
                        new Date(EVENT.commence_time).toISOString());
   }
+});
+
+// ---------------------------------------------------------------------------
+// Running order — the latest COMPLETE CARD, not the latest row per fight
+// ---------------------------------------------------------------------------
+//
+// `fight_bout_order` is an observation ledger: the whole card is appended as one
+// observation sharing one observed_at, and history is never edited. So a booking
+// that was pulled from the card still has its old row on file forever. Resolving
+// per fight would let that dead row stay "current" and give the card two bout 1s.
+
+const OBS_1 = '2026-09-19T12:00:00.000Z';   // card as first seen: A, B, C
+const OBS_2 = '2026-09-20T12:00:00.000Z';   // A scratched: B, C
+
+// As the query returns them: observed_at DESC, id DESC.
+const ORDER_LEDGER = [
+  { id: 5, fight_id: 'C', event_id: 900, bout_order: 2, observed_at: OBS_2, source: 'ufcstats_card' },
+  { id: 4, fight_id: 'B', event_id: 900, bout_order: 1, observed_at: OBS_2, source: 'ufcstats_card' },
+  { id: 3, fight_id: 'C', event_id: 900, bout_order: 3, observed_at: OBS_1, source: 'ufcstats_card' },
+  { id: 2, fight_id: 'B', event_id: 900, bout_order: 2, observed_at: OBS_1, source: 'ufcstats_card' },
+  { id: 1, fight_id: 'A', event_id: 900, bout_order: 1, observed_at: OBS_1, source: 'ufcstats_card' },
+];
+
+// The same event -> bout_order -> fight_id index attachEventFlow builds, so the
+// previous-bout assertions below exercise the real lookup and not a paraphrase.
+function positionIndex(current) {
+  const byEventOrder = new Map();
+  for (const [fightId, o] of current) {
+    byEventOrder.set(`${o.event_id}|${o.bout_order}`, fightId);
+  }
+  return byEventOrder;
+}
+
+test('the current card is the latest complete observation, A=1,B=2,C=3 -> B=1,C=2', () => {
+  const current = resolveCurrentCard(ORDER_LEDGER);
+  assert.strictEqual(current.get('B').bout_order, 1);
+  assert.strictEqual(current.get('C').bout_order, 2);
+  assert.strictEqual(current.size, 2, 'the current card is exactly what the ' +
+    'latest observation contained');
+});
+
+test('a scratched bout is historical only and holds no current position', () => {
+  const current = resolveCurrentCard(ORDER_LEDGER);
+  assert.strictEqual(current.has('A'), false,
+    'A is absent from the latest observation, so it is not on the card');
+  const byEventOrder = positionIndex(current);
+  assert.strictEqual(byEventOrder.get('900|1'), 'B',
+    'position 1 belongs to B; A must not still occupy it');
+  assert.notStrictEqual(byEventOrder.get('900|1'), 'A');
+  assert.strictEqual(byEventOrder.get('900|3'), undefined,
+    'the card is two bouts long now — there is no third position to inherit');
+});
+
+test('the previous bout of C is B, never the scratched A', () => {
+  const current = resolveCurrentCard(ORDER_LEDGER);
+  const byEventOrder = positionIndex(current);
+  const c = current.get('C');
+  const prev = byEventOrder.get(`${c.event_id}|${c.bout_order - 1}`);
+  assert.strictEqual(prev, 'B');
+  assert.notStrictEqual(prev, 'A',
+    "a dead booking's completion must never become the next bout's cutoff");
+});
+
+test('the first bout of the current card is B, and B alone', () => {
+  const current = resolveCurrentCard(ORDER_LEDGER);
+  const firsts = [...current].filter(([, o]) => o.bout_order === 1).map(([id]) => id);
+  assert.deepStrictEqual(firsts, ['B'],
+    'exactly one fight may be identified as bout 1 — that is what takes the ' +
+    "card's scheduled start as its cutoff");
+});
+
+test('another source cannot truncate or extend the current card', () => {
+  const mixed = [
+    { id: 9, fight_id: 'D', event_id: 900, bout_order: 1, observed_at: '2026-09-21T00:00:00.000Z',
+      source: 'manual' },
+    ...ORDER_LEDGER,
+  ];
+  const current = resolveCurrentCard(mixed);
+  assert.strictEqual(current.has('D'), false,
+    'only ufcstats_card carries complete-card semantics');
+  assert.strictEqual(current.get('B').bout_order, 1);
+  assert.strictEqual(current.size, 2);
+});
+
+test('each event resolves its own latest card independently', () => {
+  const twoEvents = [
+    { id: 8, fight_id: 'X', event_id: 901, bout_order: 1, observed_at: OBS_1, source: 'ufcstats_card' },
+    ...ORDER_LEDGER,
+  ];
+  const current = resolveCurrentCard(twoEvents);
+  assert.strictEqual(current.get('X').bout_order, 1,
+    "event 901's newest observation is its own, not event 900's");
+  assert.strictEqual(current.get('B').bout_order, 1);
+  assert.strictEqual(current.size, 3);
 });
 
 // ---------------------------------------------------------------------------

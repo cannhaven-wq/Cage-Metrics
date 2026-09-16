@@ -66,17 +66,46 @@ create table if not exists public.fight_bout_order (
 comment on table public.fight_bout_order is
   'Append-only record of where a fight sat in its card''s running order. '
   'bout_order 1 is the first bout to walk out - the only one whose start is the '
-  'card''s scheduled start. Append-only: a reshuffled card gets a NEW row and '
-  'the latest observation wins, so the order we believed at any past moment '
-  'stays recoverable.';
+  'card''s scheduled start. Append-only, and DELIBERATELY NOT UNIQUE on '
+  '(fight_id, source, bout_order): a reshuffled card can return a bout to a '
+  'position it held before, and a unique index there would reject that '
+  'observation and leave the ledger asserting the intermediate position for '
+  'ever. Event Flow appends the WHOLE card as one observation sharing one '
+  'observed_at; consumers resolve the latest COMPLETE CARD, not the latest row '
+  'per fight. The observations before it stay readable.';
 
--- One live answer per (fight, source): re-observing the same order is a no-op,
--- a changed order appends.
-create unique index if not exists fight_bout_order_unique_idx
-  on public.fight_bout_order (fight_id, source, bout_order);
+-- NOT unique on (fight_id, source, bout_order). Event Flow's implementation
+-- review showed why, and it is not a corner case:
+--
+-- Event Flow appends the WHOLE card as one observation whenever the order
+-- changes. When two prelims swap, two bouts move and the other eleven are
+-- re-appended at positions they already hold — so under a unique index every one
+-- of those eleven collides, and the ledger records a card's first observation
+-- and then nothing, ever again. The minimal case is the same defect: a bout at
+-- 5 moves to 6 and back to 5, and the third observation is rejected, leaving the
+-- ledger asserting 6 forever.
+--
+-- The general rule: an observation ledger must never let history constrain what
+-- can be observed next. A position the card held before is a position the card
+-- can hold again.
+--
+-- The lookup the old index was really serving is "what is the latest observation
+-- for this fight?", which wants fight, source and time — not the position.
+create index if not exists fight_bout_order_latest_idx
+  on public.fight_bout_order (fight_id, source, observed_at desc, id desc);
 
-create index if not exists fight_bout_order_event_idx
-  on public.fight_bout_order (event_id, bout_order);
+-- This one IS genuinely unique and cannot recur: one statement about a fight per
+-- instant. `observed_at` defaults to now(), the TRANSACTION start time, so a
+-- whole card appended in one statement shares one timestamp and this holds
+-- trivially. It stops the same batch being inserted twice inside one
+-- transaction. It does not stop a doubled write from two separate calls —
+-- nothing at the storage layer can, and that is the ingester's job.
+create unique index if not exists fight_bout_order_one_per_instant_idx
+  on public.fight_bout_order (fight_id, source, observed_at);
+
+-- Resolving a whole card observation: every row of one event sharing one instant.
+create index if not exists fight_bout_order_card_idx
+  on public.fight_bout_order (event_id, source, observed_at desc, id desc);
 
 -- ---------------------------------------------------------------------------
 -- 2. Bout completions — when a fight actually ended
@@ -96,7 +125,9 @@ create table if not exists public.fight_bout_completions (
 );
 
 comment on table public.fight_bout_completions is
-  'Append-only record of when a bout ended. Two roles under Amendment 5: it is '
+  'Append-only, and deliberately not unique on the completed_at VALUE: a '
+  'correction may return to an instant observed before, and a unique index '
+  'there would reject it. Two roles under Amendment 5: it is '
   'the NEXT fight''s scoring cutoff, and it triggers aggressive card-night '
   'capture for that fight. The cutoff precedes that fight''s bell by the walkout '
   'interval, which is accepted for this protocol version and marked per row by '
@@ -114,8 +145,17 @@ comment on column public.fight_bout_completions.is_exact is
 -- observation is not a timestamp. The epoch floor is the same one fight_odds
 -- quotes are held to.
 
-create unique index if not exists fight_bout_completions_unique_idx
-  on public.fight_bout_completions (fight_id, source, completed_at);
+-- Same principle as fight_bout_order, and it bites the same way. A completion
+-- observed at 9:31, corrected to 9:30, then re-confirmed as 9:31 is a legitimate
+-- sequence of three observations — and a unique index on the VALUE would reject
+-- the third, leaving the ledger asserting 9:30 for ever. History must never
+-- constrain what can be observed next.
+create index if not exists fight_bout_completions_latest_idx
+  on public.fight_bout_completions (fight_id, source, observed_at desc, id desc);
+
+-- Genuinely unique and non-recurring: one statement about a fight per instant.
+create unique index if not exists fight_bout_completions_one_per_instant_idx
+  on public.fight_bout_completions (fight_id, source, observed_at);
 
 -- ---------------------------------------------------------------------------
 -- 2b. Append-only enforcement
@@ -235,7 +275,7 @@ alter table public.odds_api_usage enable row level security;
 revoke all on public.odds_api_usage from anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- 4. The close reference — Amendments 3 and 4, in one view
+-- 4. The close reference — Amendments 3 through 5.1, in one view
 -- ---------------------------------------------------------------------------
 -- AMENDMENT 5 - the operational cutoff, frozen for this protocol version:
 --
@@ -260,7 +300,7 @@ revoke all on public.odds_api_usage from anon, authenticated;
 -- scored under this one are never retroactively reinterpreted, which is why
 -- every scored row carries its own clv_protocol_version.
 --
--- AMENDMENT 4.1 separately withdrew a fourth tier. Amendment 4 had admitted the card's
+-- AMENDMENT 4.1 separately withdrew a third candidate cutoff. Amendment 4 had admitted the card's
 -- scheduled start as a LOWER BOUND for every fight on the card, reasoning that a
 -- fight cannot begin before its card does. The reasoning is sound; the
 -- conclusion overreached. Such a quote is safely pre-fight but not LATE - on the
@@ -282,11 +322,44 @@ revoke all on public.odds_api_usage from anon, authenticated;
 
 create or replace view public.v_clv_close_reference
 with (security_invoker = true) as
-with ord as (
-  select distinct on (o.fight_id)
-         o.fight_id, o.event_id, o.bout_order
+with latest_card as (
+  -- THE LATEST COMPLETE CARD OBSERVATION for each event.
+  --
+  -- Event Flow appends the WHOLE UFCStats card as one observation whenever the
+  -- order changes, and every row of that observation shares one `observed_at`.
+  -- So the current order is a SNAPSHOT, and it must be resolved as a unit.
+  --
+  -- Taking the latest row per FIGHT instead — which this view used to do — leaves
+  -- a removed booking's stale order alive beside the current card. A fight that
+  -- was bout 1 in an older observation and is absent from the newest one would
+  -- still resolve to bout 1, producing two current bout 1s on the same card, a
+  -- wrong `is_first_bout`, and a previous-bout lookup that walks into a dead
+  -- booking. Silently.
+  --
+  -- distinct on picks the row with the greatest (observed_at, id) per event, and
+  -- we keep only its instant. Deterministic on a tie by id, per the ledger's
+  -- observed_at DESC, id DESC rule.
+  select distinct on (o.event_id) o.event_id, o.observed_at
   from public.fight_bout_order o
-  order by o.fight_id, o.observed_at desc, o.id desc   -- latest observation wins
+  where o.source = 'ufcstats_card'
+  order by o.event_id, o.observed_at desc, o.id desc
+),
+ord as (
+  -- Only the fights belonging to that observation. A fight present in an older
+  -- observation and absent from this one does not participate in the current
+  -- order or in any previous-bout lookup. Its older rows stay in the ledger,
+  -- readable as history — nothing is erased.
+  --
+  -- Scoped to 'ufcstats_card' deliberately. That is the source with
+  -- complete-card semantics; a partial observation from another source would
+  -- silently truncate the current card if it were mixed in here. Other sources
+  -- can join this resolution once their semantics are defined.
+  select o.fight_id, o.event_id, o.bout_order
+  from public.fight_bout_order o
+  join latest_card lc
+    on lc.event_id = o.event_id
+   and lc.observed_at = o.observed_at
+  where o.source = 'ufcstats_card'
 ),
 prev_done as (
   -- The completion of the bout immediately before this one, same card.

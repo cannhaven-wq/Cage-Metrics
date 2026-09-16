@@ -83,7 +83,7 @@ def edge(**over):
 
 
 def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW,
-          basis="bell_at", first_bout=None, **over):
+          basis="previous_bout_completion", first_bout=False, **over):
     return score_row(edge=edge(**over),
                      quotes=three_books() if quotes is None else quotes,
                      fight=FIGHT if fight is None else fight,
@@ -289,10 +289,16 @@ class TestWindowAndEligibility(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "eligible_book_list_not_frozen")
 
-    def test_no_scheduled_start_means_no_row_can_score(self):
-        got = score(ref=None)
-        self.assertFalse(got["scored"])
-        self.assertEqual(got["reason"], "no_scheduled_start")
+    def test_no_cutoff_means_no_row_can_score(self):
+        """Bout 1 with no card start on file, and a later bout with no previous
+        completion on file, are both unscored — with the reason naming which
+        input is missing."""
+        self.assertEqual(
+            score(ref=None, basis=None, first_bout=True)["reason"],
+            "no_scheduled_start")
+        self.assertEqual(
+            score(ref=None, basis=None, first_bout=False)["reason"],
+            "no_previous_bout_completion")
 
     def test_a_forecast_published_after_the_close_is_refused(self):
         got = score(published_at=START + dt.timedelta(hours=1))
@@ -400,7 +406,8 @@ class TestClosedVocabulary(unittest.TestCase):
             "bet_fighter_not_in_fight":
                 lambda: score(fight={"id": 1, "fighter_a_id": 999,
                                      "fighter_b_id": OPP}),
-            "no_scheduled_start": lambda: score(ref=None),
+            "no_scheduled_start":
+                lambda: score(ref=None, basis=None, first_bout=True),
             "no_closing_quotes": lambda: score(quotes=[]),
             "implausible_timestamp": lambda: score(quotes=three_books(at=EPOCH)),
             "stale_close": lambda: score(quotes=three_books(
@@ -476,6 +483,50 @@ class TestCloseReference(unittest.TestCase):
         self.assertIsNone(admissible_reference(START, "bell_at", is_first_bout=True))
         self.assertIsNone(admissible_reference(START, "bell_at", is_first_bout=False))
 
+    def test_a_direct_call_cannot_score_against_a_bell_either(self):
+        """admissible_reference is the gate, but score_row takes the instant and
+        the basis as SEPARATE arguments — so a caller that resolved the reference
+        itself, or a future one that forgets the gate, would hand in a real
+        instant labelled 'bell_at' and get a perfectly valid-looking score back.
+        The refusal has to live inside score_row, not only in front of it."""
+        got = score(ref=START, basis="bell_at", first_bout=False)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_scheduled_start")
+        self.assertIn("bell", got["detail"])
+        self.assertIsNone(got["clv_return"])
+        self.assertEqual(score(ref=START, basis="bell_at", first_bout=True)["scored"],
+                         False, "a bell is not a cutoff on bout 1 either")
+
+    def test_an_unknown_basis_is_refused_rather_than_trusted(self):
+        """The permitted set is a closed vocabulary. Anything outside it — a
+        typo, a basis from a future version, a string from a caller that grew a
+        new tier — is refused, never scored on the strength of the instant
+        looking reasonable."""
+        for basis in ("card_scheduled_start", "provider_commence",
+                      "event_date_fallback", "closing_line", ""):
+            with self.subTest(basis=basis):
+                got = score(ref=START, basis=basis, first_bout=False)
+                self.assertFalse(got["scored"],
+                                 f"{basis!r} scored, and it is not a cutoff")
+                self.assertEqual(got["reason"], "no_scheduled_start")
+
+    def test_the_refusal_names_the_two_bases_this_version_allows(self):
+        detail = score(ref=START, basis="bell_at")["detail"]
+        self.assertIn("previous_bout_completion", detail)
+        self.assertIn("scheduled_first_bout", detail)
+        self.assertIn(PROTOCOL_TAG, detail,
+                      "the message has to say WHICH version is refusing, because "
+                      "a later version may well admit a bell")
+
+    def test_the_card_schedule_cannot_be_smuggled_onto_a_later_bout(self):
+        """scheduled_first_bout is bout 1's cutoff and nothing else's. On bout 7
+        it is hours early, which is the whole reason Amendment 4.1 withdrew it."""
+        got = score(ref=START, basis="scheduled_first_bout", first_bout=False)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_scheduled_start")
+        self.assertTrue(score(ref=START, basis="scheduled_first_bout",
+                              first_bout=True)["scored"])
+
     def test_scoring_against_real_bells_would_be_a_new_version(self):
         """Stated as a test so the boundary is checkable: the audit field exists,
         and admitting it is a version bump rather than a code change here."""
@@ -545,7 +596,8 @@ class TestCloseReference(unittest.TestCase):
         self.assertIsNone(admissible_reference(None, "previous_bout_completion"))
 
     def test_a_fight_with_no_reference_is_unscored_not_scored_on_a_placeholder(self):
-        got = score(ref=admissible_reference(START, "event_date_fallback", True))
+        got = score(ref=admissible_reference(START, "event_date_fallback", True),
+                    basis=None, first_bout=True)
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
@@ -597,7 +649,7 @@ class TestLatePreFightProxy(unittest.TestCase):
         hold nothing'. Collapsing them would hide which problem to fix."""
         self.assertEqual(score(ref=None, basis="card_scheduled_start")["reason"],
                          "only_pre_card_price")
-        self.assertEqual(score(ref=None, basis=None)["reason"],
+        self.assertEqual(score(ref=None, basis=None, first_bout=True)["reason"],
                          "no_scheduled_start")
 
     def test_the_withdrawn_basis_is_recognised_but_never_admissible(self):
@@ -774,6 +826,109 @@ class TestFrozenBookList(unittest.TestCase):
         self.assertEqual(chain[-1]["version_after"], protocol["version"])
         for a in chain:
             self.assertFalse(a["motivated_by_observed_results"])
+
+
+# ---------------------------------------------------------------------------
+# The 20-event floor counts EVENTS, by event_id
+# ---------------------------------------------------------------------------
+
+class TestEventCounting(unittest.TestCase):
+    """The publication gate needs 20 DISTINCT EVENTS, and an event is an
+    event_id.
+
+    Counting event_date instead is the tempting shortcut, because every edge row
+    already carries one. It is wrong in exactly the way that matters: the UFC
+    runs two cards on one date regularly (an early prelim card and a numbered
+    card, or a Fight Night in one time zone and an overseas card in another). A
+    date count of 20 can be 19 real events or fewer, and the gate would open on
+    a sample narrower than the floor was written to require.
+    """
+
+    def test_the_scored_row_carries_the_fight_s_event_id(self):
+        got = score(fight={**FIGHT, "event_id": 4242})
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertEqual(got["event_id"], 4242)
+        self.assertEqual(got["event_date"], "2026-09-12",
+                         "the date is still carried — it is just not the count")
+
+    def test_a_fight_with_no_event_id_scores_but_carries_none(self):
+        """A missing event_id must not fabricate one or block the score; it has
+        to be visibly absent so the report can refuse to count it."""
+        got = score(fight=dict(FIGHT))          # no event_id key at all
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertIsNone(got["event_id"])
+
+    def test_two_event_ids_on_one_date_count_as_two_events(self):
+        """The regression this class exists for."""
+        rows = [
+            {"scored": True, "event_id": 11, "event_date": "2026-09-12",
+             "edge_id": 1, "fight_id": 1, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [1, 2, 3],
+             "consensus_sha256": "a" * 64},
+            {"scored": True, "event_id": 12, "event_date": "2026-09-12",
+             "edge_id": 2, "fight_id": 2, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [4, 5, 6],
+             "consensus_sha256": "b" * 64},
+        ]
+        out = self._report(rows)
+        self.assertIn("2 observation(s) across 2 distinct event(s)", out)
+        self.assertIn("2 / 20", out)
+        self.assertNotIn("1 distinct event", out,
+                         "counting by event_date would have collapsed these two "
+                         "cards into one")
+
+    def test_one_event_id_on_two_dates_counts_as_one_event(self):
+        """The mirror. A card that starts 22:00 local and finishes after
+        midnight UTC is one event, however many dates its rows carry."""
+        rows = [
+            {"scored": True, "event_id": 11, "event_date": "2026-09-12",
+             "edge_id": 1, "fight_id": 1, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [1], "consensus_sha256": "a" * 64},
+            {"scored": True, "event_id": 11, "event_date": "2026-09-13",
+             "edge_id": 2, "fight_id": 2, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [2], "consensus_sha256": "b" * 64},
+        ]
+        out = self._report(rows)
+        self.assertIn("2 observation(s) across 1 distinct event(s)", out)
+        self.assertIn("1 / 20", out)
+
+    def test_a_row_without_an_event_id_is_warned_about_not_counted(self):
+        rows = [
+            {"scored": True, "event_id": 11, "event_date": "2026-09-12",
+             "edge_id": 1, "fight_id": 1, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [1], "consensus_sha256": "a" * 64},
+            {"scored": True, "event_id": None, "event_date": "2026-09-12",
+             "edge_id": 2, "fight_id": 2, "reason": None, "detail": None,
+             "closing_book_count": 3, "quote_ids": [2], "consensus_sha256": "b" * 64},
+        ]
+        out = self._report(rows)
+        self.assertIn("across 1 distinct event(s)", out)
+        self.assertIn("1 scored row(s) carry no event_id", out,
+                      "an uncountable row has to be visible, not silently "
+                      "dropped or silently counted as its own event")
+
+    def test_the_gate_line_says_it_counts_by_event_id(self):
+        out = self._report([])
+        self.assertIn("20 distinct events (by event_id)", out)
+        self.assertIn("Blocked.", out)
+
+    @staticmethod
+    def _report(rows):
+        """Run the real reporting function and capture what it printed.
+
+        Importing settle_clv is safe here: the module reads env at call time,
+        not at import, and _report_clv001 touches nothing but its argument.
+        """
+        import contextlib
+        import io
+        engine_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import settle_clv                                            # noqa: E402
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            settle_clv._report_clv001(rows)
+        return buf.getvalue()
 
 
 class TestProtocolPinning(unittest.TestCase):

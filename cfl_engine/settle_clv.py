@@ -642,11 +642,14 @@ def _resolve_eligible_books(base_url: str, key: str,
 
 
 def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
-    """Corners plus the Amendment 3 close reference, per fight.
+    """Corners plus the close reference, per fight.
 
-    The reference comes from `v_clv_close_reference`, which resolves an actual
-    bell -> the previous bout's exact completion -> (bout 1 only) the card's
-    scheduled start, and says which tier answered.
+    The reference comes from `v_clv_close_reference`, which under v1.0.8 resolves
+    exactly two cutoffs and says which one answered: the card's scheduled start
+    for bout 1, and the immediately previous bout's exact completion for bouts
+    2..N. A confirmed bell is NOT one of them — it is carried as an audit field
+    and never substituted for the cutoff (Amendment 5.1). Scoring against real
+    bells is a new protocol version, not a per-row upgrade inside this one.
 
     NOT from DUR-001's `v_fight_start_best`. Two reasons, both load-bearing.
     That view always answers — it falls back to the event date at 18:00 UTC — so
@@ -663,7 +666,7 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
     for chunk in _chunks(sorted(fight_ids), 100):
         ids = ",".join(str(i) for i in chunk)
         for f in fetch_all(base_url, key, "fights",
-                           f"select=id,fighter_a_id,fighter_b_id,bell_at"
+                           f"select=id,event_id,fighter_a_id,fighter_b_id,bell_at"
                            f"&id=in.({ids})"):
             f["bell_at"] = _iso(f.get("bell_at"))
             f["start_at"], f["start_basis"] = None, None
@@ -690,7 +693,7 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
             f["is_first_bout"] = s.get("is_first_bout")
             # Carried separately and never used as the reference: the audit
             # field records when the fight actually began, which stays
-            # comparable even if the reference tier later changes.
+            # comparable even if a later version changes the cutoff basis.
             f["actual_bell_at"] = _iso(s.get("actual_bell_at"))
             # When the bout before this one ended. Under Amendment 5 this IS the
             # cutoff for bouts 2..N — carried separately for provenance, and
@@ -732,9 +735,16 @@ def _report_clv001(results: list) -> None:
         if not x["scored"]:
             reasons[x["reason"]] = reasons.get(x["reason"], 0) + 1
 
-    events = {x["event_date"] for x in scored}
+    # DISTINCT EVENTS, by event_id — never by event_date. The UFC runs two cards
+    # on one date often enough that counting dates would understate the event
+    # count and let the 20-event gate open early on 19 real events.
+    events = {x["event_id"] for x in scored if x["event_id"] is not None}
+    undated = sum(1 for x in scored if x["event_id"] is None)
     print(f"\nscored   : {len(scored)} observation(s) across {len(events)} "
-          f"distinct event date(s)")
+          f"distinct event(s), counted by event_id")
+    if undated:
+        print(f"  warning: {undated} scored row(s) carry no event_id and cannot "
+              f"count toward the 20-event floor")
     print(f"unscored : {len(results) - len(scored)}")
     for reason in UNSCORED_REASONS:             # fixed order, so runs compare
         if reasons.get(reason):
@@ -748,8 +758,8 @@ def _report_clv001(results: list) -> None:
         print(f"\n  e.g. edge {example['edge_id']} (fight {example['fight_id']}): "
               f"{example['detail']}")
 
-    print(f"\ngate: 100 scored observations AND 20 distinct events AND an "
-          f"event-cluster interval excluding zero.")
+    print(f"\ngate: 100 scored observations AND 20 distinct events (by event_id) "
+          f"AND an event-cluster interval excluding zero.")
     print(f"      currently {len(scored)} / 100 and {len(events)} / 20. Blocked.")
 
     if scored:

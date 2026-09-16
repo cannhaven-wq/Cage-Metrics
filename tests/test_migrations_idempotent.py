@@ -178,8 +178,13 @@ class TestCompletionCorrectionSemantics(unittest.TestCase):
                       "a cutoff")
 
     def test_the_running_order_also_resolves_by_latest_observation(self):
-        block = re.search(r"ord as \((.*?)\n\),", self.sql, re.S).group(1)
+        # The order resolves a whole card at a time, so the observed_at DESC,
+        # id DESC rule lives in latest_card and `ord` joins to it. See
+        # TestTheCurrentCardIsAWholeObservation for why it moved.
+        block = re.search(r"latest_card as \((.*?)\n\),", self.sql, re.S).group(1)
         self.assertIn("observed_at desc", block)
+        self.assertIn("join latest_card lc",
+                      re.search(r"\nord as \((.*?)\n\),", self.sql, re.S).group(1))
 
     def test_the_card_schedule_also_resolves_by_latest_observation(self):
         block = re.search(r"sched as \((.*?)\n\)\n", self.sql, re.S).group(1)
@@ -189,11 +194,111 @@ class TestCompletionCorrectionSemantics(unittest.TestCase):
                          "superseded later time")
 
 
+class TestObservationLedgersAreNotConstrainedByHistory(unittest.TestCase):
+    """History must never constrain what can be observed next.
+
+    Both ledgers record OBSERVATIONS, not facts. A card can be reordered and
+    then reordered back; a completion can be corrected to an instant already
+    observed once. A unique index on the VALUE — (fight_id, source, bout_order),
+    or on completed_at — rejects that second, truthful observation and turns an
+    append-only ledger into one that quietly refuses to record reality.
+
+    What IS unique is one statement per source per instant, which cannot recur.
+    """
+
+    def setUp(self):
+        self.sql = code_only(read("proposed_2026-09-16_event_flow.sql"))
+
+    def test_the_running_order_is_not_unique_on_the_position(self):
+        self.assertNotIn("unique index if not exists fight_bout_order_unique_idx",
+                         self.sql)
+        for cols in self._unique_index_columns("fight_bout_order"):
+            self.assertIn("observed_at", cols,
+                          "the only uniqueness allowed on the order ledger is "
+                          "one observation per instant")
+            self.assertNotIn("bout_order", cols,
+                             "a card reordered back to a position it held "
+                             "before must still be recordable")
+
+    def test_the_completions_ledger_is_not_unique_on_the_instant_value(self):
+        for cols in self._unique_index_columns("fight_bout_completions"):
+            self.assertIn("observed_at", cols)
+            self.assertNotIn("completed_at", cols,
+                             "a correction that returns to an instant observed "
+                             "before must still be recordable")
+
+    def _unique_index_columns(self, table):
+        """The indexed COLUMN LIST of each unique index on `table`.
+
+        The table name itself contains 'bout_order', so matching the whole
+        statement would read the table's name as one of its indexed columns.
+        """
+        out = []
+        for stmt in re.findall(r"create unique index[^;]+;", self.sql):
+            if f"on public.{table} " not in stmt:
+                continue
+            out.append(stmt[stmt.index(f"on public.{table} "):].split("(", 1)[1])
+        self.assertTrue(out, f"{table} has no unique index at all")
+        return out
+
+    def test_each_ledger_has_a_latest_observation_index(self):
+        for table in ("fight_bout_order", "fight_bout_completions"):
+            with self.subTest(table=table):
+                stmt = re.search(rf"create index if not exists {table}_latest_idx"
+                                 r"[^;]+;", self.sql)
+                self.assertIsNotNone(stmt, f"{table} has no latest-observation "
+                                           f"index; every read of it sorts by "
+                                           f"observed_at desc, id desc")
+                self.assertIn("observed_at desc", stmt.group(0))
+                self.assertIn("id desc", stmt.group(0))
+
+
+class TestTheCurrentCardIsAWholeObservation(unittest.TestCase):
+    """The running order resolves as a COMPLETE CARD, not per fight.
+
+    Resolving the latest row per fight leaves a scratched booking's old position
+    alive beside the current card: two bout 1s, a wrong is_first_bout, and a
+    previous-bout lookup into a dead booking. The behavioural regression test
+    for the same rule on the capture side is in build/test-fetch-odds.js.
+    """
+
+    def setUp(self):
+        self.sql = read("proposed_2026-09-16_event_flow.sql")
+
+    def test_the_view_resolves_one_observation_instant_per_event(self):
+        block = re.search(r"latest_card as \((.*?)\n\),", self.sql, re.S)
+        self.assertIsNotNone(block, "the latest_card CTE is gone — the view is "
+                                    "back to resolving per fight")
+        body = block.group(1)
+        self.assertIn("distinct on (o.event_id)", body,
+                      "one instant per EVENT is what makes it a whole card")
+        self.assertIn("order by o.event_id, o.observed_at desc, o.id desc", body)
+
+    def test_the_order_cte_keeps_only_that_observation_s_rows(self):
+        body = re.search(r"\nord as \((.*?)\n\),", self.sql, re.S).group(1)
+        self.assertIn("join latest_card lc", body)
+        self.assertIn("lc.observed_at = o.observed_at", body,
+                      "without matching the instant, older rows survive and the "
+                      "card gets two bout 1s")
+        self.assertNotIn("distinct on (o.fight_id)", body,
+                         "per-fight resolution is the bug this replaced")
+
+    def test_the_complete_card_rule_is_scoped_to_one_source(self):
+        for name in ("latest_card", "\nord"):
+            body = re.search(rf"{name} as \((.*?)\n\),", self.sql, re.S).group(1)
+            self.assertIn("o.source = 'ufcstats_card'", body,
+                          "a partial observation from another source would "
+                          "silently truncate the current card")
+
+
 class TestNoBellOverrideInTheView(unittest.TestCase):
     """Amendment 5.1: this version's cutoff is exactly two cases, always."""
 
     def setUp(self):
-        self.sql = read("proposed_2026-09-16_event_flow.sql")
+        # code_only, because a semicolon inside a comment would otherwise end
+        # the statement early and leave most of the view unexamined — the
+        # assertions below would then pass on text they never read.
+        self.sql = code_only(read("proposed_2026-09-16_event_flow.sql"))
         self.view = re.search(
             r"create or replace view public\.v_clv_close_reference(.*?);",
             self.sql, re.S).group(1)

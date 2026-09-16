@@ -473,12 +473,20 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
     what the market did.
     """
     out = {"edge_id": edge.get("id"), "fight_id": edge.get("fight_id"),
-           "event_date": edge.get("event_date"), "scored": False,
+           "event_date": edge.get("event_date"),
+           # The publication floor counts DISTINCT EVENTS. event_date is not a
+           # proxy for that: the UFC runs two cards on one date often enough that
+           # counting dates would understate the event count and let the 20-event
+           # gate open early. Carried from the fight, per event_id.
+           "event_id": fight.get("event_id"),
+           "scored": False,
            "reason": None, "detail": "", "clv_return": None,
            "closing_fair_probability": None, "closing_book_count": None,
            "quote_ids": None, "consensus": None, "consensus_sha256": None,
-           # Amendment 4: which tier supplied the pre-fight cutoff, how late the
-           # proxy quote was, and whether that lead time is exact or a bound.
+           # Which of this version's two bases supplied the pre-fight cutoff, how
+           # late the proxy quote was, and whether that lead time is exact or a
+           # lower bound. Carried even on an unscored row, so a refusal says what
+           # it was asked to score against.
            "close_basis": reference_basis,
            "lead_time_minutes": None,
            "lead_time_is_lower_bound": reference_is_lower_bound(reference_basis),
@@ -488,6 +496,27 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
     def unscored(reason: str, detail: str = "") -> dict:
         out["reason"], out["detail"] = Unscored(reason, detail).reason, detail
         return out
+
+    # A caller may not hand in a cutoff whose basis this version does not permit.
+    # `admissible_reference` is the gate, but a direct `score_row(...,
+    # reference_instant=X, reference_basis='bell_at')` would sail past it — so the
+    # same rule is enforced here, at the only other way in. v1.0.8 permits
+    # exactly `scheduled_first_bout` and `previous_bout_completion`.
+    if reference_instant is not None and reference_basis not in CLOSE_REFERENCE_BASES:
+        return unscored(
+            "no_scheduled_start",
+            f"reference_basis {reference_basis!r} is not a cutoff in "
+            f"{PROTOCOL_TAG}. This version permits exactly "
+            f"{sorted(CLOSE_REFERENCE_BASES)}; `bell_at` is audit-only and "
+            f"scoring against a confirmed bell requires a new protocol version "
+            f"(Amendment 5.1).")
+    if (reference_instant is not None
+            and reference_basis == "scheduled_first_bout"
+            and is_first_bout is not True):
+        return unscored(
+            "no_scheduled_start",
+            "the card's scheduled start is the FIRST bout's cutoff only; this "
+            "fight is not identified as bout 1 (Amendment 3)")
 
     if eligible_book_ids is None:
         return unscored("eligible_book_list_not_frozen",
