@@ -2,20 +2,181 @@
 
 **From:** Claude (event-flow / integrity session, branch `claude/cfl-event-flow-integrity-29rl4c`)
 **To:** ChatGPT for review, then Reed for the L3s
-**Date:** 2026-09-16
+**Date:** 2026-09-16 — revision 2. Newest section first; revision 1 is kept
+below as the record, superseded where revision 2 says so.
 
-> **A note on where this file lives.** The CLV session owns
-> [`STATE.md`](STATE.md) and [`HANDOFF.md`](HANDOFF.md) and was editing both
-> while this ran. This is a separate file on a separate branch so the two
-> sessions cannot collide; it is a handoff entry, not a second baton. **When the
-> branches merge, fold the summary below into `HANDOFF.md` and refresh
-> `STATE.md` in the same commit**, per the rule at the bottom of `STATE.md`.
+> **A note on where this file lives.** The CLV session (Session 1) owns
+> `coordination/STATE.md` and `coordination/HANDOFF.md` and was editing both
+> while this ran. **They live on `research/clv-001-revision`, not on this
+> branch**, which is why this file is the only thing in `coordination/` here.
+> It is a handoff entry, not a second baton. **When the branches merge, fold the
+> summary below into `HANDOFF.md` and refresh `STATE.md` in the same commit**,
+> per the rule at the bottom of `STATE.md`.
 >
-> This session **modified no existing file**. Everything below is new paths. The
-> working tree touched nothing under `research/clv/`, nothing frozen, and
-> nothing the close-price implementation is changing.
+> This session **modified no file it does not own**. Everything here is new
+> paths under `cfl_engine/event_flow/`, `cfl_engine/integrity/`,
+> `research/integrity/` and `.github/workflows/event-flow.yml`. Nothing under
+> `research/clv/` was touched, nothing frozen was touched, and nothing the
+> close-price implementation is changing was touched — **including the migration
+> that needs the index change, which is described for Session 1 to apply rather
+> than edited here.**
 
 ---
+
+## Revision 2 — 2026-09-16 — the ledger-history defect is fixed
+
+**Reviewer's finding, accepted in full.** The unique index on
+`(fight_id, source, bout_order)` plus `resolution=ignore-duplicates` could not
+record a bout returning to a position it held before. On 5 → 6 → 5 the third
+observation was dropped as a duplicate of the first, the ledger was left holding
+5 and 6 with **6** carrying the later `observed_at`, and every consumer taking
+the latest observation concluded 6. The fight was at 5.
+
+### What changed
+
+The ingester no longer asks the database whether anything is new. It **reads the
+latest observation per fight, compares it to the page, and appends the whole
+card as one observation if anything differs** — nothing at all if nothing does.
+The insert carries **no conflict resolution of any kind**: no
+`ignore-duplicates`, no `merge-duplicates`, `Prefer: return=representation` and
+nothing else, asserted by a test that parses the header out of the source.
+
+Because all the rows go in one POST they share one transaction and therefore one
+`now()`, so each observation reads back as a single coherent card snapshot
+rather than thirteen timestamps that have to be reassembled.
+
+`latest_state()` reimplements the consumer's rule exactly —
+`distinct on (fight_id) order by observed_at desc, id desc` — including the
+`id desc` tiebreak, which is load-bearing: `now()` is the transaction's start
+time, so a retried write lands on the same microsecond and without a
+deterministic tiebreak "latest" is whatever the planner hands over first.
+
+### The migration change Session 1 needs to make
+
+Written up in full in
+[`cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md`](../cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md).
+**This session did not edit `research/clv/proposed_2026-09-16_event_flow.sql`.**
+In short: drop `fight_bout_order_unique_idx`, replace it with a non-unique
+`(fight_id, source, observed_at desc, id desc)` for the latest-observation
+lookup, and optionally add a genuinely-unique
+`(fight_id, source, observed_at)`. The table comment needs a line saying the
+non-uniqueness is deliberate, so nobody "fixes" it back.
+
+Nothing else in that migration moves. The append-only triggers, the RLS grants
+and `v_clv_close_reference` are all unaffected — the view's ordering rule was
+already right and simply becomes correct in practice once the ledger can record
+the move back.
+
+### A sharper version of the same problem, found while testing
+
+The 5 → 6 → 5 case is the minimal one. Because the append is a **complete card**,
+the index as written bites on the **first reshuffle of any card**: when two
+prelims swap, the eleven bouts that did not move are re-appended at the positions
+they already hold, and every one collides. Under the migration as written the
+ledger would record each card once and then nothing, ever again.
+
+The end-to-end test proves this and its control proves the index is the only
+difference. The ingester recognises the `23505`, exits **5**
+(`EXIT_LEDGER_SHAPE`) naming the fix, and writes **no partial card**.
+
+### The real-page requirement is now a gate, not a note
+
+`--execute` is refused until `cfl_engine/event_flow/REAL_PAGE_CHECK.json` exists
+and records which page was read, by whom, when, what `main_event_bout_order`
+came out as, and what the first walkout was. Missing any of those fields is a
+refusal — a record that does not say what was checked asserts nothing.
+
+**The gate is currently shut**, and a test asserts the file does not exist, so it
+cannot be added quietly without that showing up in review. Dry runs are never
+gated, because the dry run is how the confirmation is produced. The
+`--from-file` recipe is in the README.
+
+The gate sits on the CLI entry point (`main`), so a caller importing
+`ingest_event` directly bypasses it. The CLI and the workflow are the only
+callers.
+
+### One thing this still does not solve
+
+When a booking falls off a card, its last observation stands and
+`v_clv_close_reference` will still resolve a running order for it. The ledger has
+no way to record "this bout left the card" and inventing one would write a fact
+nobody observed. The ingester now **reports** it — `N fight(s) were ordered
+before and are not on the page now` — and the note in `MIGRATION_ADJUSTMENT.md`
+raises the view-side question for Session 1. Not urgent: a dead booking has no
+result and no bell, so nothing scores it.
+
+### Integrity findings: unchanged, still read-only
+
+No auto-fix was applied to the rebooked fights, the corner-letter contradiction
+or the 1970 timestamps. `cfl_engine/integrity/` and `research/integrity/` are
+byte-identical to revision 1.
+
+### Tests after the revision
+
+| suite | result |
+|---|---|
+| `cfl_engine.event_flow.test_event_flow` | **47 passed** (was 26) |
+| `cfl_engine.integrity.test_integrity` | 17 passed, unchanged |
+| `tests.test_research_state` | 28 passed |
+| `research.dur001_backfill.tests.test_gate` | 32 passed |
+| `cfl_engine.dur001.test_alert` | 25 passed |
+| `cfl_engine.dur001.test_diagnose_folds` | 20 passed |
+
+**169 passing.** The three numpy-dependent modules are still unrunnable in this
+container, pre-existing and untouched.
+
+The 21 new tests worth a reviewer's time:
+
+* `test_the_move_back_is_appended_and_downstream_resolves_to_5` — the requested
+  regression, asserted against a reimplementation of the consumer's SQL rule
+  rather than against our own helper, so a matching bug in `latest_state` cannot
+  hide it;
+* `test_the_old_ignore_duplicates_behaviour_would_have_failed_this` — replays the
+  old rule and shows it resolves to **6**, so the test above is demonstrably
+  testing something;
+* `test_five_six_five_through_the_runner` — the same shape driven through
+  `ingest_event` against a fake ledger that enforces append-only, so the
+  read → compare → append wiring is covered rather than assumed;
+* `test_a_tie_on_observed_at_is_broken_by_id_not_by_luck` and
+  `test_out_of_order_arrival_still_resolves_to_the_newest`.
+
+Verified to bite: making `plan_append` compare against all history instead of the
+latest observation fails the regression test with the message
+*"step 3: observing bout 5 was treated as no change."*
+
+### Still not done, deliberately
+
+No schedule enabled, no production write, no migration applied, nothing that
+costs money.
+
+## Next action for ChatGPT review (revised)
+
+The original four review questions stand. Two are now more specific and one is
+new:
+
+1. **The flip is still the biggest risk** and is now gated rather than
+   documented. Confirm the gate is the right shape: is "a human read one real
+   upcoming card and recorded the direction" sufficient to open production
+   writes, or should the check be repeated per-card until N cards agree?
+2. **The whole-card append.** It is the reason the unique index has to go, and
+   the alternative — appending only the bouts that moved — would dodge the
+   collision for movers but not for a returning bout, while giving up the
+   one-snapshot-per-observation property. Confirm that trade is the right way
+   round.
+3. **New:** `v_clv_close_reference` resolves running order by
+   `observed_at desc, id desc`. With whole-card appends, every bout on a card
+   shares an `observed_at`, so the `id desc` tiebreak now decides between rows
+   of the *same* observation for a given fight only if a card were appended
+   twice in one transaction — which the optional unique index would prevent.
+   Confirm Session 1 is happy with that, and with the non-unique index shape.
+4. The `prev_completed_at` correlated subquery in `v_clv_close_reference` reads
+   `ord` twice, once for the fight and once for `bout_order - 1`. With multiple
+   observations now genuinely accumulating per fight, confirm the `distinct on`
+   in `ord` still gives that subquery one row per fight in every case.
+
+---
+
+## Revision 1 — 2026-09-16 (superseded where the sections above say so)
 
 ## 1. What changed
 
@@ -31,8 +192,9 @@ Reads a UFCStats event page and writes one row per bout into the append-only
 | `ufcstats_card.py` | parses the event page; stdlib only, no bs4 |
 | `bout_order.py` | links page bouts to fight rows and does the page-order flip |
 | `ingest_bout_order.py` | the runner — dry run by default |
-| `test_event_flow.py` | 26 tests |
+| `test_event_flow.py` | 47 tests |
 | `fixtures/ufcstats_event_page.html` | hand-built to the markup contract, labelled as such |
+| `MIGRATION_ADJUSTMENT.md` | the one index change Session 1 must make before applying its migration |
 | `README.md` | including the outstanding real-page verification step |
 
 The direction is the thing worth reviewing hardest. UFCStats prints **main event

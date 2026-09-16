@@ -71,9 +71,11 @@ exists so a future join notices.
   to the wrong bout.
 * **Never creates the table.** If `fight_bout_order` is missing, the run stops
   and names the migration.
-* **Never rewrites.** Inserts only, with `resolution=ignore-duplicates` against
-  the unique index `(fight_id, source, bout_order)`. Re-running is a no-op. A
-  reshuffled card **appends** a new observation and the latest wins downstream.
+* **Never rewrites.** It reads the latest observation for every bout, compares
+  it to the page, and appends the **whole card** as one observation only if
+  something differs. An unchanged card writes nothing. The insert carries no
+  conflict resolution at all — see "A bout can return to a position it held
+  before" below, which is the reason.
 * **Never backfills.** A running order reconstructed today is not what we
   observed on the night. Past cards get no rows.
 * **Dry run unless told otherwise.** `--execute` is required to write.
@@ -81,6 +83,44 @@ exists so a future join notices.
 Dead bookings are the case this handles best by doing nothing: a booking that
 fell off the card is still in `fights` — 36 such rows sit on settled 2026 cards —
 and the page not listing it is the signal. It gets no order row.
+
+## A bout can return to a position it held before
+
+This is the one piece of the design worth reading twice.
+
+A card is reshuffled and a bout moves from 5 to 6. It is reshuffled again and
+moves **back to 5**. All three are real observations and all three have to be on
+record, because the last one is the current answer.
+
+An earlier version of this leaned on the ledger's unique index —
+`(fight_id, source, bout_order)` — plus `resolution=ignore-duplicates`, on the
+reasoning that re-observing the same order should be a no-op. It is a no-op when
+the order has not changed. It is **data loss** when the order changed twice and
+came back: the third insert collides with the row from two reshuffles ago, gets
+dropped, and the ledger is left holding 5 and 6 with 6 carrying the later
+timestamp. Every consumer that takes the latest observation then says 6. The
+fight is at 5.
+
+So:
+
+* there is **no uniqueness on (fight_id, source, bout_order)** — the CLV
+  session's migration still declares it and needs one index change, written up
+  in [`MIGRATION_ADJUSTMENT.md`](MIGRATION_ADJUSTMENT.md);
+* the insert sends **no conflict resolution**, only `return=representation`;
+* "has this changed?" is answered by **reading the ledger** — the latest
+  observation per fight — never by catching a constraint violation;
+* if the unique index is still in place, the append fails, the ingester
+  recognises the error and exits **5** naming the fix, and nothing is written —
+  not even a partial card.
+
+Worth knowing: because the append is a **complete card**, the index as written
+bites on the *first* reshuffle of any card, not only on a returning bout. When
+two prelims swap, the eleven bouts that did not move are re-appended at the
+positions they already hold, and every one of them collides. The index and
+complete-snapshot appends are incompatible; dropping it is the fix.
+
+The general rule: **history constrains nothing about the future.** A position
+the card held before is a position the card can hold again.
 
 ## Running it
 
@@ -91,13 +131,17 @@ python cfl_engine/event_flow/ingest_bout_order.py --event-id 4433 --execute
 python cfl_engine/event_flow/ingest_bout_order.py --event-id 4433 --from-file page.html
 ```
 
+`--execute` additionally requires the real-page check below. Dry runs never do.
+
 Needs `SUPABASE_URL` and a service key (`SUPABASE_SECRET_KEY`,
 `SUPABASE_SERVICE_ROLE_KEY` or `SUPABASE_SERVICE_KEY`). The ledger is revoked
 from `anon`, so a publishable key would read zero rows with HTTP 200 and look
 like a clean run — hence the hard exit.
 
-Exit codes: `0` fine, `2` setup problem, `3` a card would not link completely,
-`4` the page could not be fetched or read.
+Exit codes: `0` fine, `2` setup problem (including the real-page check not
+done), `3` a card would not link completely, `4` the page could not be fetched
+or read, `5` the ledger still carries the unique index that blocks a returning
+bout.
 
 **Cost: none.** UFCStats is public HTML on the host the event scraper already
 polls. No API key, no credits, no paid tier.
@@ -108,30 +152,64 @@ polls. No API key, no credits, no paid tier.
 python -m unittest cfl_engine.event_flow.test_event_flow -v
 ```
 
-26 tests, no network, no database.
+47 tests, no network, no database. `TestReturnToAPreviousPosition` is the one to
+read: it walks 5 → 6 → 5 and asserts the consumer's own resolution rule lands on
+5, and a companion test replays the old behaviour to show it lands on 6.
 
-## Verifying against a real page — still outstanding
+## Verifying against a real page — required before the first write
+
+**`--execute` is refused until this has been done.** It is not a note in a
+README; it is a gate in the code, and the gate is currently shut.
 
 The parser is tested against `fixtures/ufcstats_event_page.html`, which is
-**hand-built to the UFCStats markup contract, not a captured page**: the
-container these sessions run in cannot reach `ufcstats.com` (the host is not on
-the network egress allowlist, and both `curl` and the fetch tool are refused).
+**hand-built to the UFCStats markup contract, not a captured page**: this
+container cannot reach `ufcstats.com` (the host is not on the network egress
+allowlist; `curl` returns `Host not in allowlist` and the fetch tool returns
+`EGRESS_BLOCKED`). A fixture written from an assumption cannot test that
+assumption — and the assumption in question is the one that matters most and is
+invisible when wrong: **that UFCStats lists the main event first**, which is why
+`bout_order` counts up from the bottom of the page. If that is backwards, every
+card in the ledger is inverted, every close reference derived from it lands on
+the wrong fight, and nothing fails.
 
-The linkage half *has* been checked against production data: a page built from
-UFC 331's thirteen real `ufc_fight_id` values links 13/13 and numbers the main
-event 13 and the opener 1.
+The linkage half *is* verified against production: a page built from UFC 331's
+thirteen real `ufc_fight_id` values links 13/13 and numbers the main event 13
+and the opener 1.
 
-Before the first `--execute`, run this once somewhere with UFCStats access —
-the event scraper's Railway environment qualifies:
+Do this once, somewhere with UFCStats access — the event scraper's Railway
+environment qualifies — against an **upcoming** card:
 
 ```bash
 curl -s http://www.ufcstats.com/event-details/8a0a35e7c74bebcc > /tmp/ufc331.html
 python cfl_engine/event_flow/ingest_bout_order.py --event-id 4433 --from-file /tmp/ufc331.html
 ```
 
-and read the printed order against the card. It is a dry run; it writes nothing.
-If the parser raises, the markup contract has moved and the fixture needs
-replacing with the real page — which is the better fixture anyway.
+It is a dry run and writes nothing. Read the printed order against the real
+card. **Bout 1 must be the first prelim and the last line must be the main
+event.** If it is the other way round, the flip in `bout_order.walkout_order` is
+backwards and must be corrected before anything is written.
+
+Then record what you saw, in `cfl_engine/event_flow/REAL_PAGE_CHECK.json`:
+
+```json
+{
+  "ufc_event_id": "8a0a35e7c74bebcc",
+  "cfl_event_id": 4433,
+  "checked_by": "Reed Cannon",
+  "checked_at": "2026-09-17",
+  "main_event_bout_order": 13,
+  "first_walkout_matchup": "Michael Aswell Jr. vs JooSang Yoo",
+  "notes": "matched the card as listed on ufcstats.com"
+}
+```
+
+All of `ufc_event_id`, `checked_by`, `checked_at`, `main_event_bout_order` and
+`first_walkout_matchup` are required — a record that does not say which page was
+read, by whom, when, and how the direction came out asserts nothing.
+
+If the parser raises instead of printing an order, the markup contract has moved
+and the fixture should be replaced with the real page, which is the better
+fixture anyway.
 
 ## Where this sits
 

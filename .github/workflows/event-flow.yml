@@ -1,14 +1,25 @@
 # Capture the running order of upcoming cards from UFCStats.
 #
-# MANUAL ONLY, deliberately. There is no `schedule:` block yet because
-# `fight_bout_order` does not exist until
-# research/clv/proposed_2026-09-16_event_flow.sql is applied, and a cron that is
-# red on every run is a cron people learn to ignore.
+# MANUAL ONLY, deliberately, and it cannot write yet even when dispatched.
 #
-# After that migration lands, uncomment the schedule below. Twice a day is
-# enough: a card's order is announced days out and moves rarely, and every
-# observation is appended rather than overwritten, so a missed pass costs
-# nothing a later one cannot record.
+# Two things have to happen before the schedule below is uncommented:
+#
+#   1. research/clv/proposed_2026-09-16_event_flow.sql is applied — WITH the one
+#      index change in cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md. Without
+#      that change a bout cannot return to a position it held before, and the
+#      ingester halts on such a card rather than recording the wrong order.
+#   2. somebody reads one real UFCStats page and records the check in
+#      cfl_engine/event_flow/REAL_PAGE_CHECK.json. Until that file exists,
+#      `--execute` refuses; dry runs work fine and are how you produce it.
+#
+# Both are enforced in code, so a scheduled run before either would stop rather
+# than write — and a cron that is red on every run is a cron people learn to
+# ignore. Hence: manual only for now.
+#
+# Once both are done, uncomment the schedule. Twice a day is enough: a card's
+# order is announced days out and moves rarely, an unchanged card writes nothing
+# at all, and every observation is appended rather than overwritten, so a missed
+# pass costs nothing a later one cannot record.
 #
 # Cost: none. UFCStats is public HTML; no API key and no credits are involved.
 name: Event flow — bout order
