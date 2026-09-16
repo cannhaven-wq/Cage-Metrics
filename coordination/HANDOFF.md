@@ -11,6 +11,105 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — D-004: the legacy BFO backfill is retired
+
+**From:** Claude
+**To:** Owner → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied. No production write. No CLV published. No paid API call.**
+No `fight_odds` row deleted or rewritten, here or anywhere.
+
+Two repositories:
+
+| repo | commit | branch |
+|---|---|---|
+| `cage-metrics-odds-scrapper` | `d8e1908` | `retire/backfill-odds-2026-09-16` (pushed, **not merged** — it is not my default branch to push to) |
+| `Cage-Metrics` | see below | `research/clv-001-revision` |
+
+### The retirement
+
+`backfill_odds.py` now prints a retirement notice and **exits non-zero**. It
+holds no `delete`, `insert`, `update` or `upsert` — verified by grep after the
+change, and by running it.
+
+Non-zero is the deliberate part. A scheduler that read a silent success would go
+on calling it forever and nobody would learn it had been retired.
+
+The docstring carries the full reasoning rather than a one-line "retired":
+what it did, the R-01 clause it collides with, the fact that its
+delete-before-insert was *the* mechanism of its idempotency, and — for whoever
+wants the capability back — that the append-only replacement appends a second
+observation and resolves by `(observed_at DESC, id DESC)`, the pattern
+`fight_bout_completions` already uses. The implementation is preserved in git
+history at `1ad1aa6`.
+
+### No automation referenced it
+
+Checked before changing anything:
+
+- `.github/workflows/` — three workflows, running `polymarket/backfill_history.py`,
+  `polymarket/probe_history.py`, and the nightly model-training loop. None
+  mentions it.
+- `nixpacks.toml` — `[start] cmd = "python odds_scraper.py"`.
+- No `Procfile`, no `railway.json`/`railway.toml`.
+- The only references anywhere were **documentation**: two in `README.md` and one
+  comment in `backtest_queries.sql`. All three updated.
+
+**One thing I cannot verify.** The README described a *second Railway service*
+whose start command was overridden to `backfill_odds.py`. Railway configuration
+is not in git. If that service still exists it will now exit non-zero with the
+notice instead of deleting anything — loud and harmless — and it should be
+removed. Flagged in the README and the inventory.
+
+### Nothing scorable was lost
+
+BFO publishes the price but not when it was observed, so the script stamped
+`captured_at` as the Unix epoch *by design* — the source comment reads
+"placeholder; opener time isn't precisely known". R-13 excludes every such row
+from scoring permanently; they are the bulk of the 30,724 it names. The rows it
+already wrote are untouched and still feed `model/v5`, `model/v6` and the rest,
+which read opener/closer prices without needing a capture instant.
+
+### Cage-Metrics side
+
+- **`CLAUDE.md`** — `cage-metrics-odds-scrapper` added to the related-repos
+  list, named as the main writer to `fight_odds`, linked to the inventory.
+- **`FIGHT_ODDS_WRITER_INVENTORY.md`** — status block at the top: no known
+  repository-based writer conflict remains. The blocker is left described in
+  full rather than deleted; a retired conflict nobody can read the reasoning for
+  is one somebody re-creates.
+- **`DECISIONS.md`** — **D-004**, quoting the owner, recording that the repo
+  change is revertible and the rule it protects is not: a ledger that has been
+  append-only and then is not was never append-only.
+- **`STATE.md`**, **`HANDOFF.md`** — this.
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo, incl. static migration + Postgres behavioural) | **171 passed**, 3 skipped |
+| `cfl_engine/clv/` | **200 passed** (`test_scoring` 167 + `test_devig` 33) |
+| `build/test-fetch-odds.js` (Node) | **66 passed** |
+
+**437 total, all green.** No CLV-001 code changed in this pass. Still locally
+reported.
+
+### Where this leaves the migration
+
+`proposed_2026-09-16_fight_odds_immutability.sql` has **no known
+repository-based writer conflict**. It remains unapplied, with the other four.
+
+## Next action
+
+**ChatGPT:** the migration application plan.
+
+**Owner:** merge `retire/backfill-odds-2026-09-16` in the odds scrapper (pushed
+as a branch, not to `main`), and check whether the second Railway service still
+exists.
+
+---
+
 ## 2026-09-16 — conformance cleanup: the machine mirror and the SQL pairing
 
 **From:** Claude

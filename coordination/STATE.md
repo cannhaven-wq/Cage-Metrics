@@ -47,7 +47,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 |---|---|
 | [`STATE.md`](STATE.md) | this file — current position, refreshed at every handoff |
 | [`TASK_QUEUE.md`](TASK_QUEUE.md) | what is queued, who owns it, what level it is |
-| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them |
+| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-004**, retiring `backfill_odds.py` |
 | [`HANDOFF.md`](HANDOFF.md) | the live baton — newest entry at the top |
 | [`CRITICAL_GATES.md`](CRITICAL_GATES.md) | the L0–L3 ladder and the closed L3 list |
 
@@ -344,15 +344,21 @@ frozen file and serves DUR-001.
 froze. Additive, order-independent, and it cannot be backfilled, so the sooner
 it lands the sooner snapshots stop being ambiguous.
 
-**Every `fight_odds` writer is now inventoried** —
+**Every `fight_odds` writer is inventoried, and the one conflict is retired** —
 [`FIGHT_ODDS_WRITER_INVENTORY.md`](../research/clv/FIGHT_ODDS_WRITER_INVENTORY.md),
-read-only across all five repositories on the account. One blocker:
-`cage-metrics-odds-scrapper`'s `backfill_odds.py` deletes opener/closer rows
-before re-inserting them, which an append-only table cannot allow. Seven other
-write sites are compatible, and the four UPDATE sites touch only `is_opener` /
-`is_closer` — independent confirmation that the trigger's whitelist is the right
-cut. **`cage-metrics-odds-scrapper` is missing from `CLAUDE.md`'s related-repos
-list**, and it is the repository that writes most to `fight_odds`.
+read-only across all five repositories on the account.
+`cage-metrics-odds-scrapper`'s `backfill_odds.py` deleted opener/closer rows
+before re-inserting them, which an append-only table cannot allow. **Retired by
+owner decision (D-004)** — `cage-metrics-odds-scrapper@d8e1908`, branch
+`retire/backfill-odds-2026-09-16`: it prints a notice and exits non-zero, holds
+no write verb, deleted nothing, and nothing automated ever invoked it. Seven
+other write sites are compatible, and the four UPDATE sites touch only
+`is_opener` / `is_closer` — independent confirmation that the trigger's
+whitelist is the right cut. **The immutability migration now has no known
+repository-based writer conflict**; what a grep cannot see (a SQL editor
+session, a Railway console) is why its loud failure still matters, and why it
+should land between cards. `cage-metrics-odds-scrapper` has been added to
+`CLAUDE.md`'s related-repos list, where it had been missing.
 
 **A fourth migration is written, and it is the one that is NOT additive.**
 [`proposed_2026-09-16_fight_odds_immutability.sql`](../research/clv/proposed_2026-09-16_fight_odds_immutability.sql)

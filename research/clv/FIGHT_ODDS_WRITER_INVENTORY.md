@@ -14,12 +14,35 @@ grepped for `fight_odds`, then every hit was classified by verb. No database was
 queried; no repository was modified. A grep can only find writers that live in a
 repository, which is the limit stated at the bottom.
 
-**Result: one blocker.** Everything else either appends or touches only the two
-derived flags the trigger whitelists.
+**Result: one blocker, now retired.** Everything else either appends or touches
+only the two derived flags the trigger whitelists.
 
 ---
 
-## The blocker
+## STATUS, 2026-09-16: no known repository-based writer conflict remains
+
+The one blocker below is **retired by owner decision** (D-004, Michael Cannon):
+
+> Retire `cage-metrics-odds-scrapper/backfill_odds.py`. Do not weaken the
+> `fight_odds` immutability rule to preserve it.
+
+`cage-metrics-odds-scrapper@d8e1908`, branch `retire/backfill-odds-2026-09-16`.
+The script prints a retirement notice and exits non-zero; it contains no write
+verb of any kind. No `fight_odds` row was deleted or rewritten, and the
+implementation stays in git history. Verified before the change: no workflow,
+cron or start command invoked it.
+
+**`proposed_2026-09-16_fight_odds_immutability.sql` therefore has no known
+repository-based writer conflict.** What a grep cannot see is unchanged and is
+stated at the bottom of this document — that is the reason the migration's own
+loud-failure behaviour still matters, and the reason to land it between cards.
+
+The blocker is left described in full below rather than deleted. A retired
+conflict that nobody can read the reasoning for is one somebody re-creates.
+
+---
+
+## The blocker — RETIRED 2026-09-16 (D-004)
 
 ### `cage-metrics-odds-scrapper` — `backfill_odds.py:457`
 
@@ -42,15 +65,16 @@ garbage is excluded at scoring time by a written rule, never deleted"* — so th
 append-only version of this function appends a second observation and lets the
 reader resolve which is current, exactly as `fight_bout_completions` does.
 
-Three ways forward, and the choice is the owner's:
+Three ways forward were put to the owner. **(1) was chosen.**
 
-1. **Retire it.** It is a historical backfill of BestFightOdds opener/closer
-   pairs, not a cron. If it has done its job, it can stop being runnable.
-2. **Make it append-only.** Drop the delete; insert the new pair; readers take
-   the latest observation. Costs nothing at read time and matches the ledger
-   pattern already used elsewhere.
-3. **Apply the migration knowing it breaks.** Defensible only if (1) is true in
-   practice, and it should be a decision rather than a discovery.
+1. **Retire it.** ✅ **DONE.** It is a historical backfill of BestFightOdds
+   opener/closer pairs, not a cron. It had done its job, and it can stop being
+   runnable.
+2. ~~Make it append-only.~~ Drop the delete; insert the new pair; readers take
+   the latest observation. Still the right shape if the capability is ever
+   wanted back — the retirement notice says so and points at
+   `fight_bout_completions` as the pattern.
+3. ~~Apply the migration knowing it breaks.~~ Not needed.
 
 **Worth knowing while deciding:** this function writes `captured_at` as
 `1970-01-01T00:00:00Z` and `…:01Z` — commented in the source as *"placeholder;
@@ -82,7 +106,7 @@ cron.
 | where | verb | verdict |
 |---|---|---|
 | `odds_scraper.py:517` | `INSERT` | append — unaffected |
-| `backfill_odds.py:499` | `INSERT` | append (epoch-stamped, permanently unscorable) |
+| ~~`backfill_odds.py:499`~~ | ~~`INSERT`~~ | **retired** 2026-09-16 (D-004) — the whole script |
 | `polymarket/scrape.py:321` | `INSERT` | append |
 | `polymarket/scrape.py:355` | `UPDATE {is_opener}` | **whitelisted** |
 | `polymarket/scrape.py:360,361` | `UPDATE {is_closer}` | **whitelisted** |
@@ -114,20 +138,20 @@ legacy `predictions` table; its cron has been dead since 2026-05-29.
 
 ---
 
-## A finding that is not about this migration
+## A finding that is not about this migration — FIXED 2026-09-16
 
-**`cage-metrics-odds-scrapper` is not in `CLAUDE.md`'s "Related repos" list.** That
-list names Cage-Metrics, `cage-metrics-scrapper`, `cage-metrics-event-scrapper`
-and `cfl-snapshotter` — and the repository that does most of the writing to
-`fight_odds` is absent from it.
+**`cage-metrics-odds-scrapper` was not in `CLAUDE.md`'s "Related repos" list.**
+That list named Cage-Metrics, `cage-metrics-scrapper`,
+`cage-metrics-event-scrapper` and `cfl-snapshotter` — and the repository that
+does most of the writing to `fight_odds` was absent from it.
 
 Every reasoning step in this project that started from "the repos are X, Y and Z"
 was working from an incomplete list. Nothing downstream turned out to be wrong,
 but that was luck rather than method: it is exactly the shape of the mistake that
 would have made this inventory come back clean and be wrong.
 
-Adding it to `CLAUDE.md` is a one-line edit and is left to the owner, since that
-file is the project's canonical description rather than working notes.
+Added to `CLAUDE.md` on the owner's instruction, named as the main writer to
+`fight_odds` and linked back here.
 
 ---
 
@@ -144,3 +168,11 @@ starts erroring loudly instead of quietly rewriting evidence, which is the
 behaviour R-01 asks for. **Loud is the intended failure mode — but it is better
 to be loud on a Tuesday afternoon than at 23:00 UTC on a card night**, which is
 the argument for landing it between cards.
+
+One specific instance is worth naming, because it is known rather than
+hypothetical: the odds scrapper's README described a **second Railway service**
+whose start command was overridden to `backfill_odds.py`. Railway configuration
+is not in git, so this inventory cannot tell whether that service still exists.
+If it does, it will now exit non-zero with a retirement notice instead of
+deleting anything — the failure is loud and harmless — and the service should be
+removed. Flagged for the owner; the README carries the same note.

@@ -153,3 +153,53 @@ status `draft`. Twelve decided rules and eleven open questions, each question
 carrying a proposed level; five are marked L3 because they change what a
 published number means. No historical comparison was run to choose among any of
 them, and `tests/test_clv_protocol.py` requires each question to record that.
+
+---
+
+## D-004 — Retire `backfill_odds.py` rather than weaken `fight_odds` immutability
+
+| field | value |
+|---|---|
+| date | 2026-09-16 |
+| decided by | Michael Cannon (owner) |
+| task | CLV-001, `proposed_2026-09-16_fight_odds_immutability.sql` |
+| level | L3 |
+| reversible | **no, in one direction.** The repo change is revertible in git. The rule it protects is not: `fight_odds` becomes append-only, and a ledger that has been append-only and then is not was never append-only |
+
+**Decision.** In the owner's words:
+
+> Retire `cage-metrics-odds-scrapper/backfill_odds.py`. Do not weaken the
+> `fight_odds` immutability rule to preserve it.
+
+**The conflict it settles.** `upsert_opener_closer()` deleted the existing
+`is_opener` / `is_closer` rows for a `(fight_id, book_id)` and re-inserted them.
+That delete is what made the backfill re-runnable. CLV-001 R-01 requires the raw
+quote store to reject DELETE by trigger for every role — *"a quote that turns out
+to be garbage is excluded at scoring time by a written rule, never deleted"* — so
+the two cannot both hold. This was a genuine design conflict, not an oversight:
+the script's docstring names the delete as the mechanism of its idempotency.
+
+**Why this direction.** Three options were put to the owner: retire it, rewrite
+it append-only, or apply the migration knowing it breaks. Retirement was chosen,
+and the reasoning is that the script had already stopped being able to produce
+anything CLV-001 can use. BFO publishes the price but not when it was observed,
+so it stamped `captured_at` as the Unix epoch by design; R-13 excludes every such
+row permanently. Retiring it costs a maintenance tool and no scorable
+observation.
+
+**What was done.** `cage-metrics-odds-scrapper@d8e1908` (branch
+`retire/backfill-odds-2026-09-16`). The script prints a retirement notice and
+exits non-zero — non-zero deliberately, so a scheduler cannot read a silent
+success and keep calling it. No `fight_odds` row was deleted or rewritten. The
+implementation stays in git history. No workflow, cron or start command invoked
+it, verified before the change.
+
+**What it unblocks.** The writer inventory now has no known repository-based
+conflict with the immutability migration. That migration remains **unapplied**
+and is the owner's to apply.
+
+**Found while establishing it.** `cage-metrics-odds-scrapper` was missing from
+`CLAUDE.md`'s related-repos list, and it is the repository that writes most to
+`fight_odds`. Added in the same pass. Every earlier step that reasoned from "the
+repos are X, Y and Z" was working from an incomplete list; nothing downstream
+turned out wrong, but that was luck rather than method.

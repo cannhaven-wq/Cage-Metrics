@@ -45,6 +45,7 @@ Finishing a piece of work means updating `STATE.md` and `HANDOFF.md` in the same
 
 - **Cage-Metrics** — this repo. The website. Plain HTML/CSS/JS, hosted on GitHub Pages.
 - **cage-metrics-scrapper** — Python fighter scraper, runs on Railway.
+- **cage-metrics-odds-scrapper** — Python odds scraper, runs on Railway (`odds_scraper.py`). **The main writer to `fight_odds`**, plus the Polymarket capture under `polymarket/` and the v1–v6 model training that reads it. Added to this list 2026-09-16: it had been missing, and it is the repo that writes most to `fight_odds` — see [`research/clv/FIGHT_ODDS_WRITER_INVENTORY.md`](research/clv/FIGHT_ODDS_WRITER_INVENTORY.md). Its `backfill_odds.py` is **retired**; `fight_odds` is append-only and that script deleted rows.
 - **cage-metrics-event-scrapper** — Python event scraper, in-progress on Railway.
 - **cfl-snapshotter** — Node predictions snapshotter. Shares verdict logic with the frontend via `edges.js` (loaded with `<script>` in browser, `require('./edges')` in Node).
 
