@@ -18,7 +18,7 @@ whose source cannot be produced is withdrawn, not footnoted.
 
 > ## 🔒 The duration model is READ-ONLY as of 2026-09-16
 >
-> DUR-001 is collecting; DUR-002 is armed. Until each reaches its predefined
+> DUR-001 and DUR-002 are both collecting. Until each reaches its predefined
 > evaluation point, **the duration model is not touched**:
 >
 > - no calibration experiments;
@@ -47,7 +47,7 @@ Last updated: 2026-09-16.
 | id | what it asks | status | verdict |
 |---|---|---|---|
 | **DUR-001** | after the vig-free totals market is known, does PROP-0001@v1 still add information about whether a fight goes over a round total? | collecting | none yet |
-| **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **armed** (frozen 2026-09-16, zero observations) | none |
+| **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **collecting** since 2026-09-16 | none |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---
@@ -185,7 +185,7 @@ of it — caught before monetisation, which is what this register is for.
 
 | field | value |
 |---|---|
-| status | **ARMED** — frozen and binding, implementation wired, **zero observations yet** |
+| status | **COLLECTING** — 48 rows on 12 fights since 2026-09-16T01:29:00Z |
 | preregistration | [`cfl_engine/dur002/PREREGISTRATION.md`](cfl_engine/dur002/PREREGISTRATION.md) |
 | model version tested | `PROP-0001@v2` — identical to v1 except no isotonic or other post-hoc calibration |
 | **frozen (UTC)** | **2026-09-16T01:03:45Z**, by Reed Cannon |
@@ -232,16 +232,31 @@ non-trivial, so they cannot pass vacuously.
 Wired into `.github/workflows/prop-locks.yml` as a **separate step after** the
 v1 lock, never instead of it — a v2 failure must not cost the v1 lock.
 
-**Status: ARMED, not collecting.** An experiment whose specification and
-implementation are both frozen but which has recorded zero observations is not
-collecting, and calling it so overstates the record.
+**Status: COLLECTING.** The `armed → collecting` transition happened on the
+first successful insert.
 
-When the first `PROP-0001@v2` row lands, record in `research/registry.json`: the
-exact first-lock UTC timestamp, the workflow run id and commit SHA,
-`lock_prop0002.py`'s sha256, and the number of rows written. Then set
-`lock_script.frozen = true`, move the script into DUR-002's frozen files, change
-the status to `collecting`, and rerun the full guards. From that point a
-substantive change to the script needs an amendment or a new model version.
+| | |
+|---|---|
+| first lock (UTC) | **2026-09-16T01:29:00.054095Z** |
+| rows written | 48, across 12 fights |
+| workflow run | [35044179800](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/35044179800) |
+| commit | `97ed4aa544f6b5de87dfdd09366f6a73e2a43073` |
+| `code_version` on rows | `97ed4aa544f6` — **clean, no `-dirty`** |
+| `lock_prop0002.py` sha256 | `92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79` |
+
+Verified after the insert: all 48 rows reproduce `predicted_probability` from
+their own stored hazards and phi (48/48 at 1e-5, max error 8.8e-7); 49 feature
+keys per row; every row's `notes` records both "RAW hazard, no post-hoc
+calibration" and the lock script's sha256 prefix `92d28d8638c15016`, which
+matches the file on `main`; zero rows carry a dirty-diff marker; one distinct
+`code_version`.
+
+**This is the complete provenance chain v1 lacks.** Every v1 lock says
+`322a5b09e739-dirty` with no record of what dirty was. Every v2 lock names a
+clean commit and the exact bytes of the script that produced it.
+
+`lock_prop0002.py` is now **frozen** and sits in DUR-002's frozen files. A
+substantive change requires an amendment or a new model version.
 
 Note §0.3 of the frozen preregistration says this script does not exist. That is
 true **of the state at freeze** and is deliberately not updated — the
@@ -327,6 +342,11 @@ the same set. `cfl_engine/models/duration.py` and
 DUR-002; each preregistration is frozen only by its own experiment.
 `research/registry.json` records which experiment freezes what.
 
+`cfl_engine/dur002/lock_prop0002.py` froze at DUR-002's first collection rather
+than at its preregistration freeze: an operational implementation is only worth
+freezing once it has produced an observation, and before that it must stay
+fixable.
+
 | path | sha256 | frozen at |
 |---|---|---|
 | `cfl_engine/dur001/PREREGISTRATION.md` | `7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0` | `1bc3fdd`, **amended 2026-09-16** |
@@ -337,6 +357,7 @@ DUR-002; each preregistration is frozen only by its own experiment.
 | `cfl_engine/models/duration.py` | `b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b` | `90571ff` |
 | `cfl_engine/harness/walkforward_report.json` | `d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c` | `90571ff` |
 | `cfl_engine/dur002/PREREGISTRATION.md` | `18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a` | `1337246` |
+| `cfl_engine/dur002/lock_prop0002.py` | `92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79` | `97ed4aa` |
 
 All seven were verified on 2026-09-16 to be byte-identical to their freeze
 commits. The preregistration has since been **amended once**, under its own
