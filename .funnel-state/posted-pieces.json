@@ -29,5 +29,6 @@
   "4282::cardio-flagged",
   "4282::coinflip-lead",
   "4433::sensor-main",
-  "4433::coinflip-lead"
+  "4433::coinflip-lead",
+  "4433::whatif-finisher"
 ]
