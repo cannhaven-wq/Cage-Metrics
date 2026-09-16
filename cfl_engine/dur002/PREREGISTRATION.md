@@ -1,25 +1,83 @@
 # DUR-002 Preregistration — PROP-0001@v2 (uncalibrated hazard)
 
-> ## STATUS: DRAFT — NOT IN FORCE
+> ## STATUS: FROZEN — BINDING
 >
-> This document is **not frozen**. It takes effect only when Reed dates and
-> signs §0, and not before. Until then no `PROP-0001@v2` lock may be written and
-> no DUR-002 number may be computed.
+> Frozen **2026-09-16T01:03:45Z** by Reed Cannon. This document is in force.
 >
-> Freezing is a two-line edit — set the date in §0 and change this banner — plus
-> a registry entry. It is deliberately left undone so the freeze date is the day
-> Reed actually approves, not the day this was drafted.
+> No parameter, eligibility rule, feature definition, timing rule, scoring rule
+> or threshold in it may change without a formally versioned, dated amendment
+> recorded in §Amendments below.
 
 ---
 
-## 0. Signature
+## 0. Freeze record
 
 | | |
 |---|---|
 | drafted | 2026-09-16 |
-| **frozen** | **— not yet —** |
-| approved by | — |
-| first eligible card | the first card whose locks are written after the freeze |
+| **frozen (UTC)** | **2026-09-16T01:03:45Z** |
+| approved by | Reed Cannon |
+| `main` at freeze | `133724676bc55e9429aa3dae5b833358cd557315` |
+| model code at freeze | `cfl_engine/models/duration.py` @ `90571ff1b6de74079e87946c1e7f6e705f85cf5c` |
+| feature code at freeze | `cfl_engine/features/build_features.py` @ `6be7198ebe4d56b27366268318b757e99e3074c5` |
+| this document's sha256 | recorded in `research/registry.json` — a file cannot contain its own hash |
+| first eligible card | the first card whose `PROP-0001@v2` locks are written after the timestamp above |
+
+### 0.1 What the freeze establishes
+
+Five points, binding from the timestamp above.
+
+1. **Specification.** `PROP-0001@v2` under DUR-002 uses the **raw
+   hazard-derived probability**. No isotonic and no other post-hoc calibration
+   is applied — none is fitted, attached, or consulted at any point.
+
+2. **The historical comparison is barred as evidence.** The raw-versus-calibrated
+   walk-forward comparison had already been observed before this specification
+   was written (§2). It **cannot be used as evidence for DUR-002**, in its
+   results, its writeup, or on any CFL surface. It is disclosed, not relied on.
+
+3. **No drift after freeze.** No parameter, eligibility rule, feature
+   definition, timing rule, scoring rule or threshold may change without a
+   formally versioned, dated amendment in §Amendments — recorded before the
+   affected data is analysed, and never motivated by an observed result.
+
+4. **Prospective observations are authoritative.** Fights locked after the
+   freeze timestamp decide this experiment, **even where they contradict the
+   historical artifact**. If prospective evidence and
+   `cfl_engine/harness/walkforward_report.json` disagree, the prospective
+   evidence governs and the historical artifact is not reconciled to it.
+
+5. **Permanent separation from `PROP-0001@v1`.** DUR-002 stays separate from v1
+   **forever**. There is no retroactive regrading of v1 locks, no replacement or
+   restatement of v1 probabilities, and no migration of v1 rows to v2. The two
+   model versions coexist in `prop_model_locks` and are never merged, reconciled
+   or substituted for one another.
+
+### 0.2 Naming
+
+**DUR-002 is the experiment. `PROP-0001@v2` is the model version it tests.**
+They are not interchangeable and must not be used as synonyms. DUR-002 could in
+principle outlive this model version, and `PROP-0001@v2` could in principle be
+tested by a later experiment; writing either name where the other belongs
+destroys that distinction.
+
+Correct: "DUR-002 tests `PROP-0001@v2`." Wrong: "the DUR-002 model", "the
+PROP-0001@v2 experiment".
+
+### 0.3 Status of the lock path
+
+**`PROP-0001@v2` has no lock script yet.** `lock_prop0001.py` is frozen under
+DUR-001 and writes v1 only; it is not modified.
+
+A v2 lock script belongs at `cfl_engine/dur002/lock_prop0002.py` and is a
+mechanical port: the same `PITWorld`, the same `fit_prop0001` training recipe up
+to the calibration step, `predict_hazard(..., calibrated=False)`, no `iso_`, and
+`MODEL_VERSION = 'PROP-0001@v2'`. It contains **no modelling decisions** — every
+such decision is fixed by this document.
+
+Until that script exists and runs, DUR-002 is frozen but collecting nothing. The
+freeze is still meaningful: it fixes the specification before any v2 observation
+exists, which is the property that cannot be recovered later.
 
 ---
 
@@ -129,6 +187,7 @@ reports.
 | feature code | `cfl_engine/features/build_features.py`, unchanged, 49 covariates |
 | calibration | **none.** `calibrated=False`; no `iso_` is fitted or attached |
 | threshold mapping | unchanged from v1 (§3 of the DUR-001 preregistration) |
+| lock script | `cfl_engine/dur002/lock_prop0002.py` — **not yet written**, see §0.3 |
 | lock table | `prop_model_locks`, `model_version = 'PROP-0001@v2'` |
 
 v2 locks are written alongside v1 locks for the same fights. The lock table's
