@@ -1,0 +1,31 @@
+name: Prune hub_visits (120-day retention)
+
+# The anonymous card-visit ledger (hub_visits_migration.sql) keeps rows for
+# 120 days and no longer. pg_cron is not enabled on the project, so this
+# weekly job calls the service-role-only function hub_visits_prune().
+#
+# Needs SUPABASE_SERVICE_ROLE_KEY (the existing repo secret).
+
+on:
+  schedule:
+    - cron: '30 6 * * 2'   # Tuesdays 06:30 UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call hub_visits_prune()
+        env:
+          KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "SUPABASE_SERVICE_ROLE_KEY not set — skipping"; exit 0; fi
+          code=$(curl -s -o /tmp/out -w '%{http_code}' -X POST \
+            'https://uftancejftcryfvbggll.supabase.co/rest/v1/rpc/hub_visits_prune' \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+            -H 'Content-Type: application/json' -d '{"p_keep_days": 120}')
+          echo "HTTP $code — rows deleted: $(cat /tmp/out)"
+          [ "$code" = "200" ]

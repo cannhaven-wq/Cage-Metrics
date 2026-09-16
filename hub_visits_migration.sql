@@ -45,3 +45,31 @@ create policy hub_visits_insert_anon
   with check (true);
 
 grant insert on public.hub_visits to anon, authenticated;
+
+-- ---------------------------------------------------------------- retention
+-- Rows live 120 days, then go. That covers the card-N → card-N+1 comparison
+-- (a week apart) with a quarter of history for trend, and no longer. The
+-- visitor key itself rotates every 60 days in the browser, so nothing in this
+-- table can be tied together past that window anyway.
+--
+-- pg_cron is not enabled on this project, so the prune is a function the
+-- weekly workflow (.github/workflows/hub-visits-prune.yml) calls with the
+-- service role. Nobody else can execute it.
+create or replace function public.hub_visits_prune(p_keep_days integer default 120)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n integer;
+begin
+  delete from public.hub_visits
+   where seen_on < (now() at time zone 'utc')::date - greatest(p_keep_days, 30);
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+revoke all on function public.hub_visits_prune(integer) from public, anon, authenticated;
+grant execute on function public.hub_visits_prune(integer) to service_role;

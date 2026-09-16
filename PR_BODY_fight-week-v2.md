@@ -18,13 +18,21 @@ Branch `fight-week-v2`, stacked on PR 1 (`revenue/trust-funnel-v1`). Open it aga
 
 **Hard rules honoured:** nothing in `cfl_engine/`, `research/`, `prop_model_locks`, `pre_fight_snapshots` or the `fight_odds` ledger was touched; no new model, no threshold change; the words edge / lock / best bet / value bet do not appear in the new copy (only inside the mandated "not a proven betting edge" line and "locked before results"); RLS on the new table is INSERT-only for anon/authenticated with no read; Supabase no-op lock untouched; `?v=` bumped (`_shared.js?v=rd18`, `fight-week.*?v=fw1`).
 
-## Decisions to confirm (Reed)
+## Decisions — approved by Reed 2026-09-16
 
-- **Vig-free view is not literally "off" `v_fight_odds_consensus`.** That view averages every row in `fight_odds`, which includes CFL's own synthetic "CFL Consensus (Odds API)" median row (so the consensus is counted twice) and prediction-market prices (Polymarket, Kalshi), and its `bookmaker_count` counts all of them. A page saying "7 books" off that would be untrue. The new view reads the same `fight_odds` rows but keeps sportsbooks only, de-vigs each book's pair on its own, and takes the median. The old view is untouched. If you want the literal wrapper instead, it is a 10-line change.
-- **Tennessee-licensed list** (`books.js`) is conservative — FanDuel, DraftKings, BetMGM, Caesars, Fanatics, Hard Rock Bet, Bally Bet, Betly. BetRivers is currently treated as *not* purchasable (I could not confirm a TN license); unlisted books can only ever hide a price, never show a wrong one. Please check the list.
-- **`hub_visits` ledger.** Plausible's API has no returning-visitor or cohort dimension, so the retention question can only be answered from our own data. The browser writes one row per (card, page, day) with a random UUID it keeps for 60 days — no IP, no user agent, no account link, insert-only, unreadable from the browser. If you would rather not keep even that, drop the table and the retention SQL has no input.
-- **New SECURITY DEFINER views.** The four views read `fight_odds` / `odds_books`, which are admin-only for anon, so they run with definer rights exactly like `v_fight_odds_consensus`. The security linter will list them; they expose only per-fight aggregates plus the latest per-book quote for the current card window.
-- **Fight pages stayed at `/preview/`.** The brief said "extend the f/ route" — `f/` is the fighter-stub namespace (4,500 files, canonical to `fighter.html`), and fight pages already lived at `/preview/`. Moving them into `f/` would collide with the fighter stubs and their prune logic.
+- **Sportsbooks-only vig-free consensus** (not a wrapper over `v_fight_odds_consensus`, which double-counts CFL's synthetic row and counts Polymarket as a book): approved.
+- **Tennessee-licensed book list**: now copied from the regulator's page — Caesars, Bally Bet, FanDuel, BetMGM, DraftKings, Fanatics, bet365, theScore Bet, Hard Rock Bet (BetRivers is not licensed). `books.js` records the source URL and check date (`TN_LIST_SOURCE`, `TN_LIST_CHECKED = 2026-09-16`) and the Market Board shows them.
+- **`hub_visits` ledger**: approved with a defined retention — rows are deleted after **120 days** by `hub_visits_prune()` (service-role only, applied to the DB), run weekly by `.github/workflows/hub-visits-prune.yml`; the browser key rotates every 60 days. The table holds no email, IP, user agent, account id or fingerprint.
+- **No `watchlist_add` trigger** until a watchlist ships: approved.
+- **Fight pages / hubs from the locked forecast only**; **biggest miss beside biggest hit**: approved.
+- **Fight pages stayed at `/preview/`** (`f/` is the fighter-stub namespace).
+
+## Integration with PR #8 (`CFL_RESEARCH_STATE.md`)
+
+PR #8 merged into `main` (`461abcd2`) after PR 1 and PR 2 were cut, which is why the file was absent from my tree. `origin/main` is now merged into `fight-week-v2` (only generated-stub conflicts, resolved by taking main's copies — CI regenerates them). On the combined tree:
+
+- `tests/test_research_state.py`: **13 passed** with LF-normalised hashing (i.e. as CI sees it). On this Windows PC with `core.autocrlf=true` the raw run reports 22 hash failures on frozen files that are byte-identical to `main` in git — a CRLF checkout artifact, not a change to any frozen file (`git diff origin/main -- cfl_engine/ CFL_RESEARCH_STATE.md` is empty). Worth making the test normalise line endings (PR #8's file — not touched here).
+- DUR-001 tripwire: 23 passed.
 
 ## Tests
 

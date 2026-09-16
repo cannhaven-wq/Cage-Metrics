@@ -150,7 +150,7 @@ cfl.renderFooter();
   });
   $('mbPrices').innerHTML = priceRows.length
     ? `<div class="fw-tablewrap"><table class="fw-table" data-track="odds_view"><thead><tr><th>Fight</th><th class="num">CFL probability</th><th class="num">Fair line</th><th>Best posted price (TN-licensed)</th></tr></thead><tbody>${priceRows.join('')}</tbody></table></div>
-       <p class="fw-note">Fair line is the moneyline CFL's probability is worth, before any book's cut. A posted price that pays more than the fair line only means the book disagrees with the model — the market's price is right more often than any model. Prices refresh hourly around fight day; timestamps are on each fight page. No affiliate links.</p>`
+       <p class="fw-note">Fair line is the moneyline CFL's probability is worth, before any book's cut. A posted price that pays more than the fair line only means the book disagrees with the model — the market's price is right more often than any model. Prices refresh hourly around fight day; timestamps are on each fight page. No affiliate links. Licensed-book list: <a class="fw-link" href="${books.TN_LIST_SOURCE}" rel="noopener" target="_blank">Tennessee Sports Wagering Council</a>, checked ${esc(books.TN_LIST_CHECKED)}.</p>`
     : '<div class="fw-empty">No locked forecasts on this card yet.</div>';
 
   // ---- 3. Market movement ----
