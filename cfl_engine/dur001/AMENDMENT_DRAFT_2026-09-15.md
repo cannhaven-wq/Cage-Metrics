@@ -393,16 +393,23 @@ code included the lock script itself.
 > written to `notes`, and the diff itself is committed under
 > `research/provenance/` before the card starts.
 >
-> Any hash cited in this preregistration as evidence must be computed by code in
-> the repository. The ledger hash `df3ab0cc…` recorded in §3 was computed ad hoc
-> and cannot be reproduced; it is superseded by
-> `prop_model_locks_2026-09-15.full.jsonl`, sha256
-> `9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6`,
-> whose recipe is `row_to_json` per row, newline-joined, ordered by id, with a
-> trailing newline.
+> Any hash cited in this preregistration must name the expression that computes
+> it, or point at the function in the repository that does. The ledger hash
+> `df3ab0cc…` in §3 is amended to read:
+>
+> > ledger hash `df3ab0cca0757eb9c452e9bfb0cede38` —
+> > `md5(string_agg(row_to_json(l)::text, '|' order by id))` over the whole
+> > `prop_model_locks` table, as computed by `cfl_engine/dur001/health.py`
+
+**Note on the audit:** the hash **verified**. The 48 rows are byte-for-byte what
+was hashed at freeze time. The only defect found was that §3's one-line
+description ("md5 of row_to_json ordered by id") omits the pipe separator and
+the table scope, so it cannot be re-derived from the preregistration alone.
+Item (k) is therefore a wording fix plus the dirty-tree guard, not a
+supersession — nothing about the existing evidence is withdrawn.
 
 **Code:** `lock_prop0001.py` — a dirty-tree guard and an `--allow-dirty` escape
-that records the diff hash.
+that records the diff hash. No change to `health.py`.
 
 ---
 

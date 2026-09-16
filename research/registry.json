@@ -1,0 +1,171 @@
+{
+  "_schema": "CFL research registry. Machine-readable mirror of CFL_RESEARCH_STATE.md. null means not known or not applicable - never a placeholder for a value someone should have filled in with a guess.",
+  "generated": "2026-09-16",
+  "experiments": [
+    {
+      "experiment_id": "DUR-001",
+      "status": "collecting",
+      "hypothesis": "Conditional on the vig-free closing totals market, PROP-0001 carries additional information about whether a 3-round UFC fight goes over a posted round total. H0: gamma = 0 and G_LL = 0. H1: G_LL > 0 out of sample.",
+      "economic_rationale": "Round totals are a thinner market than the moneyline, quoted by fewer books and moved less often. If a duration model holds information the totals price has not absorbed, that is where it would show.",
+      "population": "UFC fights scheduled for 3 rounds, not flagged main event or title fight at lock time, settling with a finish or decision. Five-round fights excluded permanently.",
+      "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
+      "challenger_model": "PROP-0001@v1",
+      "market_benchmark": "median of per-book vig-free p_over across eligible books at the identical threshold, last non-live quote strictly before v_fight_start_best.start_at (v_prop_odds_closing_consensus)",
+      "prediction_time_rule": "A lock must exist in prop_model_locks written before the fight's best-known start, enforced by an insert trigger. training_cutoff must precede actual_lock_at. The lock's actual_lock_at must not be after the latest closing quote.",
+      "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
+      "minimum_useful_effect": 0.003,
+      "observation_unit": "one (fight, threshold) row",
+      "cluster_unit": "UFC event",
+      "eligibility_rules": [
+        "UFC event, scheduled 3 rounds, not main event or title fight at lock time, actual scheduled rounds 3 once the result is in",
+        "a PROP-0001@v1 lock exists, written before the fight's best-known start",
+        "fight settles with a finish or decision; no-contests, overturned results and 'could not continue' are void",
+        "not a dead or duplicate booking",
+        "sportsbook threshold exactly equals a locked threshold (0.5, 1.5, 2.5); no interpolation or nearest-line mapping",
+        "at least one non-synthetic, non-live quote captured strictly before the fight's start",
+        "start basis is bell_at or provider_commence; event_date_fallback rows are diagnostics only",
+        "the lock's actual_lock_at is not after the latest closing quote"
+      ],
+      "preregistration_path": "cfl_engine/dur001/PREREGISTRATION.md",
+      "preregistration_sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+      "model_artifact_sha256": null,
+      "data_artifact_sha256": "9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6",
+      "freeze_timestamp": "2026-09-15T00:00:00Z",
+      "formal_analysis_points": [
+        "no performance number is computed for a card until every eligible fight on it has settled",
+        "the first card (UFC 331) produces a descriptive table only; no decision is taken from one card",
+        "decision rules are evaluated only on the full accumulated sample"
+      ],
+      "kill_rule": null,
+      "allowed_sensitivities": [
+        "secondary opener test (walk-forward OLS predicting logit(P_close) from logit(P_open) with and without logit(P_CFL)); not a decision input",
+        "raw comparison LL_market - LL_CFL, informational only",
+        "Brier, calibration intercept and slope of the challenger"
+      ],
+      "forbidden_changes": [
+        "retraining, re-featuring, re-calibrating or re-mapping PROP-0001 while the sample accumulates",
+        "selecting sportsbooks",
+        "selecting thresholds after results are visible",
+        "interpolating, extrapolating or nearest-line mapping a threshold",
+        "deriving 3.5 or 4.5 probabilities for five-round fights",
+        "writing any historical backfill into prop_model_locks",
+        "optimising ROI thresholds; CLV and ROI are reported as null"
+      ],
+      "results_artifact": null,
+      "verdict": null,
+      "verdict_timestamp": null,
+      "frozen_files": [
+        {
+          "path": "cfl_engine/dur001/PREREGISTRATION.md",
+          "sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+          "frozen_at_commit": "1bc3fdd"
+        },
+        {
+          "path": "cfl_engine/dur001/dur001_analysis.py",
+          "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
+          "frozen_at_commit": "788386e"
+        },
+        {
+          "path": "dur001_migration.sql",
+          "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/dur001/lock_prop0001.py",
+          "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/features/build_features.py",
+          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/models/duration.py",
+          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+          "frozen_at_commit": "90571ff"
+        },
+        {
+          "path": "cfl_engine/harness/walkforward_report.json",
+          "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
+          "frozen_at_commit": "90571ff"
+        }
+      ]
+    },
+    {
+      "experiment_id": "PROP-0001",
+      "status": "frozen",
+      "hypothesis": null,
+      "economic_rationale": null,
+      "population": "UFC fights scheduled for 3 rounds, 2010 onward, clean finish or decision",
+      "market": null,
+      "challenger_model": "PROP-0001@v1",
+      "market_benchmark": null,
+      "prediction_time_rule": "Training data is every completed 3-round UFC fight with event_date strictly before training_cutoff. Fighter histories use only rounds and fights strictly before that cutoff.",
+      "primary_endpoint": null,
+      "minimum_useful_effect": null,
+      "observation_unit": "one (fight, round reached) person-period row",
+      "cluster_unit": "fight",
+      "eligibility_rules": [
+        "scheduled_rounds == 3",
+        "event_date year >= build_features.MIN_YEAR",
+        "outcome classifies as finish or decision (no-contest and unparseable excluded)",
+        "both corners present"
+      ],
+      "preregistration_path": null,
+      "preregistration_sha256": null,
+      "model_artifact_sha256": null,
+      "data_artifact_sha256": null,
+      "freeze_timestamp": "2026-09-15T00:00:00Z",
+      "formal_analysis_points": [
+        "block walk-forward gate from 2018-01-01 in 6-month blocks, reported in cfl_engine/harness/walkforward_report.json"
+      ],
+      "kill_rule": null,
+      "allowed_sensitivities": null,
+      "forbidden_changes": [
+        "any change to features, model form, calibration recipe or threshold mapping without a new model_version and its own preregistration",
+        "editing any file listed in frozen_files in place"
+      ],
+      "results_artifact": "cfl_engine/harness/walkforward_report.json",
+      "verdict": null,
+      "verdict_timestamp": null,
+      "frozen_files": [
+        {
+          "path": "cfl_engine/dur001/PREREGISTRATION.md",
+          "sha256": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+          "frozen_at_commit": "1bc3fdd"
+        },
+        {
+          "path": "cfl_engine/dur001/dur001_analysis.py",
+          "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
+          "frozen_at_commit": "788386e"
+        },
+        {
+          "path": "dur001_migration.sql",
+          "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/dur001/lock_prop0001.py",
+          "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/features/build_features.py",
+          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+          "frozen_at_commit": "6be7198"
+        },
+        {
+          "path": "cfl_engine/models/duration.py",
+          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+          "frozen_at_commit": "90571ff"
+        },
+        {
+          "path": "cfl_engine/harness/walkforward_report.json",
+          "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
+          "frozen_at_commit": "90571ff"
+        }
+      ]
+    }
+  ]
+}

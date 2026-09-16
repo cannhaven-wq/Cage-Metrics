@@ -25,10 +25,8 @@ But the change is almost certainly harmless, and the rows check out:
 - The table physically cannot be edited after the fact — the database rejects
   UPDATE, DELETE and TRUNCATE for every role, including `service_role`.
 
-One loose end: the ledger hash written into the preregistration cannot be
-reproduced, because the recipe for computing it was never written down
-anywhere. See "The unreproducible ledger hash" below. This is a
-record-keeping gap, not evidence that anything changed.
+- The ledger hash in the preregistration **reproduces exactly**, so the 48 rows
+  are byte-for-byte what was hashed when DUR-001 was frozen.
 
 ---
 
@@ -145,44 +143,62 @@ the dirty tree. It does **not** prove the hazards themselves came from the
 frozen model — that would need a re-run, which the preregistration forbids and
 which would be the wrong thing to do anyway.
 
-## 4. The unreproducible ledger hash
+## 4. The ledger hash — reproduced
 
 The preregistration (§3) records:
 
 > first 48 locks (UFC 331, 12 fights) | `prop_model_locks` ids 5–52, ledger
 > hash `df3ab0cca0757eb9c452e9bfb0cede38` (md5 of row_to_json ordered by id)
 
-**That hash could not be reproduced.** 42 recipes were tried — seven server-side
-in Postgres and 35 client-side — covering separator choices (none, newline,
-comma, CRLF, with and without a trailing separator), `json_agg` / `jsonb_agg`
-array forms, per-row-md5 concatenation, key-sorted and unsorted
-re-serialisation, compact and spaced separators, and six column-subset variants
-(dropping `features`, `notes`, `actual_lock_at`, `id`). None produced
-`df3ab0...`.
+**That hash reproduces exactly.** The recipe is in the repository, at
+[`cfl_engine/dur001/health.py:157`](../../cfl_engine/dur001/health.py):
 
-For reference, the literal reading of the documented recipe
-(`md5(string_agg(row_to_json(t)::text, '' ORDER BY id))`) gives
-**`b1101e17322402428ef50a74fda1123c`**.
+```sql
+select md5(string_agg(row_to_json(l)::text, '|' order by id))
+from prop_model_locks l
+```
 
-Two explanations are possible, and this audit distinguishes them:
+Two details that the preregistration's one-line description omits, and that have
+to be right or the hash misses: the separator is a **pipe**, and the aggregate
+runs over the **whole table**, unfiltered by `model_version`. Both were
+confirmed server-side and against the local export:
 
-1. **The recipe was ad hoc and is lost.** `grep` over `lock_prop0001.py`,
-   `dur001_analysis.py`, `dur001/README.md` and `dur001_migration.sql` finds no
-   md5 or ledger-hash computation anywhere. Nothing in the codebase ever
-   computed this number, so it was produced by hand in a session or a psql
-   prompt and the exact expression was never recorded.
-2. **The rows changed after the hash was taken.** Ruled out as far as the
-   database can rule anything out: `prop_model_locks` has
-   `prop_model_locks_block_update`, `_block_delete` and `_block_truncate`
-   triggers, all `BEFORE ... EXECUTE FUNCTION prop_model_locks_no_rewrite()`,
-   which raise unconditionally. Row-level UPDATE and DELETE and statement-level
-   TRUNCATE are rejected for every role including `service_role`. Ids 5–52 are
-   contiguous with no gaps, the count is exactly 48, and all 48 rows pass the
-   arithmetic check.
+| | |
+|---|---|
+| `md5(string_agg(row_to_json(l)::text,'\|' order by id))` | `df3ab0cca0757eb9c452e9bfb0cede38` |
+| preregistration §3 | `df3ab0cca0757eb9c452e9bfb0cede38` |
+| match | **yes** |
+| `count(*)` over the whole table | 48 (so the unfiltered and filtered sets coincide today) |
 
-Conclusion: **(1), a lost recipe.** This is a record-keeping defect, not an
-integrity failure. It should still be fixed — a hash nobody can recompute is
-not evidence of anything.
+This is the strongest single result in the audit. It means the 48 rows are
+**byte-for-byte identical** to what was hashed when DUR-001 was frozen —
+nothing has been revised, reordered, or re-serialised since.
+
+It also corroborates the append-only guarantee independently.
+`prop_model_locks` carries `prop_model_locks_block_update`, `_block_delete` and
+`_block_truncate`, all `BEFORE ... EXECUTE FUNCTION
+prop_model_locks_no_rewrite()`, which raise unconditionally — row-level UPDATE
+and DELETE and statement-level TRUNCATE are rejected for every role including
+`service_role`. The triggers say the rows *cannot* have changed; the hash says
+they *did not*.
+
+### Correction
+
+An earlier pass of this audit reported the hash as unreproducible and concluded
+the recipe had been lost. That was wrong. 42 recipes were tried and all missed,
+but the search was over the wrong files — `lock_prop0001.py`,
+`dur001_analysis.py`, `dur001/README.md` and `dur001_migration.sql` — and
+`health.py` was not among them. The pipe separator was never tested. The recipe
+was in the codebase the whole time.
+
+For reference, the literal reading of the preregistration's wording
+(`md5(string_agg(row_to_json(t)::text, '' ORDER BY id))`, empty separator,
+filtered to `PROP-0001@v1`) gives `b1101e17322402428ef50a74fda1123c`, which is
+what led the first pass astray.
+
+The one real defect here is documentation: §3 describes the recipe loosely
+enough that it cannot be re-derived from the preregistration alone. Worth
+tightening to name the separator and the scope, and to point at `health.py`.
 
 ## 5. Artifacts in this folder
 
@@ -203,9 +219,12 @@ the lock row must carry the sha256 of the full working-tree diff alongside
 `code_version`, and that diff must be committed to `research/provenance/`
 before the card starts.
 
-The same applies to ledger hashes: the expression that computes one belongs in
-code, not in a session. A hash whose recipe is not in the repository is not
-verifiable and should not be cited as if it were.
+The same applies to ledger hashes — with the narrower lesson this audit
+actually supports. The recipe *was* in code (`health.py:157`), which is why the
+hash verified. What failed was the preregistration's description of it: "md5 of
+row_to_json ordered by id" omits the pipe separator and the table scope, so a
+reader cannot re-derive the number from §3 alone. A cited hash should name its
+recipe precisely or point at the function that computes it.
 
 Proposed as a registry row on DUR-001 (see `CFL_RESEARCH_STATE.md`) and as
 amendment item (k) in `cfl_engine/dur001/AMENDMENT_DRAFT_2026-09-15.md`.
