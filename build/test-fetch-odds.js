@@ -326,6 +326,45 @@ test('each event resolves its own latest card independently', () => {
 });
 
 // ---------------------------------------------------------------------------
+// The closer promotion may only touch the derived flags
+// ---------------------------------------------------------------------------
+//
+// CLV-001 Amendment 6 (g) makes fight_odds observation fields immutable by
+// trigger (R-01: clv_source_quote_ids points at these rows as evidence, and
+// evidence that can be rewritten afterwards is not evidence). The whitelist is
+// exactly `is_opener` and `is_closer` — derived flags, recomputable, carrying no
+// observation of their own.
+//
+// This job is the only UPDATE path in the repo. If a future edit here starts
+// writing another column, that column is protected and the cron starts erroring
+// at 23:00 UTC on a card night. Pinned here so it fails in the suite instead.
+
+const SOURCE = fs.readFileSync(path.join(__dirname, 'fetch-odds.js'), 'utf8');
+
+test('every fight_odds UPDATE writes only whitelisted derived fields', () => {
+  const updates = [...SOURCE.matchAll(
+    /from\(['"]fight_odds['"]\)\s*\.update\(\{([^}]*)\}/g)];
+  assert.ok(updates.length > 0, 'the closer promotion is gone — if that is ' +
+    'deliberate, delete this test with it');
+  const allowed = new Set(['is_opener', 'is_closer']);
+  for (const m of updates) {
+    for (const key of m[1].split(',')) {
+      const name = key.split(':')[0].trim();
+      if (!name) continue;
+      assert.ok(allowed.has(name),
+        `fetch-odds.js UPDATEs fight_odds.${name}, which the CLV-001 ` +
+        `immutability trigger rejects. Append a new observation row instead.`);
+    }
+  }
+});
+
+test('nothing in the odds job deletes a captured quote', () => {
+  assert.ok(!/from\(['"]fight_odds['"]\)\s*\.delete\(/.test(SOURCE),
+    'fight_odds is append-only (R-01): a quote that turns out to be garbage ' +
+    'is excluded at scoring time by a written rule, never deleted');
+});
+
+// ---------------------------------------------------------------------------
 // Side mapping — by name, never by the provider's home/away order
 // ---------------------------------------------------------------------------
 

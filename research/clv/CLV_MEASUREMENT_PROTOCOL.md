@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.8` |
+| version | `1.0.9` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–5.1 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–6 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,6 +336,162 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 6, v1.0.9, 2026-09-16 — provenance, enforced per row
+>
+> **Approved by Reed Cannon (L3).** The measurement is unchanged: same cutoffs,
+> same de-vig, same 45-minute limit, same book list, same publication gate. What
+> changes is that the rules already written here are now enforced where they
+> apply — on the ROW — instead of being assumed from the shape of the table.
+>
+> Nothing is retroactively reinterpreted, because nothing has been scored: the
+> gate stands at 0 of 100 observations and 0 of 20 events.
+>
+> ### (a) Eligibility is a property of the row, not of the schema
+>
+> §4 says these fields "cannot be backfilled" and that anything captured without
+> them "simply cannot be used for the definitions that need them". The settler
+> checked that the CLV-001 **columns existed** and then scored on whatever
+> `fight_odds` held. Those are not the same test, and the gap between them opens
+> the day the capture migration lands: a May or June quote with a perfectly
+> credible `captured_at` and NULL in every new column becomes scorable, and the
+> measurement silently includes rows that cannot support it.
+>
+> A quote is now eligible only if **that quote** carries `source_event_id`,
+> `feed_version`, `opponent_fighter_id`, `provider_last_update`, `retrieved_at`,
+> `market_status` and `raw` — §4 items 9, 6, 10, 11, 11, 8 and 12. Present means
+> populated: an empty string and an empty jsonb object record nothing and do not
+> count. Rows captured before the migration stay permanently unscorable, which
+> is a coverage fact reported under R-05.
+>
+> New reason: `incomplete_quote_provenance`.
+>
+> ### (b) R-07 is applied per quote, as written
+>
+> R-07 is `forecast_locked_at < close_quoted_at`, strictly. The implementation
+> checked `published_at < cutoff`, which is a different and much weaker claim.
+>
+> **A forecast locked at 9:28 could be scored against a book quote from 9:20,
+> because the cutoff was 9:30.** That quote was on the screen before the forecast
+> existed — it is a price the forecast could have been read off, and calling the
+> difference between them closing-line value is the no-lookahead violation R-07
+> names as the one an implementation is most likely to make by accident.
+>
+> Every quote entering the consensus must now be strictly after the lock and
+> strictly before the cutoff. `closing_pairs` takes the lock as a required
+> argument with no default, because a default of None would be a silent bypass
+> of exactly this rule.
+>
+> ### (c) The lock comes from an immutable record
+>
+> R-07's second sentence: "A forecast whose timestamp cannot be established from
+> an immutable record is not eligible." `model_edges` is a working table with no
+> append-only trigger, so `published_at` is a claim about what we published, not
+> a record of it.
+>
+> `pre_fight_snapshots` is the immutable record — unique on `fight_id`, rejecting
+> UPDATE and DELETE by trigger for every role including `service_role` — and it
+> carries `edge_side`, `edge_bet_fighter_id` and `edge_odds_at_publish`, so it can
+> be matched to **this edge** rather than merely to its fight. All three must
+> agree. A dedicated publish-lock ledger is therefore not needed; the record
+> already exists and predates CLV-001, which is what makes it good evidence.
+>
+> The effective lock is the **later** of the immutable instant and `published_at`.
+> Later is strictly harder to satisfy, so an edited `published_at` can only ever
+> cost observations — never admit a quote the immutable record would have
+> excluded. That asymmetry is why the two are combined rather than one trusted.
+>
+> New reason: `no_immutable_forecast_lock`.
+>
+> ### (d) The publish price must name its source quote
+>
+> §4 item 12. `model_edges.clv_publish_quote_id` records the exact `fight_odds`
+> row `odds_at_publish` came from, and the scorer **verifies** it rather than
+> trusting it: the referenced row must itself carry the same American price, the
+> bet fighter, the opponent (Q-10), the provider market id (R-06), a credible
+> capture instant (R-13) and full §4 provenance.
+>
+> Historical edges have no such link and are not given one. Searching for "the
+> row whose price matches" manufactures the record the rule exists to require,
+> and afterwards would be indistinguishable from one the publisher recorded.
+>
+> The closing quotes must also name the **same provider market** as the publish
+> quote, and the **same opponent** — a repost or a rematch is a different market,
+> not a later quote on the same one (R-06, Q-10).
+>
+> New reasons: `no_publish_quote_link`, `market_identity_changed`.
+>
+> ### (e) The cutoff is stored, and hashed
+>
+> Every scored observation is defined as "the latest eligible quote strictly
+> before X", and X was not stored. For bouts 2..N it coincides with
+> `clv_window_opened_at` so it looked recoverable; for **bout 1** — the only bout
+> this version can currently score — the cutoff is the card's scheduled start and
+> no column held it.
+>
+> `clv_cutoff_at` is added and required on every scored row. The cutoff also goes
+> **inside the hashed artifact**, with the forecast lock and the publish quote id:
+> a consensus is a set of prices *selected by* a cutoff, and hashing the prices
+> alone leaves the selection rule outside the integrity check — the same books at
+> the same median hash identically whether they were chosen against a 22:00
+> cutoff or a 23:00 one.
+>
+> ### (f) Bout 1's cutoff comes from bout 1's own schedule
+>
+> `v_clv_close_reference` resolved the card's scheduled start from the latest
+> `odds_api_commence` observation belonging to **any** fight on the event. The
+> provider publishes a commence time per market and the later bouts' estimates
+> drift as the night is rebuilt, so on a twelve-bout card the newest observation
+> almost always belongs to another fight — and bout 1's cutoff was being set from
+> bout 12's schedule. Amendment 3 exists because those are different instants.
+>
+> It now resolves the latest observation **for the bout-1 fight itself**, within
+> the latest complete card snapshot. No running order means no identified first
+> bout and therefore no scheduled start, which is correct: "the card's scheduled
+> start" is a claim about a specific fight.
+>
+> ### (g) The raw quote evidence is made durable
+>
+> R-01 requires the raw quote store to reject UPDATE and DELETE by trigger for
+> every role including `service_role`. `fight_odds` did not — it is UPDATEd in
+> production today by the legacy `is_closer` promotion — so `clv_source_quote_ids`
+> pointed at rows whose price, timestamp, identity or provenance could be
+> rewritten afterwards, with the consensus hash still matching because it covers
+> the artifact rather than the rows.
+>
+> `proposed_2026-09-16_fight_odds_immutability.sql` rejects DELETE and TRUNCATE
+> outright and rejects any UPDATE that changes anything other than the derived
+> flags `is_opener` / `is_closer`, which are recomputable, carry no observation,
+> and are not read by CLV-001. Whitelist by construction — the guard compares
+> `to_jsonb(old)` and `to_jsonb(new)` minus those keys, so a column added later is
+> protected the moment it exists.
+>
+> That migration is **not additive-only** and is filed separately for that reason.
+>
+> ### (h) The staleness clock is named, and left alone
+>
+> The frozen 45 minutes was derived from CFL's own observation cadence, so it is
+> measured from `captured_at` and nothing else. `provider_last_update` is
+> required provenance (§4 item 11) and is **not** the clock: re-pointing the limit
+> at it would change which rows score under the same version number. Recorded as
+> `STALENESS_MEASURED_FROM`, and moving it is a methodological amendment.
+>
+> ### (i) §5 no longer says freezing opens the gate
+>
+> §5 listed "`publication_gate.publication_allowed` becomes `true`" among the
+> things that happen at freeze. That was wrong, and it was the one sentence here
+> that could be read as authorising a number to appear. Removed and replaced with
+> the actual rule: the flag is the AND of protocol-frozen, the sample floor, and
+> an interval excluding zero. It is `false` today.
+>
+> ### What did NOT change
+>
+> The cutoff bases, the de-vig method and its order, the 45-minute limit, the
+> three-book minimum, the ten named books, the benchmark's name, the credit
+> ceiling, and the publication gate and its floor. No rule was changed because a
+> result looked better; there are no results.
+>
+> ---
+>
 > ## AMENDMENT 5.1, v1.0.8, 2026-09-16 — consistency fixes to Amendment 5
 >
 > **Approved by Reed Cannon (L3).** The v1.0.7 methodology stands; these make the
@@ -1258,10 +1414,24 @@ At freeze:
 1. status becomes `frozen`, with the UTC instant and Reed as approver;
 2. the sha256 of this file is recorded in `protocol.json` and in the frozen-file
    tripwire, the same mechanism `CFL_RESEARCH_STATE.md` uses;
-3. `publication_gate.publication_allowed` becomes `true`;
-4. every open question in §3 is resolved to a single rule, in place, with the
+3. every open question in §3 is resolved to a single rule, in place, with the
    rejected options retained as rejected — not deleted;
-5. `settle_clv.py` is reconciled with the frozen rules.
+4. `settle_clv.py` is reconciled with the frozen rules.
+
+**Freezing does not open the publication gate.** Corrected by Amendment 6 (i);
+this list previously said `publication_gate.publication_allowed` becomes `true`
+at freeze, which was wrong and was the one sentence in this document that could
+be read as authorising a number to appear. Freezing settles **how** the number
+is measured. It does not create a number worth showing, and it does not create
+one at all — at freeze there were zero scored observations.
+
+`publication_allowed` is the AND of every condition in
+`publication_gate.conditions`, and `protocol_frozen` is only the first of them.
+The others are the sample floor (**100 scored observations across 20 distinct
+events**, counted by `event_id`) and an event-cluster interval excluding zero.
+It is `false` today and stays `false` until all three hold — R-10 states the
+prohibition, Q-08 and Q-13 set the floor, and `tests/test_clv_protocol.py`
+asserts the flag rather than trusting it.
 
 After freeze, changes follow the register's two routes and nothing else: a
 **dated amendment** recorded with both hashes and a reason, or a **new protocol

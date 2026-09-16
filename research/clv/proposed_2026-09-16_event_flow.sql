@@ -382,20 +382,36 @@ prev_done as (
   from ord o
 ),
 sched as (
-  -- The card's scheduled start, from the provider commence ledger DUR-001
-  -- already maintains.
+  -- The card's scheduled start = THE FIRST BOUT'S OWN scheduled start.
+  --
+  -- Amendment 6 (f). This used to take the latest odds_api_commence observation
+  -- from ANY fight sharing the event, which is not the same quantity and is
+  -- usually a different number. The provider publishes a commence time per
+  -- market, and on a UFC card the later bouts' estimates drift as the night is
+  -- rebuilt — so on a twelve-bout card the newest observation almost always
+  -- belongs to some other fight, and bout 1's cutoff was being set from bout
+  -- 12's schedule. Amendment 3 exists precisely because those are different
+  -- instants; resolving them this way put the difference straight back in.
+  --
+  -- Scoped to the bout-1 fight in the LATEST COMPLETE CARD observation (`ord`),
+  -- so a scratched booking that used to open the card cannot supply the cutoff
+  -- either. If the running order is unknown the card has no identified first
+  -- bout, and no scheduled start is produced at all — the right answer, because
+  -- "the card's scheduled start" is a claim about a specific fight.
   --
   -- LATEST OBSERVATION, not max(start_at). A reschedule can move a card
   -- EARLIER, and max() would keep returning the superseded later time — so a
   -- quote taken after the new start would still look pre-fight. DISTINCT ON
   -- ordered by observed_at takes what the provider most recently said, which is
   -- the only reading that survives a reschedule in either direction.
-  select distinct on (f.event_id)
-         f.event_id, e.start_at as card_start_at, e.observed_at
-  from public.fight_start_estimates e
-  join public.fights f on f.id = e.fight_id
-  where e.source = 'odds_api_commence'
-  order by f.event_id, e.observed_at desc, e.id desc
+  select distinct on (o.event_id)
+         o.event_id, e.start_at as card_start_at, e.observed_at,
+         o.fight_id as first_bout_fight_id
+  from ord o
+  join public.fight_start_estimates e on e.fight_id = o.fight_id
+  where o.bout_order = 1
+    and e.source = 'odds_api_commence'
+  order by o.event_id, e.observed_at desc, e.id desc
 )
 select f.id                                   as fight_id,
        f.event_id,
@@ -445,7 +461,11 @@ select f.id                                   as fight_id,
        -- Never substituted for reference_at inside this version.
        f.bell_at                              as actual_bell_at,
        s.card_start_at                        as card_scheduled_start_at,
-       s.observed_at                          as card_start_observed_at
+       s.observed_at                          as card_start_observed_at,
+       -- WHOSE schedule that is. The card's scheduled start is the first bout's
+       -- own scheduled start (Amendment 3), so the row names the fight it came
+       -- from — a reader can check it is bout 1's and not some other bout's.
+       s.first_bout_fight_id                  as card_start_fight_id
 from public.fights f
 left join ord o        on o.fight_id = f.id
 left join prev_done pd on pd.fight_id = f.id

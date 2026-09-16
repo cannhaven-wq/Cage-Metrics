@@ -89,9 +89,17 @@ alter table public.fight_odds
 -- schedule to be at that instant, which is the only version of the schedule that
 -- can explain a capture decision made then.
 --
--- The fight-level best start stays v_fight_start_best, and CLV-001 Amendment 2
--- (b) admits only its bell_at and provider_commence bases — never the
--- event-date fallback.
+-- NOT a cutoff. From v1.0.8 onward there are exactly two cutoff bases — the
+-- card's scheduled start for bout 1 and the previous bout's exact completion for
+-- bouts 2..N — and they
+-- are resolved by v_clv_close_reference, not from this column. A confirmed bell
+-- is audit-only and supplies neither (Amendment 5.1). The card's scheduled start
+-- applied to a LATER bout is hours early and is reported, never scored
+-- (Amendment 4.1).
+--
+-- CLV-001 reads this column as provenance: what the schedule looked like when
+-- the quote was taken. The cutoff the quote was judged against is
+-- proxy_cutoff_at, below, under its own name.
 alter table public.fight_odds
   add column if not exists source_commence_at timestamptz;
 
@@ -250,14 +258,30 @@ comment on column public.fight_odds.source_event_id is
   'across a repost or a rematch, and the second half of Q-10''s mechanical match.';
 
 comment on column public.fight_odds.source_commence_at is
-  'Provider scheduled start AS SEEN AT CAPTURE. Immutable per row. The '
-  'fight-level best start is v_fight_start_best; CLV-001 Amendment 2 (b) admits '
-  'only its bell_at and provider_commence bases, never the event-date fallback.';
+  'Provider scheduled start AS SEEN AT CAPTURE. Immutable per row, and NOT a '
+  'cutoff. CLV-001 from v1.0.8 onward has exactly two cutoff bases - the card''s scheduled '
+  'start for bout 1, the previous bout''s exact completion for bouts 2..N - '
+  'resolved by v_clv_close_reference. A confirmed bell supplies neither '
+  '(Amendment 5.1). The cutoff a quote was judged against is proxy_cutoff_at.';
 
 comment on column public.fight_odds.retrieved_at is
   'When we retrieved the payload, as distinct from captured_at (the row''s '
   'canonical instant) and provider_last_update (when the book last moved). '
   'Kept separate because collapsing them hides feed lag.';
+
+comment on column public.fight_odds.provider_last_update is
+  'When the BOOK last moved this price, as the provider reports it. Required '
+  'provenance (CLV-001 §4 item 11) and deliberately NOT the staleness clock: '
+  'the frozen 45-minute limit was derived from CFL''s own observation cadence '
+  'and is measured from captured_at. Re-pointing it here would silently '
+  'redefine the rule, and is a methodological amendment rather than an '
+  'implementation choice.';
+
+comment on column public.fight_odds.captured_at is
+  'The row''s canonical observation instant - when WE looked. CLV-001 measures '
+  'its frozen 45-minute staleness limit from this column, orders quotes by it, '
+  'and applies R-13 to it (a pre-2026-05-22 or epoch value is not a credible '
+  'capture instant). Immutable once written.';
 
 commit;
 

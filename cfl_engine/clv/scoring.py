@@ -10,9 +10,15 @@ decided rule, named in the comment beside it. Nothing here is tunable.
 
 The order of operations is the part that is easy to get wrong, so it is fixed:
 
-    eligible quotes  ->  per-book two-sided pairs  ->  de-vig EACH book
-                     ->  median of the per-book fair probabilities
-                     ->  CLV_return against the posted price
+    immutable forecast lock  ->  linked publish quote  ->  eligible quotes
+                             ->  per-book two-sided pairs  ->  de-vig EACH book
+                             ->  median of the per-book fair probabilities
+                             ->  CLV_return against the posted price
+
+Eligibility is decided PER ROW, never per table (Amendment 6). A `fight_odds`
+row is usable because that row carries the §4 provenance, not because the
+columns exist on the table — the 110,032 rows captured before the columns
+landed carry NULL in all of them and are permanently unscorable.
 
 De-vig first, median second (Q-02). Taking the median of vigged prices and
 de-vigging once afterwards blends the books' margins together and is a different
@@ -42,7 +48,7 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.8"
+PROTOCOL_VERSION = "1.0.9"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
 # ---------------------------------------------------------------------------
@@ -169,6 +175,25 @@ LIVE_CAPTURE_ERA_START = dt.datetime(2026, 5, 22, tzinfo=dt.timezone.utc)
 # between-cards mode would have produced a useless ~24-hour limit.
 STALENESS_LIMIT_MINUTES = 45
 
+# WHICH INSTANT THE STALENESS LIMIT IS MEASURED FROM — Amendment 6 (h).
+#
+# `captured_at`. The 45 minutes was derived from CFL's own OBSERVATION cadence —
+# one measured near-card capture interval plus grace — so it answers "how long
+# ago did we look?" and nothing else. It is frozen against that meaning.
+#
+# `provider_last_update` is a different quantity: when the BOOK last moved the
+# price. A price we retrieved five minutes before the cutoff that the book last
+# moved four hours earlier is stale in a way this limit was never calibrated to
+# detect. That is worth knowing, which is why §4 item 11 requires the field and
+# `REQUIRED_QUOTE_PROVENANCE` below refuses a quote without it — but measuring
+# the frozen 45 minutes from it instead would silently redefine the rule and
+# change which rows score, under the same version number.
+#
+# So: recorded, required, reported — never the clock. Re-pointing the limit at
+# provider_last_update is a METHODOLOGICAL AMENDMENT, not an implementation
+# choice.
+STALENESS_MEASURED_FROM = "captured_at"
+
 # Q-02. Minimum eligible books with a valid TWO-SIDED close.
 MIN_BOOKS = 3
 
@@ -183,6 +208,68 @@ EXCHANGE_BOOK_NAMES = frozenset({"polymarket", "kalshi", "betfair", "smarkets",
 # other books' margins, so de-vigging it is not the same operation as de-vigging
 # a book, and counting it toward MIN_BOOKS would double-count its constituents.
 AGGREGATE_BOOK_NAMES = frozenset({"bfo consensus", "cfl consensus (odds api)"})
+
+# ---------------------------------------------------------------------------
+# §4 provenance, enforced ROW BY ROW — Amendment 6 (a)
+# ---------------------------------------------------------------------------
+# The migration adding these columns makes them RECORDABLE. It does not make any
+# particular row contain them, and every one of the 110,032 rows that predate it
+# carries NULL in all of them, permanently and correctly ("this row predates the
+# column").
+#
+# The defect this closes: eligibility was decided at the SCHEMA level — the
+# settler checked that `model_edges` had the CLV-001 columns and then scored on
+# whatever `fight_odds` happened to hold. So the day after the capture migration
+# lands, a May or June quote with a perfectly credible `captured_at` and NULL in
+# every new provenance column becomes scorable, and the measurement quietly
+# includes rows that cannot support it. §4 is explicit that these "cannot be
+# backfilled" and that anything captured without them "simply cannot be used for
+# the definitions that need them" — that is a per-QUOTE rule, and it is now
+# applied per quote.
+#
+# Each entry names the §4 item it satisfies:
+#   source_event_id       item  9  provider market id — Q-10's stable key
+#   feed_version          item  6  provider and feed version
+#   opponent_fighter_id   item 10  opponent identity at quote time
+#   provider_last_update  item 11  the provider's own timestamp …
+#   retrieved_at          item 11  … kept separate from ours
+#   market_status         item  8  suspension / takedown state
+#   raw                   item 12  the immutable link to what the provider said
+#
+# Items 1 and 2 (book, fighter, price, credible UTC instant, both corners) are
+# enforced separately and earlier, because a quote missing those is not a quote.
+REQUIRED_QUOTE_PROVENANCE = (
+    "source_event_id", "feed_version", "opponent_fighter_id",
+    "provider_last_update", "retrieved_at", "market_status", "raw",
+)
+
+# The publish side carries the same burden (§4 item 12). A posted price with no
+# link to the exact quote it came from is an assertion, not a record — the same
+# defect the PROP-0001 provenance audit found in v1 locks that recorded
+# `code_version` as `…-dirty` with no record of what dirty was.
+REQUIRED_PUBLISH_PROVENANCE = REQUIRED_QUOTE_PROVENANCE
+
+
+def _provenance_present(value) -> bool:
+    """Present means populated, not merely non-NULL.
+
+    An empty string and an empty jsonb object both survive a NULL check while
+    recording nothing, which is the failure mode this whole section exists to
+    stop.
+    """
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (dict, list, tuple, set)):
+        return len(value) > 0
+    return True
+
+
+def missing_quote_provenance(quote: dict,
+                             required: tuple = REQUIRED_QUOTE_PROVENANCE) -> tuple:
+    """Which §4 provenance fields this quote does not carry. Empty means whole."""
+    return tuple(f for f in required if not _provenance_present(quote.get(f)))
 
 
 class Unscored(Exception):
@@ -218,6 +305,11 @@ UNSCORED_REASONS = (
     "forecast_not_before_close",     # R-07: no-lookahead violated
     "only_pre_card_price",           # Amendment 4.1: safely pre-fight, not late
     "no_previous_bout_completion",   # Amendment 5: bout 2..N with no cutoff on file
+    # --- Amendment 6, provenance hardening ---
+    "no_immutable_forecast_lock",    # R-07: the lock rests only on a mutable row
+    "no_publish_quote_link",         # §4 item 12: posted price has no source quote
+    "incomplete_quote_provenance",   # §4: the close quotes lack required fields
+    "market_identity_changed",       # Q-10 / R-06: different market or opponent
 )
 
 
@@ -259,14 +351,30 @@ def quote_prob(quote: dict) -> float | None:
 
 def closing_pairs(quotes: list[dict], bet_fighter_id: int, opp_fighter_id: int,
                   reference_instant: dt.datetime, now: dt.datetime,
-                  eligible_book_ids: set[int]) -> tuple[list[dict], dict]:
+                  eligible_book_ids: set[int],
+                  forecast_locked_at: dt.datetime | None,
+                  publish_market_id: str | None = None,
+                  ) -> tuple[list[dict], dict]:
     """The scheduled-close proxy (Q-01), per book, both corners.
 
-    For each eligible book, take its latest quote per corner that is strictly
-    before `reference_instant`, has a credible capture instant (R-13) and is
-    within the staleness limit (Q-01b). A book contributes a pair only if BOTH
-    corners survive; a book quoting one side is not a two-way market and cannot
-    be de-vigged.
+    For each eligible book, take its latest quote per corner that is
+
+      * strictly AFTER the immutable forecast lock (R-07),
+      * strictly BEFORE `reference_instant` (Q-01, Amendment 5),
+      * on a credible capture instant (R-13),
+      * within the staleness limit measured from `captured_at` (Q-01b),
+      * carrying every §4 provenance field (Amendment 6 (a)),
+      * and referring to the same market and the same opponent as the forecast
+        (Q-10, R-06).
+
+    A book contributes a pair only if BOTH corners survive; a book quoting one
+    side is not a two-way market and cannot be de-vigged.
+
+    `forecast_locked_at` is REQUIRED and is deliberately not defaulted. R-07 is
+    the rule an implementation is most likely to violate by accident, and a
+    default of None would be a silent bypass of it — the same shape of hole
+    Amendment 5.1 closed in `score_row`. Passing None here drops every quote:
+    no lock, no eligible close.
 
     Returns `(pairs, diagnostics)`. `pairs` is one dict per contributing book,
     already ordered by book id so the artifact is deterministic. `diagnostics`
@@ -278,7 +386,10 @@ def closing_pairs(quotes: list[dict], bet_fighter_id: int, opp_fighter_id: int,
     """
     diag = {"seen": 0, "ineligible_book": 0, "after_reference": 0,
             "implausible_timestamp": 0, "stale": 0, "one_sided_books": 0,
-            "wrong_fighter": 0}
+            "wrong_fighter": 0, "before_forecast_lock": 0,
+            "missing_provenance": 0, "opponent_mismatch": 0,
+            "market_id_mismatch": 0}
+    # Q-01b, measured from the OBSERVATION instant. See STALENESS_MEASURED_FROM.
     cutoff = reference_instant - dt.timedelta(minutes=STALENESS_LIMIT_MINUTES)
 
     # book_id -> fighter_id -> the latest surviving quote
@@ -297,11 +408,41 @@ def closing_pairs(quotes: list[dict], bet_fighter_id: int, opp_fighter_id: int,
         if not credible_capture_instant(at, now):
             diag["implausible_timestamp"] += 1
             continue
+        # R-07, literally, per quote pair — not once per edge against the cutoff.
+        # `published_at < cutoff` is a far weaker test: it lets a forecast locked
+        # at 9:28 be scored against a book quote from 9:20 as long as the cutoff
+        # is 9:30. That quote was on the screen BEFORE the forecast existed, so
+        # "the forecast preceded the market quote" is false for it, and the
+        # comparison is measuring a price the forecast could have been read off.
+        if forecast_locked_at is None or at <= forecast_locked_at:
+            diag["before_forecast_lock"] += 1
+            continue
         if at >= reference_instant:
             diag["after_reference"] += 1      # Q-01: strictly before, and R-03
             continue
         if at < cutoff:
             diag["stale"] += 1
+            continue
+        # §4, per row. The columns existing on the table says nothing about this
+        # row carrying them, and a pre-migration row never will.
+        if missing_quote_provenance(q):
+            diag["missing_provenance"] += 1
+            continue
+        # Q-10, mechanically. The quote names its own opponent; if that is not
+        # the other corner of the fight we are scoring, the price referred to a
+        # different matchup and cannot be compared with this forecast.
+        expected_opponent = (opp_fighter_id if fighter_id == bet_fighter_id
+                             else bet_fighter_id)
+        if q.get("opponent_fighter_id") != expected_opponent:
+            diag["opponent_mismatch"] += 1
+            continue
+        # R-06. A repost or a rematch gets a new provider market id, and is a
+        # different market rather than a later quote on the same one. Enforced
+        # only when the publish side identified its market — otherwise there is
+        # nothing to compare against and the check would be inventing a match.
+        if (publish_market_id is not None
+                and q.get("source_event_id") != publish_market_id):
+            diag["market_id_mismatch"] += 1
             continue
         keep = latest.setdefault(book_id, {})
         if fighter_id not in keep or at > keep[fighter_id]["captured_at"]:
@@ -395,6 +536,142 @@ def canonical_sha256(artifact: dict) -> str:
     return hashlib.sha256(blob).hexdigest()
 
 
+def forecast_lock(edge: dict, snapshot: dict | None) -> tuple:
+    """The IMMUTABLE instant the forecast was locked, or why there isn't one.
+
+    Returns `(locked_at, provenance)` on success, or `(None, detail)` where
+    `locked_at` is None and `detail` explains the refusal.
+
+    R-07 does not merely say the forecast precedes the quote. It says: "A
+    forecast whose timestamp cannot be established from an immutable record is
+    not eligible." `model_edges` is a working table with no append-only trigger —
+    `published_at` can be rewritten, and a row rewritten after the fact is not a
+    record of what we published, it is a claim about it. Treating it as the lock
+    is exactly the accident R-07 warns about, one step removed.
+
+    `pre_fight_snapshots` is the immutable record, and it is trigger-enforced
+    against UPDATE and DELETE for every role including `service_role`. It carries
+    the edge as published — `edge_side`, `edge_bet_fighter_id`,
+    `edge_odds_at_publish` — so the snapshot can be matched to THIS edge rather
+    than merely to its fight, which is what makes it a crosscheck instead of a
+    coincidence. All three must agree; a snapshot that names a different side,
+    fighter or price is a record of a different forecast.
+
+    THE EFFECTIVE LOCK IS THE LATER of the immutable instant and the mutable
+    `published_at`. Later is strictly harder to satisfy, so a `published_at`
+    that has been edited — in either direction, for any reason — can only ever
+    cost observations. It can never admit a quote the immutable record would
+    have excluded. That asymmetry is the whole point, and it is why the two are
+    combined this way rather than one being trusted over the other.
+
+    Within the snapshot, `engine_published_at` is preferred and `snapshot_at` is
+    the fallback. `snapshot_at` is later than publication, so falling back to it
+    is also fail-closed.
+    """
+    if not snapshot:
+        return None, ("no pre_fight_snapshots row identifies this edge, so the "
+                      "forecast's lock instant rests only on model_edges."
+                      "published_at, which is mutable (R-07)")
+
+    for field, mine, theirs in (
+            ("side", edge.get("side"), snapshot.get("edge_side")),
+            ("bet_fighter_id", edge.get("bet_fighter_id"),
+             snapshot.get("edge_bet_fighter_id")),
+            ("odds_at_publish", edge.get("odds_at_publish"),
+             snapshot.get("edge_odds_at_publish"))):
+        if theirs is None:
+            return None, (f"the pre-fight snapshot for this fight records no "
+                          f"{field}, so it cannot be matched to this edge (R-07)")
+        if mine != theirs:
+            return None, (f"the pre-fight snapshot records {field}={theirs!r} and "
+                          f"this edge carries {mine!r}; they are records of "
+                          f"different forecasts (R-07)")
+
+    source = "engine_published_at"
+    locked_at = snapshot.get("engine_published_at")
+    if locked_at is None:
+        source, locked_at = "snapshot_at", snapshot.get("snapshot_at")
+    if locked_at is None:
+        return None, ("the pre-fight snapshot carries neither "
+                      "engine_published_at nor snapshot_at (R-07)")
+
+    published_at = edge.get("published_at")
+    effective = locked_at
+    if published_at is not None and published_at > effective:
+        effective = published_at
+    return effective, {
+        "locked_at": effective,
+        "immutable_locked_at": locked_at,
+        "immutable_source": f"pre_fight_snapshots.{source}",
+        "snapshot_id": snapshot.get("id"),
+        "model_edges_published_at": published_at,
+        # TRUE when the mutable column is the later of the two and therefore the
+        # binding one. Recorded rather than hidden: it is the case where the
+        # working table tightened the immutable record, which is allowed, and
+        # the case a reader would most want flagged.
+        "published_at_is_binding": effective == published_at and published_at != locked_at,
+        "agrees_with_immutable_record": published_at == locked_at,
+    }
+
+
+def verify_publish_quote(quote: dict | None, edge: dict, bet_fighter_id: int,
+                         opp_fighter_id: int, now: dt.datetime) -> tuple:
+    """§4 item 12. Returns `(provenance, None)` or `(None, detail)`.
+
+    `odds_at_publish` is one side of `CLV_return`, and without a link to the
+    exact source quote it is an assertion rather than a record — we would be
+    comparing a de-vigged, fully-provenanced closing consensus against a number
+    somebody typed. The link must PROVE, not merely reference:
+
+      * the exact offered price — the quote's own `american_odds` equals
+        `odds_at_publish`; a link to a row quoting something else is not a link
+        to this price;
+      * fighter and opponent identity (Q-10);
+      * the provider's market id (R-06 — the stable key across a repost);
+      * the quote instant, credible under R-13;
+      * provider and feed provenance, `raw` included.
+
+    Historical edges have no such link and are not given one. Fabricating it —
+    "find the row whose price matches" — invents the record R-07 and §4 item 12
+    exist to require, and would be indistinguishable from the real thing
+    afterwards. They stay unscored, which is a coverage fact reported under R-05.
+    """
+    if not quote:
+        return None, ("no source quote is linked to odds_at_publish, so the "
+                      "publish side of CLV_return is an assertion rather than a "
+                      "record (§4 item 12)")
+    if quote.get("fighter_id") != bet_fighter_id:
+        return None, (f"the linked publish quote prices fighter "
+                      f"{quote.get('fighter_id')!r}, not the bet fighter "
+                      f"{bet_fighter_id!r}")
+    if quote.get("opponent_fighter_id") != opp_fighter_id:
+        return None, (f"the linked publish quote names opponent "
+                      f"{quote.get('opponent_fighter_id')!r}; this fight's other "
+                      f"corner is {opp_fighter_id!r} (Q-10)")
+    if quote.get("american_odds") != edge.get("odds_at_publish"):
+        return None, (f"the linked publish quote offers "
+                      f"{quote.get('american_odds')!r} and the edge posted "
+                      f"{edge.get('odds_at_publish')!r}; the link does not prove "
+                      f"the price that was published")
+    if not credible_capture_instant(quote.get("captured_at"), now):
+        return None, ("the linked publish quote's capture instant is not credible "
+                      "(R-13), so it cannot place the posted price in time")
+    missing = missing_quote_provenance(quote, REQUIRED_PUBLISH_PROVENANCE)
+    if missing:
+        return None, (f"the linked publish quote is missing required §4 "
+                      f"provenance: {', '.join(missing)}")
+    return {
+        "quote_id": quote.get("id"),
+        "american_odds": quote.get("american_odds"),
+        "captured_at": quote.get("captured_at"),
+        "provider_market_id": quote.get("source_event_id"),
+        "opponent_fighter_id": quote.get("opponent_fighter_id"),
+        "feed_version": quote.get("feed_version"),
+        "provider_last_update": quote.get("provider_last_update"),
+        "retrieved_at": quote.get("retrieved_at"),
+    }, None
+
+
 def admissible_reference(start_at: dt.datetime | None,
                          start_basis: str | None,
                          is_first_bout: bool | None = None) -> dt.datetime | None:
@@ -458,7 +735,9 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
               reference_instant: dt.datetime | None, now: dt.datetime,
               eligible_book_ids: set[int] | None,
               reference_basis: str | None = None,
-              is_first_bout: bool | None = None) -> dict:
+              is_first_bout: bool | None = None,
+              snapshot: dict | None = None,
+              publish_quote: dict | None = None) -> dict:
     """Score one `model_edges` row under CLV-001, or say why it cannot be.
 
     Returns a dict that is always shaped the same — `scored` is True or False and
@@ -488,9 +767,21 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
            # lower bound. Carried even on an unscored row, so a refusal says what
            # it was asked to score against.
            "close_basis": reference_basis,
+           # THE CUTOFF ITSELF, persisted. Amendment 6 (e).
+           #
+           # It was previously recoverable only for bouts 2..N, where it happens
+           # to equal clv_window_opened_at. For bout 1 the cutoff is the card's
+           # scheduled start and nothing on the row held it, so the one number
+           # every scored observation is defined against was not stored for the
+           # only bouts this version can currently score. A lead time plus a
+           # basis is not a substitute: reconstructing the cutoff from them
+           # re-reads a schedule that may since have moved.
+           "cutoff_at": reference_instant,
            "lead_time_minutes": None,
            "lead_time_is_lower_bound": reference_is_lower_bound(reference_basis),
            "proxy_quoted_at": None,
+           "forecast_lock": None,
+           "publish_quote": None,
            "diagnostics": {}}
 
     def unscored(reason: str, detail: str = "") -> dict:
@@ -500,7 +791,7 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
     # A caller may not hand in a cutoff whose basis this version does not permit.
     # `admissible_reference` is the gate, but a direct `score_row(...,
     # reference_instant=X, reference_basis='bell_at')` would sail past it — so the
-    # same rule is enforced here, at the only other way in. v1.0.8 permits
+    # same rule is enforced here, at the only other way in. This version permits
     # exactly `scheduled_first_bout` and `previous_bout_completion`.
     if reference_instant is not None and reference_basis not in CLOSE_REFERENCE_BASES:
         return unscored(
@@ -560,22 +851,70 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
                 "completion is on file. Recording one makes the snapshots "
                 "already captured scorable.")
         return unscored("no_scheduled_start",
-                        "no cutoff for this fight: needs the card's scheduled "
-                        "start (bout 1), the previous bout's exact completion "
-                        "(bouts 2..N), or a confirmed bell (Amendments 3, 5)")
+                        "no cutoff for this fight: this version's cutoff is the "
+                        "card's scheduled start (bout 1) or the previous bout's "
+                        "exact completion (bouts 2..N), and neither is on file. "
+                        "A confirmed bell is audit-only and cannot supply one "
+                        "(Amendments 3, 5, 5.1)")
 
-    # R-07, no-lookahead. Strict, in UTC.
-    published_at = edge.get("published_at")
-    if published_at is not None and published_at >= reference_instant:
+    # R-07, no-lookahead — and it starts with establishing the lock from an
+    # IMMUTABLE record, because a lock read off a rewritable row is not one.
+    locked_at, lock_info = forecast_lock(edge, snapshot)
+    if locked_at is None:
+        return unscored("no_immutable_forecast_lock", lock_info)
+    out["forecast_lock"] = lock_info
+
+    # The edge-level half of R-07: a forecast locked at or after the cutoff has
+    # no pre-cutoff window at all. The per-quote half is enforced inside
+    # closing_pairs, and it is the half that actually bites — this one only
+    # catches the degenerate case.
+    if locked_at >= reference_instant:
         return unscored("forecast_not_before_close",
-                        f"published_at {published_at.isoformat()} is not before "
-                        f"the close reference {reference_instant.isoformat()}")
+                        f"the forecast was locked at {locked_at.isoformat()}, "
+                        f"which is not before the cutoff "
+                        f"{reference_instant.isoformat()}")
+
+    # §4 item 12. The publish side of CLV_return must be a record.
+    publish_info, publish_detail = verify_publish_quote(
+        publish_quote, edge, bet_fighter_id, opp_fighter_id, now)
+    if publish_info is None:
+        return unscored("no_publish_quote_link", publish_detail)
+    out["publish_quote"] = publish_info
 
     pairs, diag = closing_pairs(quotes, bet_fighter_id, opp_fighter_id,
-                                reference_instant, now, eligible_book_ids)
+                                reference_instant, now, eligible_book_ids,
+                                forecast_locked_at=locked_at,
+                                publish_market_id=publish_info["provider_market_id"])
     out["diagnostics"] = diag
 
     if not pairs:
+        # Structural obstacles first, and deliberately ahead of one_sided_close.
+        # Dropping one corner of a book for missing provenance leaves the book
+        # one-sided, so reporting one_sided_close first would name the symptom
+        # and hide the cause — and the cause here is permanent, while a genuine
+        # one-sided close may be fixed by the next capture.
+        if diag["missing_provenance"]:
+            return unscored(
+                "incomplete_quote_provenance",
+                f"{diag['missing_provenance']} quote(s) in the window are missing "
+                f"required §4 provenance ({', '.join(REQUIRED_QUOTE_PROVENANCE)}). "
+                f"These fields cannot be backfilled, so rows captured before the "
+                f"capture migration landed are permanently unscorable — a "
+                f"coverage fact under R-05, not a gap to paper over.")
+        if diag["opponent_mismatch"] or diag["market_id_mismatch"]:
+            return unscored(
+                "market_identity_changed",
+                f"{diag['opponent_mismatch']} quote(s) name a different opponent "
+                f"and {diag['market_id_mismatch']} quote(s) a different provider "
+                f"market than the forecast was made on (Q-10, R-06)")
+        if diag["before_forecast_lock"]:
+            return unscored(
+                "forecast_not_before_close",
+                f"{diag['before_forecast_lock']} quote(s) in the window are at or "
+                f"before the forecast lock {locked_at.isoformat()}. R-07 requires "
+                f"forecast_locked_at < close_quoted_at strictly, per quote — a "
+                f"price that was on the screen before the forecast existed cannot "
+                f"measure the forecast against it.")
         if diag["one_sided_books"]:
             return unscored("one_sided_close",
                             f"{diag['one_sided_books']} eligible book(s) quoted "
@@ -605,6 +944,18 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
                    if p["book_id"] in {b["book_id"] for b in artifact["books"]})
     artifact["proxy_quoted_at"] = proxy_at
     artifact["close_basis"] = reference_basis
+    # THE CUTOFF GOES INTO THE HASHED ARTIFACT — Amendment 6 (e).
+    #
+    # The consensus is a set of prices selected BY a cutoff. Hashing the prices
+    # without it leaves the selection rule outside the integrity check: the same
+    # books, the same quotes and the same median produce the same hash whether
+    # they were selected against a 22:00 cutoff or a 23:00 one, and the artifact
+    # cannot then be verified as the calculation that was actually performed.
+    artifact["cutoff_at"] = reference_instant
+    # The other two ends of the provenance chain, so the hash covers the whole of
+    # it: what the forecast was locked against, and what the posted price was.
+    artifact["forecast_locked_at"] = locked_at
+    artifact["publish_quote_id"] = publish_info["quote_id"]
     artifact["benchmark"] = BENCHMARK_NAME
 
     out.update({
@@ -616,6 +967,7 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
         "consensus": artifact,
         "consensus_sha256": canonical_sha256(artifact),
         "proxy_quoted_at": proxy_at,
+        "cutoff_at": reference_instant,
         "lead_time_minutes": lead_time_minutes(proxy_at, reference_instant),
     })
     return out

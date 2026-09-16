@@ -83,7 +83,7 @@ alter table public.model_edges
 -- Which instant was the CUTOFF for this fight: 'scheduled_first_bout' (bout 1)
 -- or 'previous_bout_completion' (bouts 2..N). Those two, always.
 --
--- 'bell_at' is NOT one of them. A confirmed bell is an AUDIT field in v1.0.8 and
+-- 'bell_at' is NOT one of them. A confirmed bell is an AUDIT field from v1.0.8 onward and
 -- never supplies the cutoff; scoring against real bells requires a new protocol
 -- version (Amendment 5.1).
 alter table public.model_edges
@@ -116,6 +116,40 @@ alter table public.model_edges
 alter table public.model_edges
   add column if not exists clv_proxy_quoted_at timestamptz;
 
+-- THE CUTOFF THIS ROW WAS SCORED AGAINST — Amendment 6 (e).
+--
+-- Every scored observation is defined as "the latest eligible quote strictly
+-- before X". X was not stored. For bouts 2..N it happens to equal
+-- clv_window_opened_at, so it looked recoverable; for bout 1 the cutoff is the
+-- card's SCHEDULED START and no column on this row held it — and bout 1 is the
+-- only bout this version can score until exact bout completions exist.
+--
+-- Nor is it reliably reconstructible: clv_proxy_quoted_at +
+-- clv_lead_time_minutes recovers it arithmetically, but the honest source is
+-- the schedule, and a schedule can move after the fact. A number defined
+-- against an instant must store that instant.
+alter table public.model_edges
+  add column if not exists clv_cutoff_at timestamptz;
+
+-- THE SOURCE OF THE POSTED PRICE — §4 item 12, Amendment 6 (d).
+--
+-- The exact fight_odds.id that odds_at_publish came from. Without it the publish
+-- side of CLV_return is an assertion: a fully-provenanced, de-vigged closing
+-- consensus compared against a number with no record behind it.
+--
+-- The scorer does not trust this pointer, it VERIFIES it — the referenced row
+-- must itself carry the same American price, the bet fighter, the opponent
+-- (Q-10), the provider market id (R-06), a credible capture instant (R-13) and
+-- full §4 provenance. A pointer to a row that says something else is not a link.
+--
+-- NULL on every existing row, permanently. Historical edges have no such link
+-- and must not be given one: searching for "the row whose price matches"
+-- manufactures the record the rule exists to require, and afterwards it would be
+-- indistinguishable from one the publisher actually recorded. Those rows stay
+-- unscored under R-05.
+alter table public.model_edges
+  add column if not exists clv_publish_quote_id bigint;
+
 -- ---------------------------------------------------------------------------
 -- 2. Provenance — enough to reconstruct the calculation from the raw quotes
 --
@@ -141,7 +175,16 @@ alter table public.model_edges
 --              "fair_bet":0.5155,"k":0.9023,
 --              "quote_ids":[123,124]}, ...],
 --    "median_fair_bet":0.5155,"n_books":3,
---    "devig":"power","protocol":"CLV-001@<version>"}
+--    "devig":"power","protocol":"CLV-001@<version>",
+--    "close_basis":"scheduled_first_bout","proxy_quoted_at":"...",
+--    "cutoff_at":"...","forecast_locked_at":"...","publish_quote_id":123}
+--
+-- Amendment 6 (e): cutoff_at, forecast_locked_at and publish_quote_id are inside
+-- the hashed artifact, not merely beside it. The consensus is a set of prices
+-- SELECTED BY a cutoff, from a window that opens at the forecast lock — hashing
+-- the prices alone leaves the selection rule outside the integrity check, and
+-- the same books at the same median hash identically whether they were chosen
+-- against a 22:00 cutoff or a 23:00 one.
 alter table public.model_edges
   add column if not exists clv_closing_consensus jsonb;
 
@@ -195,7 +238,12 @@ begin
             and clv_close_basis is not null
             and clv_lead_time_minutes is not null
             and clv_lead_time_is_lower_bound is not null
-            and clv_proxy_quoted_at is not null)
+            and clv_proxy_quoted_at is not null
+            -- Amendment 6: the cutoff the row was scored against, and the
+            -- source of the price it was scored from. A row missing either
+            -- cannot be checked, only believed.
+            and clv_cutoff_at is not null
+            and clv_publish_quote_id is not null)
       ) not valid;
   end if;
 end $$;
@@ -208,7 +256,7 @@ end $$;
 --   'card_scheduled_start'  applied to a later bout it sits hours early, so the
 --                           proxy would mean something different on every fight
 --                           of the card (Amendment 4.1).
---   'bell_at'               audit-only in v1.0.8. Letting a bell supply the
+--   'bell_at'               audit-only from v1.0.8 onward. Letting a bell supply the
 --                           cutoff "where one exists" would make one version
 --                           behave as two (Amendment 5.1). Scoring against real
 --                           bells is a NEW protocol version.
@@ -252,6 +300,37 @@ begin
                     and conrelid = 'public.model_edges'::regclass) then
     alter table public.model_edges add constraint model_edges_clv_lead_time_positive
       check (clv_lead_time_minutes is null or clv_lead_time_minutes > 0) not valid;
+  end if;
+end $$;
+
+-- The stored cutoff and the stored lead time must describe the same selection.
+-- If they disagree, one of them was written from a different calculation than
+-- the other and the row cannot be trusted to mean what it says. Half a minute of
+-- tolerance for the numeric rounding the writer applies.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'model_edges_clv_cutoff_matches_lead_time'
+                    and conrelid = 'public.model_edges'::regclass) then
+    alter table public.model_edges add constraint model_edges_clv_cutoff_matches_lead_time
+      check (clv_cutoff_at is null or clv_proxy_quoted_at is null
+             or clv_lead_time_minutes is null
+             or abs(extract(epoch from (clv_cutoff_at - clv_proxy_quoted_at)) / 60.0
+                    - clv_lead_time_minutes) < 0.5) not valid;
+  end if;
+end $$;
+
+-- The selected quote is strictly before the cutoff. Same rule as
+-- model_edges_clv_lead_time_positive, now checkable against the stored instants
+-- rather than only against the derived minutes.
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'model_edges_clv_quote_precedes_cutoff'
+                    and conrelid = 'public.model_edges'::regclass) then
+    alter table public.model_edges add constraint model_edges_clv_quote_precedes_cutoff
+      check (clv_cutoff_at is null or clv_proxy_quoted_at is null
+             or clv_proxy_quoted_at < clv_cutoff_at) not valid;
   end if;
 end $$;
 
@@ -320,7 +399,26 @@ begin
         -- exact completion of the bout before it — and no such completion is
         -- recorded. Recording one makes the already-captured snapshots scorable,
         -- which is why bout completions are the highest-leverage open item.
-        'no_previous_bout_completion'
+        'no_previous_bout_completion',
+        -- Amendment 6. Provenance, enforced per row rather than per table.
+        -- R-07: the forecast's lock instant rests only on model_edges.
+        -- published_at, which is mutable, and no pre_fight_snapshots row
+        -- identifies this edge. A lock read off a rewritable row is not one.
+        'no_immutable_forecast_lock',
+        -- §4 item 12: odds_at_publish names no source quote, or the row it
+        -- names does not prove the price, the corners, the market or the
+        -- instant. Historical edges have no link and are never given a
+        -- fabricated one.
+        'no_publish_quote_link',
+        -- §4: the quotes in the window are missing required provenance
+        -- (provider market id, feed version, opponent, provider and retrieval
+        -- timestamps, market status, raw). Permanent for anything captured
+        -- before the capture migration landed.
+        'incomplete_quote_provenance',
+        -- Q-10 / R-06: the quotes on file name a different opponent or a
+        -- different provider market than the forecast was made on, so they
+        -- price a different thing.
+        'market_identity_changed'
       )) not valid;
   end if;
 end $$;

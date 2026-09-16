@@ -572,3 +572,99 @@ class TestPublicationGateAfterFreeze(unittest.TestCase):
             with self.subTest(question=q["id"]):
                 self.assertTrue((q.get("resolved_by") or "").strip(),
                                 f"{q['id']} is L3 and resolved but names no approver")
+
+
+class TestActiveDocumentationIsNotStale(unittest.TestCase):
+    """Amendment 6 (i) and the rest of item 9.
+
+    The amendment blocks are HISTORY and stay exactly as filed — a superseded
+    rule deleted is a rule you cannot audit. Everything OUTSIDE them is live
+    text, and live text that contradicts the current version is worse than no
+    text, because a reader reasonably trusts it.
+
+    These tests read the live sections only.
+    """
+
+    def _live_text(self) -> str:
+        """The markdown with every amendment blockquote removed.
+
+        Amendments are written as `> ` blockquotes under Q-01; stripping every
+        quoted line leaves the live rule text. Crude and reliable — and it fails
+        loudly if the amendment style ever changes, because the live text would
+        suddenly include amendment prose and these assertions would trip.
+        """
+        return "\n".join(line for line in markdown().splitlines()
+                         if not line.lstrip().startswith(">"))
+
+    def test_section_5_does_not_say_freezing_opens_the_gate(self):
+        """The one sentence in this document that could be read as authorising
+        a number to appear."""
+        live = self._live_text()
+        section = live[live.index("## 5. What freezing means"):
+                       live.index("## 6. What this protocol does not cover")]
+        # The numbered list is the rule. The prose below it is the dated
+        # correction, which QUOTES the removed sentence in order to record what
+        # changed — the repo's convention for an audit narrative (edges.html's
+        # "Updated August 2026" note), so it is read past deliberately.
+        steps = [ln for ln in section.splitlines()
+                 if re.match(r"^\d+\.\s", ln.strip()) or ln.startswith("   ")]
+        self.assertTrue(steps, "§5's numbered procedure is gone")
+        joined = " ".join(steps)
+        self.assertNotIn("publication_allowed", joined,
+                         "freezing does not set the publication flag, and §5's "
+                         "procedure must not list it among the things it does")
+        self.assertIn("Freezing does not open the publication gate", section)
+        self.assertIn("100 scored observations", section)
+        self.assertIn("Corrected by Amendment 6 (i)", section,
+                      "the removal is recorded as a dated correction rather "
+                      "than a silent rewrite")
+
+    def test_the_freeze_procedure_in_json_agrees(self):
+        steps = " ".join(doc()["freeze_procedure"]).lower()
+        self.assertIn("publication_allowed does not", steps)
+
+    def test_no_live_text_says_a_bell_can_supply_the_cutoff(self):
+        """v1.0.8 onward has exactly two cutoff bases and a bell is neither.
+        Superseded amendment text may still say otherwise; live text may not."""
+        live = self._live_text().lower()
+        for phrase in ("actual bell, previous bout",
+                       "a confirmed bell outranks",
+                       "wherever one exists",
+                       "bell_at` (any bout)"):
+            self.assertNotIn(phrase, live,
+                             f"live rule text still admits a bell as a cutoff: "
+                             f"{phrase!r}")
+
+    def test_the_machine_mirror_marks_the_bell_audit_only(self):
+        self.assertTrue(doc()["close_reference"].get("bell_at_is_audit_only"))
+        bases = {t["basis"] for t in doc()["close_reference"]["tiers"]}
+        self.assertEqual(bases, {"scheduled_first_bout", "previous_bout_completion"})
+
+
+class TestScorerTextIsNotStale(unittest.TestCase):
+    """Item 9's third bullet. The scorer's own messages are user-facing too —
+    they are what a dry run prints and what a reader of an unscored row sees."""
+
+    def _scoring_source(self) -> str:
+        return (REPO / "cfl_engine" / "clv" / "scoring.py").read_text(encoding="utf-8")
+
+    def test_no_error_message_offers_a_confirmed_bell_as_a_cutoff(self):
+        src = self._scoring_source()
+        self.assertNotIn("or a confirmed bell (Amendments 3, 5)", src)
+        self.assertIn("A confirmed bell is audit-only and cannot supply one", src)
+
+    def test_the_capture_migration_comments_name_the_two_bases(self):
+        sql = (REPO / "research" / "clv" /
+               "proposed_2026-09-16_fight_odds_capture.sql").read_text(encoding="utf-8")
+        # The Amendment 2 (b) era rule, which admitted bell_at and
+        # provider_commence as "start bases", is gone from the live comments.
+        self.assertNotIn("Amendment 2 (b) admits", sql)
+        self.assertNotIn("bell_at and provider_commence bases", sql)
+        self.assertIn("exactly two cutoff bases", sql)
+        self.assertIn("proxy_cutoff_at", sql)
+
+    def test_the_staleness_clock_is_documented_where_the_column_lives(self):
+        sql = (REPO / "research" / "clv" /
+               "proposed_2026-09-16_fight_odds_capture.sql").read_text(encoding="utf-8")
+        self.assertIn("NOT the staleness clock", sql)
+        self.assertIn("measured from captured_at", sql)

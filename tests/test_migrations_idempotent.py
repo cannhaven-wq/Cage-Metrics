@@ -18,10 +18,22 @@ import unittest
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CLV_DIR = os.path.join(REPO_ROOT, "research", "clv")
-MIGRATIONS = [
+# The three ADDITIVE migrations: columns, indexes, NOT VALID checks, new tables.
+# They change no existing behaviour, and `TestStillAdditiveOnly` holds them to
+# that.
+ADDITIVE_MIGRATIONS = [
     "proposed_2026-09-16_fight_odds_capture.sql",
     "proposed_2026-09-16_event_flow.sql",
     "proposed_2026-09-16_clv001_columns.sql",
+]
+
+# The fourth (Amendment 6 (g)) adds triggers to a table that is already written
+# to, so it changes what an existing writer may do. It is deliberately NOT held
+# to the additive-only rule — it would fail it, because it names TRUNCATE in
+# order to reject it. Everything else applies to it, and `TestRawQuoteDurability`
+# plus `tests/test_sql_behaviour.py` cover what it does instead.
+MIGRATIONS = ADDITIVE_MIGRATIONS + [
+    "proposed_2026-09-16_fight_odds_immutability.sql",
 ]
 
 
@@ -101,7 +113,7 @@ class TestStillAdditiveOnly(unittest.TestCase):
     ]
 
     def test_nothing_destructive(self):
-        for name in MIGRATIONS:
+        for name in ADDITIVE_MIGRATIONS:
             # Comments carry the words on purpose ("no DROP of any kind").
             code = code_only(read(name))
             for pattern, label in self.FORBIDDEN:
@@ -144,9 +156,6 @@ class TestAppendOnlyPreserved(unittest.TestCase):
                 self.assertRegex(
                     sql, rf"revoke all on public\.{table} from anon, authenticated")
 
-
-if __name__ == "__main__":
-    unittest.main(verbosity=2)
 
 
 class TestCompletionCorrectionSemantics(unittest.TestCase):
@@ -291,6 +300,100 @@ class TestTheCurrentCardIsAWholeObservation(unittest.TestCase):
                           "silently truncate the current card")
 
 
+class TestRawQuoteDurability(unittest.TestCase):
+    """Amendment 6 (g). R-01 requires the raw quote store to reject UPDATE and
+    DELETE by trigger for every role; `fight_odds` did not.
+
+    The behavioural half — that the trigger actually lets `is_closer` through
+    and actually stops a price edit — is in `tests/test_sql_behaviour.py`, which
+    runs the DDL against a throwaway Postgres. These are the assertions that
+    hold even where no Postgres is available.
+    """
+
+    NAME = "proposed_2026-09-16_fight_odds_immutability.sql"
+
+    def setUp(self):
+        self.raw = read(self.NAME)
+        self.sql = code_only(self.raw)
+
+    def test_the_whitelist_is_exactly_the_derived_flags(self):
+        m = re.search(r"mutable_keys constant text\[\] := array\[([^\]]*)\]",
+                      self.sql)
+        self.assertIsNotNone(m, "the mutable-key whitelist is gone")
+        keys = {k.strip().strip("'") for k in m.group(1).split(",")}
+        self.assertEqual(keys, {"is_opener", "is_closer"},
+                         "only recomputable derived flags may stay mutable; "
+                         "anything else is an observation")
+
+    def test_it_is_a_whitelist_not_a_blacklist(self):
+        """A column added later must be protected the moment it exists."""
+        self.assertIn("to_jsonb(old) - mutable_keys", self.sql)
+        self.assertIn("to_jsonb(new) - mutable_keys", self.sql)
+        self.assertIn("is distinct from", self.sql)
+
+    def test_delete_and_truncate_are_both_refused(self):
+        self.assertIn("tg_op = 'DELETE'", self.sql)
+        self.assertIn("tg_op = 'TRUNCATE'", self.sql)
+        for trigger, when in (("fight_odds_block_delete", "before delete"),
+                              ("fight_odds_protect_update", "before update"),
+                              ("fight_odds_block_truncate", "before truncate")):
+            with self.subTest(trigger=trigger):
+                self.assertRegex(self.sql,
+                                 rf"create trigger {trigger}\s+{when} on "
+                                 rf"public\.fight_odds")
+
+    def test_it_declares_that_it_is_not_additive_only(self):
+        """The other three migrations are additive and say so. This one changes
+        what an existing writer may do, and must not be read as one of them."""
+        self.assertIn("NOT ADDITIVE-ONLY", self.raw.upper())
+
+    def test_it_still_drops_nothing_and_writes_nothing(self):
+        code = self.sql.lower()
+        self.assertNotIn("drop table", code)
+        self.assertNotIn("drop column", code)
+        self.assertNotIn("delete from", code)
+        self.assertNotIn("update public.", code)
+        # drop trigger is the idempotent recreate idiom, and only for its own.
+        for stmt in re.findall(r"drop trigger[^;]+;", code):
+            self.assertIn("if exists", stmt)
+            self.assertIn("fight_odds_", stmt)
+
+    def test_the_function_is_replaceable_so_the_file_reruns(self):
+        self.assertIn("create or replace function "
+                      "public.fight_odds_protect_observation()", self.sql)
+
+
+class TestPublishSideProvenance(unittest.TestCase):
+    """Amendment 6 (d) and (e), as the storage layer sees them."""
+
+    def setUp(self):
+        self.sql = read("proposed_2026-09-16_clv001_columns.sql")
+
+    def test_the_new_columns_are_added_conditionally_like_the_rest(self):
+        for col, typ in (("clv_cutoff_at", "timestamptz"),
+                         ("clv_publish_quote_id", "bigint")):
+            with self.subTest(column=col):
+                self.assertIn(f"add column if not exists {col} {typ}", self.sql)
+
+    def test_a_scored_row_cannot_omit_either_of_them(self):
+        block = re.search(r"model_edges_clv_scored_is_complete(.*?)not valid",
+                          self.sql, re.S).group(1)
+        self.assertIn("clv_cutoff_at is not null", block)
+        self.assertIn("clv_publish_quote_id is not null", block)
+
+    def test_the_new_unscored_reasons_are_in_the_closed_vocabulary(self):
+        block = re.search(r"model_edges_clv_unscored_reason_known(.*?)not valid",
+                          self.sql, re.S).group(1)
+        for reason in ("no_immutable_forecast_lock", "no_publish_quote_link",
+                       "incomplete_quote_provenance", "market_identity_changed"):
+            with self.subTest(reason=reason):
+                self.assertIn(f"'{reason}'", block)
+
+    def test_historical_rows_are_not_backfilled_with_a_fabricated_link(self):
+        self.assertNotIn("update public.model_edges", code_only(self.sql).lower())
+        self.assertIn("must not be given one", self.sql)
+
+
 class TestNoBellOverrideInTheView(unittest.TestCase):
     """Amendment 5.1: this version's cutoff is exactly two cases, always."""
 
@@ -322,3 +425,6 @@ class TestNoBellOverrideInTheView(unittest.TestCase):
             bases,
             {"scheduled_first_bout", "previous_bout_completion",
              "card_scheduled_start"})
+
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

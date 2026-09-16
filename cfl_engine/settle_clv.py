@@ -117,7 +117,8 @@ from export_data import fetch_all, prob_to_american
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
 from scoring import (  # noqa: E402
     CLOSE_REFERENCE_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
-    UNSCORED_REASONS, admissible_reference, is_eligible_book, score_row,
+    REQUIRED_QUOTE_PROVENANCE, UNSCORED_REASONS, admissible_reference,
+    is_eligible_book, score_row,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -134,6 +135,8 @@ CLV001_COLUMNS = (
     # Amendment 4 — how late the proxy was, and whether that is exact.
     "clv_close_basis", "clv_lead_time_minutes", "clv_lead_time_is_lower_bound",
     "clv_proxy_quoted_at", "clv_window_opened_at",
+    # Amendment 6 — the cutoff itself, and the link to the published price.
+    "clv_cutoff_at", "clv_publish_quote_id",
 )
 
 # Capture columns on fight_odds that the close depends on
@@ -141,6 +144,16 @@ CLV001_COLUMNS = (
 CAPTURE_COLUMNS = ("source_event_id", "bout_started_at", "proxy_cutoff_at",
                    "is_live", "provider_last_update", "retrieved_at",
                    "opponent_fighter_id")
+
+# Everything a quote row must be READ with for row-level eligibility to be
+# decidable. Selecting less would make the scorer's provenance check pass or fail
+# on what the query asked for rather than on what the row holds — the schema-level
+# mistake, one layer down. Kept in sync with REQUIRED_QUOTE_PROVENANCE by a test.
+QUOTE_SELECT_COLUMNS = (
+    "id", "fight_id", "fighter_id", "book_id", "american_odds", "implied_prob",
+    "captured_at", "source_event_id", "feed_version", "opponent_fighter_id",
+    "provider_last_update", "retrieved_at", "market_status", "raw",
+)
 
 
 # A real two-way market never prices a side outside this band. Anything beyond
@@ -470,6 +483,34 @@ def _capture_capabilities(base_url: str, key: str) -> dict:
         "fight_odds does not record the opposing corner at quote time (§4 item "
         "10), so Q-10's opponent-change exclusion rests on today's corners.")
 
+    # EVERY CHECK ABOVE IS ABOUT THE TABLE, NOT ABOUT A ROW, and that is all it
+    # can be: this is a run-level precondition answering "can the record support
+    # the measure at all". It is NOT the eligibility test. Amendment 6 (a) — a
+    # quote is usable because THAT ROW carries the provenance, which
+    # `closing_pairs` decides per quote. The two were once the same check, and
+    # the day the capture migration landed every pre-migration row would have
+    # become scorable on the strength of columns it does not populate.
+    #
+    # So this one asks whether any row anywhere carries the full set. A `false`
+    # here means nothing can score yet; a `true` means something might.
+    try:
+        probe_cols = "&".join(f"{c}=not.is.null" for c in REQUIRED_QUOTE_PROVENANCE)
+        rows = fetch_all(base_url, key, "fight_odds",
+                         f"select=id&{probe_cols}&limit=1")
+        cond["some_quote_carries_full_provenance"] = bool(rows)
+    except Exception as e:                      # noqa: BLE001
+        cond["some_quote_carries_full_provenance"] = False
+        detail["some_quote_carries_full_provenance"] = (
+            f"cannot probe fight_odds provenance ({e})")
+    detail.setdefault(
+        "some_quote_carries_full_provenance",
+        "at least one quote carries every §4 field"
+        if cond["some_quote_carries_full_provenance"] else
+        "no quote yet carries the full §4 provenance set "
+        f"({', '.join(REQUIRED_QUOTE_PROVENANCE)}). The columns existing is not "
+        "the same as a row populating them — everything captured before the "
+        "capture migration landed is permanently unscorable (R-05).")
+
     # Item 7, Amendment 3: a close reference per fight, not per card. The card's
     # published start belongs to bout 1; every later bout begins when the one
     # before it ends.
@@ -563,11 +604,21 @@ def clv001_main(write: bool) -> None:
     # scoring one against quotes taken before a future scheduled start would be
     # measuring a market that is still moving.
     today = dt.date.today().isoformat()
-    rows = fetch_all(
-        base_url, key, "model_edges",
-        "select=id,fight_id,event_date,side,bet_fighter_id,odds_at_publish,"
-        f"published_at,source&source=eq.live&event_date=lt.{today}"
-        "&order=event_date")
+    base_select = ("select=id,fight_id,event_date,side,bet_fighter_id,"
+                   "odds_at_publish,published_at,source")
+    try:
+        rows = fetch_all(
+            base_url, key, "model_edges",
+            f"{base_select},clv_publish_quote_id&source=eq.live"
+            f"&event_date=lt.{today}&order=event_date")
+    except Exception as e:                      # noqa: BLE001 - unknown is failed
+        print(f"  note: model_edges has no clv_publish_quote_id ({e}) — no edge "
+              f"can name the source of its posted price, so every row will be "
+              f"unscored with no_publish_quote_link (§4 item 12). Apply "
+              f"research/clv/proposed_2026-09-16_clv001_columns.sql.")
+        rows = fetch_all(base_url, key, "model_edges",
+                         f"{base_select}&source=eq.live"
+                         f"&event_date=lt.{today}&order=event_date")
     print(f"\nlive edges on cards before {today}: {len(rows)}")
     if not rows:
         print("nothing to score.")
@@ -575,6 +626,14 @@ def clv001_main(write: bool) -> None:
 
     fights = _fights_by_id(base_url, key, {r["fight_id"] for r in rows})
     quotes = _quotes_by_fight(base_url, key, {r["fight_id"] for r in rows})
+    # R-07's immutable half, and §4 item 12's link. Both are fetched for the
+    # whole population up front so a row's refusal is decided by what the record
+    # holds, not by whether a per-row lookup happened to succeed.
+    snapshots = _snapshots_by_fight(base_url, key, {r["fight_id"] for r in rows})
+    publish_quotes = _publish_quotes_by_id(
+        base_url, key,
+        {r["clv_publish_quote_id"] for r in rows
+         if r.get("clv_publish_quote_id") is not None})
 
     results = []
     for r in rows:
@@ -585,7 +644,9 @@ def clv001_main(write: bool) -> None:
             reference_instant=fight.get("start_at"), now=now,
             eligible_book_ids=eligible_book_ids,
             reference_basis=fight.get("start_basis"),
-            is_first_bout=fight.get("is_first_bout")))
+            is_first_bout=fight.get("is_first_bout"),
+            snapshot=snapshots.get(r["fight_id"]),
+            publish_quote=publish_quotes.get(r.get("clv_publish_quote_id"))))
 
     _report_clv001(results)
 
@@ -611,6 +672,10 @@ def clv001_main(write: bool) -> None:
             "clv_lead_time_minutes": round(x["lead_time_minutes"], 4),
             "clv_lead_time_is_lower_bound": x["lead_time_is_lower_bound"],
             "clv_proxy_quoted_at": x["proxy_quoted_at"].isoformat(),
+            # Amendment 6 (e). The cutoff the row was scored against, stored so
+            # it never has to be re-derived from a schedule that may have moved.
+            "clv_cutoff_at": x["cutoff_at"].isoformat(),
+            "clv_publish_quote_id": x["publish_quote"]["quote_id"],
             "clv_window_opened_at": (
                 fights.get(x["fight_id"], {}).get("window_opens_at").isoformat()
                 if fights.get(x["fight_id"], {}).get("window_opens_at") else None),
@@ -644,7 +709,7 @@ def _resolve_eligible_books(base_url: str, key: str,
 def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
     """Corners plus the close reference, per fight.
 
-    The reference comes from `v_clv_close_reference`, which under v1.0.8 resolves
+    The reference comes from `v_clv_close_reference`, which from v1.0.8 onward resolves
     exactly two cutoffs and says which one answered: the card's scheduled start
     for bout 1, and the immediately previous bout's exact completion for bouts
     2..N. A confirmed bell is NOT one of them — it is carried as an audit field
@@ -706,14 +771,103 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
 
 
 def _quotes_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
+    """Every quote for these fights, WITH its §4 provenance.
+
+    The provenance columns are selected here so `closing_pairs` can decide
+    eligibility from what the row actually holds. Reading a narrower set would
+    make every row look provenance-less and nothing would ever score; reading
+    the columns but not checking them would score rows that carry NULL. Both are
+    failures of the same kind — the eligibility question belongs to the row.
+
+    If the capture migration is not applied the table has none of these columns
+    and PostgREST rejects the whole select, so this falls back to the minimal
+    set. Every row then reads as missing provenance and is unscored with
+    `incomplete_quote_provenance`, which is the truth: the columns do not exist,
+    so no row can be carrying them.
+    """
     out: dict[int, list[dict]] = {}
+    select = ",".join(QUOTE_SELECT_COLUMNS)
+    minimal = "id,fight_id,fighter_id,book_id,american_odds,implied_prob,captured_at"
     for chunk in _chunks(sorted(fight_ids), 50):
         ids = ",".join(str(i) for i in chunk)
-        for q in fetch_all(base_url, key, "fight_odds",
-                           f"select=id,fight_id,fighter_id,book_id,american_odds,"
-                           f"implied_prob,captured_at&fight_id=in.({ids})"):
+        try:
+            rows = fetch_all(base_url, key, "fight_odds",
+                             f"select={select}&fight_id=in.({ids})")
+        except Exception as e:                  # noqa: BLE001 - unknown is failed
+            print(f"  note: fight_odds lacks the CLV-001 capture columns ({e}) — "
+                  f"every quote will read as missing §4 provenance and nothing "
+                  f"will score. Apply research/clv/"
+                  f"proposed_2026-09-16_fight_odds_capture.sql.")
+            rows = fetch_all(base_url, key, "fight_odds",
+                             f"select={minimal}&fight_id=in.({ids})")
+        for q in rows:
             q["captured_at"] = _iso(q.get("captured_at"))
+            q["provider_last_update"] = _iso(q.get("provider_last_update"))
+            q["retrieved_at"] = _iso(q.get("retrieved_at"))
             out.setdefault(q["fight_id"], []).append(q)
+    return out
+
+
+def _snapshots_by_fight(base_url: str, key: str, fight_ids: set) -> dict:
+    """The immutable pre-fight record, per fight (R-07).
+
+    `pre_fight_snapshots` is unique on fight_id and rejects UPDATE and DELETE by
+    trigger for every role including `service_role`, which is exactly the
+    property R-07 requires of a forecast's lock and exactly the property
+    `model_edges` does not have.
+
+    A fight with no snapshot yields no lock, and `forecast_lock` then refuses the
+    row. That is the intended behaviour, not a degradation to work around: the
+    snapshotter has been running since before CLV-001 and a card it missed has
+    no immutable record of what we published on it.
+    """
+    out: dict[int, dict] = {}
+    for chunk in _chunks(sorted(fight_ids), 100):
+        ids = ",".join(str(i) for i in chunk)
+        try:
+            rows = fetch_all(base_url, key, "pre_fight_snapshots",
+                             f"select=id,fight_id,snapshot_at,engine_published_at,"
+                             f"edge_side,edge_bet_fighter_id,edge_odds_at_publish"
+                             f"&fight_id=in.({ids})")
+        except Exception as e:                  # noqa: BLE001 - unknown is failed
+            print(f"  note: pre_fight_snapshots unreadable ({e}) — no row can "
+                  f"establish an immutable forecast lock, so every row will be "
+                  f"unscored with no_immutable_forecast_lock (R-07).")
+            return out
+        for s in rows:
+            s["snapshot_at"] = _iso(s.get("snapshot_at"))
+            s["engine_published_at"] = _iso(s.get("engine_published_at"))
+            out[s["fight_id"]] = s
+    return out
+
+
+def _publish_quotes_by_id(base_url: str, key: str, quote_ids: set) -> dict:
+    """The exact `fight_odds` rows edges named as the source of their posted
+    price (§4 item 12), keyed by id.
+
+    Only ids that edges actually carry are fetched. Nothing searches for a row
+    whose price happens to match: that would manufacture the link the rule
+    exists to require, and afterwards it would be indistinguishable from one the
+    publisher recorded.
+    """
+    out: dict[int, dict] = {}
+    if not quote_ids:
+        return out
+    select = ",".join(QUOTE_SELECT_COLUMNS)
+    for chunk in _chunks(sorted(quote_ids), 50):
+        ids = ",".join(str(i) for i in chunk)
+        try:
+            rows = fetch_all(base_url, key, "fight_odds",
+                             f"select={select}&id=in.({ids})")
+        except Exception as e:                  # noqa: BLE001 - unknown is failed
+            print(f"  note: publish-quote lookup failed ({e}) — every row will be "
+                  f"unscored with no_publish_quote_link (§4 item 12).")
+            return out
+        for q in rows:
+            q["captured_at"] = _iso(q.get("captured_at"))
+            q["provider_last_update"] = _iso(q.get("provider_last_update"))
+            q["retrieved_at"] = _iso(q.get("retrieved_at"))
+            out[q["id"]] = q
     return out
 
 

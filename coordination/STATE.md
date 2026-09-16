@@ -5,8 +5,8 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.8** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–5.1 same day). **Amendment 5 freezes the operational cutoff**: bout
+**Live baton:** CLV-001 is **FROZEN at v1.0.9** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–6 same day). **Amendment 5 freezes the operational cutoff**: bout
 1 takes the card's scheduled start, bouts 2..N take the exact completion of the
 immediately previous bout — **those two cases, always**, with `bell_at` retained
 as an audit field and never overriding them (5.1). The scored price is the
@@ -14,8 +14,12 @@ latest eligible sportsbook snapshot strictly before the cutoff. This is the **CF
 never the exact sportsbook closing line — for later bouts it sits several
 minutes before the bell, which is accepted and recorded per row. Capture stays
 at **5 minutes through a live card under a hard credit ceiling**.
-**Three migrations written and none applied. Publication is still shut** — 0 of
-100 observations, 0 of 20 events.
+**Amendment 6 enforces the provenance rules per ROW**: a quote is usable because
+that quote carries the §4 fields, never because the columns exist on the table;
+R-07 is applied per quote against an immutable lock from `pre_fight_snapshots`;
+the posted price must name and prove its source quote; the cutoff is stored and
+hashed. **Four migrations written and none applied. Publication is still shut** —
+0 of 100 observations, 0 of 20 events.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -62,7 +66,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.8**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.9**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -100,7 +104,7 @@ One card of waiting, not a build.
 | no bell override; cutoff ≠ start; corrections by `observed_at` | **frozen**, Amendment 5.1 |
 | the free allowance is hard-coded, env cannot widen it | **frozen**, Amendment 4.2 |
 | month-to-date spend counted from our own ledger, not the provider's balance | **fixed** |
-| all three migrations genuinely re-runnable (DO-block guards) | **fixed**, 8 tests |
+| all four migrations genuinely re-runnable (DO-block guards) | **fixed**, 8 static + 2 live-SQL tests |
 | 5-minute live capture under a hard credit governor | **written**, verified offline |
 | the three ledgers are append-only, trigger-enforced | **written, UNAPPLIED** |
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
@@ -110,7 +114,13 @@ One card of waiting, not a build.
 | the running order resolves as a **complete card**, not per fight | **fixed**, 9 tests |
 | the 20-event floor counts `event_id`, never `event_date` | **fixed**, 5 tests |
 | `score_row` refuses a cutoff basis this version does not permit | **fixed**, 4 tests |
-| `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last of the three |
+| eligibility is a property of the ROW, not of the schema | **fixed**, 7 tests |
+| R-07 applied per quote, against an immutable lock | **fixed**, 14 tests |
+| the posted price names and proves its source quote | **fixed**, 9 tests |
+| the cutoff is stored on the row and inside the hash | **fixed**, 6 tests |
+| bout 1's cutoff comes from bout 1's own schedule | **fixed**, 4 live-SQL tests |
+| `fight_odds` observation fields immutable by trigger | **written, UNAPPLIED**, 9 live-SQL tests |
+| `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last to apply |
 
 **Amendment 3 in one line:** the card's published start belongs to bout 1 and
 nobody else — applying it to all thirteen would have marked every quote after
@@ -123,6 +133,10 @@ recorded on every row.
 **Amendment 4.1 in one line:** and "pre-card" does not count as "late" — a quote
 before the card began is safely pre-fight and hours early on a late bout, so it
 is recognised (`only_pre_card_price`) and never scored.
+
+**Amendment 6 in one line:** every provenance rule already written down is now
+enforced on the ROW rather than assumed from the shape of the table — and §5 no
+longer says freezing opens the publication gate.
 
 **Amendment 5 in one line, and it supersedes 4.2:** the previous bout's
 completion is *both* the next fight's scoring cutoff and its capture trigger. It
@@ -157,6 +171,30 @@ dead booking. Older rows stay in the ledger as history; nothing is erased.
 **The 20-event floor counts `event_id`.** The UFC runs two cards on one date
 regularly, so counting `event_date` would open the gate on 19 real events. A
 scored row with no `event_id` is warned about and never counted.
+
+**Eligibility is a property of the ROW.** The capture migration makes the §4
+fields *recordable*; it does not make any row carry them, and the 110,032 rows
+captured before it will carry NULL forever — correctly. A quote scores only if
+that quote holds `source_event_id`, `feed_version`, `opponent_fighter_id`,
+`provider_last_update`, `retrieved_at`, `market_status` and `raw`. Present means
+populated: an empty string and an empty jsonb record nothing.
+
+**R-07 is `forecast_locked_at < close_quoted_at`, per quote.** A forecast locked
+at 9:28 cannot be scored against a 9:20 book quote even though the cutoff is
+9:30 — that price was on the screen before the forecast existed. The lock comes
+from `pre_fight_snapshots`, matched to *this edge* by side + bet fighter + price,
+because `model_edges.published_at` is mutable. The effective lock is the **later**
+of the two, so an edited `published_at` can only cost observations.
+
+**The posted price must name its source quote.** `clv_publish_quote_id` points at
+the exact `fight_odds` row, and the scorer verifies rather than trusts it — same
+price, same corners, same provider market, credible instant, full provenance.
+Historical edges have no link and are never given a fabricated one.
+
+**The cutoff is stored and hashed.** `clv_cutoff_at`, plus the cutoff, the lock
+and the publish quote id inside the hashed artifact: a consensus is a set of
+prices *selected by* a cutoff, so hashing the prices alone leaves the selection
+rule outside the integrity check.
 
 **Corrections resolve by observation.** `fight_bout_completions` is append-only,
 so a correction is a new row — and it usually moves the instant *earlier*. The
@@ -222,6 +260,16 @@ frozen file and serves DUR-001.
 3. [`proposed_2026-09-16_clv001_columns.sql`](../research/clv/proposed_2026-09-16_clv001_columns.sql)
    — **last, and only when there is something to write into it.** Nothing is
    computable until a card has been captured under (1) and (2).
+
+**A fourth migration is written, and it is the one that is NOT additive.**
+[`proposed_2026-09-16_fight_odds_immutability.sql`](../research/clv/proposed_2026-09-16_fight_odds_immutability.sql)
+makes `fight_odds` observation fields immutable by trigger (R-01) — DELETE and
+TRUNCATE refused outright, UPDATE refused for anything but the derived
+`is_opener` / `is_closer` flags the legacy closer promotion maintains. It adds
+triggers to a table already being written to, so it changes what an existing
+writer may do, and is filed separately to be read on its own terms. Apply it
+**second**, after the capture columns. Any writer to `fight_odds` outside this
+repo must be inventoried first.
 
 **The odds cadence changed with them.** `odds.yml` now wakes every **5 minutes**
 and `shouldCaptureNow()` gates each wake: 5 minutes while a card is **in flow**

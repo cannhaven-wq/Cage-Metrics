@@ -35,10 +35,13 @@ from scoring import (                                                # noqa: E40
     EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
     AUDIT_ONLY_BASES, PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
-    STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
+    REQUIRED_PUBLISH_PROVENANCE, REQUIRED_QUOTE_PROVENANCE,
+    STALENESS_LIMIT_MINUTES, STALENESS_MEASURED_FROM, SUPERSEDED_START_BASES,
+    UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
-    credible_capture_instant, is_eligible_book, lead_time_minutes,
-    reference_is_lower_bound, score_row,
+    credible_capture_instant, forecast_lock, is_eligible_book,
+    lead_time_minutes, missing_quote_provenance, reference_is_lower_bound,
+    score_row, verify_publish_quote,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -55,11 +58,52 @@ BET, OPP = 101, 202
 FIGHT = {"id": 1, "fighter_a_id": BET, "fighter_b_id": OPP}
 BOOKS = {1, 3, 9, 10, 11}
 
+# The forecast lock. Days before the card, as a real one is.
+LOCK = START - dt.timedelta(days=5)
+MARKET = "odds-api-evt-7f3"                      # the provider's market id
+PUBLISH_QUOTE_ID = 9001
 
-def quote(qid, fighter_id, book_id, prob, at=FRESH):
-    return {"id": qid, "fight_id": 1, "fighter_id": fighter_id,
-            "book_id": book_id, "implied_prob": prob, "american_odds": None,
-            "captured_at": at}
+
+def provenance(**over):
+    """The §4 fields every usable quote must carry (Amendment 6 (a)).
+
+    Spelled out rather than defaulted in `quote()` so a test can knock exactly
+    one field out and see the row become unscorable for that reason alone.
+    """
+    row = {"source_event_id": MARKET, "feed_version": "odds-api-v4",
+           "opponent_fighter_id": None, "provider_last_update": FRESH,
+           "retrieved_at": FRESH, "market_status": "open",
+           "raw": {"bookmaker": "draftkings"}}
+    row.update(over)
+    return row
+
+
+def quote(qid, fighter_id, book_id, prob, at=FRESH, **over):
+    row = {"id": qid, "fight_id": 1, "fighter_id": fighter_id,
+           "book_id": book_id, "implied_prob": prob, "american_odds": None,
+           "captured_at": at}
+    row.update(provenance(
+        opponent_fighter_id=OPP if fighter_id == BET else BET,
+        provider_last_update=at, retrieved_at=at))
+    row.update(over)
+    return row
+
+
+def publish_quote(**over):
+    """The exact fight_odds row the edge posted its price from (§4 item 12)."""
+    row = quote(PUBLISH_QUOTE_ID, BET, 1, 0.40, at=LOCK)
+    row["american_odds"] = 150
+    row.update(over)
+    return row
+
+
+def snapshot(**over):
+    """The immutable pre-fight record that establishes the lock (R-07)."""
+    row = {"id": 55, "fight_id": 1, "snapshot_at": LOCK + dt.timedelta(hours=1),
+           "engine_published_at": LOCK, "edge_side": "a",
+           "edge_bet_fighter_id": BET, "edge_odds_at_publish": 150}
+    row.update(over)
+    return row
 
 
 def three_books(pairs=((0.55, 0.52), (0.60, 0.50), (0.52, 0.51)), at=FRESH):
@@ -77,18 +121,22 @@ def three_books(pairs=((0.55, 0.52), (0.60, 0.50), (0.52, 0.51)), at=FRESH):
 def edge(**over):
     row = {"id": 7, "fight_id": 1, "event_date": "2026-09-12", "side": "a",
            "bet_fighter_id": BET, "odds_at_publish": 150,
-           "published_at": START - dt.timedelta(days=5)}
+           "published_at": LOCK, "clv_publish_quote_id": PUBLISH_QUOTE_ID}
     row.update(over)
     return row
 
 
 def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW,
-          basis="previous_bout_completion", first_bout=False, **over):
+          basis="previous_bout_completion", first_bout=False,
+          snap=True, pub=True, **over):
+    """`snap`/`pub` accept True (the good default), None (absent) or a dict."""
     return score_row(edge=edge(**over),
                      quotes=three_books() if quotes is None else quotes,
                      fight=FIGHT if fight is None else fight,
                      reference_instant=ref, now=now, eligible_book_ids=books,
-                     reference_basis=basis, is_first_bout=first_bout)
+                     reference_basis=basis, is_first_bout=first_bout,
+                     snapshot=snapshot() if snap is True else snap,
+                     publish_quote=publish_quote() if pub is True else pub)
 
 
 # ---------------------------------------------------------------------------
@@ -420,7 +468,15 @@ class TestClosedVocabulary(unittest.TestCase):
                 quote(5, BET, 9, 0.9995), quote(6, OPP, 9, 0.0005)]),
             "insufficient_books": lambda: score(quotes=three_books()[:4]),
             "forecast_not_before_close":
-                lambda: score(published_at=START + dt.timedelta(hours=1)),
+                lambda: score(snap=snapshot(
+                    engine_published_at=START + dt.timedelta(hours=1))),
+            "no_immutable_forecast_lock": lambda: score(snap=None),
+            "no_publish_quote_link": lambda: score(pub=None),
+            "incomplete_quote_provenance": lambda: score(quotes=[
+                dict(q, feed_version=None) for q in three_books()]),
+            "market_identity_changed": lambda: score(quotes=[
+                dict(q, source_event_id="a-different-market")
+                for q in three_books()]),
             "only_pre_card_price":
                 lambda: score(ref=None, basis="card_scheduled_start"),
             "no_previous_bout_completion":
@@ -829,6 +885,427 @@ class TestFrozenBookList(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
+# Amendment 6 (a) — eligibility is a property of the ROW, not of the schema
+# ---------------------------------------------------------------------------
+
+class TestRowLevelProvenance(unittest.TestCase):
+    """The columns existing on `fight_odds` says nothing about a given row.
+
+    The trap this closes is specific and dated: the capture migration lands, and
+    the very next run scores May and June quotes. Their `captured_at` is
+    credible — live capture began 2026-05-22, so R-13 passes them — they are
+    inside the staleness window of some cutoff, and they carry NULL in every
+    provenance column, correctly, because those columns did not exist when the
+    rows were written. A schema-level check sees "the table has the columns" and
+    lets them through.
+    """
+
+    # After the migration is installed and a cutoff exists: a perfectly ordinary
+    # early-June capture, credible instant and all.
+    JUNE_CUTOFF = dt.datetime(2026, 6, 14, 22, 0, tzinfo=dt.timezone.utc)
+    JUNE_QUOTE = JUNE_CUTOFF - dt.timedelta(minutes=10)
+    JUNE_LOCK = JUNE_CUTOFF - dt.timedelta(days=4)
+
+    def june_books(self, **strip):
+        """Three two-sided books from June, with the new columns NULL."""
+        out = []
+        for q in three_books(at=self.JUNE_QUOTE):
+            row = dict(q)
+            for field in (strip or {f: None for f in REQUIRED_QUOTE_PROVENANCE}):
+                row[field] = None
+            out.append(row)
+        return out
+
+    def score_june(self, quotes):
+        return score_row(
+            edge=edge(published_at=self.JUNE_LOCK),
+            quotes=quotes, fight=FIGHT, reference_instant=self.JUNE_CUTOFF,
+            now=NOW, eligible_book_ids=BOOKS,
+            reference_basis="previous_bout_completion", is_first_bout=False,
+            snapshot=snapshot(engine_published_at=self.JUNE_LOCK,
+                              snapshot_at=self.JUNE_LOCK),
+            publish_quote=publish_quote(captured_at=self.JUNE_LOCK,
+                                        provider_last_update=self.JUNE_LOCK,
+                                        retrieved_at=self.JUNE_LOCK))
+
+    def test_a_credible_june_quote_with_null_provenance_cannot_score(self):
+        """THE regression. Everything else about these rows is fine."""
+        quotes = self.june_books()
+        for q in quotes:                       # the premise, asserted not assumed
+            self.assertTrue(credible_capture_instant(q["captured_at"], NOW),
+                            "the test is only meaningful if R-13 passes them")
+        got = self.score_june(quotes)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "incomplete_quote_provenance")
+        self.assertIsNone(got["clv_return"])
+
+    def test_the_same_quotes_score_once_they_carry_the_provenance(self):
+        """The control. Without it the test above would pass for the wrong
+        reason — a fixture that cannot score under any conditions."""
+        got = self.score_june(three_books(at=self.JUNE_QUOTE))
+        self.assertTrue(got["scored"], got["detail"])
+
+    def test_every_required_field_is_load_bearing_on_its_own(self):
+        for field in REQUIRED_QUOTE_PROVENANCE:
+            with self.subTest(field=field):
+                got = self.score_june(self.june_books(**{field: None}))
+                self.assertEqual(got["reason"], "incomplete_quote_provenance",
+                                 f"dropping {field} alone left the row scorable")
+
+    def test_empty_is_not_present(self):
+        """An empty string and an empty jsonb survive a NULL check and record
+        nothing, which is the same defect as R-13's populated epoch stamp."""
+        self.assertFalse(missing_quote_provenance(quote(1, BET, 1, 0.5)))
+        for field, empty in (("feed_version", ""), ("feed_version", "   "),
+                             ("source_event_id", ""), ("raw", {}),
+                             ("market_status", "")):
+            with self.subTest(field=field, value=empty):
+                q = quote(1, BET, 1, 0.5)
+                q[field] = empty
+                self.assertIn(field, missing_quote_provenance(q))
+
+    def test_one_missing_corner_reports_the_cause_not_the_symptom(self):
+        """Stripping provenance from one side leaves the book one-sided. The
+        reported reason must be the provenance, not `one_sided_close` — one is
+        permanent and one might be fixed by the next capture."""
+        quotes = []
+        for q in three_books(at=self.JUNE_QUOTE):
+            row = dict(q)
+            if row["fighter_id"] == OPP:
+                row["raw"] = None
+            quotes.append(row)
+        got = self.score_june(quotes)
+        self.assertEqual(got["reason"], "incomplete_quote_provenance")
+
+    def test_the_diagnostic_counts_the_dropped_rows(self):
+        got = self.score_june(self.june_books())
+        self.assertEqual(got["diagnostics"]["missing_provenance"], 6)
+        self.assertEqual(got["diagnostics"]["seen"], 6)
+
+    def test_the_settler_reads_every_field_it_checks(self):
+        """The same mistake one layer down: checking a field the query never
+        selected would make every row read as provenance-less."""
+        sys.path.insert(0, os.path.dirname(REPO_ROOT and
+                                           os.path.join(REPO_ROOT, "cfl_engine")))
+        engine_dir = os.path.join(REPO_ROOT, "cfl_engine")
+        if engine_dir not in sys.path:
+            sys.path.insert(0, engine_dir)
+        import settle_clv                                            # noqa: E402
+        for field in REQUIRED_QUOTE_PROVENANCE:
+            self.assertIn(field, settle_clv.QUOTE_SELECT_COLUMNS,
+                          f"{field} is required but never fetched")
+
+
+# ---------------------------------------------------------------------------
+# Amendment 6 (b) — R-07 per quote, literally
+# ---------------------------------------------------------------------------
+
+class TestNoLookaheadPerQuote(unittest.TestCase):
+    """`forecast_locked_at < close_quoted_at`, strictly, for EVERY quote."""
+
+    # Reed's exact case, on the clock he gave: the previous bout ended at 9:30,
+    # the forecast was locked at 9:28, and the book last moved at 9:20.
+    CUTOFF = dt.datetime(2026, 9, 12, 21, 30, tzinfo=dt.timezone.utc)
+    LOCKED = dt.datetime(2026, 9, 12, 21, 28, tzinfo=dt.timezone.utc)
+    QUOTED = dt.datetime(2026, 9, 12, 21, 20, tzinfo=dt.timezone.utc)
+
+    def score_at(self, quoted_at, locked_at=None):
+        locked_at = self.LOCKED if locked_at is None else locked_at
+        return score_row(
+            edge=edge(published_at=locked_at),
+            quotes=three_books(at=quoted_at), fight=FIGHT,
+            reference_instant=self.CUTOFF, now=NOW, eligible_book_ids=BOOKS,
+            reference_basis="previous_bout_completion", is_first_bout=False,
+            snapshot=snapshot(engine_published_at=locked_at,
+                              snapshot_at=locked_at),
+            publish_quote=publish_quote(
+                captured_at=locked_at - dt.timedelta(minutes=1),
+                provider_last_update=locked_at - dt.timedelta(minutes=1),
+                retrieved_at=locked_at - dt.timedelta(minutes=1)))
+
+    def test_a_forecast_locked_at_928_cannot_score_a_920_quote(self):
+        """The regression Reed named. The cutoff is 9:30, so the quote is
+        comfortably pre-cutoff — and it was on the screen before the forecast
+        existed, which is what R-07 forbids."""
+        got = self.score_at(self.QUOTED)
+        self.assertLess(self.QUOTED, self.CUTOFF,
+                        "the quote must be pre-cutoff or the test proves nothing")
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "forecast_not_before_close")
+        self.assertIn("9", got["detail"])
+        self.assertEqual(got["diagnostics"]["before_forecast_lock"], 6)
+
+    def test_a_quote_after_the_lock_and_before_the_cutoff_scores(self):
+        got = self.score_at(self.LOCKED + dt.timedelta(minutes=1))
+        self.assertTrue(got["scored"], got["detail"])
+
+    def test_a_quote_exactly_at_the_lock_does_not_score(self):
+        """Strictly, as written. Simultaneous is not after."""
+        got = self.score_at(self.LOCKED)
+        self.assertEqual(got["reason"], "forecast_not_before_close")
+
+    def test_the_old_edge_level_check_alone_would_have_passed_this(self):
+        """Pins WHY the per-quote rule is needed: the check it replaced —
+        published_at < cutoff — is satisfied by exactly this arrangement."""
+        self.assertLess(self.LOCKED, self.CUTOFF)
+        self.assertLess(self.QUOTED, self.CUTOFF)
+        self.assertLess(self.QUOTED, self.LOCKED)
+        self.assertEqual(self.score_at(self.QUOTED)["reason"],
+                         "forecast_not_before_close")
+
+    def test_closing_pairs_requires_the_lock_and_does_not_default_it(self):
+        """A default of None would be a silent bypass of R-07."""
+        import inspect
+        sig = inspect.signature(closing_pairs)
+        self.assertIs(sig.parameters["forecast_locked_at"].default,
+                      inspect.Parameter.empty,
+                      "forecast_locked_at must have no default")
+        pairs, diag = closing_pairs(three_books(), BET, OPP, START, NOW, BOOKS,
+                                    forecast_locked_at=None)
+        self.assertEqual(pairs, [], "no lock must mean no eligible close")
+        self.assertEqual(diag["before_forecast_lock"], 6)
+
+
+# ---------------------------------------------------------------------------
+# Amendment 6 (c) — the lock comes from an immutable record
+# ---------------------------------------------------------------------------
+
+class TestImmutableForecastLock(unittest.TestCase):
+    def test_no_snapshot_means_no_score(self):
+        got = score(snap=None)
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+        self.assertIn("mutable", got["detail"])
+
+    def test_the_snapshot_must_identify_THIS_edge_not_just_the_fight(self):
+        """pre_fight_snapshots is unique on fight_id, so a row always exists for
+        a snapshotted fight. Matching on the fight alone would accept a record of
+        a different forecast as this one's lock."""
+        for field, wrong in (("edge_side", "b"),
+                             ("edge_bet_fighter_id", 999),
+                             ("edge_odds_at_publish", -140)):
+            with self.subTest(field=field):
+                got = score(snap=snapshot(**{field: wrong}))
+                self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+                self.assertIn(field.replace("edge_", ""), got["detail"])
+
+    def test_a_snapshot_missing_the_edge_fields_cannot_match(self):
+        got = score(snap=snapshot(edge_odds_at_publish=None))
+        self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+
+    def test_snapshot_at_is_the_fallback_when_the_publish_instant_is_absent(self):
+        got = score(snap=snapshot(engine_published_at=None))
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["forecast_lock"]["immutable_source"],
+                         "pre_fight_snapshots.snapshot_at")
+
+    def test_a_snapshot_with_neither_instant_cannot_lock(self):
+        got = score(snap=snapshot(engine_published_at=None, snapshot_at=None))
+        self.assertEqual(got["reason"], "no_immutable_forecast_lock")
+
+    def test_the_effective_lock_is_the_later_of_the_two(self):
+        """A mutated published_at can only ever COST observations. It cannot
+        admit a quote the immutable record would have excluded — which is the
+        whole reason the two are combined rather than one being trusted."""
+        later = FRESH + dt.timedelta(minutes=1)     # after every closing quote
+        got = score(published_at=later)
+        self.assertEqual(got["reason"], "forecast_not_before_close",
+                         "a later published_at must bind")
+
+        earlier = LOCK - dt.timedelta(days=30)
+        got = score(published_at=earlier)
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["forecast_lock"]["locked_at"], LOCK,
+                         "an earlier published_at must NOT loosen the immutable "
+                         "lock — that is the direction an attacker would want")
+
+    def test_the_row_records_which_record_locked_it(self):
+        info = score()["forecast_lock"]
+        self.assertEqual(info["snapshot_id"], 55)
+        self.assertEqual(info["immutable_source"],
+                         "pre_fight_snapshots.engine_published_at")
+        self.assertTrue(info["agrees_with_immutable_record"])
+        self.assertFalse(info["published_at_is_binding"])
+
+    def test_a_disagreement_is_recorded_rather_than_hidden(self):
+        info = score(published_at=LOCK + dt.timedelta(minutes=2))["forecast_lock"]
+        self.assertFalse(info["agrees_with_immutable_record"])
+        self.assertTrue(info["published_at_is_binding"])
+
+
+# ---------------------------------------------------------------------------
+# Amendment 6 (d) — the posted price names its source quote
+# ---------------------------------------------------------------------------
+
+class TestPublishQuoteLink(unittest.TestCase):
+    def test_no_link_means_no_score(self):
+        got = score(pub=None)
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+        self.assertIn("assertion", got["detail"])
+
+    def test_the_link_must_prove_the_price(self):
+        got = score(pub=publish_quote(american_odds=-135))
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+        self.assertIn("does not prove", got["detail"])
+
+    def test_the_link_must_prove_the_corners(self):
+        self.assertEqual(score(pub=publish_quote(fighter_id=OPP))["reason"],
+                         "no_publish_quote_link")
+        self.assertEqual(
+            score(pub=publish_quote(opponent_fighter_id=999))["reason"],
+            "no_publish_quote_link")
+
+    def test_the_link_must_carry_full_provenance(self):
+        for field in REQUIRED_PUBLISH_PROVENANCE:
+            with self.subTest(field=field):
+                got = score(pub=publish_quote(**{field: None}))
+                self.assertEqual(got["reason"], "no_publish_quote_link")
+                # opponent_fighter_id is refused one check earlier, as an
+                # identity mismatch rather than a missing field — a more
+                # specific answer to the same question, so the detail names the
+                # corner rather than the column.
+                self.assertIn("opponent" if field == "opponent_fighter_id"
+                              else field, got["detail"])
+
+    def test_the_link_must_carry_a_credible_instant(self):
+        got = score(pub=publish_quote(captured_at=EPOCH))
+        self.assertEqual(got["reason"], "no_publish_quote_link")
+        self.assertIn("R-13", got["detail"])
+
+    def test_a_scored_row_records_the_whole_publish_side(self):
+        info = score()["publish_quote"]
+        self.assertEqual(info["quote_id"], PUBLISH_QUOTE_ID)
+        self.assertEqual(info["american_odds"], 150)
+        self.assertEqual(info["provider_market_id"], MARKET)
+        self.assertEqual(info["opponent_fighter_id"], OPP)
+        for field in ("captured_at", "feed_version", "provider_last_update",
+                      "retrieved_at"):
+            self.assertIsNotNone(info[field])
+
+    def test_closing_quotes_must_name_the_same_provider_market(self):
+        """R-06. A repost or a rematch gets a new market id and is a different
+        market, not a later quote on the same one."""
+        quotes = [dict(q, source_event_id="odds-api-evt-REPOST")
+                  for q in three_books()]
+        got = score(quotes=quotes)
+        self.assertEqual(got["reason"], "market_identity_changed")
+        self.assertEqual(got["diagnostics"]["market_id_mismatch"], 6)
+
+    def test_closing_quotes_must_name_the_same_opponent(self):
+        quotes = [dict(q, opponent_fighter_id=999) for q in three_books()]
+        got = score(quotes=quotes)
+        self.assertEqual(got["reason"], "market_identity_changed")
+        self.assertEqual(got["diagnostics"]["opponent_mismatch"], 6)
+
+    def test_the_opponent_check_is_per_corner_not_a_constant(self):
+        """Each quote names the OTHER fighter, so a check that compared every
+        row against one id would reject half of a perfectly good market."""
+        got = score()
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["diagnostics"]["opponent_mismatch"], 0)
+
+
+# ---------------------------------------------------------------------------
+# Amendment 6 (e) — the cutoff is stored, and hashed
+# ---------------------------------------------------------------------------
+
+class TestCutoffIsPersisted(unittest.TestCase):
+    def test_a_scored_row_carries_the_cutoff_it_was_scored_against(self):
+        got = score()
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["cutoff_at"], START)
+
+    def test_bout_one_carries_it_too_though_nothing_else_on_the_row_holds_it(self):
+        """The case that motivated this. For bouts 2..N the cutoff coincides
+        with clv_window_opened_at; for bout 1 it is the card's scheduled start
+        and no other column held it — and bout 1 is the only bout this version
+        can currently score."""
+        got = score(basis="scheduled_first_bout", first_bout=True)
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["cutoff_at"], START)
+        self.assertEqual(got["close_basis"], "scheduled_first_bout")
+
+    def test_the_cutoff_is_inside_the_hash_not_merely_beside_it(self):
+        """Same books, same quotes, same median — a different cutoff must not
+        produce the same hash, or the selection rule is outside the integrity
+        check and the artifact cannot be verified as the calculation performed."""
+        a = score()
+        later = START + dt.timedelta(minutes=20)
+        b = score(ref=later)
+        self.assertTrue(a["scored"] and b["scored"])
+        self.assertEqual(a["closing_fair_probability"],
+                         b["closing_fair_probability"],
+                         "the test is only meaningful when the number is equal")
+        self.assertEqual(a["quote_ids"], b["quote_ids"])
+        self.assertNotEqual(a["consensus_sha256"], b["consensus_sha256"])
+        self.assertEqual(a["consensus"]["cutoff_at"], START)
+        self.assertEqual(b["consensus"]["cutoff_at"], later)
+
+    def test_the_lock_and_the_publish_quote_are_hashed_too(self):
+        a = score()
+        # Later, not earlier: an earlier immutable instant is overridden by the
+        # mutable published_at under the take-the-later rule, so it would leave
+        # the effective lock — and therefore the artifact — unchanged.
+        b = score(snap=snapshot(engine_published_at=LOCK + dt.timedelta(days=1)))
+        self.assertEqual(a["closing_fair_probability"],
+                         b["closing_fair_probability"])
+        self.assertNotEqual(a["consensus_sha256"], b["consensus_sha256"])
+        self.assertEqual(a["consensus"]["publish_quote_id"], PUBLISH_QUOTE_ID)
+
+    def test_the_lead_time_agrees_with_the_stored_cutoff(self):
+        got = score()
+        self.assertAlmostEqual(
+            got["lead_time_minutes"],
+            (got["cutoff_at"] - got["proxy_quoted_at"]).total_seconds() / 60.0,
+            places=9)
+
+    def test_the_migration_stores_the_cutoff_and_requires_it(self):
+        with open(MIGRATION, encoding="utf-8") as fh:
+            sql = fh.read()
+        self.assertIn("clv_cutoff_at timestamptz", sql)
+        self.assertIn("clv_publish_quote_id bigint", sql)
+        complete = re.search(r"model_edges_clv_scored_is_complete(.*?)not valid",
+                             sql, re.S).group(1)
+        for col in ("clv_cutoff_at", "clv_publish_quote_id", "clv_close_basis",
+                    "clv_proxy_quoted_at", "clv_lead_time_minutes",
+                    "clv_protocol_version"):
+            self.assertIn(f"{col} is not null", complete,
+                          f"a scored row may still omit {col}")
+
+
+# ---------------------------------------------------------------------------
+# Amendment 6 (h) — the staleness clock is named, and left alone
+# ---------------------------------------------------------------------------
+
+class TestStalenessClock(unittest.TestCase):
+    def test_the_limit_is_still_45_minutes_from_the_capture_instant(self):
+        self.assertEqual(STALENESS_LIMIT_MINUTES, 45)
+        self.assertEqual(STALENESS_MEASURED_FROM, "captured_at")
+
+    def test_an_old_provider_last_update_does_not_make_a_fresh_quote_stale(self):
+        """The rule was frozen against CFL's observation cadence. Silently
+        re-pointing it at the book's own last move would change which rows score
+        under the same version number — that is an amendment, not a fix."""
+        quotes = [dict(q, provider_last_update=FRESH - dt.timedelta(hours=9))
+                  for q in three_books()]
+        got = score(quotes=quotes)
+        self.assertTrue(got["scored"], got["detail"])
+        self.assertEqual(got["diagnostics"]["stale"], 0)
+
+    def test_a_stale_capture_instant_still_fails_however_recent_the_book_move(self):
+        quotes = [dict(q, provider_last_update=START - dt.timedelta(minutes=1))
+                  for q in three_books(at=START - dt.timedelta(hours=3))]
+        got = score(quotes=quotes)
+        self.assertEqual(got["reason"], "stale_close")
+
+    def test_provider_last_update_is_still_required_provenance(self):
+        self.assertIn("provider_last_update", REQUIRED_QUOTE_PROVENANCE)
+        self.assertEqual(score(quotes=[dict(q, provider_last_update=None)
+                                       for q in three_books()])["reason"],
+                         "incomplete_quote_provenance")
+
+
+# ---------------------------------------------------------------------------
 # The 20-event floor counts EVENTS, by event_id
 # ---------------------------------------------------------------------------
 
@@ -954,7 +1431,7 @@ class TestProtocolPinning(unittest.TestCase):
         path must never throw on bad input."""
         pairs, diag = closing_pairs(
             [quote(1, BET, 1, None, None), quote(2, 999, 1, 0.5)],
-            BET, OPP, START, NOW, BOOKS)
+            BET, OPP, START, NOW, BOOKS, forecast_locked_at=LOCK)
         self.assertEqual(pairs, [])
         self.assertEqual(diag["implausible_timestamp"], 1)
         self.assertEqual(diag["wrong_fighter"], 1)
