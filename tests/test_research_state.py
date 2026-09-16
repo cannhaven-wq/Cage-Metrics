@@ -407,6 +407,106 @@ class TestAmendmentsAreRecorded(unittest.TestCase):
                     )
 
 
+class TestExperimentLifecycle(unittest.TestCase):
+    """draft -> frozen -> armed -> collecting.
+
+    The distinction that earns its keep is `armed` vs `collecting`: an experiment
+    whose specification and implementation are both frozen but which has recorded
+    zero observations is NOT collecting, and calling it so overstates the record.
+    The transition is objective — the first row landing — so these tests check the
+    status against the recorded evidence rather than trusting the label.
+    """
+
+    STATES = ("draft", "frozen", "armed", "collecting")
+
+    def _experiments(self):
+        return json.loads(REGISTRY.read_text(encoding="utf-8"))["experiments"]
+
+    def test_lifecycle_is_declared(self):
+        doc = json.loads(REGISTRY.read_text(encoding="utf-8"))
+        self.assertIn("experiment_lifecycle", doc)
+        self.assertEqual(tuple(doc["experiment_lifecycle"]["states"]), self.STATES)
+
+    def test_status_is_a_known_state(self):
+        for exp in self._experiments():
+            with self.subTest(experiment=exp["experiment_id"]):
+                # PROP-0001 is a model artifact, not an experiment on this ladder
+                if exp["experiment_id"] == "PROP-0001":
+                    continue
+                self.assertIn(exp["status"], self.STATES)
+
+    def test_anything_past_draft_has_a_freeze_timestamp(self):
+        for exp in self._experiments():
+            if exp["status"] in ("draft",) or exp["experiment_id"] == "PROP-0001":
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                self.assertIsNotNone(
+                    exp.get("freeze_timestamp"),
+                    f"{exp['experiment_id']} is {exp['status']} but records no "
+                    f"freeze_timestamp — only a draft may be unfrozen",
+                )
+
+    def test_armed_means_zero_observations(self):
+        """The whole point of the state: armed and non-empty is a contradiction."""
+        for exp in self._experiments():
+            if exp.get("status") != "armed":
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                fc = exp.get("first_collection") or {}
+                self.assertEqual(
+                    fc.get("rows_written", 0), 0,
+                    "an armed experiment has recorded no observations; if rows "
+                    "exist it is collecting",
+                )
+                self.assertIsNone(
+                    fc.get("first_lock_at"),
+                    "an armed experiment cannot have a first-lock timestamp",
+                )
+                self.assertIsNone(exp.get("verdict"))
+
+    def test_armed_requires_an_implementation(self):
+        """frozen -> armed is earned by having something that can actually run."""
+        for exp in self._experiments():
+            if exp.get("status") != "armed":
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                ls = exp.get("lock_script") or {}
+                self.assertTrue(
+                    ls.get("exists"),
+                    "armed requires a written lock script; without one the "
+                    "experiment is merely frozen",
+                )
+                self.assertRegex(ls.get("sha256", ""), r"^[0-9a-f]{64}$")
+
+    def test_collecting_means_observations_are_recorded(self):
+        for exp in self._experiments():
+            if exp.get("status") != "collecting":
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                fc = exp.get("first_collection") or {}
+                self.assertIsNotNone(
+                    fc.get("first_lock_at"),
+                    f"{exp['experiment_id']} claims to be collecting but records no "
+                    f"first-lock timestamp. Zero observations is 'armed'.",
+                )
+                self.assertGreater(fc.get("rows_written", 0), 0)
+
+    def test_an_unfrozen_lock_script_means_not_yet_collecting(self):
+        """A lock script freezes at first collection. One still marked unfrozen on a
+        collecting experiment means the transition was recorded incompletely."""
+        for exp in self._experiments():
+            ls = exp.get("lock_script") or {}
+            if not ls or exp.get("status") != "collecting":
+                continue
+            with self.subTest(experiment=exp["experiment_id"]):
+                self.assertTrue(
+                    ls.get("frozen"),
+                    f"{exp['experiment_id']} is collecting but its lock script is "
+                    f"still marked unfrozen — freeze it and move it into "
+                    f"frozen_files as part of the transition",
+                )
+
+
 class TestWithdrawnFigures(unittest.TestCase):
     """A withdrawn number must not quietly come back.
 

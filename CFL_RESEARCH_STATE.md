@@ -5,6 +5,11 @@ what has been withdrawn. One entry per experiment. `research/registry.json` is
 the machine-readable mirror of this file; `tests/test_research_state.py` checks
 both against what is actually on disk.
 
+**Experiment lifecycle:** `draft → frozen → armed → collecting`. *Armed* means
+the specification and the implementation are both frozen and wired but no
+observation exists yet; the transition to *collecting* is the first row landing,
+which is an objective event rather than a judgement call.
+
 **Rule:** a number does not appear on a CFL surface — site copy, a post, a
 README, this file — unless it can be traced to an artifact named here. A figure
 whose source cannot be produced is withdrawn, not footnoted.
@@ -13,8 +18,8 @@ whose source cannot be produced is withdrawn, not footnoted.
 
 > ## 🔒 The duration model is READ-ONLY as of 2026-09-16
 >
-> DUR-001 and DUR-002 are both frozen and collecting. Until each reaches its
-> predefined evaluation point, **the duration model is not touched**:
+> DUR-001 is collecting; DUR-002 is armed. Until each reaches its predefined
+> evaluation point, **the duration model is not touched**:
 >
 > - no calibration experiments;
 > - no threshold exploration;
@@ -24,12 +29,14 @@ whose source cannot be produced is withdrawn, not footnoted.
 > Routine operation continues — locks are written, capture is monitored, the
 > alert runs. That is the experiment running, not work on the model.
 >
-> The one outstanding build is `cfl_engine/dur002/lock_prop0002.py`, a
-> mechanical port with no modelling decisions, without which DUR-002 collects
-> nothing.
+> Duration-model development is **finished**. `cfl_engine/dur002/lock_prop0002.py`
+> was the last build; it is implementation of an already-frozen specification,
+> and it freezes itself at first collection.
 >
-> Highest-value work moves elsewhere: market-price capture, CLV definitions,
-> customer monetisation, and the win-probability engine.
+> Highest-value work moves elsewhere: **market / closing-price capture and CLV**
+> first — that is now the biggest statistical dependency for showing CFL has an
+> economically meaningful edge — then customer monetisation and the
+> win-probability engine.
 
 Last updated: 2026-09-16.
 
@@ -40,7 +47,7 @@ Last updated: 2026-09-16.
 | id | what it asks | status | verdict |
 |---|---|---|---|
 | **DUR-001** | after the vig-free totals market is known, does PROP-0001@v1 still add information about whether a fight goes over a round total? | collecting | none yet |
-| **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **frozen 2026-09-16, collecting** | none |
+| **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **armed** (frozen 2026-09-16, zero observations) | none |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---
@@ -178,7 +185,7 @@ of it — caught before monetisation, which is what this register is for.
 
 | field | value |
 |---|---|
-| status | **FROZEN and binding**, collecting |
+| status | **ARMED** — frozen and binding, implementation wired, **zero observations yet** |
 | preregistration | [`cfl_engine/dur002/PREREGISTRATION.md`](cfl_engine/dur002/PREREGISTRATION.md) |
 | model version tested | `PROP-0001@v2` — identical to v1 except no isotonic or other post-hoc calibration |
 | **frozen (UTC)** | **2026-09-16T01:03:45Z**, by Reed Cannon |
@@ -225,11 +232,16 @@ non-trivial, so they cannot pass vacuously.
 Wired into `.github/workflows/prop-locks.yml` as a **separate step after** the
 v1 lock, never instead of it — a v2 failure must not cost the v1 lock.
 
-**Status: not yet collecting.** The first `PROP-0001@v2` row lands on the next
-scheduled run. When it does, record its timestamp and commit in
-`research/registry.json`, move the script into DUR-002's frozen files, and set
-`lock_script.frozen = true`; from then a substantive change needs an amendment
-or a new model version.
+**Status: ARMED, not collecting.** An experiment whose specification and
+implementation are both frozen but which has recorded zero observations is not
+collecting, and calling it so overstates the record.
+
+When the first `PROP-0001@v2` row lands, record in `research/registry.json`: the
+exact first-lock UTC timestamp, the workflow run id and commit SHA,
+`lock_prop0002.py`'s sha256, and the number of rows written. Then set
+`lock_script.frozen = true`, move the script into DUR-002's frozen files, change
+the status to `collecting`, and rerun the full guards. From that point a
+substantive change to the script needs an amendment or a new model version.
 
 Note §0.3 of the frozen preregistration says this script does not exist. That is
 true **of the state at freeze** and is deliberately not updated — the

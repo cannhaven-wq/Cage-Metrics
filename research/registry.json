@@ -133,6 +133,14 @@
           "k"
         ],
         "note": "The calibration blocker is closed, which does not make the remaining clauses automatically sound. Any clause changing data eligibility, scoring, model behaviour or claim interpretation gets an individual vote; pure governance/monitoring clauses are lower risk."
+      },
+      "first_collection": {
+        "status": "collected",
+        "first_lock_at": "2026-09-15T01:50:37.299956+00:00",
+        "rows_written": 48,
+        "model_version": "PROP-0001@v1",
+        "code_version": "322a5b09e739-dirty",
+        "provenance": "code_version is -dirty and the lock script was untracked at the time; see research/provenance/PROVENANCE_REPORT.md. Prediction provenance verified, source-code provenance incomplete."
       }
     },
     {
@@ -217,7 +225,7 @@
     },
     {
       "experiment_id": "DUR-002",
-      "status": "collecting",
+      "status": "armed",
       "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
       "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
       "population": "identical to DUR-001",
@@ -305,9 +313,29 @@
         "status": "not started",
         "first_v2_lock_at": null,
         "first_v2_lock_commit": null,
-        "procedure": "When the first PROP-0001@v2 row lands in prop_model_locks: record the timestamp and the commit of lock_prop0002.py here, move the script into DUR-002's frozen_files, and set lock_script.frozen = true. From that point a substantive change to it requires an amendment or a new model version.",
-        "expected_via": ".github/workflows/prop-locks.yml, daily 11:00 UTC, as a separate step after the v1 lock step"
+        "procedure": "On the successful first insert of a PROP-0001@v2 row, record here: the exact first-lock UTC timestamp, the workflow run id and commit SHA, lock_prop0002.py's sha256, and the number of rows written. Then set lock_script.frozen = true, move the script into frozen_files, change status from 'armed' to 'collecting', and rerun the full guards.",
+        "expected_via": ".github/workflows/prop-locks.yml, daily 11:00 UTC, as a separate step after the v1 lock step",
+        "rows_written": 0,
+        "first_lock_at": null,
+        "workflow_run_id": null,
+        "commit_sha": null,
+        "lock_script_sha256": null
       }
     }
-  ]
+  ],
+  "experiment_lifecycle": {
+    "states": [
+      "draft",
+      "frozen",
+      "armed",
+      "collecting"
+    ],
+    "definitions": {
+      "draft": "preregistration written but not signed; nothing frozen; no observation may be created",
+      "frozen": "preregistration signed and binding; no operational implementation yet",
+      "armed": "specification frozen AND implementation written, tested and wired, but ZERO observations recorded",
+      "collecting": "at least one observation exists; the transition is the successful first insert, not a decision"
+    },
+    "note": "armed exists because 'collecting' with zero rows overstates the state. The armed -> collecting transition is objective: it is the first row landing, not a judgement call."
+  }
 }
