@@ -316,10 +316,11 @@
 @media (max-width: 900px) {
   /* Phones: the card comes first, the full pitch reads underneath it. */
   #home { display: flex; flex-direction: column; }
-  #home > * { order: 3; }
+  #home > * { order: 4; min-width: 0; max-width: 100%; }
   #home > .m-pitch { order: 0; }
   #home > #next { order: 1; }
-  #home > .hero { order: 2; }
+  #home > #disagree { order: 2; }
+  #home > .hero { order: 3; }
 
   #home .m-pitch { display: block; padding: 14px 0 2px; }
   #home .m-pitch b { display: block; font-family: var(--font-display); font-weight: 800;
@@ -328,10 +329,11 @@
   #home .m-pitch span { display: block; font-size: 12px; color: var(--text-3); margin-top: 5px; }
 
   #home .section#next { padding-top: 16px; }
+  #home .sec-head { flex-wrap: wrap; }
+  #home .sec-head a { white-space: normal; }
   #home .hero { grid-template-columns: 1fr; gap: 22px; padding: 22px 0 18px; }
   #home .hero h1 { font-size: 36px; }
-  /* Both of these just scroll to the card that is now above them. */
-  #home .hero-cta { display: none; }
+  #home .hero-cta .btn-lg { padding: 12px 18px; font-size: 14px; }
   #home .fights { grid-template-columns: 1fr; }
   #home .card-head h2 { font-size: 24px; }
   #home .fl-hint { display: none; }
@@ -502,7 +504,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rd18"></script>
 <script src="_auth.js?v=rf1"></script>
 <script src="fight-insights.js?v=7"></script>
 <script src="distanceEdges.js"></script>
@@ -529,6 +531,7 @@ async function renderFightWeek(event, phase) {
   const rows = card ? card.rows : [];
   const s = core.summarize(rows);
   const hub = core.hubPath(event);
+  fw.recordVisit('home', event.id);
   const graded = phase === 'graded' || phase === 'fallback';
 
   // ---- hero ----
@@ -603,9 +606,11 @@ async function renderRecord() {
   const a = show('engine_replay_accuracy', $('recSim'), ' (simulated)');
   const b = show('engine_live_accuracy', $('recLive'), '');
   const live = ok('live_since');
-  const asOf = (ok('engine_replay_accuracy') || ok('engine_live_accuracy') || {}).as_of;
+  const fav = ok('market_favorite_replay_accuracy');
+  const asOfRaw = (ok('engine_replay_accuracy') || ok('engine_live_accuracy') || {}).as_of;
+  const asOf = asOfRaw ? new Date(asOfRaw).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : null;
   $('recordNote').textContent = (a || b)
-    ? `Straight-up accuracy of the engine's forecast${live && live.display ? ` · live record since ${live.display}` : ''}${asOf ? ` · verified ${asOf}` : ''}. Just backing the closing favorite wins more often; CFL publishes a number that is independent of the market, not one that beats it.`
+    ? `Straight-up accuracy of the engine's forecast${live && live.display ? ` · live record since ${live.display}` : ''}${asOf ? ` · verified ${asOf}` : ''}. ${fav ? `Just backing the closing favorite got ${fav.display} on the same replay` : 'Just backing the closing favorite wins more often'} — CFL publishes a number that is independent of the market, not one that beats it.`
     : 'Record numbers are published from the graded database only. Open the Proof Center for the full record.';
 }
 

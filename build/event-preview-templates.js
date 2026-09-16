@@ -14,7 +14,7 @@ const { slugify } = require('./slug');
 
 const SITE = 'https://cannonfightlab.com';
 // Keep in step with the ?v= on every root page (see CLAUDE.md "Caching gotcha").
-const SHARED_JS = '/_shared.js?v=rd17';
+const SHARED_JS = '/_shared.js?v=rd18';
 const AUTH_JS = '/_auth.js?v=rf1';
 const SUPABASE_CDN = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>';
 const PLAUSIBLE = '<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>';

@@ -659,7 +659,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rd18"></script>
 <script src="_auth.js?v=rf1"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
@@ -944,6 +944,7 @@ async function load() {
       <h1>${cfl.escapeHtml(event.name)}</h1>
       <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
+      ${Object.keys(engineByFight || {}).length ? `<div class="meta" style="margin-top:8px"><a href="/e/${String(event.name).toLowerCase().replace(/'/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')}-${event.id}.html" style="color:var(--red);font-weight:600">Event Hub — CFL vs the market for every fight →</a></div>` : ''}
     </div>
     ${renderEngineAccuracyStrip(engineAcc)}
     <div class="page">

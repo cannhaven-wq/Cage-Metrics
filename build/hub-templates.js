@@ -68,7 +68,7 @@ ${(jsonLd || []).map(j => `<script type="application/ld+json">${JSON.stringify(j
 function foot(navActive) {
   return `
 <footer class="cfl-footer"></footer>
-<script src="/_shared.js?v=rd17"></script>
+<script src="/_shared.js?v=rd18"></script>
 <script src="/_auth.js?v=rf1"></script>
 <script src="/fight-week-core.js?v=${ASSET_V}"></script>
 <script src="/books.js?v=${ASSET_V}"></script>

@@ -1,21 +1,29 @@
-name: Weekly digest email
+name: Fight Week Brief email
 
-# Sends the weekly fight-preview email to every active row in
-# email_subscribers. Runs Wednesday 15:00 UTC (≈ 8am PT / 11am ET — well
-# before any weekend card, so subscribers have time to read it).
+# Sends the Fight Week Brief to every active row in email_subscribers.
+#   Wednesday 15:00 UTC — pre-card: the next card, model vs market
+#   Monday    15:00 UTC — post-card: the last card graded, biggest hit and
+#                         biggest miss at the same size
+# (≈ 8am PT / 11am ET.) The mode is derived from which schedule fired;
+# a manual run can pick either.
 #
 # Falls back to dry-run mode if RESEND_API_KEY isn't set, so a fresh fork
 # without secrets won't fail the workflow — it just logs what it would send.
 
 on:
   schedule:
-    - cron: '0 15 * * 3'   # Wednesdays 15:00 UTC
+    - cron: '0 15 * * 3'   # Wednesdays 15:00 UTC — pre-card
+    - cron: '0 15 * * 1'   # Mondays 15:00 UTC — post-card
   workflow_dispatch:
     inputs:
       dry_run:
         description: 'Render only, do not send (override secret)'
         required: false
         default: 'false'
+      mode:
+        description: 'pre (next card) or post (last graded card)'
+        required: false
+        default: 'pre'
 
 permissions:
   contents: read
@@ -47,4 +55,5 @@ jobs:
           RESEND_FROM: ${{ secrets.RESEND_FROM }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           DIGEST_DRY_RUN: ${{ github.event.inputs.dry_run }}
+          DIGEST_MODE: ${{ github.event.inputs.mode || (github.event.schedule == '0 15 * * 1' && 'post' || 'pre') }}
         run: npm run send-digest

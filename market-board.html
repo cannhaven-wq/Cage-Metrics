@@ -77,7 +77,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rd18"></script>
 <script src="_auth.js?v=rf1"></script>
 <script src="fight-week-core.js?v=fw1"></script>
 <script src="books.js?v=fw1"></script>
@@ -103,6 +103,7 @@ cfl.renderFooter();
   const { event, rows, byBook, summary: s, phase } = card;
   document.body.setAttribute('data-event-id', String(event.id));
   fw.track('market_board_view', { event_id: String(event.id) });
+  fw.recordVisit('market_board', event.id);
 
   $('mbEyebrow').textContent = `${event.name} · ${core.fmtDate(event.event_date)}${phase === 'graded' ? ' · graded card (no upcoming card has a locked forecast yet)' : ''}`;
   $('mbTitle').textContent = `${event.name} — Market Board`;

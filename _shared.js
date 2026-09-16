@@ -523,29 +523,32 @@
     // target (standard mobile pattern). The drawer is position:fixed so its
     // DOM position doesn't affect the bar layout.
     const navHtml = `
-      <a class="cfl-logo" href="index.html">
+      <a class="cfl-logo" href="/index.html">
         <span class="full">Cannon Fight <span class="accent">Lab</span></span>
         <span class="short">C<span class="accent">F</span>L</span>
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
-        <a class="cfl-nav-cta-link ${active === 'home' || active === 'cardlab' ? 'active' : ''}" href="index.html#next">Card Lab</a>
-        <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
+        <a class="cfl-nav-cta-link ${active === 'home' || active === 'cardlab' ? 'active' : ''}" href="/index.html#next">Card Lab</a>
+        <a href="/track-record.html" ${active === 'track' ? 'class="active"' : ''}>
           <span class="full">Track Record</span><span class="short">Record</span>
         </a>
-        <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>
+        <a href="/market-board.html" ${active === 'board' ? 'class="active"' : ''}>
+          <span class="full">Market Board</span><span class="short">Market</span>
+        </a>
+        <a href="/props.html" ${active === 'props' ? 'class="active"' : ''}>
           <span class="full">Prop Board</span><span class="short">Props</span>
         </a>
         <div class="cfl-nav-menu">
           <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','fighters','h2h'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
           <div class="cfl-nav-menu-panel">
-            <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
-            <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
-            <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
-            <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
-            <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
+            <a href="/fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
+            <a href="/h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
+            <a href="/parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
+            <a href="/cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
+            <a href="/stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
           </div>
         </div>
-        <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
+        <a href="/pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
       <span class="cfl-nav-status" title="Model live"><span class="live-dot"></span>MODEL&nbsp;·&nbsp;LIVE</span>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
@@ -587,11 +590,11 @@
       <div class="footer-logo">Cannon Fight <span class="accent">Lab</span></div>
       <div class="cfl-footer-text">Cannon Fight Lab is an analytics publication, not a sportsbook. Statistics describe historical patterns and do not predict individual fight outcomes. 21+ only. Problem gambling? Call 1-800-GAMBLER or the Tennessee REDLINE at 1-800-889-9789.</div>
       <div class="cfl-footer-links">
-        <a href="about.html">About</a>
-        <a href="contact.html">Contact</a>
-        <a href="methodology.html">Methodology</a>
-        <a href="disclaimer.html">Disclaimer</a>
-        <a href="privacy.html">Privacy</a>
+        <a href="/about.html">About</a>
+        <a href="/contact.html">Contact</a>
+        <a href="/methodology.html">Methodology</a>
+        <a href="/disclaimer.html">Disclaimer</a>
+        <a href="/privacy.html">Privacy</a>
       </div>
     `;
     const footEl = document.querySelector('footer.cfl-footer');

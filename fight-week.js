@@ -277,6 +277,7 @@
     if (page === 'event_hub') fw.track('event_hub_view', base);
     if (page === 'fight_preview') fw.track('fight_preview_view', base);
     if (page === 'market_board') fw.track('market_board_view', base);
+    if (eventId && (page === 'event_hub' || page === 'fight_preview' || page === 'market_board')) fw.recordVisit(page, eventId);
 
     // "Show the math" and any per-fight expander.
     document.querySelectorAll('details[data-track="fight_expand"]').forEach(d => {
@@ -309,6 +310,41 @@
   // Reserved for a watchlist control; nothing on the site adds to a watchlist
   // today, so this is the one event name with no trigger.
   fw.trackWatchlistAdd = function (props) { fw.track('watchlist_add', props || {}); };
+
+  // ---------------------------------------------------------------------
+  // Card-to-card return rate (sql/retention_return_rate.sql). One anonymous
+  // row per (browser, card, page, day) in hub_visits. The visitor key is a
+  // random UUID this browser made up, kept for 60 days, then replaced — no
+  // IP, no user agent, no account link. Insert-only; nothing reads it back
+  // from the browser. Any failure is silent.
+  // ---------------------------------------------------------------------
+  const VISIT_KEY = 'cfl_visitor_key_v1';
+  const VISIT_TTL_DAYS = 60;
+  function visitorKey() {
+    try {
+      const raw = localStorage.getItem(VISIT_KEY);
+      if (raw) {
+        const o = JSON.parse(raw);
+        if (o && o.key && o.until && Date.now() < o.until) return o.key;
+      }
+      const key = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : null;
+      if (!key) return null;
+      localStorage.setItem(VISIT_KEY, JSON.stringify({ key, until: Date.now() + VISIT_TTL_DAYS * 86400000 }));
+      return key;
+    } catch (_) { return null; }
+  }
+  fw.recordVisit = async function (page, eventId) {
+    if (!page || !eventId) return;
+    const key = visitorKey();
+    if (!key) return;
+    const today = new Date().toISOString().slice(0, 10);
+    const stamp = `cfl_visit_${page}_${eventId}_${today}`;
+    try { if (sessionStorage.getItem(stamp)) return; sessionStorage.setItem(stamp, '1'); } catch (_) { /* fine */ }
+    try {
+      const res = await sb().from('hub_visits').insert({ visitor_key: key, event_id: +eventId, page, seen_on: today });
+      if (res.error && res.error.code !== '23505') console.debug('[fight-week] visit not recorded:', res.error.message);
+    } catch (_) { /* never surface */ }
+  };
 
   // ---------------------------------------------------------------------
   // Boot
