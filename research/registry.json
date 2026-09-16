@@ -133,6 +133,14 @@
           "k"
         ],
         "note": "The calibration blocker is closed, which does not make the remaining clauses automatically sound. Any clause changing data eligibility, scoring, model behaviour or claim interpretation gets an individual vote; pure governance/monitoring clauses are lower risk."
+      },
+      "first_collection": {
+        "status": "collected",
+        "first_lock_at": "2026-09-15T01:50:37.299956+00:00",
+        "rows_written": 48,
+        "model_version": "PROP-0001@v1",
+        "code_version": "322a5b09e739-dirty",
+        "provenance": "code_version is -dirty and the lock script was untracked at the time; see research/provenance/PROVENANCE_REPORT.md. Prediction provenance verified, source-code provenance incomplete."
       }
     },
     {
@@ -217,7 +225,7 @@
     },
     {
       "experiment_id": "DUR-002",
-      "status": "collecting",
+      "status": "armed",
       "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
       "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
       "population": "identical to DUR-001",
@@ -285,10 +293,49 @@
       ],
       "lock_script": {
         "path": "cfl_engine/dur002/lock_prop0002.py",
-        "exists": false,
-        "note": "Not yet written. A mechanical port of the v1 lock path with calibrated=False and MODEL_VERSION='PROP-0001@v2'; contains no modelling decisions. Until it exists DUR-002 is frozen but collecting nothing."
+        "exists": true,
+        "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+        "written": "2026-09-16",
+        "frozen": false,
+        "freezes_at_first_collection": true,
+        "role": "Operational implementation of the already-frozen DUR-002 specification. Contains no modelling decisions. A thin wrapper: PITWorld, fit_prop0001, serve_fight, build_lock_rows, the loaders and the threshold mapping are all imported from the frozen lock_prop0001.py, which is neither modified nor copied. The only behavioural difference is model.iso_ = None, so every prediction is the raw hazard.",
+        "conformance_tests": "cfl_engine/dur002/test_lock_prop0002.py",
+        "guards": [
+          "MODEL_VERSION hard-coded to PROP-0001@v2; assert_v2_only aborts the run on any row carrying another version, checked twice including immediately before the insert",
+          "never updates, replaces or regrades a v1 row; no UPDATE or DELETE is ever attempted",
+          "refuses to write from a dirty working tree (git status --porcelain, so untracked files count) unless --allow-dirty, which records the tree-state hash on every row",
+          "every row records lock_prop0002.py's own sha256 in notes, so the implementation behind any v2 forecast is identifiable from the row alone"
+        ],
+        "note": "Section 0.3 of the frozen preregistration says this script does not exist. That is a true statement about the state AT FREEZE and is deliberately not updated - the preregistration is not altered to reflect a file created after it was frozen. Current state lives here."
       },
-      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration."
+      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration.",
+      "first_collection": {
+        "status": "not started",
+        "first_v2_lock_at": null,
+        "first_v2_lock_commit": null,
+        "procedure": "On the successful first insert of a PROP-0001@v2 row, record here: the exact first-lock UTC timestamp, the workflow run id and commit SHA, lock_prop0002.py's sha256, and the number of rows written. Then set lock_script.frozen = true, move the script into frozen_files, change status from 'armed' to 'collecting', and rerun the full guards.",
+        "expected_via": ".github/workflows/prop-locks.yml, daily 11:00 UTC, as a separate step after the v1 lock step",
+        "rows_written": 0,
+        "first_lock_at": null,
+        "workflow_run_id": null,
+        "commit_sha": null,
+        "lock_script_sha256": null
+      }
     }
-  ]
+  ],
+  "experiment_lifecycle": {
+    "states": [
+      "draft",
+      "frozen",
+      "armed",
+      "collecting"
+    ],
+    "definitions": {
+      "draft": "preregistration written but not signed; nothing frozen; no observation may be created",
+      "frozen": "preregistration signed and binding; no operational implementation yet",
+      "armed": "specification frozen AND implementation written, tested and wired, but ZERO observations recorded",
+      "collecting": "at least one observation exists; the transition is the successful first insert, not a decision"
+    },
+    "note": "armed exists because 'collecting' with zero rows overstates the state. The armed -> collecting transition is objective: it is the first row landing, not a judgement call."
+  }
 }
