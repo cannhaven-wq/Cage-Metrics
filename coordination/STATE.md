@@ -5,14 +5,14 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.3** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–3 same day). Amendment 3 is the **event-flow rule**: a card is one
-scheduled start and then a queue, so the close reference is per fight — actual
-bell, else the previous bout's completion, else (first bout only) the card's
-scheduled start. Book list frozen, capture path written and verified offline,
-**three migrations written and none applied**. **Publication is still shut** — 0
-of 100 observations, 0 of 20 events. Waiting on Reed for one L3 (where bout
-completions come from) and to apply the first migration.
+**Live baton:** CLV-001 is **FROZEN at v1.0.4** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–4 same day). Amendment 4 makes the benchmark the **late pre-fight
+price proxy** — never "the closing line" — and adds a fourth tier: the card's
+scheduled start as a **lower bound** on any fight's start. A fight cannot begin
+before its card does, so exact start detection stops being a blocker. Capture
+goes to **5 minutes through a live card under a hard credit ceiling**.
+**Three migrations written and none applied. Publication is still shut** — 0 of
+100 observations, 0 of 20 events. Waiting on Reed to apply the first migration.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -59,7 +59,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.1**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.4**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -92,15 +92,26 @@ One card of waiting, not a build.
 | Q-02 eligible book list, ten sportsbooks | **frozen**, Amendment 2 (a) |
 | the event-flow close reference, per fight | **frozen**, Amendment 3 |
 | trigger ≠ close, stated so it cannot be collapsed | **frozen**, Amendment 3 (b) |
+| the late pre-fight price proxy + lead-time reporting | **frozen**, Amendment 4 |
+| 5-minute live capture under a hard credit governor | **written**, verified offline |
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
 | event-flow cadence in `build/fetch-odds.js` | **written**, verified offline, degrades if un-migrated |
 | `fight_bout_order` + `fight_bout_completions` + `v_clv_close_reference` | **written, UNAPPLIED** |
 | `model_edges` CLV-001 result columns | **written, UNAPPLIED** — last of the three |
 
 **Amendment 3 in one line:** the card's published start belongs to bout 1 and
-nobody else. Amendment 2 (b) applied it to all thirteen fights, which would have
-marked every quote after the first bell as in-play for twelve of them — caught
-before any such quote exists.
+nobody else — applying it to all thirteen would have marked every quote after
+the first bell as in-play for twelve of them.
+
+**Amendment 4 in one line:** that same published start is still a valid *lower
+bound* for every fight on the card, so the last quote before it is verifiably
+pre-fight for all of them — which takes scorable observations from ~1 a card to
+~12.5, and the 100/20 floor from ~100 cards to ~20.
+
+**What the proxy may be called:** the *late pre-fight price proxy* (long form,
+*scheduled/late closing-price proxy*). **Never "the closing line."** Every row
+carries its lead time and a flag saying whether that lead time is exact or a
+lower bound.
 
 No CLV statistic was computed, and none is computable until a card is captured
 under the new path. Nothing renders CLV today; `track-record.html` carries a
@@ -124,14 +135,11 @@ They are explicitly *not* approved en bloc. Split by risk in the register: six
 change data eligibility, scoring, model behaviour or interpretation and get
 higher scrutiny; three are governance and monitoring only.
 
-**An L3 is open: where exact bout completion times come from.**
+**The bout-completions L3 is resolved as a blocker and open as an improvement.**
 [`L3_ESCALATION_2026-09-16_bout_completions.md`](../research/clv/L3_ESCALATION_2026-09-16_bout_completions.md).
-Until they exist, only the **first bout of each card** is scorable — about one
-observation per event, against a floor of 100 across 20. The running order is
-free (ufcstats lists a card in order; the event scraper can write it). Exact
-completions are not: manual entry, a paid live feed, or a new definitional rule.
-Nothing has been bought or enabled. Recommendation in the doc: take the free half
-now, decide the paid half after a few cards of real coverage.
+Amendment 4's tier 4 removed the dependency; completions now buy **lead-time
+precision**, not the metric. Doing nothing costs precision, not coverage.
+Nothing has been bought, priced or enabled.
 
 **Three CLV-001 migrations are written and unapplied, and the order matters.**
 All additive-only — no DROP, no DELETE, no destructive UPDATE, no existing
@@ -151,14 +159,21 @@ frozen file and serves DUR-001.
    — **last, and only when there is something to write into it.** Nothing is
    computable until a card has been captured under (1) and (2).
 
-**The odds cadence changed with them.** `odds.yml` now wakes every 15 minutes and
-`shouldCaptureNow()` gates each wake: 30 minutes while a card is **in flow**,
-hourly on a card day, once daily otherwise. "In flow" opens 3h before the
-scheduled start and closes when every bout has an exact completion, or after 7h.
-~33 credits on a card day, ~286/month, inside the 500 free tier — **unchanged by
-Amendment 3**, so no spend escalation was needed for the cadence itself. The
-30-minute figure is not a preference: the frozen 45-minute staleness limit was
-derived from a measured 30-minute interval, and hourly capture cannot satisfy it.
+**The odds cadence changed with them.** `odds.yml` now wakes every **5 minutes**
+and `shouldCaptureNow()` gates each wake: 5 minutes while a card is **in flow**
+(budget permitting), hourly on a card day, once daily otherwise.
+
+**Five minutes is a target; the ceiling is a governor.** A card at 5-minute
+cadence costs ~123 credits and the measured rate is 3.7 events a month, 6 in the
+busiest — enough to break a 500-credit allowance outright. So before each call
+the job reads the provider's own `x-requests-remaining` header (persisted in
+`odds_api_usage`), counts the cards still to come, reserves each one's floor
+cost, and takes the finest rung of 5 → 10 → 15 → 30 that fits. Below a hard floor
+it stops. `FORCE` overrides the cadence, never the ceiling.
+`build/test-fetch-odds.js` walks months of 1 to 8 cards and asserts none exceeds
+the allowance. Degrading to 30 minutes still clears the frozen 45-minute
+staleness limit, so the governor costs **lead time, never correctness**.
+**No paid tier without an L3.**
 
 All five original CLV L3 questions (Q-05, Q-06, Q-07, Q-08, Q-11) are resolved
 and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.

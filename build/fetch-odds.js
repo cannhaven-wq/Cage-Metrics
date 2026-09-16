@@ -135,6 +135,83 @@ const BASELINE_HOUR_UTC = 8;
 const NEAR_BELL_WINDOW_H = Number(process.env.NEAR_BELL_WINDOW_H || 3);
 const NEAR_BELL_INTERVAL_MIN = 30;
 
+// -----------------------------------------------------------------------------
+// Credit budget — the hard ceiling (CLV-001 Amendment 4)
+// -----------------------------------------------------------------------------
+// Five-minute capture through a live card is what makes the late pre-fight proxy
+// worth having: the last price before the card starts is then five minutes old
+// rather than thirty. It is also expensive enough to break the free tier if it
+// runs unchecked.
+//
+// Measured, 2025-01 to 2026-08: 3.7 UFC events a month on average, 6 in the
+// busiest month. At 5-minute cadence a single card costs roughly 93 h2h credits.
+// Six of those plus the daily baselines is ~640 — over a 500-credit allowance.
+//
+// So the cadence is a TARGET and the ceiling is a GOVERNOR. Before each call the
+// job asks how many credits are left this month, how many cards are still to
+// come, and picks the finest cadence on the ladder that fits. When the budget is
+// tight it degrades 5 -> 10 -> 15 -> 30 rather than stopping, because a
+// thirty-minute-old price still clears the frozen 45-minute staleness limit; and
+// below a hard floor it stops entirely rather than spending a credit that does
+// not exist.
+//
+// No paid tier, ever, without an L3. The governor exists so that stays true
+// without anyone having to watch it.
+const MONTHLY_CREDIT_CAP = Number(process.env.ODDS_MONTHLY_CAP || 500);
+// Standing reserve: one baseline capture a day for a whole month (~30) plus
+// headroom for retries and manual FORCE runs. Held back before any card is
+// budgeted, so a busy month cannot eat the days between cards.
+//
+// 75, not 45. Walked across months of 1 through 8 cards, a 45-credit reserve
+// goes eight credits over the allowance at seven cards; 75 leaves a worst case
+// of +19. The cost of the larger reserve is that a busy month coarsens its
+// cadence sooner — lead time, not correctness.
+const CREDIT_RESERVE = Number(process.env.ODDS_CREDIT_RESERVE || 75);
+const CREDIT_HARD_FLOOR = 10;
+const LIVE_CADENCE_LADDER = [5, 10, 15, 30];
+const WAKE_INTERVAL_MIN = 5;              // must match the cron in odds.yml
+const TOTALS_MIN_INTERVAL_MIN = 30;       // DUR-001 keeps its density, not more
+
+// What one card costs at the COARSEST rung — 30-minute flow capture plus the
+// card day's hourly captures outside the flow window. Measured by walking a card
+// day through shouldCaptureNow at the 30-minute rung.
+//
+// It has to be reserved for every card still to come, not just averaged in.
+// Without it the governor spends generously on the first cards of a busy month
+// and arrives at the last one with nothing — which is how a six-card month went
+// eight credits over the allowance in testing before this line existed.
+const MIN_CARD_COST = 35;
+
+// A card day also costs hourly captures outside the flow window — the hours
+// before the lead-in opens and after the card is over. Measured at ~15. The
+// projection has to include it: budgeting only the flow calls understates a
+// card by that much, and four cards' worth of understatement is a blown
+// allowance.
+const CARD_DAY_HOURLY_TAIL = 15;
+
+// The finest affordable cadence for the rest of this card, or null to stop.
+// Pure — build/test-fetch-odds.js walks whole months through it.
+function planLiveCadence({ creditsRemaining, cardsRemaining, minutesRemainingInCard }) {
+  if (!Number.isFinite(creditsRemaining)) {
+    // Unknown budget is treated as tight, not as unlimited. The usage ledger is
+    // unreadable on a fresh database and on the first run of the month, and
+    // guessing generously there is how a free tier turns into a bill.
+    return LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
+  }
+  if (creditsRemaining <= CREDIT_HARD_FLOOR) return null;
+  // What this card may spend: what is left, less the standing reserve, less the
+  // floor cost of every card that still has to happen after it.
+  const laterCards = Math.max(0, (cardsRemaining ?? 1) - 1);
+  const perCard = Math.max(
+    0, creditsRemaining - CREDIT_RESERVE - MIN_CARD_COST * laterCards);
+  for (const minutes of LIVE_CADENCE_LADDER) {
+    const calls = Math.ceil(Math.max(0, minutesRemainingInCard) / minutes)
+      + CARD_DAY_HOURLY_TAIL;
+    if (calls <= perCard) return minutes;
+  }
+  return LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
+}
+
 // How long after a card's scheduled start it can still be running. Prelims to
 // main event is about five hours; seven is a generous ceiling that bounds the
 // spend if a completion signal never arrives. It is a CAPTURE bound, not a
@@ -217,33 +294,132 @@ function boutStartedAt(fight, prevCompletedAt, scheduledFirstBoutAt) {
   return null;
 }
 
+// Minutes of card still to run — how much 5-minute capture is still owed. Used
+// only by the budget governor, so an over-estimate costs cadence, never data.
+function minutesRemainingInCard(candidateFights, now = new Date()) {
+  const t = now.getTime();
+  let latest = 0;
+  for (const f of candidateFights || []) {
+    if (!f.start_at) continue;
+    if (!['bell_at', 'provider_commence'].includes(f.start_basis)) continue;
+    const end = new Date(f.start_at).getTime() + EVENT_FLOW_MAX_H * 3600000;
+    if (end > latest) latest = end;
+  }
+  return latest <= t ? 0 : Math.round((latest - t) / 60000);
+}
+
 // The cadence decision for one wake-up. Pure, so build/test-fetch-odds.js can
-// walk a whole card day through it and count the credits.
-function shouldCaptureNow(candidateFights, now, hasCardInWindow) {
+// walk whole months through it and count the credits.
+//
+// `budget` is { creditsRemaining, cardsRemaining }. Omit it and the governor
+// treats the budget as unknown, which means tight — see planLiveCadence.
+function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
   const min = now.getUTCMinutes();
   if (nearBellWindow(candidateFights, now)) {
-    // :00 and :30 — a 30-minute interval, matching the limit's derivation.
-    if (min % NEAR_BELL_INTERVAL_MIN < 15) {
-      return { yes: true, why: `card in flow — ${NEAR_BELL_INTERVAL_MIN}-minute cadence` };
+    const cadence = planLiveCadence({
+      creditsRemaining: budget.creditsRemaining,
+      cardsRemaining: budget.cardsRemaining ?? 1,
+      minutesRemainingInCard: budget.minutesRemainingInCard
+        ?? minutesRemainingInCard(candidateFights, now),
+    });
+    if (cadence === null) {
+      return { yes: false, cadence: null,
+               why: `credit floor reached (${budget.creditsRemaining} left) — ` +
+                    `capture stopped rather than spending past the free allowance` };
     }
-    return { yes: false, why: `card in flow but off the ${NEAR_BELL_INTERVAL_MIN}-minute beat` };
+    if (min % cadence < WAKE_INTERVAL_MIN) {
+      return { yes: true, cadence,
+               why: `card in flow — ${cadence}-minute cadence` +
+                    (cadence === LIVE_CADENCE_LADDER[0] ? '' : ' (budget-degraded)') };
+    }
+    return { yes: false, cadence, why: `card in flow but off the ${cadence}-minute beat` };
   }
   if (hasCardInWindow) {
-    if (min < 15) return { yes: true, why: 'card today or tomorrow — hourly cadence' };
-    return { yes: false, why: 'card window but not the top of the hour' };
+    if (min < WAKE_INTERVAL_MIN) {
+      return { yes: true, cadence: 60, why: 'card today or tomorrow — hourly cadence' };
+    }
+    return { yes: false, cadence: 60, why: 'card window but not the top of the hour' };
   }
-  if (now.getUTCHours() === BASELINE_HOUR_UTC && min < 15) {
-    return { yes: true, why: 'daily baseline capture' };
+  if (now.getUTCHours() === BASELINE_HOUR_UTC && min < WAKE_INTERVAL_MIN) {
+    return { yes: true, cadence: 1440, why: 'daily baseline capture' };
   }
-  return { yes: false, why: 'no card today or tomorrow and not the baseline hour' };
+  return { yes: false, cadence: null,
+           why: 'no card today or tomorrow and not the baseline hour' };
+}
+
+// The authoritative credit count is the Odds API's own x-requests-remaining
+// header. Each run stores it so the NEXT run — a separate Actions invocation
+// with no shared memory — can gate BEFORE calling. An unreadable or empty ledger
+// yields null, which planLiveCadence treats as tight rather than unlimited.
+async function readCreditBudget(now) {
+  const { data, error } = await sb
+    .from('odds_api_usage')
+    .select('requests_remaining, observed_at')
+    .order('observed_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    console.warn(`[budget] odds_api_usage unavailable (${error.message}) — ` +
+      `treating the budget as unknown, which means tight. Apply ` +
+      `research/clv/proposed_2026-09-16_event_flow.sql.`);
+    return { creditsRemaining: undefined, cardsRemaining: 1 };
+  }
+  const last = (data || [])[0];
+
+  // The provider resets the allowance monthly. A reading from a previous month
+  // tells us nothing about this one, so it is discarded rather than trusted.
+  let creditsRemaining;
+  if (last && last.observed_at &&
+      last.observed_at.slice(0, 7) === now.toISOString().slice(0, 7)) {
+    creditsRemaining = Number(last.requests_remaining);
+  } else if (last) {
+    console.log('[budget] last usage reading is from a previous month — the ' +
+      'allowance has reset; assuming a full cap until this month\'s first call.');
+    creditsRemaining = MONTHLY_CREDIT_CAP;
+  }
+
+  // How many cards still have to be paid for out of what is left.
+  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
+    .toISOString().slice(0, 10);
+  const { data: rest } = await sb
+    .from('events')
+    .select('id')
+    .gte('event_date', now.toISOString().slice(0, 10))
+    .lte('event_date', monthEnd);
+  const cardsRemaining = Math.max(1, (rest || []).length);
+
+  return { creditsRemaining, cardsRemaining };
+}
+
+// Record what the provider says we have left. Append-only; a failure here must
+// never take the capture down, but it does mean the next run flies blind and
+// therefore conservatively.
+async function recordCreditUsage(used, remaining) {
+  if (remaining == null) return;
+  const { error } = await sb.from('odds_api_usage').insert([{
+    requests_used: used == null ? null : Number(used),
+    requests_remaining: Number(remaining),
+    observed_at: new Date().toISOString(),
+  }]);
+  if (error) console.warn(`[budget] could not record usage: ${error.message}`);
 }
 
 async function shouldSpendCredit(candidateFights) {
+  const now = new Date();
   if (process.env.FORCE) {
-    console.log('[cadence] FORCE set — capturing regardless of schedule');
+    // FORCE overrides the CADENCE, never the CEILING. A hand-fired run is
+    // allowed to ignore the beat so "is this thing on?" is never a silent skip;
+    // it is not allowed to spend a credit the allowance does not have.
+    const { creditsRemaining } = await readCreditBudget(now);
+    if (Number.isFinite(creditsRemaining) && creditsRemaining <= CREDIT_HARD_FLOOR) {
+      console.error(`[cadence] FORCE set, but only ${creditsRemaining} credit(s) ` +
+        `remain — at or below the hard floor of ${CREDIT_HARD_FLOOR}. Refusing: ` +
+        `the ceiling is not overridable, and going past it means paid usage.`);
+      return false;
+    }
+    console.log(`[cadence] FORCE set — capturing regardless of schedule ` +
+      `[${creditsRemaining ?? 'unknown'} credit(s) left]`);
     return true;
   }
-  const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
 
@@ -254,8 +430,11 @@ async function shouldSpendCredit(candidateFights) {
     .lte('event_date', tomorrow);
   if (error) throw new Error(`cadence events check: ${error.message}`);
 
-  const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length));
-  console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}`);
+  const budget = await readCreditBudget(now);
+  const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length), budget);
+  console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}` +
+    ` [budget: ${budget.creditsRemaining ?? 'unknown'} credit(s) left, ` +
+    `${budget.cardsRemaining} card(s) still to cover this month]`);
   return decision.yes;
 }
 
@@ -268,6 +447,8 @@ async function shouldSpendCredit(candidateFights) {
 // more credit per call (quota = markets x regions), so totals ride along only
 // where a close can actually form — see wantTotals(). Totals rows go to the
 // private, append-only `prop_odds` ledger; the moneyline path is unchanged.
+let lastQuota = { used: null, remaining: null };
+
 async function fetchOddsFromApi(markets = 'h2h') {
   // ODDS_FIXTURE=<path.json>: replay a saved/synthetic Odds API payload instead
   // of spending a credit. Forces DRY_RUN semantics upstream (see main) so a
@@ -297,6 +478,10 @@ async function fetchOddsFromApi(markets = 'h2h') {
     }
     console.log(`[odds-api] HTTP ${res.status} quota: used=${res.headers.get('x-requests-used')}, ` +
       `remaining=${res.headers.get('x-requests-remaining')}, last=${res.headers.get('x-requests-last')}`);
+    // The provider's own count is the only authoritative budget. Store it so the
+    // next run — a separate Actions invocation — can gate before calling.
+    lastQuota = { used: res.headers.get('x-requests-used'),
+                  remaining: res.headers.get('x-requests-remaining') };
     if (res.ok) {
       const events = await res.json();
       console.log(`[odds-api] got ${events.length} MMA events`);
@@ -654,6 +839,15 @@ const TOTALS_ENABLED = (process.env.ODDS_MARKETS || 'h2h,totals').split(',').map
 function wantTotals(candidateFights, now = new Date()) {
   if (!TOTALS_ENABLED) return { yes: false, why: 'totals disabled via ODDS_MARKETS' };
   if (process.env.FORCE) return { yes: true, why: 'FORCE set' };
+  // Totals cost a second credit on every call they ride. Under 5-minute h2h
+  // capture that would double the card's bill for no benefit to DUR-001, whose
+  // close is derived from the same start hierarchy and needs density, not every
+  // five minutes. Capped at one totals call per TOTALS_MIN_INTERVAL_MIN, which
+  // is the density DUR-001 already had — never less.
+  if (now.getUTCMinutes() % TOTALS_MIN_INTERVAL_MIN >= WAKE_INTERVAL_MIN) {
+    return { yes: false, why: `off the ${TOTALS_MIN_INTERVAL_MIN}-minute totals beat ` +
+                              `(h2h-only call, 1 credit)` };
+  }
   const t = now.getTime();
   const near = (candidateFights || []).some(f => {
     if (!f.start_at) return false;
@@ -1077,6 +1271,8 @@ async function main() {
       if (insErr) throw new Error(`fight_odds insert: ${insErr.message}`);
     }
 
+    await recordCreditUsage(lastQuota.used, lastQuota.remaining);
+
     const scorable = supported.size === CAPTURE_COLUMNS.length;
     console.log(`[done] inserted ${toInsert.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}` +
       (scorable ? ' — CLV-001 capture complete' : ' — CLV-001 capture INCOMPLETE, these quotes can never be scored'));
@@ -1095,7 +1291,9 @@ if (require.main === module) main();
 module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
+  planLiveCadence, minutesRemainingInCard, wantTotals,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
-  EVENT_FLOW_MAX_H,
+  EVENT_FLOW_MAX_H, MONTHLY_CREDIT_CAP, CREDIT_RESERVE, CREDIT_HARD_FLOOR,
+  LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
   normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
 };

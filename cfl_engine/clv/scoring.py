@@ -42,8 +42,23 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.3"
+PROTOCOL_VERSION = "1.0.4"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
+
+# ---------------------------------------------------------------------------
+# What the benchmark is called — Amendment 4
+# ---------------------------------------------------------------------------
+# It is NOT the closing line and may never be described as one. It is the
+# **late pre-fight price proxy**: the latest quote that can be VERIFIED to have
+# been taken before the fight started.
+#
+# Under a real bell or the previous bout's completion, "before the fight" is
+# known exactly. Under the card's scheduled start it is BOUNDED — a fight cannot
+# begin before its own card begins — so the quote is still verifiably pre-fight
+# while the lead time to the actual bell is only a lower bound. Both are honest;
+# they differ in how late the price is, not in whether it was pre-fight.
+BENCHMARK_NAME = "late pre-fight price proxy"
+BENCHMARK_NAME_LONG = "scheduled/late closing-price proxy"
 
 # ---------------------------------------------------------------------------
 # The close reference — Amendment 3, approved by Reed Cannon 2026-09-16
@@ -72,7 +87,20 @@ CLOSE_REFERENCE_BASES = frozenset({
     "bell_at",                   # an actual confirmed bell. Best, and audit-grade.
     "previous_bout_completion",  # the bout before this one ended. Later bouts.
     "scheduled_first_bout",      # the card's scheduled start — FIRST BOUT ONLY.
+    "card_scheduled_start",      # the card's start as a LOWER BOUND. Amendment 4.
 })
+
+# Bases that name the fight's start. Lead time computed against these is exact.
+EXACT_REFERENCE_BASES = frozenset({
+    "bell_at", "previous_bout_completion", "scheduled_first_bout",
+})
+
+# Bases that only BOUND the fight's start. The quote is still verifiably
+# pre-fight — a fight cannot begin before its card does — but the lead time to
+# the actual bell is a lower bound, and on a late-card fight the real gap may be
+# hours larger. Amendment 4: this is what stops exact start detection being a
+# blocker. It bounds; it does not guess.
+LOWER_BOUND_REFERENCE_BASES = frozenset({"card_scheduled_start"})
 
 # `provider_commence` and `bell_at` were the admissible pair under Amendment 2
 # (b). Amendment 3 keeps `bell_at`, narrows `provider_commence` to the first bout
@@ -348,9 +376,36 @@ def admissible_reference(start_at: dt.datetime | None,
     return start_at
 
 
+def lead_time_minutes(quoted_at: dt.datetime | None,
+                      reference_at: dt.datetime | None) -> float | None:
+    """Minutes from the proxy quote to the reference instant. None if either is
+    missing. Negative is impossible by construction — the quote must be strictly
+    before the reference to be eligible at all — but it is not clamped, because
+    a negative here would mean an eligibility bug and should be visible."""
+    if quoted_at is None or reference_at is None:
+        return None
+    return (reference_at - quoted_at).total_seconds() / 60.0
+
+
+def reference_is_lower_bound(start_basis: str | None) -> bool | None:
+    """Whether the lead time computed against this basis is a lower bound.
+
+    None when the basis is unknown — never False, which would assert the lead
+    time is exact. Amendment 4 makes the distinction reportable rather than
+    assumed, because a tier-4 proxy on the twelfth bout may sit hours before the
+    bell and a reader has to be able to see that from the row.
+    """
+    if start_basis in LOWER_BOUND_REFERENCE_BASES:
+        return True
+    if start_basis in EXACT_REFERENCE_BASES:
+        return False
+    return None
+
+
 def score_row(edge: dict, quotes: list[dict], fight: dict,
               reference_instant: dt.datetime | None, now: dt.datetime,
-              eligible_book_ids: set[int] | None) -> dict:
+              eligible_book_ids: set[int] | None,
+              reference_basis: str | None = None) -> dict:
     """Score one `model_edges` row under CLV-001, or say why it cannot be.
 
     Returns a dict that is always shaped the same — `scored` is True or False and
@@ -369,6 +424,12 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
            "reason": None, "detail": "", "clv_return": None,
            "closing_fair_probability": None, "closing_book_count": None,
            "quote_ids": None, "consensus": None, "consensus_sha256": None,
+           # Amendment 4: which tier supplied the pre-fight cutoff, how late the
+           # proxy quote was, and whether that lead time is exact or a bound.
+           "close_basis": reference_basis,
+           "lead_time_minutes": None,
+           "lead_time_is_lower_bound": reference_is_lower_bound(reference_basis),
+           "proxy_quoted_at": None,
            "diagnostics": {}}
 
     def unscored(reason: str, detail: str = "") -> dict:
@@ -436,6 +497,16 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
     except Unscored as e:
         return unscored(e.reason, e.detail)
 
+    # The proxy instant is the latest quote that entered the consensus — the
+    # "late" in late pre-fight price proxy. Lead time is measured from it, so a
+    # thin consensus assembled from older books reports the lead time it
+    # actually has rather than the best one in the set.
+    proxy_at = max(p["quoted_at"] for p in pairs
+                   if p["book_id"] in {b["book_id"] for b in artifact["books"]})
+    artifact["proxy_quoted_at"] = proxy_at
+    artifact["close_basis"] = reference_basis
+    artifact["benchmark"] = BENCHMARK_NAME
+
     out.update({
         "scored": True,
         "clv_return": clv_return(fair, edge["odds_at_publish"]),
@@ -444,5 +515,7 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
         "quote_ids": sorted(qid for b in artifact["books"] for qid in b["quote_ids"]),
         "consensus": artifact,
         "consensus_sha256": canonical_sha256(artifact),
+        "proxy_quoted_at": proxy_at,
+        "lead_time_minutes": lead_time_minutes(proxy_at, reference_instant),
     })
     return out

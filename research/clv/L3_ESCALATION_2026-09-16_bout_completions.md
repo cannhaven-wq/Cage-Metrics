@@ -1,5 +1,30 @@
 # L3 escalation — where exact bout completion times come from
 
+> ## RESOLVED as a blocker, 2026-09-16 — still open as an improvement
+>
+> **Reed's answer was to stop treating exact start detection as a blocker at
+> all.** CLV-001 Amendment 4 adds a fourth tier: the card's scheduled start as a
+> **lower bound** on any fight's start. A fight cannot begin before its own card
+> begins, so the last quote before the card's scheduled start is verifiably
+> pre-fight for every fight on the card — no running order, no completion times.
+>
+> That changes the arithmetic this document was written about:
+>
+> | | before | after |
+> |---|---|---|
+> | scorable observations per card | ~1 | ~12.5 |
+> | cards to reach 100 observations | ~100 | ~8 |
+> | cards to reach 20 distinct events | 20 | 20 |
+> | **binding constraint** | observation count | **event count** |
+>
+> **The options below are no longer a decision about whether CLV is measurable.**
+> They are a decision about **lead time**: an exact completion upgrades a later
+> bout from "we know this quote was before the card started" to "we know it was
+> N minutes before the bell". Option A — do nothing — now costs precision, not
+> the metric.
+>
+> Nothing has been bought, priced or enabled, and that remains true.
+
 **Raised:** 2026-09-16, implementing CLV-001 Amendment 3.
 **Escalated because:** every option that works costs money or standing human
 time, and Reed's instruction is that no paid infrastructure or API spend is

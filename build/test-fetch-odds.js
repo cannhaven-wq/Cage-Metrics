@@ -28,7 +28,10 @@ const path = require('path');
 const {
   buildMoneylineRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
+  planLiveCadence, minutesRemainingInCard, wantTotals,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
+  MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, LIVE_CADENCE_LADDER,
+  WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
   normalizeName,
 } = require('./fetch-odds');
 
@@ -358,7 +361,6 @@ test('stripping does not mutate the rows it was given', () => {
 // ---------------------------------------------------------------------------
 
 const BELL = new Date('2026-09-20T02:00:00Z');
-const CARD = [{ id: 1, start_at: BELL.toISOString(), start_basis: 'provider_commence' }];
 
 test('a fight with only the event-date fallback never triggers a near-bell burst', () => {
   const fallbackOnly = [{ id: 1, start_at: BELL.toISOString(),
@@ -442,20 +444,116 @@ test('the flow window is bounded even if no completion ever arrives', () => {
     'is its state today');
 });
 
-test('the credit budget for a card day stays inside the free tier', () => {
-  // 13 fights, 30 minutes apart, the shape of a real card.
-  const card = Array.from({ length: 13 }, (_, i) => ({
-    id: i, start_basis: 'provider_commence',
-    start_at: new Date(BELL.getTime() + i * 30 * 60000).toISOString(),
-  }));
+// ---------------------------------------------------------------------------
+// The hard usage ceiling (Amendment 4)
+// ---------------------------------------------------------------------------
+// Five-minute capture is the target; the governor is what keeps it inside a free
+// allowance. Measured: 3.7 UFC events a month on average, 6 in the busiest.
+
+const CARD = [{ id: 1, start_at: BELL.toISOString(), start_basis: 'provider_commence' }];
+
+function creditsForCardDay(budget, wakeEvery = 5) {
   let credits = 0;
-  for (let m = 0; m < 24 * 60; m += 15) {
+  for (let m = 0; m < 24 * 60; m += wakeEvery) {
     const at = new Date(Date.UTC(2026, 8, 20, 0, 0) + m * 60000);
-    if (shouldCaptureNow(card, at, true).yes) credits++;
+    if (shouldCaptureNow(CARD, at, true, budget).yes) credits++;
   }
-  // ~8 card days a month plus ~22 baseline days must stay under 500/month.
-  const monthly = credits * 8 + 22;
-  assert.ok(monthly < 500,
-    `${credits} credits on a card day projects to ${monthly}/month, over the ` +
-    `free tier — the cadence needs narrowing, not the staleness limit widening`);
+  return credits;
+}
+
+test('with budget to spare the cadence is the five-minute target', () => {
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: 480, cardsRemaining: 1,
+                      minutesRemainingInCard: 420 }), 5);
+});
+
+test('a tight budget degrades down the ladder rather than stopping', () => {
+  // One card left and a comfortable balance: the target holds.
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: 300, cardsRemaining: 1,
+                      minutesRemainingInCard: 120 }), 5);
+  // Same balance, but three more cards to pay for afterwards and a long card
+  // still to run: it must coarsen rather than spend the later cards' floor.
+  const squeezed = planLiveCadence({ creditsRemaining: 300, cardsRemaining: 4,
+                                     minutesRemainingInCard: 600 });
+  assert.ok(squeezed > 5, 'a long card with three more to fund must coarsen');
+  assert.ok(LIVE_CADENCE_LADDER.includes(squeezed));
+});
+
+test('degrading never coarsens past 30 minutes, which still clears the limit', () => {
+  const worst = planLiveCadence({ creditsRemaining: CREDIT_HARD_FLOOR + 1,
+                                  cardsRemaining: 20,
+                                  minutesRemainingInCard: 10000 });
+  assert.strictEqual(worst, 30,
+    'the coarsest rung is 30 minutes — inside the frozen 45-minute staleness ' +
+    'limit, so the governor costs lead time and never correctness');
+});
+
+test('at the hard floor capture stops rather than overspending', () => {
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: CREDIT_HARD_FLOOR, cardsRemaining: 1,
+                      minutesRemainingInCard: 60 }), null);
+  const decision = shouldCaptureNow(CARD, BELL, true,
+    { creditsRemaining: 0, cardsRemaining: 1 });
+  assert.strictEqual(decision.yes, false);
+  assert.match(decision.why, /credit floor/);
+});
+
+test('an unknown budget is treated as tight, never as unlimited', () => {
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: undefined, cardsRemaining: 1,
+                      minutesRemainingInCard: 60 }), 30,
+    'a fresh database or the first run of a month must not read as a blank ' +
+    'cheque — that is how a free tier turns into a bill');
+});
+
+test('no plausible month exceeds the free allowance', () => {
+  // The ceiling is the whole point of the governor, so this is checked across
+  // every month shape rather than on the average one. Measured range is 2-6 UFC
+  // events a month; 7 and 8 are included as headroom.
+  for (let cards = 1; cards <= 8; cards++) {
+    let remaining = MONTHLY_CREDIT_CAP;
+    for (let card = 0; card < cards; card++) {
+      const spent = creditsForCardDay({ creditsRemaining: remaining,
+                                        cardsRemaining: cards - card });
+      remaining -= spent;
+      assert.ok(remaining >= 0,
+        `${cards}-card month: card ${card + 1} overspent the allowance`);
+    }
+    const baselineDays = 30 - cards;
+    assert.ok(remaining - baselineDays >= 0,
+      `${cards}-card month leaves ${remaining} credits for ${baselineDays} ` +
+      `baseline days — over the allowance. Raise the reserve or coarsen the ` +
+      `ladder; never widen the staleness limit to compensate.`);
+  }
+});
+
+test('an average month leaves the cadence at or near the target', () => {
+  // 3.7 events/month measured, so 4. With a full allowance the first card
+  // should run at the five-minute target rather than being pre-emptively
+  // throttled.
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: MONTHLY_CREDIT_CAP, cardsRemaining: 4,
+                      minutesRemainingInCard: 420 }), 5);
+});
+
+test('totals do not ride every five-minute call', () => {
+  // Totals cost a second credit each time they ride. DUR-001 keeps the density
+  // it already had — one totals call per 30 minutes — and no more.
+  const card = [{ id: 1, start_at: BELL.toISOString(),
+                  start_basis: 'provider_commence', event_date: '2026-09-20' }];
+  let totals = 0;
+  for (let m = 0; m < 60; m += WAKE_INTERVAL_MIN) {
+    const at = new Date(BELL.getTime() - 3600000 + m * 60000);
+    if (wantTotals(card, at).yes) totals++;
+  }
+  assert.ok(totals <= 60 / TOTALS_MIN_INTERVAL_MIN,
+    `${totals} totals calls in an hour — that doubles the card's bill`);
+});
+
+test('minutesRemainingInCard ignores a placeholder start', () => {
+  const fallbackOnly = [{ id: 1, start_at: BELL.toISOString(),
+                          start_basis: 'event_date_fallback' }];
+  assert.strictEqual(minutesRemainingInCard(fallbackOnly, BELL), 0);
+  assert.ok(minutesRemainingInCard(CARD, BELL) > 0);
 });

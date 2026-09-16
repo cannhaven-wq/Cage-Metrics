@@ -131,6 +131,9 @@ CLV001_COLUMNS = (
     "clv_return", "closing_fair_probability", "closing_book_count",
     "clv_protocol_version", "clv_scored_at", "clv_unscored_reason",
     "clv_source_quote_ids", "clv_closing_consensus", "clv_consensus_sha256",
+    # Amendment 4 — how late the proxy was, and whether that is exact.
+    "clv_close_basis", "clv_lead_time_minutes", "clv_lead_time_is_lower_bound",
+    "clv_proxy_quoted_at",
 )
 
 # Capture columns on fight_odds that the close depends on
@@ -578,7 +581,8 @@ def clv001_main(write: bool) -> None:
         results.append(score_row(
             edge=r, quotes=quotes.get(r["fight_id"], []), fight=fight,
             reference_instant=fight.get("start_at"), now=now,
-            eligible_book_ids=eligible_book_ids))
+            eligible_book_ids=eligible_book_ids,
+            reference_basis=fight.get("start_basis")))
 
     _report_clv001(results)
 
@@ -600,6 +604,10 @@ def clv001_main(write: bool) -> None:
             "clv_source_quote_ids": x["quote_ids"],
             "clv_closing_consensus": x["consensus"],
             "clv_consensus_sha256": x["consensus_sha256"],
+            "clv_close_basis": x["close_basis"],
+            "clv_lead_time_minutes": round(x["lead_time_minutes"], 4),
+            "clv_lead_time_is_lower_bound": x["lead_time_is_lower_bound"],
+            "clv_proxy_quoted_at": x["proxy_quoted_at"].isoformat(),
         })
     print(f"\nWROTE {len(scored)} CLV-001 result(s). Legacy clv_pp / clv_beat "
           f"were not read and not modified.")

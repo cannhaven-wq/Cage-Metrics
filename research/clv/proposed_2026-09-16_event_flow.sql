@@ -117,16 +117,57 @@ create unique index if not exists fight_bout_completions_unique_idx
   on public.fight_bout_completions (fight_id, source, completed_at);
 
 -- ---------------------------------------------------------------------------
--- 3. The close reference — Amendment 3's hierarchy, in one view
+-- 3. Odds API credit ledger — the hard usage ceiling (Amendment 4)
+-- ---------------------------------------------------------------------------
+-- Five-minute capture through a live card is what makes the late pre-fight proxy
+-- worth having, and it is also enough to break a 500-credit free tier if it runs
+-- unchecked: measured, 3.7 UFC events a month on average and 6 in the busiest,
+-- at roughly 93 h2h credits a card.
+--
+-- Each GitHub Actions run is a separate process with no memory of the last one,
+-- so the provider's x-requests-remaining header is written here and read by the
+-- next run to gate BEFORE spending. An empty or unreadable ledger reads as
+-- "budget unknown", which build/fetch-odds.js treats as tight, not unlimited.
+
+create table if not exists public.odds_api_usage (
+  id                 bigserial primary key,
+  requests_used      integer,
+  requests_remaining integer not null,
+  observed_at        timestamptz not null default now(),
+  constraint odds_api_usage_remaining_sane check (requests_remaining >= 0)
+);
+
+comment on table public.odds_api_usage is
+  'Append-only record of the Odds API quota headers after each call. Read by the '
+  'next run to choose an affordable cadence. The provider resets the allowance '
+  'monthly, so a reading from a previous month is discarded rather than trusted.';
+
+create index if not exists odds_api_usage_observed_idx
+  on public.odds_api_usage (observed_at desc);
+
+-- ---------------------------------------------------------------------------
+-- 4. The close reference — Amendments 3 and 4, in one view
 -- ---------------------------------------------------------------------------
 --   1. bell_at                   an actual confirmed bell. Audit-grade.
 --   2. previous_bout_completion  the bout before this one ended (is_exact only).
 --   3. scheduled_first_bout      the card's scheduled start - BOUT 1 ONLY.
+--   4. card_scheduled_start      the card's scheduled start as a LOWER BOUND on
+--                                any fight's start. Amendment 4.
 --   else NULL, and the fight is unscored.
 --
--- Deliberately absent: the event-date fallback, and any tier that guesses a
--- later bout's start from the card's scheduled time. A card's scheduled start
--- is the first fight's start and nobody else's.
+-- Tier 4 is what stops exact start detection being a blocker. A fight cannot
+-- begin before its own card begins, so a quote strictly before the card's
+-- scheduled start is verifiably pre-fight for EVERY fight on that card - whether
+-- or not we know the running order or when any bout ended.
+--
+-- What it gives up is lead time, not correctness. Under tiers 1-3 the lead time
+-- to the fight's start is known; under tier 4 it is only a LOWER BOUND, because
+-- the twelfth bout may walk out hours after the card's advertised start. The
+-- view reports which, and nothing built on it may call tier 4 a closing line.
+--
+-- Deliberately still absent: the event-date fallback (a placeholder, not a
+-- schedule) and any tier that GUESSES a later bout's start. Tier 4 does not
+-- guess - it bounds.
 
 create or replace view public.v_clv_close_reference
 with (security_invoker = true) as
@@ -150,43 +191,63 @@ prev_done as (
 sched as (
   -- The card's scheduled start, from the provider commence ledger DUR-001
   -- already maintains. Latest observation wins, so a reschedule supersedes.
-  select e.fight_id, max(e.start_at) as start_at
+  -- Taken per EVENT, not per fight, because it is the card's start: the
+  -- provider quotes one commence time for the card and it is the lower bound
+  -- tier 4 rests on.
+  select f.event_id, max(e.start_at) as card_start_at
   from public.fight_start_estimates e
+  join public.fights f on f.id = e.fight_id
   where e.source = 'odds_api_commence'
-  group by e.fight_id
+  group by f.event_id
 )
 select f.id                                   as fight_id,
-       o.event_id,
+       f.event_id,
        o.bout_order,
        (o.bout_order = 1)                     as is_first_bout,
-       coalesce(f.bell_at, pd.prev_completed_at,
-                case when o.bout_order = 1 then s.start_at end)
+       coalesce(f.bell_at, pd.prev_completed_at, s.card_start_at)
                                               as reference_at,
        case
          when f.bell_at is not null            then 'bell_at'
          when pd.prev_completed_at is not null then 'previous_bout_completion'
          when o.bout_order = 1
-          and s.start_at is not null           then 'scheduled_first_bout'
+          and s.card_start_at is not null      then 'scheduled_first_bout'
+         when s.card_start_at is not null      then 'card_scheduled_start'
          else null
        end                                    as reference_basis,
-       f.bell_at                              as actual_bell_at
+       -- TRUE when reference_at only BOUNDS the fight's start rather than
+       -- naming it, so lead time computed against it is a lower bound too.
+       (f.bell_at is null and pd.prev_completed_at is null
+        and o.bout_order is distinct from 1
+        and s.card_start_at is not null)       as reference_is_lower_bound,
+       f.bell_at                              as actual_bell_at,
+       s.card_start_at                        as card_scheduled_start_at
 from public.fights f
-join ord o          on o.fight_id = f.id
+left join ord o        on o.fight_id = f.id
 left join prev_done pd on pd.fight_id = f.id
-left join sched s      on s.fight_id = f.id;
+left join sched s      on s.event_id = f.event_id;
 
 comment on view public.v_clv_close_reference is
-  'CLV-001 Amendment 3. Per fight: the instant it began, by the best available '
-  'account - actual bell, else the previous bout''s exact completion, else (bout '
-  '1 only) the card''s scheduled start. NULL reference_basis means unscorable, '
-  'which is the correct answer and not a gap to fill. Separate from DUR-001''s '
-  'v_fight_start_best on purpose: that view is defined in a frozen file and '
-  'serves a running experiment. actual_bell_at is carried through as the audit '
-  'field and is never synthesised.';
+  'CLV-001 Amendments 3 and 4. Per fight: the instant used as the pre-fight '
+  'cutoff, by the best available account - actual bell, else the previous bout''s '
+  'exact completion, else (bout 1) the card''s scheduled start, else the card''s '
+  'scheduled start as a LOWER BOUND on any fight''s start. '
+  'reference_is_lower_bound says which, and a lower-bound row must never be '
+  'described as a closing line - it is the late pre-fight price proxy. '
+  'Separate from DUR-001''s v_fight_start_best on purpose: that view is defined '
+  'in a frozen file and serves a running experiment. actual_bell_at is carried '
+  'through as the audit field and is never synthesised.';
 
--- A fight with no order row cannot appear above at all (inner join), which is
--- deliberate: without a running order there is no "previous bout", so there is
--- nothing to reason from. Unknown is unscored.
+comment on column public.v_clv_close_reference.reference_is_lower_bound is
+  'TRUE when reference_at bounds the fight''s start rather than naming it. The '
+  'quote is verifiably pre-fight either way; only the LEAD TIME is uncertain, '
+  'and under TRUE it is a lower bound - the real gap to the bell may be hours '
+  'larger on a late-card fight.';
+
+-- Note the LEFT JOIN on running order, changed by Amendment 4. Under Amendment 3
+-- a fight with no order row could not appear at all, because tiers 1-3 all need
+-- one. Tier 4 does not: the card's scheduled start bounds every fight on the
+-- card regardless of where in the running order it sits. Order still improves
+-- the answer; it is no longer required to get one.
 
 commit;
 
@@ -194,28 +255,42 @@ commit;
 -- AFTER APPLYING — what must still be true
 --
 --   * v_fight_start_best is byte-identical and DUR-001 is unaffected.
---   * both new tables are EMPTY. Nothing backfills them: a running order
---     reconstructed today is not what we observed on the night, and a
---     completion time we never recorded cannot be recovered by inference.
---   * v_clv_close_reference therefore returns zero rows until fight_bout_order
---     is populated, and settle_clv.py reports every fight as
---     no_scheduled_start. That is the honest state, not a broken one.
+--   * all three new tables are EMPTY. Nothing backfills the two ledgers: a
+--     running order reconstructed today is not what we observed on the night,
+--     and a completion time we never recorded cannot be recovered by inference.
+--   * v_clv_close_reference resolves tier 4 (card_scheduled_start) for every
+--     fight on a card whose provider commence time is on file, immediately -
+--     no ledger population required. Fights on cards without one stay
+--     no_scheduled_start.
 --   * the publication gate is untouched: 0 of 100 scored observations, 0 of 20
 --     distinct events, fail-closed.
 --
--- WHAT STILL HAS NO SOURCE — and why it is an L3 question, not a TODO
+-- WHAT AMENDMENT 4 CHANGED ABOUT THE TIMELINE
+--
+--   Under Amendment 3, tiers 1-3 all needed a running order, and tier 2 needed
+--   exact bout completions that have no free source. Only bout 1 of a card was
+--   scorable: roughly one observation per event, so 100 observations meant
+--   about 100 cards.
+--
+--   Tier 4 bounds instead of guessing. A fight cannot start before its card
+--   does, so the last quote before the card's scheduled start is verifiably
+--   pre-fight for ALL of them - about 12.5 observations a card, measured. The
+--   floor of 100 across 20 distinct events becomes roughly 20 cards, bounded by
+--   the event count rather than the observation count.
+--
+--   What the later bouts give up is lead time, not correctness. Their proxy
+--   sits before the card started, which on the twelfth bout may be hours before
+--   the bell. reference_is_lower_bound marks every such row, and nothing built
+--   on one may call it a closing line.
+--
+-- STILL WORTH HAVING, AND NO LONGER BLOCKING
 --
 --   Running order is obtainable free: ufcstats lists a card in order, and the
---   existing event scraper can write fight_bout_order on the same pass.
+--   existing event scraper can write fight_bout_order on the same pass. It
+--   upgrades bout 1 from tier 4 to tier 3.
 --
---   Exact bout completions are NOT obtainable free. The result scraper runs
---   after the card and yields an upper bound (completion plus unknown lag),
---   which is_exact=false explicitly refuses. A real completion instant needs
---   either a paid live-data feed or a person entering times during the card.
---   Both are new standing commitments, so both are escalated rather than
---   assumed - see the handoff.
---
---   Until one exists, only bout 1 of each card can be scored. That is roughly
---   one scorable observation per event, against a floor of 100 across 20
---   events, and it is the single biggest fact about the CLV timeline.
+--   Exact bout completions are NOT obtainable free - a paid live feed or manual
+--   entry - and they upgrade every later bout from a lower bound to a real lead
+--   time. That remains an open L3, but it is now an improvement rather than a
+--   prerequisite.
 -- ============================================================================

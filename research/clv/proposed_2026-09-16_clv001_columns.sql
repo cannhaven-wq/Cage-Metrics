@@ -70,6 +70,38 @@ alter table public.model_edges
   add column if not exists clv_unscored_reason text;
 
 -- ---------------------------------------------------------------------------
+-- 1b. How late the proxy actually was — Amendment 4
+--
+-- The benchmark is the LATE PRE-FIGHT PRICE PROXY, never the closing line. These
+-- three columns are what make that claim checkable per row rather than asserted
+-- once in a document.
+-- ---------------------------------------------------------------------------
+
+-- Which tier established that the quote was pre-fight: 'bell_at',
+-- 'previous_bout_completion', 'scheduled_first_bout' or 'card_scheduled_start'.
+alter table public.model_edges
+  add column if not exists clv_close_basis text;
+
+-- Minutes from the proxy quote to the reference instant. Under a five-minute
+-- capture cadence this should normally read in single digits; a large value is
+-- a coverage problem that must be visible rather than averaged away.
+alter table public.model_edges
+  add column if not exists clv_lead_time_minutes numeric;
+
+-- TRUE when the lead time is a LOWER BOUND rather than the real gap to the bell
+-- — i.e. tier 4, where the reference is the card's scheduled start and the fight
+-- may have walked out hours later. NULL means the basis is unknown; it is never
+-- FALSE by default, because FALSE asserts the lead time is exact.
+alter table public.model_edges
+  add column if not exists clv_lead_time_is_lower_bound boolean;
+
+-- The exact capture instant of the latest quote that entered the consensus —
+-- the "late" in late pre-fight price proxy. Stored so the lead time can be
+-- recomputed if a better account of the fight's start arrives later.
+alter table public.model_edges
+  add column if not exists clv_proxy_quoted_at timestamptz;
+
+-- ---------------------------------------------------------------------------
 -- 2. Provenance — enough to reconstruct the calculation from the raw quotes
 --
 -- Reed: "store enough provenance to reconstruct the calculation — ideally the
@@ -132,8 +164,39 @@ alter table public.model_edges
         and clv_scored_at is not null
         and clv_source_quote_ids is not null
         and clv_closing_consensus is not null
-        and clv_consensus_sha256 is not null)
+        and clv_consensus_sha256 is not null
+        -- Amendment 4: a scored row states how late its proxy was and whether
+        -- that is exact. A figure without them cannot be read honestly.
+        and clv_close_basis is not null
+        and clv_lead_time_minutes is not null
+        and clv_lead_time_is_lower_bound is not null
+        and clv_proxy_quoted_at is not null)
   ) not valid;
+
+-- The close basis vocabulary, matching CLOSE_REFERENCE_BASES in
+-- cfl_engine/clv/scoring.py.
+alter table public.model_edges
+  add constraint model_edges_clv_close_basis_known
+  check (clv_close_basis is null or clv_close_basis in (
+    'bell_at',
+    'previous_bout_completion',
+    'scheduled_first_bout',
+    'card_scheduled_start'
+  )) not valid;
+
+-- Only tier 4 produces a lower bound. If these two ever disagree, one of them is
+-- lying about how late the price was.
+alter table public.model_edges
+  add constraint model_edges_clv_lower_bound_matches_basis
+  check (clv_close_basis is null or clv_lead_time_is_lower_bound is null
+         or (clv_lead_time_is_lower_bound
+             = (clv_close_basis = 'card_scheduled_start'))) not valid;
+
+-- The proxy quote is strictly before the fight; a negative lead time would mean
+-- an in-play price scored as a close.
+alter table public.model_edges
+  add constraint model_edges_clv_lead_time_positive
+  check (clv_lead_time_minutes is null or clv_lead_time_minutes > 0) not valid;
 
 -- The frozen minimum book count (Q-02). A scored row below it is impossible.
 alter table public.model_edges

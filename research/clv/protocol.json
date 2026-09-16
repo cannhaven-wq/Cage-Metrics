@@ -4,10 +4,39 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
+  "protocol_sha256": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+  "benchmark_name": {
+    "short": "late pre-fight price proxy",
+    "long": "scheduled/late closing-price proxy",
+    "never": "the closing line",
+    "rule": "no surface, artifact or summary may describe this benchmark as a closing line. It is the latest quote VERIFIABLE as pre-fight, which under tier 4 is bounded rather than exact.",
+    "frozen_by": "Amendment 4, 2026-09-16"
+  },
+  "capture_cadence": {
+    "target_minutes": 5,
+    "scope": "h2h moneyline, all remaining fights, through a live card",
+    "every_snapshot_stored": true,
+    "ladder": [5, 10, 15, 30],
+    "governor": "before each call the job reads the provider's own x-requests-remaining header (persisted in odds_api_usage), counts the cards still to come this month, and takes the finest cadence on the ladder that fits. Below a hard floor it stops rather than spending a credit it does not have.",
+    "hard_ceiling": {
+      "monthly_credit_cap": 500,
+      "reserve": 40,
+      "hard_floor": 10,
+      "paid_tier": "never, without an L3"
+    },
+    "measured_basis": {
+      "events_per_month_avg": 3.7,
+      "events_per_month_max_observed": 6,
+      "fights_per_card_avg": 12.5,
+      "window": "2025-01 to 2026-08",
+      "credits_per_card_at_5min": 93,
+      "why_a_governor_and_not_a_schedule": "six cards at five-minute cadence would exceed a 500-credit allowance on their own"
+    },
+    "degradation_costs_lead_time_not_correctness": "30-minute capture still clears the frozen 45-minute staleness limit"
+  },
   "eligible_books": [
     "FanDuel",
     "DraftKings",
@@ -43,10 +72,17 @@
     "tiers": [
       {"basis": "bell_at", "applies_to": "any bout", "note": "an actual confirmed bell; audit-grade"},
       {"basis": "previous_bout_completion", "applies_to": "any bout after the first", "note": "exact observations only - never the result scraper's upper bound"},
-      {"basis": "scheduled_first_bout", "applies_to": "the card's FIRST bout only", "note": "the card-level commence time, named for what it is"}
+      {"basis": "scheduled_first_bout", "applies_to": "the card's FIRST bout only", "note": "the card-level commence time, named for what it is"},
+      {"basis": "card_scheduled_start", "applies_to": "any fight on the card", "lead_time": "LOWER BOUND", "note": "Amendment 4. A fight cannot begin before its own card begins, so a quote strictly before the card's scheduled start is verifiably pre-fight for every fight on it. It BOUNDS; it does not guess - which is why it is admissible where the event-date fallback, which invents an instant, is not."}
     ],
-    "inadmissible": ["event_date_fallback", "provider_commence applied to a later bout"],
-    "unknown_running_order": "no admissible reference at all. Without an order there is no 'previous bout' to reason from and no fight can be identified as the card's first. Unscored.",
+    "lead_time": {
+      "exact_bases": ["bell_at", "previous_bout_completion", "scheduled_first_bout"],
+      "lower_bound_bases": ["card_scheduled_start"],
+      "rule": "the lead time to the best-known fight start is retained and reported beside any figure computed from it, and every lower-bound row is marked as such. On a late-card fight a tier-4 proxy may sit hours before the bell and a reader must be able to see that from the row.",
+      "unknown_basis": "neither exact nor bounded - reported as null, never as false, because false would assert the lead time is exact"
+    },
+    "inadmissible": ["event_date_fallback", "provider_commence applied to a later bout as if it named its start"],
+    "unknown_running_order": "no longer disqualifying. Amendment 4's tier 4 bounds every fight on the card regardless of running order. Order still improves the answer - it upgrades bout 1 to tier 3 - but is no longer required to get one.",
     "supersedes": "Amendment 2 (b), which admitted provider_commence for EVERY fight on the card - right for one fight in thirteen and wrong in the expensive direction, since it would mark every quote after the first bell as in-play for all of them",
     "narrowing_not_widening": true
   },
@@ -71,9 +107,10 @@
       "state": "absent - nothing records when a bout ended",
       "why_the_result_scraper_will_not_do": "it yields completion PLUS unknown lag, an upper bound. Used as the next bout's start it would sit too late and admit in-play quotes as that fight's close. fight_bout_completions.is_exact=false marks such rows and v_clv_close_reference ignores them.",
       "cost_to_obtain": "a paid live-data feed or a person entering times during the card - both new standing commitments",
-      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed"
+      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed",
+      "status_after_amendment_4": "still open, but an IMPROVEMENT rather than a prerequisite - it upgrades a later bout from a lower-bound lead time to an exact one"
     },
-    "consequence": "until exact completions exist, only the FIRST bout of each card can be scored - roughly one observation per event against a floor of 100 across 20 distinct events. This is the single biggest fact about the CLV timeline."
+    "consequence_superseded_by_amendment_4": "under Amendment 3 only the FIRST bout of each card was scorable - roughly one observation per event, so 100 observations meant about 100 cards. Tier 4 makes every fight on a card scorable, about 12.5 measured, so the floor becomes bound by the event count: roughly 20 cards."
   },
   "frozen_at": "2026-09-16T10:30:00Z",
   "frozen_by": "Reed Cannon",
@@ -617,6 +654,28 @@
         "c": "actual bout-start time kept as a separate audit field (fights.bell_at), distinct from the capture-time belief (fight_odds.bout_started_at)"
       },
       "output_change": "none yet - zero observations were scorable before and zero after. It corrects a rule that would have been wrong for twelve fights in thirteen once capture began, and it does so before any of those quotes exist.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": 4,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The late pre-fight price proxy: exact start detection stops being a blocker",
+      "kind": "extends Amendment 3 with a fourth tier; nothing in Amendment 3 is withdrawn",
+      "version_before": "1.0.3",
+      "version_after": "1.0.4",
+      "sha256_before": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
+      "sha256_after": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+      "parts": {
+        "a": "tier 4 - the card's scheduled start as a LOWER BOUND on any fight's start. A fight cannot begin before its own card begins, so a quote strictly before it is verifiably pre-fight for every fight on the card. It bounds; it does not guess.",
+        "b": "the benchmark is named the late pre-fight price proxy (long: scheduled/late closing-price proxy) and may never be called the closing line",
+        "c": "lead time to the best-known fight start is retained and reported, and every lower-bound row is marked as such",
+        "d": "h2h captured every 5 minutes through a live card for all remaining fights, every snapshot stored with its exact timestamp, under a hard usage ceiling that keeps CFL inside the existing free API allowance",
+        "e": "previous-bout completion remains useful for event flow and for upgrading a lower bound to an exact lead time, but is no longer a prerequisite for collecting or scoring"
+      },
+      "output_change": "none yet - the publication gate is unchanged and still at 0. It changes how fast observations can accumulate: roughly 1 per card becomes roughly 12.5, and the 100/20 floor becomes bound by the event count at about 20 cards rather than about 100.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }

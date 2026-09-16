@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.3` |
+| version | `1.0.4` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–3 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,6 +336,88 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 4, v1.0.4, 2026-09-16 — the late pre-fight price proxy
+>
+> **Approved by Reed Cannon (L3).** Extends Amendment 3 by adding a fourth tier.
+> Nothing in Amendment 3 is withdrawn.
+>
+> **Exact-to-the-second start detection stops being a blocker.** It was one: under
+> Amendment 3 every tier needed a running order, and the tier that covered later
+> bouts needed exact completion times with no free source. The result was one
+> scorable fight per card and a two-year road to a hundred observations.
+>
+> ### What the benchmark is called
+>
+> It is **not the closing line** and may never be described as one on any
+> surface, in any artifact, or in any summary. It is the **late pre-fight price
+> proxy** — long form, the *scheduled/late closing-price proxy*: the latest quote
+> that can be **verified** to have been taken before the fight started.
+>
+> ### Tier 4 — the card's scheduled start as a bound
+>
+> | tier | basis | lead time |
+> |---|---|---|
+> | 1 | actual confirmed bell | exact |
+> | 2 | the previous bout's exact completion | exact |
+> | 3 | the card's scheduled start, **first bout only** | exact |
+> | 4 | **the card's scheduled start, as a lower bound on any fight's start** | **lower bound** |
+>
+> **A fight cannot begin before its own card begins.** So a quote strictly before
+> the card's scheduled start is verifiably pre-fight for *every* fight on that
+> card — whether or not the running order is known, and whether or not any bout
+> completion was ever recorded.
+>
+> **Tier 4 bounds; it does not guess.** That distinction is the whole reason it
+> is admissible where the event-date fallback is not. The fallback invents an
+> instant (18:00 UTC) that has no relationship to anything. Tier 4 uses a real
+> published time and makes only the claim that time actually supports.
+>
+> **What it gives up is lead time, not correctness.** On the twelfth bout the
+> proxy sits before the card started, which may be hours before that fight's
+> bell. Every tier-4 row is marked `lead_time_is_lower_bound = true`, and the
+> lead time is **retained and reported** beside any figure computed from it.
+> A reader must be able to see, from the row, how late the price actually was.
+>
+> ### Capture: five minutes, under a hard ceiling
+>
+> h2h moneyline is captured **every five minutes** through a live card, for all
+> remaining fights, and **every snapshot is stored with its exact timestamp**.
+> That is what makes "late" true: the last quote before a card's scheduled start
+> is then five minutes old rather than thirty.
+>
+> **Subject to a hard usage ceiling that keeps CFL inside the existing free API
+> allowance.** Measured 2025-01 to 2026-08: 3.7 UFC events a month on average,
+> 6 in the busiest month, 12.5 fights a card. At five-minute cadence one card
+> costs roughly 93 credits, and six cards would exceed a 500-credit allowance on
+> their own. So five minutes is a **target** and the ceiling is a **governor**:
+> before each call the job reads the provider's own remaining-credit header,
+> counts the cards still to come this month, and takes the finest cadence on the
+> ladder 5 → 10 → 15 → 30 that fits. Below a hard floor it stops rather than
+> spending a credit it does not have.
+>
+> Degrading to 30 minutes still clears the frozen 45-minute staleness limit, so
+> the governor costs lead time and never correctness. **No paid tier, ever,
+> without an L3.**
+>
+> ### What previous-bout completion is now for
+>
+> It still improves the answer — it upgrades a later bout from a lower bound to
+> an exact lead time — and it still helps identify event flow. It is **no longer
+> a prerequisite** for collecting or scoring. The open L3 on where completions
+> come from stays open, as an improvement rather than a blocker.
+>
+> ### What this changes about the timeline
+>
+> From roughly **1 scorable observation per card** to roughly **12.5**. The floor
+> of 100 scored observations across 20 distinct events stops being bound by the
+> observation count and becomes bound by the event count: about **20 cards**
+> instead of about 100.
+>
+> The publication gate itself is untouched. It is still 100 and 20 and an
+> interval excluding zero, still fail-closed, still at 0.
+>
+> ---
+>
 > ## AMENDMENT 3, v1.0.3, 2026-09-16 — the event-flow rule
 >
 > **Approved by Reed Cannon (L3).** Supersedes Amendment 2 (b) below, by

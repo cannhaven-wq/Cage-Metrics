@@ -12,11 +12,11 @@ name: Fetch UFC odds
 # Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
 # whole MMA slate.
 #
-# CADENCE (2026-09-16, CLV-001 Amendment 3): wakes every 15 minutes;
+# CADENCE (2026-09-16, CLV-001 Amendments 3 and 4): wakes every 5 minutes;
 # build/fetch-odds.js decides whether the wake is worth a credit BEFORE calling
 # the API (shouldCaptureNow). Three tiers:
 #
-#   * card IN FLOW              -> every 30 minutes
+#   * card IN FLOW              -> every 5 minutes, budget permitting
 #   * a card today or tomorrow  -> hourly
 #   * otherwise                 -> one baseline capture a day at 08:00 UTC
 #
@@ -32,14 +32,27 @@ name: Fetch UFC odds
 # It does not define any fight's closing price — that is the last valid pre-live
 # quote for the upcoming fight, decided in cfl_engine/clv/scoring.py.
 #
-# ~33 credits on a card day, ~286/month, inside the 500 free-tier cap —
-# unchanged by Amendment 3, and build/test-fetch-odds.js asserts the ceiling.
+# THE HARD CEILING (Amendment 4). Five minutes is a TARGET, not a schedule. A
+# card at 5-minute cadence costs ~123 credits, and the measured event rate is
+# 3.7 a month with 6 in the busiest — enough to break a 500-credit allowance
+# outright. So before each call the job reads the provider's own
+# x-requests-remaining header (persisted in odds_api_usage by the previous run),
+# counts the cards still to come this month, reserves the floor cost of each of
+# them, and takes the finest cadence on the ladder 5 -> 10 -> 15 -> 30 that
+# fits. Below a hard floor it stops rather than spending a credit it does not
+# have. An unreadable ledger reads as "tight", never as unlimited.
 #
-# Why 30 minutes and not 60. CLV-001's staleness limit is 45 minutes, and it was
-# derived from a MEASURED 30-minute near-card interval plus 15 minutes of grace.
-# Hourly capture cannot satisfy it: a bell at :59 leaves the freshest quote 59
-# minutes old and the observation goes unscored on a stale price. At 30 minutes
-# the worst case is 29, so the frozen limit is satisfiable by construction.
+# Degrading to 30 minutes still clears the frozen 45-minute staleness limit, so
+# the governor costs LEAD TIME and never correctness. build/test-fetch-odds.js
+# walks months of 1 to 8 cards and asserts none exceeds the allowance.
+#
+# NO PAID TIER, EVER, WITHOUT AN L3.
+#
+# Why never hourly. CLV-001's staleness limit is 45 minutes, derived from a
+# MEASURED 30-minute near-card interval plus 15 minutes of grace. Hourly capture
+# cannot satisfy it — a bell at :59 leaves the freshest quote 59 minutes old and
+# the observation goes unscored on a stale price. Every rung on the ladder is
+# 30 minutes or finer, so the frozen limit is satisfiable by construction.
 # build/test-fetch-odds.js checks that exhaustively, for every bell minute.
 #
 # "A real bell" means start_basis bell_at or provider_commence only. The
@@ -59,10 +72,10 @@ name: Fetch UFC odds
 
 on:
   schedule:
-    # Wake every 15 minutes; build/fetch-odds.js::shouldCaptureNow() decides,
+    # Wake every 5 minutes; build/fetch-odds.js::shouldCaptureNow() decides,
     # before any API call, whether the wake is worth a credit. A quiet wake costs
     # nothing — it queries Supabase and exits.
-    - cron: '*/15 * * * *'
+    - cron: '*/5 * * * *'
   workflow_dispatch:
 
 permissions:

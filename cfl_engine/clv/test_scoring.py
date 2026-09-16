@@ -31,11 +31,13 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from devig import median, power_devig                                # noqa: E402
 from scoring import (                                                # noqa: E402
-    CLOSE_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
-    MIN_BOOKS, PROTOCOL_TAG, PROTOCOL_VERSION, STALENESS_LIMIT_MINUTES,
-    SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored, admissible_reference,
-    canonical_sha256, closing_pairs, consensus, credible_capture_instant,
-    is_eligible_book, score_row,
+    BENCHMARK_NAME, BENCHMARK_NAME_LONG, CLOSE_REFERENCE_BASES,
+    EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
+    LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, PROTOCOL_TAG, PROTOCOL_VERSION,
+    STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
+    admissible_reference, canonical_sha256, closing_pairs, consensus,
+    credible_capture_instant, is_eligible_book, lead_time_minutes,
+    reference_is_lower_bound, score_row,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -79,11 +81,13 @@ def edge(**over):
     return row
 
 
-def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW, **over):
+def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW,
+          basis="bell_at", **over):
     return score_row(edge=edge(**over),
                      quotes=three_books() if quotes is None else quotes,
                      fight=FIGHT if fight is None else fight,
-                     reference_instant=ref, now=now, eligible_book_ids=books)
+                     reference_instant=ref, now=now, eligible_book_ids=books,
+                     reference_basis=basis)
 
 
 # ---------------------------------------------------------------------------
@@ -513,10 +517,89 @@ class TestCloseReference(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_three(self):
+    def test_the_admissible_set_is_the_frozen_four(self):
         self.assertEqual(CLOSE_REFERENCE_BASES,
                          {"bell_at", "previous_bout_completion",
-                          "scheduled_first_bout"})
+                          "scheduled_first_bout", "card_scheduled_start"})
+
+    def test_every_basis_is_either_exact_or_a_lower_bound(self):
+        self.assertEqual(EXACT_REFERENCE_BASES | LOWER_BOUND_REFERENCE_BASES,
+                         CLOSE_REFERENCE_BASES)
+        self.assertTrue(EXACT_REFERENCE_BASES.isdisjoint(LOWER_BOUND_REFERENCE_BASES))
+
+
+class TestLatePreFightProxy(unittest.TestCase):
+    """Amendment 4 — tier 4, the one that stops exact start detection blocking.
+
+    A fight cannot begin before its own card begins, so a quote strictly before
+    the card's scheduled start is verifiably pre-fight for EVERY fight on the
+    card, running order or not. It bounds; it does not guess. What it gives up is
+    lead time, not correctness."""
+
+    def test_a_later_bout_scores_off_the_card_start_with_no_order_known(self):
+        got = score(basis="card_scheduled_start")
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertEqual(got["close_basis"], "card_scheduled_start")
+
+    def test_its_lead_time_is_reported_as_a_lower_bound(self):
+        got = score(basis="card_scheduled_start")
+        self.assertIs(got["lead_time_is_lower_bound"], True,
+                      "on the twelfth bout the real gap to the bell may be hours "
+                      "larger, and the row has to say so")
+
+    def test_an_exact_basis_reports_an_exact_lead_time(self):
+        for basis in ("bell_at", "previous_bout_completion"):
+            with self.subTest(basis=basis):
+                got = score(basis=basis)
+                self.assertTrue(got["scored"], got["reason"])
+                self.assertIs(got["lead_time_is_lower_bound"], False)
+
+    def test_an_unknown_basis_is_neither_exact_nor_bounded(self):
+        self.assertIsNone(reference_is_lower_bound(None),
+                          "None, never False — False would assert the lead time "
+                          "is exact")
+        self.assertIsNone(reference_is_lower_bound("something_new"))
+
+    def test_the_lead_time_is_measured_from_the_latest_contributing_quote(self):
+        """The 'late' in late pre-fight price proxy. A consensus assembled partly
+        from older books must report the lead time it actually has."""
+        got = score(quotes=three_books(at=START - dt.timedelta(minutes=5)))
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertAlmostEqual(got["lead_time_minutes"], 5.0, places=6)
+        self.assertEqual(got["proxy_quoted_at"], START - dt.timedelta(minutes=5))
+
+    def test_five_minute_capture_produces_a_five_minute_lead_time(self):
+        """What Amendment 4's cadence buys: the proxy is minutes old, not half an
+        hour, so 'late pre-fight price' is a fair description of it."""
+        got = score(quotes=three_books(at=START - dt.timedelta(minutes=4)))
+        self.assertLess(got["lead_time_minutes"], 5.0)
+
+    def test_lead_time_needs_both_ends(self):
+        self.assertIsNone(lead_time_minutes(None, START))
+        self.assertIsNone(lead_time_minutes(START, None))
+
+    def test_the_benchmark_is_never_called_the_closing_line(self):
+        for name in (BENCHMARK_NAME, BENCHMARK_NAME_LONG):
+            with self.subTest(name=name):
+                self.assertIn("proxy", name.lower())
+        self.assertNotEqual(BENCHMARK_NAME.lower(), "closing line")
+
+    def test_the_stored_artifact_names_the_benchmark_and_the_basis(self):
+        got = score(basis="card_scheduled_start")
+        self.assertEqual(got["consensus"]["benchmark"], BENCHMARK_NAME)
+        self.assertEqual(got["consensus"]["close_basis"], "card_scheduled_start")
+
+    def test_a_bounded_reference_still_excludes_in_play_quotes(self):
+        """Tier 4 relaxes how the cutoff is ESTABLISHED, never the rule that a
+        quote at or after it is excluded."""
+        got = score(quotes=three_books(at=START), basis="card_scheduled_start")
+        self.assertFalse(got["scored"])
+
+    def test_an_unscored_row_carries_no_lead_time(self):
+        got = score(books=None, basis="card_scheduled_start")
+        self.assertFalse(got["scored"])
+        self.assertIsNone(got["lead_time_minutes"])
+        self.assertIsNone(got["proxy_quoted_at"])
 
 
 class TestTriggerIsNotTheClose(unittest.TestCase):
