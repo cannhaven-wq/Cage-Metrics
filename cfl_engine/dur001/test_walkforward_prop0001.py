@@ -128,31 +128,42 @@ class TestMetrics(unittest.TestCase):
 
 
 class TestGtdBlock(unittest.TestCase):
-    def test_gtd_uses_all_three_hazards(self):
-        pred = pd.DataFrame({
-            "fight_id": [1, 1, 1],
-            "round": [1, 2, 3],
-            "p_hazard": [0.2, 0.2, 0.2],
-            "event": [0, 0, 0],
-        })
-        fdf = pd.DataFrame({"fight_id": [1], "outcome_kind": ["decision"]})
-        out = gtd_block(pred, fdf)
-        self.assertEqual(out["n_fights"], 1)
-        self.assertAlmostEqual(out["pred_gtd_rate"], round(0.8 ** 3, 4), places=4)
-        self.assertEqual(out["actual_gtd_rate"], 1.0)
+    """gtd_block takes FIGHT-level predictions, one row per scored fight."""
 
-    def test_fight_without_all_three_rounds_is_skipped(self):
-        """A fight finished in round 1 has no r2/r3 hazard row, so it cannot
-        contribute a goes-the-distance probability."""
-        pred = pd.DataFrame({"fight_id": [1], "round": [1],
-                             "p_hazard": [0.5], "event": [1]})
+    def test_rates_come_from_the_fight_level_frame(self):
+        fight_pred = pd.DataFrame({"fight_id": [1, 2], "p_gtd": [0.512, 0.488]})
+        fdf = pd.DataFrame({"fight_id": [1, 2], "outcome_kind": ["decision", "finish"]})
+        out = gtd_block(fight_pred, fdf)
+        self.assertEqual(out["n_fights"], 2)
+        self.assertAlmostEqual(out["pred_gtd_rate"], 0.5, places=4)
+        self.assertAlmostEqual(out["actual_gtd_rate"], 0.5, places=4)
+
+    def test_every_scored_fight_counts_including_early_finishes(self):
+        """The regression this guards: a fight finished in round 1 has no r2/r3
+        person-period row, so an implementation that rebuilt P(GTD) from those
+        rows would drop it and report a goes-the-distance rate near 1."""
+        fight_pred = pd.DataFrame({"fight_id": [1, 2, 3, 4],
+                                   "p_gtd": [0.5, 0.5, 0.5, 0.5]})
+        fdf = pd.DataFrame({
+            "fight_id": [1, 2, 3, 4],
+            "outcome_kind": ["finish", "finish", "finish", "decision"],
+        })
+        out = gtd_block(fight_pred, fdf)
+        self.assertEqual(out["n_fights"], 4, "early finishes must not be dropped")
+        self.assertAlmostEqual(out["actual_gtd_rate"], 0.25, places=4)
+
+    def test_only_decisions_count_as_going_the_distance(self):
+        fight_pred = pd.DataFrame({"fight_id": [1], "p_gtd": [0.5]})
         fdf = pd.DataFrame({"fight_id": [1], "outcome_kind": ["finish"]})
-        self.assertEqual(gtd_block(pred, fdf)["n_fights"], 0)
+        self.assertEqual(gtd_block(fight_pred, fdf)["actual_gtd_rate"], 0.0)
 
     def test_empty_input(self):
-        out = gtd_block(pd.DataFrame(columns=["fight_id", "round", "p_hazard", "event"]),
+        out = gtd_block(pd.DataFrame(columns=["fight_id", "p_gtd"]),
                         pd.DataFrame(columns=["fight_id", "outcome_kind"]))
         self.assertEqual(out["n_fights"], 0)
+
+    def test_none_input(self):
+        self.assertEqual(gtd_block(None, pd.DataFrame())["n_fights"], 0)
 
 
 class TestHarnessComparison(unittest.TestCase):

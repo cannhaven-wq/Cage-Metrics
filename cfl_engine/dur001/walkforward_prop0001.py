@@ -164,8 +164,18 @@ def calibration_table(y, p, bins: int = 10):
 
 # ------------------------------------------------------------------ the walk
 def run_walkforward(pp, fdf, cov, phi, folds, log=print):
-    """Fit on everything before each fold, score the fold. Returns per-row preds."""
-    preds, fold_meta = [], []
+    """Fit on everything before each fold, score the fold.
+
+    Returns (person-period predictions, fight-level predictions, fold metadata).
+
+    The fight-level frame is built with `fight_distribution`, which evaluates the
+    fight's covariate row at r1, r2 and r3 regardless of how far the fight
+    actually went. It cannot be reconstructed from the person-period rows: those
+    stop at the round the fight reached, so a fight finished in round 1 has no r2
+    or r3 hazard. Deriving P(goes the distance) from them would silently keep
+    only fights that reached round 3 and report a goes-the-distance rate near 1.
+    """
+    preds, fight_preds, fold_meta = [], [], []
     for k, (lo, hi) in enumerate(folds):
         train = pp[pp.event_date < lo]
         test = pp[(pp.event_date >= lo) & (pp.event_date < hi)]
@@ -185,6 +195,14 @@ def run_walkforward(pp, fdf, cov, phi, folds, log=print):
             "event_date": test.event_date.to_numpy(), "round": test["round"].to_numpy(),
             "event": test["event"].to_numpy(), "p_hazard": h, "p_const": base_rate,
         }))
+
+        # one row per test fight, hazards evaluated at all three rounds
+        tf = test.drop_duplicates(subset="fight_id")
+        dist = model.fight_distribution(tf[["fight_id"] + cov], calibrated=True)
+        fight_preds.append(pd.DataFrame({
+            "fold": k, "fight_id": dist["fight_id"].to_numpy(),
+            "p_gtd": dist["p_decision"].to_numpy(),
+        }))
         fold_meta.append({
             "fold": k, "start": str(lo.date()), "end": str(hi.date()),
             "n_train_fights": meta["n_train_fights"], "n_train_rows": meta["n_train_rows"],
@@ -200,22 +218,23 @@ def run_walkforward(pp, fdf, cov, phi, folds, log=print):
 
     if not preds:
         sys.exit("no scorable folds — check --start / --end against the data range.")
-    return pd.concat(preds, ignore_index=True), fold_meta
+    return (pd.concat(preds, ignore_index=True),
+            pd.concat(fight_preds, ignore_index=True),
+            fold_meta)
 
 
-def gtd_block(pred: pd.DataFrame, fdf: pd.DataFrame):
-    """Fight-level goes-the-distance calibration, from the per-round hazards."""
-    rows = []
-    for fid, g in pred.groupby("fight_id"):
-        g = g.sort_values("round")
-        h = dict(zip(g["round"].astype(int), g["p_hazard"]))
-        if not {1, 2, 3} <= set(h):
-            continue        # a fight that ended early contributes no r2/r3 hazard row
-        p_gtd = (1 - h[1]) * (1 - h[2]) * (1 - h[3])
-        rows.append({"fight_id": fid, "p_gtd": p_gtd})
-    if not rows:
+def gtd_block(fight_pred: pd.DataFrame, fdf: pd.DataFrame):
+    """Fight-level goes-the-distance calibration.
+
+    Takes the fight-level predictions produced by `run_walkforward` (one row per
+    scored fight, P(GTD) evaluated at all three rounds). Do NOT rebuild this from
+    the person-period frame: those rows stop at the round each fight reached, so
+    requiring r1/r2/r3 keeps only fights that went to round 3 and reports an
+    actual goes-the-distance rate near 1.
+    """
+    if fight_pred is None or len(fight_pred) == 0:
         return {"n_fights": 0}
-    g = pd.DataFrame(rows).merge(
+    g = fight_pred.merge(
         fdf[["fight_id", "outcome_kind"]].drop_duplicates("fight_id"),
         on="fight_id", how="left")
     g["y_gtd"] = (g["outcome_kind"] == "decision").astype(float)
@@ -299,7 +318,7 @@ def main() -> None:
              if args.mode == "block" else event_folds(fdf, start, end))
     print(f"[wf] {args.mode} mode: {len(folds)} candidate fold(s)")
 
-    pred, fold_meta = run_walkforward(pp, fdf, cov, phi, folds)
+    pred, fight_pred, fold_meta = run_walkforward(pp, fdf, cov, phi, folds)
 
     pooled = {
         "n_test_rows": int(len(pred)),
@@ -331,7 +350,7 @@ def main() -> None:
         "n_covariates": len(cov),
         "phi": {str(k): round(v, 6) for k, v in phi.items()},
         "pooled": pooled,
-        "gtd": gtd_block(pred, fdf),
+        "gtd": gtd_block(fight_pred, fdf),
         "calibration_table": cal_tbl,
         "harness_comparison": compare_to_harness(pooled),
         "predictions_path": os.path.relpath(pred_path, REPO),

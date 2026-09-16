@@ -169,14 +169,87 @@ omitted.
 
 ---
 
+## The walk-forward ran — and it DIFFERS
+
+Block mode, 2018-01-01, 18 folds, 9,129 test rows.
+
+```
+harness_comparison: DIFFERS
+  n_folds             18       vs 18       ok
+  n_test_rows         9129     vs 9030     DIFF
+  n_calibrated_folds  18       vs 16       DIFF
+  model_logloss       0.5180   vs 0.5037   DIFF
+  const_logloss       0.5181   vs 0.5082   DIFF
+  model_brier         0.1639   vs 0.1615   DIFF
+  const_brier         0.1677   vs 0.1643   DIFF
+  cal_max_abs_dev     0.0544   vs 0.0240   DIFF
+```
+
+`predictions_sha256 = 31180eee629b31a6232e2b20f88203cfed3bde8e998b4e5a29f0d104138ee92b`
+
+Per the brief, this step **stopped there and changed nothing** to chase a match.
+`out_real/` is gitignored and not committed.
+
+### What the difference is probably not
+
+The fight-level goes-the-distance block lands almost exactly on the frozen one:
+
+| | reproduced | frozen |
+|---|---|---|
+| `pred_gtd_rate` | 0.5131 | 0.5134 |
+| `actual_gtd_rate` | 0.5046 | 0.5077 |
+| `gtd_brier` | 0.2425 | 0.2402 |
+| `n_fights` | 3,926 | 3,876 |
+
+A predicted goes-the-distance rate agreeing to three decimals says the feature
+build, the point-in-time panel and the fitted model are reproducing. The
+divergence is downstream of that, in how the per-round hazards are **calibrated**.
+
+### Leading hypothesis — two different calibration recipes
+
+`n_calibrated_folds` is 18 here and 16 in the frozen report, and that gap is the
+tell. This harness calls `fit_prop0001`, whose frozen recipe fits isotonic on
+the **trailing 365 days** — which is always non-empty, so every fold calibrates.
+The repo's other walk-forward, `cfl_engine/train.py`, documents a different
+convention:
+
+> The isotonic calibrator for fold k is fit only on out-of-sample predictions
+> from folds < k. Same for the market-blend logistic regression.
+> …Fold 0 stays raw.
+
+Under that scheme the earliest folds have no calibrator, which is exactly how
+you get 16 of 18. If the gate report was produced by a harness using that
+convention, the two were never going to agree.
+
+If that holds, it is worth knowing on its own: **`walkforward_report.json` would
+not be a validation of the calibration recipe the locks actually use.** The
+locks call `fit_prop0001`; the gate appears not to have.
+
+A second, smaller contributor: this run's data ends 2026-08-30 and the gate is
+dated 2026-08-06, which accounts for extra rows in the final fold (+99 overall).
+
+Both are hypotheses. The generator for the frozen report is not in the
+repository, so neither can be confirmed from here, and nothing was changed on
+either side.
+
+### Event mode was not run
+
+The brief gates it on block mode matching first. It did not, so it was not run.
+
 ## Not done, and why
 
 | step | status |
 |---|---|
-| Steps 7–8 — walk-forward run, alert dry-run | **not run.** `SUPABASE_URL` / `SUPABASE_SECRET_KEY` / `SUPABASE_ACCESS_TOKEN` are unset in this container. The code is here and tested; the runs need credentials. |
+| Step 7 event mode | not run — gated on block mode matching |
+| Step 8 — alert dry-run | **not run.** `SUPABASE_ACCESS_TOKEN` is unset in this container. The code is here and tested against 25 unit tests. |
 
-The audit's read-only SQL was done through the Supabase MCP connection, which is
-read-only SELECTs and does not supply the env vars those two scripts need.
+`SUPABASE_URL` / `SUPABASE_SECRET_KEY` / `SUPABASE_ACCESS_TOKEN` are all unset
+here, so the audit's read-only SQL and the walk-forward's input both came
+through the Supabase MCP connection instead (read-only SELECTs). The data was
+exported to `data/exports/` filtered to `event_date < 2026-09-01`, which
+excludes UFC 331 entirely — the latest event in the export is 2026-08-29. That
+export is a filtered subset and is **not committed**; the export workflow
+produces the full one.
 
 ## Waiting on Reed
 
