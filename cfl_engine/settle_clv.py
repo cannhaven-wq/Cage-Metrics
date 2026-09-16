@@ -517,10 +517,11 @@ def _capture_capabilities(base_url: str, key: str) -> dict:
     detail.setdefault(
         "bout_completions_captured",
         "exact bout completions on file" if cond["bout_completions_captured"] else
-        "no exact bout completions. Until there are, only bout 1 of a card can "
-        "be scored — roughly one observation per event against a floor of 100 "
-        "across 20. Acquiring them needs a paid live feed or manual entry, which "
-        "is an L3 call.")
+        "no exact bout completions. Under Amendment 5 these ARE the scoring "
+        "cutoff for bouts 2..N, so without them only bout 1 of a card scores — "
+        "roughly one observation per event against a floor of 100 across 20. "
+        "Acquiring them needs a live feed or manual entry, which is an L3 call "
+        "and is now the highest-leverage open item.")
     return {"conditions": cond, "detail": detail}
 
 
@@ -582,7 +583,8 @@ def clv001_main(write: bool) -> None:
             edge=r, quotes=quotes.get(r["fight_id"], []), fight=fight,
             reference_instant=fight.get("start_at"), now=now,
             eligible_book_ids=eligible_book_ids,
-            reference_basis=fight.get("start_basis")))
+            reference_basis=fight.get("start_basis"),
+            is_first_bout=fight.get("is_first_bout")))
 
     _report_clv001(results)
 
@@ -671,7 +673,7 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
             refs = fetch_all(base_url, key, "v_clv_close_reference",
                              f"select=fight_id,reference_at,reference_basis,"
                              f"bout_order,is_first_bout,actual_bell_at,"
-                             f"window_opens_at"
+                             f"prev_bout_completed_at"
                              f"&fight_id=in.({ids})")
         except Exception as e:                  # noqa: BLE001 - unknown is failed
             print(f"  note: v_clv_close_reference unavailable ({e}) — every row "
@@ -689,10 +691,10 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
             # field records when the fight actually began, which stays
             # comparable even if the reference tier later changes.
             f["actual_bell_at"] = _iso(s.get("actual_bell_at"))
-            # The OPENER. Carried for provenance and never used as a cutoff —
-            # scoring against it would select a price quoted while the previous
-            # bout was still being fought (Amendment 4.2).
-            f["window_opens_at"] = _iso(s.get("window_opens_at"))
+            # When the bout before this one ended. Under Amendment 5 this IS the
+            # cutoff for bouts 2..N; carried separately so a future protocol
+            # version with real bell times can still see where the window opened.
+            f["window_opens_at"] = _iso(s.get("prev_bout_completed_at"))
             f["start_at"] = admissible_reference(_iso(s.get("reference_at")),
                                                  s.get("reference_basis"),
                                                  s.get("is_first_bout"))

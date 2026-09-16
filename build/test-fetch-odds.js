@@ -29,6 +29,7 @@ const {
   buildMoneylineRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
   planLiveCadence, minutesRemainingInCard, wantTotals,
+  spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
   MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, CREDIT_RESERVE, LIVE_CADENCE_LADDER,
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
@@ -677,4 +678,66 @@ test('a clamped quota cannot buy a finer cadence than the real allowance would',
     creditsRemaining: MONTHLY_CREDIT_CAP,
     cardsRemaining: 1, minutesRemainingInCard: 600 });
   assert.strictEqual(inflated, honest);
+});
+
+// ---------------------------------------------------------------------------
+// The monthly allowance must actually DECLINE (Amendment 5, fix 1)
+// ---------------------------------------------------------------------------
+// The bug: clamping a large provider balance to 500 on every run made the budget
+// read 500 every time. It never declined, the governor never degraded, and the
+// ceiling was decorative. Our own month-to-date count is the authoritative side
+// precisely because nothing upstream can reset it.
+
+test('month-to-date spend sums what each call actually cost', () => {
+  assert.strictEqual(spentThisMonth([]), 0);
+  assert.strictEqual(spentThisMonth([{ credits_charged: 1 }]), 1);
+  assert.strictEqual(
+    spentThisMonth([{ credits_charged: 2 }, { credits_charged: 1 }]), 3,
+    'h2h+totals costs two credits, h2h alone one');
+  assert.strictEqual(spentThisMonth([{}, {}]), 2,
+    'a row with no recorded charge counts as one, never as zero');
+});
+
+test('a huge provider balance no longer resets the budget', () => {
+  // The exact regression. Nineteen thousand credits upstream, three spent by us.
+  const ledger = [{ credits_charged: 2, requests_remaining: 19500 },
+                  { credits_charged: 1, requests_remaining: 19502 }];
+  assert.strictEqual(remainingCredits(ledger, 19500), MONTHLY_CREDIT_CAP - 3,
+    'the balance must reflect OUR spend, not the provider\'s generosity');
+});
+
+test('the budget declines monotonically as calls accumulate', () => {
+  const ledger = [];
+  let previous = remainingCredits(ledger, 19500);
+  for (let call = 0; call < 40; call++) {
+    ledger.push({ credits_charged: 1, requests_remaining: 19500 });
+    const now = remainingCredits(ledger, 19500);
+    assert.ok(now < previous,
+      `after ${call + 1} calls the balance did not fall (${previous} -> ${now})`);
+    previous = now;
+  }
+  assert.strictEqual(previous, MONTHLY_CREDIT_CAP - 40);
+});
+
+test('a provider balance TIGHTER than our count is believed', () => {
+  const ledger = [{ credits_charged: 1, requests_remaining: 12 }];
+  assert.strictEqual(remainingCredits(ledger, 12), 12,
+    'the provider catches calls we made but failed to log; the smaller of the ' +
+    'two accounts always wins');
+});
+
+test('with no provider reading our own count still governs', () => {
+  const ledger = [{ credits_charged: 2 }, { credits_charged: 2 }];
+  assert.strictEqual(remainingCredits(ledger, undefined), MONTHLY_CREDIT_CAP - 4);
+});
+
+test('a spent-out month reaches the STOP condition through our own count alone', () => {
+  const ledger = Array.from({ length: MONTHLY_CREDIT_CAP }, () => ({ credits_charged: 1 }));
+  const remaining = remainingCredits(ledger, 19500);
+  assert.strictEqual(remaining, 0);
+  assert.strictEqual(
+    planLiveCadence({ creditsRemaining: remaining, cardsRemaining: 1,
+                      minutesRemainingInCard: 60 }), null,
+    'an exhausted allowance must stop capture even while the provider would ' +
+    'happily sell more');
 });

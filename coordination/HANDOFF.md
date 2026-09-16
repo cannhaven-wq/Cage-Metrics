@@ -11,6 +11,137 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.7: the operational cutoff frozen, plus four implementation fixes
+
+**From:** Claude
+**To:** Reed → ChatGPT review
+**Date:** 2026-09-16
+
+**No migration applied.** All three remain proposed and unapplied.
+
+### Amendment 5 — the operational cutoff, frozen
+
+| | cutoff |
+|---|---|
+| bout 1 | the card's **scheduled start time** |
+| bouts 2..N | the **exact completion of the immediately previous bout** |
+| any bout with a confirmed bell | the **bell**, which outranks both |
+
+Scored price = the latest eligible sportsbook snapshot **strictly before** that
+cutoff.
+
+This **supersedes Amendment 4.2**, which refused this cutoff because it precedes
+the bell — and in doing so refused to score anything at all. Previous-bout
+completion now has both its roles: this version's **scoring cutoff** and the
+**capture trigger**. All "opener only, never a cutoff" language is gone from the
+code, the view, the migrations and the protocol.
+
+Named the **CFL closing-price proxy** (long form *late pre-fight closing-price
+proxy*), never the exact sportsbook closing line. For later bouts it sits several
+minutes before the bell; `clv_lead_time_is_lower_bound` marks exactly those rows
+rather than hiding the gap.
+
+Every scored observation preserves cutoff timestamp, cutoff basis, selected quote
+timestamp, lead time to cutoff, source quote IDs and consensus provenance, and
+protocol version — and the storage constraint requires all of them, so a figure
+missing any is not writable. Reliable bell timestamps would be a **new protocol
+version**; rows scored under this one are never reinterpreted.
+
+### Fix 1 — the budget now actually declines
+
+The real bug, and it was worse than cosmetic: clamping a 19,500-credit provider
+balance to 500 on **every run** made the budget read 500 every time. It never
+declined, the governor never degraded, and the ceiling was decorative.
+
+Month-to-date spend is now the **sum of `odds_api_usage.credits_charged`** for
+the current month — our own count, which nothing upstream can reset. The
+provider's header is a cross-check and is believed only when **smaller** (it
+catches calls we made but failed to log). The clamp stays as the second half.
+
+A regression test pushes 40 calls through a 19,500-credit balance and asserts the
+balance falls on every single one; another asserts a spent-out month reaches STOP
+through our own count alone.
+
+The 500 free allowance stays the ceiling. No paid tier assumed or enabled.
+
+### Fix 2 — the migrations are genuinely re-runnable
+
+Three files claimed idempotency while containing **13 bare `ADD CONSTRAINT`
+statements**, each of which errors on a second run — so a routine re-apply would
+have half-applied. All 13 are now wrapped in `DO` blocks that check
+`pg_constraint` first. `tests/test_migrations_idempotent.py` (8 tests) enforces
+it, including a check that a file *claiming* idempotency actually is, so the
+claim and the reality cannot drift apart again.
+
+One constraint was removed rather than guarded:
+`model_edges_clv_window_opens_before_it_closes` asserted an ordering that
+Amendment 5 inverts. `clv_lead_time_positive` already encodes the ordering that
+matters.
+
+### Fixes 3–5 — preserved
+
+Append-only protections on all three ledgers are intact and now have their own
+tests. Publication stays fail-closed at 0 of 100 / 0 of 20. Naming is the CFL
+closing-price proxy throughout.
+
+### Files changed
+
+| file | what |
+|---|---|
+| `cfl_engine/clv/scoring.py` | Amendment 5 cutoff set, `PRECEDES_BELL_BASES`, new unscored reason, v1.0.7 |
+| `cfl_engine/clv/test_scoring.py` | cutoff/lead-time/provenance tests rewritten |
+| `cfl_engine/settle_clv.py` | `is_first_bout` threaded through; preflight text; `prev_bout_completed_at` |
+| `build/fetch-odds.js` | `spentThisMonth`, `remainingCredits`, `credits_charged` recording |
+| `build/test-fetch-odds.js` | 6 credit-accounting regression tests |
+| `research/clv/CLV_MEASUREMENT_PROTOCOL.md` | Amendment 5; v1.0.7 |
+| `research/clv/protocol.json` | amendment chain, benchmark naming, accounting note |
+| `research/clv/proposed_2026-09-16_event_flow.sql` | view cutoff, `credits_charged`, DO blocks |
+| `research/clv/proposed_2026-09-16_clv001_columns.sql` | basis vocabulary, constraints, DO blocks |
+| `research/clv/proposed_2026-09-16_fight_odds_capture.sql` | DO blocks |
+| `tests/test_migrations_idempotent.py` | **new** — 8 tests |
+| `coordination/STATE.md`, `coordination/HANDOFF.md` | this |
+
+### Tests
+
+| suite | result |
+|---|---|
+| `tests/` (repo, incl. new migration tests) | **102 passed**, 3 skipped |
+| `cfl_engine/clv/` (scoring + devig) | **111 passed** |
+| `build/test-fetch-odds.js` (Node) | **60 passed** |
+
+All green. Protocol hash chain verified across 7 amendments; publication gate
+confirmed shut.
+
+### Remaining blockers
+
+1. **Exact bout completions have no source.** Under Amendment 5 these are the
+   *scoring cutoff* for bouts 2..N, not just a trigger — so they are now the
+   difference between ~1 and ~12.5 observations per card. This is the single
+   highest-leverage open item.
+2. **Running order is not captured.** Free to fix (ufcstats lists cards in
+   order); without it no fight is identifiable as bout 1 and no bout has a
+   "previous" one, so nothing scores at all.
+3. **Nothing is applied.** Migrations wait on Reed. The 5-minute cadence starts
+   when the event-flow migration lands, since `odds_api_usage` lives there.
+
+### New L3 decisions required
+
+**One, and it is the same one, now sharper:** where exact bout completion times
+come from. Under Amendment 5 they are load-bearing for the metric rather than an
+accuracy improvement. Options and costs are in
+`research/clv/L3_ESCALATION_2026-09-16_bout_completions.md` — nothing has been
+bought, priced or enabled. No other L3 is raised by this change; the Odds API
+allowance is unchanged at the free 500.
+
+## Next action
+
+**ChatGPT:** review Amendment 5 and the four fixes.
+
+**Reed, after that:** apply in order — `..._fight_odds_capture.sql`,
+`..._event_flow.sql`, `..._clv001_columns.sql`.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.6: an opener is not a cutoff, and the allowance is hard-coded
 
 **From:** Claude
@@ -209,122 +340,6 @@ The 5-minute cadence starts when that migration lands.
 
 The open L3 is unchanged: exact bout completions have no free source, and they
 are now what makes bouts 2..N scorable at all.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.4: the late pre-fight price proxy, and a credit governor
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-### The timeline just moved from ~100 cards to ~20
-
-That is what your decision bought, and it is worth putting first.
-
-Tier 4 is the card's scheduled start used as a **lower bound**: a fight cannot
-begin before its own card begins, so the last quote before the card's scheduled
-start is **verifiably pre-fight for every fight on that card** — no running
-order, no completion times, nothing new captured.
-
-| | before | after |
-|---|---|---|
-| scorable observations per card | ~1 | ~12.5 (measured) |
-| cards to reach 100 observations | ~100 | ~8 |
-| cards to reach 20 distinct events | 20 | 20 |
-| binding constraint | observation count | **event count** |
-
-**Tier 4 bounds; it does not guess.** That is the line that keeps it admissible
-where the event-date fallback is not. The fallback invents 18:00 UTC. Tier 4
-uses a real published time and makes only the claim that time supports.
-
-### Naming, as you specified
-
-`BENCHMARK_NAME = "late pre-fight price proxy"`, long form *scheduled/late
-closing-price proxy*. **Never "the closing line"** — there is a test asserting
-the string contains "proxy", and the stored consensus artifact carries the name
-so a row can never be read as something it is not.
-
-Every scored row now carries `clv_close_basis`, `clv_lead_time_minutes`,
-`clv_lead_time_is_lower_bound` and `clv_proxy_quoted_at`, and the migration's
-completeness constraint **requires all four on a scored row**. A CLV figure
-without its lead time is not writable, by construction. `lead_time_is_lower_bound`
-is `null` when the basis is unknown — never `false`, which would assert the lead
-time is exact.
-
-### Five-minute capture, and the ceiling that makes it safe
-
-The cron is now `*/5`. Every snapshot is stored with its exact timestamp.
-
-**I need to flag the arithmetic, because it does not fit naively.** A card at
-5-minute cadence costs ~123 credits. Measured event rate is 3.7 a month with 6 in
-the busiest month observed. Six cards at 5 minutes plus daily baselines is well
-past a 500-credit allowance — so a fixed 5-minute schedule would have broken the
-free tier, silently, in a busy month.
-
-So five minutes is the **target** and the ceiling is a **governor**: before each
-call the job reads the provider's own `x-requests-remaining` header (persisted in
-a new `odds_api_usage` ledger, because each Actions run is a fresh process),
-counts the cards still to come this month, reserves each one's floor cost, and
-takes the finest rung of 5 → 10 → 15 → 30 that fits. Below a hard floor it stops
-rather than spending a credit that does not exist.
-
-Two things I got wrong first and fixed, both caught by the month-walk test:
-
-- dividing the balance evenly by cards remaining let the early cards of a busy
-  month spend generously and left the last one short — it went **8 credits over**;
-  now each card reserves the floor cost of every card after it;
-- the projection counted only flow calls and not the card day's hourly tail,
-  understating a card by ~15 — four cards' worth of that is a blown allowance.
-
-The reserve is 75, not 45: walked across months of 1 to 8 cards, 45 goes over at
-seven cards and 75 leaves a worst case of +19. The test asserts every month shape
-from 1 to 8 cards fits.
-
-**`FORCE` overrides the cadence, never the ceiling.** A hand-fired run was
-bypassing the budget entirely — my gap, now closed. It can ignore the beat so a
-manual check is never a silent skip; it cannot spend past the floor.
-
-**Totals no longer ride every call.** They cost a second credit each time, which
-at 5-minute cadence would double a card's bill. Capped at one totals call per 30
-minutes — exactly the density DUR-001 already had, never less.
-
-Degrading to 30 minutes still clears the frozen 45-minute staleness limit. **The
-governor costs lead time and never correctness.** No paid tier, no incremental
-cost, nothing bought or enabled.
-
-### Previous-bout completion, as you framed it
-
-Still useful, no longer required. It upgrades a later bout from a lower-bound
-lead time to an exact one, and it still identifies event flow for the capture
-window. The L3 doc is updated: **resolved as a blocker, open as an improvement.**
-Doing nothing now costs precision, not the metric.
-
-### What is still true
-
-Publication untouched and fail-closed — 100 observations, 20 distinct events,
-interval excluding zero, currently 0 and 0. Amendment 4 changes how fast
-observations accumulate, never whether one may be shown.
-
-Three migrations written, **none applied**. All additive-only. None touches
-`v_fight_start_best`, which is in a frozen file serving DUR-001.
-
-Tests: 105 CLV Python, 94 repo Python, 44 Node. All green.
-
-## Next action
-
-**Reed:** apply the migrations in order —
-`proposed_2026-09-16_fight_odds_capture.sql`, then
-`proposed_2026-09-16_event_flow.sql`. The second one creates `odds_api_usage`,
-and until it exists the governor reads the budget as unknown and holds the
-cadence at 30 minutes. That is safe but it is not what you asked for, so the
-5-minute cadence only starts once that migration lands.
-
-`proposed_2026-09-16_clv001_columns.sql` stays last, for after the first card is
-captured.
-
-I have not applied any migration, called The Odds API, written to Supabase, or
-enabled any paid service.
 
 ---
 

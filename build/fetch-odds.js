@@ -414,45 +414,69 @@ function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
 // yields null, which planLiveCadence treats as tight rather than unlimited.
 // A provider quota larger than the approved free allowance means somebody has a
 // paid plan attached — deliberately or by a provider promotion. Either way it is
-// NOT permission for this job to spend more: the extra credits are money, and
-// money is L3. Clamp, say so loudly, and carry on inside the approved ceiling.
+// NOT permission for this job to spend more.
+//
+// Clamping ALONE was a bug, and it is the one this rewrite fixes. Clamping a
+// 19,500-credit balance to 500 on every run makes the budget read 500 every
+// time: it never declines, the governor never degrades, and the ceiling is
+// decorative. The clamp is now only the second half of the answer — the first is
+// `spentThisMonth`, our own count, which nothing upstream can reset.
 function clampToFreeAllowance(remaining) {
   if (!Number.isFinite(remaining)) return undefined;
   if (remaining > MONTHLY_CREDIT_CAP) {
     console.warn(`[budget] the provider reports ${remaining} credits remaining, ` +
-      `above the approved free allowance of ${MONTHLY_CREDIT_CAP}. Treating the ` +
-      `balance as ${MONTHLY_CREDIT_CAP}. A larger quota is not authorisation to ` +
-      `spend more — raising the ceiling is an L3 decision.`);
+      `above the approved free allowance of ${MONTHLY_CREDIT_CAP}. A larger quota ` +
+      `is not authorisation to spend more — raising the ceiling is an L3 ` +
+      `decision. Using our own month-to-date count instead.`);
     return MONTHLY_CREDIT_CAP;
   }
   return remaining;
 }
 
+// What WE have spent this month, counted from our own append-only ledger. One
+// row per API call, each carrying what that call cost (h2h alone is 1 credit;
+// h2h+totals is 2).
+//
+// This is the authoritative side of the budget, precisely because it cannot be
+// reset from outside. The provider's remaining-balance header is a cross-check
+// and is believed only when it is SMALLER — it catches calls we made but failed
+// to log, while never handing us headroom our own count says we have spent.
+function spentThisMonth(rows) {
+  return (rows || []).reduce(
+    (total, r) => total + (Number(r.credits_charged) || 1), 0);
+}
+
+// The budget the governor plans against: whichever of the two accounts is
+// tighter.
+function remainingCredits(ledgerRows, providerRemaining) {
+  const byOurCount = MONTHLY_CREDIT_CAP - spentThisMonth(ledgerRows);
+  const clamped = clampToFreeAllowance(providerRemaining);
+  if (!Number.isFinite(clamped)) return byOurCount;
+  return Math.min(byOurCount, clamped);
+}
+
 async function readCreditBudget(now) {
-  const { data, error } = await sb
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString();
+
+  // Every call WE made this month, with what each cost. The provider resets the
+  // allowance monthly, so the window starts at the first of the month.
+  const { data: rows, error } = await sb
     .from('odds_api_usage')
-    .select('requests_remaining, observed_at')
-    .order('observed_at', { ascending: false })
-    .limit(1);
+    .select('credits_charged, requests_remaining, observed_at')
+    .gte('observed_at', monthStart)
+    .order('observed_at', { ascending: false });
   if (error) {
     console.warn(`[budget] odds_api_usage unavailable (${error.message}) — ` +
       `treating the budget as unknown, which means tight. Apply ` +
       `research/clv/proposed_2026-09-16_event_flow.sql.`);
-    return { creditsRemaining: undefined, cardsRemaining: 1 };
+    return { creditsRemaining: undefined, cardsRemaining: 1, spent: undefined };
   }
-  const last = (data || [])[0];
 
-  // The provider resets the allowance monthly. A reading from a previous month
-  // tells us nothing about this one, so it is discarded rather than trusted.
-  let creditsRemaining;
-  if (last && last.observed_at &&
-      last.observed_at.slice(0, 7) === now.toISOString().slice(0, 7)) {
-    creditsRemaining = clampToFreeAllowance(Number(last.requests_remaining));
-  } else if (last) {
-    console.log('[budget] last usage reading is from a previous month — the ' +
-      'allowance has reset; assuming a full cap until this month\'s first call.');
-    creditsRemaining = MONTHLY_CREDIT_CAP;
-  }
+  const spent = spentThisMonth(rows);
+  const providerRemaining = rows && rows.length
+    ? Number(rows[0].requests_remaining) : undefined;
+  const creditsRemaining = remainingCredits(rows, providerRemaining);
 
   // How many cards still have to be paid for out of what is left.
   const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
@@ -464,20 +488,28 @@ async function readCreditBudget(now) {
     .lte('event_date', monthEnd);
   const cardsRemaining = Math.max(1, (rest || []).length);
 
-  return { creditsRemaining, cardsRemaining };
+  return { creditsRemaining, cardsRemaining, spent };
 }
 
 // Record what the provider says we have left. Append-only; a failure here must
 // never take the capture down, but it does mean the next run flies blind and
 // therefore conservatively.
-async function recordCreditUsage(used, remaining) {
-  if (remaining == null) return;
+async function recordCreditUsage(used, remaining, creditsCharged) {
   const { error } = await sb.from('odds_api_usage').insert([{
     requests_used: used == null ? null : Number(used),
-    requests_remaining: Number(remaining),
+    requests_remaining: remaining == null ? null : Number(remaining),
+    credits_charged: creditsCharged,
     observed_at: new Date().toISOString(),
   }]);
-  if (error) console.warn(`[budget] could not record usage: ${error.message}`);
+  // A failed write means this call is invisible to the next run's count, which
+  // would UNDER-state the month's spend. Loud, because the ledger is the
+  // authoritative side of the budget.
+  if (error) {
+    console.error(`[budget] could not record usage (${error.message}) — this ` +
+      `call will not be counted against the month's allowance. The provider's ` +
+      `own remaining balance is the only backstop until the next successful ` +
+      `write.`);
+  }
 }
 
 async function shouldSpendCredit(candidateFights) {
@@ -486,7 +518,7 @@ async function shouldSpendCredit(candidateFights) {
     // FORCE overrides the CADENCE, never the CEILING. A hand-fired run is
     // allowed to ignore the beat so "is this thing on?" is never a silent skip;
     // it is not allowed to spend a credit the allowance does not have.
-    const { creditsRemaining } = await readCreditBudget(now);
+    const { creditsRemaining, spent } = await readCreditBudget(now);
     if (Number.isFinite(creditsRemaining) && creditsRemaining <= CREDIT_HARD_FLOOR) {
       console.error(`[cadence] FORCE set, but only ${creditsRemaining} credit(s) ` +
         `remain — at or below the hard floor of ${CREDIT_HARD_FLOOR}. Refusing: ` +
@@ -494,7 +526,8 @@ async function shouldSpendCredit(candidateFights) {
       return false;
     }
     console.log(`[cadence] FORCE set — capturing regardless of schedule ` +
-      `[${creditsRemaining ?? 'unknown'} credit(s) left]`);
+      `[${creditsRemaining ?? 'unknown'} credit(s) left; ${spent ?? '?'} spent ` +
+      `this month]`);
     return true;
   }
   const today = now.toISOString().slice(0, 10);
@@ -510,8 +543,9 @@ async function shouldSpendCredit(candidateFights) {
   const budget = await readCreditBudget(now);
   const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length), budget);
   console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}` +
-    ` [budget: ${budget.creditsRemaining ?? 'unknown'} credit(s) left, ` +
-    `${budget.cardsRemaining} card(s) still to cover this month]`);
+    ` [budget: ${budget.spent ?? '?'} of ${MONTHLY_CREDIT_CAP} spent this month, ` +
+    `${budget.creditsRemaining ?? 'unknown'} left, ` +
+    `${budget.cardsRemaining} card(s) still to cover]`);
   return decision.yes;
 }
 
@@ -1348,7 +1382,9 @@ async function main() {
       if (insErr) throw new Error(`fight_odds insert: ${insErr.message}`);
     }
 
-    await recordCreditUsage(lastQuota.used, lastQuota.remaining);
+    // What this run actually cost: one credit per market requested.
+    await recordCreditUsage(lastQuota.used, lastQuota.remaining,
+                            totals.yes ? 2 : 1);
 
     const scorable = supported.size === CAPTURE_COLUMNS.length;
     console.log(`[done] inserted ${toInsert.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}` +
@@ -1369,6 +1405,7 @@ module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
   planLiveCadence, minutesRemainingInCard, wantTotals,
+  spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
   EVENT_FLOW_MAX_H, MONTHLY_CREDIT_CAP, CREDIT_RESERVE, CREDIT_HARD_FLOOR,
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,

@@ -4,16 +4,16 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
+  "protocol_sha256": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
   "benchmark_name": {
-    "short": "late pre-fight price proxy",
-    "long": "scheduled/late closing-price proxy",
-    "never": "the closing line",
-    "rule": "no surface, artifact or summary may describe this benchmark as a closing line. It is the latest quote VERIFIABLE as pre-fight AND genuinely late. Amendment 4.1: a quote that is merely pre-card is not late enough to qualify and is not scored.",
-    "frozen_by": "Amendment 4, 2026-09-16; narrowed by Amendment 4.1"
+    "short": "CFL closing-price proxy",
+    "long": "late pre-fight closing-price proxy",
+    "never": "the exact sportsbook closing line",
+    "rule": "no surface, artifact or summary may describe this benchmark as the exact closing line. For bouts after the first the cutoff is the previous bout's completion, so the proxy can sit several minutes before the bell - declared, and recorded per row, rather than hidden.",
+    "frozen_by": "Amendment 5, 2026-09-16"
   },
   "capture_cadence": {
     "target_minutes": 5,
@@ -79,73 +79,84 @@
     "additions_require": "a dated amendment of their own"
   },
   "close_reference": {
-    "frozen_by": "Amendment 3, 2026-09-16, approved by Reed Cannon (L3)",
+    "frozen_by": "Amendment 5, 2026-09-16, approved by Reed Cannon (L3)",
     "source_view": "v_clv_close_reference (research/clv/proposed_2026-09-16_event_flow.sql, NOT APPLIED)",
     "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
-    "principle": "a pre-fight window has two ends and only one is the close. It OPENS when the previous bout finishes - that is when capture goes aggressive - and CLOSES when THIS fight starts. Only an instant marking this fight's start may be a cutoff.",
+    "principle": "bout 1's cutoff is the card's scheduled start; bouts 2..N take the exact completion of the immediately previous bout; a confirmed bell outranks both. The scored price is the latest eligible sportsbook snapshot strictly before that cutoff.",
     "tiers": [
       {
         "basis": "bell_at",
         "applies_to": "any bout",
-        "note": "an actual confirmed bell; audit-grade"
+        "note": "an actual confirmed bell; outranks the others"
       },
       {
         "basis": "scheduled_first_bout",
-        "applies_to": "the card's FIRST bout only",
-        "note": "the card-level commence time, named for what it is"
+        "applies_to": "the card's FIRST bout",
+        "note": "the card's scheduled start"
+      },
+      {
+        "basis": "previous_bout_completion",
+        "applies_to": "bouts 2..N",
+        "note": "the exact completion of the bout immediately before; PRECEDES the bell by the walkout interval, which is accepted and marked per row"
       }
     ],
     "lead_time": {
+      "recorded": "selected quote -> cutoff, exact, on every scored row",
       "exact_bases": [
         "bell_at",
         "scheduled_first_bout"
       ],
-      "lower_bound_bases": [],
-      "rule": "every scoring basis NAMES the fight start, so every scored row has an exact lead time. LOWER_BOUND_REFERENCE_BASES is empty and a test asserts it, so re-admitting a bounded basis is deliberate rather than a quiet widening.",
-      "unknown_basis": "neither exact nor bounded - reported as null, never as false, because false would assert the lead time is exact"
+      "precedes_bell_bases": [
+        "previous_bout_completion"
+      ],
+      "flag": "clv_lead_time_is_lower_bound is TRUE exactly when the cutoff precedes the bell, so the recorded lead time is a lower bound on the true gap to the fight starting",
+      "unknown_basis": "null, never false - false asserts the cutoff was the start"
     },
     "inadmissible": [
       "event_date_fallback",
       "provider_commence applied to a later bout as if it named its start"
     ],
-    "unknown_running_order": "no admissible SCORING reference. Tier 4 was withdrawn by Amendment 4.1, so a fight without a running order, a bell or an exact previous-bout completion is unscored - it reports only_pre_card_price when a card start exists, no_scheduled_start otherwise.",
-    "supersedes": "Amendment 2 (b), which admitted provider_commence for EVERY fight on the card - right for one fight in thirteen and wrong in the expensive direction, since it would mark every quote after the first bell as in-play for all of them",
-    "narrowing_not_widening": true,
-    "window_openers": {
-      "bases": [
-        "previous_bout_completion",
-        "card_scheduled_start"
-      ],
-      "what_they_are": "LOWER bounds on this fight's start. Safe to capture from, never scored against.",
-      "previous_bout_completion": "removed from scoring by Amendment 4.2. If bout 4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote before 9:30 - a price quoted while bout 4 was still being fought - and discards the eight minutes that actually priced bout 5. It also made the 5-minute capture self-defeating: the job would collect precisely the snapshots the scorer threw away.",
-      "card_scheduled_start": "removed from scoring by Amendment 4.1 - safely pre-fight but hours early on a late bout",
-      "stored_as": "v_clv_close_reference.window_opens_at and model_edges.clv_window_opened_at",
-      "why_stored": "so the snapshots inside the window are identifiable and become scorable RETROSPECTIVELY the moment a confirmed bell for that fight arrives, including on cards already captured"
+    "unknown_running_order": "without a running order no fight can be identified as bout 1 and no bout has a 'previous' one, so nothing scores. Running order is free to obtain - ufcstats lists a card in order.",
+    "supersedes": "Amendment 4.2, which refused this cutoff because it precedes the bell and in doing so refused to score anything at all. A consistently-early cutoff, named as a proxy with its lead time recorded, is a better measurement than no measurement.",
+    "narrowing_not_widening": false,
+    "is_a_proxy": "accepted deliberately for this protocol version: it is the most consistent, observable and reproducible cutoff implementable with the tools currently available, and every such observation shares the same rule. CFL does not wait for a confirmed bell in order to score later fights under this version.",
+    "previous_bout_completion_has_two_roles": [
+      "this protocol version's scoring cutoff for the upcoming fight",
+      "the trigger for aggressive card-night capture for that fight"
+    ],
+    "preserved_per_scored_observation": [
+      "cutoff timestamp",
+      "cutoff basis",
+      "selected quote timestamp",
+      "lead time to cutoff (+ precedes-bell flag)",
+      "exact source quote ids and consensus provenance",
+      "protocol version"
+    ],
+    "future_bell_timestamps": "a NEW protocol version, not a revision of this one. Observations scored under this version are never retroactively reinterpreted or overwritten, which is why every row carries its own clv_protocol_version.",
+    "still_excluded": {
+      "basis": "card_scheduled_start",
+      "why": "applied to a later bout it sits hours early (Amendment 4.1)",
+      "treatment": "reported, never scored; unscored reason only_pre_card_price"
     },
     "unscorable_states": [
       {
-        "reason": "fight_start_unverified",
-        "meaning": "the window opened, the snapshots exist, nothing says where it closed",
-        "distance_from_scorable": "one confirmed bell"
+        "reason": "only_pre_card_price",
+        "meaning": "only the card's scheduled start is on file for a later bout"
       },
       {
-        "reason": "only_pre_card_price",
-        "meaning": "only the card's scheduled start is on file; hours early on a late bout",
-        "distance_from_scorable": "needs running order and a bell"
+        "reason": "no_previous_bout_completion",
+        "meaning": "bout 2..N with no exact completion recorded for the bout before it",
+        "fix": "record one completion and the already-captured snapshots become scorable"
       },
       {
         "reason": "no_scheduled_start",
-        "meaning": "nothing at all",
-        "distance_from_scorable": "furthest"
+        "meaning": "no cutoff of any kind"
       }
-    ],
-    "no_manufactured_end_of_window": "until there is a defensible way to identify when a fight actually started, bouts 2..N stay unscored. No marker is invented to raise coverage."
+    ]
   },
   "trigger_is_not_the_close": {
-    "capture_trigger": "the previous bout ending helps identify event flow and sharpens which fight the capture is for. It governs how much data exists and nothing else. Capture cadence is NOT frozen - it cannot change what a number means, only how many numbers there are.",
-    "the_close": "the last valid pre-live quote for the upcoming fight. Any quote captured at or after that fight actually started is excluded, strictly. Frozen, and enforced by closing_pairs in cfl_engine/clv/scoring.py.",
-    "why_stated_separately": "collapsing the two would let a quote taken DURING a fight score as that fight's closing price",
-    "tests": "TestTriggerIsNotTheClose in cfl_engine/clv/test_scoring.py"
+    "superseded_by": "Amendment 5",
+    "note": "the previous bout's completion is BOTH this version's scoring cutoff for the next fight AND the capture trigger for it. Earlier language calling it 'only an opener, never a cutoff' is stale and has been removed."
   },
   "audit_fields": {
     "fights.bell_at": "the record of when a fight ACTUALLY began. Reserved for a confirmed bell, never written by the odds job, never synthesised.",
@@ -778,6 +789,29 @@
       "coverage_change": "bouts 2..N become unscored rather than wrongly scored. No end-of-window marker is manufactured to compensate.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": 5,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The operational cutoff, frozen: scheduled start for bout 1, previous-bout completion for bouts 2..N",
+      "kind": "supersedes Amendment 4.2",
+      "version_before": "1.0.6",
+      "version_after": "1.0.7",
+      "sha256_before": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
+      "sha256_after": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
+      "parts": {
+        "a": "bout 1 cutoff = card's scheduled start; bouts 2..N cutoff = exact completion of the immediately previous bout; a confirmed bell outranks both",
+        "b": "the scored price is the latest eligible sportsbook snapshot strictly before that cutoff",
+        "c": "named the CFL closing-price proxy; never the exact sportsbook closing line",
+        "d": "previous-bout completion has two roles - scoring cutoff and capture trigger - and the opener-only language is removed",
+        "e": "every scored observation preserves cutoff timestamp, basis, selected quote timestamp, lead time, source quote provenance and protocol version",
+        "f": "reliable bell timestamps would be a NEW protocol version; no retroactive reinterpretation"
+      },
+      "output_change": "none yet - the publication gate is unchanged and still at 0. It restores scoring for bouts 2..N once bout completions are recorded.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
@@ -791,6 +825,8 @@
     "env_may_lower_the_reserve": false,
     "provider_quota_above_the_ceiling": "clamped to the ceiling and flagged, never spent",
     "rationale": "any spend above the approved free allowance is money, and money is L3. An automated job must never be able to authorise one - not through an environment variable, and not by noticing the provider is willing to sell more. Both look like extra headroom to a naive governor and neither is permission.",
-    "frozen_by": "Amendment 4.2, 2026-09-16"
+    "frozen_by": "Amendment 4.2, 2026-09-16",
+    "accounting": "month-to-date spend is the SUM of odds_api_usage.credits_charged for the current month - our own count, which nothing upstream can reset. The provider's remaining-balance header is a cross-check and is believed only when SMALLER. Clamping a large provider balance to 500 on every run was a bug: it made the budget read 500 every time, so it never declined and the ceiling was decorative.",
+    "priority": "lower priority than the methodology; must not block it"
   }
 }

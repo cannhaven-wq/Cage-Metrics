@@ -34,7 +34,7 @@ from scoring import (                                                # noqa: E40
     BENCHMARK_NAME, BENCHMARK_NAME_LONG, CLOSE_REFERENCE_BASES,
     EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
     LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
-    WINDOW_OPENER_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
+    PRECEDES_BELL_BASES, PROTOCOL_TAG, PROTOCOL_VERSION,
     STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
     credible_capture_instant, is_eligible_book, lead_time_minutes,
@@ -83,12 +83,12 @@ def edge(**over):
 
 
 def score(quotes=None, fight=None, ref=START, books=BOOKS, now=NOW,
-          basis="bell_at", **over):
+          basis="bell_at", first_bout=None, **over):
     return score_row(edge=edge(**over),
                      quotes=three_books() if quotes is None else quotes,
                      fight=FIGHT if fight is None else fight,
                      reference_instant=ref, now=now, eligible_book_ids=books,
-                     reference_basis=basis)
+                     reference_basis=basis, is_first_bout=first_bout)
 
 
 # ---------------------------------------------------------------------------
@@ -416,8 +416,8 @@ class TestClosedVocabulary(unittest.TestCase):
                 lambda: score(published_at=START + dt.timedelta(hours=1)),
             "only_pre_card_price":
                 lambda: score(ref=None, basis="card_scheduled_start"),
-            "fight_start_unverified":
-                lambda: score(ref=None, basis="previous_bout_completion"),
+            "no_previous_bout_completion":
+                lambda: score(ref=None, basis=None, first_bout=False),
             # In band on both sides, but summing BELOW one: there is no vig to
             # remove, no root in the bracket, and it is not a coherent two-way
             # market. The band guard does not catch this, which is why the
@@ -470,22 +470,24 @@ class TestCloseReference(unittest.TestCase):
         self.assertEqual(admissible_reference(START, "bell_at", is_first_bout=False),
                          START)
 
-    def test_the_previous_bouts_completion_is_NOT_a_cutoff(self):
-        """Amendment 4.2 — the bug this closes.
-
-        The previous bout ending OPENS the window; it does not close it. If bout
-        4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's
-        cutoff selects the last quote before 9:30 — a price quoted while bout 4
-        was still being fought — and discards the eight minutes that actually
-        priced bout 5. It would also make the 5-minute capture self-defeating.
-        """
-        self.assertNotIn("previous_bout_completion", CLOSE_REFERENCE_BASES)
-        self.assertIn("previous_bout_completion", WINDOW_OPENER_BASES)
-        self.assertIsNone(
-            admissible_reference(START, "previous_bout_completion"))
-        self.assertIsNone(
+    def test_the_previous_bouts_completion_IS_the_cutoff_for_later_bouts(self):
+        """Amendment 5. Bout 2..N's cutoff is the exact completion of the bout
+        before it — accepted as a PROXY that precedes the bell by the walkout
+        interval, because it is the most consistent, observable and reproducible
+        cutoff available."""
+        self.assertIn("previous_bout_completion", CLOSE_REFERENCE_BASES)
+        self.assertEqual(
             admissible_reference(START, "previous_bout_completion",
-                                 is_first_bout=False))
+                                 is_first_bout=False), START)
+        self.assertEqual(
+            admissible_reference(START, "previous_bout_completion"), START)
+
+    def test_that_cutoff_is_marked_as_preceding_the_bell(self):
+        self.assertIn("previous_bout_completion", PRECEDES_BELL_BASES)
+        self.assertIs(reference_is_lower_bound("previous_bout_completion"), True)
+        for basis in ("bell_at", "scheduled_first_bout"):
+            with self.subTest(basis=basis):
+                self.assertIs(reference_is_lower_bound(basis), False)
 
     def test_the_scheduled_start_is_admissible_for_the_first_bout_only(self):
         self.assertEqual(
@@ -534,20 +536,27 @@ class TestCloseReference(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_two(self):
+    def test_the_admissible_set_is_the_frozen_three(self):
         self.assertEqual(CLOSE_REFERENCE_BASES,
-                         {"bell_at", "scheduled_first_bout"})
+                         {"bell_at", "scheduled_first_bout",
+                          "previous_bout_completion"})
 
-    def test_openers_and_cutoffs_never_overlap(self):
-        self.assertTrue(CLOSE_REFERENCE_BASES.isdisjoint(WINDOW_OPENER_BASES),
-                        "an instant cannot both open and close the same window")
-        self.assertEqual(NON_SCORING_REFERENCE_BASES, WINDOW_OPENER_BASES)
+    def test_the_pre_card_price_is_still_never_a_cutoff(self):
+        self.assertEqual(NON_SCORING_REFERENCE_BASES, {"card_scheduled_start"})
+        self.assertTrue(
+            CLOSE_REFERENCE_BASES.isdisjoint(NON_SCORING_REFERENCE_BASES))
 
-    def test_every_scoring_basis_names_the_start_exactly(self):
-        self.assertEqual(EXACT_REFERENCE_BASES, CLOSE_REFERENCE_BASES)
-        self.assertEqual(LOWER_BOUND_REFERENCE_BASES, frozenset(),
-                         "no scored row may rest on a bounded start; "
-                         "re-admitting one must be deliberate and fail here")
+    def test_every_basis_is_either_exact_or_precedes_the_bell(self):
+        self.assertEqual(EXACT_REFERENCE_BASES | PRECEDES_BELL_BASES,
+                         CLOSE_REFERENCE_BASES)
+        self.assertTrue(EXACT_REFERENCE_BASES.isdisjoint(PRECEDES_BELL_BASES))
+
+    def test_the_lower_bound_set_is_exactly_the_previous_bout_case(self):
+        self.assertEqual(LOWER_BOUND_REFERENCE_BASES, PRECEDES_BELL_BASES)
+        self.assertEqual(LOWER_BOUND_REFERENCE_BASES,
+                         {"previous_bout_completion"},
+                         "only the previous-bout cutoff precedes the bell; any "
+                         "other entry here would be a silent widening")
 
 
 class TestLatePreFightProxy(unittest.TestCase):
@@ -584,31 +593,45 @@ class TestLatePreFightProxy(unittest.TestCase):
         self.assertIsNone(
             admissible_reference(START, "card_scheduled_start", is_first_bout=False))
 
-    def test_a_window_opener_leaves_the_fight_unscored_with_its_own_reason(self):
-        """The best case short of a bell: capture opened at the right moment and
-        the snapshots exist. Still unscored, because nothing says where the
-        window closed — and reported distinctly, because it is one confirmed bell
-        away from scorable while only_pre_card_price is much further."""
-        got = score(ref=None, basis="previous_bout_completion")
+    def test_a_later_bout_with_no_completion_on_file_says_exactly_that(self):
+        got = score(ref=None, basis=None, first_bout=False)
         self.assertFalse(got["scored"])
-        self.assertEqual(got["reason"], "fight_start_unverified")
+        self.assertEqual(got["reason"], "no_previous_bout_completion",
+                         "recording one completion makes the already-captured "
+                         "snapshots scorable, so the report must name it")
 
     def test_the_three_unscorable_states_are_told_apart(self):
-        cases = {
-            "previous_bout_completion": "fight_start_unverified",
-            "card_scheduled_start": "only_pre_card_price",
-            None: "no_scheduled_start",
-        }
-        for basis, reason in cases.items():
-            with self.subTest(basis=basis):
-                self.assertEqual(score(ref=None, basis=basis)["reason"], reason)
+        self.assertEqual(
+            score(ref=None, basis="card_scheduled_start")["reason"],
+            "only_pre_card_price")
+        self.assertEqual(
+            score(ref=None, basis=None, first_bout=False)["reason"],
+            "no_previous_bout_completion")
+        self.assertEqual(
+            score(ref=None, basis=None, first_bout=True)["reason"],
+            "no_scheduled_start")
 
-    def test_every_scored_row_has_an_exact_lead_time(self):
+    def test_every_scored_row_records_its_lead_time_to_the_cutoff(self):
         for basis in sorted(CLOSE_REFERENCE_BASES):
             with self.subTest(basis=basis):
-                got = score(basis=basis)
+                got = score(basis=basis, first_bout=(basis != "previous_bout_completion"))
                 self.assertTrue(got["scored"], got["reason"])
-                self.assertIs(got["lead_time_is_lower_bound"], False)
+                self.assertAlmostEqual(got["lead_time_minutes"], 10.0, places=6)
+                self.assertIs(got["lead_time_is_lower_bound"],
+                              basis == "previous_bout_completion")
+
+    def test_the_provenance_reed_asked_to_preserve_is_all_present(self):
+        """Cutoff timestamp, cutoff basis, selected quote timestamp, lead time,
+        source quote ids, protocol version — every scored observation."""
+        got = score(basis="previous_bout_completion", first_bout=False)
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertEqual(got["close_basis"], "previous_bout_completion")
+        self.assertEqual(got["proxy_quoted_at"], FRESH)
+        self.assertIsNotNone(got["lead_time_minutes"])
+        self.assertIsNotNone(got["lead_time_is_lower_bound"])
+        self.assertTrue(got["quote_ids"])
+        self.assertEqual(got["consensus"]["protocol"], PROTOCOL_TAG)
+        self.assertTrue(got["consensus_sha256"])
 
     def test_an_unknown_basis_is_neither_exact_nor_bounded(self):
         self.assertIsNone(reference_is_lower_bound(None),

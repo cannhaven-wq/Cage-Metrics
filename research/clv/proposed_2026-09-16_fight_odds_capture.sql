@@ -20,8 +20,10 @@
 --   * no trigger created, altered, weakened or removed
 --   * no reinterpretation of an existing row or column
 --
--- Every statement is ADD COLUMN IF NOT EXISTS or CREATE INDEX IF NOT EXISTS, so
--- it is idempotent and re-runnable. Every new column is NULLable with no
+-- Every statement is ADD COLUMN IF NOT EXISTS, CREATE INDEX IF NOT EXISTS, or a
+-- DO block that checks pg_constraint before adding a named constraint, so the
+-- whole file is genuinely idempotent and re-runnable. (A bare ADD CONSTRAINT is
+-- not: it errors on the second run.) Every new column is NULLable with no
 -- default, so all 110,032 existing rows are untouched and read exactly as they
 -- did before: NULL means "this row predates the column", which is true, and is
 -- the only honest thing it could mean.
@@ -95,6 +97,7 @@ alter table public.fight_odds
 -- The best account, at capture time, of when THIS fight began: an actual bell,
 -- else the previous bout's completion, else (bout 1 only) the card's scheduled
 -- start. NULL when none is known, which is not the same as "it had not started".
+-- Under Amendment 5 this is also the scoring cutoff for bouts 2..N.
 --
 -- Amendment 3. Separate from source_commence_at because on a thirteen-fight card
 -- they are the same instant for one fight and wrong for twelve: the card has one
@@ -167,10 +170,16 @@ alter table public.fight_odds
 
 -- Closed vocabulary. An open status column becomes free-form and stops
 -- aggregating, the same argument as the CLV unscored-reason vocabulary.
-alter table public.fight_odds
-  add constraint fight_odds_market_status_known
-  check (market_status is null or market_status in
-         ('open', 'suspended', 'taken_down')) not valid;
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'fight_odds_market_status_known'
+                    and conrelid = 'public.fight_odds'::regclass) then
+    alter table public.fight_odds add constraint fight_odds_market_status_known
+      check (market_status is null or market_status in
+             ('open', 'suspended', 'taken_down')) not valid;
+  end if;
+end $$;
 
 -- is_live must agree with the bout start it summarises. A row claiming to be
 -- pre-start while carrying a capture instant at or after that fight began is not
@@ -178,22 +187,40 @@ alter table public.fight_odds
 -- price as a close.
 --
 -- Against bout_started_at, per Amendment 3, never against source_commence_at.
-alter table public.fight_odds
-  add constraint fight_odds_is_live_agrees_with_bout_start
-  check (is_live is null or bout_started_at is null
-         or (is_live = (captured_at >= bout_started_at))) not valid;
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'fight_odds_is_live_agrees_with_bout_start'
+                    and conrelid = 'public.fight_odds'::regclass) then
+    alter table public.fight_odds add constraint fight_odds_is_live_agrees_with_bout_start
+      check (is_live is null or bout_started_at is null
+             or (is_live = (captured_at >= bout_started_at))) not valid;
+  end if;
+end $$;
 
 -- is_live is only knowable when a bout start is. A row asserting liveness with
 -- no bout start on it is asserting something it cannot know.
-alter table public.fight_odds
-  add constraint fight_odds_is_live_needs_a_bout_start
-  check (is_live is null or bout_started_at is not null) not valid;
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'fight_odds_is_live_needs_a_bout_start'
+                    and conrelid = 'public.fight_odds'::regclass) then
+    alter table public.fight_odds add constraint fight_odds_is_live_needs_a_bout_start
+      check (is_live is null or bout_started_at is not null) not valid;
+  end if;
+end $$;
 
 -- The opponent is the other corner, never the same fighter.
-alter table public.fight_odds
-  add constraint fight_odds_opponent_is_not_self
-  check (opponent_fighter_id is null or opponent_fighter_id <> fighter_id)
-  not valid;
+do $$
+begin
+  if not exists (select 1 from pg_constraint
+                  where conname = 'fight_odds_opponent_is_not_self'
+                    and conrelid = 'public.fight_odds'::regclass) then
+    alter table public.fight_odds add constraint fight_odds_opponent_is_not_self
+      check (opponent_fighter_id is null or opponent_fighter_id <> fighter_id)
+      not valid;
+  end if;
+end $$;
 
 -- Q-10's mechanical match: (fight, provider market) lookups, newest first.
 create index if not exists fight_odds_source_event_idx

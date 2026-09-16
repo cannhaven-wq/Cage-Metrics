@@ -5,14 +5,16 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.6** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–4.2 same day). The benchmark is the **late pre-fight price proxy**,
-never "the closing line". **Amendment 4.2 fixed a methodological bug**: the
-previous bout's completion OPENS a fight's window and never closes it, so it is
-no longer a scoring cutoff. Capture stays at **5 minutes through a live card
-under a hard credit ceiling** — now hard-coded so no environment variable or
-provider quota can widen it. **Three migrations written and none applied.
-Publication is still shut** — 0 of 100 observations, 0 of 20 events.
+**Live baton:** CLV-001 is **FROZEN at v1.0.7** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–5 same day). **Amendment 5 freezes the operational cutoff**: bout 1
+takes the card's scheduled start, bouts 2..N take the exact completion of the
+immediately previous bout, and the scored price is the latest eligible
+sportsbook snapshot strictly before it. This is the **CFL closing-price proxy**,
+never the exact sportsbook closing line — for later bouts it sits several
+minutes before the bell, which is accepted and recorded per row. Capture stays
+at **5 minutes through a live card under a hard credit ceiling**.
+**Three migrations written and none applied. Publication is still shut** — 0 of
+100 observations, 0 of 20 events.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -59,7 +61,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.6**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.7**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -91,11 +93,12 @@ One card of waiting, not a build.
 |---|---|
 | Q-02 eligible book list, ten sportsbooks | **frozen**, Amendment 2 (a) |
 | the event-flow close reference, per fight | **frozen**, Amendment 3 |
-| trigger ≠ close, stated so it cannot be collapsed | **frozen**, Amendment 3 (b) |
-| the late pre-fight price proxy + lead-time reporting | **frozen**, Amendment 4 |
+| the late pre-fight closing-price proxy + lead-time reporting | **frozen**, Amendment 4 |
 | a pre-card price is recognised, never scored | **frozen**, Amendment 4.1 |
-| an opener is never a cutoff | **frozen**, Amendment 4.2 |
+| the operational cutoff (scheduled start / previous-bout completion) | **frozen**, Amendment 5 |
 | the free allowance is hard-coded, env cannot widen it | **frozen**, Amendment 4.2 |
+| month-to-date spend counted from our own ledger, not the provider's balance | **fixed** |
+| all three migrations genuinely re-runnable (DO-block guards) | **fixed**, 8 tests |
 | 5-minute live capture under a hard credit governor | **written**, verified offline |
 | the three ledgers are append-only, trigger-enforced | **written, UNAPPLIED** |
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
@@ -107,33 +110,37 @@ One card of waiting, not a build.
 nobody else — applying it to all thirteen would have marked every quote after
 the first bell as in-play for twelve of them.
 
-**Amendment 4 in one line:** the benchmark is a late pre-fight price *proxy*,
-captured every 5 minutes through a live card under a hard credit ceiling, with
-its lead time recorded on every row.
+**Amendment 4 in one line:** the benchmark is a *proxy*, captured every 5
+minutes through a live card under a hard credit ceiling, with its lead time
+recorded on every row.
 
 **Amendment 4.1 in one line:** and "pre-card" does not count as "late" — a quote
 before the card began is safely pre-fight and hours early on a late bout, so it
 is recognised (`only_pre_card_price`) and never scored.
 
-**Amendment 4.2 in one line:** a window has two ends and only one is the close —
-the previous bout finishing *opens* the next fight's window, so using it as the
-cutoff would pick a price quoted while the previous bout was still being fought,
-and would make the 5-minute capture self-defeating.
+**Amendment 5 in one line, and it supersedes 4.2:** the previous bout's
+completion is *both* the next fight's scoring cutoff and its capture trigger. It
+precedes the bell by the walkout interval — accepted, because it is the most
+consistent, observable and reproducible cutoff available, and because waiting
+for a confirmed bell means scoring nothing.
 
-**Scoring cutoffs** are now `bell_at` (any bout) and `scheduled_first_bout`
-(bout 1 only). **Window openers** — `previous_bout_completion` and
-`card_scheduled_start` — are capture triggers, reported, never cutoffs. Three
-unscorable states are told apart: `fight_start_unverified` (one confirmed bell
-away), `only_pre_card_price`, `no_scheduled_start`.
+**Scoring cutoffs:** `scheduled_first_bout` (bout 1), `previous_bout_completion`
+(bouts 2..N), `bell_at` where one exists. `card_scheduled_start` stays reported
+and never scored. Unscorable states are told apart: `no_previous_bout_completion`
+(record one completion and the captured snapshots become scorable),
+`only_pre_card_price`, `no_scheduled_start`.
 
-**Capture coverage is unaffected and every snapshot is kept.** `window_opens_at`
-is stored so the snapshots inside a window become scorable **retrospectively**
-once a confirmed bell arrives — including on cards already captured.
+**Every scored row preserves** its cutoff timestamp, cutoff basis, selected quote
+timestamp, lead time to the cutoff (plus a flag saying the cutoff precedes the
+bell), source quote IDs and consensus provenance, and its protocol version. The
+storage constraint requires all of them.
 
-**What the proxy may be called:** the *late pre-fight price proxy* (long form,
-*scheduled/late closing-price proxy*). **Never "the closing line."** Every row
-carries its lead time and a flag saying whether that lead time is exact or a
-lower bound.
+**If reliable bell timestamps arrive that is a NEW protocol version** — rows
+scored under this one are never retroactively reinterpreted.
+
+**What the proxy may be called:** the *CFL closing-price proxy* (long form,
+*late pre-fight closing-price proxy*). **Never the exact sportsbook closing
+line.**
 
 No CLV statistic was computed, and none is computable until a card is captured
 under the new path. Nothing renders CLV today; `track-record.html` carries a

@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.6` |
+| version | `1.0.7` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4.2 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–5 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,7 +336,81 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 5, v1.0.7, 2026-09-16 — the operational cutoff, frozen
+>
+> **Approved by Reed Cannon (L3). Supersedes Amendment 4.2.**
+>
+> ### The rule
+>
+> | | cutoff |
+> |---|---|
+> | **bout 1** | the card's **scheduled start time** |
+> | **bouts 2..N** | the **exact completion time of the immediately previous bout** |
+> | any bout with a confirmed bell | the **bell**, which outranks both |
+>
+> **The scored price is the latest eligible sportsbook snapshot strictly before
+> that cutoff.**
+>
+> ### What this is, said plainly
+>
+> This is a **CFL closing-price proxy**, not the literal sportsbook closing line,
+> and it may never be described as the exact closing line anywhere.
+>
+> For bouts after the first the cutoff is the previous bout's completion, so the
+> proxy can sit **several minutes earlier than the actual bell**. That is
+> accepted for this protocol version — not because the gap is thought to be zero,
+> but because this is the most consistent, observable and reproducible cutoff
+> implementable with the tools currently available, and because every such
+> observation shares the same rule.
+>
+> **Amendment 4.2 is superseded.** It refused this cutoff on the grounds that it
+> precedes the bell, and in doing so refused to score anything at all. A
+> consistently-early cutoff, named as a proxy and with its lead time recorded, is
+> a better measurement than no measurement. **CFL does not wait for a confirmed
+> bell in order to score later fights under this version.**
+>
+> ### Previous-bout completion has two roles, and both are real
+>
+> 1. it is **this protocol version's scoring cutoff** for the upcoming fight;
+> 2. it **triggers aggressive card-night capture** for that fight.
+>
+> Any remaining language calling it "only an opener, never a cutoff" is stale and
+> has been removed.
+>
+> ### Preserved on every scored observation
+>
+> | | |
+> |---|---|
+> | cutoff timestamp | the instant the window closed |
+> | cutoff basis | `scheduled_first_bout`, `previous_bout_completion`, or `bell_at` |
+> | selected quote timestamp | `clv_proxy_quoted_at` |
+> | lead time | selected quote → cutoff, **exact**, plus a flag saying whether the cutoff itself precedes the bell |
+> | source quote IDs and provenance | `clv_source_quote_ids`, `clv_closing_consensus`, `clv_consensus_sha256` |
+> | protocol version | `clv_protocol_version`, per row |
+>
+> The storage constraint requires all of them on a scored row: a figure without
+> its cutoff basis and lead time is not writable.
+>
+> ### If reliable bell timestamps arrive
+>
+> That is a **NEW PROTOCOL VERSION**, not a revision of this one. Observations
+> scored under this version are **never retroactively reinterpreted or
+> overwritten**, which is why every row carries its own `clv_protocol_version`.
+>
+> ### Still excluded
+>
+> `card_scheduled_start` applied to a later bout remains a non-scoring basis
+> (Amendment 4.1): hours early, so it would make the proxy mean something
+> different on every fight of the card. It is reported, never scored.
+>
+> ---
+>
 > ## AMENDMENT 4.2, v1.0.6, 2026-09-16 — an opener is not a cutoff
+>
+> **SUPERSEDED BY AMENDMENT 5.** Its scoring restriction is withdrawn: the
+> previous bout's completion is this version's cutoff for bouts 2..N. Retained
+> below as filed — the reasoning it records is sound about the *gap* and was
+> overruled on what to do about it.
 >
 > **Approved by Reed Cannon (L3).** Removes `previous_bout_completion` from the
 > scoring references. Everything else stands.
