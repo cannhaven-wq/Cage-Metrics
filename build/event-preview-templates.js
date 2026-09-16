@@ -3,14 +3,37 @@
 //     "fighter a vs fighter b prediction"
 // this page targets the higher-volume event queries
 //     "ufc 329 predictions", "ufc 329 full card picks", "ufc 329 fight card"
-// by listing the model's verdict on EVERY fight on the card in one place, with
-// internal links out to each per-fight preview.
+// by listing the engine's LOCKED forecast on EVERY fight on the card in one
+// place (pre-fight snapshot, or the insert-only live row until the snapshot
+// exists — never a recompute at render time), with internal links out to each
+// per-fight preview and the Fight Week Market Brief signup.
 //
 // Canonical URL points at the card page itself (unique aggregated content).
 
 const { slugify } = require('./slug');
 
 const SITE = 'https://cannonfightlab.com';
+// Keep in step with the ?v= on every root page (see CLAUDE.md "Caching gotcha").
+const SHARED_JS = '/_shared.js?v=rd17';
+const AUTH_JS = '/_auth.js?v=rf1';
+const SUPABASE_CDN = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>';
+const PLAUSIBLE = '<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>';
+const SIGNUP_CSS = `
+  .cfl-email-capture { margin: 30px 0; }
+  .cfl-email-capture-inner { background:#111; border:1px solid #222; padding:22px 24px; border-radius:8px; display:grid; grid-template-columns:1fr auto; gap:18px; align-items:center; }
+  @media (max-width:640px){ .cfl-email-capture-inner { grid-template-columns:1fr; } }
+  .cfl-email-capture-copy strong { display:block; color:#fff; font-size:16px; margin-bottom:4px; font-weight:700; }
+  .cfl-email-capture-copy span { color:#bbb; font-size:13px; line-height:1.45; }
+  .cfl-email-capture-form { display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }
+  .cfl-email-capture-form input[type=email] { background:#0a0a0a; border:1px solid #333; color:#fff; padding:10px 12px; border-radius:6px; font-size:14px; font-family:inherit; min-width:220px; }
+  .cfl-email-capture-form input[type=email]:focus { outline:none; border-color:#e63946; }
+  .cfl-email-capture-form button { background:#e63946; color:#fff; border:0; padding:10px 18px; border-radius:6px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
+  .cfl-email-capture-form button:hover { background:#c1121f; }
+  .cfl-email-capture-form button:disabled { opacity:.6; cursor:wait; }
+  .cfl-email-capture-msg { grid-column:1 / -1; font-size:13px; min-height:1em; }
+  .cfl-email-capture-msg.ok { color:#3fd07a; }
+  .cfl-email-capture-msg.err { color:#e63946; }
+`;
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -30,35 +53,32 @@ function cardSlug(eventName, eventId) {
   return `${slugify(eventName)}-${eventId}`;
 }
 
-// Plain-English agreement label for the two public models (Value + Fight IQ).
-// Handles the one-model case too (a fight only one model has graded).
-function modelAgreementLabel(agree, total) {
-  if (total <= 1) return '1 model';
-  if (agree === total) return total === 2 ? 'both models agree' : `all ${total} models agree`;
-  return `${agree} of ${total} models agree`;
+// Mirrors cfl.ENGINE.tiers in _shared.js / tier_of in cfl_engine/faces.py.
+function tierWord(p) {
+  if (p == null) return '';
+  if (p >= 0.65) return 'Lock';
+  if (p >= 0.57) return 'Pick';
+  return 'Lean';
 }
 
-// Consensus verdict for one fight, matching the per-fight preview's rule
-// exactly: only picks with model_p > 0.5 count; the winner is the fighter the
-// most models favour; confidence is the average model_p of the winning models.
-// Returns null when no model has a confident pick yet (card still lists the
-// bout as "verdict pending").
+// The locked forecast for one fight, matching the per-fight preview exactly:
+// the first (and only) locked row prerender.js hands us. Returns null when
+// nothing is on the record yet (card lists the bout as "forecast pending").
 function consensusPick(picks, fighterA, fighterB) {
-  const valid = (picks || []).filter(p => p.model_p != null && +p.model_p > 0.5);
-  if (!valid.length) return null;
-  const tally = {};
-  valid.forEach(p => { tally[p.fighter_id] = (tally[p.fighter_id] || 0) + 1; });
-  const sorted = Object.entries(tally).sort((x, y) => y[1] - x[1]);
-  const winnerId = +sorted[0][0];
-  const winner = winnerId === fighterA.id ? fighterA : fighterB;
-  const winningPs = valid.filter(p => p.fighter_id === winnerId).map(p => +p.model_p);
-  const avgP = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
+  const p = (picks || []).find(x => x.model_p != null && x.fighter_id != null);
+  if (!p) return null;
+  const winner = p.fighter_id === fighterA.id ? fighterA : (p.fighter_id === fighterB.id ? fighterB : null);
+  if (!winner) return null;
   return {
-    winnerId,
+    winnerId: p.fighter_id,
     winnerName: winner.name,
-    pct: Math.round(avgP * 100),
-    agree: sorted[0][1],
-    total: valid.length
+    pct: Math.round(+p.model_p * 100),
+    tier: p.tier || tierWord(+p.model_p),
+    locked: p.locked || 'live',
+    // One engine, one forecast per fight. Kept for build/social-engine.js,
+    // which still renders an "N of M models" line off these two fields.
+    agree: 1,
+    total: 1
   };
 }
 
@@ -85,14 +105,14 @@ function eventPreview({ event, rows, previewSlugFor }) {
   const mainPick = main ? main.pick : null;
 
   // ---- meta ----
-  const title = `${event.name} Predictions & Full-Card Picks | Cannon Fight Lab`;
+  const title = `${event.name} Predictions & Odds | Cannon Fight Lab`;
   const summarySentence = mainPick
-    ? `The model picks ${mainPick.winnerName} in the main event (${mainPick.pct}% confidence). `
+    ? `Main event: the odds-blind engine forecasts ${mainPick.winnerName} at ${mainPick.pct}%. `
     : '';
   const description = (
-    `${event.name} predictions${dateLabel ? ' — ' + dateLabel : ''}` +
+    `${event.name} predictions and odds${dateLabel ? ' — ' + dateLabel : ''}` +
     `${event.location ? ', ' + event.location : ''}. ${summarySentence}` +
-    `Model verdicts, confidence, and edge factors for all ${bouts} fights on the card.`
+    `Locked model forecasts for all ${bouts} fights on the card${withVerdict ? ` (${withVerdict} on record)` : ''}, graded in public, misses included.`
   ).trim();
 
   // ---- JSON-LD ----
@@ -127,10 +147,10 @@ function eventPreview({ event, rows, previewSlugFor }) {
   if (mainPick) {
     faqEntities.push({
       '@type': 'Question',
-      'name': `Who does Cannon Fight Lab's model pick to win the ${event.name} main event?`,
+      'name': `Who does Cannon Fight Lab's engine forecast to win the ${event.name} main event?`,
       'acceptedAnswer': {
         '@type': 'Answer',
-        'text': `The model picks ${mainPick.winnerName} at ${mainPick.pct}% confidence (${modelAgreementLabel(mainPick.agree, mainPick.total)}). CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
+        'text': `Cannon Fight Lab's odds-blind engine forecasts ${mainPick.winnerName} at ${mainPick.pct}% (${mainPick.tier}). The forecast was locked before the bell and is graded in public, misses included. CFL publishes model forecasts and market analysis; it does not sell handicapper picks.`
       }
     });
   }
@@ -139,7 +159,7 @@ function eventPreview({ event, rows, previewSlugFor }) {
     'name': `How many fights are on the ${event.name} card?`,
     'acceptedAnswer': {
       '@type': 'Answer',
-      'text': `${bouts} fights are currently scheduled${withVerdict ? `, with model verdicts published on ${withVerdict} of them` : ''}. See the full card with every pick above.`
+      'text': `${bouts} fights are currently scheduled${withVerdict ? `, with locked model forecasts on ${withVerdict} of them` : ''}. See the full card with every forecast above.`
     }
   });
   const faqJsonLd = {
@@ -161,7 +181,6 @@ function eventPreview({ event, rows, previewSlugFor }) {
   const jsonLdBlobs = [sportsEventJsonLd, faqJsonLd, breadcrumbJsonLd];
 
   const eventUrl = `${SITE}/event.html?id=${event.id}`;
-  const signupUrl = `${SITE}/signup.html?next=${encodeURIComponent('/card/' + slug + '.html')}`;
 
   // ---- fight rows ----
   const rowHtml = rows.map(r => {
@@ -169,8 +188,8 @@ function eventPreview({ event, rows, previewSlugFor }) {
     const weight = r.fight.weight_class || '';
     const previewUrl = `${SITE}/preview/${previewSlugFor(r)}.html`;
     const verdictCell = r.pick
-      ? `<strong>${escapeHtml(r.pick.winnerName)}</strong><span class="cfl-card-conf">${r.pick.pct}% · ${r.pick.agree}/${r.pick.total}</span>`
-      : `<span class="cfl-card-pending">Verdict pending</span>`;
+      ? `<strong>${escapeHtml(r.pick.winnerName)}</strong><span class="cfl-card-conf">${r.pick.pct}% · ${escapeHtml(r.pick.tier)}</span>`
+      : `<span class="cfl-card-pending">Forecast pending</span>`;
     return `
       <tr>
         <td class="cfl-card-bout">
@@ -195,7 +214,7 @@ function eventPreview({ event, rows, previewSlugFor }) {
 
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="${escapeHtml(`${event.name} — Predictions & Full-Card Picks`)}">
+<meta property="og:title" content="${escapeHtml(`${event.name} — Predictions & Odds`)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${SITE}/og-image.png">
@@ -205,13 +224,14 @@ function eventPreview({ event, rows, previewSlugFor }) {
 <meta property="og:locale" content="en_US">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escapeHtml(`${event.name} — Predictions & Full-Card Picks`)}">
+<meta name="twitter:title" content="${escapeHtml(`${event.name} — Predictions & Odds`)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${SITE}/og-image.png">
 
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+${PLAUSIBLE}
 
 ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 
@@ -224,12 +244,6 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   .cfl-card-summary { background:#181818; border:1px solid #2a2a2a; border-left:3px solid #e63946; padding:18px 20px; border-radius:6px; margin-bottom:30px; font-size:16px; }
   .cfl-card-summary-label { display:block; color:#999; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
   .cfl-card-summary strong { color:#fff; }
-  .cfl-card-cta { background:linear-gradient(135deg,#e63946 0%,#c1121f 100%); color:#fff; padding:22px 24px; border-radius:8px; margin-bottom:36px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
-  .cfl-card-cta-text { flex:1 1 280px; }
-  .cfl-card-cta-text strong { display:block; font-size:17px; margin-bottom:3px; }
-  .cfl-card-cta-text span { color:#fff; opacity:0.85; font-size:13px; }
-  .cfl-card-cta a.btn { background:#fff; color:#c1121f; padding:10px 22px; border-radius:6px; font-weight:700; text-decoration:none; white-space:nowrap; font-size:14px; }
-  .cfl-card-cta a.btn:hover { background:#f5f5f5; }
   h2.cfl-card-h2 { font-size:20px; color:#fff; margin:0 0 14px; }
   table.cfl-card-table { width:100%; border-collapse:collapse; margin-bottom:30px; }
   table.cfl-card-table td { border-bottom:1px solid #1c1c1c; padding:13px 8px; vertical-align:middle; }
@@ -249,6 +263,10 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   .cfl-card-deeper a:hover { text-decoration:underline; }
   .cfl-card-foot { color:#666; font-size:12px; margin-top:36px; text-align:center; }
   .cfl-card-foot a { color:#999; }
+  .cfl-card-record { color:#999; font-size:13px; margin:0 0 26px; line-height:1.5; }
+  .cfl-card-record strong { color:#ddd; }
+  .cfl-card-record a { color:#e63946; text-decoration:none; }
+  ${SIGNUP_CSS}
 </style>
 </head>
 <body>
@@ -264,21 +282,16 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   </div>
 
   <div class="cfl-card-summary">
-    <span class="cfl-card-summary-label">Model read on this card</span>
+    <span class="cfl-card-summary-label">Model forecast · odds-blind engine</span>
     ${mainPick
-      ? `Main event: <strong>${escapeHtml(mainPick.winnerName)}</strong> · ${mainPick.pct}% confidence · ${modelAgreementLabel(mainPick.agree, mainPick.total)}. Verdicts published on ${withVerdict} of ${bouts} fights.`
-      : `Model verdicts publish closer to fight night. Full ${bouts}-fight card below.`}
+      ? `Main event: <strong>${escapeHtml(mainPick.winnerName)}</strong> · ${mainPick.pct}% · ${escapeHtml(mainPick.tier)}. Locked forecasts on record for ${withVerdict} of ${bouts} fights — never revised after the bell.`
+      : `Forecasts lock before fight night. Full ${bouts}-fight card below.`}
   </div>
+  <p class="cfl-card-record">How this engine has done: <strong data-claim="engine_replay_accuracy">…</strong> straight-up on <span data-claim="engine_replay_accuracy:sample_size">…</span> fights in the Engine v2 historical replay · live record since <span data-claim="live_since">…</span>: <strong data-claim="engine_live_accuracy">…</strong> on <span data-claim="engine_live_accuracy:sample_size">…</span> settled fights. <a href="${SITE}/track-record.html">Every miss is posted →</a></p>
 
-  <div class="cfl-card-cta">
-    <div class="cfl-card-cta-text">
-      <strong>Get every pick on this card free</strong>
-      <span>Free during beta — every edge factor, save your picks, weekly preview email.</span>
-    </div>
-    <a class="btn" href="${signupUrl}">Create free account →</a>
-  </div>
+  <div class="cfl-email-capture" data-source="card:${escapeHtml(String(event.id))}"></div>
 
-  <h2 class="cfl-card-h2">Full card &amp; model picks</h2>
+  <h2 class="cfl-card-h2">Full card &amp; model forecasts</h2>
   <table class="cfl-card-table">
     <tbody>${rowHtml}
     </tbody>
@@ -287,18 +300,25 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   <div class="cfl-card-deeper">
     <h3>Go deeper</h3>
     <a href="${eventUrl}">Live card &amp; odds: ${escapeHtml(event.name)} →</a>
-    <a href="${SITE}/card-lab.html">Card Lab — fights ranked by edge &amp; value →</a>
-    <a href="${SITE}/track-record.html">Model track record: accuracy &amp; ROI →</a>
-    <a href="${SITE}/edges.html">How model verdicts are built →</a>
+    <a href="${SITE}/index.html#next">Card Lab — fights ranked by edge &amp; value →</a>
+    <a href="${SITE}/track-record.html">Model track record: accuracy &amp; profit per $100 →</a>
+    <a href="${SITE}/methodology.html">How the engine is built →</a>
   </div>
 
   <p class="cfl-card-foot">
-    Cannon Fight Lab is an analytics publication, not a sportsbook. 21+ only.
+    Cannon Fight Lab publishes model forecasts and market analysis. It does not sell handicapper picks. Not a sportsbook. 21+ only.
     <a href="${SITE}/disclaimer.html">Disclaimer</a>
   </p>
 
 </div>
 
+${SUPABASE_CDN}
+<script src="${SHARED_JS}"></script>
+<script src="${AUTH_JS}"></script>
+<script>
+cfl.track('preview_view', { card: ${JSON.stringify(String(event.id))}, event: ${JSON.stringify(event.name)} });
+cfl.renderClaims('/data/claims.json');
+</script>
 </body>
 </html>
 `;

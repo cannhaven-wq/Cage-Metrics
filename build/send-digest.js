@@ -1,4 +1,4 @@
-// Weekly preview-email sender. Runs on Wednesday morning UTC via the
+// Fight Week Market Brief — the weekly email sender. Runs on Wednesday morning UTC via the
 // digest.yml workflow. Pulls the next upcoming UFC card from Supabase,
 // renders the same per-fight verdict + edge breakdown that draft-post.js
 // uses, and emails it to every active row in email_subscribers via Resend.
@@ -173,7 +173,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
       </td></tr>
 
       <tr><td style="padding:0 20px 6px;">
-        <div style="color:#e63946;font-size:11px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">This week's card</div>
+        <div style="color:#e63946;font-size:11px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">Fight Week Market Brief</div>
         <h1 style="margin:6px 0 4px;font-size:24px;color:#fff;line-height:1.25;">${escHtml(event.name)}</h1>
         <div style="color:#999;font-size:14px;">${escHtml(formatLongDate(event.event_date))}${event.location ? ' &middot; ' + escHtml(event.location) : ''}</div>
       </td></tr>
@@ -182,7 +182,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111;border:1px solid #222;border-radius:8px;">
           <tr>
             <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Fight</th>
-            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Model pick</th>
+            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Model forecast</th>
             <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Confidence</th>
           </tr>
           ${rows || '<tr><td colspan="3" style="padding:14px;color:#999;">Verdicts publishing closer to fight night.</td></tr>'}
@@ -196,7 +196,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
       <tr><td style="padding:0 20px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg,#e63946,#c1121f);border-radius:8px;">
           <tr><td style="padding:22px 24px;">
-            <div style="color:#fff;font-weight:700;font-size:16px;margin-bottom:6px;">Track your picks on a free account</div>
+            <div style="color:#fff;font-weight:700;font-size:16px;margin-bottom:6px;">Track these forecasts on a free account</div>
             <div style="color:#fff;opacity:0.9;font-size:13px;margin-bottom:14px;">Save fighters to your watchlist, see every model verdict, and unlock all edge factors. Free during beta.</div>
             <a href="${signupUrl}" style="background:#fff;color:#c1121f;padding:10px 22px;border-radius:6px;font-weight:700;text-decoration:none;display:inline-block;font-size:14px;">Create free account →</a>
           </td></tr>
@@ -207,7 +207,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
         Cannon Fight Lab is an analytics publication, not a sportsbook. 21+ only. 1-800-GAMBLER.
       </td></tr>
       <tr><td style="padding:0 20px 20px;color:#555;font-size:11px;text-align:center;">
-        You're subscribed to the Cannon Fight Lab weekly fight preview.
+        You're subscribed to the Fight Week Market Brief from Cannon Fight Lab. CFL publishes model forecasts and market analysis; it does not sell handicapper picks.
         <a href="${unsubUrl}" style="color:#888;">Unsubscribe</a>
       </td></tr>
 
@@ -225,7 +225,7 @@ function renderText({ event, lines, unsubscribeToken }) {
   out.push(`CANNON FIGHT LAB — ${event.name}`);
   out.push(formatLongDate(event.event_date) + (event.location ? ' · ' + event.location : ''));
   out.push('');
-  out.push('Model picks (locked in before the bell):');
+  out.push('Fight Week Market Brief — model forecasts (locked in before the bell):');
   out.push('');
   for (const l of lines) {
     const flag = l.flag ? ` [${l.flag}]` : '';
@@ -236,7 +236,7 @@ function renderText({ event, lines, unsubscribeToken }) {
   }
   out.push(`Full card with edges: ${eventUrl}`);
   out.push('');
-  out.push('Create a free account to track picks and unlock every edge:');
+  out.push('Create a free account to track forecasts and unlock every edge:');
   out.push(`  ${signupUrl}`);
   out.push('');
   out.push('---');
@@ -318,7 +318,7 @@ async function markSent(emails) {
       return;
     }
 
-    const subject = `${event.name} — model picks before the card`;
+    const subject = `Fight Week Market Brief: ${event.name}`;
     let sent = 0;
     let failed = 0;
     const sentEmails = [];

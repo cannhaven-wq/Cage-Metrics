@@ -83,7 +83,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -444,8 +444,8 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('stats');
 cfl.renderFooter();
@@ -481,26 +481,12 @@ const FL_LO = 40;
 const FL_HI = 60;
 const flPos = (v) => ((Math.min(FL_HI, Math.max(FL_LO, v)) - FL_LO) / (FL_HI - FL_LO)) * 100;
 
-// One word. The uncertainty lives in the word, not in a chart a newcomer would
-// have to be taught to read.
-const ANSWER = {
-  real: 'Yes',
-  lean: 'Maybe',
-  proxy: 'No',
-  inverted: 'No',
-  unproven: 'No idea',
-  insufficient: 'No idea',
-};
-
-// One short line under it, and none of them repeat the sentence above.
-const BECAUSE = {
-  real: 'That is a real edge.',
-  lean: 'Close, but not enough fights yet to be sure.',
-  proxy: 'Take the odds away and it stops working.',
-  inverted: 'It points the wrong way.',
-  unproven: 'Too few even-odds fights to say yet.',
-  insufficient: 'Too few fights to say yet.',
-};
+// One word, one short line — shared with About and Methodology through
+// cfl.FACTOR_ANSWER / cfl.FACTOR_BECAUSE in _shared.js so every page describes
+// a verdict the same way. The uncertainty lives in the word, not in a chart a
+// newcomer would have to be taught to read.
+const ANSWER = cfl.FACTOR_ANSWER;
+const BECAUSE = cfl.FACTOR_BECAUSE;
 
 const VERDICT_ORDER = { real: 0, lean: 1, inverted: 2, proxy: 3, unproven: 4, insufficient: 5 };
 

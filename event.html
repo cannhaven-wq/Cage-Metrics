@@ -9,7 +9,7 @@
      updateSEO() once the event loads from Supabase. -->
 <title>UFC Event Card — Predictions & Edge Factors | Cannon Fight Lab</title>
 <meta name="description" content="Full UFC event card with model verdicts and edge factors for every fight. See cardio, striking, grappling, and matchup edges before the cage closes.">
-<meta name="keywords" content="UFC event card, UFC fight predictions, UFC event analysis, MMA event picks, UFC fight breakdown">
+<meta name="keywords" content="UFC event card, UFC fight predictions, UFC event analysis, MMA event forecasts, UFC fight breakdown">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/event.html">
@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -655,13 +655,15 @@
   </div>
 </div>
 
+<div class="cfl-email-capture" data-source="event:bottom"></div>
+
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
-<script src="fight-insights.js?v=6"></script>
+<script src="fight-insights.js?v=7"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -1072,7 +1074,7 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
   const verdict = renderVerdict(a, b, fight, isUpcoming, cardioMap || {}, finishRateMap || {}, odds, (engineByFight || {})[fight.id], fmap);
 
   return `
-    <div class="${cardClass}">
+    <div class="${cardClass}" data-fid="${fight.id}">
       <div class="fight-card-header">
         ${tags.join(' ')}
         ${fight.weight_class ? `<span class="weight">${cfl.escapeHtml(fight.weight_class)}</span>` : ''}
@@ -1118,10 +1120,10 @@ function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, market
     let checkHtml = '';
     if (!isUpcoming && eng.hit === true)  checkHtml = '<span class="check correct">✓ Correct</span>';
     if (!isUpcoming && eng.hit === false) checkHtml = '<span class="check wrong">✗ Missed</span>';
-    html += `<div class="fight-verdict"><span class="label">${isUpcoming ? 'Model pick' : 'Model picked'}</span>`
+    html += `<div class="fight-verdict"><span class="label">Model forecast</span>`
       + `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${Math.round(conf)}%</span><span class="tier-word">${tierWord}</span>${movHtml}</span>${checkHtml}</div>`;
   } else {
-    html += `<div class="fight-verdict too-close"><span class="label">Model pick</span><span class="pick">${isUpcoming ? 'Not scored yet' : 'No pick on record'}</span></div>`;
+    html += `<div class="fight-verdict too-close"><span class="label">Model forecast</span><span class="pick">${isUpcoming ? 'Not scored yet' : 'No forecast on record'}</span></div>`;
   }
 
   // Distance verdict (distanceEdges.js)
@@ -1191,7 +1193,7 @@ function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, market
     const movExplanation = renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fight.weight_class);
     html += `
       <details class="fight-why">
-        <summary>Why this pick?</summary>
+        <summary>Why this forecast?</summary>
         <div class="why-body">
           ${bullets.length
             ? `<div class="why-hd">Why the model likes it</div><ul class="why-list">${bullets.map(li).join('')}</ul>`

@@ -66,7 +66,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -360,8 +360,8 @@
   <div class="section" id="july-2026-engine">
     <div class="section-eyebrow"><span class="dot"></span>Model update — July 19, 2026</div>
     <h2>One engine, two faces</h2>
-    <p>The rebuild promised below has shipped. CFL's picks now come from a single audited engine that trains strictly walk-forward: to predict any fight, it may only use what was knowable before that fight, and an automated leakage audit has to pass before anything publishes. The engine reads fighter history, per-fight statistics (strikes, takedowns, control, knockdowns), and physical attributes — height, reach, stance, age — and never a betting line.</p>
-    <p>It has two faces. <strong>Fight IQ</strong> is the calibrated winner probability for every fight: 61.6% straight-up across 3,288 fights it never trained on, with its highest-confidence Locks at 74.7%. <strong>Value</strong> compares that number to the vig-free market price and flags a bet only at 4+ points of disagreement. Because both are one brain, they can never contradict themselves.</p>
+    <p>The rebuild promised below has shipped. CFL's forecasts now come from a single audited engine that trains strictly walk-forward: to predict any fight, it may only use what was knowable before that fight, and an automated leakage audit has to pass before anything publishes. The engine reads fighter history, per-fight statistics (strikes, takedowns, control, knockdowns), and physical attributes — height, reach, stance, age — and never a betting line.</p>
+    <p>It has two faces. <strong>Fight IQ</strong> is the calibrated winner probability for every fight: <span data-claim="engine_replay_accuracy">…</span> straight-up across <span data-claim="engine_replay_accuracy:sample_size">…</span> fights it never trained on in the Engine v2 historical replay, with its highest-confidence Locks at <span data-claim="engine_replay_locks">…</span> (<span data-claim-asof></span>). <strong>Value</strong> compares that number to the vig-free market price and flags a bet only at 4+ points of disagreement. Because both are one brain, they can never contradict themselves.</p>
     <p>The honest context stays on the label: just backing the closing favourite runs about 68%, so Fight IQ <em>loses to Vegas</em> — on purpose. A model within seven points of the market without ever looking at the market is a model you can trust to be independent of it. The v1–v6 experiments keep their archived records on the <a href="track-record.html" style="color:var(--red)">Proof Center</a>.</p>
   </div>
 
@@ -395,7 +395,7 @@
       <div class="formula-note">These subset numbers used career-to-date records — hindsight. The record factor's honest point-in-time number is 61.9%. See the July 14, 2026 update above.</div>
     </div>
     <p><span class="superseded">Superseded July 2026 — measured with hindsight; see update above</span><br>Calibration improved alongside accuracy. The 70–75% confidence band hit 82.9% accuracy before the change and <strong>92.7%</strong> after. About 20% of fights now show "no edge" rather than a confident pick — those are genuine toss-ups where the prior model was gambling and losing.</p>
-    <p>Every pick committed before May 17 reflects the older ten-edge model. We don't retroactively re-grade — the track record is the track record. Cards from May 17 onward use the new three-edge model.</p>
+    <p>Every forecast committed before May 17 reflects the older ten-edge model. We don't retroactively re-grade — the track record is the track record. Cards from May 17 onward use the new three-edge model.</p>
   </div>
 
   <!-- ============== What an edge factor is ============== -->
@@ -573,11 +573,12 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('');
 cfl.renderFooter();
+cfl.renderClaims();
 </script>
 </body>
 </html>

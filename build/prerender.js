@@ -206,11 +206,15 @@ async function prerenderMatchupPreviews() {
     }
   }
 
-  const [fightersData, predsData, cardioData, finishData] = await Promise.all([
-    safe(sb.from('fighters').select('id, name, nickname').in('id', fighterIds)),
-    // Engine picks (model_picks) — the one current model; a locked 'live' row
-    // outranks a 'backtest' replay row for the same fight.
-    safe(sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds)),
+  const [fightersData, snapData, predsData, cardioData, finishData] = await Promise.all([
+    safe(sb.from('fighters').select('id, name, nickname, wins, losses, draws, height_in, reach_in, stance, age, dob, slpm, td_avg, td_def, str_acc').in('id', fighterIds)),
+    // Locked forecasts only. First choice is the immutable pre-fight snapshot
+    // (pre_fight_snapshots: append-only, one row per fight, written the night
+    // before the card). Until that exists, the insert-only live model_picks
+    // row. Never a 'backtest' row and never a recompute at render time — a
+    // preview page may only ever show what was already on the record.
+    safe(sb.from('pre_fight_snapshots').select('fight_id, engine_pick_fighter_id, engine_p_cal, engine_tier, engine_model_version, snapshot_at').in('fight_id', fightIds)),
+    safe(sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, tier, model_version, published_at, source').in('fight_id', fightIds).eq('source', 'live')),
     safe(sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds)),
     safe(sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)),
   ]);
@@ -218,18 +222,24 @@ async function prerenderMatchupPreviews() {
   const fmap = {};
   fightersData.forEach(f => { fmap[f.id] = f; });
 
-  // picksByFight[fight_id] = [{ fighter_id, model_p }] (engine rows, live-preferred)
-  const engineByFight = {};
+  // picksByFight[fight_id] = [{ fighter_id, model_p, tier, locked, locked_at }]
+  // Earliest snapshot wins (the table is append-only; a second row can only be
+  // a late-booked re-run and is skipped by the snapshotter anyway).
+  const lockedByFight = {};
+  snapData.forEach(r => {
+    if (r.engine_pick_fighter_id == null || r.engine_p_cal == null) return;
+    const prev = lockedByFight[r.fight_id];
+    if (prev && prev.locked === 'snapshot' && prev.locked_at <= r.snapshot_at) return;
+    lockedByFight[r.fight_id] = { fighter_id: r.engine_pick_fighter_id, model_p: +r.engine_p_cal, tier: r.engine_tier || null, model_version: r.engine_model_version || null, locked: 'snapshot', locked_at: r.snapshot_at };
+  });
   predsData.forEach(p => {
-    const prev = engineByFight[p.fight_id];
-    if (prev && prev.source === 'live' && p.source !== 'live') return;
-    engineByFight[p.fight_id] = p;
+    if (lockedByFight[p.fight_id] && lockedByFight[p.fight_id].locked === 'snapshot') return;
+    const prev = lockedByFight[p.fight_id];
+    if (prev && prev.locked_at <= p.published_at) return;   // insert-only: first write stands
+    lockedByFight[p.fight_id] = { fighter_id: p.pick_fighter_id, model_p: p.p_cal == null ? null : +p.p_cal, tier: p.tier || null, model_version: p.model_version || null, locked: 'live', locked_at: p.published_at };
   });
   const picksByFight = {};
-  Object.values(engineByFight).forEach(p => {
-    if (!picksByFight[p.fight_id]) picksByFight[p.fight_id] = [];
-    picksByFight[p.fight_id].push({ fighter_id: p.pick_fighter_id, model_p: p.p_cal == null ? null : +p.p_cal });
-  });
+  Object.entries(lockedByFight).forEach(([fid, p]) => { picksByFight[fid] = [p]; });
 
   // Cardio: prefer CAREER row (per-weight-class rows are noise at this level).
   const cardioMap = {};
@@ -377,7 +387,8 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
 
   const staticPages = [
     { loc: '/',                priority: '1.0', changefreq: 'daily' },
-    { loc: '/card-lab.html',   priority: '0.9', changefreq: 'daily' },
+    { loc: '/methodology.html', priority: '0.7', changefreq: 'monthly' },
+    { loc: '/props.html',      priority: '0.8', changefreq: 'daily' },
     { loc: '/track-record.html', priority: '0.9', changefreq: 'weekly' },
     { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },
     { loc: '/stats.html',      priority: '0.9', changefreq: 'weekly' },

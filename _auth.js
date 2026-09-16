@@ -228,23 +228,26 @@
   };
 
   // Lower-friction lead-magnet entry point — email-only subscription to the
-  // weekly fight-preview digest. Distinct from joinWaitlist (which is the
-  // paid-tier interest list). The digest itself contains the CTA back to
+  // Fight Week Market Brief. Distinct from joinWaitlist (which is the
+  // paid-tier interest list). The brief itself contains the CTA back to
   // signup.html, completing the funnel.
+  //
+  // Resolves { data, error, duplicate }. A plain INSERT is used on purpose:
+  // the old upsert(ignoreDuplicates) path (ON CONFLICT DO NOTHING) is rejected
+  // by RLS with 42501 even for a brand-new address — that is why the table sat
+  // at zero rows — while a plain insert passes the anon INSERT policy. A
+  // re-submitted address comes back as unique-violation 23505, which we
+  // report as duplicate:true rather than as an error.
   auth.subscribeEmail = async function (email, source) {
     const cleaned = String(email || '').trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
-      return { data: null, error: { message: 'Please enter a valid email address.' } };
+      return { data: null, error: { message: 'Please enter a valid email address.' }, duplicate: false };
     }
-    // ON CONFLICT DO NOTHING via upsert with ignoreDuplicates so re-submitting
-    // an already-subscribed email returns success without erroring.
     const { data, error } = await sb
       .from('email_subscribers')
-      .upsert(
-        { email: cleaned, source: source || 'unknown' },
-        { onConflict: 'email', ignoreDuplicates: true }
-      );
-    return { data, error };
+      .insert({ email: cleaned, source: source || 'unknown' });
+    if (error && error.code === '23505') return { data: null, error: null, duplicate: true };
+    return { data, error, duplicate: false };
   };
 
   // -------- nav integration helpers --------

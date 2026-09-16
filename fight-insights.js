@@ -120,7 +120,7 @@
     const co = cardioFor(ctx.cardioMap, opp.id, ctx.weightClass);
     if (cp && co && cp.tier_word && co.tier_word) {
       const rp = CARDIO_RANK[cp.tier_word] || 0, ro = CARDIO_RANK[co.tier_word] || 0;
-      if (ro > rp) flags.push(`${lastName(opp.name)} has the better late-round cardio — if this goes long, our pick fades.`);
+      if (ro > rp) flags.push(`${lastName(opp.name)} has the better late-round cardio — if this goes long, our forecast fades.`);
       else if (cp.confidence === 'limited') flags.push(`${lastName(picked.name)}'s cardio read comes from just a few fights — treat it as a guess, not a fact.`);
     }
     // Giving up youth
@@ -133,7 +133,7 @@
     }
     // Thin lean
     if (confidence < 55) {
-      flags.push(`This is a lean, not a strong pick — the model barely separates these two.`);
+      flags.push(`This is a lean, not a strong forecast — the model barely separates these two.`);
     }
     // Structural flags only. The plain-variance point is made once at the
     // page level (card-lab intro note / edges calibration explainer).

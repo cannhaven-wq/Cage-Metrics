@@ -25,6 +25,39 @@ losses at exactly the same size as our wins. Every sentence should be something
 you'd be comfortable reading back after the pick lost. If a line only sounds
 good when the bet wins, cut it.
 
+## What we call what we publish (added Sep 2026)
+
+The line, verbatim, wherever the question "do you sell picks?" could come up
+(homepage, About, Proof Center, previews, the email footer):
+
+> **CFL publishes model forecasts and market analysis. It does not sell
+> handicapper picks.**
+
+- **"Forecast", not "pick", for anything the engine outputs.** "Model
+  forecast", "the engine's forecast", "every forecast graded". "Pick" is a
+  tout's word and it is the one thing we don't sell. Keep "pick" only where
+  it is a technical record name that already exists in the data — the
+  `model_picks` table, the graded-row columns, the `Pick` confidence tier
+  (Lock / Pick / Lean) — and never as the noun for the product.
+- **"Odds-blind model", not "tape-only".** "Tape" reads as film study we don't
+  do. The point of Fight IQ is that it never sees a betting line — say that.
+- **Never the two old contradictions.** "We don't issue picks" and "Every pick
+  we've made" both go; the replacement is the line above and "Every forecast
+  we've published. Wins and losses."
+- **Two records, two labels, never summed.** Anything from the walk-forward
+  replay is labeled **"Engine v2 historical replay"**; anything written to the
+  database before a card is labeled **"Live record"**. They live in separate
+  blocks and are never added into one number. This supersedes the older
+  "simulated" label — "simulated" is still fine in running prose, but the
+  block label is "historical replay".
+- **Headline numbers come from `data/claims.json`, not prose.** Mark the
+  element `data-claim="<id>"` and call `cfl.renderClaims()`; the page shows
+  "Last updated: <date>" next to them. If a number can't be traced to a
+  table or view, it does not go on the page.
+- **Factor Lab verdicts come from `factor-rates.json`.** About and
+  Methodology read the survivors and the UFC-record verdict through
+  `cfl.renderFactorVerdicts()`; they do not restate the result in prose.
+
 ## Voice: nine rules
 
 1. **Plain English over stats jargon — always translate.** Never ship the
@@ -67,8 +100,8 @@ good when the bet wins, cut it.
    Put the two numbers side by side. One idea per clause.
 
 8. **Confidence is honest, not inflated.** A thin edge is called a thin edge:
-   *"This is a lean, not a strong pick — the model barely separates these
-   two."* A read from a small sample is called a guess: *"treat it as a guess,
+   *"This is a lean, not a strong forecast — the model barely separates
+   these two."* A read from a small sample is called a guess: *"treat it as a guess,
    not a fact."* Punchy truths over hedges: *"age catches up fast, not
    slowly."*
 
@@ -81,7 +114,10 @@ good when the bet wins, cut it.
 
 | Don't ship | Ship |
 |---|---|
-| Input weights | What's driving this pick |
+| Pick / picks (as the product) | Forecast / model forecast |
+| Tape-only | Odds-blind |
+| Simulated (as a block label) | Engine v2 historical replay |
+| Input weights | What's driving this forecast |
 | Rules-based read / tier-2 | Quick read (the lighter edges.js fallback when the engine didn't score a fight) |
 | Edge (as a bare noun) | The gap between our number and the book's |
 | ROI | Profit per $100 |

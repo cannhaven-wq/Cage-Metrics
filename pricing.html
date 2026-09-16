@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <title>Pricing — Cannon Fight Lab</title>
-<meta name="description" content="Cannon Fight Lab pricing. Free tier: the Factor Lab, Fight IQ picks, and the public track record. Premium (free during beta): full Card Lab detail, Value-model picks with edge and stake, and the pick-lock email before each card.">
+<meta name="description" content="Cannon Fight Lab pricing. Free tier: the Factor Lab, Fight IQ forecasts, and the public track record. Premium (free during beta): full Card Lab detail, Value-model forecasts with edge and stake, and the forecast-lock email before each card.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://cannonfightlab.com/pricing.html">
 
@@ -23,7 +23,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
@@ -70,7 +70,7 @@
   <h1>Most of it is free. All of it is honest.</h1>
   <p class="lede">
     Three products, one public record. The Factor Lab shows which stats actually
-    predict fights. Fight IQ picks winners from tape alone — it never sees a betting
+    predict fights. Fight IQ forecasts winners from fighter data alone — it never sees a betting
     line. The Value model hunts mispriced favorites. Free gets you the first two.
     Premium adds the money tools.
   </p>
@@ -87,13 +87,13 @@
       </div>
       <ul class="pricing-features">
         <li><strong>The Factor Lab</strong> — full access. Which stats predict fights, and which just repeat the betting line</li>
-        <li><strong>Fight IQ picks</strong> for every card — the tape-only model</li>
-        <li><strong>Card Lab</strong> — the pick, model %, and market edge on every fight; full breakdown on the top 2</li>
-        <li><strong>Proof Center</strong> — every graded pick, hits and misses</li>
+        <li><strong>Fight IQ forecasts</strong> for every card — the odds-blind model</li>
+        <li><strong>Card Lab</strong> — the forecast, model %, and market edge on every fight; full breakdown on the top 2</li>
+        <li><strong>Proof Center</strong> — every graded forecast, hits and misses</li>
         <li><strong>Weekly digest</strong> by email</li>
         <li class="muted">Full Card Lab detail on every fight</li>
-        <li class="muted">Value-model picks with edge + stake</li>
-        <li class="muted">Pick-lock email before each card</li>
+        <li class="muted">Value-model forecasts with edge + stake</li>
+        <li class="muted">Forecast-lock email before each card</li>
       </ul>
       <a href="/signup.html" class="btn ghost" id="freeCta" style="display:block; text-align:center;">Create free account</a>
     </div>
@@ -109,8 +109,8 @@
       <ul class="pricing-features">
         <li>Everything in Free, plus:</li>
         <li><strong>Full Card Lab detail</strong> on every fight, not just the top 2</li>
-        <li><strong>Value-model picks</strong> with the edge and a suggested flat stake</li>
-        <li><strong>Pick-lock email</strong> before each card — picks locked before the fights, on the record</li>
+        <li><strong>Value-model forecasts</strong> with the edge and a suggested flat stake</li>
+        <li><strong>Forecast-lock email</strong> before each card — forecasts locked before the fights, on the record</li>
       </ul>
       <a href="/signup.html" class="btn" id="premiumCta" style="display:block; text-align:center;">Create account → Get premium free</a>
       <div style="font-size: 11px; color: var(--text-3); margin-top: 10px; text-align: center; line-height: 1.5;">
@@ -144,10 +144,10 @@
       No firm date. The live betting record only started in July 2026, and we want it long enough to judge before we ask anyone to pay. Expect months, not weeks.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">Will the free tier ever go away?</strong><br>
-      No. The Factor Lab, Fight IQ picks, and the Proof Center stay free. The whole point is a record you can check without paying us.</p>
+      No. The Factor Lab, Fight IQ forecasts, and the Proof Center stay free. The whole point is a record you can check without paying us.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">What am I paying for eventually?</strong><br>
-      The money tools: the Value model's picks with the edge and stake attached, the pick-lock email before each card, and full Card Lab detail. The analysis of what happened stays free — you'd be paying for what we think happens next, priced.</p>
+      The money tools: the Value model's forecasts with the edge and stake attached, the forecast-lock email before each card, and full Card Lab detail. The analysis of what happened stays free — you'd be paying for what we think happens next, priced.</p>
 
       <p style="margin-bottom: 18px"><strong style="color: var(--text)">Is the betting record real money?</strong><br>
       Not yet. The 519-139 record is a simulated replay: the engine walked forward through history, only ever betting fights it had not trained on, graded at real closing prices. The live, real-time record started July 2026 and is still tiny — 12-5 on settled flags, down $61 at flat $100 — and every settled result is shown like everything else. Both are on the <a href="/track-record.html" style="color: var(--red)">Proof Center</a>, misses included.</p>
@@ -161,10 +161,11 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('pricing');
+['freeCta', 'premiumCta'].forEach(id => { const el = document.getElementById(id); if (el) el.addEventListener('click', () => cfl.track('premium_interest', { cta: id })); });
 cfl.renderFooter();
 
 // If user is already signed in, change the free CTA to "go to your account"

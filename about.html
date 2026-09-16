@@ -6,7 +6,7 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>About Cannon Fight Lab — How the UFC Prediction Model Works</title>
-<meta name="description" content="Cannon Fight Lab is a UFC fight prediction platform. See how the engine is built, which stats actually predict fights, and our graded track record across 3,200+ never-seen fights.">
+<meta name="description" content="Cannon Fight Lab is a UFC fight prediction platform. See how the engine is built, which stats actually predict fights, and our graded track record — historical replay and live record labeled separately, misses included.">
 <meta name="keywords" content="Cannon Fight Lab, UFC prediction model, MMA model methodology, UFC edge factors, UFC fight model accuracy">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -57,7 +57,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -130,7 +130,7 @@
 <div class="page">
   <div class="prose">
     <p class="lead">
-      Cannon Fight Lab is a UFC analytics platform built for one purpose: giving MMA bettors the hard data to make their own informed picks.
+      Cannon Fight Lab is a UFC analytics platform built for one purpose: giving MMA bettors the hard data to make their own informed decisions.
     </p>
 
     <p>
@@ -150,14 +150,26 @@
     </div>
 
     <p>
-      All data is updated nightly from public UFC sources, so the counts above grow weekly as new cards land. The platform doesn't sell picks. It doesn't run a Discord. It doesn't tell you who to bet on. It gives you the numbers and gets out of your way.
+      All data is updated nightly from public UFC sources, so the counts above grow weekly as new cards land. CFL publishes model forecasts and market analysis. It does not sell handicapper picks. It doesn't run a Discord. It doesn't tell you who to bet on. It gives you the numbers and gets out of your way.
     </p>
 
     <h2>The three products</h2>
 
     <p>
-      CFL is three things. <strong>The Factor Lab</strong> (free) tests which fight stats actually predict winners and which just repeat the betting line — so far only one factor survives that test — age. A fighter's UFC record tops the raw column and still can't clear the bar in evenly-priced fights. <strong>Fight IQ</strong> is the tape-only face of our audited engine: it calls every fight from fighter history, fight stats, and physical attributes without ever seeing a betting line, and lands 61.6% on 3,288 fights it never trained on — within seven points of just picking the Vegas favorite (about 68%), without ever looking at Vegas. Its highest-confidence Locks hit 74.7%. <strong>Value</strong> is the same engine's money face: it flags a bet only when the engine's number disagrees with the vig-free market price by 4+ points. The simulated walk-forward record lives in the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>; the live record started July 2026 and is still tiny — every result, misses included, goes on the board.
+      CFL is three things. <strong>The Factor Lab</strong> (free) tests which fight stats actually predict winners and which just repeat the betting line. Its recorded result, read straight from the Factor Lab's own data file: <span data-factor-survivor-count>one</span> factor survives that test — <strong data-factor-survivors>age</strong>. A fighter's UFC record tops the raw column, but on evenly-priced fights the Factor Lab's verdict on it is "<span data-factor-answer="ufc_record">Maybe</span>" — <span data-factor-because="ufc_record">close, but not enough fights yet to be sure.</span> <strong>Fight IQ</strong> is the odds-blind face of our audited engine: it calls every fight from fighter history, fight stats, and physical attributes without ever seeing a betting line. <strong>Value</strong> is the same engine's money face: it flags a bet only when the engine's number disagrees with the vig-free market price by 4+ points.
     </p>
+
+    <div class="cfl-claims">
+      <div class="cfl-claim replay">
+        <div class="kind">Engine v2 historical replay</div>
+        <p>Fight IQ called <strong data-claim="engine_replay_accuracy">…</strong> of <span data-claim="engine_replay_accuracy:sample_size">…</span> fights it never trained on — the closing favorite won <span data-claim="market_favorite_replay_accuracy">…</span> of the same fights, and we publish a number that loses to Vegas because it never looks at Vegas. Its highest-confidence Locks hit <strong data-claim="engine_replay_locks">…</strong> (<span data-claim="engine_replay_locks:sample_size">…</span> forecasts). Value went <strong data-claim="value_replay_record">…</strong> on <span data-claim="value_replay_record:sample_size">…</span> replayed bets at the closing price. A walk-forward replay of history, not bets anyone placed.</p>
+      </div>
+      <div class="cfl-claim live">
+        <div class="kind">Live record</div>
+        <p>Since <span data-claim="live_since">…</span>: Fight IQ is <strong data-claim="engine_live_accuracy">…</strong> on <span data-claim="engine_live_accuracy:sample_size">…</span> settled fights; Value flags are <strong data-claim="value_live_record">…</strong>. Still tiny — every result, misses included, goes on the board in the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>.</p>
+      </div>
+    </div>
+    <p class="cfl-claims-foot">Numbers come from the public claim manifest (<a href="data/claims.json">claims.json</a>) and the Factor Lab data file (<a href="factor-rates.json">factor-rates.json</a>), both rebuilt from the database every few hours. <span data-claim-asof></span>.</p>
 
     <h2>The core tools</h2>
 
@@ -182,7 +194,7 @@
     <h2>What this site is not</h2>
 
     <p>
-      This is not a sportsbook. We don't take bets. We don't issue picks. We don't guarantee outcomes. The stats, edges, and projections shown here describe historical patterns — they don't predict any individual fight. A 56% historical edge still means 44% of the time the pattern doesn't hold.
+      This is not a sportsbook. We don't take bets. We don't sell handicapper picks — we publish model forecasts and market analysis. We don't guarantee outcomes. The stats, edges, and projections shown here describe historical patterns — they don't predict any individual fight. A 56% historical edge still means 44% of the time the pattern doesn't hold.
     </p>
 
     <p>
@@ -193,11 +205,13 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('');
 cfl.renderFooter();
+cfl.renderClaims();
+cfl.renderFactorVerdicts();
 </script>
 </body>
 </html>

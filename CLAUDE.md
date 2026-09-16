@@ -10,6 +10,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Product / naming
 
+- **CFL publishes model forecasts and market analysis. It does not sell handicapper picks.** That sentence, verbatim, is the answer wherever the question comes up. The engine's output is a "forecast" in every visible label; "pick" survives only as a technical record name (`model_picks`, graded rows, the `Pick` confidence tier). "Odds-blind", never "tape-only". See `COPY_STYLE.md`.
 - **Product name is Cannon Fight Lab (CFL).** Never refer to it as "Cage Metrics" in user-facing copy. The repo on GitHub is still named `Cage-Metrics` for historical reasons — **do not rename the repo**.
 - Wordmark: "Cannon Fight Lab" full / "CFL" short. Domain: `cannonfightlab.com`.
 - Owner: Reed Cannon. GitHub: `cannhaven-wq`. Remote: `https://github.com/cannhaven-wq/Cage-Metrics.git`.
@@ -108,6 +109,8 @@ This is a workaround for a Supabase auth-lock hang bug (see `supabase/auth-js#76
 
 - Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).
 - **RLS policies on public-data tables (`events`, `fighters`, `fights`, `fight_rounds`, every `v_*` view) must grant `SELECT TO anon, authenticated`.** An anon-only policy causes signed-in users to see empty results with HTTP 200 and no error — extremely hard to debug. When adding a new public view or table, always grant to both roles.
+- `email_subscribers` accepts anon INSERTs (plain `insert` only — the `upsert(ignoreDuplicates)` path is rejected by RLS with 42501 even for a new address, which is why the table sat at zero rows until Sep 2026). `cflAuth.subscribeEmail` treats the 23505 unique-violation as "already subscribed". The one signup component is `cfl.renderEmailCaptures` in `_shared.js` ("Get the Fight Week Market Brief"); drop `<div class="cfl-email-capture" data-source="<page>:<block>"></div>` on a page and it renders itself.
+- Funnel events go through `cfl.track(name, props)` (Plausible custom events, cookie-free, no-op if Plausible is blocked). The event list is in the comment above `cfl.track` in `_shared.js`; each needs a matching goal in the Plausible dashboard.
 - The Supabase publishable key is committed in `_shared.js`. That's intentional — it's a public anon key, all access is enforced by RLS.
 
 ### Secrets (env vars, NEVER paste in chat)
@@ -169,11 +172,20 @@ These stubs are **not** the canonical URL — each one carries `<link rel="canon
 - `build/prerender.js` — pulls all fighters and events from Supabase via the same publishable anon key as the frontend, writes stubs to `f/` and `e/`, regenerates `sitemap.xml`. Uses `writeIfChanged` so unchanged stubs don't churn git diffs, and prunes stale stubs whose underlying row was deleted.
 - `build/templates.js` — `fighterStub(f)` and `eventStub(e, fighters)` HTML builders. **If you edit the static fallback meta in `fighter.html` / `event.html`, mirror the change here** or the stubs drift from the canonical pages.
 - `build/slug.js` — `slugify(s)` lowercases, drops apostrophes, replaces non-alphanum runs with `-`. Falls back to `'item'` for empty strings.
-- `.github/workflows/prerender.yml` — runs on `schedule` (every 6 hours), `workflow_dispatch` (manual), and `push` to `build/**` or the workflow file. It runs **two** build steps: `npm run prerender` (stubs + sitemap) and `npm run factor-rates` (the Factor Lab data), and commits both. Commits as `github-actions[bot]` with `[skip ci]` so the auto-commit doesn't re-trigger the workflow.
+- `.github/workflows/prerender.yml` — runs on `schedule` (every 6 hours), `workflow_dispatch` (manual), and `push` to `build/**` or the workflow file. It runs **three** build steps: `npm run prerender` (stubs + sitemap), `npm run factor-rates` (the Factor Lab data) and `npm run claims` (the public claim manifest, below), and commits all three. Commits as `github-actions[bot]` with `[skip ci]` so the auto-commit doesn't re-trigger the workflow.
 
 **Internal links** still go to `fighter.html?id=N` / `event.html?id=N` (via `cfl.fighterUrl` and `cfl.eventUrl`). Stubs are reachable via the sitemap and via direct sharing of slug URLs. If you ever want canonical to flip to the slug URL, change `cfl.fighterUrl` / `cfl.eventUrl` to emit slug paths and update the `<link rel="canonical">` in both the stub template and `fighter.html` / `event.html`.
 
 **Repo size**: ~5,000 stubs × ~5KB = ~25MB on disk. Git diffs stay small because most stubs are stable run-to-run; only changed fighters' files are rewritten.
+
+### Public claim manifest (`data/claims.json`)
+
+Every headline number the site quotes about its own record — replay accuracy, Lock accuracy, the Value W-L, the live record, the closing-favorite benchmark, the fights count — comes from `data/claims.json`, written by [`build/claims-manifest.js`](build/claims-manifest.js) from `v_model_picks_graded` / `v_model_edges_graded` (and `fight_odds` for the favorite benchmark, service key only). Pages never carry these figures in prose: they mark an element `data-claim="<id>"` (or `data-claim="<id>:<field>"`) and call `cfl.renderClaims()`, which also fills `[data-claim-asof]` with "Last updated: …".
+
+- **Historical replay and live results are separate claims (`kind`: `historical_replay` / `live`) and are never added together** — not in the manifest, not on a page. The labels are "Engine v2 historical replay" and "Live record". The Proof Center's engine KPIs are toggled between the two, never summed.
+- Each claim carries `source` (table/view + filter), `model_id`, `sample_size`, `as_of` and `status` (`VERIFIED`, or `STALE` when the favorite benchmark had to be carried forward because no service key was present).
+- If a number can't be traced to a table or view, it doesn't go on the page.
+- The Factor Lab's result is the same idea for `factor-rates.json`: About and Methodology read the survivors and the UFC-record verdict through `cfl.renderFactorVerdicts()` rather than restating them.
 
 ### Factor Lab (`stats.html` + `factor-rates.json`)
 

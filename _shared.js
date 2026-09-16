@@ -51,7 +51,7 @@
     },
     v3: {
       slot: 'accuracy',
-      name: 'Fight IQ — tape only',
+      name: 'Fight IQ — odds-blind',
       tagline: 'Predicts winners from fighter data alone. Never sees a betting line, so its number is fully independent of the market.',
       trainEnd: '2022-12-31',
       money: false,
@@ -79,7 +79,7 @@
     },
     v1: {
       slot: 'accuracy',
-      name: 'Baseline — tape only',
+      name: 'Baseline — odds-blind',
       tagline: 'The reference model: rolling fighter stats, no opponent-quality signal. Shows what every later feature actually buys.',
       trainEnd: '2022-12-31',
       money: false,
@@ -114,7 +114,7 @@
   cfl.ENGINE = {
     family: 'engine',
     accuracy: {
-      name: 'Fight IQ — tape only',
+      name: 'Fight IQ — odds-blind',
       tagline: 'One calibrated winner probability per fight, built from fighter history, fight stats, and physical attributes. Never sees a betting line.',
     },
     roi: {
@@ -681,26 +681,203 @@
     }
   };
 
-  // Email-only lead magnet. Drop:
-  //   <div class="cfl-email-capture" data-source="home-footer"></div>
-  // …then call cfl.renderEmailCaptures(). Submitting writes to the
-  // email_subscribers table; the digest workflow picks it up from there.
+  // --------- Funnel tracking (Plausible custom events) ---------
+  // cfl.track('email_submit', { source: 'home-bottom' }). Cookie-free; the
+  // Plausible snippet is already on every page. If it hasn't loaded yet the
+  // call is queued the way Plausible's own snippet does it; if it's blocked or
+  // absent the call is a no-op. Never throws.
+  //
+  // Event names in use (create each as a custom-event goal in Plausible):
+  //   preview_view, fight_expand, proof_center_view, methodology_view,
+  //   email_form_view, email_submit, email_submit_success, email_submit_error,
+  //   signup_start, signup_complete, odds_book_click, premium_interest.
+  // (page_view is Plausible's default pageview and needs no call.)
+  try {
+    window.plausible = window.plausible || function () {
+      (window.plausible.q = window.plausible.q || []).push(arguments);
+    };
+  } catch (_) { /* nothing */ }
+  cfl.track = function (name, props) {
+    try {
+      if (!name || typeof window.plausible !== 'function') return;
+      window.plausible(name, props ? { props } : undefined);
+    } catch (_) { /* analytics must never break a page */ }
+  };
+
+  // Delegated events so pages don't each wire their own:
+  //   - fight_expand: opening a fight's "Why this forecast?" disclosure
+  //     (<details class="fight-why">) anywhere on the site.
+  //   - any <a data-track="odds_book_click" data-book="DraftKings"> (or any
+  //     other event name in data-track) fires that event on click. There are
+  //     no sportsbook links today; this is the hook for when there are.
+  try {
+    document.addEventListener('toggle', ev => {
+      const el = ev.target;
+      if (el && el.tagName === 'DETAILS' && el.open && el.classList.contains('fight-why')) {
+        const card = el.closest('[data-fid], [data-fight-id]');
+        cfl.track('fight_expand', { page: location.pathname.split('/').pop() || 'index.html', fight: card ? (card.getAttribute('data-fid') || card.getAttribute('data-fight-id')) : 'unknown' });
+      }
+    }, true);
+    document.addEventListener('click', ev => {
+      const a = ev.target && ev.target.closest ? ev.target.closest('a[data-track]') : null;
+      if (!a) return;
+      const props = {};
+      Array.from(a.attributes).forEach(at => { if (at.name.startsWith('data-') && at.name !== 'data-track') props[at.name.slice(5)] = at.value; });
+      cfl.track(a.getAttribute('data-track'), props);
+    }, true);
+  } catch (_) { /* nothing */ }
+
+  // --------- Public claim manifest (data/claims.json) ---------
+  // Every headline number the site quotes about its record comes from
+  // data/claims.json, written by build/claims-manifest.js from the graded
+  // views. Historical replay and live results are separate claims — never add
+  // them. Mark up a page like:
+  //   <span data-claim="engine_replay_accuracy"></span>          → display value
+  //   <span data-claim="engine_replay_accuracy:sample_size"></span> → a field
+  //   <span data-claim-asof></span>                              → "Last updated …"
+  // then call cfl.renderClaims(). Missing claims render as "—".
+  cfl._claims = null;
+  cfl.loadClaims = async function (url) {
+    if (cfl._claims) return cfl._claims;
+    const res = await fetch(url || 'data/claims.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('claims.json ' + res.status);
+    const m = await res.json();
+    // claims is an object keyed by id (an array is tolerated for older files).
+    m.by_id = Array.isArray(m.claims)
+      ? Object.fromEntries(m.claims.map(c => [c.id, c]))
+      : (m.claims || {});
+    cfl._claims = m;
+    return m;
+  };
+  cfl.claim = function (id) {
+    return (cfl._claims && cfl._claims.by_id[id]) || null;
+  };
+  cfl.claimField = function (id, field) {
+    const c = cfl.claim(id);
+    if (!c) return '—';
+    const v = c[field || 'display'];
+    if (v == null) return '—';
+    if (typeof v === 'number') return Number.isInteger(v) ? v.toLocaleString() : String(v);
+    return String(v);
+  };
+  cfl.formatAsOf = function (iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+  };
+  cfl.renderClaims = async function (url) {
+    let m;
+    try { m = await cfl.loadClaims(url); }
+    catch (err) { console.warn('[claims] manifest unavailable', err); return null; }
+    document.querySelectorAll('[data-claim]').forEach(el => {
+      const [id, field] = el.getAttribute('data-claim').split(':');
+      el.textContent = cfl.claimField(id, field);
+    });
+    document.querySelectorAll('[data-claim-asof]').forEach(el => {
+      const id = el.getAttribute('data-claim-asof');
+      const c = id ? cfl.claim(id) : null;
+      const iso = c ? c.as_of : m.generated_at;
+      el.textContent = 'Last updated: ' + cfl.formatAsOf(iso);
+    });
+    return m;
+  };
+
+  // --------- Factor Lab verdicts (factor-rates.json) ---------
+  // The one recorded result of the market-control screen is factor-rates.json
+  // (built by build/factor-rates.js). stats.html renders all of it; About and
+  // Methodology quote the headline ("only age survives") and must read it from
+  // the same file instead of carrying it in prose. Verdict words are shared
+  // here so no page can describe a verdict differently from the Factor Lab.
+  cfl.FACTOR_ANSWER = {
+    real: 'Yes', lean: 'Maybe', proxy: 'No', inverted: 'No', unproven: 'No idea', insufficient: 'No idea',
+  };
+  cfl.FACTOR_BECAUSE = {
+    real: 'That is a real edge.',
+    lean: 'Close, but not enough fights yet to be sure.',
+    proxy: 'Take the odds away and it stops working.',
+    inverted: 'It points the wrong way.',
+    unproven: 'Too few even-odds fights to say yet.',
+    insufficient: 'Too few fights to say yet.',
+  };
+  cfl._factorRates = null;
+  cfl.loadFactorRates = async function (url) {
+    if (cfl._factorRates) return cfl._factorRates;
+    const res = await fetch(url || 'factor-rates.json', { cache: 'no-cache' });
+    if (!res.ok) throw new Error('factor-rates.json ' + res.status);
+    cfl._factorRates = await res.json();
+    return cfl._factorRates;
+  };
+  // Markup:
+  //   <span data-factor-survivors></span>         → "age" (labels whose headline verdict is real)
+  //   <span data-factor-survivor-count></span>    → "one"
+  //   <span data-factor-answer="ufc_record"></span>  → "Maybe"
+  //   <span data-factor-because="ufc_record"></span> → "Close, but not enough fights yet to be sure."
+  //   <span data-factor="age|headline|even.pct"></span> → a number off a bucket
+  //       (bucket = "headline" or the bucket's label; path is dotted)
+  //   <span data-factor-asof></span>              → "Last updated: …"
+  cfl.renderFactorVerdicts = async function (url) {
+    let d;
+    try { d = await cfl.loadFactorRates(url); }
+    catch (err) { console.warn('[factor-rates] unavailable', err); return null; }
+    const factors = d.factors || [];
+    const headOf = f => f.buckets.find(b => b.headline) || f.buckets[0];
+    const byId = {};
+    factors.forEach(f => { byId[f.id] = f; });
+    const survivors = factors.filter(f => headOf(f).verdict === 'real').map(f => f.label.toLowerCase());
+    const words = ['none', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight'];
+    document.querySelectorAll('[data-factor-survivors]').forEach(el => {
+      el.textContent = survivors.length ? survivors.join(', ') : 'none';
+    });
+    document.querySelectorAll('[data-factor-survivor-count]').forEach(el => {
+      el.textContent = words[survivors.length] || String(survivors.length);
+    });
+    document.querySelectorAll('[data-factor-answer]').forEach(el => {
+      const f = byId[el.getAttribute('data-factor-answer')];
+      el.textContent = f ? (cfl.FACTOR_ANSWER[headOf(f).verdict] || headOf(f).verdict) : '—';
+    });
+    document.querySelectorAll('[data-factor-because]').forEach(el => {
+      const f = byId[el.getAttribute('data-factor-because')];
+      el.textContent = f ? (cfl.FACTOR_BECAUSE[headOf(f).verdict] || '') : '';
+    });
+    document.querySelectorAll('[data-factor]').forEach(el => {
+      const [id, bucketKey, path] = el.getAttribute('data-factor').split('|');
+      const f = byId[id];
+      const b = f ? (bucketKey === 'headline' ? headOf(f) : f.buckets.find(x => x.label === bucketKey)) : null;
+      let v = b;
+      (path || '').split('.').filter(Boolean).forEach(k => { v = v == null ? v : v[k]; });
+      el.textContent = v == null ? '—' : (typeof v === 'number' ? v.toLocaleString() : String(v));
+    });
+    document.querySelectorAll('[data-factor-asof]').forEach(el => {
+      el.textContent = 'Last updated: ' + cfl.formatAsOf(d.generated_at);
+    });
+    return d;
+  };
+
+  // --------- Email signup: the Fight Week Market Brief ---------
+  // One component, everywhere. Drop:
+  //   <div class="cfl-email-capture" data-source="home-bottom"></div>
+  // and it renders on DOM ready (or call cfl.renderEmailCaptures() after
+  // injecting one). Submitting inserts into email_subscribers via
+  // cflAuth.subscribeEmail; the digest workflow (build/send-digest.js) reads
+  // the table with the service key. The wording is fixed on purpose — one
+  // offer, one field, one button — so the same list is built from every page.
+  cfl.EMAIL_HEADLINE = 'Get the Fight Week Market Brief';
+  cfl.EMAIL_SUB = 'Every UFC card before the bell: the engine’s forecasts, where the price looks off, and last week’s results — wins and misses. One email a week, free.';
   cfl.renderEmailCaptures = function () {
     const els = document.querySelectorAll('.cfl-email-capture:not([data-cfl-rendered])');
     els.forEach(el => {
       el.setAttribute('data-cfl-rendered', '1');
       const source = el.getAttribute('data-source') || 'inline';
-      const headline = el.getAttribute('data-headline') || 'Weekly fight preview, free.';
-      const sub = el.getAttribute('data-sub') || 'Get every upcoming UFC card with the model’s verdict in your inbox.';
       el.innerHTML = `
         <div class="cfl-email-capture-inner">
           <div class="cfl-email-capture-copy">
-            <strong>${cfl.escapeHtml(headline)}</strong>
-            <span>${cfl.escapeHtml(sub)}</span>
+            <strong>${cfl.escapeHtml(cfl.EMAIL_HEADLINE)}</strong>
+            <span>${cfl.escapeHtml(cfl.EMAIL_SUB)}</span>
           </div>
           <form class="cfl-email-capture-form" novalidate>
             <input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
-            <button type="submit">Subscribe</button>
+            <button type="submit">Get the brief</button>
           </form>
           <div class="cfl-email-capture-msg" aria-live="polite"></div>
         </div>
@@ -709,28 +886,51 @@
       const input = el.querySelector('input[type=email]');
       const btn = el.querySelector('button');
       const msg = el.querySelector('.cfl-email-capture-msg');
+      // email_form_view fires once, when the form actually scrolls into view —
+      // a form below the fold that nobody reached isn't a view.
+      try {
+        if ('IntersectionObserver' in window) {
+          const io = new IntersectionObserver(entries => {
+            if (entries.some(e => e.isIntersecting)) { cfl.track('email_form_view', { source }); io.disconnect(); }
+          }, { threshold: 0.5 });
+          io.observe(el);
+        } else {
+          cfl.track('email_form_view', { source });
+        }
+      } catch (_) { /* nothing */ }
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
         msg.textContent = '';
         msg.classList.remove('err', 'ok');
+        cfl.track('email_submit', { source });
         if (!window.cflAuth || !window.cflAuth.subscribeEmail) {
           msg.classList.add('err');
-          msg.textContent = 'Subscription is temporarily unavailable.';
+          msg.textContent = 'Signup is temporarily unavailable. Try again in a minute.';
+          cfl.track('email_submit_error', { source, reason: 'no_client' });
           return;
         }
         btn.disabled = true;
         const originalLabel = btn.textContent;
-        btn.textContent = 'Submitting…';
-        const { error } = await window.cflAuth.subscribeEmail(input.value, source);
+        btn.textContent = 'Adding you…';
+        let result;
+        try {
+          result = await window.cflAuth.subscribeEmail(input.value, source);
+        } catch (e) {
+          result = { error: { message: (e && e.message) || 'network' } };
+        }
         btn.disabled = false;
         btn.textContent = originalLabel;
-        if (error) {
+        if (result.error) {
           msg.classList.add('err');
-          msg.textContent = error.message || 'Something went wrong. Try again.';
+          msg.textContent = result.error.message || 'Something went wrong. Try again.';
+          cfl.track('email_submit_error', { source, reason: result.error.code || 'unknown' });
           return;
         }
         msg.classList.add('ok');
-        msg.textContent = 'Subscribed. Check your inbox before the next card.';
+        msg.textContent = result.duplicate
+          ? 'You’re already on the list. The next brief goes out before the card.'
+          : 'You’re in. The next Fight Week Market Brief lands before the card.';
+        cfl.track('email_submit_success', { source, duplicate: result.duplicate ? 'yes' : 'no' });
         form.reset();
       });
     });

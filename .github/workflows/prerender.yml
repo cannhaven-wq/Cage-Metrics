@@ -1,7 +1,9 @@
 name: Prerender static stubs
 
 # Generates /f/<slug>-<id>.html and /e/<slug>-<id>.html for every fighter and
-# event in Supabase, regenerates sitemap.xml, commits any changes back to main.
+# event in Supabase, the /preview and /card pages, sitemap.xml, the Factor Lab
+# data (factor-rates.json) and the public claim manifest (data/claims.json),
+# and commits any changes back to main.
 #
 # Triggers:
 #   - schedule: every 6 hours (catches scraper updates)
@@ -57,11 +59,21 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: npm run factor-rates
 
+      # Public claim manifest: every headline record number the site quotes,
+      # pulled from the graded views and written to data/claims.json. The
+      # service key is only needed for the closing-favorite benchmark
+      # (fight_odds); without it that one claim is carried forward as STALE.
+      - name: Rebuild claim manifest
+        working-directory: build
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run claims
+
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add f/ e/ preview/ card/ sitemap.xml feed.xml factor-rates.json
+          git add f/ e/ preview/ card/ sitemap.xml feed.xml factor-rates.json data/claims.json
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else

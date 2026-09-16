@@ -1,11 +1,13 @@
 // Matchup-preview stub: a real, indexable, content-bearing static page for
 // every fight on an upcoming UFC card. Unlike fighter/event stubs (which
 // redirect users back to the dynamic page), the preview is the destination.
-// It carries the model's verdict, the per-fighter cardio tier, and finish
-// rates so a cold visitor arriving from a Google search for
+// It carries the engine's LOCKED forecast (pre-fight snapshot, or the
+// insert-only live row until the snapshot exists — never a recompute, never a
+// backtest row), a short tale-of-the-tape comparison, the per-fighter cardio
+// tier and finish rates, and the Fight Week Market Brief signup, so a cold
+// visitor arriving from a Google search for
 //     "fighter a vs fighter b prediction"
-// sees real, opinionated content immediately — and a Create-account CTA
-// at the top of the page.
+// sees real, opinionated content immediately.
 //
 // Canonical URL points at the preview itself (not at h2h.html or event.html)
 // since the content is unique to the preview.
@@ -13,6 +15,11 @@
 const { slugify } = require('./slug');
 
 const SITE = 'https://cannonfightlab.com';
+// Keep in step with the ?v= on every root page (see CLAUDE.md "Caching gotcha").
+const SHARED_JS = '/_shared.js?v=rd17';
+const AUTH_JS = '/_auth.js?v=rf1';
+const SUPABASE_CDN = '<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>';
+const PLAUSIBLE = '<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>';
 
 function escapeHtml(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({
@@ -28,16 +35,73 @@ function formatLongDate(isoDate) {
   });
 }
 
+function formatShortDate(iso) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+}
+
 function previewSlug(aName, bName, fightId) {
   return `${slugify(aName)}-vs-${slugify(bName)}-${fightId}`;
 }
 
-// Plain-English agreement label for the two public models (Value + Fight IQ).
-// Handles the one-model case too (a fight only one model has graded).
-function modelAgreementLabel(agree, total) {
-  if (total <= 1) return '1 model';
-  if (agree === total) return total === 2 ? 'both models agree' : `all ${total} models agree`;
-  return `${agree} of ${total} models agree`;
+// Mirrors cfl.ENGINE.tiers in _shared.js / tier_of in cfl_engine/faces.py.
+function tierWord(p) {
+  if (p == null) return '';
+  if (p >= 0.65) return 'Lock';
+  if (p >= 0.57) return 'Pick';
+  return 'Lean';
+}
+
+// Shared CSS for the signup component (the class names _shared.js renders).
+// Copied rather than loading _shared.css so the preview keeps its own layout.
+const SIGNUP_CSS = `
+  .cfl-email-capture { margin: 30px 0; }
+  .cfl-email-capture-inner { background:#111; border:1px solid #222; padding:22px 24px; border-radius:8px; display:grid; grid-template-columns:1fr auto; gap:18px; align-items:center; }
+  @media (max-width:640px){ .cfl-email-capture-inner { grid-template-columns:1fr; } }
+  .cfl-email-capture-copy strong { display:block; color:#fff; font-size:16px; margin-bottom:4px; font-weight:700; }
+  .cfl-email-capture-copy span { color:#bbb; font-size:13px; line-height:1.45; }
+  .cfl-email-capture-form { display:flex; gap:8px; align-items:stretch; flex-wrap:wrap; }
+  .cfl-email-capture-form input[type=email] { background:#0a0a0a; border:1px solid #333; color:#fff; padding:10px 12px; border-radius:6px; font-size:14px; font-family:inherit; min-width:220px; }
+  .cfl-email-capture-form input[type=email]:focus { outline:none; border-color:#e63946; }
+  .cfl-email-capture-form button { background:#e63946; color:#fff; border:0; padding:10px 18px; border-radius:6px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit; }
+  .cfl-email-capture-form button:hover { background:#c1121f; }
+  .cfl-email-capture-form button:disabled { opacity:.6; cursor:wait; }
+  .cfl-email-capture-msg { grid-column:1 / -1; font-size:13px; min-height:1em; }
+  .cfl-email-capture-msg.ok { color:#3fd07a; }
+  .cfl-email-capture-msg.err { color:#e63946; }
+`;
+
+// Tale of the tape rows. Every value is optional; a row is dropped when both
+// sides are missing so the table never shows a column of dashes.
+function tapeRows(a, b) {
+  const rec = f => (f.wins == null && f.losses == null) ? null : `${f.wins ?? 0}-${f.losses ?? 0}${f.draws ? '-' + f.draws : ''}`;
+  const ht = f => f.height_in == null ? null : `${Math.floor(f.height_in / 12)}'${Math.round(f.height_in % 12)}"`;
+  const rch = f => f.reach_in == null ? null : `${f.reach_in}"`;
+  const age = f => {
+    if (f.dob) {
+      const d = new Date(f.dob + 'T00:00:00Z'); const now = new Date();
+      let y = now.getUTCFullYear() - d.getUTCFullYear();
+      if (now.getUTCMonth() < d.getUTCMonth() || (now.getUTCMonth() === d.getUTCMonth() && now.getUTCDate() < d.getUTCDate())) y -= 1;
+      return String(y);
+    }
+    return f.age == null ? null : String(f.age);
+  };
+  const num = (v, dp) => v == null ? null : Number(v).toFixed(dp);
+  const pct = v => v == null ? null : `${Math.round(Number(v) * (Number(v) <= 1 ? 100 : 1))}%`;
+  const rows = [
+    ['Record', rec(a), rec(b)],
+    ['Height', ht(a), ht(b)],
+    ['Reach', rch(a), rch(b)],
+    ['Stance', a.stance || null, b.stance || null],
+    ['Age', age(a), age(b)],
+    ['Sig. strikes / min', num(a.slpm, 1), num(b.slpm, 1)],
+    ['Strike accuracy', pct(a.str_acc), pct(b.str_acc)],
+    ['Takedowns / 15 min', num(a.td_avg, 1), num(b.td_avg, 1)],
+    ['Takedown defense', pct(a.td_def), pct(b.td_def)],
+  ];
+  return rows.filter(r => r[1] != null || r[2] != null);
 }
 
 // Render one preview page for a single fight. All params are optional except
@@ -48,7 +112,7 @@ function matchupPreview({
   fighterA,
   fighterB,
   event,
-  picks,       // [{ model_version, fighter_id, model_p }]
+  picks,       // [{ fighter_id, model_p, tier, locked: 'snapshot'|'live', locked_at }]
   cardioA,     // 'tireless' | 'steady' | 'tapers' | 'fades' | 'collapses' | null
   cardioB,
   finishA,     // { total_fights, ko_tko_rate, sub_rate } | null
@@ -62,34 +126,31 @@ function matchupPreview({
   const weight = fight.weight_class ? ` ${fight.weight_class}` : '';
   const flag = fight.is_title_fight ? ' Title Fight' : (fight.is_main_event ? ' Main Event' : '');
 
-  // ---- consensus model verdict ----
-  const validPicks = (picks || []).filter(p => p.model_p != null && +p.model_p > 0.5);
-  const tally = {};
-  validPicks.forEach(p => { tally[p.fighter_id] = (tally[p.fighter_id] || 0) + 1; });
-  const sortedSides = Object.entries(tally).sort((x, y) => y[1] - x[1]);
-
+  // ---- locked engine forecast ----
+  const locked = (picks || []).find(p => p.model_p != null && p.fighter_id != null) || null;
   let verdictLine = '';
   let descVerdict = '';
   let winnerName = null;
-  if (sortedSides.length) {
-    const winnerId = +sortedSides[0][0];
-    const winner = winnerId === fighterA.id ? fighterA : fighterB;
-    winnerName = winner.name;
-    const winningPs = validPicks
-      .filter(p => p.fighter_id === winnerId)
-      .map(p => +p.model_p);
-    const avgP = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
-    const pct = Math.round(avgP * 100);
-    const agree = sortedSides[0][1];
-    const total = validPicks.length;
-    const agreeLabel = modelAgreementLabel(agree, total);
-    verdictLine = `<strong>${escapeHtml(winner.name)}</strong> · ${pct}% confidence · ${agreeLabel}`;
-    descVerdict = `Model verdict: ${winner.name} (${pct}%, ${agreeLabel}). `;
-  } else {
-    verdictLine = `Verdict pending — model picks publish closer to fight night.`;
+  let pct = null;
+  let lockNote = '';
+  if (locked) {
+    const winner = locked.fighter_id === fighterA.id ? fighterA : (locked.fighter_id === fighterB.id ? fighterB : null);
+    if (winner) {
+      winnerName = winner.name;
+      pct = Math.round(+locked.model_p * 100);
+      const tw = locked.tier || tierWord(+locked.model_p);
+      lockNote = locked.locked === 'snapshot'
+        ? `Locked in the pre-fight snapshot${locked.locked_at ? ' on ' + formatShortDate(locked.locked_at) : ''} — never revised.`
+        : `Locked at first write${locked.locked_at ? ' on ' + formatShortDate(locked.locked_at) : ''} — never revised.`;
+      verdictLine = `<strong>${escapeHtml(winner.name)}</strong> · ${pct}% · ${escapeHtml(tw)}`;
+      descVerdict = `CFL's odds-blind engine forecasts ${winner.name} at ${pct}%. `;
+    }
+  }
+  if (!winnerName) {
+    verdictLine = `Forecast pending — the engine's forecast locks before fight night.`;
   }
 
-  // ---- per-fighter edge notes ----
+  // ---- per-fighter notes ----
   function cardioLine(cardio) {
     if (!cardio) return null;
     const labels = {
@@ -112,13 +173,17 @@ function matchupPreview({
   const bCardio = cardioLine(cardioB);
   const aFinish = finishLine(finishA);
   const bFinish = finishLine(finishB);
+  const tape = tapeRows(fighterA, fighterB);
 
-  // ---- meta ----
-  const title = `${fighterA.name} vs ${fighterB.name} — Prediction, Cardio & Edges | Cannon Fight Lab`;
+  // ---- meta (unique per page) ----
+  const title = `${fighterA.name} vs ${fighterB.name} Prediction & Odds | Cannon Fight Lab`;
+  const tapeBits = [];
+  const recA = tape.find(r => r[0] === 'Record'); if (recA) tapeBits.push(`${fighterA.name.split(' ').pop()} ${recA[1] || '—'} vs ${fighterB.name.split(' ').pop()} ${recA[2] || '—'}`);
   const description = (
     `${fighterA.name} vs ${fighterB.name}${flag ? ' (' + flag.trim() + ')' : ''} at ` +
-    `${eventName}${dateLabel ? ' on ' + dateLabel : ''}. ${descVerdict}` +
-    `Cardio scores, finish rates, and the strongest edge factors for both fighters.`
+    `${eventName}${dateLabel ? ', ' + dateLabel : ''}. ${descVerdict}` +
+    `${tapeBits.length ? tapeBits.join('; ') + '. ' : ''}` +
+    `Locked forecast, tale of the tape, cardio and finish rates — graded in public, misses included.`
   ).trim();
 
   const sportsEventJsonLd = {
@@ -145,9 +210,6 @@ function matchupPreview({
       { '@type': 'Person', 'name': fighterB.name, 'url': `${SITE}/fighter.html?id=${fighterB.id}` }
     ]
   };
-  // Drop undefined keys so JSON.stringify doesn't emit `"key":undefined` (it
-  // would just omit them, but explicit cleanup makes the JSON-LD readable in
-  // view-source).
   Object.keys(sportsEventJsonLd).forEach(k => sportsEventJsonLd[k] === undefined && delete sportsEventJsonLd[k]);
 
   const faqJsonLd = winnerName ? {
@@ -158,7 +220,7 @@ function matchupPreview({
       'name': `Who wins ${fighterA.name} vs ${fighterB.name}?`,
       'acceptedAnswer': {
         '@type': 'Answer',
-        'text': `Cannon Fight Lab's models pick ${winnerName}. CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
+        'text': `Cannon Fight Lab's odds-blind engine forecasts ${winnerName} at ${pct}%. The forecast was locked before the bell and is graded in public, misses included. CFL publishes model forecasts and market analysis; it does not sell handicapper picks.`
       }
     }]
   } : null;
@@ -175,7 +237,6 @@ function matchupPreview({
 
   const h2hUrl = `${SITE}/h2h.html?a=${fighterA.id}&b=${fighterB.id}`;
   const eventUrl = event ? `${SITE}/event.html?id=${event.id}` : `${SITE}/`;
-  const signupUrl = `${SITE}/signup.html?next=${encodeURIComponent('/preview/' + slug + '.html')}`;
 
   const fighterCard = (f, cardioStr, finishStr) => `
     <article class="cfl-prev-card">
@@ -188,6 +249,13 @@ function matchupPreview({
       </ul>
     </article>
   `;
+
+  const tapeHtml = tape.length ? `
+  <h2 class="cfl-prev-h2">Tale of the tape</h2>
+  <table class="cfl-prev-tape">
+    <thead><tr><th></th><th>${escapeHtml(fighterA.name)}</th><th>${escapeHtml(fighterB.name)}</th></tr></thead>
+    <tbody>${tape.map(r => `<tr><td>${escapeHtml(r[0])}</td><td>${escapeHtml(r[1] ?? '—')}</td><td>${escapeHtml(r[2] ?? '—')}</td></tr>`).join('')}</tbody>
+  </table>` : '';
 
   const jsonLdBlobs = [sportsEventJsonLd, breadcrumbJsonLd];
   if (faqJsonLd) jsonLdBlobs.push(faqJsonLd);
@@ -206,7 +274,7 @@ function matchupPreview({
 
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Edges`)}">
+<meta property="og:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Odds`)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${SITE}/og-image.png">
@@ -216,13 +284,14 @@ function matchupPreview({
 <meta property="og:locale" content="en_US">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Edges`)}">
+<meta name="twitter:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Odds`)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${SITE}/og-image.png">
 
 <meta name="theme-color" content="#0a0a0a">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+${PLAUSIBLE}
 
 ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}</script>`).join('\n')}
 
@@ -236,14 +305,17 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   h1 .vs { color:#999; padding:0 6px; font-weight:400; }
   .cfl-prev-meta { color:#999; font-size:14px; margin-bottom:28px; }
   .cfl-prev-meta strong { color:#e63946; }
-  .cfl-prev-verdict { background:#181818; border:1px solid #2a2a2a; border-left:3px solid #e63946; padding:18px 20px; border-radius:6px; margin-bottom:30px; font-size:16px; }
+  .cfl-prev-verdict { background:#181818; border:1px solid #2a2a2a; border-left:3px solid #e63946; padding:18px 20px; border-radius:6px; margin-bottom:12px; font-size:16px; }
   .cfl-prev-verdict-label { display:block; color:#999; font-size:11px; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
-  .cfl-prev-cta { background:linear-gradient(135deg,#e63946 0%,#c1121f 100%); color:#fff; padding:22px 24px; border-radius:8px; margin-bottom:36px; display:flex; gap:18px; align-items:center; flex-wrap:wrap; }
-  .cfl-prev-cta-text { flex:1 1 280px; }
-  .cfl-prev-cta-text strong { display:block; font-size:17px; margin-bottom:3px; }
-  .cfl-prev-cta-text span { color:#fff; opacity:0.85; font-size:13px; }
-  .cfl-prev-cta a.btn { background:#fff; color:#c1121f; padding:10px 22px; border-radius:6px; font-weight:700; text-decoration:none; white-space:nowrap; font-size:14px; }
-  .cfl-prev-cta a.btn:hover { background:#f5f5f5; }
+  .cfl-prev-lock { color:#888; font-size:12px; margin:8px 0 0; }
+  .cfl-prev-record { color:#999; font-size:13px; margin:0 0 26px; line-height:1.5; }
+  .cfl-prev-record strong { color:#ddd; }
+  .cfl-prev-record a { color:#e63946; text-decoration:none; }
+  h2.cfl-prev-h2 { font-size:18px; color:#fff; margin:0 0 10px; }
+  table.cfl-prev-tape { width:100%; border-collapse:collapse; margin-bottom:30px; font-size:14px; }
+  table.cfl-prev-tape th { text-align:left; color:#999; font-size:11px; letter-spacing:1px; text-transform:uppercase; padding:8px; border-bottom:1px solid #2a2a2a; }
+  table.cfl-prev-tape td { padding:9px 8px; border-bottom:1px solid #1c1c1c; color:#e8e8e8; }
+  table.cfl-prev-tape td:first-child { color:#999; }
   .cfl-prev-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; margin-bottom:30px; }
   @media (max-width:640px){ .cfl-prev-grid { grid-template-columns:1fr; } }
   .cfl-prev-card { background:#111; border:1px solid #222; border-radius:6px; padding:18px; }
@@ -260,6 +332,7 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   .cfl-prev-deeper a:hover { text-decoration:underline; }
   .cfl-prev-foot { color:#666; font-size:12px; margin-top:36px; text-align:center; }
   .cfl-prev-foot a { color:#999; }
+  ${SIGNUP_CSS}
 </style>
 </head>
 <body>
@@ -277,17 +350,15 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   </div>
 
   <div class="cfl-prev-verdict">
-    <span class="cfl-prev-verdict-label">Model verdict</span>
+    <span class="cfl-prev-verdict-label">Model forecast · odds-blind engine</span>
     ${verdictLine}
+    ${lockNote ? `<p class="cfl-prev-lock">${escapeHtml(lockNote)}</p>` : ''}
   </div>
+  <p class="cfl-prev-record">How this engine has done: <strong data-claim="engine_replay_accuracy">…</strong> straight-up on <span data-claim="engine_replay_accuracy:sample_size">…</span> fights in the Engine v2 historical replay · live record since <span data-claim="live_since">…</span>: <strong data-claim="engine_live_accuracy">…</strong> on <span data-claim="engine_live_accuracy:sample_size">…</span> settled fights. <a href="${SITE}/track-record.html">Every miss is posted →</a></p>
 
-  <div class="cfl-prev-cta">
-    <div class="cfl-prev-cta-text">
-      <strong>Track this pick on your free account</strong>
-      <span>Free during beta — see every edge factor, save your picks, get the weekly preview email.</span>
-    </div>
-    <a class="btn" href="${signupUrl}">Create free account →</a>
-  </div>
+  <div class="cfl-email-capture" data-source="preview:${escapeHtml(String(fight.id))}"></div>
+
+  ${tapeHtml}
 
   <div class="cfl-prev-grid">
     ${fighterCard(fighterA, aCardio, aFinish)}
@@ -297,18 +368,25 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   <div class="cfl-prev-deeper">
     <h3>Go deeper</h3>
     <a href="${h2hUrl}">Head-to-head: ${escapeHtml(fighterA.name)} vs ${escapeHtml(fighterB.name)} →</a>
-    <a href="${eventUrl}">Full card &amp; verdicts: ${escapeHtml(eventName)} →</a>
+    <a href="${eventUrl}">Full card &amp; forecasts: ${escapeHtml(eventName)} →</a>
     <a href="${SITE}/cardio.html">How the cardio score works →</a>
-    <a href="${SITE}/edges.html">How model verdicts are built →</a>
+    <a href="${SITE}/methodology.html">How the engine is built →</a>
   </div>
 
   <p class="cfl-prev-foot">
-    Cannon Fight Lab is an analytics publication, not a sportsbook. 21+ only.
+    Cannon Fight Lab publishes model forecasts and market analysis. It does not sell handicapper picks. Not a sportsbook. 21+ only.
     <a href="${SITE}/disclaimer.html">Disclaimer</a>
   </p>
 
 </div>
 
+${SUPABASE_CDN}
+<script src="${SHARED_JS}"></script>
+<script src="${AUTH_JS}"></script>
+<script>
+cfl.track('preview_view', { fight: ${JSON.stringify(String(fight.id))}, event: ${JSON.stringify(eventName)} });
+cfl.renderClaims('/data/claims.json');
+</script>
 </body>
 </html>
 `;

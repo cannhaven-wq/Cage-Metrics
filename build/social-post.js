@@ -107,7 +107,7 @@ async function buildPost(event) {
 
   // Twitter: must fit 280 chars. Format conservatively.
   const tweet = (() => {
-    const header = `🥊 ${event.name} — model picks, locked in.\n${date}\n\n`;
+    const header = `🥊 ${event.name} — model forecasts, locked in.\n${date}\n\n`;
     const cta = `\nFull card + edges + free account:\n${eventUrl}`;
     let body = '';
     for (const l of headlineLines) {
@@ -120,11 +120,11 @@ async function buildPost(event) {
   })();
 
   // Reddit: title + selftext markdown.
-  const redditTitle = `[Model picks] ${event.name} — ${date}`;
+  const redditTitle = `[Model forecasts] ${event.name} — ${date}`;
   const redditBody = (() => {
     const parts = [];
     parts.push(`Posting verdicts before the card so receipts are timestamped.\n`);
-    parts.push(`| Fight | Pick | Conf |`);
+    parts.push(`| Fight | Forecast | Conf |`);
     parts.push(`|---|---|---|`);
     for (const l of headlineLines) {
       const tag = l.flag ? ` **[${l.flag}]**` : '';

@@ -6,8 +6,8 @@
 
 <!-- ===== Primary SEO ===== -->
 <title>Cannon Fight Lab — UFC Models That Show Their Work</title>
-<meta name="description" content="A tape-only UFC engine graded in public — 61% straight-up on 3,200+ fights it never trained on, Locks at 75% — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights. Every miss shown.">
-<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, accurate UFC picks">
+<meta name="description" content="An odds-blind UFC engine graded in public — historical replay and live record labeled separately, every miss shown — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights. Model forecasts and market analysis, not handicapper picks.">
+<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, UFC model forecasts">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
-<meta property="og:description" content="A tape-only UFC engine graded in public — 61% straight-up on 3,200+ fights it never trained on, Locks at 75% — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights. Every miss shown.">
+<meta property="og:description" content="An odds-blind UFC engine graded in public — historical replay and live record labeled separately, every miss shown — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights.">
 <meta property="og:url" content="https://cannonfightlab.com/">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -27,7 +27,7 @@
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
-<meta name="twitter:description" content="A tape-only UFC engine graded in public — 61% on 3,200+ never-seen fights, every pick locked, every miss shown — plus the Factor Lab: which stats actually predict fights.">
+<meta name="twitter:description" content="An odds-blind UFC engine graded in public — every forecast locked before the bell, every miss shown — plus the Factor Lab: which stats actually predict fights.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -43,7 +43,7 @@
   "name": "Cannon Fight Lab",
   "alternateName": "CFL",
   "url": "https://cannonfightlab.com/",
-  "description": "UFC fight models that show their work: a tape-only predictor, a value model graded against the opening line, and the Factor Lab — every stat tested against 8,600+ decided fights, then again on evenly-priced fights alone.",
+  "description": "UFC fight models that show their work: an odds-blind predictor, a value model graded against the opening line, and the Factor Lab — every stat tested against 8,600+ decided fights, then again on evenly-priced fights alone.",
   "applicationCategory": "SportsApplication",
   "operatingSystem": "Any",
   "creator": {
@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -393,7 +393,7 @@
   <!-- 1a · MOBILE PITCH STRIP — phones only; the full hero sits below the card. -->
   <div class="m-pitch">
     <b>Find where the betting line is <span class="hl">wrong.</span></b>
-    <span id="mProof">Every pick graded in public &middot; every miss posted</span>
+    <span id="mProof">Every forecast graded in public &middot; every miss posted</span>
   </div>
 
   <!-- 1 · HERO -->
@@ -401,14 +401,14 @@
     <div>
       <div class="hp-eyebrow">UFC Betting Analytics</div>
       <h1>Find where the betting line is <span class="hl">wrong.</span></h1>
-      <p class="lede">UFC picks with the math shown and the losses posted. One model calls every fight without ever seeing the odds; a second flags the fights where the price looks off.</p>
+      <p class="lede">UFC model forecasts with the math shown and the losses posted. One odds-blind model calls every fight without ever seeing the betting line; a second flags the fights where the price looks off. CFL publishes model forecasts and market analysis. It does not sell handicapper picks.</p>
       <div class="hero-cta">
         <a href="#next" class="btn btn-primary btn-lg">Analyze next card →</a>
         <a href="track-record.html" class="btn btn-ghost btn-lg">See the graded track record</a>
       </div>
       <div class="hero-proofline" id="heroProofline">
-        <span class="pf" id="hpProof"><b>61.6%</b> straight-up across 3,288 never-seen fights · Locks hit <b>74.7%</b> (simulated)</span>
-        <span class="pf">Picks locked at first write · misses shown · live record since July 2026</span>
+        <span class="pf" id="hpProof"><b data-claim="engine_replay_accuracy">…</b> straight-up across <span data-claim="engine_replay_accuracy:sample_size">…</span> never-seen fights · Locks hit <b data-claim="engine_replay_locks">…</b> (Engine v2 historical replay)</span>
+        <span class="pf">Forecasts locked at first write · misses shown · live record since <span data-claim="live_since">…</span></span>
         <a class="pf link" href="track-record.html">Verify it →</a>
       </div>
     </div>
@@ -448,8 +448,19 @@
 
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
-    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded in public, misses included.</div></div><a href="track-record.html">See the full graded record →</a></div>
-    <p class="track-note">One engine, two honest numbers. <strong>Fight IQ</strong> — the engine's tape-only face — has been graded on <strong id="hpN2">3,288</strong> fights it never trained on: <strong id="hpAcc2">61.6%</strong> of its picks were right, and its highest-confidence Locks hit <strong id="hpLockAcc2">74.7%</strong> (<span id="hpLockN2">722</span> picks). Just backing the closing favorite gets about 68% — we publish a number that loses to Vegas because a model within seven points of the market without ever looking at the market is a model you can actually trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its 658 simulated bets, graded at real closing prices, went <strong>519-139</strong> (+10.0% when bets are sized to the edge; roughly break-even at flat $100 — short-priced favorites pay small). Those results are the walk-forward replay, simulated point-in-time and labeled as such; the replay's first, uncalibrated year is excluded from everything we publish. The live record started July 2026 and is still tiny — <strong>12-5</strong> on settled flags, down $61 at flat $100 so far. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market. The Fight IQ numbers refresh from the pick database on every load; the Value numbers are a snapshot as of Aug 18, 2026.</p>
+    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every forecast graded in public, misses included.</div></div><a href="track-record.html">See the full graded record →</a></div>
+    <p class="track-note">One engine, two records — kept separate, never added together. <strong>CFL publishes model forecasts and market analysis. It does not sell handicapper picks.</strong></p>
+    <div class="cfl-claims">
+      <div class="cfl-claim replay">
+        <div class="kind">Engine v2 historical replay</div>
+        <p><strong>Fight IQ</strong> — the engine's odds-blind face — called <strong data-claim="engine_replay_accuracy">…</strong> of <span data-claim="engine_replay_accuracy:sample_size">…</span> fights it never trained on, and its highest-confidence Locks hit <strong data-claim="engine_replay_locks">…</strong> (<span data-claim="engine_replay_locks:sample_size">…</span> forecasts). Backing the closing favorite on the same fights gets <span data-claim="market_favorite_replay_accuracy">…</span> — we publish a number that loses to Vegas because a model that lands within a few points of the market without ever looking at the market is one you can trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its <span data-claim="value_replay_record:sample_size">…</span> replayed bets, graded at real closing prices, went <strong data-claim="value_replay_record">…</strong> (<span data-claim="value_replay_record:flat_100_pnl_display">…</span> at flat $100 — short-priced favorites pay small). This is a walk-forward replay of history, not bets anyone placed; the replay's first, uncalibrated year is excluded.</p>
+      </div>
+      <div class="cfl-claim live">
+        <div class="kind">Live record</div>
+        <p>Forecasts written to the database before the card, since <span data-claim="live_since">…</span>. Fight IQ is <strong data-claim="engine_live_accuracy">…</strong> on <span data-claim="engine_live_accuracy:sample_size">…</span> settled fights (<span data-claim="engine_live_accuracy:pending">…</span> pending); Locks are <strong data-claim="engine_live_locks">…</strong> on <span data-claim="engine_live_locks:sample_size">…</span>. Value flags are <strong data-claim="value_live_record">…</strong>, <span data-claim="value_live_record:flat_100_pnl_display">…</span> at flat $100 at the price posted. Still a small sample — read it as a work in progress, not proof.</p>
+      </div>
+    </div>
+    <div class="cfl-claims-foot">Every number above comes from the public claim manifest (<a href="data/claims.json">claims.json</a>), rebuilt from the forecast database every few hours. <span data-claim-asof></span>. The <a href="track-record.html">Proof Center</a> grades every forecast; the <a href="stats.html">Factor Lab</a> shows which stats survive the market.</div>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
@@ -463,7 +474,7 @@
       </a>
       <a class="tool" href="cardio.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-        <h3>Spot late-round fade risk</h3><p>Cardio scores show who holds output deep into fights and who falls apart — context for every pick, not a betting edge on its own.</p><span class="go">Check cardio scores →</span>
+        <h3>Spot late-round fade risk</h3><p>Cardio scores show who holds output deep into fights and who falls apart — context for every forecast, not a betting edge on its own.</p><span class="go">Check cardio scores →</span>
       </a>
       <a class="tool" href="stats.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M6 20v-6"/><path d="M12 20V4"/><path d="M18 20v-9"/></svg></div>
@@ -481,12 +492,12 @@
     <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
     <div class="trust" style="margin-top:14px">
       <div class="trust-grid">
-        <div class="trust-item"><div class="n" id="tileGraded">3,288</div><div class="l">never-seen fights graded</div></div>
-        <div class="trust-item"><div class="n" id="tileLock">74.7<span class="u">%</span></div><div class="l">Lock-tier accuracy (simulated)</div></div>
-        <div class="trust-item"><div class="n" id="tileFights">8,937</div><div class="l">fights in the database</div></div>
-        <div class="trust-item"><div class="n">Locked</div><div class="l">every live pick at first write</div></div>
+        <div class="trust-item"><div class="n" id="tileGraded" data-claim="engine_replay_accuracy:sample_size">…</div><div class="l">never-seen fights graded (historical replay)</div></div>
+        <div class="trust-item"><div class="n" id="tileLock" data-claim="engine_replay_locks">…</div><div class="l">Lock-tier accuracy (historical replay)</div></div>
+        <div class="trust-item"><div class="n" id="tileFights" data-claim="fights_in_database">…</div><div class="l">fights in the database</div></div>
+        <div class="trust-item"><div class="n">Locked</div><div class="l">every live forecast at first write</div></div>
       </div>
-      <div class="trust-foot">The record numbers refresh from the pick database on every load — accuracy, calibration, profit, and the misses, graded in the open. <a href="track-record.html">See the full track record →</a> · <a href="methodology.html">Read the methodology</a></div>
+      <div class="trust-foot">The record numbers come from the public claim manifest, rebuilt from the forecast database every few hours (<span data-claim-asof></span>) — accuracy, calibration, profit, and the misses, graded in the open. <a href="track-record.html">See the full track record →</a> · <a href="methodology.html">Read the methodology</a></div>
     </div>
   </section>
 
@@ -494,9 +505,9 @@
   <section class="section">
     <div class="sec-head"><div><h2>How to use CFL before a card</h2></div></div>
     <div class="steps" style="margin-top:14px">
-      <div class="step"><div class="num">1</div><div class="st">Check the model pick</div><div class="sd">Who the model likes, and by how much.</div></div>
+      <div class="step"><div class="num">1</div><div class="st">Check the model forecast</div><div class="sd">Who the model likes, and by how much.</div></div>
       <div class="step"><div class="num">2</div><div class="st">Review confidence</div><div class="sd">High, medium, or a thin lean worth a second look.</div></div>
-      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the pick — age, cardio, takedown defense.</div></div>
+      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the forecast — age, cardio, takedown defense.</div></div>
       <div class="step"><div class="num">4</div><div class="st">Check sportsbook odds</div><div class="sd">Line up the model's number against the price.</div></div>
       <div class="step"><div class="num">5</div><div class="st">Bet only on value</div><div class="sd">When the price gives an edge — never on hype.</div></div>
     </div>
@@ -510,9 +521,9 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
-<script src="fight-insights.js?v=6"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
+<script src="fight-insights.js?v=7"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -525,43 +536,19 @@ async function loadHomepageStats() {
   await Promise.all([loadHeroProof(), loadPastEvents()]);
 }
 
-// Engine record for the hero proof line, from the graded picks view. Every
-// row is out-of-sample by construction (walk-forward replay + locked live
-// picks), so no window clamp applies. The static HTML numbers are the
-// fallback. Labeled "simulated" while the live record is still small.
+// Headline record numbers come from the public claim manifest
+// (data/claims.json, built by build/claims-manifest.js). Historical replay and
+// live results are separate claims there and separate blocks here — nothing
+// on this page adds them together. cfl.renderClaims fills every [data-claim].
 async function loadHeroProof() {
   try {
-    const rows = await cfl.fetchEnginePicks(q => q.not('hit', 'is', null));
-    const graded = (rows || []).filter(r => r.hit === true || r.hit === false);
-    if (graded.length >= 100) {
-      const hits = graded.filter(r => r.hit === true).length;
-      const acc = (100 * hits / graded.length).toFixed(1);
-      const locks = graded.filter(r => r.tier === 'Lock');
-      const lockHits = locks.filter(r => r.hit === true).length;
-      const lockStr = locks.length >= 50
-        ? ' · Locks hit <b>' + (100 * lockHits / locks.length).toFixed(1) + '%</b>'
-        : '';
-      const el = document.getElementById('hpProof');
-      if (el) el.innerHTML = '<b>' + acc + '%</b> straight-up across ' +
-        graded.length.toLocaleString() + ' never-seen fights' + lockStr + ' (simulated)';
-      // Every other place the record is quoted reads these same numbers, so
-      // the site never shows two sample sizes for one record.
+    await cfl.renderClaims();
+    const acc = cfl.claim('engine_replay_accuracy');
+    if (acc && acc.display && acc.sample_size) {
       const setText = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
-      setText('mProof', acc + '% on ' + graded.length.toLocaleString() + ' fights the model never saw · every miss posted');
-      setText('hpN2', graded.length.toLocaleString());
-      setText('hpAcc2', acc + '%');
-      if (locks.length >= 50) { setText('hpLockAcc2', (100 * lockHits / locks.length).toFixed(1) + '%'); setText('hpLockN2', locks.length.toLocaleString()); }
-      // Keep the "Why trust it?" tiles on the same live numbers as the hero.
-      const tg = document.getElementById('tileGraded');
-      if (tg) tg.textContent = graded.length.toLocaleString();
-      const tl = document.getElementById('tileLock');
-      if (tl && locks.length >= 50) tl.innerHTML = (100 * lockHits / locks.length).toFixed(1) + '<span class="u">%</span>';
+      setText('mProof', acc.display + ' on ' + Number(acc.sample_size).toLocaleString() + ' replayed fights the model never saw · every miss posted');
     }
-    const sb = window.cflSupabase;
-    const { count } = await sb.from('fights').select('id', { count: 'exact', head: true });
-    const tf = document.getElementById('tileFights');
-    if (tf && count) tf.textContent = count.toLocaleString();
-  } catch (err) { console.warn('[home] hero proof fetch failed', err); }
+  } catch (err) { console.warn('[home] claim manifest failed', err); }
 }
 
 // Vig-free market probability for one side of a fight. The consensus row's
@@ -611,7 +598,7 @@ function renderHeroEdge(event) {
     whenEl.textContent = days > 1 ? `in ${days} days` : (days === 1 ? 'tomorrow' : 'fight day');
   }
   if (!best) {
-    el.innerHTML = '<div class="models-loading">Model picks for this card aren\'t locked yet — check back closer to fight night.</div>';
+    el.innerHTML = '<div class="models-loading">Model forecasts for this card aren\'t locked yet — check back closer to fight night.</div>';
     return;
   }
 
@@ -625,15 +612,15 @@ function renderHeroEdge(event) {
     ? `<div class="cell"><div class="t">Edge</div><div class="n ${best.value >= 1 ? 'green' : ''}">${best.value >= 0 ? '+' : ''}${best.value.toFixed(0)}%</div></div>`
     : `<div class="cell"><div class="t">Edge</div><div class="n" style="color:var(--text-3)">—</div></div>`;
   const note = best.impl != null
-    ? (best.value >= 5 ? 'The model thinks the market is underpricing this pick — the biggest gap on the card.'
+    ? (best.value >= 5 ? 'The model thinks the market is underpricing this forecast — the biggest gap on the card.'
       : best.value >= 1 ? 'A modest gap over the market price — the best value the model sees on this card.'
-      : 'No real gap vs the market on this card yet — the line is fair. Bet value, not picks.')
+      : 'No real gap vs the market on this card yet — the line is fair. Bet the price, not the name.')
     : 'Consensus odds land closer to fight night — the model probability is locked now.';
 
   el.innerHTML = `
     <div class="spot-wt">${cfl.escapeHtml(event ? event.name : 'Next card')} · ${cfl.escapeHtml(best.fight.weight_class || 'Bout')}</div>
     <div class="spot-matchup">${cfl.escapeHtml(best.a.name)} vs ${cfl.escapeHtml(best.b.name)}</div>
-    <div class="spot-pick"><div><div class="lab">Model pick</div><div class="nm">${cfl.escapeHtml(best.pick.picked.name)}</div></div>${tier}</div>
+    <div class="spot-pick"><div><div class="lab">Model forecast</div><div class="nm">${cfl.escapeHtml(best.pick.picked.name)}</div></div>${tier}</div>
     <div class="spot-stats">
       <div class="cell"><div class="t">Model</div><div class="n">${Math.round(best.pick.pct)}%</div></div>
       ${marketCell}
@@ -700,7 +687,7 @@ async function loadPastEvents() {
     const s = modelStats[eventDate + '::' + version];
     const labelHtml = '<div class="pe-model-label">' + cfl.escapeHtml(PE_MODEL_LABELS[version] || version) + '</div>';
     if (!s || s.picks === 0) {
-      return labelHtml + '<div class="pe-model-pct na">—</div><div class="pe-model-detail">no picks</div>';
+      return labelHtml + '<div class="pe-model-pct na">—</div><div class="pe-model-detail">no forecasts</div>';
     }
     const pct = (s.hits / s.picks) * 100;
     const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'mid' : 'bad');
@@ -963,7 +950,7 @@ function renderLeanCards() {
   const pstrip = document.getElementById('hpParlay');
   if (valuePlays >= 2) {
     document.getElementById('hpParlayText').innerHTML =
-      `<strong>${valuePlays} picks</strong> on this card clear our ${VALUE_EDGE}% value bar — the model's number beats the book's by at least that much. That's the raw material for a parlay, not a green light: a parlay multiplies the swings as fast as the payout, so keep stakes small. We grade every one of these in the open — <a href="track-record.html">see the record</a>, wins and losses.`;
+      `<strong>${valuePlays} forecasts</strong> on this card clear our ${VALUE_EDGE}% value bar — the model's number beats the book's by at least that much. That's the raw material for a parlay, not a green light: a parlay multiplies the swings as fast as the payout, so keep stakes small. We grade every one of these in the open — <a href="track-record.html">see the record</a>, wins and losses.`;
     pstrip.hidden = false;
   } else {
     pstrip.hidden = true;
@@ -1061,7 +1048,7 @@ function wireControls() {
     seg._wired = true;
     const hints = {
       order: 'Main event first, top of the card down.',
-      conf: 'Most confident picks first.',
+      conf: 'Most confident forecasts first.',
       value: 'Biggest edge over the market first.',
     };
     seg.addEventListener('click', (e) => {
@@ -1157,10 +1144,10 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   const cf = confidence >= 65 ? '' : (confidence >= 55 ? ' med' : ' low');
   const pickbar = pick ? `
     <div class="pickbar">
-      <div><div class="lab">Model pick</div><div class="nm">${cfl.escapeHtml(pick.picked.name)}</div></div>
+      <div><div class="lab">Model forecast</div><div class="nm">${cfl.escapeHtml(pick.picked.name)}</div></div>
       <div class="pb-right"><div class="cf${cf}">${Math.round(confidence)}%</div></div>
     </div>` : `
-    <div class="pickbar"><div><div class="lab">Model pick</div><div class="nm">Not scored yet</div></div></div>`;
+    <div class="pickbar"><div><div class="lab">Model forecast</div><div class="nm">Not scored yet</div></div></div>`;
 
   const sideA = fighterSideHtml(a, pick && pickedIsA);
   const sideB = fighterSideHtml(b, pick && !pickedIsA);
@@ -1212,7 +1199,7 @@ function wireSort() {
   seg._wired = true;
   const hints = {
     order: 'Main event first, top of the card down.',
-    conf: 'Most confident picks first.',
+    conf: 'Most confident forecasts first.',
     value: 'Biggest edge over the market first.',
   };
   seg.addEventListener('click', (e) => {

@@ -36,7 +36,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -287,7 +287,7 @@
 
       <div class="stat-callout">
         <div class="headline">When one fighter is 5+ years younger, they win about 60% of the time.</div>
-        <div class="sample"><strong>Sample:</strong> 3,831 fights. <strong>Source:</strong> the Factor Lab dataset — point-in-time, decided UFC fights with both DOBs known (5–6 yr gap: 56.2% of 1,642 · 7–9 yr: 61.6% of 1,423 · 10+ yr: 67.9% of 766).</div>
+        <div class="sample"><strong>Sample:</strong> <span data-factor="age|headline|all.n">…</span> fights. <strong>Source:</strong> the Factor Lab dataset (<a href="factor-rates.json" style="color:var(--text); text-decoration: underline;">factor-rates.json</a>) — point-in-time, decided UFC fights with both DOBs known (5–6 yr gap: <span data-factor="age|5–6 years younger|all.pct">…</span>% of <span data-factor="age|5–6 years younger|all.n">…</span> · 7–9 yr: <span data-factor="age|7–9 years younger|all.pct">…</span>% of <span data-factor="age|7–9 years younger|all.n">…</span> · 10+ yr: <span data-factor="age|10+ years younger|all.pct">…</span>% of <span data-factor="age|10+ years younger|all.n">…</span>). <span data-factor-asof></span>.</div>
       </div>
 
       <h3>Formula</h3>
@@ -297,10 +297,10 @@ win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in b
 
       <h3>Why we trust this signal</h3>
       <ul>
-        <li>The sample size (3,831 fights) is large enough to be statistically meaningful</li>
+        <li>The sample size (<span data-factor="age|headline|all.n">…</span> fights) is large enough to be statistically meaningful</li>
         <li>The pattern is monotonic — larger age gaps produce larger win-rate gaps for the younger fighter, which is what you would expect if the effect is real and not noise</li>
         <li>Age is exogenous — fighters cannot manipulate it, and matchmaking does not systematically pair younger versus older fighters in a way that would confound the result</li>
-        <li>Age is the only factor we measure that survives market control — the younger fighter still wins about 57% of the fights the betting market priced as even. UFC record used to sit beside it here; re-measured on the raw record in August 2026 it no longer clears the bar. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
+        <li>The Factor Lab's recorded result: <span data-factor-survivor-count>one</span> factor survives market control — <strong data-factor-survivors>age</strong>. The younger fighter still wins <span data-factor="age|headline|even.pct">…</span>% of the <span data-factor="age|headline|even.n">…</span> fights the betting market priced as even. UFC record used to sit beside it here; re-measured on the raw record in August 2026 its verdict is "<span data-factor-answer="ufc_record">Maybe</span>" — <span data-factor-because="ufc_record">close, but not enough fights yet to be sure.</span> <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
       </ul>
 
       <h3>Known caveats</h3>
@@ -362,15 +362,26 @@ win_rate(bucket) = sum(longer_won where reach_gap in bucket) / count(reach_gap i
     <section class="method" id="implied-win">
       <h2>05 &nbsp;How CFL produces a per-fight number</h2>
       <div class="subhead">The engine — one calibrated probability per fight (since July 2026)</div>
-      <p>Every published pick comes from a single machine-learned engine. It reads each fighter's history, per-fight statistics (strikes, takedowns, control, knockdowns), and physical attributes — height, reach, stance, age — and produces one calibrated win probability per fight. It never sees a betting line.</p>
+      <p>Every published forecast comes from a single machine-learned engine. It reads each fighter's history, per-fight statistics (strikes, takedowns, control, knockdowns), and physical attributes — height, reach, stance, age — and produces one calibrated win probability per fight. It never sees a betting line.</p>
       <p>Three rules govern everything it publishes:</p>
       <ul>
         <li><strong>Walk-forward only.</strong> To score any fight, the engine may use only what was knowable before that fight. Its backtest replays history year by year, only ever picking fights it had not trained on, and the replay's first, uncalibrated year is excluded from everything published.</li>
         <li><strong>An automated leakage audit has to pass before anything ships</strong> — including a hard flag if accuracy looks too good (clean MMA models live in the low-to-mid 60s; a number above 70% means leakage, not genius).</li>
-        <li><strong>Picks are locked at first write.</strong> Live picks are inserted before the card with their percentage and price, and are never revised. Every fight also gets one immutable pre-fight snapshot of everything CFL was showing at that moment.</li>
+        <li><strong>Forecasts are locked at first write.</strong> Live forecasts are inserted before the card with their percentage and price, and are never revised. Every fight also gets one immutable pre-fight snapshot of everything CFL was showing at that moment.</li>
       </ul>
-      <p>The engine's confidence tiers are <strong>Lock</strong> (65%+), <strong>Pick</strong> (57%+), and <strong>Lean</strong> (everything else). Its money face, <strong>Value</strong>, flags a bet only when the engine's number beats the vig-free market price by 4+ points, sized to the edge and capped at 2% of bankroll. The graded record for all of it lives on the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>.</p>
-      <p class="muted">Some fight cards also show a factor-based verdict built from the base rates above (age, record, cardio) where engine picks aren't published yet. That verdict is the older May 2026 system and is labeled provisional — see <a href="edges.html" style="color:var(--red); text-decoration: underline;">the edges page</a> for its full history, including the mistakes.</p>
+      <p>The engine's confidence tiers are <strong>Lock</strong> (65%+), <strong>Pick</strong> (57%+), and <strong>Lean</strong> (everything else). Its money face, <strong>Value</strong>, flags a bet only when the engine's number beats the vig-free market price by 4+ points, sized to the edge and capped at 2% of bankroll. The graded record for all of it lives on the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>. CFL publishes model forecasts and market analysis. It does not sell handicapper picks.</p>
+      <div class="cfl-claims">
+        <div class="cfl-claim replay">
+          <div class="kind">Engine v2 historical replay</div>
+          <p><strong data-claim="engine_replay_accuracy">…</strong> straight-up on <span data-claim="engine_replay_accuracy:sample_size">…</span> never-trained-on fights (closing favorite on the same fights: <span data-claim="market_favorite_replay_accuracy">…</span>) · Locks <strong data-claim="engine_replay_locks">…</strong> on <span data-claim="engine_replay_locks:sample_size">…</span> · Value <strong data-claim="value_replay_record">…</strong> at the closing price, <span data-claim="value_replay_record:flat_100_pnl_display">…</span> at flat $100.</p>
+        </div>
+        <div class="cfl-claim live">
+          <div class="kind">Live record</div>
+          <p>Since <span data-claim="live_since">…</span>: <strong data-claim="engine_live_accuracy">…</strong> on <span data-claim="engine_live_accuracy:sample_size">…</span> settled fights (<span data-claim="engine_live_accuracy:pending">…</span> pending) · Value flags <strong data-claim="value_live_record">…</strong>, <span data-claim="value_live_record:flat_100_pnl_display">…</span> at flat $100 at the price posted.</p>
+        </div>
+      </div>
+      <p class="muted">Source: <a href="data/claims.json" style="color:var(--text); text-decoration: underline;">claims.json</a>, rebuilt from <code>v_model_picks_graded</code> / <code>v_model_edges_graded</code> every few hours. <span data-claim-asof></span>.</p>
+      <p class="muted">Some fight cards also show a factor-based verdict built from the base rates above (age, record, cardio) where engine forecasts aren't published yet. That verdict is the older May 2026 system and is labeled provisional — see <a href="edges.html" style="color:var(--red); text-decoration: underline;">the edges page</a> for its full history, including the mistakes.</p>
 
       <div class="warn-box">
         <div class="warn-label">Important</div>
@@ -467,10 +478,10 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
         <li>If a methodology changes — formula, bucket boundaries, sample inclusion rules — this page is updated and the change is dated</li>
       </ul>
 
-      <div class="subhead" style="margin-top: 22px">Model picks: locked before the card</div>
-      <p>Each model's pick for a fight is snapshotted before the event and is never edited afterward. The scoreboard you see is the model's real, committed call — wins and losses both counted, with no retroactive tuning.</p>
-      <p>CFL publishes one audited engine with two faces: <strong>Fight IQ</strong> (tape only — a calibrated winner probability for every fight, built from fighter history, fight stats, and physical attributes, never a betting line) and <strong>Value</strong> (the same engine compared against the vig-free market price — it flags a bet only when they disagree by 4+ points). Because both faces share one brain, they can never contradict themselves. The engine trains strictly walk-forward: every published backtest number comes from fights the model had not trained on, and it passes an automated leakage audit before anything ships. The earlier numbered models (v1–v6) keep their archived records on the track-record page.</p>
-      <p><strong>One documented exception:</strong> if an infrastructure outage (such as a missing odds feed) stops a model from recording its pick before an event, we reconstruct that pick using only information that existed <em>before</em> the card — the same point-in-time fighter stats and market inputs the model would have seen on fight night. We never alter an input to produce a more favorable result, and we count the outcome, win or loss, exactly as we would a live pick. Reconstructed picks are flagged <code>reconstructed</code> in the database, recorded for accuracy only, and excluded from every betting profit-and-loss figure, since no live line was available to bet. To date this has happened once: 28 v5 picks across two June 2026 cards, after an odds-feed outage.</p>
+      <div class="subhead" style="margin-top: 22px">Model forecasts: locked before the card</div>
+      <p>Each model's forecast for a fight is snapshotted before the event and is never edited afterward. The scoreboard you see is the model's real, committed call — wins and losses both counted, with no retroactive tuning.</p>
+      <p>CFL publishes one audited engine with two faces: <strong>Fight IQ</strong> (odds-blind — a calibrated winner probability for every fight, built from fighter history, fight stats, and physical attributes, never a betting line) and <strong>Value</strong> (the same engine compared against the vig-free market price — it flags a bet only when they disagree by 4+ points). Because both faces share one brain, they can never contradict themselves. The engine trains strictly walk-forward: every published backtest number comes from fights the model had not trained on, and it passes an automated leakage audit before anything ships. The earlier numbered models (v1–v6) keep their archived records on the track-record page.</p>
+      <p><strong>One documented exception:</strong> if an infrastructure outage (such as a missing odds feed) stops a model from recording its forecast before an event, we reconstruct that forecast using only information that existed <em>before</em> the card — the same point-in-time fighter stats and market inputs the model would have seen on fight night. We never alter an input to produce a more favorable result, and we count the outcome, win or loss, exactly as we would a live forecast. Reconstructed forecasts are flagged <code>reconstructed</code> in the database, recorded for accuracy only, and excluded from every betting profit-and-loss figure, since no live line was available to bet. To date this has happened once: 28 v5 picks across two June 2026 cards, after an odds-feed outage.</p>
 
       <p class="muted">Disagreement with a specific number? Spot a methodology error? <a href="contact.html" style="color: var(--red); text-decoration: underline;">Get in touch</a> — we treat substantiation questions as the most important questions a user can ask.</p>
       <a href="#" class="back-to-top">Back to top ↑</a>
@@ -485,11 +496,14 @@ ratio is capped at a divisional cap to prevent small-denominator spikes</div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('');
 cfl.renderFooter();
+cfl.renderClaims();
+cfl.renderFactorVerdicts();
+cfl.track('methodology_view');
 </script>
 </body>
 </html>

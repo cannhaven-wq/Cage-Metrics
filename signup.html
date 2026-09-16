@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=flag4">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
@@ -29,7 +29,7 @@
 <div class="auth-page">
   <div class="auth-card">
     <h1>Create account</h1>
-    <p class="auth-sub">Free forever. Every account gets Premium features during beta — full Card Lab detail, Value-model picks, and bet tracking.</p>
+    <p class="auth-sub">Free forever. Every account gets Premium features during beta — full Card Lab detail, Value-model forecasts, and bet tracking.</p>
 
     <div id="msgArea"></div>
 
@@ -53,8 +53,8 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
-<script src="_auth.js"></script>
+<script src="_shared.js?v=rd17"></script>
+<script src="_auth.js?v=rf1"></script>
 <script>
 cfl.renderNav('signup');
 cfl.renderFooter();
@@ -62,6 +62,8 @@ cfl.renderFooter();
 const msgArea = document.getElementById('msgArea');
 const form = document.getElementById('signupForm');
 const submitBtn = document.getElementById('submitBtn');
+// signup_start fires once, on first interaction with the form.
+form.addEventListener('focusin', () => cfl.track('signup_start', { src: cfl.getQueryParam('src') || 'direct' }), { once: true });
 
 // If already signed in, bounce home
 cflAuth.ready().then(() => {
@@ -97,6 +99,7 @@ form.addEventListener('submit', async (e) => {
 
   // Supabase by default requires email confirmation. Show a success message
   // telling the user to check their inbox.
+  cfl.track('signup_complete', { src: cfl.getQueryParam('src') || 'direct', confirmed: data.session ? 'yes' : 'pending' });
   if (data.user && !data.session) {
     form.style.display = 'none';
     msgArea.innerHTML = `
