@@ -135,19 +135,86 @@ const BASELINE_HOUR_UTC = 8;
 const NEAR_BELL_WINDOW_H = Number(process.env.NEAR_BELL_WINDOW_H || 3);
 const NEAR_BELL_INTERVAL_MIN = 30;
 
-// Does any candidate fight start within the near-bell window?
-// ONLY a real schedule counts — CLV-001 Amendment 2 (b). v_fight_start_best
-// always answers, falling back to the event date at 18:00 UTC, so a caller that
-// reads start_at without start_basis gets a plausible instant for every fight
-// ever recorded and would burst-capture against a placeholder.
+// How long after a card's scheduled start it can still be running. Prelims to
+// main event is about five hours; seven is a generous ceiling that bounds the
+// spend if a completion signal never arrives. It is a CAPTURE bound, not a
+// measurement rule — it decides how much data exists, never what a number means,
+// so it is tunable without an amendment.
+const EVENT_FLOW_MAX_H = Number(process.env.EVENT_FLOW_MAX_H || 7);
+
+// -----------------------------------------------------------------------------
+// Event flow (CLV-001 Amendment 3)
+// -----------------------------------------------------------------------------
+// A card is one scheduled start and then a queue. The published commence time
+// belongs to the FIRST bout; every later bout begins when the one before it
+// ends. So "capture near the bell" cannot mean "capture near the one timestamp
+// we were given" — that timestamp is right for one fight out of thirteen.
+//
+// Instead the card enters FLOW at its scheduled start and stays in flow until
+// its last bout is done (or the ceiling above, whichever comes first). Through
+// the flow the job captures every 30 minutes, which is what gives each fight in
+// the queue a quote inside the 45-minute staleness limit of its own start.
+//
+// The previous bout ending is a TRIGGER here and nothing more. It sharpens which
+// fight we are capturing for; it does not decide any fight's closing price. The
+// close is the last valid pre-live quote for the upcoming fight, decided in
+// cfl_engine/clv/scoring.py against v_clv_close_reference.
+
+// Is a card currently running? Lead-in counts too: NEAR_BELL_WINDOW_H before the
+// scheduled start, so the opening bout has a fresh quote of its own.
+//
+// ONLY a real schedule counts. DUR-001's v_fight_start_best always answers,
+// falling back to the event date at 18:00 UTC, so a caller reading start_at
+// without start_basis would burst-capture against a placeholder for every fight
+// ever recorded.
 function nearBellWindow(candidateFights, now = new Date(), windowH = NEAR_BELL_WINDOW_H) {
   const t = now.getTime();
   return (candidateFights || []).some(f => {
     if (!f.start_at) return false;
     if (!['bell_at', 'provider_commence'].includes(f.start_basis)) return false;
     const s = new Date(f.start_at).getTime();
-    return s > t - 3600000 && s < t + windowH * 3600000;
+    if (f.card_complete) return false;          // the night is over, stop spending
+    // Lead-in before the scheduled start, then the whole flow window after it.
+    return s > t - EVENT_FLOW_MAX_H * 3600000 && s < t + windowH * 3600000;
   });
+}
+
+// Which fight the capture is currently FOR, given what has finished. Used for
+// logging and for stamping bout_started_at; it does not gate anything, because
+// the job captures the whole slate in one request either way.
+//
+// `completed_at` comes from the fight_bout_completions ledger and is only ever
+// an EXACT observation — never the result scraper's "we first saw a winner at
+// T", which is completion plus unknown lag. An upper bound used here would mark
+// the next fight as started too late and admit in-play quotes as its close.
+function currentBout(cardFights, now = new Date()) {
+  const ordered = (cardFights || [])
+    .filter(f => Number.isInteger(f.bout_order))
+    .sort((a, b) => a.bout_order - b.bout_order);
+  if (!ordered.length) return null;
+  const t = now.getTime();
+  for (const f of ordered) {
+    if (!f.completed_at || new Date(f.completed_at).getTime() > t) return f;
+  }
+  return null;                                   // every bout on the card is done
+}
+
+// The best account, at capture time, of when a fight began — the value stamped
+// into fight_odds.bout_started_at, and what is_live is keyed to.
+//
+//   1. an actual confirmed bell
+//   2. the previous bout's exact completion
+//   3. the card's scheduled start — FIRST BOUT ONLY
+//   else null, meaning unknown. Never a guess, and never the card's scheduled
+//   start applied to a later bout: that would sit hours early and mark every
+//   real quote in between as in-play.
+function boutStartedAt(fight, prevCompletedAt, scheduledFirstBoutAt) {
+  if (fight && fight.bell_at) return new Date(fight.bell_at).toISOString();
+  if (prevCompletedAt) return new Date(prevCompletedAt).toISOString();
+  if (fight && fight.bout_order === 1 && scheduledFirstBoutAt) {
+    return new Date(scheduledFirstBoutAt).toISOString();
+  }
+  return null;
 }
 
 // The cadence decision for one wake-up. Pure, so build/test-fetch-odds.js can
@@ -157,9 +224,9 @@ function shouldCaptureNow(candidateFights, now, hasCardInWindow) {
   if (nearBellWindow(candidateFights, now)) {
     // :00 and :30 — a 30-minute interval, matching the limit's derivation.
     if (min % NEAR_BELL_INTERVAL_MIN < 15) {
-      return { yes: true, why: `a bell is within ${NEAR_BELL_WINDOW_H}h — ${NEAR_BELL_INTERVAL_MIN}-minute cadence` };
+      return { yes: true, why: `card in flow — ${NEAR_BELL_INTERVAL_MIN}-minute cadence` };
     }
-    return { yes: false, why: `near a bell but off the ${NEAR_BELL_INTERVAL_MIN}-minute beat` };
+    return { yes: false, why: `card in flow but off the ${NEAR_BELL_INTERVAL_MIN}-minute beat` };
   }
   if (hasCardInWindow) {
     if (min < 15) return { yes: true, why: 'card today or tomorrow — hourly cadence' };
@@ -283,7 +350,88 @@ async function loadCandidateFights() {
     f.start_at = s ? s.start_at : null;
     f.start_basis = s ? s.start_basis : null;
   }
+
+  await attachEventFlow(fights || []);
   return fights || [];
+}
+
+// Running order and bout completions (CLV-001 Amendment 3). Both ledgers are
+// append-only and both may be absent — the migration that creates them is
+// proposed, not applied — so every field here degrades to null and the capture
+// falls back to the card-level cadence it had before. A missing ledger costs
+// coverage; it never costs correctness, because an unknown bout start produces
+// is_live = null, and null is never treated as "pre-start".
+async function attachEventFlow(fights) {
+  if (!fights.length) return;
+  const ids = fights.map(f => f.id);
+
+  const { data: order, error: oErr } = await sb
+    .from('fight_bout_order')
+    .select('fight_id, event_id, bout_order, observed_at')
+    .in('fight_id', ids)
+    .order('observed_at', { ascending: false });
+  if (oErr) {
+    console.warn(`[flow] fight_bout_order unavailable (${oErr.message}) — running ` +
+      `order unknown, so no fight can be identified as the card's first bout. ` +
+      `Apply research/clv/proposed_2026-09-16_event_flow.sql.`);
+  }
+  const orderBy = new Map();
+  for (const o of order || []) {
+    if (!orderBy.has(o.fight_id)) orderBy.set(o.fight_id, o);  // latest wins
+  }
+
+  // is_exact only. The result scraper's "we first saw a winner at T" is
+  // completion PLUS unknown lag; using it would place the next bout's start too
+  // late and admit in-play quotes as its close.
+  const { data: done, error: cErr } = await sb
+    .from('fight_bout_completions')
+    .select('fight_id, completed_at')
+    .in('fight_id', ids)
+    .eq('is_exact', true);
+  if (cErr) {
+    console.warn(`[flow] fight_bout_completions unavailable (${cErr.message}) — ` +
+      `no bout completions, so only a card's first bout can ever be scored.`);
+  }
+  const doneBy = new Map();
+  for (const c of done || []) {
+    const prev = doneBy.get(c.fight_id);
+    if (!prev || c.completed_at > prev) doneBy.set(c.fight_id, c.completed_at);
+  }
+
+  // event -> bout_order -> fight_id, so "the bout before this one" is a lookup
+  // rather than an assumption about id ordering.
+  const byEventOrder = new Map();
+  for (const f of fights) {
+    const o = orderBy.get(f.id);
+    f.bout_order = o ? o.bout_order : null;
+    f.completed_at = doneBy.get(f.id) || null;
+    if (o) byEventOrder.set(`${o.event_id}|${o.bout_order}`, f.id);
+  }
+  for (const f of fights) {
+    const o = orderBy.get(f.id);
+    f.prev_completed_at = null;
+    if (o && o.bout_order > 1) {
+      const prevId = byEventOrder.get(`${o.event_id}|${o.bout_order - 1}`);
+      if (prevId) f.prev_completed_at = doneBy.get(prevId) || null;
+    }
+  }
+
+  // A card is finished when every bout on it has an exact completion. Used only
+  // to stop spending credits on a night that is over.
+  const cardFights = new Map();
+  for (const f of fights) {
+    if (!f.event_id) continue;
+    if (!cardFights.has(f.event_id)) cardFights.set(f.event_id, []);
+    cardFights.get(f.event_id).push(f);
+  }
+  for (const [, group] of cardFights) {
+    const complete = group.length > 0 && group.every(f => f.completed_at);
+    for (const f of group) f.card_complete = complete;
+  }
+
+  const withOrder = fights.filter(f => Number.isInteger(f.bout_order)).length;
+  console.log(`[flow] running order known for ${withOrder}/${fights.length} candidate ` +
+    `fight(s); ${doneBy.size} exact bout completion(s) on file`);
 }
 
 // Reduce a normalized name to first + last token only, so middle names don't
@@ -587,15 +735,27 @@ function buildTotalsRows(e, fight, bookId, captured_at) {
 // half-writes.
 
 const CAPTURE_COLUMNS = [
-  'source_event_id', 'feed_version', 'source_commence_at', 'is_live',
-  'provider_last_update', 'retrieved_at', 'opponent_fighter_id',
+  'source_event_id', 'feed_version', 'source_commence_at', 'bout_started_at',
+  'is_live', 'provider_last_update', 'retrieved_at', 'opponent_fighter_id',
   'market_status', 'raw',
 ];
 
 function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
   const rows = [];
   const commence = e.commence_time ? new Date(e.commence_time).toISOString() : null;
-  const is_live = commence ? captured_at >= commence : null;
+
+  // Amendment 3: liveness is PER FIGHT, keyed to when THIS bout began — not to
+  // the card's commence time. Keying it to the card would mark every quote taken
+  // after the first bell as in-play for all thirteen fights and throw away
+  // exactly the quotes the later fights close on.
+  //
+  // null is a third state and means "we do not know when this fight started",
+  // which on a card whose running order or bout completions are unrecorded is
+  // the truth. It is never collapsed to false: false asserts the quote was
+  // pre-start, and that is a fact we would not have.
+  const bout_started_at = boutStartedAt(fight, fight.prev_completed_at,
+                                        fight.bout_order === 1 ? commence : null);
+  const is_live = bout_started_at ? captured_at >= bout_started_at : null;
 
   const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
   const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
@@ -637,7 +797,8 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
         // ---- CLV-001 §4 capture requirements, none of them backfillable ----
         source_event_id: e.id || null,              // item 9  — provider market id
         feed_version: FEED_VERSION,                 // item 6  — feed + shape
-        source_commence_at: commence,               // item 7  — schedule at capture
+        source_commence_at: commence,               // item 7  — the CARD's schedule
+        bout_started_at,                            // item 7  — when THIS bout began
         is_live,                                    //         — in-play, never a close
         provider_last_update: bm.last_update        // item 11 — when the BOOK moved
           ? new Date(bm.last_update).toISOString() : null,
@@ -933,7 +1094,8 @@ if (require.main === module) main();
 
 module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
-  nearBellWindow, shouldCaptureNow,
+  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
+  EVENT_FLOW_MAX_H,
   normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
 };

@@ -11,6 +11,128 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.3: the event-flow rule, and one L3 back to you
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+### What your decision fixed
+
+Amendment 2 (b), frozen an hour earlier, admitted `provider_commence` — the
+card-level commence time — as the close reference for **every** fight on the
+card. Your rule makes that right for one fight in thirteen and wrong for the
+rest, which is what it always was.
+
+Wrong in the expensive direction, too. Keyed to the card's commence time,
+`is_live` would have marked **every quote taken after the first bell as in-play
+for all thirteen fights** — discarding exactly the quotes the later fights close
+on. Caught before a single such quote exists, because none of this is applied.
+
+### Amendment 3, as implemented
+
+**The close reference, per fight:**
+
+| tier | basis | applies to |
+|---|---|---|
+| 1 | actual confirmed bell | any bout |
+| 2 | the previous bout's **exact** completion | any bout after the first |
+| 3 | the card's scheduled start | **the first bout only** |
+| — | anything else | nothing — the fight is unscored |
+
+A fight whose running order is unknown has no admissible reference at all:
+without an order there is no "previous bout", and no fight can be identified as
+the card's first. `is_first_bout` is `None` in that state and `None` is not a
+yes — there is a test named for it.
+
+**The trigger is not the close.** Your distinction, encoded in three places so it
+cannot be collapsed by accident: the previous bout ending starts the 30-minute
+capture window and governs only how much data exists; the close is the last valid
+pre-live quote for the upcoming fight, and any quote at or after that fight
+started is excluded, strictly. Four tests under `TestTriggerIsNotTheClose`,
+including one that proves a late-card fight's quotes — which only exist *because*
+the trigger fired — still score.
+
+**The audit field stays separate.** `fights.bell_at` remains the record of when a
+fight actually began, reserved for a confirmed bell and never written by the odds
+job. `fight_odds.bout_started_at` is a different thing: the capture-time *belief*,
+stamped per quote so the close a quote was judged against stays recoverable if a
+better account arrives later. A correction to one never rewrites the other.
+
+**Capture.** `odds.yml` wakes every 15 minutes; a card is "in flow" from 3h
+before its scheduled start until every bout has an exact completion or 7h passes,
+and capture runs every 30 minutes throughout. Previously the window was anchored
+to the single published commence time, which would have given bout 1 a fresh
+quote and left the other twelve closing on a line hours stale.
+
+**No spend increase.** Still ~33 credits on a card day, ~286/month, inside the
+500 free tier — the test asserts the ceiling. So nothing to escalate for the
+cadence itself.
+
+`v_fight_start_best` is untouched. It lives in `dur001_migration.sql`, a frozen
+file serving a running experiment, so CLV-001 got its own `v_clv_close_reference`
+rather than a `create or replace` on DUR-001's view.
+
+### The L3 back to you
+
+[`L3_ESCALATION_2026-09-16_bout_completions.md`](../research/clv/L3_ESCALATION_2026-09-16_bout_completions.md).
+**Nothing has been bought, priced, signed up for or enabled.**
+
+Tier 2 needs two things the database does not have:
+
+- **Running order** — `fights` has no order column, only `is_main_event` (the
+  last bout). Sorting by id would be an inference dressed as a record, and it
+  breaks exactly when a card is reshuffled. **Free to fix**: ufcstats lists a
+  card in order and the event scraper can write `fight_bout_order` on the pass it
+  already makes. No L3 needed.
+- **Exact bout completions** — nothing records when a bout ended, and the result
+  scraper cannot stand in. It gives *completion plus unknown lag*: an upper
+  bound, and used as the next bout's start it would admit in-play prices as that
+  fight's close, invisibly. `is_exact = false` marks such rows and the view
+  ignores them.
+
+Options are A do nothing (bout 1 only), B manual entry during the card, C a paid
+live feed, D derive it from market disappearance. **I did not implement D**,
+though it is free and uses data the new capture already produces — "the market
+disappeared" is not "the fight started", and adding a new measurement definition
+to a protocol frozen this morning, to relieve a coverage problem I reported this
+afternoon, is the move the freeze exists to stop. It is a fresh L3 if you want it.
+
+**Recommendation: take the free half now, decide the paid half later.** Populate
+`fight_bout_order`, let a few cards of real coverage accumulate, then decide with
+a real count in front of you rather than my estimate.
+
+### The number that matters most
+
+Until exact completions exist, **only the first bout of each card is scorable** —
+about one observation per event, against a floor of 100 across 20 distinct
+events. That is roughly 100 cards. It is the single biggest fact about the CLV
+timeline and it is now recorded in the protocol, the migration and the preflight
+rather than living in my head.
+
+### Publication
+
+Untouched and fail-closed. 0 of 100 observations, 0 of 20 events, still blocked
+on `sample_floor_met` and `interval_excludes_zero`. Nothing in Amendment 3 moves
+it — it changes how fast observations accumulate, never whether one may be shown.
+
+Tests: 93 CLV Python, 94 repo Python, 36 Node. All green.
+
+## Next action
+
+**Reed:** two things, independent of each other.
+
+1. **Answer the L3** on bout completions — or say "A for now", which is a
+   complete answer and needs nothing built.
+2. **Apply `proposed_2026-09-16_fight_odds_capture.sql`**, then
+   `proposed_2026-09-16_event_flow.sql`. Both additive-only, both unapplied.
+   Every card that passes before they land is permanently unscorable.
+
+I have not applied any migration, called The Odds API, written to Supabase, or
+enabled any paid service.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.2: book list frozen, capture path written and verified, nothing applied
 
 **From:** Claude
@@ -277,98 +399,5 @@ The migration stays unapplied until there is something to write into it.
 
 ---
 
-## 2026-09-16 — CLV-001 FROZEN v1.0.0; one amendment proposed before settle_clv
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-### What changed
-
-Your L3 approvals are recorded and **CLV-001 is frozen at v1.0.0**
-(2026-09-16T10:30:00Z, sha256 `ef912fce…`). Q-14 recorded first, `CLAUDE.md`
-amended with your exact replacement rule, then Q-05/06/07/08/11/13 resolved.
-
-**Freezing did not open publication, and I had to restructure the gate to keep
-it that way.** The freeze procedure literally said *"publication_gate.
-publication_allowed becomes true"* — following it would have published on a
-sample of zero, against your explicit instruction. The gate is now the AND of
-three conditions:
-
-| condition | state |
-|---|---|
-| `protocol_frozen` | **true** |
-| `sample_floor_met` | **false** — 0 of 100 observations, 0 of 20 events |
-| `interval_excludes_zero` | **false** — unevaluable, and fail-closed |
-
-Three of the original gate tests *skip* once frozen — they policed the run-up to
-a freeze. That meant freezing would silently remove every check on publication
-at the exact moment publication becomes conceivable. Eight new tests cover the
-frozen state; flipping `publication_allowed` to true now fails with
-`CLV publication is ALLOWED at 0/100 observations and 0/20 events`.
-
-### The thing I need you to rule on
-
-**Implementing the power de-vig found a mathematical error in the protocol you
-froze this morning.** §6 says *"the sum is strictly decreasing in k"*. For the
-formula it specifies, `q^(1/k)`, the sum is strictly **increasing** in k. It
-decreases only under the other convention, `q^k`.
-
-**No number changes.** The two are exact reparametrisations — the `q^k` root is
-the reciprocal — so the fair probabilities are bit-identical, and both roots sit
-inside the stated `[0.5, 5.0]` bracket. Verified on three pairs.
-
-It still matters: an implementer trusting the stated direction inverts their sign
-test and fails to converge. And it is a false statement inside a document whose
-value is that you do not have to re-derive its claims.
-
-Proposal at
-[`research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md`](../research/clv/AMENDMENT_PROPOSAL_2026-09-16_devig_direction.md).
-
-**I did not quietly fix it.** The protocol was frozen hours earlier, and
-correcting a frozen document silently — even for something numerically inert —
-is the exact habit the freeze exists to prevent. Afterwards it would be
-indistinguishable from quietly correcting something that *did* change a number.
-
-The implementation does not depend on the claim either way: `_bisect` reads the
-sign at both bracket ends. Two tests pin the equivalence, and one is written to
-start **failing** if the protocol's claim ever becomes true, so the note cannot
-outlive its cause.
-
-### What shipped
-
-`cfl_engine/clv/devig.py` — the frozen arithmetic as pure functions: power
-de-vig (primary), proportional and Shin (frozen sensitivities), the ≥3-book
-consensus with per-book de-vig *then* median, and `CLV_return`. 33 tests, no DB.
-
-One test earned its place immediately: **de-vig-then-median and
-median-then-de-vig can coincide**, when one book is median on both sides. My
-first version of that test asserted they always differ and failed. They differ
-only when the median pair is *synthetic* — a pair no book quoted — which is the
-situation Q-02's ordering exists to rule out. Both directions are now pinned.
-
-### What I did NOT do
-
-**`settle_clv.py` is untouched.** Two reasons, and I want you to pick:
-
-1. `model_edges` has **no column** for `clv_return`, the closing fair
-   probability, the book count, or an unscored reason. Writing the frozen
-   measure needs a migration, and I do not apply migrations.
-2. I cannot run it — no service key here — and it is a live daily writer.
-   Shipping an unverified rewrite of it blind is how the 1970-timestamp class of
-   defect gets introduced rather than found.
-
-### Next action
-
-**Reed: approve or reject the de-vig amendment, and say how you want
-`settle_clv.py` reconciled** — a proposed-unapplied migration plus a
-column-detecting script that reports `CLV_return` until the columns exist, or
-wait until you can run it yourself.
-
-Publication stays shut either way. 0 of 100.
-
----
-
-*Older entries (CLV-001 v0.3.0-draft, the revision against the review, the
-original draft, and the coordination-layer setup) are in git history — the
-convention at the top of this file is to keep the last three.*
+*Older entries are in git history — the convention at the top of this file is
+to keep the last three.*

@@ -116,7 +116,7 @@ from export_data import fetch_all, prob_to_american
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "clv"))
 from scoring import (  # noqa: E402
-    ADMISSIBLE_START_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
+    CLOSE_REFERENCE_BASES, PROTOCOL_ID, PROTOCOL_TAG, PROTOCOL_VERSION,
     UNSCORED_REASONS, admissible_reference, is_eligible_book, score_row,
 )
 
@@ -132,6 +132,11 @@ CLV001_COLUMNS = (
     "clv_protocol_version", "clv_scored_at", "clv_unscored_reason",
     "clv_source_quote_ids", "clv_closing_consensus", "clv_consensus_sha256",
 )
+
+# Capture columns on fight_odds that the close depends on
+# (research/clv/proposed_2026-09-16_fight_odds_capture.sql).
+CAPTURE_COLUMNS = ("source_event_id", "bout_started_at", "is_live",
+                   "provider_last_update", "retrieved_at", "opponent_fighter_id")
 
 
 # A real two-way market never prices a side outside this band. Anything beyond
@@ -461,27 +466,58 @@ def _capture_capabilities(base_url: str, key: str) -> dict:
         "fight_odds does not record the opposing corner at quote time (§4 item "
         "10), so Q-10's opponent-change exclusion rests on today's corners.")
 
-    # Item 7: Q-01 measures to the scheduled bout start. The mechanism is
-    # v_fight_start_best + the fight_start_estimates ledger, both shipped by
-    # DUR-001. What matters is whether it is producing an ADMISSIBLE basis —
-    # the view always answers, falling back to the event date at 18:00 UTC, and
-    # that fallback is not a schedule (Amendment 2 (b)).
-    bases = ",".join(sorted(ADMISSIBLE_START_BASES))
+    # Item 7, Amendment 3: a close reference per fight, not per card. The card's
+    # published start belongs to bout 1; every later bout begins when the one
+    # before it ends.
+    bases = ",".join(sorted(CLOSE_REFERENCE_BASES))
     try:
-        rows = fetch_all(base_url, key, "v_fight_start_best",
-                         f"select=fight_id&start_basis=in.({bases})&limit=1")
-        cond["scheduled_start_available"] = bool(rows)
+        rows = fetch_all(base_url, key, "v_clv_close_reference",
+                         f"select=fight_id&reference_basis=in.({bases})&limit=1")
+        cond["close_reference_available"] = bool(rows)
     except Exception as e:                      # noqa: BLE001
-        cond["scheduled_start_available"] = False
-        detail["scheduled_start_available"] = (
-            f"v_fight_start_best unreadable ({e}) — apply dur001_migration.sql")
+        cond["close_reference_available"] = False
+        detail["close_reference_available"] = (
+            f"v_clv_close_reference unreadable ({e}) — apply "
+            f"research/clv/proposed_2026-09-16_event_flow.sql")
     detail.setdefault(
-        "scheduled_start_available",
-        f"v_fight_start_best resolves an admissible basis ({bases})"
-        if cond["scheduled_start_available"] else
-        "v_fight_start_best resolves only event_date_fallback — the event date at "
-        "18:00 UTC, which is a placeholder and not a schedule. The ledger works; "
-        "it has not been collecting long enough to cover a settled card.")
+        "close_reference_available",
+        f"v_clv_close_reference resolves a basis in ({bases})"
+        if cond["close_reference_available"] else
+        "no fight resolves an admissible close reference")
+
+    # The running order is the prerequisite for everything after bout 1: without
+    # it there is no "previous bout" to reason from, and no fight can even be
+    # identified as the card's first.
+    try:
+        rows = fetch_all(base_url, key, "fight_bout_order", "select=fight_id&limit=1")
+        cond["running_order_captured"] = bool(rows)
+    except Exception as e:                      # noqa: BLE001
+        cond["running_order_captured"] = False
+        detail["running_order_captured"] = f"fight_bout_order unreadable ({e})"
+    detail.setdefault(
+        "running_order_captured",
+        "fight_bout_order populated" if cond["running_order_captured"] else
+        "no running order on file. `fights` has no order column — only "
+        "is_main_event, which names the last bout — and sorting by id would be "
+        "an inference dressed as a record.")
+
+    # Exact bout completions. Not is_exact=false rows: an upper bound from the
+    # result scraper is completion PLUS unknown lag, and using it would place a
+    # bout's start too late and admit in-play quotes as its close.
+    try:
+        rows = fetch_all(base_url, key, "fight_bout_completions",
+                         "select=fight_id&is_exact=is.true&limit=1")
+        cond["bout_completions_captured"] = bool(rows)
+    except Exception as e:                      # noqa: BLE001
+        cond["bout_completions_captured"] = False
+        detail["bout_completions_captured"] = f"fight_bout_completions unreadable ({e})"
+    detail.setdefault(
+        "bout_completions_captured",
+        "exact bout completions on file" if cond["bout_completions_captured"] else
+        "no exact bout completions. Until there are, only bout 1 of a card can "
+        "be scored — roughly one observation per event against a floor of 100 "
+        "across 20. Acquiring them needs a paid live feed or manual entry, which "
+        "is an L3 call.")
     return {"conditions": cond, "detail": detail}
 
 
@@ -592,14 +628,22 @@ def _resolve_eligible_books(base_url: str, key: str,
 
 
 def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
-    """Corners plus the Q-01 reference instant, per fight.
+    """Corners plus the Amendment 3 close reference, per fight.
 
-    The reference comes from `v_fight_start_best` (dur001_migration.sql), which
-    resolves bell_at -> latest provider commence -> an event-date fallback, and
-    reports which tier answered in `start_basis`. Amendment 2 (b) admits only the
-    first two, so the basis is read and acted on rather than discarded — the view
-    ALWAYS returns an instant, and taking it at face value would hand every fight
-    in the database, back to 1994, a plausible-looking schedule.
+    The reference comes from `v_clv_close_reference`, which resolves an actual
+    bell -> the previous bout's exact completion -> (bout 1 only) the card's
+    scheduled start, and says which tier answered.
+
+    NOT from DUR-001's `v_fight_start_best`. Two reasons, both load-bearing.
+    That view always answers — it falls back to the event date at 18:00 UTC — so
+    taking its instant at face value hands every fight in the database a
+    plausible-looking schedule. And it is defined in a frozen file serving a
+    running experiment, so CLV-001 reads its own view rather than reinterpreting
+    DUR-001's.
+
+    `admissible_reference` is applied even though the view already filters, so
+    the rule holds at both ends. A view can be replaced; this function is the
+    one the tests pin.
     """
     out = {}
     for chunk in _chunks(sorted(fight_ids), 100):
@@ -609,23 +653,33 @@ def _fights_by_id(base_url: str, key: str, fight_ids: set) -> dict:
                            f"&id=in.({ids})"):
             f["bell_at"] = _iso(f.get("bell_at"))
             f["start_at"], f["start_basis"] = None, None
+            f["bout_order"], f["is_first_bout"] = None, None
             out[f["id"]] = f
 
         try:
-            starts = fetch_all(base_url, key, "v_fight_start_best",
-                               f"select=fight_id,start_at,start_basis"
-                               f"&fight_id=in.({ids})")
+            refs = fetch_all(base_url, key, "v_clv_close_reference",
+                             f"select=fight_id,reference_at,reference_basis,"
+                             f"bout_order,is_first_bout,actual_bell_at"
+                             f"&fight_id=in.({ids})")
         except Exception as e:                  # noqa: BLE001 - unknown is failed
-            print(f"  note: v_fight_start_best unavailable ({e}) — every row will "
-                  f"be unscored for want of a schedule. Apply dur001_migration.sql.")
-            starts = []
-        for s in starts:
+            print(f"  note: v_clv_close_reference unavailable ({e}) — every row "
+                  f"will be unscored for want of a close reference. Apply "
+                  f"research/clv/proposed_2026-09-16_event_flow.sql.")
+            refs = []
+        for s in refs:
             f = out.get(s["fight_id"])
             if f is None:
                 continue
-            f["start_basis"] = s.get("start_basis")
-            f["start_at"] = admissible_reference(_iso(s.get("start_at")),
-                                                 s.get("start_basis"))
+            f["start_basis"] = s.get("reference_basis")
+            f["bout_order"] = s.get("bout_order")
+            f["is_first_bout"] = s.get("is_first_bout")
+            # Carried separately and never used as the reference: the audit
+            # field records when the fight actually began, which stays
+            # comparable even if the reference tier later changes.
+            f["actual_bell_at"] = _iso(s.get("actual_bell_at"))
+            f["start_at"] = admissible_reference(_iso(s.get("reference_at")),
+                                                 s.get("reference_basis"),
+                                                 s.get("is_first_bout"))
     return out
 
 

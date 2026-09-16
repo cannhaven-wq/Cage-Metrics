@@ -42,16 +42,48 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.2"
+PROTOCOL_VERSION = "1.0.3"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
-# Amendment 2 (b). The reference instant comes from `v_fight_start_best`, which
-# resolves bell_at -> latest provider commence -> an event-date fallback. Only
-# the first two are a schedule. The fallback is the event date at 18:00 UTC: a
-# placeholder, wrong by hours in both directions, and accepting it would put a
-# fabricated instant at the centre of the measure and decide staleness by a
-# constant nobody chose for this purpose.
-ADMISSIBLE_START_BASES = frozenset({"bell_at", "provider_commence"})
+# ---------------------------------------------------------------------------
+# The close reference — Amendment 3, approved by Reed Cannon 2026-09-16
+# ---------------------------------------------------------------------------
+# A UFC card is one scheduled start and then a queue. Only the FIRST bout begins
+# at a time anybody published; every later bout begins when the one before it
+# ends. So a single card-level "commence time" applied to all thirteen fights is
+# wrong for twelve of them — and wrong in the expensive direction, because it
+# would mark every quote after the card's first bell as in-play and throw away
+# exactly the quotes that matter for the later fights.
+#
+# THE TRIGGER IS NOT THE CLOSE. This is the distinction the amendment turns on
+# and it is easy to collapse by accident:
+#
+#   * the previous bout ending is a CAPTURE trigger — it tells the odds job to
+#     start taking quotes every 30 minutes for the next fight. It affects how
+#     much data exists and nothing else. Capture heuristics are not frozen,
+#     because they cannot change what a number means.
+#   * the CLOSE is the last valid pre-live quote for the upcoming fight, and any
+#     quote at or after that fight actually started is excluded. That is a
+#     frozen rule and it is what `closing_pairs` enforces.
+#
+# Getting those the wrong way round would let a quote taken during a fight score
+# as its closing price.
+CLOSE_REFERENCE_BASES = frozenset({
+    "bell_at",                   # an actual confirmed bell. Best, and audit-grade.
+    "previous_bout_completion",  # the bout before this one ended. Later bouts.
+    "scheduled_first_bout",      # the card's scheduled start — FIRST BOUT ONLY.
+})
+
+# `provider_commence` and `bell_at` were the admissible pair under Amendment 2
+# (b). Amendment 3 keeps `bell_at`, narrows `provider_commence` to the first bout
+# (where it is renamed `scheduled_first_bout`, because that is what it is), and
+# adds the queue rule for everything after it. Narrowing, never widening.
+SUPERSEDED_START_BASES = frozenset({"provider_commence"})
+
+# Still inadmissible, unchanged: the event date at 18:00 UTC is a placeholder,
+# wrong by hours in both directions, and would decide staleness by a constant
+# nobody chose for this purpose.
+INADMISSIBLE_START_BASES = frozenset({"event_date_fallback"})
 
 # R-13. Live capture begins 2026-05-22; everything stamped before it is a
 # historical import whose capture instant was never recorded and defaulted to
@@ -288,17 +320,30 @@ def canonical_sha256(artifact: dict) -> str:
 
 
 def admissible_reference(start_at: dt.datetime | None,
-                         start_basis: str | None) -> dt.datetime | None:
-    """The Q-01 reference instant, or None if what we hold is not a schedule.
+                         start_basis: str | None,
+                         is_first_bout: bool | None = None) -> dt.datetime | None:
+    """The close reference for one fight, or None if what we hold is not one.
 
-    Amendment 2 (b). `v_fight_start_best` always answers — it falls back to the
-    event date at 18:00 UTC when it has nothing better — so a caller that reads
-    `start_at` without reading `start_basis` gets a plausible-looking instant for
-    every fight in the database, including fights from 1994. That is the failure
-    this function exists to prevent, and it is the same shape as R-13: a
-    populated placeholder passing a presence check.
+    Amendment 3. Returns the instant at which this fight began, by the best
+    available account of it. Everything strictly before it and inside the
+    staleness limit is eligible to be the close; everything at or after it is a
+    quote taken once the fight was under way and is excluded.
+
+    The guard this function exists for: a start-time view ALWAYS answers. DUR-001's
+    `v_fight_start_best` falls back to the event date at 18:00 UTC, so a caller
+    that reads the instant without reading the basis gets a plausible-looking
+    schedule for every fight in the database, including fights from 1994. Same
+    shape as R-13 — a populated placeholder sailing through a presence check.
+
+    `scheduled_first_bout` additionally requires `is_first_bout` to be TRUE, not
+    merely non-false. A card's scheduled start is the first fight's start and
+    nobody else's; applying it to the twelfth bout would put the reference five
+    hours early and mark every real quote in between as in-play. When the card's
+    running order is unknown, `is_first_bout` is None, and that is not a yes.
     """
-    if start_at is None or start_basis not in ADMISSIBLE_START_BASES:
+    if start_at is None or start_basis not in CLOSE_REFERENCE_BASES:
+        return None
+    if start_basis == "scheduled_first_bout" and is_first_bout is not True:
         return None
     return start_at
 
@@ -353,8 +398,10 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
 
     if reference_instant is None:
         return unscored("no_scheduled_start",
-                        "Q-01 measures to the scheduled bout start; no scheduled "
-                        "start instant exists for this fight")
+                        "no admissible close reference for this fight: needs an "
+                        "actual bell, the previous bout's completion, or — for "
+                        "the card's first bout only — its scheduled start "
+                        "(Amendment 3)")
 
     # R-07, no-lookahead. Strict, in UTC.
     published_at = edge.get("published_at")

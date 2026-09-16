@@ -31,10 +31,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from devig import median, power_devig                                # noqa: E402
 from scoring import (                                                # noqa: E402
-    ADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START, MIN_BOOKS, PROTOCOL_TAG,
-    PROTOCOL_VERSION, STALENESS_LIMIT_MINUTES, UNSCORED_REASONS, Unscored,
-    admissible_reference, canonical_sha256, closing_pairs, consensus,
-    credible_capture_instant, is_eligible_book, score_row,
+    CLOSE_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
+    MIN_BOOKS, PROTOCOL_TAG, PROTOCOL_VERSION, STALENESS_LIMIT_MINUTES,
+    SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored, admissible_reference,
+    canonical_sha256, closing_pairs, consensus, credible_capture_instant,
+    is_eligible_book, score_row,
 )
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -446,39 +447,118 @@ class TestClosedVocabulary(unittest.TestCase):
         self.assertEqual(ctx.exception.reason, "insufficient_books")
 
 
-class TestStartBasis(unittest.TestCase):
-    """Amendment 2 (b). `v_fight_start_best` ALWAYS returns an instant — it falls
-    back to the event date at 18:00 UTC — so reading `start_at` without reading
-    `start_basis` hands every fight since 1994 a plausible-looking schedule.
-    That is the same shape of defect as R-13: a populated placeholder sailing
-    through a presence check."""
+class TestCloseReference(unittest.TestCase):
+    """Amendment 3 — the event-flow rule.
 
-    def test_a_real_bell_is_admissible(self):
+    A card is one scheduled start and then a queue. Only the first bout begins
+    when the schedule says; every later bout begins when the one before it ends.
+    A start-time view ALWAYS answers, so reading an instant without reading its
+    basis hands every fight since 1994 a plausible-looking schedule — the same
+    defect shape as R-13, a populated placeholder passing a presence check."""
+
+    def test_a_real_bell_is_admissible_for_any_bout(self):
         self.assertEqual(admissible_reference(START, "bell_at"), START)
+        self.assertEqual(admissible_reference(START, "bell_at", is_first_bout=False),
+                         START)
 
-    def test_a_provider_commence_is_admissible(self):
-        self.assertEqual(admissible_reference(START, "provider_commence"), START)
+    def test_the_previous_bouts_completion_is_admissible(self):
+        self.assertEqual(
+            admissible_reference(START, "previous_bout_completion", is_first_bout=False),
+            START)
 
-    def test_the_event_date_fallback_is_not(self):
-        self.assertIsNone(admissible_reference(START, "event_date_fallback"),
-                          "18:00 UTC on the event date is a placeholder, not a "
-                          "schedule, and it is wrong by hours in both directions")
+    def test_the_scheduled_start_is_admissible_for_the_first_bout_only(self):
+        self.assertEqual(
+            admissible_reference(START, "scheduled_first_bout", is_first_bout=True),
+            START)
+        self.assertIsNone(
+            admissible_reference(START, "scheduled_first_bout", is_first_bout=False),
+            "the card's scheduled start is the FIRST fight's start and nobody "
+            "else's; on bout twelve it sits hours early")
+
+    def test_an_unknown_running_order_is_not_a_yes(self):
+        """`is_first_bout` is None when the card's order was never recorded, and
+        that must not pass as first-bout. Defaulting it to True would apply the
+        card's schedule to every fight — the exact failure Amendment 3 fixes."""
+        self.assertIsNone(admissible_reference(START, "scheduled_first_bout"))
+        self.assertIsNone(
+            admissible_reference(START, "scheduled_first_bout", is_first_bout=None))
+
+    def test_provider_commence_alone_no_longer_qualifies(self):
+        """Amendment 2 (b) admitted it for every fight; Amendment 3 narrows it to
+        the first bout, where it is named for what it is. Narrowing, never
+        widening."""
+        self.assertIsNone(admissible_reference(START, "provider_commence"))
+        self.assertIsNone(
+            admissible_reference(START, "provider_commence", is_first_bout=True))
+        self.assertTrue(SUPERSEDED_START_BASES.isdisjoint(CLOSE_REFERENCE_BASES))
+
+    def test_the_event_date_fallback_is_still_not_admissible(self):
+        for basis in INADMISSIBLE_START_BASES:
+            with self.subTest(basis=basis):
+                self.assertIsNone(admissible_reference(START, basis, True),
+                                  "18:00 UTC on the event date is a placeholder, "
+                                  "wrong by hours in both directions")
 
     def test_an_unknown_basis_is_not(self):
-        for basis in (None, "", "guess", "BELL_AT"):
+        for basis in (None, "", "guess", "BELL_AT", "market_disappearance"):
             with self.subTest(basis=basis):
-                self.assertIsNone(admissible_reference(START, basis))
+                self.assertIsNone(admissible_reference(START, basis, True))
 
     def test_a_missing_instant_is_not_rescued_by_a_good_basis(self):
         self.assertIsNone(admissible_reference(None, "bell_at"))
+        self.assertIsNone(admissible_reference(None, "previous_bout_completion"))
 
-    def test_a_fallback_only_fight_is_unscored_not_scored_on_the_placeholder(self):
-        got = score(ref=admissible_reference(START, "event_date_fallback"))
+    def test_a_fight_with_no_reference_is_unscored_not_scored_on_a_placeholder(self):
+        got = score(ref=admissible_reference(START, "event_date_fallback", True))
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_two(self):
-        self.assertEqual(ADMISSIBLE_START_BASES, {"bell_at", "provider_commence"})
+    def test_the_admissible_set_is_the_frozen_three(self):
+        self.assertEqual(CLOSE_REFERENCE_BASES,
+                         {"bell_at", "previous_bout_completion",
+                          "scheduled_first_bout"})
+
+
+class TestTriggerIsNotTheClose(unittest.TestCase):
+    """The distinction Amendment 3 turns on, and the one easiest to collapse by
+    accident. The previous bout ending starts the 30-minute CAPTURE window. The
+    CLOSE is the last valid pre-live quote for the upcoming fight."""
+
+    def test_a_quote_taken_after_the_fight_started_is_excluded(self):
+        # Three books quote 10 minutes AFTER this bout began.
+        after = START + dt.timedelta(minutes=10)
+        got = score(quotes=three_books(at=after))
+        self.assertFalse(got["scored"],
+                         "a quote taken once the fight was under way can never "
+                         "be its closing price")
+        self.assertEqual(got["diagnostics"]["after_reference"], 6)
+
+    def test_a_quote_exactly_at_the_start_is_excluded(self):
+        got = score(quotes=three_books(at=START))
+        self.assertFalse(got["scored"], "strictly before, so the boundary is out")
+
+    def test_the_close_is_the_last_quote_before_the_start_not_the_trigger(self):
+        """The trigger (previous bout's completion) is also this fight's
+        reference here, but the SCORED close must still be the last quote before
+        it — not a quote at the trigger, and not the trigger instant itself."""
+        early = START - dt.timedelta(minutes=40)
+        late = START - dt.timedelta(minutes=5)
+        quotes = three_books(at=early) + three_books(at=late)
+        for i, q in enumerate(quotes[6:], start=100):
+            q["id"] = i                       # distinguish the late batch
+        got = score(quotes=quotes)
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertTrue(all(qid >= 100 for qid in got["quote_ids"]),
+                        "the close must be the LAST eligible quote before the "
+                        "start, not an earlier one still inside the window")
+
+    def test_capture_after_the_trigger_still_scores_the_pre_start_quote(self):
+        """The case the whole rule exists for: a late-card fight whose quotes
+        only exist because the previous bout ending triggered capture. They are
+        pre-live for THIS fight and must score."""
+        got = score(quotes=three_books(at=START - dt.timedelta(minutes=12)))
+        self.assertTrue(got["scored"], got["reason"])
+        self.assertEqual(got["closing_book_count"], 3)
 
 
 class TestFrozenBookList(unittest.TestCase):

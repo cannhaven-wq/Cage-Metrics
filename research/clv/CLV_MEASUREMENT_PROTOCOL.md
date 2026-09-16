@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.2` |
+| version | `1.0.3` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1 and 2 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–3 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,7 +336,87 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
-> **AMENDMENT 2 (b), v1.0.2, 2026-09-16 — which start bases count.** The
+> ## AMENDMENT 3, v1.0.3, 2026-09-16 — the event-flow rule
+>
+> **Approved by Reed Cannon (L3).** Supersedes Amendment 2 (b) below, by
+> narrowing it.
+>
+> A UFC card is **one scheduled start and then a queue.** Only the first bout
+> begins at a time anybody published. Every later bout begins when the one before
+> it ends, and the gap between the card's advertised start and the twelfth fight
+> walking out is hours.
+>
+> Amendment 2 (b) admitted `provider_commence` — the card-level commence time —
+> as the reference for *every* fight on the card. That is right for one fight out
+> of thirteen and wrong for the rest, and wrong in the expensive direction: it
+> would mark every quote taken after the first bell as in-play for all thirteen,
+> discarding exactly the quotes the later fights close on.
+>
+> ### The close reference, per fight
+>
+> | tier | basis | applies to |
+> |---|---|---|
+> | 1 | **actual confirmed bell** (`fights.bell_at`) | any bout |
+> | 2 | **the previous bout's exact completion** | any bout after the first |
+> | 3 | **the card's scheduled start** (`scheduled_first_bout`) | **the first bout only** |
+> | — | anything else, including the event-date fallback | nothing — the fight is unscored |
+>
+> A fight whose running order is unknown has no admissible reference at all:
+> without an order there is no "previous bout" to reason from, and no fight can
+> be identified as the card's first. Unknown is unscored.
+>
+> ### The trigger is not the close
+>
+> This is the distinction the amendment turns on, and it is easy to collapse by
+> accident. Stated so it cannot be:
+>
+> - **The previous bout ending is a CAPTURE TRIGGER.** It tells the odds job to
+>   begin taking quotes every 30 minutes for the next fight. It governs how much
+>   data exists and nothing else. Capture cadence is **not frozen** — it cannot
+>   change what a number means, only how many numbers there are.
+> - **The CLOSE is the last valid pre-live quote for the upcoming fight.** Any
+>   quote captured at or after that fight actually started is excluded, strictly.
+>   That is frozen, and `closing_pairs` in `cfl_engine/clv/scoring.py` enforces
+>   it.
+>
+> Getting these the wrong way round would let a quote taken *during* a fight
+> score as that fight's closing price. There are four tests named for this in
+> `test_scoring.py`.
+>
+> ### The audit field stays separate
+>
+> `fights.bell_at` remains the record of when a fight **actually** began,
+> reserved for a confirmed bell and never written by the odds job.
+> `fight_odds.bout_started_at` is a different thing: the capture-time **belief**
+> about when this bout began, stamped on each quote so the close a quote was
+> judged against stays recoverable even if a better account arrives later. A
+> correction to one never silently rewrites the other.
+>
+> ### What this costs, and it is the biggest fact about the CLV timeline
+>
+> Both tier-2 inputs are missing from the database today:
+>
+> - **Running order.** `fights` has no order column — only `is_main_event`, which
+>   names the last bout. Sorting by id would be an inference dressed as a record,
+>   and it breaks exactly when a card is reshuffled. Obtainable free: ufcstats
+>   lists a card in order.
+> - **Exact bout completions.** Nothing records when a bout ended. The result
+>   scraper yields an *upper bound* — completion plus unknown lag — which is
+>   explicitly refused, because using it would place a bout's start too late and
+>   admit in-play quotes as its close.
+>
+> Until exact completions exist, **only the first bout of each card can be
+> scored**: roughly one observation per event, against a floor of 100 across 20
+> distinct events. Acquiring them needs a paid live-data feed or a person
+> entering times during the card. Both are new standing commitments and are
+> escalated, not assumed.
+>
+> ---
+>
+> **AMENDMENT 2 (b), v1.0.2, 2026-09-16 — which start bases count.** *Superseded
+> in part by Amendment 3 above: `provider_commence` is no longer admissible for
+> every fight, only for the card's first bout. The rest stands — the event-date
+> fallback was not a schedule then and is not one now.* The
 > reference instant is read from `v_fight_start_best` (`dur001_migration.sql`),
 > which resolves `bell_at` → latest provider commence → an event-date fallback.
 > **Only the first two are admissible here.**

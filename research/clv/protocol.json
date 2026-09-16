@@ -4,10 +4,10 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+  "protocol_sha256": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
   "eligible_books": [
     "FanDuel",
     "DraftKings",
@@ -35,13 +35,45 @@
     },
     "additions_require": "a dated amendment of their own"
   },
-  "admissible_start_bases": {
-    "source_view": "v_fight_start_best (dur001_migration.sql)",
-    "admissible": ["bell_at", "provider_commence"],
-    "inadmissible": ["event_date_fallback"],
-    "why": "the fallback is the event date at 18:00 UTC - a placeholder, not a schedule, wrong by hours in both directions. Accepting it would put a fabricated instant at the centre of the measure and make a quote look fresh or stale according to a constant nobody chose for this purpose.",
-    "treatment": "a fight whose only basis is the fallback is unscored with reason no_scheduled_start, the same treatment a missing instant gets, because that is what it is",
-    "frozen_by": "Amendment 2 (b), 2026-09-16"
+  "close_reference": {
+    "frozen_by": "Amendment 3, 2026-09-16, approved by Reed Cannon (L3)",
+    "source_view": "v_clv_close_reference (research/clv/proposed_2026-09-16_event_flow.sql, NOT APPLIED)",
+    "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
+    "principle": "a UFC card is one scheduled start and then a queue. Only the first bout begins at a time anybody published; every later bout begins when the one before it ends.",
+    "tiers": [
+      {"basis": "bell_at", "applies_to": "any bout", "note": "an actual confirmed bell; audit-grade"},
+      {"basis": "previous_bout_completion", "applies_to": "any bout after the first", "note": "exact observations only - never the result scraper's upper bound"},
+      {"basis": "scheduled_first_bout", "applies_to": "the card's FIRST bout only", "note": "the card-level commence time, named for what it is"}
+    ],
+    "inadmissible": ["event_date_fallback", "provider_commence applied to a later bout"],
+    "unknown_running_order": "no admissible reference at all. Without an order there is no 'previous bout' to reason from and no fight can be identified as the card's first. Unscored.",
+    "supersedes": "Amendment 2 (b), which admitted provider_commence for EVERY fight on the card - right for one fight in thirteen and wrong in the expensive direction, since it would mark every quote after the first bell as in-play for all of them",
+    "narrowing_not_widening": true
+  },
+  "trigger_is_not_the_close": {
+    "capture_trigger": "the previous bout ending tells the odds job to begin 30-minute capture for the next fight. It governs how much data exists and nothing else. Capture cadence is NOT frozen - it cannot change what a number means, only how many numbers there are.",
+    "the_close": "the last valid pre-live quote for the upcoming fight. Any quote captured at or after that fight actually started is excluded, strictly. Frozen, and enforced by closing_pairs in cfl_engine/clv/scoring.py.",
+    "why_stated_separately": "collapsing the two would let a quote taken DURING a fight score as that fight's closing price",
+    "tests": "TestTriggerIsNotTheClose in cfl_engine/clv/test_scoring.py"
+  },
+  "audit_fields": {
+    "fights.bell_at": "the record of when a fight ACTUALLY began. Reserved for a confirmed bell, never written by the odds job, never synthesised.",
+    "fight_odds.bout_started_at": "the capture-time BELIEF about when this bout began, stamped per quote so the close a quote was judged against stays recoverable if a better account arrives later.",
+    "kept_apart_because": "a correction to one must never silently rewrite the other"
+  },
+  "missing_inputs_for_tier_2": {
+    "running_order": {
+      "state": "absent - `fights` has no order column, only is_main_event (the LAST bout)",
+      "why_not_id_order": "sorting by id is an inference dressed as a record, and it breaks exactly when a card is reshuffled, which is when getting it wrong costs most",
+      "cost_to_obtain": "free - ufcstats lists a card in order and the existing event scraper can write fight_bout_order on the same pass"
+    },
+    "exact_bout_completions": {
+      "state": "absent - nothing records when a bout ended",
+      "why_the_result_scraper_will_not_do": "it yields completion PLUS unknown lag, an upper bound. Used as the next bout's start it would sit too late and admit in-play quotes as that fight's close. fight_bout_completions.is_exact=false marks such rows and v_clv_close_reference ignores them.",
+      "cost_to_obtain": "a paid live-data feed or a person entering times during the card - both new standing commitments",
+      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed"
+    },
+    "consequence": "until exact completions exist, only the FIRST bout of each card can be scored - roughly one observation per event against a floor of 100 across 20 distinct events. This is the single biggest fact about the CLV timeline."
   },
   "frozen_at": "2026-09-16T10:30:00Z",
   "frozen_by": "Reed Cannon",
@@ -567,6 +599,26 @@
       "output_change": "none yet - zero observations were scorable before this amendment and zero are scorable after it. It removes a blocker, it does not produce a number.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record, so neither part can have been chosen for its effect on a result"
+    },
+    {
+      "number": 3,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The event-flow rule: a card is one scheduled start and then a queue",
+      "kind": "narrows Amendment 2 (b)",
+      "version_before": "1.0.2",
+      "version_after": "1.0.3",
+      "sha256_before": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+      "sha256_after": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
+      "parts": {
+        "a": "close reference per fight: actual bell, else the previous bout's exact completion, else (first bout only) the card's scheduled start",
+        "b": "the previous bout ending is a CAPTURE trigger and never the close; the close is the last valid pre-live quote for the upcoming fight, and any quote at or after that fight started is excluded",
+        "c": "actual bout-start time kept as a separate audit field (fights.bell_at), distinct from the capture-time belief (fight_odds.bout_started_at)"
+      },
+      "output_change": "none yet - zero observations were scorable before and zero after. It corrects a rule that would have been wrong for twelve fights in thirteen once capture began, and it does so before any of those quotes exist.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }
   ],
   "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",

@@ -12,15 +12,28 @@ name: Fetch UFC odds
 # Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
 # whole MMA slate.
 #
-# CADENCE (2026-09-16, CLV-001): wakes every 15 minutes; build/fetch-odds.js
-# decides whether the wake is worth a credit BEFORE calling the API
-# (shouldCaptureNow). Three tiers:
+# CADENCE (2026-09-16, CLV-001 Amendment 3): wakes every 15 minutes;
+# build/fetch-odds.js decides whether the wake is worth a credit BEFORE calling
+# the API (shouldCaptureNow). Three tiers:
 #
-#   * a real bell within 3 hours  -> every 30 minutes
-#   * a card today or tomorrow    -> hourly
-#   * otherwise                   -> one baseline capture a day at 08:00 UTC
+#   * card IN FLOW              -> every 30 minutes
+#   * a card today or tomorrow  -> hourly
+#   * otherwise                 -> one baseline capture a day at 08:00 UTC
 #
-# ~33 credits on a card day, ~286/month, inside the 500 free-tier cap.
+# "In flow" is the event-flow rule. A card is one scheduled start and then a
+# queue: only the first bout begins when the schedule says, and the twelfth
+# walks out hours later. So the window opens 3h before the scheduled start and
+# stays open until every bout has an exact completion on file, or EVENT_FLOW_MAX_H
+# (7h) passes — whichever comes first. Capturing only "near the published
+# commence time" would give bout 1 a fresh quote and leave the other twelve
+# closing on a line hours stale.
+#
+# The previous bout ending is a TRIGGER for capture intensity and nothing else.
+# It does not define any fight's closing price — that is the last valid pre-live
+# quote for the upcoming fight, decided in cfl_engine/clv/scoring.py.
+#
+# ~33 credits on a card day, ~286/month, inside the 500 free-tier cap —
+# unchanged by Amendment 3, and build/test-fetch-odds.js asserts the ceiling.
 #
 # Why 30 minutes and not 60. CLV-001's staleness limit is 45 minutes, and it was
 # derived from a MEASURED 30-minute near-card interval plus 15 minutes of grace.

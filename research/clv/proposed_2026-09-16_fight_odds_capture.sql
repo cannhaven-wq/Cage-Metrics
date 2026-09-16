@@ -41,12 +41,20 @@
 --
 -- Mapping to CLV-001 §4, the capture requirements that cannot be backfilled:
 --   item  9  provider market IDs                -> source_event_id
---   item  7  scheduled bout-start timing        -> source_commence_at
+--   item  7  scheduled AND actual bout timing   -> source_commence_at (card),
+--                                                  bout_started_at (this fight)
 --   item 11  provider AND retrieval timestamps  -> provider_last_update + retrieved_at
 --   item 10  opponent identity at quote time    -> opponent_fighter_id
 --   item  8  market suspension / takedown       -> market_status
 --   item  6  provider and feed version          -> feed_version
 --   item 12  immutable link to the source quote -> raw
+--
+-- The actual-bell audit field stays where it is: `fights.bell_at`, reserved for
+-- a confirmed bell and never written by the odds job. bout_started_at is the
+-- capture-time BELIEF about when this fight began; bell_at is the record of when
+-- it did. They are kept apart so a later correction to one never silently
+-- rewrites the other, and so the close a quote was judged against at capture
+-- stays recoverable.
 -- ============================================================================
 
 begin;
@@ -84,9 +92,24 @@ alter table public.fight_odds
 alter table public.fight_odds
   add column if not exists source_commence_at timestamptz;
 
--- True when the quote was captured at or after the provider's commence time,
--- i.e. an in-play price. Never eligible as a close. Stored rather than derived
--- so it reflects the commence time known AT CAPTURE, not a later revision.
+-- The best account, at capture time, of when THIS fight began: an actual bell,
+-- else the previous bout's completion, else (bout 1 only) the card's scheduled
+-- start. NULL when none is known, which is not the same as "it had not started".
+--
+-- Amendment 3. Separate from source_commence_at because on a thirteen-fight card
+-- they are the same instant for one fight and wrong for twelve: the card has one
+-- published start, and every later bout begins when the one before it ends.
+alter table public.fight_odds
+  add column if not exists bout_started_at timestamptz;
+
+-- True when the quote was captured at or after THIS FIGHT started — an in-play
+-- price, never eligible as a close. NULL means we do not know, and that is a
+-- third state, not a synonym for false.
+--
+-- It is keyed to bout_started_at and NOT to source_commence_at. Keying it to the
+-- card's commence time would mark every quote taken after the first bell as
+-- in-play for all thirteen fights, discarding exactly the quotes the later
+-- fights close on. That was the bug this column had before Amendment 3.
 alter table public.fight_odds
   add column if not exists is_live boolean;
 
@@ -149,14 +172,22 @@ alter table public.fight_odds
   check (market_status is null or market_status in
          ('open', 'suspended', 'taken_down')) not valid;
 
--- is_live must agree with the two timestamps it summarises. A row claiming to be
--- pre-start while carrying a capture instant at or after commence is not a
--- disagreement to resolve later — it is a bug, and it would present an in-play
+-- is_live must agree with the bout start it summarises. A row claiming to be
+-- pre-start while carrying a capture instant at or after that fight began is not
+-- a disagreement to resolve later — it is a bug, and it would present an in-play
 -- price as a close.
+--
+-- Against bout_started_at, per Amendment 3, never against source_commence_at.
 alter table public.fight_odds
-  add constraint fight_odds_is_live_agrees_with_commence
-  check (is_live is null or source_commence_at is null
-         or (is_live = (captured_at >= source_commence_at))) not valid;
+  add constraint fight_odds_is_live_agrees_with_bout_start
+  check (is_live is null or bout_started_at is null
+         or (is_live = (captured_at >= bout_started_at))) not valid;
+
+-- is_live is only knowable when a bout start is. A row asserting liveness with
+-- no bout start on it is asserting something it cannot know.
+alter table public.fight_odds
+  add constraint fight_odds_is_live_needs_a_bout_start
+  check (is_live is null or bout_started_at is not null) not valid;
 
 -- The opponent is the other corner, never the same fighter.
 alter table public.fight_odds
