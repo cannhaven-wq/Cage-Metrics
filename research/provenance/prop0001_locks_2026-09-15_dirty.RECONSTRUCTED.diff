@@ -1,0 +1,2458 @@
+diff --git a/.github/workflows/odds.yml b/.github/workflows/odds.yml
+index 755cdc5..6eb73cc 100644
+--- a/.github/workflows/odds.yml
++++ b/.github/workflows/odds.yml
+@@ -10,11 +10,27 @@ name: Fetch UFC odds
+ #                                 service_role key — bypasses RLS to write)
+ #
+ # Cost: one request per run (regions=us, markets=h2h) = 1 credit, returns the
+-# whole MMA slate. Every 2h = ~360 requests/month, under the 500 free-tier cap.
++# whole MMA slate.
++#
++# CADENCE (2026-08-30): wakes hourly; build/fetch-odds.js decides whether the run
++# is worth a credit BEFORE calling the API (shouldSpendCredit). A card today or
++# tomorrow (UTC) => capture every hour, so the last price on file before a bell
++# is at most ~60 min old instead of up to ~24h. Otherwise => one baseline
++# capture a day at 08:00 UTC. ~215 credits/month, inside the 500 free-tier cap.
++#
++# Why this matters: settle_clv.py scores every published edge against the last
++# capture on file. A once-a-day line is not a close, so CLV computed off it is
++# noise. Density near the bell is the whole point of this job.
++#
++# DUR-001 (2026-09-14): the same call also carries the fight TOTALS market when
++# build/fetch-odds.js::wantTotals() says so (+1 credit per call), appended to the
++# private prop_odds ledger, plus the provider commence time into
++# fight_start_estimates. Set ODDS_MARKETS=h2h to switch totals off.
++# See cfl_engine/dur001/README.md.
+ 
+ on:
+   schedule:
+-    - cron: '0 */2 * * *'   # every 2 hours
++    - cron: '0 * * * *'   # hourly wake-up; the script self-gates on card proximity
+   workflow_dispatch:
+ 
+ permissions:
+@@ -45,4 +61,7 @@ jobs:
+         env:
+           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
++          # A hand-fired run always captures — never let the cadence gate make a
++          # manual "is this thing on?" check look like a silent success.
++          FORCE: ${{ github.event_name == 'workflow_dispatch' && '1' || '' }}
+         run: node fetch-odds.js
+diff --git a/.github/workflows/prop-locks.yml b/.github/workflows/prop-locks.yml
+new file mode 100644
+index 0000000..6253fac
+--- /dev/null
++++ b/.github/workflows/prop-locks.yml
+@@ -0,0 +1,51 @@
++name: DUR-001 — lock PROP-0001 duration predictions
++
++# Writes immutable PROP-0001 prediction locks (prop_model_locks) for every
++# eligible 3-round fight on any card in the next 8 days. First lock wins:
++# re-runs skip fights already on the ledger for the current model_version, so a
++# daily schedule is safe and a fight is locked the first day it enters the
++# window (i.e. with the data available THAT day — see cfl_engine/dur001/README.md).
++#
++# The database itself refuses a lock whose training cutoff is after the lock,
++# whose fight already has a result, or whose best-known start is not after the
++# lock, so a late run cannot backfill anything.
++
++on:
++  workflow_dispatch:
++  schedule:
++    # Daily at 11:00 UTC — after the event scraper and the 10:00 props refresh.
++    - cron: '0 11 * * *'
++
++concurrency:
++  group: prop-locks
++  cancel-in-progress: false
++
++jobs:
++  lock:
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    env:
++      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
++      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
++    steps:
++      - uses: actions/checkout@v4
++
++      - name: Set up Python
++        uses: actions/setup-python@v5
++        with:
++          python-version: '3.11'
++          cache: 'pip'
++          cache-dependency-path: cfl_engine/requirements.txt
++
++      - name: Install deps
++        run: pip install -q -r cfl_engine/requirements.txt
++
++      - name: Guard — service key present
++        run: |
++          if [ -z "$SUPABASE_SECRET_KEY" ]; then
++            echo "::error::SUPABASE_SERVICE_ROLE_KEY secret is not set."
++            exit 1
++          fi
++
++      - name: Lock PROP-0001 for the next 8 days of cards
++        run: python cfl_engine/dur001/lock_prop0001.py --within-days 8 --execute
+diff --git a/build/fetch-odds.js b/build/fetch-odds.js
+index cc4bdf8..461648d 100644
+--- a/build/fetch-odds.js
++++ b/build/fetch-odds.js
+@@ -22,8 +22,22 @@
+ // Keep it in GitHub Secrets only — never commit it.
+ //
+ // Cost: ONE API request per run (regions=us, markets=h2h) = 1 credit, and it
+-// returns the whole MMA slate at once. Free tier is 500/mo; the workflow runs
+-// every 2h (~360/mo) to stay well under budget.
++// returns the whole MMA slate at once. Free tier is 500/mo.
++//
++// CADENCE (changed 2026-08-30): the workflow now wakes HOURLY, but this script
++// decides whether the run is worth a credit before spending one — see
++// shouldSpendCredit(). A price captured once a day is not a closing price: with
++// the old every-2h-on-paper schedule the freshest line we held going into a
++// bell could be ~24h stale, which makes CLV a guess. Now:
++//
++//   * card today or tomorrow (UTC) -> capture every hour, so the last line we
++//     hold before any bell is at most ~60 minutes old
++//   * no card in that window       -> one baseline capture a day (08:00 UTC) to
++//     keep openers and slow line movement on file
++//
++// Budget: ~8 card-adjacent days/month x 24 + ~22 quiet days x 1 = ~215 credits,
++// well inside the 500 cap and far denser where it actually matters. Quiet-hour
++// runs exit BEFORE the API call, so they cost nothing.
+ // =============================================================================
+ 
+ const { createClient } = require('@supabase/supabase-js');
+@@ -35,9 +49,10 @@ const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
+ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
+ const SOURCE_TAG = 'the-odds-api:mma_mixed_martial_arts';
+ // DRY_RUN=1 → fetch + match + build rows but DON'T write. For safe local testing.
+-const DRY_RUN = !!process.env.DRY_RUN;
++// A fixture replay is always a dry run: synthetic quotes must never be stored.
++const DRY_RUN = !!process.env.DRY_RUN || !!process.env.ODDS_FIXTURE;
+ 
+-if (!ODDS_API_KEY) {
++if (!ODDS_API_KEY && !process.env.ODDS_FIXTURE) {
+   console.error('ODDS_API_KEY missing. Set it in GitHub Secrets (or env for local runs).');
+   process.exit(1);
+ }
+@@ -87,13 +102,63 @@ function impliedToAmerican(p) {
+ // locked opening price — even though the underlying book set varies run to run.
+ const CONSENSUS_BOOK_NAME = 'CFL Consensus (Odds API)';
+ 
++// -----------------------------------------------------------------------------
++// 0. Cadence gate — is this hourly wake-up worth a credit?
++// -----------------------------------------------------------------------------
++// Runs against `events` only (free), before any Odds API call. FORCE=1 (set by
++// workflow_dispatch) always spends, so a manual run is never silently skipped.
++
++const BASELINE_HOUR_UTC = 8;
++
++async function shouldSpendCredit() {
++  if (process.env.FORCE) {
++    console.log('[cadence] FORCE set — capturing regardless of schedule');
++    return true;
++  }
++  const now = new Date();
++  const today = now.toISOString().slice(0, 10);
++  const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
++
++  const { data: near, error } = await sb
++    .from('events')
++    .select('name, event_date')
++    .gte('event_date', today)
++    .lte('event_date', tomorrow);
++  if (error) throw new Error(`cadence events check: ${error.message}`);
++
++  if (near && near.length) {
++    console.log(`[cadence] card window (${near.map(e => `${e.name} ${e.event_date}`).join('; ')}) — hourly capture`);
++    return true;
++  }
++  if (now.getUTCHours() === BASELINE_HOUR_UTC) {
++    console.log('[cadence] no card today or tomorrow — taking the daily baseline capture');
++    return true;
++  }
++  console.log(`[cadence] no card today or tomorrow and it is not the ${BASELINE_HOUR_UTC}:00 UTC baseline hour — skipping (0 credits)`);
++  return false;
++}
++
+ // -----------------------------------------------------------------------------
+ // 1. Fetch raw odds from The Odds API (one request = whole MMA slate)
+ // -----------------------------------------------------------------------------
+ 
+-async function fetchOddsFromApi() {
++// DUR-001 (2026-09-14): the same request also carries the fight TOTALS market
++// (over/under rounds) when wantTotals() says so. Each extra market costs one
++// more credit per call (quota = markets x regions), so totals ride along only
++// where a close can actually form — see wantTotals(). Totals rows go to the
++// private, append-only `prop_odds` ledger; the moneyline path is unchanged.
++async function fetchOddsFromApi(markets = 'h2h') {
++  // ODDS_FIXTURE=<path.json>: replay a saved/synthetic Odds API payload instead
++  // of spending a credit. Forces DRY_RUN semantics upstream (see main) so a
++  // fixture can never reach the database. Used by the DUR-001 ingestion check.
++  if (process.env.ODDS_FIXTURE) {
++    const fs = require('fs');
++    const events = JSON.parse(fs.readFileSync(process.env.ODDS_FIXTURE, 'utf8'));
++    console.log(`[odds-api] FIXTURE ${process.env.ODDS_FIXTURE}: ${events.length} events (markets=${markets}; no credit spent)`);
++    return events;
++  }
+   const url = 'https://api.the-odds-api.com/v4/sports/mma_mixed_martial_arts/odds' +
+-    '?regions=us&markets=h2h&oddsFormat=american&dateFormat=iso' +
++    `?regions=us&markets=${encodeURIComponent(markets)}&oddsFormat=american&dateFormat=iso` +
+     `&apiKey=${encodeURIComponent(ODDS_API_KEY)}`;
+ 
+   // Retry transient failures (network, 429, 5xx) — a lost run here can cost a
+@@ -143,10 +208,27 @@ async function loadCandidateFights() {
+   const ids = events.map(e => e.id);
+   const { data: fights, error: fErr } = await sb
+     .from('fights')
+-    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name')
++    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, bell_at')
+     .in('event_id', ids);
+   if (fErr) throw new Error(`fights fetch: ${fErr.message}`);
+   console.log(`[supabase] ${fights ? fights.length : 0} candidate fights across ${events.length} events`);
++
++  // Best-known start time per fight (bell_at > provider commence > event-date
++  // fallback), from the DUR-001 start hierarchy view. Used by wantTotals() and
++  // promoteClosers(). Missing view (migration not applied) => empty map.
++  const byDate = new Map(events.map(e => [e.id, e.event_date]));
++  const { data: starts, error: sErr } = await sb
++    .from('v_fight_start_best')
++    .select('fight_id, start_at, start_basis')
++    .in('fight_id', (fights || []).map(f => f.id));
++  if (sErr) console.warn(`[start] v_fight_start_best unavailable (${sErr.message}) — apply dur001_migration.sql`);
++  const startById = new Map((starts || []).map(s => [s.fight_id, s]));
++  for (const f of fights || []) {
++    f.event_date = byDate.get(f.event_id) || null;
++    const s = startById.get(f.id);
++    f.start_at = s ? s.start_at : null;
++    f.start_basis = s ? s.start_basis : null;
++  }
+   return fights || [];
+ }
+ 
+@@ -224,16 +306,224 @@ async function resolveBooks(oddsEvents) {
+   return byName; // normalized name -> book_id
+ }
+ 
++// -----------------------------------------------------------------------------
++// 3b. Start times — the only thing that makes "the close" mean anything
++// -----------------------------------------------------------------------------
++// ufcstats gives us an event DATE and no start time. The Odds API gives a
++// per-fight commence_time, and it is the only source we have for one today.
++// It is a PROVIDER ESTIMATE, not the bell, so it is recorded in the append-only
++// fight_start_estimates ledger (source 'odds_api_commence'), never written into
++// fights.bell_at — that column stays reserved for a confirmed actual bell.
++// v_fight_start_best resolves bell_at > latest provider commence > event-date
++// fallback, and settlement defines the close as the last non-live capture
++// STRICTLY BEFORE that start, rather than "the newest row we happen to hold" —
++// which is how post-settlement sentinel prices (-199900 / +199900) end up
++// flagged as closers and poison CLV.
++//
++// Duplicate observations (same fight, same commence) are no-ops via the ledger's
++// unique index; a reschedule appends a new row and becomes the latest estimate.
++
++async function recordStartEstimates(commenceByFight) {
++  if (!commenceByFight.size) return;
++  const rows = [...commenceByFight.entries()].map(([fight_id, start_at]) => ({
++    fight_id, source: 'odds_api_commence', start_at,
++  }));
++  const { error } = await sb
++    .from('fight_start_estimates')
++    .upsert(rows, { onConflict: 'fight_id,source,start_at', ignoreDuplicates: true });
++  if (error) {
++    // Ledger missing (migration not applied) must not take the moneyline
++    // capture down with it.
++    console.warn(`[start] fight_start_estimates write failed: ${error.message}`);
++    return;
++  }
++  console.log(`[start] recorded provider commence for ${rows.length} fight(s) (duplicates ignored)`);
++}
++
++// -----------------------------------------------------------------------------
++// 3c. Closer promotion — one closing price per (fight, fighter, book)
++// -----------------------------------------------------------------------------
++// Openers are known at capture time; closers are not, because we cannot know a
++// capture is the last one until the bell rings. So this runs after the fact:
++// for every fight whose bell has passed, the latest capture before the bell
++// becomes that book's closer, and anything else loses the flag.
++//
++// It CLEARS as well as sets, deliberately. The Polymarket scraper marks its
++// newest row as the closer whether or not the fight has started, so its flag
++// walks forward into post-fight captures. Left alone, that is a closing price
++// taken after the result was known.
++//
++// Fights with no real start time (no bell_at and no provider commence — i.e.
++// only the event-date fallback) are never touched — that leaves the BFO-era
++// history (book 6, closers set by the backfill) exactly as it is.
++//
++// This flag only exists on the moneyline table. prop_odds never stores a closer
++// flag: its close is computed by v_prop_odds_lifecycle from the same start
++// hierarchy, so it can be recomputed when better start times arrive.
++
++const CLOSER_LOOKBACK_DAYS = 21;
++
++async function promoteClosers(candidateFights) {
++  const now = Date.now();
++  const floor = now - CLOSER_LOOKBACK_DAYS * 86400000;
++  const due = (candidateFights || []).filter(f => {
++    if (!f.start_at || !['bell_at', 'provider_commence'].includes(f.start_basis)) return false;
++    const t = new Date(f.start_at).getTime();
++    return t < now && t > floor;
++  });
++  if (!due.length) return;
++
++  let promoted = 0, demoted = 0;
++  for (const f of due) {
++    const bell = new Date(f.start_at).toISOString();
++    const { data: caps, error } = await sb
++      .from('fight_odds')
++      .select('id, fighter_id, book_id, captured_at, is_closer')
++      .eq('fight_id', f.id);
++    if (error) throw new Error(`closer scan (fight ${f.id}): ${error.message}`);
++    if (!caps || !caps.length) continue;
++
++    // Winner per (fighter, book): latest capture strictly before the bell.
++    const best = new Map();
++    for (const c of caps) {
++      if (!(c.captured_at < bell)) continue;
++      const k = `${c.fighter_id}|${c.book_id}`;
++      const cur = best.get(k);
++      if (!cur || c.captured_at > cur.captured_at) best.set(k, c);
++    }
++    const keep = new Set([...best.values()].map(c => c.id));
++
++    const toSet = [...keep].filter(id => !caps.find(c => c.id === id).is_closer);
++    const toClear = caps.filter(c => c.is_closer && !keep.has(c.id)).map(c => c.id);
++
++    if (toSet.length) {
++      const { error: e1 } = await sb
++        .from('fight_odds').update({ is_closer: true }).in('id', toSet);
++      if (e1) throw new Error(`closer set (fight ${f.id}): ${e1.message}`);
++      promoted += toSet.length;
++    }
++    if (toClear.length) {
++      const { error: e2 } = await sb
++        .from('fight_odds').update({ is_closer: false }).in('id', toClear);
++      if (e2) throw new Error(`closer clear (fight ${f.id}): ${e2.message}`);
++      demoted += toClear.length;
++    }
++  }
++  if (promoted || demoted) {
++    console.log(`[closers] ${due.length} fight(s) past the bell: promoted ${promoted} ` +
++      `capture(s), cleared ${demoted} stale/post-bell flag(s)`);
++  }
++}
++
++// -----------------------------------------------------------------------------
++// 3d. Fight totals (DUR-001) — over/under rounds, appended to prop_odds
++// -----------------------------------------------------------------------------
++// Every quote is one immutable row: (fight, book, line, captured_at) with both
++// prices, the provider's commence time as seen at capture, a live flag
++// (captured at/after commence => in-play, never a close) and the raw provider
++// metadata. No opener/closer flags are stored: v_prop_odds_lifecycle derives
++// them from the start hierarchy, so they can be recomputed later.
++//
++// Credit budget. Totals add one credit per call. They are requested when:
++//   * FORCE=1 (manual run), or
++//   * a candidate fight's best-known start is within TOTALS_HOURLY_WINDOW_H
++//     hours (hourly density right where the close forms), or
++//   * it is an even UTC hour inside the card window, or
++//   * it is the daily baseline hour (so opening lines are on file for the
++//     Phase-8 opener test).
++// Set ODDS_MARKETS to override entirely (e.g. 'h2h' to switch totals off).
++const TOTALS_HOURLY_WINDOW_H = Number(process.env.TOTALS_HOURLY_WINDOW_H || 6);
++const TOTALS_ENABLED = (process.env.ODDS_MARKETS || 'h2h,totals').split(',').map(s => s.trim()).includes('totals');
++
++function wantTotals(candidateFights, now = new Date()) {
++  if (!TOTALS_ENABLED) return { yes: false, why: 'totals disabled via ODDS_MARKETS' };
++  if (process.env.FORCE) return { yes: true, why: 'FORCE set' };
++  const t = now.getTime();
++  const near = (candidateFights || []).some(f => {
++    if (!f.start_at) return false;
++    const s = new Date(f.start_at).getTime();
++    return s > t - 3600000 && s < t + TOTALS_HOURLY_WINDOW_H * 3600000;
++  });
++  if (near) return { yes: true, why: `a fight starts within ${TOTALS_HOURLY_WINDOW_H}h` };
++  if (now.getUTCHours() === BASELINE_HOUR_UTC) return { yes: true, why: 'daily baseline hour' };
++  const today = now.toISOString().slice(0, 10);
++  const tomorrow = new Date(t + 86400000).toISOString().slice(0, 10);
++  const cardWindow = (candidateFights || []).some(f => f.event_date === today || f.event_date === tomorrow);
++  if (cardWindow && now.getUTCHours() % 2 === 0) return { yes: true, why: 'even hour in the card window' };
++  return { yes: false, why: cardWindow ? 'odd hour in the card window' : 'no card in window' };
++}
++
++// One prop_odds row per (book, line) for a matched Odds API event.
++function buildTotalsRows(e, fight, bookId, captured_at) {
++  const rows = [];
++  const commence = e.commence_time ? new Date(e.commence_time).toISOString() : null;
++  const is_live = !!(commence && captured_at >= commence);
++  for (const bm of e.bookmakers || []) {
++    const bid = bookId.get((bm.title || '').trim().toLowerCase());
++    if (!bid) continue;
++    for (const m of bm.markets || []) {
++      if (m.key !== 'totals' || !Array.isArray(m.outcomes)) continue;
++      // Group Over/Under by line (books can post alternates; keep each pair).
++      const byLine = new Map();
++      for (const o of m.outcomes) {
++        if (o.point == null || o.price == null) continue;
++        const k = String(o.point);
++        if (!byLine.has(k)) byLine.set(k, { point: Number(o.point) });
++        const slot = byLine.get(k);
++        const nm = String(o.name || '').toLowerCase();
++        if (nm === 'over') slot.over = Math.round(o.price);
++        else if (nm === 'under') slot.under = Math.round(o.price);
++      }
++      for (const slot of byLine.values()) {
++        if (slot.over == null || slot.under == null || !(slot.point > 0)) continue;
++        rows.push({
++          fight_id: fight.id,
++          event_id: fight.event_id,
++          event_date: fight.event_date,
++          market_type: 'total_rounds',
++          fighter_id: null,
++          line: slot.point,
++          over_odds: slot.over,
++          under_odds: slot.under,
++          book_id: bid,
++          source: 'odds_api',
++          source_event_id: e.id || null,
++          captured_at,
++          source_commence_at: commence,
++          is_live,
++          raw: { bookmaker_key: bm.key || null, bookmaker_last_update: bm.last_update || null,
++                 market_last_update: m.last_update || null, home_team: e.home_team, away_team: e.away_team },
++        });
++      }
++    }
++  }
++  return rows;
++}
++
++async function writePropOdds(rows) {
++  if (!rows.length) return 0;
++  const CHUNK = 500;
++  for (let i = 0; i < rows.length; i += CHUNK) {
++    const { error } = await sb.from('prop_odds').insert(rows.slice(i, i + CHUNK));
++    if (error) throw new Error(`prop_odds insert: ${error.message}`);
++  }
++  return rows.length;
++}
++
+ // -----------------------------------------------------------------------------
+ // 4. Main: fetch, match, build per-book snapshot rows, insert
+ // -----------------------------------------------------------------------------
+ 
+ (async () => {
+   try {
+-    const [oddsEvents, candidateFights] = await Promise.all([
+-      fetchOddsFromApi(),
+-      loadCandidateFights(),
+-    ]);
++    if (!(await shouldSpendCredit())) return;
++
++    // Candidate fights first: wantTotals() needs their start times to decide
++    // whether this call should spend the extra credit on the totals market.
++    const candidateFights = await loadCandidateFights();
++    const totals = wantTotals(candidateFights);
++    console.log(`[totals] ${totals.yes ? 'requesting' : 'skipping'} fight totals — ${totals.why}`);
++    const oddsEvents = await fetchOddsFromApi(totals.yes ? 'h2h,totals' : 'h2h');
+ 
+     const fightIndex = buildFightIndex(candidateFights);
+     const bookId = await resolveBooks(oddsEvents);
+@@ -241,6 +531,8 @@ async function resolveBooks(oddsEvents) {
+     const captured_at = new Date().toISOString();
+     const rows = [];
+     const unmatched = [];
++    const commenceByFight = new Map(); // fight_id -> provider commence_time (ISO)
++    const totalsRows = [];             // prop_odds rows (DUR-001)
+     let matchedFights = 0;
+ 
+     for (const e of oddsEvents) {
+@@ -287,7 +579,24 @@ async function resolveBooks(oddsEvents) {
+           wrote++;
+         }
+       }
++      // Fight totals (DUR-001) — independent of whether h2h matched a price.
++      if (totals.yes) totalsRows.push(...buildTotalsRows(e, fight, bookId, captured_at));
++
+       if (wrote > 0) matchedFights++;
++      if (wrote > 0 || totals.yes) {
++        // Proof that this capture is actually near the bell. The Odds API gives
++        // us commence_time, which ufcstats does not — so this is the only place
++        // we can see how stale our "closing" price would be if the feed stopped
++        // here. Anything over ~120 min on a card day means the hourly cadence
++        // isn't landing and CLV is being settled against a stale line.
++        if (e.commence_time) {
++          commenceByFight.set(fight.id, new Date(e.commence_time).toISOString());
++          const mins = Math.round((new Date(e.commence_time) - new Date(captured_at)) / 60000);
++          if (mins >= -60 && mins <= 24 * 60) {
++            console.log(`[start] fight ${fight.id} (${e.home_team} vs ${e.away_team}) — captured ${mins} min before commence_time`);
++          }
++        }
++      }
+     }
+ 
+     if (unmatched.length) {
+@@ -295,6 +604,26 @@ async function resolveBooks(oddsEvents) {
+       for (const u of unmatched) console.warn('  - ' + u);
+     }
+ 
++    if (DRY_RUN) {
++      console.log(`[dry-run] would record provider commence for ${commenceByFight.size} fight(s), ` +
++        `append ${totalsRows.length} totals quote(s) to prop_odds, and promote moneyline closers ` +
++        `for any fight past its start.`);
++      for (const r of totalsRows.slice(0, 8)) {
++        console.log(`  totals fight ${r.fight_id} book ${r.book_id} line ${r.line} ` +
++          `O ${r.over_odds > 0 ? '+' : ''}${r.over_odds} / U ${r.under_odds > 0 ? '+' : ''}${r.under_odds}` +
++          ` commence ${r.source_commence_at} live=${r.is_live}`);
++      }
++    } else {
++      await recordStartEstimates(commenceByFight);
++      // Uses the start times already on file, so this still closes out last
++      // night's card on a run where nothing new matched.
++      await promoteClosers(candidateFights);
++      // Totals are appended before the moneyline path's zero-match guard so a
++      // totals-only slate (books post totals late; h2h drift) is never lost.
++      const nTotals = await writePropOdds(totalsRows);
++      if (nTotals) console.log(`[totals] appended ${nTotals} totals quote(s) to prop_odds at ${captured_at}`);
++    }
++
+     if (rows.length === 0) {
+       // Zero matches is legitimate in the off-week lull before books post the
+       // next card — but during fight week odds always exist, so matching
+diff --git a/cfl_engine/dur001/README.md b/cfl_engine/dur001/README.md
+new file mode 100644
+index 0000000..2906888
+--- /dev/null
++++ b/cfl_engine/dur001/README.md
+@@ -0,0 +1,158 @@
++# DUR-001 — does PROP-0001 beat the closing totals market?
++
++One question: **after the vig-free closing UFC totals market is known, does the
++frozen PROP-0001 fight-duration model still add predictive information?**
++
++Everything here is prospective. No historical sportsbook totals exist in the
++database (`prop_odds` had 0 rows on 2026-09-14), so the experiment starts from
++the first captured card and accumulates. Nothing is back-filled, nothing is
++re-priced after a result is known, and the decision rules below were written
++before any result existed.
++
++## What PROP-0001 is (and is not)
++
++| | |
++|---|---|
++| Model | `cfl_engine/models/duration.py` — discrete-time logistic hazard, one finish hazard per round of a 3-round fight, isotonic-recalibrated. |
++| Features | `cfl_engine/features/build_features.py` — 49 point-in-time covariates (round-profile rates, fight-history rates, age/reach/height, stance + style matchups). Frozen 2026-08-06; `covariate_columns()` is the list. |
++| Gate evidence | `cfl_engine/harness/walkforward_report.json` — walk-forward log loss 0.5037 vs 0.5082 constant hazard, all gates pass. |
++| Freeze tag | `PROP-0001@v1` (`lock_prop0001.py::MODEL_VERSION`). The spec is frozen; training data grows daily. A spec change is a new version and new lock rows. |
++| **Not** PROP-0001 | `prop_projections.p_distance` (`props_v1`) — that is a league-average baseline, identical for every fight. It is never used here. |
++
++### Threshold mapping (frozen)
++
++The hazard model gives per-round finish probabilities `h1, h2, h3`. A sportsbook
++total of `X.5` rounds settles at 2:30 of round `X+1`, so we also need `phi_r`,
++the share of round-`r` finishes that land at or before 2:30 (estimated
++point-in-time from the training data, ~0.45):
++
++```
++P(over X.5) = S_X * (1 - phi_{X+1} * h_{X+1})     S_0 = 1, S_1 = 1-h1, S_2 = (1-h1)(1-h2)
++P(distance) = S_2 * (1 - h3)
++```
++
++Every lock row stores `haz_r1..3`, `phi_r1..3`, the round-end split and the
++49-feature row, so the probability can be recomputed without the model
++(`test_lock_row_reproduces_probability_from_stored_hazards`).
++
++Corner order: the training panel randomises corners, so a served fight is scored
++under both orderings and the hazards averaged.
++
++Scope: **3-round fights only**. Upcoming fights are scraped with
++`scheduled_rounds = 3` by default, so main events and title fights are excluded
++on their flags. The analysis additionally filters on the *actual* scheduled
++rounds once the result is in.
++
++## Ledgers (all private, all append-only)
++
++| Table / view | Role | Immutability |
++|---|---|---|
++| `prop_odds` | every sportsbook totals quote: fight, book, line, over/under price, `captured_at`, `source_commence_at`, `is_live`, raw provider metadata | triggers reject UPDATE / DELETE / TRUNCATE |
++| `fight_start_estimates` | every start-time observation per fight and source (`odds_api_commence` today) | triggers reject UPDATE / DELETE |
++| `v_fight_start_best` | **close hierarchy**: `fights.bell_at` (actual bell) → latest provider commence → `event_date` 18:00 UTC fallback. `start_basis` says which tier answered. | view |
++| `v_prop_odds_lifecycle` | per-quote opener / closer flags. **Close = last non-live quote strictly before `start_at`.** Carries `start_basis`, `lead_time`. | view (recomputed, so closes update when real bell times arrive) |
++| `v_prop_odds_closing_consensus` / `v_prop_odds_opening_consensus` | median vig-free P(over) across books per (fight, line) | view |
++| `prop_model_locks` | PROP-0001 predictions locked pre-fight | triggers reject UPDATE / DELETE / TRUNCATE; insert guard rejects `training_cutoff > actual_lock_at`, a fight with a result, or a lock at/after the best-known start |
++| `v_prop_fight_duration` | elapsed seconds from ufcstats `end_round`/`end_time`; void flag | view |
++
++`fights.bell_at` is never written from a provider guess. The fallback tier is
++deliberately early (18:00 UTC) so a fallback close can be stale but can never
++contain an in-play price.
++
++Schema: [`dur001_migration.sql`](../../dur001_migration.sql) (repo root).
++
++## Pipeline
++
++```
++build/fetch-odds.js  (hourly CI, .github/workflows/odds.yml)
++   ├─ h2h  -> fight_odds            (unchanged moneyline path)
++   ├─ totals -> prop_odds           (append-only; wantTotals() decides when the
++   │                                 extra credit is spent — hourly within 6h of
++   │                                 a start, even hours in the card window,
++   │                                 daily baseline for openers)
++   └─ commence_time -> fight_start_estimates
++
++cfl_engine/dur001/lock_prop0001.py   (daily CI, .github/workflows/prop-locks.yml)
++   -> prop_model_locks  one row per (fight, threshold 0.5/1.5/2.5, over) + distance
++      trained ONLY on completed fights with event_date < today; first lock wins
++
++cfl_engine/dur001/dur001_analysis.py  (run by hand once cards have settled)
++   -> out_real/dur001/dur001_report.json + dur001_rows.csv
++```
++
++Commands:
++
++```bash
++# dry-run / replay the totals capture without spending a credit or writing
++cd build && ODDS_FIXTURE=../cfl_engine/dur001/fixtures/odds_api_totals_fixture.json FORCE=1 node fetch-odds.js
++
++# lock the next 8 days of cards (dry-run, then write)
++python cfl_engine/dur001/lock_prop0001.py
++python cfl_engine/dur001/lock_prop0001.py --execute
++
++# the analysis (10,000 event-cluster bootstrap draws)
++python cfl_engine/dur001/dur001_analysis.py --draws 10000
++
++# pipeline check on synthetic events (never stored)
++python cfl_engine/dur001/dur001_analysis.py --synthetic 40
++python cfl_engine/dur001/dur001_analysis.py --synthetic 40 --synthetic-signal 1.0
++
++# tests (pure-Python + a rolled-back DB probe when SUPABASE_ACCESS_TOKEN is set)
++python -m pytest cfl_engine/dur001/test_dur001.py -q
++```
++
++## The analysis
++
++One row = one (fight, sportsbook threshold) with a closing consensus **and** a
++PROP-0001 lock at that exact threshold.
++
++* **Market probability**: American → raw implied (`|A|/(|A|+100)` or `100/(A+100)`),
++  two-way de-vig `p_over = q_over/(q_over+q_under)`, median across books, last
++  non-live quote before the best-known start.
++* **Outcome**: Over `X.5` wins iff elapsed time > `X*300 + 150` s (past 2:30 of
++  round X+1); ending exactly at 2:30 is Under. Whole-number lines push on the
++  bell and are excluded; no-contests are void and excluded.
++* **Phase 5** raw: log loss, Brier, calibration intercept/slope, fight / event /
++  book counts, coverage by threshold. `G_LL = LL_market − LL_CFL`.
++* **Phase 6** residual (the real test), walk-forward by event, coefficients fit
++  on prior events only:
++  `baseline: logit(P) = α + β·logit(P_close)`
++  `challenger: logit(P) = α + β·logit(P_close) + γ·[logit(P_CFL) − logit(P_close)]`
++  Primary metric `G_LL = LL_baseline − LL_challenger` on fully out-of-sample rows.
++* **Phase 7** event-cluster bootstrap: whole events resampled 10,000 times on the
++  fixed OOS predictions; CI for `G_LL`, ΔBrier, calibration slope. Mean CLV and
++  ROI are reported as null — DUR-001 places no bets.
++* **Phase 8** opener test, walk-forward: predict `logit(P_close)` from
++  `logit(P_open)` with and without `logit(P_CFL)`; compare OOS squared error.
++  (Not `(close−open) ~ (CFL−open)`, which shares opener noise on both sides.)
++
++## Pre-registered decision (frozen 2026-09-14, before any data)
++
++PROMOTE the duration branch only if **all** of:
++
++1. residual `G_LL > 0` out of sample;
++2. event-cluster 95% bootstrap CI for `G_LL` excludes zero (lower bound > 0);
++3. `G_LL ≥ 0.003` log loss per fight-threshold;
++4. challenger Brier is not materially worse (ΔBrier ≤ 0.001);
++5. challenger OOS calibration slope in [0.8, 1.2] and |intercept| ≤ 0.10.
++
++REJECT if the CI upper bound is below 0.003 — an economically meaningful effect
++is unlikely and the answer is not "add features". Otherwise HOLD and keep
++collecting. Sportsbooks and thresholds are never selected after results are
++visible; every posted line at every captured book enters the consensus.
++
++## Known limits
++
++* **The Odds API feed has been failing in CI** (every scheduled `odds.yml` run
++  since at least 2026-08-29; the last successful write was 2026-08-16). Totals
++  capture rides on that job, so nothing is captured until it is fixed. Run logs
++  need repo admin; the two candidates are the `ODDS_API_KEY` (quota / revoked)
++  and the service-role secret. The fixture replay above proves the code path.
++* Credits: totals add one credit per call. With the hourly card-window cadence
++  the gating keeps a 4–5 card month around 400–430 of the 500 free credits.
++  `ODDS_MARKETS=h2h` switches totals off.
++* Close provenance is `provider_commence` until real bell times exist. Every row
++  says so (`start_basis`), and the views recompute when `fights.bell_at` is filled.
++* PROP-0001 is 3-round only; 5-round totals are out of scope by design.
++* Isotonic recalibration is piecewise-constant, so fights with similar raw
++  hazards receive identical calibrated probabilities. That is the frozen recipe.
+diff --git a/cfl_engine/dur001/dur001_analysis.py b/cfl_engine/dur001/dur001_analysis.py
+new file mode 100644
+index 0000000..a2620e5
+--- /dev/null
++++ b/cfl_engine/dur001/dur001_analysis.py
+@@ -0,0 +1,465 @@
++"""DUR-001 — does PROP-0001 add information after the vig-free closing UFC
++totals market is known?
++
++Inputs (all read-only, service key):
++  v_prop_odds_closing_consensus   median vig-free closing P(over) per (fight, line)
++  v_prop_odds_opening_consensus   same at the opener (Phase 8)
++  prop_model_locks                PROP-0001 P(over) locked pre-fight (Phase 4)
++  v_prop_fight_duration           elapsed seconds + void flag (outcome)
++  fights / events                 scheduled rounds, event clustering
++
++One analysis row = one (fight, sportsbook total threshold) with a closing
++consensus AND a PROP-0001 lock at that exact threshold.
++
++Settlement (Over X.5 rounds): wins iff elapsed time > X*300 + 150 seconds, i.e.
++the fight goes PAST 2:30 of round X+1. Ending exactly at 2:30 settles Under
++(standard book rule: "past the halfway point"). Whole-number lines push when the
++fight ends exactly on the round bell and are excluded. No-contests / overturned
++results are void and excluded. Only scheduled 3-round fights qualify (PROP-0001
++scope). All of this is fixed BEFORE any result is looked at.
++
++Phases:
++  5  raw log loss / Brier / calibration, market vs CFL, G_LL = LL_market - LL_CFL
++  6  walk-forward residual test — per event, on PRIOR events only, fit
++       baseline   logit(P) = a + b*logit(P_close)
++       challenger logit(P) = a + b*logit(P_close) + g*[logit(P_CFL) - logit(P_close)]
++     and score the held-out event. Primary metric G_LL = LL_base - LL_chal.
++  7  event-cluster bootstrap (10,000 draws of whole events) of every metric.
++  8  opener test — walk-forward, predict logit(P_close) from logit(P_open)
++     with and without logit(P_CFL); compare OOS squared error.
++  9  pre-registered decision (DECISION_RULES below), frozen 2026-09-14.
++
++Usage:
++  python cfl_engine/dur001/dur001_analysis.py                  # live data
++  python cfl_engine/dur001/dur001_analysis.py --draws 10000 --out out_real/dur001
++  python cfl_engine/dur001/dur001_analysis.py --synthetic 40   # pipeline check on
++                                                               # SYNTHETIC events (never stored)
++"""
++from __future__ import annotations
++
++import argparse
++import datetime as dt
++import json
++import os
++import sys
++
++import numpy as np
++import pandas as pd
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++ENGINE = os.path.dirname(HERE)
++sys.path.insert(0, os.path.join(ENGINE, "features"))
++
++MODEL_VERSION = "PROP-0001@v1"
++MIDPOINT = 150
++ROUND_SECONDS = 300
++EPS = 1e-6
++RIDGE = 1e-3                 # tiny L2 on the walk-forward logistic fits (separation guard)
++MIN_PRIOR_EVENTS = 8         # first scored event needs at least this many prior events
++MIN_PRIOR_ROWS = 40
++
++# --------------------------------------------------------------- frozen rules
++# PROMOTE the duration branch only if ALL hold on the residual (Phase 6) test.
++DECISION_RULES = {
++    "residual_G_LL_positive": "G_LL = LL_market_baseline - LL_market_plus_CFL > 0 (OOS)",
++    "bootstrap_ci_excludes_zero": "event-cluster 95% CI lower bound of G_LL > 0",
++    "practical_gain": "G_LL >= 0.003 log-loss per fight-threshold",
++    "brier_not_worse": "challenger Brier - baseline Brier <= 0.001",
++    "calibration_acceptable": "challenger OOS calibration slope in [0.8, 1.2] and |intercept| <= 0.10",
++    "reject_if_ceiling_low": "if the 95% CI upper bound < 0.003, REJECT (an economically meaningful effect is unlikely) — do not keep adding features",
++}
++PRACTICAL_GAIN = 0.003
++BRIER_TOL = 0.001
++SLOPE_BAND = (0.8, 1.2)
++INTERCEPT_TOL = 0.10
++
++
++# ------------------------------------------------------------------- helpers
++def american_to_q(a):
++    a = float(a)
++    return (-a) / ((-a) + 100.0) if a < 0 else 100.0 / (a + 100.0)
++
++
++def devig_two_way(over_odds, under_odds):
++    qo, qu = american_to_q(over_odds), american_to_q(under_odds)
++    return qo / (qo + qu), qu / (qo + qu)
++
++
++def settle_over(duration_seconds, line, scheduled_rounds=3):
++    """Return 1 / 0 for an Over bet at `line` rounds, None for push/void."""
++    if duration_seconds is None or (isinstance(duration_seconds, float) and np.isnan(duration_seconds)):
++        return None
++    line = float(line)
++    whole = int(np.floor(line))
++    if abs(line - whole - 0.5) < 1e-9:                 # X.5 -> 2:30 of round X+1
++        cut = whole * ROUND_SECONDS + MIDPOINT
++        return int(duration_seconds > cut)
++    if abs(line - round(line)) < 1e-9:                 # whole number -> round bell
++        cut = int(round(line)) * ROUND_SECONDS
++        if abs(duration_seconds - cut) < 1e-9:
++            return None                                # push
++        return int(duration_seconds > cut)
++    return None
++
++
++def logit(p):
++    p = np.clip(np.asarray(p, float), EPS, 1 - EPS)
++    return np.log(p / (1 - p))
++
++
++def sigmoid(z):
++    return 1.0 / (1.0 + np.exp(-z))
++
++
++def log_loss(p, y):
++    p = np.clip(np.asarray(p, float), EPS, 1 - EPS); y = np.asarray(y, float)
++    return -(y * np.log(p) + (1 - y) * np.log(1 - p))
++
++
++def brier(p, y):
++    return (np.asarray(p, float) - np.asarray(y, float)) ** 2
++
++
++def fit_logistic(X, y, ridge=RIDGE, iters=50):
++    """Newton logistic regression with intercept and a tiny ridge (not on the
++    intercept). X: (n,k). Returns coef vector [a, b1..bk]."""
++    X = np.asarray(X, float); y = np.asarray(y, float)
++    n, k = X.shape
++    A = np.hstack([np.ones((n, 1)), X])
++    w = np.zeros(k + 1)
++    R = np.eye(k + 1) * ridge; R[0, 0] = 0.0
++    for _ in range(iters):
++        p = sigmoid(A @ w)
++        g = A.T @ (p - y) + R @ w
++        H = (A * (p * (1 - p))[:, None]).T @ A + R
++        try:
++            step = np.linalg.solve(H, g)
++        except np.linalg.LinAlgError:
++            step = np.linalg.lstsq(H, g, rcond=None)[0]
++        w -= step
++        if np.max(np.abs(step)) < 1e-8:
++            break
++    return w
++
++
++def fit_ols(X, y, ridge=RIDGE):
++    X = np.asarray(X, float); y = np.asarray(y, float)
++    A = np.hstack([np.ones((len(X), 1)), X])
++    R = np.eye(A.shape[1]) * ridge; R[0, 0] = 0.0
++    return np.linalg.solve(A.T @ A + R, A.T @ y)
++
++
++def calibration(p, y):
++    """Logistic recalibration of y on logit(p): intercept, slope."""
++    if len(p) < 10 or len(set(np.asarray(y).tolist())) < 2:
++        return {"intercept": None, "slope": None}
++    w = fit_logistic(logit(p)[:, None], y)
++    return {"intercept": float(w[0]), "slope": float(w[1])}
++
++
++# ------------------------------------------------------------------ the data
++def load_live(base_url, key, log=print):
++    import build_features as bf
++    close = bf.fetch_all(base_url, key, "v_prop_odds_closing_consensus",
++                         "select=fight_id,event_id,event_date,line,bookmaker_count,median_over_prob_vigfree,"
++                         "start_basis,latest_book_close_at,book_ids&market_type=eq.total_rounds")
++    opener = bf.fetch_all(base_url, key, "v_prop_odds_opening_consensus",
++                          "select=fight_id,line,bookmaker_count,median_over_prob_vigfree&market_type=eq.total_rounds")
++    locks = bf.fetch_all(base_url, key, "prop_model_locks",
++                         "select=fight_id,threshold,predicted_probability,actual_lock_at"
++                         f"&model_version=eq.{MODEL_VERSION}&market_type=eq.total_rounds&side=eq.over")
++    dur = bf.fetch_all(base_url, key, "v_prop_fight_duration",
++                       "select=fight_id,event_id,event_date,scheduled_rounds,duration_seconds,is_void,method")
++    log(f"  closes={len(close)} openers={len(opener)} locks={len(locks)} graded_fights="
++        f"{sum(1 for d in dur if d['duration_seconds'] is not None)}")
++    c = pd.DataFrame(close); o = pd.DataFrame(opener); l = pd.DataFrame(locks); d = pd.DataFrame(dur)
++    if c.empty or l.empty:
++        return pd.DataFrame()
++    c["line"] = c["line"].astype(float); l["threshold"] = l["threshold"].astype(float)
++    df = c.merge(l.rename(columns={"threshold": "line", "predicted_probability": "p_cfl"}),
++                 on=["fight_id", "line"], how="inner")
++    if not o.empty:
++        o["line"] = o["line"].astype(float)
++        df = df.merge(o.rename(columns={"median_over_prob_vigfree": "p_open",
++                                        "bookmaker_count": "open_books"})[["fight_id", "line", "p_open", "open_books"]],
++                      on=["fight_id", "line"], how="left")
++    else:
++        df["p_open"] = np.nan; df["open_books"] = np.nan
++    df = df.merge(d[["fight_id", "scheduled_rounds", "duration_seconds", "is_void"]], on="fight_id", how="left")
++    df = df.rename(columns={"median_over_prob_vigfree": "p_market", "bookmaker_count": "close_books"})
++    # the lock must predate the close (belt and braces; the DB guard already enforces pre-start)
++    df["actual_lock_at"] = pd.to_datetime(df["actual_lock_at"], utc=True)
++    df["latest_book_close_at"] = pd.to_datetime(df["latest_book_close_at"], utc=True)
++    df = df[df["actual_lock_at"] <= df["latest_book_close_at"]]
++    return df
++
++
++def make_synthetic(n_events=40, seed=7, cfl_signal=0.0, cfl_noise=0.5):
++    """SYNTHETIC events for a pipeline check. Never stored.
++
++    cfl_signal = 0 is a true null: CFL is the market plus independent noise, so
++    it carries NOTHING the close does not already know. cfl_signal = 1 makes CFL
++    an independent noisy read of the truth, which the residual test should find."""
++    rng = np.random.default_rng(seed)
++    rows = []
++    for e in range(n_events):
++        date = dt.date(2026, 10, 3) + dt.timedelta(days=7 * e)
++        for f in range(rng.integers(8, 13)):
++            truth = rng.normal(0.15, 0.9)                      # latent logit P(over 2.5)
++            mkt = truth + rng.normal(0, 0.35)                  # market sees truth + noise
++            cfl = mkt + cfl_signal * (truth - mkt) + rng.normal(0, cfl_noise)
++            y = int(rng.random() < sigmoid(truth))
++            rows.append({"fight_id": e * 100 + f, "event_id": e, "event_date": date.isoformat(),
++                         "line": 2.5, "p_market": sigmoid(mkt), "p_cfl": sigmoid(cfl),
++                         "p_open": sigmoid(mkt + rng.normal(0, 0.25)), "close_books": 5, "open_books": 4,
++                         "start_basis": "synthetic", "scheduled_rounds": 3, "is_void": False,
++                         "duration_seconds": 800 if y else 700})
++    return pd.DataFrame(rows)
++
++
++def prepare(df: pd.DataFrame):
++    df = df.copy()
++    df = df[df["scheduled_rounds"].fillna(3).astype(int) == 3]
++    df = df[~df["is_void"].fillna(False).astype(bool)]
++    df["y"] = [settle_over(d, l) for d, l in zip(df["duration_seconds"], df["line"])]
++    df = df[df["y"].notna()].copy()
++    df["y"] = df["y"].astype(int)
++    df["event_date"] = pd.to_datetime(df["event_date"]).dt.date
++    df = df.sort_values(["event_date", "event_id", "fight_id", "line"]).reset_index(drop=True)
++    df["x_mkt"] = logit(df["p_market"]); df["x_cfl"] = logit(df["p_cfl"])
++    df["x_res"] = df["x_cfl"] - df["x_mkt"]
++    return df
++
++
++# --------------------------------------------------------------- the phases
++def phase5_raw(df):
++    out = {"n_rows": int(len(df)), "n_fights": int(df.fight_id.nunique()),
++           "n_events": int(df.event_id.nunique()),
++           "n_books_median_close": float(df.close_books.median()) if len(df) else None,
++           "coverage_by_threshold": {str(k): int(v) for k, v in df.line.value_counts().sort_index().items()},
++           "close_basis": {str(k): int(v) for k, v in df.start_basis.value_counts().items()}}
++    if len(df):
++        out.update({
++            "LL_market": float(log_loss(df.p_market, df.y).mean()),
++            "LL_cfl": float(log_loss(df.p_cfl, df.y).mean()),
++            "Brier_market": float(brier(df.p_market, df.y).mean()),
++            "Brier_cfl": float(brier(df.p_cfl, df.y).mean()),
++            "cal_market": calibration(df.p_market, df.y),
++            "cal_cfl": calibration(df.p_cfl, df.y),
++        })
++        out["G_LL_raw"] = out["LL_market"] - out["LL_cfl"]
++        out["over_rate"] = float(df.y.mean())
++    return out
++
++
++def walk_forward(df, min_prior_events=MIN_PRIOR_EVENTS, min_prior_rows=MIN_PRIOR_ROWS):
++    """Per-row OOS predictions from baseline and challenger fit on prior events."""
++    events = list(dict.fromkeys(zip(df.event_date, df.event_id)))   # chronological
++    p_base = np.full(len(df), np.nan); p_chal = np.full(len(df), np.nan)
++    coefs = []
++    for i, (d, e) in enumerate(events):
++        if i < min_prior_events:
++            continue
++        prior = df[[(dd < d) for dd in df.event_date]]
++        if len(prior) < min_prior_rows:
++            continue
++        wb = fit_logistic(prior[["x_mkt"]].to_numpy(), prior.y.to_numpy())
++        wc = fit_logistic(prior[["x_mkt", "x_res"]].to_numpy(), prior.y.to_numpy())
++        m = (df.event_id == e) & (df.event_date == d)
++        Xb = df.loc[m, ["x_mkt"]].to_numpy(); Xc = df.loc[m, ["x_mkt", "x_res"]].to_numpy()
++        p_base[m.to_numpy()] = sigmoid(wb[0] + Xb @ wb[1:])
++        p_chal[m.to_numpy()] = sigmoid(wc[0] + Xc @ wc[1:])
++        coefs.append({"event_date": str(d), "event_id": int(e), "n_prior": int(len(prior)),
++                      "base": [float(x) for x in wb], "chal": [float(x) for x in wc]})
++    return p_base, p_chal, coefs
++
++
++def phase6_residual(df):
++    p_base, p_chal, coefs = walk_forward(df)
++    m = ~np.isnan(p_base)
++    sc = df[m].copy(); sc["p_base"] = p_base[m]; sc["p_chal"] = p_chal[m]
++    out = {"n_scored_rows": int(len(sc)), "n_scored_events": int(sc.event_id.nunique()) if len(sc) else 0,
++           "n_fit_events": len(coefs), "last_coefs": coefs[-1] if coefs else None}
++    if len(sc):
++        out.update({
++            "LL_market_baseline": float(log_loss(sc.p_base, sc.y).mean()),
++            "LL_market_plus_cfl": float(log_loss(sc.p_chal, sc.y).mean()),
++            "Brier_baseline": float(brier(sc.p_base, sc.y).mean()),
++            "Brier_challenger": float(brier(sc.p_chal, sc.y).mean()),
++            "cal_challenger": calibration(sc.p_chal, sc.y),
++            "cal_baseline": calibration(sc.p_base, sc.y),
++            "gamma_trajectory": [c["chal"][2] for c in coefs],
++        })
++        out["G_LL"] = out["LL_market_baseline"] - out["LL_market_plus_cfl"]
++        out["delta_Brier"] = out["Brier_challenger"] - out["Brier_baseline"]
++    return out, sc
++
++
++def phase7_bootstrap(sc, draws=10000, seed=20260914, log=print):
++    """Resample whole events with replacement; recompute every metric on the
++    fixed walk-forward OOS predictions (no refitting inside the bootstrap)."""
++    if len(sc) == 0:
++        return {"draws": 0}
++    rng = np.random.default_rng(seed)
++    ev_ids = sc.event_id.unique()
++    groups = {e: sc[sc.event_id == e] for e in ev_ids}
++    G, dB, slope, rawG = [], [], [], []
++    for _ in range(draws):
++        pick = rng.choice(ev_ids, size=len(ev_ids), replace=True)
++        s = pd.concat([groups[e] for e in pick], ignore_index=True)
++        G.append(float((log_loss(s.p_base, s.y) - log_loss(s.p_chal, s.y)).mean()))
++        dB.append(float((brier(s.p_chal, s.y) - brier(s.p_base, s.y)).mean()))
++        rawG.append(float((log_loss(s.p_market, s.y) - log_loss(s.p_cfl, s.y)).mean()))
++        if len(s) >= 40 and s.y.nunique() == 2:
++            slope.append(calibration(s.p_chal, s.y)["slope"])
++    def ci(a):
++        a = np.asarray([x for x in a if x is not None], float)
++        return {"mean": float(a.mean()), "lo95": float(np.percentile(a, 2.5)),
++                "hi95": float(np.percentile(a, 97.5))} if len(a) else None
++    return {"draws": draws, "n_events": int(len(ev_ids)),
++            "G_LL": ci(G), "delta_Brier": ci(dB), "cal_slope_challenger": ci(slope), "G_LL_raw": ci(rawG),
++            "mean_CLV": None, "ROI": None,
++            "note": "mean CLV / ROI are null: DUR-001 places no bets and optimises no thresholds."}
++
++
++def phase8_opener(df):
++    d = df[df.p_open.notna()].copy()
++    if len(d) < MIN_PRIOR_ROWS:
++        return {"n_rows": int(len(d)), "note": "insufficient rows with an opening consensus"}
++    d["x_open"] = logit(d.p_open)
++    events = list(dict.fromkeys(zip(d.event_date, d.event_id)))
++    e_base, e_chal = [], []
++    for i, (dd, e) in enumerate(events):
++        if i < MIN_PRIOR_EVENTS:
++            continue
++        prior = d[[(x < dd) for x in d.event_date]]
++        if len(prior) < MIN_PRIOR_ROWS:
++            continue
++        wb = fit_ols(prior[["x_open"]].to_numpy(), prior.x_mkt.to_numpy())
++        wc = fit_ols(prior[["x_open", "x_cfl"]].to_numpy(), prior.x_mkt.to_numpy())
++        m = (d.event_id == e) & (d.event_date == dd)
++        yb = wb[0] + d.loc[m, ["x_open"]].to_numpy() @ wb[1:]
++        yc = wc[0] + d.loc[m, ["x_open", "x_cfl"]].to_numpy() @ wc[1:]
++        e_base.extend(((d.loc[m, "x_mkt"].to_numpy() - yb) ** 2).tolist())
++        e_chal.extend(((d.loc[m, "x_mkt"].to_numpy() - yc) ** 2).tolist())
++    if not e_base:
++        return {"n_rows": int(len(d)), "note": "not enough events for a walk-forward opener test"}
++    return {"n_rows": int(len(d)), "n_scored": len(e_base),
++            "MSE_open_only": float(np.mean(e_base)), "MSE_open_plus_cfl": float(np.mean(e_chal)),
++            "MSE_gain": float(np.mean(e_base) - np.mean(e_chal))}
++
++
++def phase9_decision(p6, p7):
++    checks = {}
++    if "G_LL" not in p6 or not p7.get("G_LL"):
++        return {"verdict": "INSUFFICIENT DATA", "checks": checks,
++                "reason": "no fully out-of-sample scored events yet"}
++    g = p6["G_LL"]; lo = p7["G_LL"]["lo95"]; hi = p7["G_LL"]["hi95"]
++    cal = p6["cal_challenger"]
++    checks["residual_G_LL_positive"] = bool(g > 0)
++    checks["bootstrap_ci_excludes_zero"] = bool(lo > 0)
++    checks["practical_gain"] = bool(g >= PRACTICAL_GAIN)
++    checks["brier_not_worse"] = bool(p6["delta_Brier"] <= BRIER_TOL)
++    checks["calibration_acceptable"] = bool(cal["slope"] is not None and SLOPE_BAND[0] <= cal["slope"] <= SLOPE_BAND[1]
++                                            and abs(cal["intercept"]) <= INTERCEPT_TOL)
++    ceiling_low = bool(hi < PRACTICAL_GAIN)
++    if all(checks.values()):
++        verdict = "PROMOTE"
++    elif ceiling_low:
++        verdict = "REJECT"
++    else:
++        verdict = "HOLD"
++    return {"verdict": verdict, "checks": checks, "ceiling_below_practical_gain": ceiling_low,
++            "G_LL": g, "ci95": [lo, hi], "rules": DECISION_RULES}
++
++
++# ------------------------------------------------------------------------ main
++def run(df, draws, out_dir, label, log=print):
++    df = prepare(df)
++    log(f"[dur001] {label}: {len(df)} fight-threshold rows, {df.fight_id.nunique() if len(df) else 0} fights, "
++        f"{df.event_id.nunique() if len(df) else 0} events after settlement filters")
++    p5 = phase5_raw(df)
++    p6, sc = phase6_residual(df)
++    p7 = phase7_bootstrap(sc, draws=draws)
++    p8 = phase8_opener(df)
++    p9 = phase9_decision(p6, p7)
++    report = {"experiment": "DUR-001", "model_version": MODEL_VERSION, "data": label,
++              "generated_at_utc": dt.datetime.now(dt.timezone.utc).isoformat(),
++              "phase5_raw": p5, "phase6_residual": p6, "phase7_bootstrap": p7,
++              "phase8_opener": p8, "phase9_decision": p9}
++    os.makedirs(out_dir, exist_ok=True)
++    with open(os.path.join(out_dir, "dur001_report.json"), "w") as fh:
++        json.dump(report, fh, indent=2, default=str)
++    if len(df):
++        df.to_csv(os.path.join(out_dir, "dur001_rows.csv"), index=False)
++    print_summary(report)
++    return report
++
++
++def print_summary(r):
++    p5, p6, p7, p8, p9 = (r["phase5_raw"], r["phase6_residual"], r["phase7_bootstrap"],
++                          r["phase8_opener"], r["phase9_decision"])
++    print("\n" + "=" * 78)
++    print(f"DUR-001 — PROP-0001 vs the closing totals market   [{r['data']}]")
++    print("=" * 78)
++    print(f"rows {p5['n_rows']}  fights {p5['n_fights']}  events {p5['n_events']}  "
++          f"coverage {p5['coverage_by_threshold']}  close basis {p5['close_basis']}")
++    if "LL_market" in p5:
++        print(f"raw:      LL market {p5['LL_market']:.4f} | LL CFL {p5['LL_cfl']:.4f} | "
++              f"G_LL(raw) {p5['G_LL_raw']:+.4f} | Brier {p5['Brier_market']:.4f} vs {p5['Brier_cfl']:.4f}")
++    if "G_LL" in p6:
++        print(f"residual: LL base {p6['LL_market_baseline']:.4f} | LL base+CFL {p6['LL_market_plus_cfl']:.4f} | "
++              f"G_LL {p6['G_LL']:+.4f}  (scored {p6['n_scored_rows']} rows / {p6['n_scored_events']} events)")
++        print(f"          dBrier {p6['delta_Brier']:+.4f} | challenger cal slope "
++              f"{p6['cal_challenger']['slope']} intercept {p6['cal_challenger']['intercept']}")
++    if p7.get("G_LL"):
++        print(f"bootstrap ({p7['draws']} event draws): G_LL {p7['G_LL']['mean']:+.4f} "
++              f"[{p7['G_LL']['lo95']:+.4f}, {p7['G_LL']['hi95']:+.4f}] | dBrier "
++              f"[{p7['delta_Brier']['lo95']:+.4f}, {p7['delta_Brier']['hi95']:+.4f}]")
++    if "MSE_gain" in p8:
++        print(f"opener:   MSE open-only {p8['MSE_open_only']:.4f} | +CFL {p8['MSE_open_plus_cfl']:.4f} | "
++              f"gain {p8['MSE_gain']:+.4f} ({p8['n_scored']} rows)")
++    else:
++        print(f"opener:   {p8.get('note')}")
++    print(f"VERDICT:  {p9['verdict']}  checks={p9.get('checks')}")
++    print("=" * 78)
++
++
++def main():
++    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    ap.add_argument("--draws", type=int, default=10000)
++    ap.add_argument("--out", default=os.path.join(ENGINE, os.pardir, "out_real", "dur001"))
++    ap.add_argument("--synthetic", type=int, default=0, metavar="N_EVENTS",
++                    help="run on N synthetic events instead of live data (pipeline check only)")
++    ap.add_argument("--synthetic-signal", type=float, default=0.0,
++                    help="planted residual CFL signal for the synthetic run (0 = none)")
++    args = ap.parse_args()
++    try:
++        sys.stdout.reconfigure(encoding="utf-8")
++    except Exception:
++        pass
++    if args.synthetic:
++        df = make_synthetic(args.synthetic, cfl_signal=args.synthetic_signal)
++        run(df, args.draws, os.path.join(args.out, "synthetic"),
++            f"SYNTHETIC {args.synthetic} events, planted signal {args.synthetic_signal}")
++        return
++    base_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
++    key = (os.environ.get("SUPABASE_SECRET_KEY") or os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
++           or os.environ.get("SUPABASE_SERVICE_KEY"))
++    if not base_url or not key:
++        sys.exit("SUPABASE_URL + service key required (or use --synthetic N).")
++    print("[dur001] loading live closes, locks and outcomes ...")
++    df = load_live(base_url, key)
++    if df.empty:
++        print("[dur001] no (closing consensus × PROP-0001 lock) rows yet — the ledgers are "
++              "prospective; re-run after the first captured card settles.")
++        run(pd.DataFrame(columns=["fight_id", "event_id", "event_date", "line", "p_market", "p_cfl",
++                                  "p_open", "close_books", "open_books", "start_basis",
++                                  "scheduled_rounds", "is_void", "duration_seconds"]),
++            args.draws, args.out, "live (empty)")
++        return
++    run(df, args.draws, args.out, "live")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/cfl_engine/dur001/fixtures/odds_api_totals_fixture.json b/cfl_engine/dur001/fixtures/odds_api_totals_fixture.json
+new file mode 100644
+index 0000000..e339eb6
+--- /dev/null
++++ b/cfl_engine/dur001/fixtures/odds_api_totals_fixture.json
+@@ -0,0 +1,74 @@
++[
++  {
++    "id": "fixture-ufc331-tsarukyan-ruffy",
++    "sport_key": "mma_mixed_martial_arts",
++    "commence_time": "2026-09-20T02:00:00Z",
++    "home_team": "Arman Tsarukyan",
++    "away_team": "Mauricio Ruffy",
++    "bookmakers": [
++      {"key": "draftkings", "title": "DraftKings", "last_update": "2026-09-14T20:00:00Z",
++       "markets": [
++         {"key": "h2h", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Arman Tsarukyan", "price": -300}, {"name": "Mauricio Ruffy", "price": 240}]},
++         {"key": "totals", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Over", "price": -135, "point": 2.5}, {"name": "Under", "price": 105, "point": 2.5}]}
++       ]},
++      {"key": "fanduel", "title": "FanDuel", "last_update": "2026-09-14T20:01:00Z",
++       "markets": [
++         {"key": "h2h", "last_update": "2026-09-14T20:01:00Z",
++          "outcomes": [{"name": "Arman Tsarukyan", "price": -310}, {"name": "Mauricio Ruffy", "price": 250}]},
++         {"key": "totals", "last_update": "2026-09-14T20:01:00Z",
++          "outcomes": [{"name": "Over", "price": -128, "point": 2.5}, {"name": "Under", "price": 100, "point": 2.5}]}
++       ]},
++      {"key": "betmgm", "title": "BetMGM", "last_update": "2026-09-14T19:58:00Z",
++       "markets": [
++         {"key": "totals", "last_update": "2026-09-14T19:58:00Z",
++          "outcomes": [{"name": "Over", "price": -120, "point": 1.5}, {"name": "Under", "price": -110, "point": 1.5}]}
++       ]}
++    ]
++  },
++  {
++    "id": "fixture-ufc331-moicano-ortega",
++    "sport_key": "mma_mixed_martial_arts",
++    "commence_time": "2026-09-20T01:30:00Z",
++    "home_team": "Brian Ortega",
++    "away_team": "Renato Moicano",
++    "bookmakers": [
++      {"key": "draftkings", "title": "DraftKings", "last_update": "2026-09-14T20:00:00Z",
++       "markets": [
++         {"key": "h2h", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Brian Ortega", "price": 150}, {"name": "Renato Moicano", "price": -180}]},
++         {"key": "totals", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Over", "price": -150, "point": 2.5}, {"name": "Under", "price": 120, "point": 2.5}]}
++       ]}
++    ]
++  },
++  {
++    "id": "fixture-live-example",
++    "sport_key": "mma_mixed_martial_arts",
++    "commence_time": "2020-01-01T00:00:00Z",
++    "home_team": "Giga Chikadze",
++    "away_team": "Joanderson Brito",
++    "bookmakers": [
++      {"key": "draftkings", "title": "DraftKings", "last_update": "2026-09-14T20:00:00Z",
++       "markets": [
++         {"key": "totals", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Over", "price": -200, "point": 1.5}, {"name": "Under", "price": 160, "point": 1.5}]}
++       ]}
++    ]
++  },
++  {
++    "id": "fixture-non-ufc",
++    "sport_key": "mma_mixed_martial_arts",
++    "commence_time": "2026-09-21T00:00:00Z",
++    "home_team": "Some Bellator Guy",
++    "away_team": "Other Promotion Guy",
++    "bookmakers": [
++      {"key": "draftkings", "title": "DraftKings", "last_update": "2026-09-14T20:00:00Z",
++       "markets": [
++         {"key": "totals", "last_update": "2026-09-14T20:00:00Z",
++          "outcomes": [{"name": "Over", "price": -110, "point": 2.5}, {"name": "Under", "price": -110, "point": 2.5}]}
++       ]}
++    ]
++  }
++]
+diff --git a/cfl_engine/dur001/lock_prop0001.py b/cfl_engine/dur001/lock_prop0001.py
+new file mode 100644
+index 0000000..99cc01e
+--- /dev/null
++++ b/cfl_engine/dur001/lock_prop0001.py
+@@ -0,0 +1,454 @@
++"""PROP-0001 prediction locks for the DUR-001 experiment.
++
++PROP-0001 is the FROZEN fight-duration research model (2026-08-06 gate,
++cfl_engine/harness/walkforward_report.json): the discrete-time logistic hazard
++in models/duration.py on the point-in-time covariate set in
++features/build_features.py (49 columns), isotonic-recalibrated. It is NOT the
++league-baseline `props_v1.p_distance` published on the Prop Board.
++
++This script writes one immutable row per (fight, threshold) into
++`prop_model_locks` BEFORE the fight, using only information available at lock
++time:
++
++  * training data = every completed 3-round UFC fight with event_date strictly
++    before `training_cutoff` (= the lock date, UTC);
++  * fighter histories = only rounds/fights strictly before that cutoff;
++  * the model is refit from scratch on that data (the spec is frozen, the data
++    grows), then applied to the upcoming fight's point-in-time feature row.
++
++Threshold mapping (frozen). The hazard model gives per-round finish
++probabilities h1..h3. A sportsbook total of X.5 rounds settles at 2:30 of round
++X+1, so we need the share of round-(X+1) finishes that land at or before 2:30,
++phi_{X+1}, estimated point-in-time from the same training data (~0.45):
++
++    P(over X.5) = S_X * (1 - phi_{X+1} * h_{X+1}),   S_0 = 1, S_1 = 1-h1, S_2 = (1-h1)(1-h2)
++    P(goes the distance) = S_2 * (1 - h3)
++
++Side symmetry: the training panel randomises corner order, so the fitted signed
++diffs are not exactly antisymmetric. A served fight is scored under both
++orderings and the hazards averaged, so the lock does not depend on which corner
++ufcstats listed first. The a/b-ordered feature row is stored on the lock.
++
++Scope: 3-round fights only (the model was never fit on 5-rounders). Upcoming
++fights are scraped with scheduled_rounds=3 by default, so main events and title
++fights are excluded on their flags, not on scheduled_rounds.
++
++Immutability: prop_model_locks rejects UPDATE/DELETE/TRUNCATE by trigger, and an
++insert trigger rejects any lock whose training_cutoff is after actual_lock_at,
++whose fight already has a result, or whose best-known start time is not after
++the lock. Re-runs skip fights already locked under this model_version (first
++lock wins). A changed spec is a new MODEL_VERSION and new rows.
++
++Usage (repo root; needs SUPABASE_URL + a service key in env):
++  python cfl_engine/dur001/lock_prop0001.py                 # dry-run, next 8 days
++  python cfl_engine/dur001/lock_prop0001.py --execute       # write locks
++  python cfl_engine/dur001/lock_prop0001.py --event-id 4433 --execute
++"""
++from __future__ import annotations
++
++import argparse
++import datetime as dt
++import hashlib
++import json
++import os
++import subprocess
++import sys
++import urllib.request
++from collections import defaultdict
++
++import numpy as np
++import pandas as pd
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++ENGINE = os.path.dirname(HERE)
++sys.path.insert(0, os.path.join(ENGINE, "features"))
++sys.path.insert(0, os.path.join(ENGINE, "models"))
++
++import build_features as bf                    # noqa: E402  (frozen feature code)
++from duration import DurationHazardModel       # noqa: E402  (frozen model code)
++
++MODEL_NAME = "PROP-0001"
++# Freeze tag. Bump ONLY if the spec (features, model, calibration recipe,
++# threshold mapping) changes. Training data growing over time is not a change.
++MODEL_VERSION = "PROP-0001@v1"
++THRESHOLDS = (0.5, 1.5, 2.5)          # every 3-round total a book can post
++CAL_WINDOW_DAYS = 365                 # isotonic fit on the trailing year, OOS to the base fit
++K, K_SLOPE, K_FIGHTS = 25.0, 8.0, 5.0 # build_features.py defaults (frozen)
++SEED = 42                             # build_features.py corner-randomisation seed
++MIDPOINT_SECONDS = 150                # 2:30 — where an X.5 total settles
++LOCK_TABLE = "prop_model_locks"
++EPS = 1e-6
++
++
++# ----------------------------------------------------------------------------- io
++def env_key() -> str:
++    for name in ("SUPABASE_SECRET_KEY", "SUPABASE_SERVICE_ROLE_KEY", "SUPABASE_SERVICE_KEY"):
++        if os.environ.get(name):
++            return os.environ[name]
++    sys.exit("No Supabase service key in env (SUPABASE_SECRET_KEY / "
++             "SUPABASE_SERVICE_ROLE_KEY / SUPABASE_SERVICE_KEY).")
++
++
++def git_commit() -> str:
++    try:
++        sha = subprocess.check_output(["git", "rev-parse", "--short=12", "HEAD"],
++                                      cwd=ENGINE, text=True).strip()
++        dirty = subprocess.run(["git", "diff", "--quiet"], cwd=ENGINE).returncode != 0
++        return sha + ("-dirty" if dirty else "")
++    except Exception:
++        return "unknown"
++
++
++def rest_post(base_url, key, path, body):
++    req = urllib.request.Request(
++        f"{base_url}/rest/v1/{path}", data=json.dumps(body, default=str).encode(),
++        method="POST",
++        headers={"apikey": key, "Authorization": f"Bearer {key}",
++                 "Content-Type": "application/json", "Prefer": "return=representation"})
++    with urllib.request.urlopen(req, timeout=60) as resp:
++        txt = resp.read().decode()
++        return json.loads(txt) if txt else []
++
++
++def load_all(base_url, key, log=print):
++    log("pulling events, fighters, fights, fight_rounds ...")
++    events = bf.fetch_all(base_url, key, "events", "select=id,name,event_date,is_upcoming&order=id")
++    fighters = bf.fetch_all(base_url, key, "fighters",
++                            "select=id,name,dob,height_in,reach_in,stance&order=id")
++    fights = bf.fetch_all(base_url, key, "fights",
++                          "select=id,event_id,fighter_a_id,fighter_b_id,winner_id,method,"
++                          "weight_class,scheduled_rounds,end_round,end_time,is_main_event,"
++                          "is_title_fight&order=id")
++    round_cols = ("fight_id,fighter_a_id,fighter_b_id,round_number,"
++                  + ",".join(f"{s}_{stem}" for stem in bf.ROUND_STATS for s in ("a", "b")))
++    rounds = bf.fetch_all(base_url, key, "fight_rounds", f"select={round_cols}&order=id")
++    log(f"  events={len(events)} fighters={len(fighters)} fights={len(fights)} rounds={len(rounds)}")
++    return events, fighters, fights, rounds
++
++
++# ------------------------------------------------------------ point-in-time data
++def end_seconds(end_time):
++    try:
++        m, s = str(end_time).split(":")
++        return int(m) * 60 + int(s)
++    except Exception:
++        return None
++
++
++class PITWorld:
++    """Everything the model may know at `cutoff` (a UTC date): completed fights
++    with event_date < cutoff, and nothing else. Built once per lock run."""
++
++    def __init__(self, events, fighters, fights, rounds, cutoff: dt.date, log=print):
++        self.cutoff = cutoff
++        ev = {e["id"]: e for e in events}
++        self.fight_date = {}
++        for f in fights:
++            e = ev.get(f["event_id"])
++            if not e or not e.get("event_date") or e.get("is_upcoming"):
++                continue
++            d = dt.date.fromisoformat(e["event_date"])
++            if d >= cutoff:
++                continue                                  # the future does not exist
++            if f.get("winner_id") is None and not f.get("method"):
++                continue                                  # unresolved: not evidence
++            self.fight_date[f["id"]] = pd.Timestamp(d)
++        known = set(self.fight_date)
++        self.fights = [f for f in fights if f["id"] in known]
++        self.rounds = [r for r in rounds if r["fight_id"] in known]
++        self.corners = {f["id"]: (f["fighter_a_id"], f["fighter_b_id"]) for f in self.fights}
++        self.round_recs = bf.build_round_records(self.rounds, self.fight_date, self.corners)
++        self.fight_hist = bf.build_fight_history(self.fights, self.fight_date)
++        self.pri = bf.league_priors(self.round_recs, K, K_SLOPE)
++        self.lr = bf.league_fight_rates(self.fight_hist)
++        self.fight_pos = {fid: {x["fight_id"]: i for i, x in enumerate(recs)}
++                          for fid, recs in self.fight_hist.items()}
++        self.round_start = {}
++        for fid, recs in self.round_recs.items():
++            d = {}
++            for i, x in enumerate(recs):
++                d.setdefault(x["fight_id"], i)
++            self.round_start[fid] = d
++        self.fmeta = {f["id"]: f for f in fighters}
++        log(f"  PIT world @ {cutoff}: {len(self.fights)} completed fights, "
++            f"{len(self.rounds)} round rows, {len(self.round_recs)} fighters with tape")
++
++    def feats_asof(self, fighter_id, fight_id, when: pd.Timestamp) -> dict:
++        """Identical to build_features.main's feats_asof: strictly-prior rounds and
++        fights. For a fight not in the histories (an upcoming one) the prefix is
++        the whole (already cutoff-filtered) history."""
++        prior_r = []
++        rr = self.round_recs.get(fighter_id)
++        if rr:
++            cut = self.round_start.get(fighter_id, {}).get(fight_id, len(rr))
++            prior_r = rr[:cut]
++        prior_f = []
++        fh = self.fight_hist.get(fighter_id)
++        if fh:
++            pos = self.fight_pos[fighter_id].get(fight_id, len(fh))
++            prior_f = fh[:pos]
++        d = {}
++        d.update(bf.round_profile_asof(prior_r, self.pri, K, K_SLOPE))
++        d.update(bf.fight_history_asof(prior_f, self.lr, K_FIGHTS))
++        d["style"] = bf.style_asof(prior_r)
++        meta = self.fmeta.get(fighter_id, {})
++        dob = meta.get("dob")
++        d["age"] = ((when - pd.Timestamp(dob)).days / 365.25) if dob else np.nan
++        d["reach_in"] = pd.to_numeric(meta.get("reach_in"), errors="coerce")
++        d["height_in"] = pd.to_numeric(meta.get("height_in"), errors="coerce")
++        d["stance"] = bf.stance_flag(meta.get("stance"))
++        return d
++
++    # ---- training panel (mirrors build_features.main, with the cutoff applied)
++    def training_panel(self, seed=SEED):
++        rng = np.random.default_rng(seed)
++        rows = []
++        for f in self.fights:
++            if f["scheduled_rounds"] != 3:
++                continue
++            when = self.fight_date[f["id"]]
++            if when.year < bf.MIN_YEAR:
++                continue
++            kind, fr = bf.classify_outcome(f["method"], f["end_round"], f["scheduled_rounds"])
++            if kind in ("nc", "bad"):
++                continue
++            a_id, b_id = f["fighter_a_id"], f["fighter_b_id"]
++            if a_id is None or b_id is None:
++                continue
++            if rng.random() < 0.5:
++                a_id, b_id = b_id, a_id
++            fa = self.feats_asof(a_id, f["id"], when)
++            fb = self.feats_asof(b_id, f["id"], when)
++            row = {"fight_id": f["id"], "event_date": when, "outcome_kind": kind,
++                   "finish_round": fr, "reached": (fr if kind == "finish" else 3),
++                   "end_seconds": end_seconds(f.get("end_time")) if kind == "finish" else None}
++            row.update(bf.matchup_features(fa, fb))
++            rows.append(row)
++        fdf = pd.DataFrame(rows).sort_values(["event_date", "fight_id"]).reset_index(drop=True)
++        cov = bf.covariate_columns()
++        pp_rows = []
++        for r in fdf.itertuples(index=False):
++            rd = r._asdict()
++            for rnum in range(1, rd["reached"] + 1):
++                pr = {"fight_id": rd["fight_id"], "event_date": rd["event_date"], "round": rnum,
++                      "event": 1 if (rd["outcome_kind"] == "finish" and rnum == rd["finish_round"]) else 0,
++                      "r1": float(rnum == 1), "r2": float(rnum == 2), "r3": float(rnum == 3)}
++                for c in cov:
++                    pr[c] = rd[c]
++                pp_rows.append(pr)
++        pp = pd.DataFrame(pp_rows)
++        med = pp[cov].median(numeric_only=True)
++        pp[cov] = pp[cov].fillna(med)
++        # phi_r: share of round-r finishes at or before 2:30 (point-in-time)
++        phi = {}
++        fin = fdf[fdf.outcome_kind == "finish"]
++        for r in (1, 2, 3):
++            s = fin[fin.finish_round == r]["end_seconds"].dropna()
++            phi[r] = float((s <= MIDPOINT_SECONDS).mean()) if len(s) else 0.5
++        return pp, fdf, cov, med, phi
++
++
++# ------------------------------------------------------------------- the model
++def fit_prop0001(pp: pd.DataFrame, cov, cutoff: dt.date, log=print):
++    """Frozen recipe: hazard fit on everything before (cutoff - 365d), isotonic
++    fit on the trailing year's raw hazards (out-of-sample to that fit), then the
++    hazard is refit on all training rows and carries that isotonic map."""
++    cal_start = pd.Timestamp(cutoff - dt.timedelta(days=CAL_WINDOW_DAYS))
++    pre, cal = pp[pp.event_date < cal_start], pp[pp.event_date >= cal_start]
++    base = DurationHazardModel().fit(pre, cov)
++    base.fit_calibration(cal)
++    full = DurationHazardModel().fit(pp, cov)
++    full.iso_ = base.iso_
++    log(f"  PROP-0001 fit: {pp.fight_id.nunique()} fights / {len(pp)} person-period rows; "
++        f"calibration rows={len(cal)} (from {cal_start.date()}); "
++        f"regularized={full.regularized_}")
++    return full, {"n_train_rows": int(len(pp)), "n_train_fights": int(pp.fight_id.nunique()),
++                  "n_cal_rows": int(len(cal)), "cal_start": str(cal_start.date()),
++                  "regularized_fallback": bool(full.regularized_)}
++
++
++def threshold_probs(h1, h2, h3, phi):
++    S = {0: 1.0, 1: 1.0 - h1, 2: (1.0 - h1) * (1.0 - h2)}
++    h = {1: h1, 2: h2, 3: h3}
++    out = {}
++    for X in (0, 1, 2):
++        out[X + 0.5] = S[X] * (1.0 - phi[X + 1] * h[X + 1])
++    out["distance"] = S[2] * (1.0 - h3)
++    out["p_ends"] = {1: h1, 2: S[1] * h2, 3: S[2] * h3}
++    return out
++
++
++def serve_fight(model, world, cov, med, phi, fight, when: pd.Timestamp):
++    """Hazards for one upcoming fight, averaged over both corner orderings."""
++    a, b = fight["fighter_a_id"], fight["fighter_b_id"]
++    fa = world.feats_asof(a, fight["id"], when)
++    fb = world.feats_asof(b, fight["id"], when)
++    rows = []
++    for x, y in ((fa, fb), (fb, fa)):
++        r = bf.matchup_features(x, y)
++        rows.append(r)
++    df = pd.DataFrame(rows)[cov].astype(float)
++    df = df.fillna(med)
++    dist = model.fight_distribution(df, calibrated=True)
++    h1 = float(dist.haz_r1.mean()); h2 = float(dist.haz_r2.mean()); h3 = float(dist.haz_r3.mean())
++    feats_ab = {k: (None if (isinstance(v, float) and np.isnan(v)) else float(v)) for k, v in rows[0].items()}
++    return (h1, h2, h3), threshold_probs(h1, h2, h3, phi), feats_ab
++
++
++# --------------------------------------------------------------------- the card
++def upcoming_card(events, fights, lock_date: dt.date, within_days: int, event_id=None, log=print):
++    ev = {e["id"]: e for e in events if e.get("event_date")}
++    if event_id is not None:
++        ids = {event_id}
++    else:
++        hi = lock_date + dt.timedelta(days=within_days)
++        ids = {i for i, e in ev.items()
++               if lock_date <= dt.date.fromisoformat(e["event_date"]) <= hi}
++    card, skipped = [], defaultdict(int)
++    graded_by_event = defaultdict(set)
++    for f in fights:
++        if f["event_id"] in ids and f.get("winner_id") is not None:
++            graded_by_event[f["event_id"]].update([f["fighter_a_id"], f["fighter_b_id"]])
++    for f in fights:
++        if f["event_id"] not in ids:
++            continue
++        if f.get("winner_id") is not None or f.get("method"):
++            skipped["already_settled"] += 1; continue
++        if f["fighter_a_id"] is None or f["fighter_b_id"] is None:
++            skipped["missing_corner"] += 1; continue
++        if f["fighter_a_id"] in graded_by_event[f["event_id"]] or f["fighter_b_id"] in graded_by_event[f["event_id"]]:
++            skipped["dead_booking"] += 1; continue
++        if f.get("is_main_event") or f.get("is_title_fight") or (f.get("scheduled_rounds") or 3) != 3:
++            skipped["not_3_rounds"] += 1; continue           # PROP-0001 scope
++        e = ev[f["event_id"]]
++        card.append({**f, "event_date": e["event_date"], "event_name": e["name"]})
++    # duplicate pending bookings on one card: keep the newest scrape (highest id)
++    seen = {}
++    for f in sorted(card, key=lambda x: x["id"]):
++        for fid in (f["fighter_a_id"], f["fighter_b_id"]):
++            seen[(f["event_id"], fid)] = f["id"]
++    keep = {f["id"] for f in card
++            if seen[(f["event_id"], f["fighter_a_id"])] == f["id"] and seen[(f["event_id"], f["fighter_b_id"])] == f["id"]}
++    dropped = [f["id"] for f in card if f["id"] not in keep]
++    if dropped:
++        skipped["duplicate_booking"] += len(dropped)
++    card = [f for f in card if f["id"] in keep]
++    if skipped:
++        log(f"  card filter skipped: {dict(skipped)}")
++    return card
++
++
++def existing_locks(base_url, key, fight_ids):
++    if not fight_ids:
++        return set()
++    out = set()
++    ids = ",".join(str(i) for i in fight_ids)
++    for r in bf.fetch_all(base_url, key, LOCK_TABLE,
++                          f"select=fight_id,market_type,threshold,side&model_version=eq.{MODEL_VERSION}"
++                          f"&fight_id=in.({ids})"):
++        out.add((r["fight_id"], r["market_type"], float(r["threshold"]) if r["threshold"] is not None else None, r["side"]))
++    return out
++
++
++# ------------------------------------------------------------------------ main
++def build_lock_rows(card, model, world, cov, med, phi, fit_info, lock_time: dt.datetime,
++                    cutoff: dt.date, code_version, names, log=print):
++    rows, generated_at = [], dt.datetime.now(dt.timezone.utc)
++    for f in card:
++        when = pd.Timestamp(dt.date.fromisoformat(f["event_date"]))
++        (h1, h2, h3), tp, feats = serve_fight(model, world, cov, med, phi, f, when)
++        fh = hashlib.sha256(json.dumps(feats, sort_keys=True).encode()).hexdigest()[:16]
++        base = {
++            "fight_id": f["id"], "event_id": f["event_id"], "event_date": f["event_date"],
++            "model_name": MODEL_NAME, "model_version": MODEL_VERSION,
++            # actual_lock_at is NOT sent: the ledger stamps it with now() at insert,
++            # so it can never be earlier than generated_at or claimed after the fact.
++            "generated_at": generated_at.isoformat(),
++            "training_cutoff": dt.datetime.combine(cutoff, dt.time(0, 0), tzinfo=dt.timezone.utc).isoformat(),
++            "training_n_fights": fit_info["n_train_fights"],
++            "haz_r1": round(h1, 6), "haz_r2": round(h2, 6), "haz_r3": round(h3, 6),
++            "phi_r1": round(phi[1], 6), "phi_r2": round(phi[2], 6), "phi_r3": round(phi[3], 6),
++            "p_ends_r1": round(tp["p_ends"][1], 6), "p_ends_r2": round(tp["p_ends"][2], 6),
++            "p_ends_r3": round(tp["p_ends"][3], 6), "p_decision": round(tp["distance"], 6),
++            "features": feats, "code_version": code_version, "feature_hash": fh,
++            "notes": f"{names.get(f['fighter_a_id'], f['fighter_a_id'])} vs "
++                     f"{names.get(f['fighter_b_id'], f['fighter_b_id'])} | {f['event_name']} | "
++                     f"hazards averaged over both corner orderings; calibration rows={fit_info['n_cal_rows']}",
++        }
++        for X in THRESHOLDS:
++            p = float(np.clip(tp[X], EPS, 1 - EPS))
++            rows.append({**base, "market_type": "total_rounds", "threshold": X, "side": "over",
++                         "predicted_probability": round(p, 6)})
++        rows.append({**base, "market_type": "goes_distance", "threshold": None, "side": "yes",
++                     "predicted_probability": round(float(np.clip(tp["distance"], EPS, 1 - EPS)), 6)})
++    return rows
++
++
++def main():
++    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    ap.add_argument("--event-id", type=int, default=None)
++    ap.add_argument("--within-days", type=int, default=8)
++    ap.add_argument("--execute", action="store_true", help="write locks (default: dry-run)")
++    ap.add_argument("--out", default=os.path.join(ENGINE, os.pardir, "out_real", "prop0001_locks_preview.csv"))
++    args = ap.parse_args()
++    try:
++        sys.stdout.reconfigure(encoding="utf-8")
++    except Exception:
++        pass
++
++    base_url = os.environ.get("SUPABASE_URL", "").rstrip("/")
++    if not base_url:
++        sys.exit("SUPABASE_URL not set.")
++    key = env_key()
++
++    lock_time = dt.datetime.now(dt.timezone.utc)
++    cutoff = lock_time.date()                       # strictly-before-today evidence only
++    code_version = git_commit()
++    print(f"[lock] {MODEL_NAME} {MODEL_VERSION} | lock_time={lock_time.isoformat()} "
++          f"| training_cutoff={cutoff} | code={code_version}")
++
++    events, fighters, fights, rounds = load_all(base_url, key)
++    card = upcoming_card(events, fights, cutoff, args.within_days, args.event_id)
++    if not card:
++        print("[lock] no eligible 3-round pending fights in the window — nothing to lock.")
++        return
++    print(f"[lock] {len(card)} eligible fight(s) on: "
++          + ", ".join(sorted({f['event_name'] for f in card})))
++
++    world = PITWorld(events, fighters, fights, rounds, cutoff)
++    pp, fdf, cov, med, phi = world.training_panel()
++    print(f"  training panel: {len(fdf)} fights / {len(pp)} rows, {len(cov)} covariates; "
++          f"phi(<=2:30 by round)={ {k: round(v, 3) for k, v in phi.items()} }")
++    model, fit_info = fit_prop0001(pp, cov, cutoff)
++
++    names = {x["id"]: x["name"] for x in fighters}
++    rows = build_lock_rows(card, model, world, cov, med, phi, fit_info, lock_time, cutoff, code_version, names)
++
++    have = existing_locks(base_url, key, [f["id"] for f in card])
++    fresh = [r for r in rows if (r["fight_id"], r["market_type"], r["threshold"], r["side"]) not in have]
++    print(f"[lock] {len(rows)} lock row(s) computed; {len(rows) - len(fresh)} already on the ledger "
++          f"for {MODEL_VERSION} (skipped, first lock wins); {len(fresh)} new.")
++
++    prev = pd.DataFrame(rows)
++    os.makedirs(os.path.dirname(os.path.abspath(args.out)), exist_ok=True)
++    prev.drop(columns=["features"]).to_csv(args.out, index=False)
++    for f in card:
++        r = {x["threshold"]: x["predicted_probability"] for x in rows
++             if x["fight_id"] == f["id"] and x["market_type"] == "total_rounds"}
++        d = next(x["predicted_probability"] for x in rows if x["fight_id"] == f["id"] and x["market_type"] == "goes_distance")
++        print(f"  fight {f['id']:>6} {names.get(f['fighter_a_id'], '?'):<22} vs {names.get(f['fighter_b_id'], '?'):<22} "
++              f"O0.5 {r[0.5]:.3f}  O1.5 {r[1.5]:.3f}  O2.5 {r[2.5]:.3f}  distance {d:.3f}")
++    print(f"preview CSV -> {os.path.abspath(args.out)}")
++
++    if not args.execute:
++        print("\nDRY-RUN — nothing written. Re-run with --execute to lock.")
++        return
++    if not fresh:
++        print("nothing new to write.")
++        return
++    written = rest_post(base_url, key, LOCK_TABLE, fresh)
++    print(f"[lock] wrote {len(written)} immutable lock row(s) to {LOCK_TABLE}.")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/cfl_engine/dur001/test_dur001.py b/cfl_engine/dur001/test_dur001.py
+new file mode 100644
+index 0000000..fc3a927
+--- /dev/null
++++ b/cfl_engine/dur001/test_dur001.py
+@@ -0,0 +1,277 @@
++"""DUR-001 tests. Two layers:
++
++  * pure-Python (no network): market maths, settlement rules, the PROP-0001
++    threshold mapping, the walk-forward residual test, and — the important one —
++    that the point-in-time world used for a lock cannot see anything dated on or
++    after the training cutoff.
++  * database (needs SUPABASE_ACCESS_TOKEN; skipped otherwise): every ledger
++    rejects UPDATE / DELETE, the lock guard rejects post-hoc locks, and the whole
++    probe is rolled back so nothing is ever stored.
++
++Run:  python -m pytest cfl_engine/dur001/test_dur001.py -q
++"""
++from __future__ import annotations
++
++import datetime as dt
++import json
++import os
++import sys
++import urllib.request
++
++import numpy as np
++import pandas as pd
++import pytest
++
++HERE = os.path.dirname(os.path.abspath(__file__))
++sys.path.insert(0, HERE)
++sys.path.insert(0, os.path.join(os.path.dirname(HERE), "features"))
++sys.path.insert(0, os.path.join(os.path.dirname(HERE), "models"))
++
++import dur001_analysis as an          # noqa: E402
++import lock_prop0001 as lk            # noqa: E402
++import build_features as bf           # noqa: E402
++
++
++# ------------------------------------------------------------ market maths
++def test_american_to_probability_both_signs():
++    assert abs(an.american_to_q(-150) - 0.6) < 1e-9
++    assert abs(an.american_to_q(+150) - 0.4) < 1e-9
++    assert abs(an.american_to_q(-100) - 0.5) < 1e-9
++
++
++def test_two_way_devig_sums_to_one_and_matches_view_formula():
++    po, pu = an.devig_two_way(-135, 105)
++    assert abs(po + pu - 1) < 1e-12
++    qo, qu = an.american_to_q(-135), an.american_to_q(105)
++    assert abs(po - qo / (qo + qu)) < 1e-12
++
++
++# ------------------------------------------------------------- settlement
++@pytest.mark.parametrize("secs,line,expect", [
++    (751, 2.5, 1),      # past 2:30 of R3 -> over
++    (750, 2.5, 0),      # exactly 2:30 of R3 -> under (must go PAST)
++    (749, 2.5, 0),
++    (900, 2.5, 1),      # decision
++    (451, 1.5, 1), (450, 1.5, 0),
++    (151, 0.5, 1), (150, 0.5, 0),
++    (600, 2.0, None),   # whole-number line ends on the bell -> push
++    (601, 2.0, 1), (599, 2.0, 0),
++    (None, 2.5, None),  # ungraded / void
++])
++def test_settle_over(secs, line, expect):
++    assert an.settle_over(secs, line) == expect
++
++
++# --------------------------------------------------- PROP-0001 threshold map
++def test_threshold_probabilities_follow_survival_identity():
++    h1, h2, h3 = 0.22, 0.20, 0.16
++    phi = {1: 0.47, 2: 0.43, 3: 0.46}
++    tp = lk.threshold_probs(h1, h2, h3, phi)
++    assert abs(tp[0.5] - (1 - phi[1] * h1)) < 1e-12
++    assert abs(tp[1.5] - (1 - h1) * (1 - phi[2] * h2)) < 1e-12
++    assert abs(tp[2.5] - (1 - h1) * (1 - h2) * (1 - phi[3] * h3)) < 1e-12
++    assert abs(tp["distance"] - (1 - h1) * (1 - h2) * (1 - h3)) < 1e-12
++    # monotone in the threshold, and distance <= over 2.5
++    assert tp[0.5] > tp[1.5] > tp[2.5] >= tp["distance"]
++    assert abs(sum(tp["p_ends"].values()) + tp["distance"] - 1) < 1e-12
++
++
++def test_lock_row_reproduces_probability_from_stored_hazards():
++    """A stored lock carries haz_r*, phi_r*: recompute P(over 2.5) from them."""
++    row = {"haz_r1": 0.217822, "haz_r2": 0.198911, "haz_r3": 0.158263,
++           "phi_r1": 0.467232, "phi_r2": 0.432532, "phi_r3": 0.462963,
++           "predicted_probability": 0.580684}          # real lock id 27, fight 47331
++    tp = lk.threshold_probs(row["haz_r1"], row["haz_r2"], row["haz_r3"],
++                            {1: row["phi_r1"], 2: row["phi_r2"], 3: row["phi_r3"]})
++    assert abs(tp[2.5] - row["predicted_probability"]) < 1e-5
++
++
++# ------------------------------------------------ point-in-time guarantee
++def _mini_world(cutoff: dt.date, extra_future=False):
++    """Two fighters with history; optionally a FUTURE fight (on/after cutoff)
++    between them that a leaky implementation would fold into the features."""
++    events = [{"id": 1, "event_date": "2025-01-01", "is_upcoming": False},
++              {"id": 2, "event_date": "2025-06-01", "is_upcoming": False},
++              {"id": 3, "event_date": cutoff.isoformat(), "is_upcoming": False},
++              {"id": 9, "event_date": (cutoff + dt.timedelta(days=5)).isoformat(), "is_upcoming": True}]
++    fighters = [{"id": 10, "name": "A", "dob": "1995-01-01", "height_in": 70, "reach_in": 72, "stance": "Orthodox"},
++                {"id": 20, "name": "B", "dob": "1994-01-01", "height_in": 71, "reach_in": 74, "stance": "Southpaw"},
++                {"id": 30, "name": "C", "dob": "1996-01-01", "height_in": 69, "reach_in": 70, "stance": "Orthodox"}]
++    fights = [
++        {"id": 100, "event_id": 1, "fighter_a_id": 10, "fighter_b_id": 30, "winner_id": 10,
++         "method": "KO/TKO", "scheduled_rounds": 3, "end_round": 1, "end_time": "1:10"},
++        {"id": 101, "event_id": 2, "fighter_a_id": 20, "fighter_b_id": 30, "winner_id": 20,
++         "method": "Decision - Unanimous", "scheduled_rounds": 3, "end_round": 3, "end_time": "5:00"},
++        {"id": 999, "event_id": 9, "fighter_a_id": 10, "fighter_b_id": 20, "winner_id": None,
++         "method": None, "scheduled_rounds": 3, "end_round": None, "end_time": None},
++    ]
++    if extra_future:   # a result dated ON the cutoff day (a leak if it counted)
++        fights.append({"id": 102, "event_id": 3, "fighter_a_id": 10, "fighter_b_id": 20, "winner_id": 20,
++                       "method": "Submission", "scheduled_rounds": 3, "end_round": 2, "end_time": "3:00"})
++    def rr(fid, a, b, n):
++        return [{"fight_id": fid, "fighter_a_id": a, "fighter_b_id": b, "round_number": r,
++                 "a_sig_str_landed": 20, "b_sig_str_landed": 10, "a_sig_str_attempted": 40,
++                 "b_sig_str_attempted": 30, "a_td_landed": 1, "b_td_landed": 0, "a_ctrl_seconds": 60,
++                 "b_ctrl_seconds": 0, "a_kd": 0, "b_kd": 0, "a_sub_attempts": 0, "b_sub_attempts": 1}
++                for r in range(1, n + 1)]
++    rounds = rr(100, 10, 30, 1) + rr(101, 20, 30, 3)
++    if extra_future:
++        rounds += rr(102, 10, 20, 2)
++    return events, fighters, fights, rounds
++
++
++def test_pit_world_ignores_fights_on_or_after_cutoff():
++    cutoff = dt.date(2026, 9, 15)
++    w0 = lk.PITWorld(*_mini_world(cutoff), cutoff=cutoff, log=lambda *_: None)
++    w1 = lk.PITWorld(*_mini_world(cutoff, extra_future=True), cutoff=cutoff, log=lambda *_: None)
++    assert 102 not in w0.fight_date and 102 not in w1.fight_date       # cutoff-day fight excluded
++    assert 999 not in w1.fight_date                                    # upcoming fight excluded
++    when = pd.Timestamp(cutoff + dt.timedelta(days=5))
++    for fid in (10, 20):
++        f0 = w0.feats_asof(fid, 999, when); f1 = w1.feats_asof(fid, 999, when)
++        for k, v in f0.items():
++            if isinstance(v, float) and np.isnan(v):
++                assert np.isnan(f1[k])
++            else:
++                assert f1[k] == v, f"feature {k} leaked post-cutoff data"
++    # and the matchup row the model sees is identical
++    a0, b0 = w0.feats_asof(10, 999, when), w0.feats_asof(20, 999, when)
++    a1, b1 = w1.feats_asof(10, 999, when), w1.feats_asof(20, 999, when)
++    assert bf.matchup_features(a0, b0) == bf.matchup_features(a1, b1)
++
++
++def test_training_panel_is_strictly_before_cutoff_and_covariates_frozen():
++    cutoff = dt.date(2026, 9, 15)
++    w = lk.PITWorld(*_mini_world(cutoff, extra_future=True), cutoff=cutoff, log=lambda *_: None)
++    pp, fdf, cov, med, phi = w.training_panel()
++    assert (pd.to_datetime(fdf.event_date) < pd.Timestamp(cutoff)).all()
++    assert cov == bf.covariate_columns() and len(cov) == 49
++    assert set(phi) == {1, 2, 3}
++
++
++def test_upcoming_card_excludes_five_round_and_settled_fights():
++    today = dt.date(2026, 9, 15)
++    events = [{"id": 5, "name": "UFC X", "event_date": "2026-09-19", "is_upcoming": True}]
++    fights = [
++        {"id": 1, "event_id": 5, "fighter_a_id": 1, "fighter_b_id": 2, "winner_id": None, "method": None,
++         "scheduled_rounds": 3, "is_main_event": True, "is_title_fight": True},       # 5-rounder in disguise
++        {"id": 2, "event_id": 5, "fighter_a_id": 3, "fighter_b_id": 4, "winner_id": 3, "method": "KO/TKO",
++         "scheduled_rounds": 3, "is_main_event": False, "is_title_fight": False},     # settled
++        {"id": 3, "event_id": 5, "fighter_a_id": 5, "fighter_b_id": 6, "winner_id": None, "method": None,
++         "scheduled_rounds": 3, "is_main_event": False, "is_title_fight": False},     # eligible
++        {"id": 4, "event_id": 5, "fighter_a_id": 5, "fighter_b_id": 7, "winner_id": None, "method": None,
++         "scheduled_rounds": 3, "is_main_event": False, "is_title_fight": False},     # dup booking of 5 -> keep newest (4)
++    ]
++    card = lk.upcoming_card(events, fights, today, 8, log=lambda *_: None)
++    assert [f["id"] for f in card] == [4]
++
++
++# ------------------------------------------------ walk-forward residual test
++def test_walk_forward_only_uses_prior_events_and_detects_planted_signal():
++    df = an.prepare(an.make_synthetic(30, seed=3, cfl_signal=1.0, cfl_noise=0.1))
++    p_base, p_chal, coefs = an.walk_forward(df)
++    scored = ~np.isnan(p_base)
++    first = df[scored].event_date.min()
++    # nothing before the first scored event is scored; every fit used only prior rows
++    assert (df[~scored].event_date <= first).all()
++    dates = sorted(set(df.event_date))
++    for c in coefs:
++        d = dt.date.fromisoformat(c["event_date"])
++        assert c["n_prior"] == int((df.event_date < d).sum())
++        assert dates.index(d) >= an.MIN_PRIOR_EVENTS
++    p6, sc = an.phase6_residual(df)
++    assert p6["G_LL"] > 0.01                     # planted signal found
++    # true null (CFL = market + noise): no gain, and clearly below the planted case
++    p6n, _ = an.phase6_residual(an.prepare(an.make_synthetic(30, seed=3, cfl_signal=0.0, cfl_noise=0.1)))
++    assert p6n["G_LL"] < 0.005 and p6n["G_LL"] < p6["G_LL"]
++
++
++def test_bootstrap_resamples_events_not_fights():
++    df = an.prepare(an.make_synthetic(12, seed=1))
++    _, sc = an.phase6_residual(df)
++    p7 = an.phase7_bootstrap(sc, draws=200)
++    assert p7["n_events"] == sc.event_id.nunique()
++    assert p7["G_LL"]["lo95"] <= p7["G_LL"]["mean"] <= p7["G_LL"]["hi95"]
++    assert p7["mean_CLV"] is None and p7["ROI"] is None
++
++
++def test_decision_rules_are_frozen_and_reject_when_ceiling_is_low():
++    p6 = {"G_LL": -0.001, "delta_Brier": 0.0, "cal_challenger": {"slope": 1.0, "intercept": 0.0}}
++    p7 = {"G_LL": {"mean": -0.001, "lo95": -0.004, "hi95": 0.002}}
++    d = an.phase9_decision(p6, p7)
++    assert d["verdict"] == "REJECT" and d["ceiling_below_practical_gain"]
++    p6 = {"G_LL": 0.006, "delta_Brier": -0.001, "cal_challenger": {"slope": 1.05, "intercept": 0.02}}
++    p7 = {"G_LL": {"mean": 0.006, "lo95": 0.001, "hi95": 0.011}}
++    assert an.phase9_decision(p6, p7)["verdict"] == "PROMOTE"
++    assert an.PRACTICAL_GAIN == 0.003 and an.SLOPE_BAND == (0.8, 1.2)
++
++
++# ----------------------------------------------------------- database layer
++PROJECT_REF = "uftancejftcryfvbggll"
++ROLLBACK_PROBE = r"""
++do $$
++declare r text := ''; qid bigint; lid bigint; sid bigint; fid bigint; eid bigint; bid bigint;
++begin
++  select f.id, f.event_id into fid, eid from fights f join events e on e.id=f.event_id
++   where e.event_date > current_date + 3 and f.winner_id is null and f.method is null order by e.event_date, f.id limit 1;
++  select id into bid from odds_books order by id limit 1;
++  insert into prop_odds (fight_id, event_id, market_type, line, over_odds, under_odds, book_id, source, captured_at, source_commence_at, is_live)
++  values (fid, eid, 'total_rounds', 2.5, -120, 100, bid, 'odds_api', now(), now()+interval '5 days', false) returning id into qid;
++  begin update prop_odds set over_odds=-130 where id=qid; r := r||'quote_update_ALLOWED;';
++  exception when others then r := r||'quote_update_blocked;'; end;
++  begin delete from prop_odds where id=qid; r := r||'quote_delete_ALLOWED;';
++  exception when others then r := r||'quote_delete_blocked;'; end;
++  insert into fight_start_estimates (fight_id, source, start_at) values (fid,'odds_api_commence', now()+interval '5 days') returning id into sid;
++  begin update fight_start_estimates set start_at=now() where id=sid; r := r||'start_update_ALLOWED;';
++  exception when others then r := r||'start_update_blocked;'; end;
++  insert into prop_model_locks (fight_id, event_id, market_type, threshold, side, model_name, model_version, generated_at, training_cutoff, predicted_probability)
++  values (fid, eid, 'total_rounds', 2.5, 'over', 'PROP-0001', 'TEST-ONLY', now(), now()-interval '1 hour', 0.55) returning id into lid;
++  begin update prop_model_locks set predicted_probability=0.6 where id=lid; r := r||'lock_update_ALLOWED;';
++  exception when others then r := r||'lock_update_blocked;'; end;
++  begin delete from prop_model_locks where id=lid; r := r||'lock_delete_ALLOWED;';
++  exception when others then r := r||'lock_delete_blocked;'; end;
++  begin
++    insert into prop_model_locks (fight_id, event_id, market_type, threshold, side, model_name, model_version, generated_at, training_cutoff, predicted_probability)
++    values (fid, eid, 'total_rounds', 1.5, 'over', 'PROP-0001', 'TEST-ONLY', now(), now()+interval '1 day', 0.55);
++    r := r||'future_cutoff_ALLOWED;';
++  exception when others then r := r||'future_cutoff_blocked;'; end;
++  begin
++    insert into prop_model_locks (fight_id, event_id, market_type, threshold, side, model_name, model_version, generated_at, training_cutoff, predicted_probability)
++    select id, event_id, 'total_rounds', 2.5, 'over', 'PROP-0001', 'TEST-ONLY', now(), now()-interval '1 hour', 0.55
++      from fights where winner_id is not null order by id desc limit 1;
++    r := r||'settled_lock_ALLOWED;';
++  exception when others then r := r||'settled_lock_blocked;'; end;
++  raise exception 'PROBE:%', r;
++end $$;
++"""
++
++
++def _mgmt_sql(sql):
++    token = os.environ.get("SUPABASE_ACCESS_TOKEN")
++    req = urllib.request.Request(
++        f"https://api.supabase.com/v1/projects/{PROJECT_REF}/database/query",
++        data=json.dumps({"query": sql}).encode(), method="POST",
++        headers={"Authorization": f"Bearer {token}", "Content-Type": "application/json",
++                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/126.0.0.0"})
++    try:
++        with urllib.request.urlopen(req, timeout=120) as r:
++            return r.status, r.read().decode()
++    except urllib.error.HTTPError as e:
++        return e.code, e.read().decode()
++
++
++@pytest.mark.skipif(not os.environ.get("SUPABASE_ACCESS_TOKEN"), reason="needs SUPABASE_ACCESS_TOKEN")
++def test_db_ledgers_are_append_only_and_lock_guard_holds():
++    """Runs a DO block that inserts probe rows, tries to rewrite them, then raises
++    so the WHOLE transaction rolls back. The error text carries the results."""
++    status, body = _mgmt_sql(ROLLBACK_PROBE)
++    assert "PROBE:" in body, body
++    res = body.split("PROBE:", 1)[1]
++    for expected in ("quote_update_blocked", "quote_delete_blocked", "start_update_blocked",
++                     "lock_update_blocked", "lock_delete_blocked", "future_cutoff_blocked",
++                     "settled_lock_blocked"):
++        assert expected in res, res
++    assert "ALLOWED" not in res, res
++    # and nothing leaked: no TEST-ONLY lock survives the rollback
++    status, body = _mgmt_sql("select count(*) as n from prop_model_locks where model_version='TEST-ONLY'")
++    assert '"n":0' in body.replace(" ", ""), body
+diff --git a/cfl_engine/features/build_features.py b/cfl_engine/features/build_features.py
+index c5709f9..ecdb9a0 100644
+--- a/cfl_engine/features/build_features.py
++++ b/cfl_engine/features/build_features.py
+@@ -373,6 +373,65 @@ def stance_flag(stance):
+     return s if s in ("orthodox", "southpaw", "switch") else None
+ 
+ 
++# FROZEN PROP-0001 feature set (2026-08-06). These lists define the covariate
++# columns of the duration hazard model. They are module-level so the live lock
++# script (cfl_engine/dur001/lock_prop0001.py) assembles EXACTLY the same row the
++# training panel uses — no train/serve skew. Do not edit without bumping the
++# PROP-0001 model_version.
++#
++# NOTE deliberate omissions to avoid exact/near collinearity (which explodes
++# the Wald CIs without helping prediction):
++#   - rp_pace_pm == rp_sig_landed_pm + rp_sig_absorbed_pm exactly -> keep the
++#     two components in diffs, keep pace only as a mean feature.
++#   - fh_finish_win + fh_finish_loss + fh_decision ~= 1 -> drop fh_decision_rate;
++#     avg_end_round already carries the "goes-long" signal distinctly.
++RATE_FEATS = ["rp_sig_landed_pm", "rp_sig_absorbed_pm", "rp_td_pm",
++              "rp_ctrl_pct", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm",
++              "rp_strike_decay", "rp_grap_decay", "fh_finish_win_rate",
++              "fh_finish_loss_rate", "fh_win_rate",
++              "fh_avg_end_round", "fh_streak", "age", "reach_in", "height_in"]
++MEAN_FEATS = ["rp_pace_pm", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm", "rp_td_pm",
++              "rp_ctrl_pct", "rp_strike_decay", "rp_grap_decay",
++              "fh_finish_win_rate", "fh_finish_loss_rate",
++              "fh_avg_end_round", "fh_win_rate", "fh_n_fights", "age"]
++ABS_FEATS = ["age", "reach_in", "height_in", "fh_win_rate", "rp_pace_pm",
++             "fh_finish_win_rate"]
++STANCES = ["orthodox", "southpaw", "switch"]
++STYLES = ["grappler", "striker", "hybrid"]
++
++
++def matchup_features(fa: dict, fb: dict) -> dict:
++    """Signed diffs + symmetric means + abs-diffs + stance/style one-hots for one
++    fight, from the two fighters' point-in-time feature dicts (feats_asof)."""
++    row = {}
++    for k in RATE_FEATS:
++        row[f"d_{k}"] = fa[k] - fb[k]
++    for k in MEAN_FEATS:
++        row[f"m_{k}"] = (fa[k] + fb[k]) / 2.0
++    for k in ABS_FEATS:
++        row[f"ad_{k}"] = abs(fa[k] - fb[k])
++    # stance matchup (unordered one-hot; unknown -> all zero baseline)
++    sp = tuple(sorted([fa["stance"] or "unk", fb["stance"] or "unk"]))
++    for i, s1 in enumerate(STANCES):
++        for s2 in STANCES[i:]:
++            row[f"stance_{s1[:3]}_{s2[:3]}"] = 1.0 if sp == tuple(sorted([s1, s2])) else 0.0
++    # style matchup (unordered one-hot; unknown -> all zero baseline)
++    yp = tuple(sorted([fa["style"], fb["style"]]))
++    for i, y1 in enumerate(STYLES):
++        for y2 in STYLES[i:]:
++            row[f"style_{y1[:4]}_{y2[:4]}"] = 1.0 if yp == tuple(sorted([y1, y2])) else 0.0
++    return row
++
++
++def covariate_columns() -> list[str]:
++    """The ordered covariate column list the hazard model is fit on."""
++    return list(matchup_features(_DUMMY_FEATS, _DUMMY_FEATS).keys())
++
++
++_DUMMY_FEATS = {k: 0.0 for k in set(RATE_FEATS) | set(MEAN_FEATS) | set(ABS_FEATS)}
++_DUMMY_FEATS.update({"stance": None, "style": "unknown"})
++
++
+ def main() -> None:
+     ap = argparse.ArgumentParser(description=__doc__)
+     here = os.path.dirname(__file__)
+@@ -485,25 +544,8 @@ def main() -> None:
+ 
+     # -------- emit qualifying fights (sched==3, >=2010, clean finish/decision)
+     rng = np.random.default_rng(args.seed)
+-    # NOTE deliberate omissions to avoid exact/near collinearity (which explodes
+-    # the Wald CIs without helping prediction):
+-    #   - rp_pace_pm == rp_sig_landed_pm + rp_sig_absorbed_pm exactly -> keep the
+-    #     two components in diffs, keep pace only as a mean feature.
+-    #   - fh_finish_win + fh_finish_loss + fh_decision ~= 1 -> drop fh_decision_rate;
+-    #     avg_end_round already carries the "goes-long" signal distinctly.
+-    RATE_FEATS = ["rp_sig_landed_pm", "rp_sig_absorbed_pm", "rp_td_pm",
+-                  "rp_ctrl_pct", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm",
+-                  "rp_strike_decay", "rp_grap_decay", "fh_finish_win_rate",
+-                  "fh_finish_loss_rate", "fh_win_rate",
+-                  "fh_avg_end_round", "fh_streak", "age", "reach_in", "height_in"]
+-    MEAN_FEATS = ["rp_pace_pm", "rp_kd_pm", "rp_kd_against_pm", "rp_sub_pm", "rp_td_pm",
+-                  "rp_ctrl_pct", "rp_strike_decay", "rp_grap_decay",
+-                  "fh_finish_win_rate", "fh_finish_loss_rate",
+-                  "fh_avg_end_round", "fh_win_rate", "fh_n_fights", "age"]
+-    ABS_FEATS = ["age", "reach_in", "height_in", "fh_win_rate", "rp_pace_pm",
+-                 "fh_finish_win_rate"]
+-    STANCES = ["orthodox", "southpaw", "switch"]
+-    STYLES = ["grappler", "striker", "hybrid"]
++    # Feature lists + matchup assembly live at module level (frozen PROP-0001
++    # set) so the lock script serves the identical row. See matchup_features().
+ 
+     excluded = defaultdict(int)
+     fight_rows = []
+@@ -541,22 +583,7 @@ def main() -> None:
+             "fighter_a_id": a_id, "fighter_b_id": b_id,
+         }
+         # signed diffs (as specified) + symmetric means + abs-diffs (duration signal)
+-        for k in RATE_FEATS:
+-            row[f"d_{k}"] = fa[k] - fb[k]
+-        for k in MEAN_FEATS:
+-            row[f"m_{k}"] = (fa[k] + fb[k]) / 2.0
+-        for k in ABS_FEATS:
+-            row[f"ad_{k}"] = abs(fa[k] - fb[k])
+-        # stance matchup (unordered one-hot; unknown -> all zero baseline)
+-        sp = tuple(sorted([fa["stance"] or "unk", fb["stance"] or "unk"]))
+-        for i, s1 in enumerate(STANCES):
+-            for s2 in STANCES[i:]:
+-                row[f"stance_{s1[:3]}_{s2[:3]}"] = 1.0 if sp == tuple(sorted([s1, s2])) else 0.0
+-        # style matchup (unordered one-hot; unknown -> all zero baseline)
+-        yp = tuple(sorted([fa["style"], fb["style"]]))
+-        for i, y1 in enumerate(STYLES):
+-            for y2 in STYLES[i:]:
+-                row[f"style_{y1[:4]}_{y2[:4]}"] = 1.0 if yp == tuple(sorted([y1, y2])) else 0.0
++        row.update(matchup_features(fa, fb))
+         row["a_style"], row["b_style"] = fa["style"], fb["style"]
+         fight_rows.append(row)
+ 
+diff --git a/dur001_migration.sql b/dur001_migration.sql
+new file mode 100644
+index 0000000..4a67a68
+--- /dev/null
++++ b/dur001_migration.sql
+@@ -0,0 +1,346 @@
++-- =============================================================================
++-- dur001_migration.sql — DUR-001: "does PROP-0001 add information after the
++-- vig-free closing UFC totals market is known?"
++--
++-- Applied 2026-09-14 via the Supabase Management API (cfl_engine/run_sql_mgmt.py
++-- or the MCP apply_migration path). Idempotent: safe to re-run.
++--
++-- What this changes (and only this):
++--   1. prop_odds  — three new columns (provider commence time, live flag, raw
++--                   payload) and APPEND-ONLY triggers. Existing columns untouched.
++--   2. fight_start_estimates — append-only ledger of "when does this fight
++--                   start" observations by source (Odds API commence_time today;
++--                   real bell times later). fights.bell_at stays reserved for an
++--                   ACTUAL bell time and is never written from a provider guess.
++--   3. v_fight_start_best — the close hierarchy:
++--                   bell_at  >  latest provider commence  >  event_date fallback.
++--   4. v_prop_odds_lifecycle / v_prop_odds_closing_consensus — recreated so the
++--                   computed close is "last NON-LIVE quote strictly before the best
++--                   available start time", with the basis carried on every row so
++--                   closes can be recomputed when real bell times arrive.
++--                   Column order of the existing views is preserved; new columns
++--                   are appended (v_prop_odds_devig / v_odds_capture_health /
++--                   v_prop_odds_integrity_issues are untouched).
++--   5. prop_model_locks — the immutable PROP-0001 prediction-lock ledger.
++--
++-- Nothing here touches fight_odds, the moneyline model, or any public table.
++-- prop_odds, fight_start_estimates and prop_model_locks are PRIVATE
++-- (RLS on, no anon/authenticated policy → service_role only).
++-- =============================================================================
++
++
++-- ----------------------------------------------------------------------------
++-- 1. prop_odds: provenance columns + append-only
++-- ----------------------------------------------------------------------------
++alter table public.prop_odds
++  add column if not exists source_commence_at timestamptz,   -- provider's fight start (Odds API commence_time)
++  add column if not exists is_live            boolean not null default false,  -- captured_at >= provider commence
++  add column if not exists raw                jsonb;         -- bookmaker/market last_update etc.
++
++comment on column public.prop_odds.source_commence_at is
++  'Provider commence/start timestamp as seen AT CAPTURE (Odds API commence_time). Immutable per row; the fight-level best start time is v_fight_start_best.';
++comment on column public.prop_odds.is_live is
++  'True when the quote was captured at/after the provider commence time — i.e. an in-play price. Never eligible as a pre-fight close.';
++comment on column public.prop_odds.raw is
++  'Verbatim provider metadata for the quote (bookmaker key, market/bookmaker last_update). Never used for modelling.';
++
++create or replace function public.prop_odds_no_rewrite()
++returns trigger language plpgsql as $$
++begin
++  raise exception
++    'prop_odds is append-only: % on quote id % (fight %) rejected. A sportsbook quote is an observation; capture a new row instead.',
++    tg_op, coalesce(old.id, new.id), coalesce(old.fight_id, new.fight_id);
++end;
++$$;
++
++drop trigger if exists prop_odds_block_update on public.prop_odds;
++create trigger prop_odds_block_update
++  before update on public.prop_odds
++  for each row execute function public.prop_odds_no_rewrite();
++
++drop trigger if exists prop_odds_block_delete on public.prop_odds;
++create trigger prop_odds_block_delete
++  before delete on public.prop_odds
++  for each row execute function public.prop_odds_no_rewrite();
++
++-- Belt and braces: no truncate either (statement-level).
++drop trigger if exists prop_odds_block_truncate on public.prop_odds;
++create trigger prop_odds_block_truncate
++  before truncate on public.prop_odds
++  for each statement execute function public.prop_odds_no_rewrite();
++
++create index if not exists prop_odds_fight_commence_idx
++  on public.prop_odds (fight_id, source_commence_at desc);
++
++
++-- ----------------------------------------------------------------------------
++-- 2. fight_start_estimates: append-only ledger of start-time observations
++-- ----------------------------------------------------------------------------
++create table if not exists public.fight_start_estimates (
++  id          bigint generated always as identity primary key,
++  fight_id    bigint      not null references public.fights(id) on delete cascade,
++  source      text        not null,                 -- 'odds_api_commence' | 'ufcstats_bell' | 'manual'
++  start_at    timestamptz not null,
++  observed_at timestamptz not null default now(),
++  note        text
++);
++create index if not exists fight_start_estimates_fight_idx
++  on public.fight_start_estimates (fight_id, source, observed_at desc);
++-- one row per distinct observation; a re-run seeing the same start does nothing
++create unique index if not exists fight_start_estimates_uniq
++  on public.fight_start_estimates (fight_id, source, start_at);
++
++comment on table public.fight_start_estimates is
++  'Append-only. Every start-time observation per fight and source. fights.bell_at is reserved for a confirmed actual bell; provider guesses live here.';
++
++create or replace function public.fight_start_estimates_no_rewrite()
++returns trigger language plpgsql as $$
++begin
++  raise exception 'fight_start_estimates is append-only: % rejected.', tg_op;
++end;
++$$;
++drop trigger if exists fight_start_estimates_block_update on public.fight_start_estimates;
++create trigger fight_start_estimates_block_update
++  before update on public.fight_start_estimates
++  for each row execute function public.fight_start_estimates_no_rewrite();
++drop trigger if exists fight_start_estimates_block_delete on public.fight_start_estimates;
++create trigger fight_start_estimates_block_delete
++  before delete on public.fight_start_estimates
++  for each row execute function public.fight_start_estimates_no_rewrite();
++
++alter table public.fight_start_estimates enable row level security;
++revoke all on public.fight_start_estimates from anon, authenticated;
++
++
++-- ----------------------------------------------------------------------------
++-- 3. v_fight_start_best: the close hierarchy
++--    1) fights.bell_at (actual bell) when present
++--    2) most recently OBSERVED provider commence time (fight_start_estimates,
++--       source 'odds_api_commence'), so a reschedule wins over an older guess
++--    3) fallback: event_date 18:00 UTC. Deliberately EARLY: US cards start
++--       prelims ~22:00 UTC and never before 18:00 UTC, so a fallback close can be
++--       stale but can never include an in-play price. start_basis says which.
++-- ----------------------------------------------------------------------------
++create or replace view public.v_fight_start_best
++  with (security_invoker = true) as
++select
++  f.id as fight_id,
++  f.event_id,
++  e.event_date,
++  coalesce(f.bell_at, pc.start_at,
++           (e.event_date::timestamp + time '18:00') at time zone 'UTC') as start_at,
++  case when f.bell_at is not null then 'bell_at'
++       when pc.start_at is not null then 'provider_commence'
++       when e.event_date is not null then 'event_date_fallback'
++       else null end as start_basis,
++  pc.observed_at as provider_observed_at
++from public.fights f
++left join public.events e on e.id = f.event_id
++left join lateral (
++  select s.start_at, s.observed_at
++  from public.fight_start_estimates s
++  where s.fight_id = f.id and s.source = 'odds_api_commence'
++  order by s.observed_at desc
++  limit 1
++) pc on true;
++
++comment on view public.v_fight_start_best is
++  'Best available fight start per fight: bell_at > latest provider commence > event_date 18:00 UTC. start_basis records which tier answered so closes can be recomputed later.';
++
++
++-- ----------------------------------------------------------------------------
++-- 4. lifecycle + closing consensus, recreated on the start hierarchy.
++--    Existing columns/order preserved; new columns appended at the end.
++-- ----------------------------------------------------------------------------
++drop view if exists public.v_prop_odds_closing_consensus;
++drop view if exists public.v_prop_odds_lifecycle;
++
++create view public.v_prop_odds_lifecycle
++  with (security_invoker = true) as
++select
++  d.id, d.fight_id, d.event_id, d.event_date, d.market_type, d.fighter_id, d.line,
++  d.over_odds, d.under_odds, d.book_id, d.source, d.source_event_id, d.captured_at,
++  d.is_opener, d.is_closer, d.over_prob_raw, d.under_prob_raw, d.overround,
++  d.over_prob_vigfree, d.under_prob_vigfree,
++  f.bell_at,
++  -- opener: first quote ever seen for this (fight, market, fighter, line, book)
++  d.captured_at = min(d.captured_at) over (
++      partition by d.fight_id, d.market_type, coalesce(d.fighter_id, 0::bigint),
++                   coalesce(d.line, '-1'::numeric), d.book_id) as is_opener_calc,
++  -- closer: last NON-LIVE quote strictly before the best available start time
++  (s.start_at is not null and not p.is_live and d.captured_at < s.start_at
++   and d.captured_at = max(d.captured_at) filter (where not p.is_live and d.captured_at < s.start_at) over (
++      partition by d.fight_id, d.market_type, coalesce(d.fighter_id, 0::bigint),
++                   coalesce(d.line, '-1'::numeric), d.book_id)) as is_closer_calc,
++  -- appended provenance
++  s.start_at,
++  s.start_basis,
++  p.source_commence_at,
++  p.is_live,
++  (s.start_at - d.captured_at) as lead_time
++from public.v_prop_odds_devig d
++join public.prop_odds p on p.id = d.id
++join public.fights f on f.id = d.fight_id
++left join public.v_fight_start_best s on s.fight_id = d.fight_id;
++
++comment on view public.v_prop_odds_lifecycle is
++  'Per-quote opener/closer flags. is_closer_calc = last non-live quote strictly before v_fight_start_best.start_at; start_basis tells you whether that was an actual bell, a provider commence time, or the event-date fallback.';
++
++create view public.v_prop_odds_closing_consensus
++  with (security_invoker = true) as
++select
++  fight_id, event_id, event_date, market_type, fighter_id, line,
++  count(*) as bookmaker_count,
++  percentile_cont(0.5) within group (order by over_prob_vigfree::double precision)  as median_over_prob_vigfree,
++  percentile_cont(0.5) within group (order by under_prob_vigfree::double precision) as median_under_prob_vigfree,
++  min(captured_at) as earliest_book_close_at,
++  max(captured_at) as latest_book_close_at,
++  bell_at,
++  -- appended
++  start_at,
++  start_basis,
++  min(lead_time) as min_lead_time,
++  max(lead_time) as max_lead_time,
++  array_agg(book_id order by book_id) as book_ids
++from public.v_prop_odds_lifecycle
++where is_closer_calc and source <> 'synthetic'
++group by fight_id, event_id, event_date, market_type, fighter_id, line, bell_at, start_at, start_basis;
++
++comment on view public.v_prop_odds_closing_consensus is
++  'Median vig-free closing probability per (fight, market, fighter, line) across books. Only non-live pre-start quotes qualify. start_basis is the provenance of the close.';
++
++-- Opening consensus (same shape) for the Phase-8 opener test.
++create or replace view public.v_prop_odds_opening_consensus
++  with (security_invoker = true) as
++select
++  fight_id, event_id, event_date, market_type, fighter_id, line,
++  count(*) as bookmaker_count,
++  percentile_cont(0.5) within group (order by over_prob_vigfree::double precision)  as median_over_prob_vigfree,
++  percentile_cont(0.5) within group (order by under_prob_vigfree::double precision) as median_under_prob_vigfree,
++  min(captured_at) as earliest_book_open_at,
++  max(captured_at) as latest_book_open_at,
++  start_at, start_basis,
++  array_agg(book_id order by book_id) as book_ids
++from public.v_prop_odds_lifecycle
++where is_opener_calc and not is_live and source <> 'synthetic'
++group by fight_id, event_id, event_date, market_type, fighter_id, line, start_at, start_basis;
++
++
++-- ----------------------------------------------------------------------------
++-- 5. prop_model_locks — immutable PROP-0001 (and future) prediction locks
++-- ----------------------------------------------------------------------------
++create table if not exists public.prop_model_locks (
++  id                    bigint generated always as identity primary key,
++  fight_id              bigint  not null references public.fights(id) on delete restrict,
++  event_id              bigint  not null references public.events(id) on delete restrict,
++  event_date            date,
++  market_type           text    not null check (market_type in ('total_rounds','goes_distance')),
++  threshold             numeric,                -- e.g. 1.5 / 2.5 (null for goes_distance)
++  side                  text    not null check (side in ('over','under','yes')),
++  model_name            text    not null,       -- 'PROP-0001'
++  model_version         text    not null,       -- e.g. 'PROP-0001@2026-09-14' (freeze tag)
++  generated_at          timestamptz not null,   -- when the prediction was computed
++  actual_lock_at        timestamptz not null default now(),  -- when the row hit the ledger
++  training_cutoff       timestamptz not null,   -- only fights with event_date < this were used
++  training_n_fights     integer,
++  predicted_probability numeric not null check (predicted_probability > 0 and predicted_probability < 1),
++  -- enough to reproduce predicted_probability without the model:
++  haz_r1                numeric,                -- calibrated per-round finish hazards
++  haz_r2                numeric,
++  haz_r3                numeric,
++  phi_r1                numeric,                -- PIT share of round-r finishes at/before 2:30
++  phi_r2                numeric,
++  phi_r3                numeric,
++  p_ends_r1             numeric,
++  p_ends_r2             numeric,
++  p_ends_r3             numeric,
++  p_decision            numeric,
++  features              jsonb,                  -- the covariate row fed to the model
++  code_version          text,                   -- git commit of the lock script
++  feature_hash          text,                   -- sha256 of the covariate row
++  notes                 text
++);
++create unique index if not exists prop_model_locks_one_per_version
++  on public.prop_model_locks (fight_id, market_type, coalesce(threshold, '-1'::numeric), side, model_name, model_version);
++create index if not exists prop_model_locks_fight_idx on public.prop_model_locks (fight_id);
++create index if not exists prop_model_locks_event_idx on public.prop_model_locks (event_date, event_id);
++
++comment on table public.prop_model_locks is
++  'Append-only research prediction locks (PROP-0001 duration model). One row per (fight, market, threshold, side, model_version). Never updated; a new model version is a new row.';
++
++create or replace function public.prop_model_locks_no_rewrite()
++returns trigger language plpgsql as $$
++begin
++  raise exception
++    'prop_model_locks is append-only: % on lock % rejected. Locks are never revised; publish a new model_version instead.',
++    tg_op, coalesce(old.id, new.id);
++end;
++$$;
++drop trigger if exists prop_model_locks_block_update on public.prop_model_locks;
++create trigger prop_model_locks_block_update
++  before update on public.prop_model_locks
++  for each row execute function public.prop_model_locks_no_rewrite();
++drop trigger if exists prop_model_locks_block_delete on public.prop_model_locks;
++create trigger prop_model_locks_block_delete
++  before delete on public.prop_model_locks
++  for each row execute function public.prop_model_locks_no_rewrite();
++drop trigger if exists prop_model_locks_block_truncate on public.prop_model_locks;
++create trigger prop_model_locks_block_truncate
++  before truncate on public.prop_model_locks
++  for each statement execute function public.prop_model_locks_no_rewrite();
++
++-- A lock must be made BEFORE the fight could have started and must only train on
++-- fights strictly before the lock. Enforced at insert time so no post-hoc lock
++-- can ever be written, even by service_role.
++create or replace function public.prop_model_locks_guard()
++returns trigger language plpgsql as $$
++declare
++  v_start timestamptz;
++  v_settled boolean;
++begin
++  if new.training_cutoff > new.actual_lock_at then
++    raise exception 'lock rejected: training_cutoff (%) is after actual_lock_at (%)', new.training_cutoff, new.actual_lock_at;
++  end if;
++  if new.generated_at > new.actual_lock_at + interval '5 minutes' then
++    raise exception 'lock rejected: generated_at (%) is after actual_lock_at (%)', new.generated_at, new.actual_lock_at;
++  end if;
++  select (winner_id is not null or method is not null) into v_settled from public.fights where id = new.fight_id;
++  if v_settled then
++    raise exception 'lock rejected: fight % already has a result on file', new.fight_id;
++  end if;
++  select start_at into v_start from public.v_fight_start_best where fight_id = new.fight_id;
++  if v_start is not null and new.actual_lock_at >= v_start then
++    raise exception 'lock rejected: fight % start (%) is not after actual_lock_at (%)', new.fight_id, v_start, new.actual_lock_at;
++  end if;
++  return new;
++end;
++$$;
++drop trigger if exists prop_model_locks_guard_insert on public.prop_model_locks;
++create trigger prop_model_locks_guard_insert
++  before insert on public.prop_model_locks
++  for each row execute function public.prop_model_locks_guard();
++
++alter table public.prop_model_locks enable row level security;
++revoke all on public.prop_model_locks from anon, authenticated;
++
++
++-- ----------------------------------------------------------------------------
++-- 6. Graded join used by the DUR-001 analysis (read-side only)
++-- ----------------------------------------------------------------------------
++create or replace view public.v_prop_fight_duration
++  with (security_invoker = true) as
++select
++  f.id as fight_id, f.event_id, e.event_date, f.scheduled_rounds, f.method, f.end_round, f.end_time,
++  case
++    when f.method is null then null
++    when f.method ilike 'decision%' or f.method ilike '%draw%' then f.scheduled_rounds * 300
++    when f.method ilike 'overturned%' or f.method ilike 'could not continue%' or f.method ilike 'no contest%' or f.method ilike 'other%' then null
++    when f.end_round is null or f.end_time !~ '^\d+:\d\d$' then null
++    else (f.end_round - 1) * 300 + split_part(f.end_time, ':', 1)::int * 60 + split_part(f.end_time, ':', 2)::int
++  end as duration_seconds,
++  (f.method ilike 'overturned%' or f.method ilike 'could not continue%' or f.method ilike 'no contest%' or f.method ilike 'other%') as is_void
++from public.fights f
++left join public.events e on e.id = f.event_id;
++
++comment on view public.v_prop_fight_duration is
++  'Elapsed fight time in seconds from ufcstats end_round/end_time (decision = full scheduled time). NULL = not graded or void.';
