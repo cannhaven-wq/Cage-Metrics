@@ -17,8 +17,9 @@ Last updated: 2026-09-16.
 
 | id | what it asks | status | verdict |
 |---|---|---|---|
-| **DUR-001** | after the vig-free totals market is known, does PROP-0001 still add information about whether a fight goes over a round total? | collecting | none yet |
-| **PROP-0001** | the frozen fight-duration model DUR-001 tests. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
+| **DUR-001** | after the vig-free totals market is known, does PROP-0001@v1 still add information about whether a fight goes over a round total? | collecting | none yet |
+| **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **DRAFT, not frozen** | none |
+| **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---
 
@@ -86,27 +87,58 @@ The backfill gate enforces (i): `self_consistent_walkback` earns a dedicated
 
 **Held — not approved:** items (a), (b), (c), (d), (e), (f), (g), (j), (k) in
 [`AMENDMENT_DRAFT_2026-09-15.md`](cfl_engine/dur001/AMENDMENT_DRAFT_2026-09-15.md)
-remain **PROPOSED**. Nothing that changes calibration, scoring or the market
-comparison is decided while the walk-forward fold discrepancy is open; the
-governance and monitoring items can be voted on individually once it closes.
+remain **PROPOSED**.
 
-### Open: the walk-forward fold discrepancy
+The calibration blocker is now closed, and that does **not** make the remaining
+clauses automatically sound. They are not approved en bloc. Each gets an
+individual vote on its actual clause text:
 
-A block walk-forward of the frozen recipe reproduces the panel, the fold
-boundaries and the training sets of
-[`walkforward_report.json`](cfl_engine/harness/walkforward_report.json)
-**exactly** — every fold's `n_test` matches, and `n_train` for fold 0 is the
-panel minus the test rows to the row. Data selection is ruled out.
+- **Higher scrutiny** — anything changing data eligibility, scoring, model
+  behaviour or how a claim is interpreted: (a) book minimum, (b) one line per
+  fight, (c) the two-questions split, (d) the verdict rule, (e) cluster-CI
+  gating, (g) terminology.
+- **Lower risk** — governance and monitoring only: (f) the checkpoint,
+  (j) `market_last_update` exposure, (k) the dirty-tree guard.
 
-One structural difference survives: the frozen report records folds 0 and 1 as
-`calibrated: false`. `fit_prop0001` fits isotonic on the trailing 365 days, a
-window that is never empty here, so under that recipe every fold calibrates.
-**The gate report therefore did not use the calibration recipe the live locks
-use, and cannot be cited as validation of it.** Which recipe it did use is
-unconfirmed — the generator is not in the repository.
+### Closed: what the historical gate report actually validates
 
-This is the blocker for the held amendment items. Nothing was tuned on either
-side.
+**Resolved 2026-09-16.**
+[`research/provenance/CALIBRATION_FINDING.md`](research/provenance/CALIBRATION_FINDING.md).
+
+A block walk-forward of the frozen recipe reproduces
+[`walkforward_report.json`](cfl_engine/harness/walkforward_report.json)'s panel,
+fold boundaries and training sets **exactly**. Data selection was ruled out. The
+difference is the isotonic step:
+
+| | pooled log loss |
+|---|---|
+| reproduced, isotonic **applied** (the live-lock path) | 0.5180 |
+| reproduced, isotonic **bypassed** | **0.5032** |
+| the gate report | **0.5037** |
+
+**The gate report measures the raw hazard model.** The accurate sentence, to be
+used wherever historical testing is described:
+
+> Historical walk-forward testing supports the underlying raw hazard model. The
+> calibration layer used in live PROP-0001 forecasts was not validated by that
+> historical artifact.
+
+PROP-0001 is **not** to be described as "historically validated" end to end.
+
+Two consequences, kept separate on purpose:
+
+1. **Labelling.** The artifact is relabelled, not altered — see
+   [`cfl_engine/harness/README.md`](cfl_engine/harness/README.md). The frozen
+   file is untouched.
+2. **A model question, deferred to a new version.** The isotonic step costs
+   0.0148 log loss pooled across 13 of 18 folds. PROP-0001@v1 is **not**
+   changed and its locks are **not** reinterpreted. Any calibration change is a
+   new `model_version` with its own preregistration, judged prospectively — see
+   DUR-002 below.
+
+This did not find PROP-0001 to be a bad model. It found that the artifact
+everyone took as validating the live pipeline was validating a different stage
+of it — caught before monetisation, which is what this register is for.
 
 ### Forbidden changes
 
@@ -120,6 +152,49 @@ side.
 
 ---
 
+## DUR-002 — the same question for the uncalibrated hazard
+
+| field | value |
+|---|---|
+| status | **DRAFT — not frozen, not in force** |
+| preregistration | [`cfl_engine/dur002/PREREGISTRATION.md`](cfl_engine/dur002/PREREGISTRATION.md) |
+| challenger | `PROP-0001@v2` — identical to v1 except no isotonic or other post-hoc calibration |
+| freeze timestamp | none. Takes effect only when Reed dates and signs §0 |
+| verdict | none |
+
+Until §0 is signed, **no `PROP-0001@v2` lock may be written and no DUR-002
+number computed.**
+
+### Why v2 is specified this way
+
+Three reasons, none of which is a score:
+
+1. it is the **simpler specification** — it removes a stage rather than adding one;
+2. it is the specification the **existing historical artifact actually
+   evaluated**, so adopting it stops the prospective pipeline and the historical
+   evidence describing different objects;
+3. the v1 calibration step is **questionable on inspection**: the isotonic map is
+   fit on a model trained without the trailing year, then applied to a model
+   refit including it — a correction estimated on one output scale applied to
+   another's.
+
+### Disclosure
+
+A historical comparison of the two variants was run and seen before this was
+drafted, and it favoured the uncalibrated variant. **That is not the reason for
+the specification and may not be cited as evidence for it.** It is recorded in
+§2 of the preregistration so nobody later finds it and assumes it was the hidden
+motive. DUR-002's verdict rests only on fights locked after the freeze.
+
+### What DUR-002 does not do
+
+It does not modify `PROP-0001@v1`, reinterpret its 48 existing locks, or change
+DUR-001. The two run in parallel under separate `model_version`s. A head-to-head
+comparison of v1 against v2 is **not** preregistered and would need its own
+document.
+
+---
+
 ## PROP-0001 — the frozen duration model
 
 | field | value |
@@ -129,6 +204,7 @@ side.
 | freeze commit | `6be7198ebe4d56b27366268318b757e99e3074c5` |
 | freeze timestamp | 2026-09-15 (UTC) |
 | form | discrete-time logistic hazard, one hazard per round, isotonic recalibration on the trailing 365 days |
+| historical validation | **raw hazard model only** — the gate report bypasses the isotonic step. The live calibration layer is unvalidated historically. |
 | features | 49 covariates from `build_features.covariate_columns()` |
 | population | UFC fights scheduled for 3 rounds, 2010 onward, clean finish or decision |
 | gate report | [`cfl_engine/harness/walkforward_report.json`](cfl_engine/harness/walkforward_report.json) — block walk-forward from 2018-01-01, 6-month blocks |
@@ -142,11 +218,19 @@ committed. Nothing currently in the repository reproduces it.
 
 The figures that **do** have an artifact are the ones in
 `walkforward_report.json` — pooled model log-loss 0.5037 against a constant
-hazard's 0.5082 over 9,030 test rows in 18 folds, and 0.5059 against the
-market's 0.5073 on the 8,565-row odds subset. Those are the only duration-model
-performance numbers with a committed source, and they are a *gate* result, not
-a DUR-001 result: they are measured against the model's own historical panel,
-not against a pre-fight market on fights locked in advance.
+hazard's 0.5082 over 9,030 test rows in 18 folds. Two limits on how far they
+reach, both load-bearing:
+
+1. They are a *gate* result, not a DUR-001 result: measured against the model's
+   own historical panel, not against a pre-fight market on fights locked in
+   advance.
+2. **They measure the raw hazard model, with the isotonic step bypassed** — not
+   the complete PROP-0001 locking pipeline. See
+   [`cfl_engine/harness/README.md`](cfl_engine/harness/README.md).
+
+So: historical walk-forward testing supports the underlying raw hazard model.
+The calibration layer used in live PROP-0001 forecasts was not validated by that
+historical artifact.
 
 ---
 
