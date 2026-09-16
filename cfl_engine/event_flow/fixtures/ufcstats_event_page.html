@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<!--
+  FIXTURE — hand-built to the UFCStats event-page markup contract.
+
+  This is NOT a captured page. The container this repo's sessions run in cannot
+  reach ufcstats.com (the host is not on the network allowlist), so the parser is
+  tested against a page written to the contract it depends on:
+
+    * each bout is a <tr> carrying data-link=".../fight-details/<16 hex>"
+    * each bout row prints exactly two <a href=".../fighter-details/<16 hex>">
+    * rows run main event first, first prelim last
+
+  Ids and names are synthetic. Before this ingester is trusted in production,
+  run it once with --from-file against a REAL saved page and confirm the printed
+  order matches the card. See README.md, "Verifying against a real page".
+-->
+<html><head><title>UFC Fixture Event</title></head>
+<body>
+  <h2 class="b-content__title"><span class="b-content__title-highlight">UFC Fixture: Alpha vs. Omega</span></h2>
+  <a href="http://ufcstats.com/event-details/6d066a2d94981620">event</a>
+  <table class="b-fight-details__table b-fight-details__table_style_margin-top b-fight-details__table_type_event-details js-fight-table">
+    <tbody class="b-fight-details__table-body">
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/15a2ed7bcb852da7">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/15a2ed7bcb852da7" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/a929d8851591252a" class="b-link b-link_style_black">Alexandre Pantoja</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/8f910f92b5067add" class="b-link b-link_style_black">Joshua Van</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/451b1e20222064be">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/451b1e20222064be" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/eeb7a99e3bc6ad0c" class="b-link b-link_style_black">Deiveson Figueiredo</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/7b7c177195e7e343" class="b-link b-link_style_black">Montel Jackson</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/e65aa4559b1303ac">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/e65aa4559b1303ac" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/33a47c843ff1e185" class="b-link b-link_style_black">Rob Font</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/7dc94717b37d6672" class="b-link b-link_style_black">Jean Matsumoto</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/f0dd3cd723913103">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/f0dd3cd723913103" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/875f0d1d8997b889" class="b-link b-link_style_black">Manel Kape</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/f4252c30b8e8e513" class="b-link b-link_style_black">Bruno Silva</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/e8e9fb9e840fdf00">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/e8e9fb9e840fdf00" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/466c943b20f685c1" class="b-link b-link_style_black">Julianna Pena</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/09e366102ebe95a4" class="b-link b-link_style_black">Kayla Harrison</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/48fa0f88c9f8b43e">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/48fa0f88c9f8b43e" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/5efbaa3c0acef22e" class="b-link b-link_style_black">Kyler Phillips</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/4beaec0adc825f61" class="b-link b-link_style_black">Vinicius Oliveira</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/0fa31553dbc109d9">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/0fa31553dbc109d9" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/0f65f2fb323fa38f" class="b-link b-link_style_black">Cody Brundage</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/fa8afd9a385e2e50" class="b-link b-link_style_black">Eryk Anders</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/0991722412c76601">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/0991722412c76601" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/13ff925f61d73b3d" class="b-link b-link_style_black">Zhang Mingyang</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/8b1db4c622b07c07" class="b-link b-link_style_black">Ozzy Diaz</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/799daa98c4a372b6">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/799daa98c4a372b6" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/48c8d11aaa307bdb" class="b-link b-link_style_black">Piera Rodriguez</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/43966dc7e5f6d41b" class="b-link b-link_style_black">Ariane Carnelossi</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/6fb9ed4bdefb50dc">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/6fb9ed4bdefb50dc" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/2881407458531043" class="b-link b-link_style_black">Andre Lima</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/5098ba9cb0b3e81b" class="b-link b-link_style_black">Mitch Raposo</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/3362957077b79d1e">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/3362957077b79d1e" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/fe9eede5730850d8" class="b-link b-link_style_black">Melissa Gatto</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/32cacf07d4220420" class="b-link b-link_style_black">Tamires Vidal</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/dfd763b30de0532a">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/dfd763b30de0532a" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/5c96bed088084046" class="b-link b-link_style_black">Elves Brener</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/59f86954edee8ddf" class="b-link b-link_style_black">Guram Kutateladze</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+          <tr class="b-fight-details__table-row b-fight-details__table-row__hover js-fight-details-click" data-link="http://ufcstats.com/fight-details/0f95cb45ff6c4db0">
+            <td class="b-fight-details__table-col">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fight-details/0f95cb45ff6c4db0" class="b-flag b-flag_style_green"><i class="b-flag__inner"><i class="b-flag__text">win</i></i></a></p>
+            </td>
+            <td class="b-fight-details__table-col l-page_align_left">
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/22bfbb89960346fd" class="b-link b-link_style_black">Josias Musasa</a></p>
+              <p class="b-fight-details__table-text"><a href="http://ufcstats.com/fighter-details/6276a2d134a034b7" class="b-link b-link_style_black">Danny Barlow</a></p>
+            </td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">0</p><p class="b-fight-details__table-text">0</p></td>
+            <td class="b-fight-details__table-col l-page_align_left"><p class="b-fight-details__table-text">Flyweight Bout</p></td>
+            <td class="b-fight-details__table-col"><p class="b-fight-details__table-text">3</p></td>
+          </tr>
+    </tbody>
+  </table>
+</body></html>
