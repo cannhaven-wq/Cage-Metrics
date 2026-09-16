@@ -4,38 +4,45 @@
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
   "status": "frozen",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+  "protocol_sha256": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
   "benchmark_name": {
     "short": "late pre-fight price proxy",
     "long": "scheduled/late closing-price proxy",
     "never": "the closing line",
-    "rule": "no surface, artifact or summary may describe this benchmark as a closing line. It is the latest quote VERIFIABLE as pre-fight, which under tier 4 is bounded rather than exact.",
-    "frozen_by": "Amendment 4, 2026-09-16"
+    "rule": "no surface, artifact or summary may describe this benchmark as a closing line. It is the latest quote VERIFIABLE as pre-fight AND genuinely late. Amendment 4.1: a quote that is merely pre-card is not late enough to qualify and is not scored.",
+    "frozen_by": "Amendment 4, 2026-09-16; narrowed by Amendment 4.1"
   },
   "capture_cadence": {
     "target_minutes": 5,
     "scope": "h2h moneyline, all remaining fights, through a live card",
     "every_snapshot_stored": true,
-    "ladder": [5, 10, 15, 30],
-    "governor": "before each call the job reads the provider's own x-requests-remaining header (persisted in odds_api_usage), counts the cards still to come this month, and takes the finest cadence on the ladder that fits. Below a hard floor it stops rather than spending a credit it does not have.",
+    "ladder": [
+      5,
+      10,
+      15,
+      30
+    ],
+    "governor": "before each call the job reads the provider's own x-requests-remaining header (persisted in the append-only odds_api_usage ledger), counts the cards still to come this month, RESERVES the floor cost of each card after this one, and takes the finest cadence on the ladder that fits. If NO rung fits it returns STOP - it never falls through to the coarsest rung, because a ceiling that yields under pressure is not a ceiling. Below a hard floor it also stops.",
     "hard_ceiling": {
       "monthly_credit_cap": 500,
-      "reserve": 40,
+      "reserve": 75,
       "hard_floor": 10,
-      "paid_tier": "never, without an L3"
+      "paid_tier": "never, without an L3",
+      "reserve_note": "75, not 45. Walked across months of 1 to 8 cards, a 45-credit reserve goes 8 credits over at seven cards; 75 leaves a worst case of +19."
     },
     "measured_basis": {
       "events_per_month_avg": 3.7,
       "events_per_month_max_observed": 6,
       "fights_per_card_avg": 12.5,
       "window": "2025-01 to 2026-08",
-      "credits_per_card_at_5min": 93,
-      "why_a_governor_and_not_a_schedule": "six cards at five-minute cadence would exceed a 500-credit allowance on their own"
+      "credits_per_card_at_5min": 123,
+      "why_a_governor_and_not_a_schedule": "six cards at five-minute cadence would exceed a 500-credit allowance on their own",
+      "credits_per_card_at_coarsest_rung": 35
     },
-    "degradation_costs_lead_time_not_correctness": "30-minute capture still clears the frozen 45-minute staleness limit"
+    "degradation_costs_lead_time_not_correctness": "every rung on the ladder is 30 minutes or finer, inside the frozen 45-minute staleness limit, so degrading costs lead time and never correctness. Running out entirely stops capture rather than overspending."
   },
   "eligible_books": [
     "FanDuel",
@@ -56,9 +63,15 @@
     "verifiable_not_result_motivated": "no CLV figure has ever been computed, and the 2026-09-16 dry run establishes none is computable on the present record. A list frozen in that state cannot have been chosen for its effect on a result.",
     "coverage_deliberately_not_a_criterion": "Caesars, BetWay and Unibet have not appeared in the feed since 2026-05-31 and are on the list anyway. Dropping a book for thin coverage is a judgement about which prices count, made now, which is what freezing forecloses. A book that never quotes never enters a consensus.",
     "excluded_by_kind_not_by_this_list": {
-      "aggregates": ["BFO Consensus", "CFL Consensus (Odds API)"],
+      "aggregates": [
+        "BFO Consensus",
+        "CFL Consensus (Odds API)"
+      ],
       "aggregates_why": "a consensus row is already a blend of other books' margins, so de-vigging it is a different operation, and counting it toward the three-book floor would double-count its constituents",
-      "prediction_markets": ["Polymarket", "Kalshi"],
+      "prediction_markets": [
+        "Polymarket",
+        "Kalshi"
+      ],
       "prediction_markets_why": "Q-03 - commission rather than vig",
       "enforced_by": "is_eligible_book in cfl_engine/clv/scoring.py, by name, so neither can re-enter through a book-id renumbering"
     },
@@ -70,24 +83,49 @@
     "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
     "principle": "a UFC card is one scheduled start and then a queue. Only the first bout begins at a time anybody published; every later bout begins when the one before it ends.",
     "tiers": [
-      {"basis": "bell_at", "applies_to": "any bout", "note": "an actual confirmed bell; audit-grade"},
-      {"basis": "previous_bout_completion", "applies_to": "any bout after the first", "note": "exact observations only - never the result scraper's upper bound"},
-      {"basis": "scheduled_first_bout", "applies_to": "the card's FIRST bout only", "note": "the card-level commence time, named for what it is"},
-      {"basis": "card_scheduled_start", "applies_to": "any fight on the card", "lead_time": "LOWER BOUND", "note": "Amendment 4. A fight cannot begin before its own card begins, so a quote strictly before the card's scheduled start is verifiably pre-fight for every fight on it. It BOUNDS; it does not guess - which is why it is admissible where the event-date fallback, which invents an instant, is not."}
+      {
+        "basis": "bell_at",
+        "applies_to": "any bout",
+        "note": "an actual confirmed bell; audit-grade"
+      },
+      {
+        "basis": "previous_bout_completion",
+        "applies_to": "any bout after the first",
+        "note": "exact observations only - never the result scraper's upper bound"
+      },
+      {
+        "basis": "scheduled_first_bout",
+        "applies_to": "the card's FIRST bout only",
+        "note": "the card-level commence time, named for what it is"
+      }
     ],
     "lead_time": {
-      "exact_bases": ["bell_at", "previous_bout_completion", "scheduled_first_bout"],
-      "lower_bound_bases": ["card_scheduled_start"],
-      "rule": "the lead time to the best-known fight start is retained and reported beside any figure computed from it, and every lower-bound row is marked as such. On a late-card fight a tier-4 proxy may sit hours before the bell and a reader must be able to see that from the row.",
+      "exact_bases": [
+        "bell_at",
+        "previous_bout_completion",
+        "scheduled_first_bout"
+      ],
+      "lower_bound_bases": [],
+      "rule": "every scoring basis NAMES the fight start, so every scored row has an exact lead time. LOWER_BOUND_REFERENCE_BASES is empty and a test asserts it, so re-admitting a bounded basis is deliberate rather than a quiet widening.",
       "unknown_basis": "neither exact nor bounded - reported as null, never as false, because false would assert the lead time is exact"
     },
-    "inadmissible": ["event_date_fallback", "provider_commence applied to a later bout as if it named its start"],
-    "unknown_running_order": "no longer disqualifying. Amendment 4's tier 4 bounds every fight on the card regardless of running order. Order still improves the answer - it upgrades bout 1 to tier 3 - but is no longer required to get one.",
+    "inadmissible": [
+      "event_date_fallback",
+      "provider_commence applied to a later bout as if it named its start"
+    ],
+    "unknown_running_order": "no admissible SCORING reference. Tier 4 was withdrawn by Amendment 4.1, so a fight without a running order, a bell or an exact previous-bout completion is unscored - it reports only_pre_card_price when a card start exists, no_scheduled_start otherwise.",
     "supersedes": "Amendment 2 (b), which admitted provider_commence for EVERY fight on the card - right for one fight in thirteen and wrong in the expensive direction, since it would mark every quote after the first bell as in-play for all of them",
-    "narrowing_not_widening": true
+    "narrowing_not_widening": true,
+    "recognised_but_never_scored": {
+      "basis": "card_scheduled_start",
+      "withdrawn_by": "Amendment 4.1, 2026-09-16",
+      "why": "a quote before the card's scheduled start is safely pre-fight but not LATE - on the twelfth bout it sits hours before the bell. Scoring it would make the benchmark mean five minutes before the bell for bout one and four hours before it for bout twelve, both under one name.",
+      "treatment": "reported as a reference_basis with a NULL reference_at; the row is unscored with reason only_pre_card_price",
+      "snapshots": "kept. Five-minute capture runs through the whole card and every snapshot is stored, so a genuinely late proxy is on file the moment a fight start becomes verifiable - including retrospectively."
+    }
   },
   "trigger_is_not_the_close": {
-    "capture_trigger": "the previous bout ending tells the odds job to begin 30-minute capture for the next fight. It governs how much data exists and nothing else. Capture cadence is NOT frozen - it cannot change what a number means, only how many numbers there are.",
+    "capture_trigger": "the previous bout ending helps identify event flow and sharpens which fight the capture is for. It governs how much data exists and nothing else. Capture cadence is NOT frozen - it cannot change what a number means, only how many numbers there are.",
     "the_close": "the last valid pre-live quote for the upcoming fight. Any quote captured at or after that fight actually started is excluded, strictly. Frozen, and enforced by closing_pairs in cfl_engine/clv/scoring.py.",
     "why_stated_separately": "collapsing the two would let a quote taken DURING a fight score as that fight's closing price",
     "tests": "TestTriggerIsNotTheClose in cfl_engine/clv/test_scoring.py"
@@ -190,7 +228,7 @@
     },
     {
       "id": "R-08",
-      "title": "Outcome independence \u2014 void and no-contest retained and scored; cancelled-before-close excluded, not scored zero",
+      "title": "Outcome independence — void and no-contest retained and scored; cancelled-before-close excluded, not scored zero",
       "basis": "CLV measures price, not result; scoring zero would pull summaries toward the middle"
     },
     {
@@ -200,17 +238,17 @@
     },
     {
       "id": "R-10",
-      "title": "Publication gate \u2014 nothing on a surface until frozen",
+      "title": "Publication gate — nothing on a surface until frozen",
       "basis": "Reed, 2026-09-16"
     },
     {
       "id": "R-11",
-      "title": "Provenance \u2014 a published figure names its protocol version and the script that produced it",
+      "title": "Provenance — a published figure names its protocol version and the script that produced it",
       "basis": "inherits the research register's standing rule"
     },
     {
       "id": "R-12",
-      "title": "Copy governance \u2014 CLV wording follows COPY_STYLE.md",
+      "title": "Copy governance — CLV wording follows COPY_STYLE.md",
       "basis": "Q-11 fixes substance, COPY_STYLE.md fixes wording"
     },
     {
@@ -294,7 +332,7 @@
         "best available price",
         "liquidity-weighted"
       ],
-      "recommendation": "median \u2014 robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
+      "recommendation": "median — robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
       "note": "The review was explicitly asked to challenge the rejection of 'best available price' rather than agree with it, and rejected it on the same grounds.",
       "chosen_by_historical_comparison": false,
       "status": "resolved",
@@ -419,9 +457,9 @@
       "level": "L3",
       "why_l3": "it is the claim itself",
       "options": [
-        "adopt the may / may-never list in \u00a73 Q-11 as written",
-        "stricter \u2014 descriptive reporting only, with no comparative framing of any kind",
-        "more permissive \u2014 allow comparison against public benchmarks once past the Q-08 floor"
+        "adopt the may / may-never list in §3 Q-11 as written",
+        "stricter — descriptive reporting only, with no comparative framing of any kind",
+        "more permissive — allow comparison against public benchmarks once past the Q-08 floor"
       ],
       "recommendation": "permit \"positive closing-line value over this sample\" ONLY when the cluster interval excludes zero AND the sample floor is met. Never \"proven edge\", \"beats the market\", expected profit, ROI, or bankroll growth.",
       "never_permitted": [
@@ -429,7 +467,7 @@
         "'beats the market', 'proven edge', or any phrasing converting a price measurement into a claim about winning money",
         "a positive figure without its interval and its n",
         "a favourable subset presented without the overall number beside it",
-        "any claim at all while the interval crosses zero \u2014 reported as 'we can't tell yet'"
+        "any claim at all while the interval crosses zero — reported as 'we can't tell yet'"
       ],
       "chosen_by_historical_comparison": false,
       "status": "resolved",
@@ -676,6 +714,28 @@
         "e": "previous-bout completion remains useful for event flow and for upgrading a lower bound to an exact lead time, but is no longer a prerequisite for collecting or scoring"
       },
       "output_change": "none yet - the publication gate is unchanged and still at 0. It changes how fast observations can accumulate: roughly 1 per card becomes roughly 12.5, and the 100/20 floor becomes bound by the event count at about 20 cards rather than about 100.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "4.1",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "A pre-card price is not a late pre-fight proxy: tier 4 withdrawn from scoring",
+      "kind": "narrows Amendment 4; naming, lead-time reporting, 5-minute capture and the credit ceiling all stand",
+      "version_before": "1.0.4",
+      "version_after": "1.0.5",
+      "sha256_before": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+      "sha256_after": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
+      "parts": {
+        "a": "card_scheduled_start removed as a scoring reference for later fights; recognised and reported, never scored",
+        "b": "new unscored reason only_pre_card_price, distinct from no_scheduled_start - a verifiably pre-fight price that is not late enough is a different problem from holding nothing",
+        "c": "every scoring basis names the start, so every scored row's lead time is exact; the lower-bound set is empty and asserted so",
+        "d": "snapshots are kept; capture coverage is unchanged"
+      },
+      "output_change": "none - the publication gate is unchanged and still at 0. It reduces scoring coverage from ~12.5 observations a card back to ~1 (the first bout) until a running order and exact bout completions exist.",
+      "cost_stated_plainly": "100 observations returns to the order of 100 cards rather than the ~8 Amendment 4 projected. That is the price of a consistently measured benchmark: an hours-early pre-card price and a five-minute-old price cannot both be called the same thing.",
       "motivated_by_observed_results": false,
       "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
     }

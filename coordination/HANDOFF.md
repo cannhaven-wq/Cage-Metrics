@@ -11,6 +11,112 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-16 — CLV-001 v1.0.5: tier 4 withdrawn, governor hole closed, ledgers sealed
+
+**From:** Claude
+**To:** Reed
+**Date:** 2026-09-16
+
+**No migration has been applied.** All three remain proposed and unapplied, as
+instructed.
+
+### 1. Tier 4 is withdrawn from scoring
+
+You were right that it overreached. The argument held — a fight cannot begin
+before its card does — but the conclusion did not follow: such a quote is safely
+pre-fight and **not late**. Scoring it would have made the benchmark mean five
+minutes before the bell on bout one and four hours before it on bout twelve,
+both under one name. That is not a consistently measured benchmark.
+
+`card_scheduled_start` is now **recognised and never scored**. A fight in that
+state reports a new unscored reason, `only_pre_card_price`, kept distinct from
+`no_scheduled_start` on purpose: "we hold a verifiably pre-fight price that is
+not late enough" and "we hold nothing" are different problems with different
+fixes, and collapsing them would hide which one is in front of you.
+
+`LOWER_BOUND_REFERENCE_BASES` is now empty, with a test asserting it, so
+re-admitting a bounded basis is a deliberate act that fails a test rather than a
+quiet widening. The migration's constraint enforces the same thing at the
+storage layer: a scored row cannot carry a lower-bound lead time.
+
+**The cost, plainly:** scoring coverage returns to ~1 observation per card until
+a running order and exact completions exist — on the order of 100 cards for 100
+observations, not the ~8 I projected under Amendment 4. That is the price of a
+consistent benchmark and it is recorded in the protocol, the migration and the
+handoff rather than left implicit.
+
+### 2. Capture is unchanged, and that is the point
+
+Five-minute capture runs through the whole card and **every snapshot is stored**.
+Nothing is discarded. The dense snapshots are exactly what makes a genuinely late
+proxy available the moment a fight's start becomes verifiable — including
+retrospectively, for cards already captured. The stored history is the asset; the
+scoring rule is what stays strict.
+
+### 3. The governor no longer has a hole in it
+
+`planLiveCadence` used to fall through to the coarsest rung when nothing fitted,
+which turned "we cannot afford any cadence" into "spend at 30 minutes anyway" —
+and it did so exactly when the budget was tightest. It now returns **null / STOP**.
+
+`test_when_NO_cadence_fits_the_budget_the_governor_returns_STOP_not_30_minutes`
+is the specific test you asked for. It constructs a balance **above** the hard
+floor — so the earlier guard cannot mask the result — and asserts the fixture is
+genuinely one where even the coarsest rung is unaffordable before checking that
+`planLiveCadence` returns null and `shouldCaptureNow` declines.
+
+One branch still returns the coarsest rung without a fit check: an **unknown**
+budget, on a fresh database or the first run of a month. That is not "the budget
+says 30 does not fit", it is "the budget says nothing". I added
+`the coarsest rung alone can never exhaust the allowance`, which walks months of
+1 to 8 cards entirely at 30 minutes and proves the branch is safe by
+construction rather than by hope.
+
+### 4. The three ledgers are genuinely append-only
+
+`fight_bout_order`, `fight_bout_completions` and `odds_api_usage` each get a
+`BEFORE UPDATE` / `BEFORE DELETE` trigger that raises for **every role,
+service_role included**, plus RLS enabled and `revoke all from anon,
+authenticated` — the same shape as `fight_start_estimates`, `prop_odds`,
+`prop_model_locks` and `pre_fight_snapshots`. RLS alone would not do it: the
+scripts that write these hold service_role, which bypasses policies.
+
+`odds_api_usage` matters most here. A quota reading that can be edited after the
+fact is a budget that can be talked into allowing one more call, and one more
+call past a free tier is paid usage.
+
+### 5. Reschedules are read by `observed_at`, not `max(start_at)`
+
+The `sched` CTE took `max(start_at)`, which breaks precisely when a card is moved
+**earlier**: the superseded later time keeps winning, and a quote taken after the
+new start still looks pre-fight. It is now `DISTINCT ON (event_id) … ORDER BY
+observed_at DESC`, which takes what the provider most recently said and survives
+a reschedule in either direction.
+
+### Still true
+
+Publication untouched and fail-closed — 100 observations, 20 distinct events,
+interval excluding zero, currently 0 and 0. No paid tier, no incremental cost,
+nothing bought or enabled. `v_fight_start_best` untouched.
+
+Tests rerun: **105 CLV Python, 94 repo Python, 47 Node. All green.**
+
+## Next action
+
+**Reed:** review, then apply in order when you're ready —
+`proposed_2026-09-16_fight_odds_capture.sql`,
+`proposed_2026-09-16_event_flow.sql`, and
+`proposed_2026-09-16_clv001_columns.sql` last.
+
+Note the sequencing: `odds_api_usage` is created by the second migration, and
+until it exists the governor reads the budget as unknown and holds at 30 minutes.
+The 5-minute cadence starts when that migration lands.
+
+The open L3 is unchanged: exact bout completions have no free source, and they
+are now what makes bouts 2..N scorable at all.
+
+---
+
 ## 2026-09-16 — CLV-001 v1.0.4: the late pre-fight price proxy, and a credit governor
 
 **From:** Claude
@@ -246,143 +352,6 @@ Tests: 93 CLV Python, 94 repo Python, 36 Node. All green.
 
 I have not applied any migration, called The Odds API, written to Supabase, or
 enabled any paid service.
-
----
-
-## 2026-09-16 — CLV-001 v1.0.2: book list frozen, capture path written and verified, nothing applied
-
-**From:** Claude
-**To:** Reed
-**Date:** 2026-09-16
-
-### First, a correction to what I gave you an hour ago
-
-**The dry run said the scheduled-start mechanism did not exist. It does, and I
-missed it.** I checked `fights.bell_at` (0 of 8,994) and `events` (a DATE, no
-time) and stopped. I did not check for a start-time ledger, and there is one:
-**`fight_start_estimates` + `v_fight_start_best`**, shipped in
-`dur001_migration.sql`, collecting provider commence times since 2026-09-14 and
-already resolving 16 future fights.
-
-The 47 rows still fail — every settled card resolves to the event-date fallback,
-because the ledger started after them. But "the field does not exist" implies
-building something, and "the ledger started collecting two days ago" implies
-waiting one card. The second is true, and it is a materially better position than
-I reported. Correction is at the top of `DRY_RUN_2026-09-16.md`.
-
-The same sweep found `v_odds_books_sportsbooks`, also from DUR-001, which already
-encodes the sportsbook / aggregate / prediction-market split — and it turned out
-to be the right answer to the book-list question below.
-
-### 1. The eligible book list is frozen — Amendment 2 (a)
-
-Ten sportsbooks: FanDuel, DraftKings, BetMGM, Caesars, BetRivers, BetWay, Unibet,
-BetOnline.ag, Bovada, BetUS. v1.0.1 → v1.0.2, chain `c2e3f5aa…` → `06fa587a…`.
-
-**Where the list came from matters more than its contents.** It is the membership
-of `v_odds_books_sportsbooks` — a view written for the **totals** market *before
-CLV-001 existed*, defined as every book whose name does not contain "consensus"
-and is not Polymarket or Kalshi. It was not assembled by looking at which books
-would suit a CLV number; it was already in the repo, under a rule anyone can
-read. That is better provenance than anything I could have composed today.
-
-Two facts make `motivated_by_observed_results: false` checkable rather than
-merely asserted here: no CLV figure has ever been computed, and the dry run
-establishes none is computable on the present record.
-
-**Coverage was deliberately not a criterion.** Caesars, BetWay and Unibet have not
-appeared in the feed since 2026-05-31 and are on the list anyway. Dropping a book
-for thin coverage is a judgement about which prices count, made now, and it is
-exactly what freezing forecloses. A book that never quotes never enters a
-consensus, which costs nothing.
-
-### 2. A second amendment part you did not ask for, and I think you need
-
-**Amendment 2 (b): only `bell_at` and `provider_commence` count as a scheduled
-start. The event-date fallback does not.**
-
-`v_fight_start_best` *always* answers — it falls back to the event date at 18:00
-UTC. Reading `start_at` without reading `start_basis` therefore hands every fight
-in the database, back to 1994, a plausible-looking schedule. That is the same
-defect shape as R-13: a populated placeholder sailing through a presence check,
-and it would have decided staleness by a constant nobody chose for this purpose.
-A fight resting on the fallback is unscored, which is what it is.
-
-### 3. Capture: written, verified offline, unapplied
-
-The moneyline path was throwing away everything the totals path keeps — same
-loop, same payload, same provider metadata. That asymmetry is the whole reason
-CLV-001's capture requirements read as unmet: **the mechanism was already running
-in the next table over.** So the column names are copied from `prop_odds`, not
-invented.
-
-| §4 | requirement | column |
-|---|---|---|
-| 9 | provider market IDs | `source_event_id` |
-| 7 | scheduled bout-start timing | `source_commence_at` (+ `is_live`) |
-| 11 | provider AND retrieval timestamps | `provider_last_update` + `retrieved_at` |
-| 10 | opponent identity at quote time | `opponent_fighter_id` |
-| 8 | market suspension / takedown | `market_status` |
-| 6 | provider and feed version | `feed_version` |
-| 12 | immutable link to the source quote | `raw` |
-
-`research/clv/proposed_2026-09-16_fight_odds_capture.sql` — additive only, every
-column NULLable with no default, so all 110,032 existing rows are untouched and
-NULL honestly means "predates the column". **Unapplied.** `build/fetch-odds.js`
-strips these keys when the columns are absent, so an un-migrated database keeps
-capturing exactly what it captured before and logs that the quotes it is taking
-can never be scored.
-
-**Two-sided near-bell capture.** `odds.yml` now wakes every 15 minutes;
-`shouldCaptureNow()` gates each wake — 30 minutes near a real bell, hourly on a
-card day, once daily otherwise. ~33 credits on a card day, ~286/month, inside the
-500 free tier.
-
-The 30 minutes is forced, not chosen: the frozen 45-minute staleness limit was
-derived from a measured 30-minute interval plus grace, and **hourly capture
-cannot satisfy it** — a bell at :59 leaves the freshest quote 59 minutes old and
-the row goes unscored on a stale price. At 30 minutes the worst case is 29.
-
-### How "verified" was interpreted, since you said verify before applying
-
-The only thing checkable before the migration exists is the code that will fill
-it. So I pulled the row builders out of the main loop, made them pure, and wrote
-`build/test-fetch-odds.js` — **25 checks, no API key, no Supabase key, no
-network, no credit, nothing written.** It replays the saved Odds API fixture and
-asserts every §4 field lands on every row; that sides map by fighter name and not
-the provider's home/away order; that a Draw outcome is dropped rather than
-guessed onto a corner; that `is_live` is *null* and not *false* when there is no
-commence time; that stripping leaves the legacy shape untouched; and — walking
-every possible bell minute — that the freshest pre-bell quote is always inside 45
-minutes.
-
-**What that does not verify**, and must not be read as verifying: that the
-provider keeps sending these fields, that the columns accept them, or that a real
-card yields three two-sided books inside 45 minutes of a bell. Those need the
-migration applied and one card captured.
-
-### Publication is untouched
-
-Amendment 2 removes a blocker from the **write** path. It does not touch the
-**publish** path, and there is now a test that says so by name:
-`test_freezing_the_list_did_not_open_publication`. The gate is still 0 of 100
-observations and 0 of 20 events, still fail-closed, still blocked on
-`sample_floor_met` and `interval_excludes_zero`.
-
-Tests: 86 CLV Python, 94 repo Python, 25 Node. All green.
-
-## Next action
-
-**Reed:** apply `research/clv/proposed_2026-09-16_fight_odds_capture.sql` — that
-one only. Everything downstream waits on real captured rows, and every card that
-passes before it lands is permanently unscorable.
-
-Then the sequence runs itself: the next card captures under the new path →
-`--clv001 --report` shows real per-row reasons instead of one blanket one → if
-three named books quote both corners inside the window, apply
-`proposed_2026-09-16_clv001_columns.sql` and turn on `--write`.
-
-I have not applied either migration, called The Odds API, or written to Supabase.
 
 ---
 

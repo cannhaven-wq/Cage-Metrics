@@ -33,7 +33,8 @@ from devig import median, power_devig                                # noqa: E40
 from scoring import (                                                # noqa: E402
     BENCHMARK_NAME, BENCHMARK_NAME_LONG, CLOSE_REFERENCE_BASES,
     EXACT_REFERENCE_BASES, INADMISSIBLE_START_BASES, LIVE_CAPTURE_ERA_START,
-    LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, PROTOCOL_TAG, PROTOCOL_VERSION,
+    LOWER_BOUND_REFERENCE_BASES, MIN_BOOKS, NON_SCORING_REFERENCE_BASES,
+    PROTOCOL_TAG, PROTOCOL_VERSION,
     STALENESS_LIMIT_MINUTES, SUPERSEDED_START_BASES, UNSCORED_REASONS, Unscored,
     admissible_reference, canonical_sha256, closing_pairs, consensus,
     credible_capture_instant, is_eligible_book, lead_time_minutes,
@@ -413,6 +414,8 @@ class TestClosedVocabulary(unittest.TestCase):
             "insufficient_books": lambda: score(quotes=three_books()[:4]),
             "forecast_not_before_close":
                 lambda: score(published_at=START + dt.timedelta(hours=1)),
+            "only_pre_card_price":
+                lambda: score(ref=None, basis="card_scheduled_start"),
             # In band on both sides, but summing BELOW one: there is no vig to
             # remove, no root in the bracket, and it is not a coherent two-way
             # market. The band guard does not catch this, which is why the
@@ -517,15 +520,16 @@ class TestCloseReference(unittest.TestCase):
         self.assertFalse(got["scored"])
         self.assertEqual(got["reason"], "no_scheduled_start")
 
-    def test_the_admissible_set_is_the_frozen_four(self):
+    def test_the_admissible_set_is_the_frozen_three(self):
         self.assertEqual(CLOSE_REFERENCE_BASES,
                          {"bell_at", "previous_bout_completion",
-                          "scheduled_first_bout", "card_scheduled_start"})
+                          "scheduled_first_bout"})
 
-    def test_every_basis_is_either_exact_or_a_lower_bound(self):
-        self.assertEqual(EXACT_REFERENCE_BASES | LOWER_BOUND_REFERENCE_BASES,
-                         CLOSE_REFERENCE_BASES)
-        self.assertTrue(EXACT_REFERENCE_BASES.isdisjoint(LOWER_BOUND_REFERENCE_BASES))
+    def test_every_scoring_basis_names_the_start_exactly(self):
+        self.assertEqual(EXACT_REFERENCE_BASES, CLOSE_REFERENCE_BASES)
+        self.assertEqual(LOWER_BOUND_REFERENCE_BASES, frozenset(),
+                         "no scored row may rest on a bounded start; "
+                         "re-admitting one must be deliberate and fail here")
 
 
 class TestLatePreFightProxy(unittest.TestCase):
@@ -536,19 +540,34 @@ class TestLatePreFightProxy(unittest.TestCase):
     card, running order or not. It bounds; it does not guess. What it gives up is
     lead time, not correctness."""
 
-    def test_a_later_bout_scores_off_the_card_start_with_no_order_known(self):
-        got = score(basis="card_scheduled_start")
-        self.assertTrue(got["scored"], got["reason"])
-        self.assertEqual(got["close_basis"], "card_scheduled_start")
+    def test_a_pre_card_price_is_recognised_and_NOT_scored(self):
+        """Amendment 4.1. The quote is safely pre-fight — a fight cannot begin
+        before its card does — and on a later bout it is hours early. Safely
+        pre-fight is not the same as LATE, and calling both by one name would
+        make the benchmark mean different things on different fights of the same
+        card."""
+        got = score(ref=None, basis="card_scheduled_start")
+        self.assertFalse(got["scored"])
+        self.assertEqual(got["reason"], "only_pre_card_price")
 
-    def test_its_lead_time_is_reported_as_a_lower_bound(self):
-        got = score(basis="card_scheduled_start")
-        self.assertIs(got["lead_time_is_lower_bound"], True,
-                      "on the twelfth bout the real gap to the bell may be hours "
-                      "larger, and the row has to say so")
+    def test_a_pre_card_price_is_distinguished_from_having_no_price(self):
+        """Two different situations, two different reasons. One is 'we hold a
+        verifiably pre-fight price that is not late enough'; the other is 'we
+        hold nothing'. Collapsing them would hide which problem to fix."""
+        self.assertEqual(score(ref=None, basis="card_scheduled_start")["reason"],
+                         "only_pre_card_price")
+        self.assertEqual(score(ref=None, basis=None)["reason"],
+                         "no_scheduled_start")
 
-    def test_an_exact_basis_reports_an_exact_lead_time(self):
-        for basis in ("bell_at", "previous_bout_completion"):
+    def test_the_withdrawn_basis_is_recognised_but_never_admissible(self):
+        self.assertIn("card_scheduled_start", NON_SCORING_REFERENCE_BASES)
+        self.assertNotIn("card_scheduled_start", CLOSE_REFERENCE_BASES)
+        self.assertIsNone(admissible_reference(START, "card_scheduled_start"))
+        self.assertIsNone(
+            admissible_reference(START, "card_scheduled_start", is_first_bout=False))
+
+    def test_every_scored_row_has_an_exact_lead_time(self):
+        for basis in sorted(CLOSE_REFERENCE_BASES):
             with self.subTest(basis=basis):
                 got = score(basis=basis)
                 self.assertTrue(got["scored"], got["reason"])
@@ -585,18 +604,12 @@ class TestLatePreFightProxy(unittest.TestCase):
         self.assertNotEqual(BENCHMARK_NAME.lower(), "closing line")
 
     def test_the_stored_artifact_names_the_benchmark_and_the_basis(self):
-        got = score(basis="card_scheduled_start")
+        got = score(basis="previous_bout_completion")
         self.assertEqual(got["consensus"]["benchmark"], BENCHMARK_NAME)
-        self.assertEqual(got["consensus"]["close_basis"], "card_scheduled_start")
-
-    def test_a_bounded_reference_still_excludes_in_play_quotes(self):
-        """Tier 4 relaxes how the cutoff is ESTABLISHED, never the rule that a
-        quote at or after it is excluded."""
-        got = score(quotes=three_books(at=START), basis="card_scheduled_start")
-        self.assertFalse(got["scored"])
+        self.assertEqual(got["consensus"]["close_basis"], "previous_bout_completion")
 
     def test_an_unscored_row_carries_no_lead_time(self):
-        got = score(books=None, basis="card_scheduled_start")
+        got = score(books=None)
         self.assertFalse(got["scored"])
         self.assertIsNone(got["lead_time_minutes"])
         self.assertIsNone(got["proxy_quoted_at"])

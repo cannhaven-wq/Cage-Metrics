@@ -173,24 +173,24 @@ alter table public.model_edges
         and clv_proxy_quoted_at is not null)
   ) not valid;
 
--- The close basis vocabulary, matching CLOSE_REFERENCE_BASES in
--- cfl_engine/clv/scoring.py.
+-- The close basis vocabulary for a SCORED row, matching CLOSE_REFERENCE_BASES
+-- in cfl_engine/clv/scoring.py. 'card_scheduled_start' is deliberately absent:
+-- Amendment 4.1 recognises it as a state a fight can be in and refuses it as a
+-- basis to score on, so it can never reach a scored row.
 alter table public.model_edges
   add constraint model_edges_clv_close_basis_known
   check (clv_close_basis is null or clv_close_basis in (
     'bell_at',
     'previous_bout_completion',
-    'scheduled_first_bout',
-    'card_scheduled_start'
+    'scheduled_first_bout'
   )) not valid;
 
--- Only tier 4 produces a lower bound. If these two ever disagree, one of them is
--- lying about how late the price was.
+-- Every basis that can score NAMES the fight's start, so a scored row's lead
+-- time is exact. A TRUE here would mean a bounded start slipped into a scored
+-- row — the thing Amendment 4.1 withdrew.
 alter table public.model_edges
-  add constraint model_edges_clv_lower_bound_matches_basis
-  check (clv_close_basis is null or clv_lead_time_is_lower_bound is null
-         or (clv_lead_time_is_lower_bound
-             = (clv_close_basis = 'card_scheduled_start'))) not valid;
+  add constraint model_edges_clv_lead_time_is_exact_when_scored
+  check (clv_return is null or clv_lead_time_is_lower_bound is false) not valid;
 
 -- The proxy quote is strictly before the fight; a negative lead time would mean
 -- an in-play price scored as a close.
@@ -229,7 +229,13 @@ alter table public.model_edges
     'non_market_price',             -- R-03 band violation on every book
     'devig_failed',                 -- no root in the frozen bracket
     'insufficient_books',           -- fewer than 3 eligible two-sided books
-    'forecast_not_before_close'     -- R-07; no-lookahead violated
+    'forecast_not_before_close',    -- R-07; no-lookahead violated
+    -- Amendment 4.1: we hold a verifiably pre-fight price, but the only cutoff
+    -- we can verify is the card's scheduled start, which on a later bout is
+    -- hours early. Safely pre-fight is not LATE. Distinct from
+    -- no_scheduled_start, which means we hold nothing at all — two different
+    -- problems with two different fixes.
+    'only_pre_card_price'
   )) not valid;
 
 -- This list and UNSCORED_REASONS in cfl_engine/clv/scoring.py must stay

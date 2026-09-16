@@ -10,12 +10,12 @@ number is measured — it did not create a number worth showing.
 | field | value |
 |---|---|
 | protocol id | `CLV-001` |
-| version | `1.0.4` |
+| version | `1.0.5` |
 | revised | 2026-09-16, against [ChatGPT's review](../../coordination/reviews/2026-09-16-chatgpt-clv-review.md) |
 | created | 2026-09-16 |
 | author | Claude, for ChatGPT methodological review |
 | next action | reconcile `settle_clv.py` with the frozen rules. **No publication** |
-| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4 same day) |
+| frozen at | **2026-09-16T10:30:00Z** (v1.0.0; Amendments 1–4.1 same day) |
 | frozen by | **Reed Cannon** |
 | machine mirror | [`protocol.json`](protocol.json) |
 
@@ -336,7 +336,63 @@ published number means.
 > fights, so no row in the database currently supports a literal closing
 > line. The proxy naming is forced by the data, not merely prudent.
 
+> ## AMENDMENT 4.1, v1.0.5, 2026-09-16 — a pre-card price is not a late one
+>
+> **Approved by Reed Cannon (L3).** Withdraws tier 4 from scoring. Everything
+> else in Amendment 4 stands — the naming, the lead-time reporting, the
+> five-minute capture and the credit ceiling.
+>
+> **Amendment 4 overreached.** Its argument was sound: a fight cannot begin
+> before its own card begins, so a quote strictly before the card's scheduled
+> start is verifiably pre-fight for every fight on the card. The conclusion did
+> not follow. Such a quote is safely pre-fight and it is **not late** — on the
+> twelfth bout it sits hours before the bell.
+>
+> Scoring it would have made the benchmark mean **different things on different
+> fights of the same card**: five minutes before the bell for bout one, four
+> hours before it for bout twelve, both labelled the same. A benchmark that moves
+> like that is not consistently measured, and the name would have been doing work
+> the number could not support.
+>
+> ### What changes
+>
+> | | |
+> |---|---|
+> | scoring bases | **three**: actual bell, previous bout's exact completion, and the card's scheduled start **for the first bout only** |
+> | `card_scheduled_start` | **recognised, never scored**. A fight in that state reports `only_pre_card_price` |
+> | every scored row's lead time | **exact**. `LOWER_BOUND_REFERENCE_BASES` is empty and a test asserts it |
+>
+> `only_pre_card_price` is a distinct unscored reason on purpose. "We hold a
+> verifiably pre-fight price that is not late enough" and "we hold nothing" are
+> different problems with different fixes, and collapsing them would hide which
+> one is in front of you.
+>
+> ### What this costs, stated plainly
+>
+> Scoring coverage returns to roughly **one observation per card** — the first
+> bout — until a running order and exact bout completions exist. At that rate 100
+> observations is on the order of 100 cards, not the ~8 Amendment 4 projected.
+>
+> That is the price of a consistently measured benchmark, and it is the right
+> price. An hours-early pre-card price and a five-minute-old price cannot both be
+> called the same thing.
+>
+> ### What is NOT given up
+>
+> **Capture coverage is unchanged.** Five-minute snapshots run through the whole
+> card and **every one is stored**. Nothing is discarded. The dense snapshots are
+> precisely what makes a genuinely late proxy available the moment a fight's
+> start becomes verifiable — including retrospectively, for cards already
+> captured. The stored history is the asset; the scoring rule is what stays
+> strict.
+>
+> ---
+>
 > ## AMENDMENT 4, v1.0.4, 2026-09-16 — the late pre-fight price proxy
+>
+> *Tier 4 below is **withdrawn from scoring** by Amendment 4.1 above. The naming,
+> the lead-time reporting, the five-minute capture and the credit ceiling all
+> stand.*
 >
 > **Approved by Reed Cannon (L3).** Extends Amendment 3 by adding a fourth tier.
 > Nothing in Amendment 3 is withdrawn.

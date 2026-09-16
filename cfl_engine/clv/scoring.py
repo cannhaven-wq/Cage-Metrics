@@ -5,7 +5,7 @@ Pure functions over plain dicts. No database, no network, no clock of its own �
 rules live here and are unit-tested here (`test_scoring.py`).
 
 Governed by `research/clv/CLV_MEASUREMENT_PROTOCOL.md` (CLV-001, frozen
-2026-09-16, v1.0.1). Every constant below traces to a resolved question or a
+2026-09-16). Every constant below traces to a resolved question or a
 decided rule, named in the comment beside it. Nothing here is tunable.
 
 The order of operations is the part that is easy to get wrong, so it is fixed:
@@ -42,21 +42,21 @@ except ImportError:                   # run directly, with this folder on sys.pa
     )
 
 PROTOCOL_ID = "CLV-001"
-PROTOCOL_VERSION = "1.0.4"
+PROTOCOL_VERSION = "1.0.5"
 PROTOCOL_TAG = f"{PROTOCOL_ID}@{PROTOCOL_VERSION}"
 
 # ---------------------------------------------------------------------------
-# What the benchmark is called — Amendment 4
+# What the benchmark is called — Amendment 4, narrowed by 4.1
 # ---------------------------------------------------------------------------
 # It is NOT the closing line and may never be described as one. It is the
-# **late pre-fight price proxy**: the latest quote that can be VERIFIED to have
-# been taken before the fight started.
+# **late pre-fight price proxy**: the latest quote that can be verified to have
+# been taken before the fight started AND is genuinely late.
 #
-# Under a real bell or the previous bout's completion, "before the fight" is
-# known exactly. Under the card's scheduled start it is BOUNDED — a fight cannot
-# begin before its own card begins — so the quote is still verifiably pre-fight
-# while the lead time to the actual bell is only a lower bound. Both are honest;
-# they differ in how late the price is, not in whether it was pre-fight.
+# Both halves matter. Verifiably pre-fight is necessary and not sufficient: a
+# quote taken before the card began is safely pre-fight for every bout on it, and
+# on the twelfth bout it is hours early. Amendment 4.1 refuses to score that,
+# because a benchmark that means five minutes before the bell on one fight and
+# four hours before it on the next is not consistently measured.
 BENCHMARK_NAME = "late pre-fight price proxy"
 BENCHMARK_NAME_LONG = "scheduled/late closing-price proxy"
 
@@ -73,10 +73,10 @@ BENCHMARK_NAME_LONG = "scheduled/late closing-price proxy"
 # THE TRIGGER IS NOT THE CLOSE. This is the distinction the amendment turns on
 # and it is easy to collapse by accident:
 #
-#   * the previous bout ending is a CAPTURE trigger — it tells the odds job to
-#     start taking quotes every 30 minutes for the next fight. It affects how
-#     much data exists and nothing else. Capture heuristics are not frozen,
-#     because they cannot change what a number means.
+#   * the previous bout ending is a CAPTURE trigger — it helps identify event
+#     flow and sharpens which fight the capture is for. It affects how much data
+#     exists and nothing else. Capture heuristics are not frozen, because they
+#     cannot change what a number means.
 #   * the CLOSE is the last valid pre-live quote for the upcoming fight, and any
 #     quote at or after that fight actually started is excluded. That is a
 #     frozen rule and it is what `closing_pairs` enforces.
@@ -87,20 +87,40 @@ CLOSE_REFERENCE_BASES = frozenset({
     "bell_at",                   # an actual confirmed bell. Best, and audit-grade.
     "previous_bout_completion",  # the bout before this one ended. Later bouts.
     "scheduled_first_bout",      # the card's scheduled start — FIRST BOUT ONLY.
-    "card_scheduled_start",      # the card's start as a LOWER BOUND. Amendment 4.
 })
 
-# Bases that name the fight's start. Lead time computed against these is exact.
-EXACT_REFERENCE_BASES = frozenset({
-    "bell_at", "previous_bout_completion", "scheduled_first_bout",
-})
+# Every scoring basis NAMES the fight's start, so lead time against it is exact.
+EXACT_REFERENCE_BASES = frozenset(CLOSE_REFERENCE_BASES)
 
-# Bases that only BOUND the fight's start. The quote is still verifiably
-# pre-fight — a fight cannot begin before its card does — but the lead time to
-# the actual bell is a lower bound, and on a late-card fight the real gap may be
-# hours larger. Amendment 4: this is what stops exact start detection being a
-# blocker. It bounds; it does not guess.
-LOWER_BOUND_REFERENCE_BASES = frozenset({"card_scheduled_start"})
+# ---------------------------------------------------------------------------
+# Withdrawn by Amendment 4.1 — a pre-card price is not a late pre-fight proxy
+# ---------------------------------------------------------------------------
+# Amendment 4 admitted the card's scheduled start as a LOWER BOUND for every
+# fight on the card, on the argument that a fight cannot begin before its card
+# does. That argument is sound and the conclusion still overreached.
+#
+# The quote is safely pre-fight. It is not *late*. On the twelfth bout it sits
+# hours before the bell, and calling an hours-early pre-card price a "late
+# pre-fight closing-price proxy" would make the benchmark mean different things
+# on different fights of the same card — which is precisely what a consistently
+# measured benchmark cannot do. The name would be doing work the number could
+# not support.
+#
+# So the basis is RECOGNISED and never SCORED. Recognised, because a fight that
+# has only a pre-card price is a different situation from one with no price at
+# all, and the report should say which. Never scored, because consistency of
+# measurement outranks coverage.
+#
+# The snapshots are kept. Five-minute capture continues through the whole card
+# precisely so that when a fight's start can be verified, a genuinely late
+# snapshot is already on file to choose — rather than a pre-card one being the
+# only thing available.
+NON_SCORING_REFERENCE_BASES = frozenset({"card_scheduled_start"})
+
+# Nothing currently scored rests on a bounded start. Kept as a concept, and
+# asserted empty, so re-admitting one is a deliberate act with a failing test
+# rather than a quiet widening.
+LOWER_BOUND_REFERENCE_BASES = frozenset()
 
 # `provider_commence` and `bell_at` were the admissible pair under Amendment 2
 # (b). Amendment 3 keeps `bell_at`, narrows `provider_commence` to the first bout
@@ -170,6 +190,7 @@ UNSCORED_REASONS = (
     "devig_failed",                  # no root in the frozen bracket
     "insufficient_books",            # fewer than MIN_BOOKS survived
     "forecast_not_before_close",     # R-07: no-lookahead violated
+    "only_pre_card_price",           # Amendment 4.1: safely pre-fight, not late
 )
 
 
@@ -458,6 +479,13 @@ def score_row(edge: dict, quotes: list[dict], fight: dict,
         return unscored("one_sided_close", "the fight has no recorded opponent")
 
     if reference_instant is None:
+        if reference_basis in NON_SCORING_REFERENCE_BASES:
+            return unscored(
+                "only_pre_card_price",
+                "the only verifiable cutoff for this fight is the card's "
+                "scheduled start, which on a later bout is hours before the "
+                "bell. Safely pre-fight, but not a LATE pre-fight price, so it "
+                "is not scored (Amendment 4.1). The snapshots are kept.")
         return unscored("no_scheduled_start",
                         "no admissible close reference for this fight: needs an "
                         "actual bell, the previous bout's completion, or — for "

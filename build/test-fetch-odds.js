@@ -30,7 +30,7 @@ const {
   nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt,
   planLiveCadence, minutesRemainingInCard, wantTotals,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
-  MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, LIVE_CADENCE_LADDER,
+  MONTHLY_CREDIT_CAP, CREDIT_HARD_FLOOR, CREDIT_RESERVE, LIVE_CADENCE_LADDER,
   WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
   normalizeName,
 } = require('./fetch-odds');
@@ -480,13 +480,27 @@ test('a tight budget degrades down the ladder rather than stopping', () => {
   assert.ok(LIVE_CADENCE_LADDER.includes(squeezed));
 });
 
-test('degrading never coarsens past 30 minutes, which still clears the limit', () => {
-  const worst = planLiveCadence({ creditsRemaining: CREDIT_HARD_FLOOR + 1,
-                                  cardsRemaining: 20,
-                                  minutesRemainingInCard: 10000 });
-  assert.strictEqual(worst, 30,
-    'the coarsest rung is 30 minutes — inside the frozen 45-minute staleness ' +
-    'limit, so the governor costs lead time and never correctness');
+test('every rung on the ladder clears the frozen staleness limit', () => {
+  // The governor is allowed to trade lead time for budget, and never
+  // correctness. A rung coarser than the 45-minute staleness limit would trade
+  // correctness — an observation captured on that beat could be unscorable.
+  for (const rung of LIVE_CADENCE_LADDER) {
+    assert.ok(rung < 45,
+      `a ${rung}-minute rung can leave the freshest quote outside the frozen ` +
+      `45-minute limit`);
+  }
+  assert.strictEqual(LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1], 30);
+});
+
+test('a squeezed budget picks a coarser rung, and only one that fits', () => {
+  const budget = { creditsRemaining: 120, cardsRemaining: 1,
+                   minutesRemainingInCard: 600 };
+  const picked = planLiveCadence(budget);
+  assert.ok(LIVE_CADENCE_LADDER.includes(picked), 'must be a real rung or null');
+  const cost = Math.ceil(600 / picked) + 15;
+  assert.ok(cost <= budget.creditsRemaining - CREDIT_RESERVE || picked === null,
+    `picked a ${picked}-minute rung costing ${cost} against a budget that ` +
+    `cannot fund it`);
 });
 
 test('at the hard floor capture stops rather than overspending', () => {
@@ -496,7 +510,50 @@ test('at the hard floor capture stops rather than overspending', () => {
   const decision = shouldCaptureNow(CARD, BELL, true,
     { creditsRemaining: 0, cardsRemaining: 1 });
   assert.strictEqual(decision.yes, false);
-  assert.match(decision.why, /credit floor/);
+  assert.match(decision.why, /no cadence fits/);
+});
+
+test('when NO cadence fits the budget the governor returns STOP, not 30 minutes', () => {
+  // The specific hole this closes. The ladder used to fall through to its
+  // coarsest rung, which turned "we cannot afford any cadence" into "spend at 30
+  // minutes anyway" — and it did so exactly when the budget was tightest. A
+  // ceiling that yields under pressure is not a ceiling.
+  //
+  // Above the hard floor, so the earlier guard does not catch it; and a balance
+  // that cannot even fund the coarsest rung for the card still to run.
+  const budget = {
+    creditsRemaining: CREDIT_HARD_FLOOR + 5,   // above the floor
+    cardsRemaining: 1,
+    minutesRemainingInCard: 600,
+  };
+  const coarsest = LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
+  const coarsestCost = Math.ceil(600 / coarsest);
+  assert.ok(coarsestCost > budget.creditsRemaining,
+    'the fixture must be a case where even the coarsest rung is unaffordable');
+
+  assert.strictEqual(planLiveCadence(budget), null,
+    `returned a cadence when nothing fits — the coarsest rung costs ` +
+    `${coarsestCost} and only ${budget.creditsRemaining} credits remain`);
+
+  const decision = shouldCaptureNow(CARD, BELL, true, budget);
+  assert.strictEqual(decision.yes, false);
+  assert.strictEqual(decision.cadence, null);
+  assert.match(decision.why, /no cadence fits/);
+});
+
+test('the coarsest rung alone can never exhaust the allowance', () => {
+  // This is what makes "unknown budget -> coarsest rung" defensible rather than
+  // hopeful: a whole month spent at the coarsest cadence has to fit, or that
+  // branch is a hole of its own.
+  for (let cards = 1; cards <= 8; cards++) {
+    let remaining = MONTHLY_CREDIT_CAP;
+    for (let card = 0; card < cards; card++) {
+      remaining -= creditsForCardDay({ creditsRemaining: undefined });
+    }
+    assert.ok(remaining - (30 - cards) >= 0,
+      `${cards} cards at the coarsest rung leaves ${remaining} for ` +
+      `${30 - cards} baseline days — the unknown-budget branch would overspend`);
+  }
 });
 
 test('an unknown budget is treated as tight, never as unlimited', () => {

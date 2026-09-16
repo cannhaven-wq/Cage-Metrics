@@ -5,14 +5,15 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-16
 
-**Live baton:** CLV-001 is **FROZEN at v1.0.4** (frozen 2026-09-16T10:30:00Z;
-Amendments 1–4 same day). Amendment 4 makes the benchmark the **late pre-fight
-price proxy** — never "the closing line" — and adds a fourth tier: the card's
-scheduled start as a **lower bound** on any fight's start. A fight cannot begin
-before its card does, so exact start detection stops being a blocker. Capture
-goes to **5 minutes through a live card under a hard credit ceiling**.
-**Three migrations written and none applied. Publication is still shut** — 0 of
-100 observations, 0 of 20 events. Waiting on Reed to apply the first migration.
+**Live baton:** CLV-001 is **FROZEN at v1.0.5** (frozen 2026-09-16T10:30:00Z;
+Amendments 1–4.1 same day). The benchmark is the **late pre-fight price proxy**,
+never "the closing line". **Amendment 4.1 withdrew tier 4**: a quote taken before
+the card began is safely pre-fight but not *late*, and scoring it would make the
+benchmark mean five minutes before the bell on bout one and four hours before it
+on bout twelve. Capture stays at **5 minutes through a live card under a hard
+credit ceiling** and every snapshot is stored. **Three migrations written and
+none applied. Publication is still shut** — 0 of 100 observations, 0 of 20
+events.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -59,7 +60,7 @@ experiments run untouched until their evaluation points.
 ### CLV — the active line
 
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md)
-is **frozen at v1.0.4**. It is a measurement protocol, not a model experiment —
+is **frozen at v1.0.5**. It is a measurement protocol, not a model experiment —
 no hypothesis, no challenger, no verdict — so it lives outside the DUR register.
 
 Three gates, deliberately separate:
@@ -93,7 +94,9 @@ One card of waiting, not a build.
 | the event-flow close reference, per fight | **frozen**, Amendment 3 |
 | trigger ≠ close, stated so it cannot be collapsed | **frozen**, Amendment 3 (b) |
 | the late pre-fight price proxy + lead-time reporting | **frozen**, Amendment 4 |
+| a pre-card price is recognised, never scored | **frozen**, Amendment 4.1 |
 | 5-minute live capture under a hard credit governor | **written**, verified offline |
+| the three ledgers are append-only, trigger-enforced | **written, UNAPPLIED** |
 | `fight_odds` capture columns, mirroring `prop_odds` | **written, UNAPPLIED** |
 | event-flow cadence in `build/fetch-odds.js` | **written**, verified offline, degrades if un-migrated |
 | `fight_bout_order` + `fight_bout_completions` + `v_clv_close_reference` | **written, UNAPPLIED** |
@@ -103,10 +106,15 @@ One card of waiting, not a build.
 nobody else — applying it to all thirteen would have marked every quote after
 the first bell as in-play for twelve of them.
 
-**Amendment 4 in one line:** that same published start is still a valid *lower
-bound* for every fight on the card, so the last quote before it is verifiably
-pre-fight for all of them — which takes scorable observations from ~1 a card to
-~12.5, and the 100/20 floor from ~100 cards to ~20.
+**Amendment 4 in one line:** the benchmark is a late pre-fight price *proxy*,
+captured every 5 minutes through a live card under a hard credit ceiling, with
+its lead time recorded on every row.
+
+**Amendment 4.1 in one line:** and "pre-card" does not count as "late" — a quote
+before the card began is safely pre-fight and hours early on a late bout, so it
+is recognised (`only_pre_card_price`) and never scored. Scoring coverage stays at
+~1 observation per card until a running order and exact bout completions exist;
+**capture coverage is unaffected and every snapshot is kept.**
 
 **What the proxy may be called:** the *late pre-fight price proxy* (long form,
 *scheduled/late closing-price proxy*). **Never "the closing line."** Every row

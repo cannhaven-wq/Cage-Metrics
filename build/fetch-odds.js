@@ -196,6 +196,12 @@ function planLiveCadence({ creditsRemaining, cardsRemaining, minutesRemainingInC
     // Unknown budget is treated as tight, not as unlimited. The usage ledger is
     // unreadable on a fresh database and on the first run of the month, and
     // guessing generously there is how a free tier turns into a bill.
+    //
+    // The coarsest rung is safe here without a fit check, and provably so: a
+    // month spent entirely at 30 minutes costs ~35 credits a card, so even eight
+    // cards plus daily baselines sit far inside the allowance. The test
+    // 'the coarsest rung alone can never exhaust the allowance' pins that, which
+    // is what makes this branch defensible rather than hopeful.
     return LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
   }
   if (creditsRemaining <= CREDIT_HARD_FLOOR) return null;
@@ -209,7 +215,16 @@ function planLiveCadence({ creditsRemaining, cardsRemaining, minutesRemainingInC
       + CARD_DAY_HOURLY_TAIL;
     if (calls <= perCard) return minutes;
   }
-  return LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
+  // NOTHING on the ladder fits. Stop.
+  //
+  // This used to fall through to the coarsest rung, which quietly converted "we
+  // cannot afford any cadence" into "spend at 30 minutes anyway" — a ceiling
+  // with a hole in it, and the hole opened exactly when the budget was tightest.
+  // A ceiling that yields under pressure is not a ceiling.
+  //
+  // Stopping loses the rest of this card's capture. Overspending would mean paid
+  // usage, which is an L3 decision and not one a scheduled job gets to make.
+  return null;
 }
 
 // How long after a card's scheduled start it can still be running. Prelims to
@@ -324,7 +339,9 @@ function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
     });
     if (cadence === null) {
       return { yes: false, cadence: null,
-               why: `credit floor reached (${budget.creditsRemaining} left) — ` +
+               why: `no cadence fits the remaining budget ` +
+                    `(${budget.creditsRemaining ?? 'unknown'} credit(s) left, ` +
+                    `${budget.cardsRemaining ?? 1} card(s) still to cover) — ` +
                     `capture stopped rather than spending past the free allowance` };
     }
     if (min % cadence < WAKE_INTERVAL_MIN) {
