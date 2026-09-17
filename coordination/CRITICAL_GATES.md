@@ -131,7 +131,7 @@ exist; the checks are what actually holds.
 
 ### The duration model is read-only
 
-DUR-001 is collecting and DUR-002 is armed. Until each reaches its predefined
+DUR-001 and DUR-002 are both collecting. Until each reaches its predefined
 evaluation point, the duration model is not touched by anyone — no calibration
 experiments, no threshold exploration, no tuning. Routine operation (locks
 written, capture monitored, the alert running) is the experiment running, not

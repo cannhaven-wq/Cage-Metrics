@@ -26,7 +26,8 @@ The one blocker below is **retired by owner decision** (D-004, Michael Cannon):
 > Retire `cage-metrics-odds-scrapper/backfill_odds.py`. Do not weaken the
 > `fight_odds` immutability rule to preserve it.
 
-`cage-metrics-odds-scrapper@d8e1908`, branch `retire/backfill-odds-2026-09-16`.
+`cage-metrics-odds-scrapper@af54180` on `main` — **merged 2026-09-17** via PR #1,
+from branch `retire/backfill-odds-2026-09-16` (`d8e1908`).
 The script prints a retirement notice and exits non-zero; it contains no write
 verb of any kind. No `fight_odds` row was deleted or rewritten, and the
 implementation stays in git history. Verified before the change: no workflow,
@@ -176,3 +177,25 @@ is not in git, so this inventory cannot tell whether that service still exists.
 If it does, it will now exit non-zero with a retirement notice instead of
 deleting anything — the failure is loud and harmless — and the service should be
 removed. Flagged for the owner; the README carries the same note.
+
+### How dormant that service is, measured 2026-09-17
+
+Read-only, from `fight_odds` itself. The backfill is identifiable by the epoch
+`captured_at` sentinel it stamped on every row it wrote.
+
+| | |
+|---|---|
+| epoch-stamped rows | **30,724** — matches the figure R-13 names, so this is the right writer |
+| highest `id` among them | 384,002 |
+| `captured_at` of the rows written just after | **2026-05-26T23:02:20Z** |
+| rows inserted since | ~59,900 |
+| newest capture overall | 2026-09-17T09:08:54Z — the live scraper is healthy |
+
+**The backfill has not written since 2026-05-26**, which is consistent with what
+it always was: a one-shot historical pass, not a cron. So the risk the unknown
+Railway service represents is bounded — it is dormant, and as of `af54180` it
+cannot write even if invoked.
+
+This is evidence, not confirmation. It shows the service has not *run*; it
+cannot show the service does not *exist*. Only the Railway dashboard can, and
+that check remains the owner's. **The immutability migration stays gated on it.**

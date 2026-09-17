@@ -11,6 +11,84 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-17 — consolidation: three merges landed, CLV-001 rebased and held
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-17
+
+**No migration applied. No production write. No CLV published. No paid API call.**
+No `fight_odds` row deleted or rewritten, here or anywhere. Every database call
+made in this session was read-only.
+
+### What landed
+
+Consolidation in a fixed order, each step verified on the remote before the next
+began — not merely committed locally.
+
+| # | what | result |
+|---|---|---|
+| 1 | PR #14 — DUR-002's first collection | merged, `1a5cf890` |
+| 2 | PR #15 — the `coordination/` layer | merged, `934721ba` |
+| 3 | odds scrapper retirement | merged, `cage-metrics-odds-scrapper@af54180` (PR #1) |
+| 4 | PR #16 — CLV-001 v1.0.10 | rebased onto the new `main`, **held unmerged** |
+
+**Step 1** put DUR-002's 48 prospective observations on `main`. Verified before
+merge: `lock_prop0002.py`'s sha256 on `main` is byte-identical to the value
+recorded in `registry.json` and the register.
+
+**Step 2** put the coordination layer on `main` and wired it into `CLAUDE.md`.
+
+**Step 3** is the one that was only ever a branch. `backfill_odds.py` is now
+retired on `main`: it imports `sys` alone, holds no write verb, and exits
+non-zero. Confirmed before merge that no workflow and no `nixpacks.toml` start
+command invokes it.
+
+**Step 4** rebased 19 commits onto the new `main` with **zero conflicts**, and
+confirmed the rebase did not revert DUR-002 to `armed` — both branches edit
+`research/registry.json` and only that check rules it out.
+
+### What I corrected in the rebase
+
+The coordination records were written before steps 1–3 landed and had gone stale:
+
+- `STATE.md` — DUR-002 read "**armed**, zero observations". Now collecting, 48
+  rows on 12 fights. **This was the load-bearing one**: `STATE.md` is the file
+  `CLAUDE.md` tells every session to read first, and nothing cross-checks it
+  against the research register, so it would have gone on being wrong silently.
+- `CRITICAL_GATES.md` — same stale assertion in the read-only clause.
+- `TASK_QUEUE.md` — T-001 **dropped**. It asked to automate a one-shot
+  transition that has now happened; automation for it has no remaining value.
+  Reason recorded rather than deleted.
+- `FIGHT_ODDS_WRITER_INVENTORY.md` — the retirement is merged, not a branch.
+
+### The Railway service is still open, and it is a gate
+
+The odds scrapper's README describes a **second Railway service** whose start
+command was overridden to `backfill_odds.py`. Railway config is not in git and
+this session holds no Railway credential, so it cannot be confirmed from here.
+
+Measured instead, read-only, to bound the risk: the backfill's last write sits
+at `fight_odds.id ≤ 384002`, and the rows written immediately after it captured
+at **2026-05-26T23:02:20Z**. It has not written in nearly four months, and as of
+`af54180` it cannot write if invoked. That shows the service has not *run*. It
+cannot show it does not *exist*.
+
+**`proposed_2026-09-16_fight_odds_immutability.sql` stays gated on the owner's
+dashboard check.** The other four migrations are additive and not gated on it.
+
+## Next action
+
+**Owner:** remove or disable the second Railway backfill service, and confirm —
+that closes the last precondition on the immutability migration. PR #16 is
+rebased, green and waiting on your word to merge; it was deliberately not
+merged in this session.
+
+**ChatGPT:** the migration application plan, for five migrations applied
+deliberately and sequentially. Every one is still unapplied.
+
+---
+
 ## 2026-09-16 — D-004: the legacy BFO backfill is retired
 
 **From:** Claude

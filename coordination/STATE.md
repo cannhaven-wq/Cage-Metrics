@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -62,7 +62,7 @@ Git history is the audit trail. These files are the working surface.
 | line | state | see |
 |---|---|---|
 | DUR-001 — does PROP-0001@v1 beat the totals market? | collecting | [register](../CFL_RESEARCH_STATE.md) |
-| DUR-002 — the same question for the uncalibrated hazard | **armed**, zero observations | [register](../CFL_RESEARCH_STATE.md) |
+| DUR-002 — the same question for the uncalibrated hazard | **collecting** since 2026-09-16 — 48 rows on 12 fights | [register](../CFL_RESEARCH_STATE.md) |
 | PROP-0001 | frozen, serving locks | [register](../CFL_RESEARCH_STATE.md) |
 
 **The duration model is read-only.** Development on it is finished; both
@@ -349,8 +349,8 @@ it lands the sooner snapshots stop being ambiguous.
 read-only across all five repositories on the account.
 `cage-metrics-odds-scrapper`'s `backfill_odds.py` deleted opener/closer rows
 before re-inserting them, which an append-only table cannot allow. **Retired by
-owner decision (D-004)** — `cage-metrics-odds-scrapper@d8e1908`, branch
-`retire/backfill-odds-2026-09-16`: it prints a notice and exits non-zero, holds
+owner decision (D-004)** and **merged to `cage-metrics-odds-scrapper@af54180`
+on 2026-09-17** (PR #1): it prints a notice and exits non-zero, holds
 no write verb, deleted nothing, and nothing automated ever invoked it. Seven
 other write sites are compatible, and the four UPDATE sites touch only
 `is_opener` / `is_closer` — independent confirmation that the trigger's
