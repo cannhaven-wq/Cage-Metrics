@@ -24,6 +24,7 @@ it died is usually worth more than the task was.
 | T-004 | Collapse the `picks.html` → `card-lab.html` → `/` redirect to a single hop | L1 | Claude | queued |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
+| T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
 
 ## Closed
 
@@ -36,6 +37,18 @@ it died is usually worth more than the task was.
 ---
 
 ## Notes on the open rows
+
+**T-009** is attribution, which is the one thing an append-only log exists to
+get right. The records name the owner two ways: `protocol.json` resolves Q-14 by
+**"Reed Cannon"** and `CLAUDE.md` names the owner that way, while
+[D-004](DECISIONS.md) records **"Michael Cannon (owner)"**; both appear across
+`STATE.md`, `HANDOFF.md` and the protocol document.
+
+Whether that is one person recorded two ways or a genuine mis-attribution is
+**not** something Claude or ChatGPT may settle by inference — which is why
+nothing has been normalised and every entry still reads exactly as it was
+written. L3 and blocked on the owner. The fix is a new `DECISIONS.md` entry
+stating which name is correct, never an edit to the existing ones.
 
 **T-002** is the live bottleneck on DUR-001's specification. The clauses are not
 approved en bloc and are split by risk in the register. Six of them change data

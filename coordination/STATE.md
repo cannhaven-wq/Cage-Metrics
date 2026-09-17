@@ -314,6 +314,11 @@ They are explicitly *not* approved en bloc. Split by risk in the register: six
 change data eligibility, scoring, model behaviour or interpretation and get
 higher scrutiny; three are governance and monitoring only.
 
+**Owner attribution (T-009).** The governance records name the owner two ways —
+"Reed Cannon" and "Michael Cannon". Nothing has been normalised: [D-005](DECISIONS.md)
+records Q-14's ratifier exactly as `protocol.json` has it, and D-004 still reads as
+written. L3, blocked on the owner; the fix is a new decision entry, never an edit.
+
 **The bout-completions L3 is resolved as a blocker and open as an improvement.**
 [`L3_ESCALATION_2026-09-16_bout_completions.md`](../research/clv/L3_ESCALATION_2026-09-16_bout_completions.md).
 Amendment 4's tier 4 removed the dependency; completions now buy **lead-time

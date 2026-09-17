@@ -203,3 +203,70 @@ and is the owner's to apply.
 `fight_odds`. Added in the same pass. Every earlier step that reasoned from "the
 repos are X, Y and Z" was working from an incomplete list; nothing downstream
 turned out wrong, but that was luck rather than method.
+
+---
+
+## D-005 — Q-14: CLV may appear in the user interface, under the frozen protocol
+
+> **This entry records a decision already made and ratified; it does not make
+> one.** Q-14 was resolved on 2026-09-16 and the resolution has been acted on
+> since — `CLAUDE.md`'s top-line rule is already amended on this branch. What
+> was missing is the entry in this log. It is written now, backdated in the
+> `date` field to when the decision was actually taken, because a decision is
+> dated when it is made and not when it is transcribed.
+
+| field | value |
+|---|---|
+| date | 2026-09-16 |
+| decided by | Reed Cannon |
+| task | T-007 (the CLV-001 protocol L3 set); Q-14 specifically |
+| level | L3 |
+| recorded | 2026-09-17, from `research/clv/protocol.json` |
+| reversible | **no, in one direction.** The rule is revertible in git. A CLV figure once shown is not: a number withdrawn from a surface has still been read, and the claim it made cannot be unmade |
+
+**Decision.** As recorded against Q-14 in
+[`research/clv/protocol.json`](../research/clv/protocol.json):
+
+> YES — CLV may appear in the UI, but only under the currently frozen protocol
+> with every publication threshold satisfied. `CLAUDE.md`'s absolute prohibition
+> is amended; `COPY_STYLE.md` rule 3 wins on direction.
+
+The replacement rule, as it now stands at the top of `CLAUDE.md`:
+
+> **No CLV figure may appear on a user-facing surface unless it was produced
+> under the currently frozen CLV measurement protocol and every publication
+> threshold in that protocol is satisfied.**
+
+**The conflict it settles.** Two documents the owner owns gave opposite answers.
+`CLAUDE.md` line 3 said *"no closing line value ... anywhere in the user
+interface"*; `COPY_STYLE.md` rule 3 said *"CLV is the north star ... Say so."*
+Q-11 — how a positive CLV figure may be phrased — presupposed an answer to
+whether one may appear at all, so Q-14 blocked it until both were resolved
+together.
+
+**Why it was L3, and why no reviewer recommended a direction.** Q-14 was raised
+by the revision rather than by the review, and carries **no reviewer
+recommendation by design**: it is a product-voice decision about what CFL is
+willing to claim, not a measurement question. `protocol.json` records
+`chosen_by_historical_comparison: false` — no CLV figure was computed and then
+used to argue for permission to show CLV figures.
+
+**What it does not authorise.** The prohibition on vague **edge percentages**
+and unsupported market claims is untouched, and is recorded in `protocol.json`
+under `preserved_prohibitions`. This authorises one narrowly defined, auditable
+metric under a frozen protocol — not sportsbook-style marketing.
+
+**Frozen is not publishable.** As of this entry the gate is still shut: the
+floor is 100 scored observations across 20 distinct events, and it stands at
+**0 and 0**. `tests/test_clv_protocol.py` enforces it. Deciding *how* the number
+is measured did not create a number worth showing.
+
+**Attribution cleanup, pending the owner — not resolved here.** This entry
+records the ratifier **exactly as `protocol.json` has it: "Reed Cannon"**. The
+governance records name the owner two ways — D-004 above reads "Michael Cannon
+(owner)", and both names appear across `protocol.json`, `STATE.md`, `HANDOFF.md`
+and the protocol document. Whether these are one person recorded two ways or a
+genuine mis-attribution is **not** something an AI may settle by inference, and
+this log is append-only precisely so that attribution is not quietly rewritten.
+No name has been normalised anywhere. Flagged for the owner to confirm; the
+correction, when it comes, is a new entry, not an edit to an old one.

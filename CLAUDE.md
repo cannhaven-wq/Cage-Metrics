@@ -149,7 +149,39 @@ Recurring secrets live as environment variables on the Claude Code environment (
 | `RESEND_FROM` | `build/send-digest.js` | Verified sender, e.g. `Cannon Fight Lab <hello@cannonfightlab.com>`. |
 | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | `build/social-post.js` | OAuth 1.0a creds for posting to X. Missing → that platform is skipped. |
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`, `REDDIT_SUBREDDIT` | `build/social-post.js` | Script-app creds for posting to Reddit. Missing → that platform is skipped. |
-| `ODDS_API_KEY` | `build/fetch-odds.js` (disabled workflow) | The Odds API. |
+| `ODDS_API_KEY` | `build/fetch-odds.js` (**active** workflow — see below) | The Odds API. |
+
+#### `odds.yml` is active, and its cron is not its capture rate
+
+This file used to describe the odds workflow as **disabled**. It is not, and was
+not — `Fetch UFC odds` (`.github/workflows/odds.yml`) is an **active** workflow.
+Anything reasoning from "that one's off" was reasoning from a wrong premise.
+
+Its cron wakes **every 5 minutes** (`*/5`). That is a wake rate, not a capture
+rate, and the two are deliberately different:
+
+- `build/fetch-odds.js::shouldCaptureNow()` decides **before any API call**
+  whether the wake is worth a credit. A quiet wake queries Supabase and exits,
+  spending no credit.
+- Three tiers: a card **in flow** captures every 5 minutes, budget permitting; a
+  card **today or tomorrow** captures hourly; otherwise **one baseline capture a
+  day** at 08:00 UTC.
+- A hard ceiling reads the provider's own `x-requests-remaining` (persisted in
+  `odds_api_usage`), reserves the floor cost of each card still to come this
+  month, and degrades 5 → 10 → 15 → 30 minutes to fit. **An unreadable ledger
+  reads as tight, never as unlimited.** No paid tier without an L3.
+
+**Until the CLV-001 migrations are applied, effective capture stays on the
+hourly / daily tiers.** The "in flow" tier needs `fight_bout_order` and
+`fight_bout_completions` to know a card's running order, and the budget ceiling
+needs `odds_api_usage` — all three are created by
+`research/clv/proposed_2026-09-16_event_flow.sql` and
+`proposed_2026-09-16_fight_odds_capture.sql`, which are **written and not
+applied**. Each missing object is handled explicitly: the script warns, treats
+the budget as tight, and no card can be identified as in flow. So the `*/5` wake
+is real today but the 5-minute cadence is not reachable yet — applying those
+migrations is what turns it on, and that is the change to plan for, not the
+merge.
 
 Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
