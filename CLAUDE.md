@@ -8,6 +8,24 @@ Wording reference: [`COPY_STYLE.md`](COPY_STYLE.md) governs every user-facing st
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Start here: `coordination/`
+
+**Read [`coordination/STATE.md`](coordination/STATE.md) at the start of every session.** It is one screen and it says where the project actually is.
+
+The repo is the communication layer between Claude (build) and ChatGPT (spec and review). Claude ships work and writes a handoff; ChatGPT reviews it and writes the next specification; Reed is pulled in only at an L3 gate.
+
+| file | read it when |
+|---|---|
+| [`coordination/STATE.md`](coordination/STATE.md) | always, first |
+| [`coordination/HANDOFF.md`](coordination/HANDOFF.md) | picking up work — the top entry names the next action |
+| [`coordination/TASK_QUEUE.md`](coordination/TASK_QUEUE.md) | choosing what to do next |
+| [`coordination/CRITICAL_GATES.md`](coordination/CRITICAL_GATES.md) | before anything that might need Reed |
+| [`coordination/DECISIONS.md`](coordination/DECISIONS.md) | when a decision feels already-settled — it probably is |
+
+**Default: proceed.** If a change is revertible, testable and already inside a written specification, do not ask. `CRITICAL_GATES.md` defines the L0–L3 ladder and the closed list of things that stop and wait — and defines "reversible" precisely, because append-only tables and published claims are not undone by `git revert`.
+
+Finishing a piece of work means updating `STATE.md` and `HANDOFF.md` in the same commit. `tests/test_coordination.py` checks the structure; an L3 task cannot reach `done` without a decision recorded against its id.
+
 ## Product / naming
 
 - **Product name is Cannon Fight Lab (CFL).** Never refer to it as "Cage Metrics" in user-facing copy. The repo on GitHub is still named `Cage-Metrics` for historical reasons — **do not rename the repo**.
