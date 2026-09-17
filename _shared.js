@@ -642,6 +642,21 @@
     return `<div class="fighter-chip">${inner}</div>`;
   };
 
+  // --------- Event tracking ---------
+  // Every page already loads plausible.io/js/script.js. Custom events go
+  // through Plausible's standard queue stub, so a call made before the script
+  // lands — or when a blocker eats it entirely — is a silent no-op instead of
+  // a crash. Analytics is never load-bearing: if this throws, nothing else
+  // should notice.
+  cfl.track = function (name, props) {
+    try {
+      window.plausible = window.plausible || function () {
+        (window.plausible.q = window.plausible.q || []).push(arguments);
+      };
+      window.plausible(name, props ? { props: props } : undefined);
+    } catch (e) { /* ignore */ }
+  };
+
   // --------- Traffic-funnel widgets ---------
   // Drop a signup CTA into any page:
   //   <div class="cfl-funnel-cta" data-source="fighters-bottom"></div>
@@ -729,6 +744,8 @@
           msg.textContent = error.message || 'Something went wrong. Try again.';
           return;
         }
+        if (cfl.markEmailCaptured) cfl.markEmailCaptured();
+        cfl.track('Email capture submitted', { source: source });
         msg.classList.add('ok');
         msg.textContent = 'Subscribed. Check your inbox before the next card.';
         form.reset();
@@ -736,16 +753,200 @@
     });
   };
 
+  // --------- Timed email prompt (soft, dismissible) ---------
+  // A small card that slides into the corner of the page once the visitor has
+  // been on the site for two minutes, asking whether they want the weekly
+  // preview email. Deliberately NOT a gate:
+  //   * nothing on the site is hidden, blurred or paywalled by it;
+  //   * it never covers the page — no backdrop, the page stays scrollable
+  //     and every pick stays readable behind it;
+  //   * one dismissal is permanent (localStorage), as is one submission;
+  //   * it never shows to a signed-in visitor, who already has the digest
+  //     available from their account.
+  // Submitting reuses cflAuth.subscribeEmail — the same email_subscribers
+  // path as the inline .cfl-email-capture widget, with a different `source`.
+  const EMAIL_PROMPT_DELAY_MS = 120000;           // two minutes on site
+  const EMAIL_PROMPT_DONE_KEY = 'cfl_email_prompt_v1';   // localStorage: dismissed | subscribed
+  const EMAIL_PROMPT_START_KEY = 'cfl_visit_started_at'; // sessionStorage: ms epoch
+
+  // Pages where an email ask is either redundant or in the way: anything the
+  // visitor opened to transact on (auth, their own book), plus the legal
+  // pages, where a marketing card next to the disclaimer reads badly.
+  const EMAIL_PROMPT_SKIP_PAGES = [
+    'login', 'signup', 'reset', 'account', 'mybook',
+    'unsubscribe', 'contact', 'privacy', 'disclaimer', 'pricing', 'lab'
+  ];
+
+  function emailPromptPage() {
+    const file = (location.pathname.split('/').pop() || '').replace(/\.html$/, '');
+    // '/' and '/index.html' are the same page; attribute both to one source.
+    return (!file || file === 'index') ? 'home' : file;
+  }
+
+  function emailPromptDone() {
+    try { return !!localStorage.getItem(EMAIL_PROMPT_DONE_KEY); } catch (e) { return false; }
+  }
+
+  // Called on any successful subscribe, from this prompt or from an inline
+  // capture widget, so somebody who just handed us their email in one place
+  // is not asked again in the other.
+  cfl.markEmailCaptured = function () {
+    try { localStorage.setItem(EMAIL_PROMPT_DONE_KEY, 'subscribed'); } catch (e) {}
+  };
+
+  // Elapsed time is kept in sessionStorage rather than per-page, so reading
+  // three fighter pages for forty seconds each counts as two minutes on site
+  // instead of restarting the clock on every navigation.
+  function emailPromptElapsedMs() {
+    let started;
+    try {
+      started = parseInt(sessionStorage.getItem(EMAIL_PROMPT_START_KEY) || '', 10);
+      if (!started || started > Date.now()) {
+        started = Date.now();
+        sessionStorage.setItem(EMAIL_PROMPT_START_KEY, String(started));
+      }
+    } catch (e) {
+      started = Date.now();   // private mode / storage blocked: per-page clock
+    }
+    return Date.now() - started;
+  }
+
+  cfl.initEmailPrompt = function (opts) {
+    opts = opts || {};
+    const delay = typeof opts.delayMs === 'number' ? opts.delayMs : EMAIL_PROMPT_DELAY_MS;
+    const source = opts.source || ('timed-prompt-' + emailPromptPage());
+    if (document.querySelector('.cfl-email-prompt')) return;   // already mounted
+    if (emailPromptDone()) return;
+
+    let cancelled = false;
+    let shown = false;
+
+    // Signing in mid-countdown cancels the ask.
+    if (window.cflAuth && window.cflAuth.onAuthChange) {
+      window.cflAuth.onAuthChange((user) => {
+        if (!user || shown) return;
+        cancelled = true;
+      });
+    }
+
+    function signedIn() {
+      return !!(window.cflAuth && window.cflAuth.isSignedIn && window.cflAuth.isSignedIn());
+    }
+
+    function show() {
+      if (cancelled || shown || signedIn() || emailPromptDone()) return;
+      shown = true;
+
+      const host = document.createElement('div');
+      host.className = 'cfl-email-prompt';
+      host.innerHTML = `
+        <div class="cfl-email-prompt-card" role="dialog" aria-modal="false"
+             aria-labelledby="cflEmailPromptTitle">
+          <button type="button" class="cfl-email-prompt-x" aria-label="Close">&times;</button>
+          <strong id="cflEmailPromptTitle">Want next week&rsquo;s picks when they drop?</strong>
+          <span>One email before each card, unsubscribe in a click. Every pick on the site stays free either way.</span>
+          <form class="cfl-email-prompt-form" novalidate>
+            <input type="email" required placeholder="you@example.com"
+                   autocomplete="email" aria-label="Email address">
+            <button type="submit">Send me the picks</button>
+          </form>
+          <div class="cfl-email-prompt-msg" aria-live="polite"></div>
+          <button type="button" class="cfl-email-prompt-no">No thanks</button>
+        </div>
+      `;
+      document.body.appendChild(host);
+      // Next frame, so the slide-in transition has a starting state to run from.
+      requestAnimationFrame(() => host.classList.add('show'));
+      cfl.track('Email capture shown', { source: source });
+
+      const form = host.querySelector('form');
+      const input = host.querySelector('input[type=email]');
+      const btn = host.querySelector('button[type=submit]');
+      const msg = host.querySelector('.cfl-email-prompt-msg');
+
+      function close() {
+        host.classList.remove('show');
+        document.removeEventListener('keydown', onKey);
+        setTimeout(() => host.remove(), 250);
+      }
+
+      function dismiss(via) {
+        try { localStorage.setItem(EMAIL_PROMPT_DONE_KEY, 'dismissed'); } catch (e) {}
+        cfl.track('Email capture dismissed', { source: source, via: via });
+        close();
+      }
+
+      function onKey(ev) { if (ev.key === 'Escape') dismiss('escape'); }
+      document.addEventListener('keydown', onKey);
+
+      host.querySelector('.cfl-email-prompt-x').addEventListener('click', () => dismiss('close'));
+      host.querySelector('.cfl-email-prompt-no').addEventListener('click', () => dismiss('no-thanks'));
+
+      form.addEventListener('submit', async (ev) => {
+        ev.preventDefault();
+        msg.textContent = '';
+        msg.classList.remove('err', 'ok');
+        if (!window.cflAuth || !window.cflAuth.subscribeEmail) {
+          msg.classList.add('err');
+          msg.textContent = 'Sign-up is temporarily unavailable.';
+          return;
+        }
+        const label = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = 'Sending…';
+        const { error } = await window.cflAuth.subscribeEmail(input.value, source);
+        btn.disabled = false;
+        btn.textContent = label;
+        if (error) {
+          msg.classList.add('err');
+          msg.textContent = error.message || 'Something went wrong. Try again.';
+          return;
+        }
+        cfl.markEmailCaptured();
+        cfl.track('Email capture submitted', { source: source });
+        msg.classList.add('ok');
+        msg.textContent = 'You’re in. The picks land before the next card.';
+        form.remove();
+        host.querySelector('.cfl-email-prompt-no').remove();
+        setTimeout(close, 3500);
+      });
+    }
+
+    const remaining = delay - emailPromptElapsedMs();
+    if (remaining <= 0) show();
+    else setTimeout(show, remaining);
+  };
+
   // Auto-render funnel widgets whenever the DOM is ready. Safe to call this
   // even on pages that don't include any widget elements — the queries return
   // empty NodeLists and short-circuit.
+  //
+  // The timed prompt arms itself on every page except the ones listed in
+  // EMAIL_PROMPT_SKIP_PAGES, and waits on cflAuth so it can tell a signed-in
+  // visitor from a signed-out one before the clock runs out. Opt a single page
+  // out without touching this list with <body data-cfl-no-email-prompt>.
+  function armEmailPrompt() {
+    if (document.body && document.body.hasAttribute('data-cfl-no-email-prompt')) return;
+    if (EMAIL_PROMPT_SKIP_PAGES.indexOf(emailPromptPage()) !== -1) return;
+    if (window.cflAuth && window.cflAuth.ready) {
+      window.cflAuth.ready().then(() => {
+        if (!window.cflAuth.isSignedIn()) cfl.initEmailPrompt();
+      }).catch(() => cfl.initEmailPrompt());
+    } else {
+      cfl.initEmailPrompt();
+    }
+  }
+
+  function bootFunnel() {
+    cfl.renderFunnelCtas();
+    cfl.renderEmailCaptures();
+    armEmailPrompt();
+  }
+
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => {
-      cfl.renderFunnelCtas();
-      cfl.renderEmailCaptures();
-    });
+    document.addEventListener('DOMContentLoaded', bootFunnel);
   } else {
-    setTimeout(() => { cfl.renderFunnelCtas(); cfl.renderEmailCaptures(); }, 0);
+    setTimeout(bootFunnel, 0);
   }
 
   window.cfl = cfl;

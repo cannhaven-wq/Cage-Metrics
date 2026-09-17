@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-16
+Last updated: 2026-09-17
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -92,6 +92,12 @@ positive CLV may be described. Each changes what a published number means.
 Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
 One Node build step (prerender + factor rates) runs on a 6-hour cron. Nothing
 on the card is gated in the frontend during beta.
+
+A timed email prompt (T-009, [D-004](DECISIONS.md)) asks signed-out visitors
+for an email after two minutes on site. It is a corner card with no backdrop
+and no scroll lock, dismissible for good, and it gates nothing — the
+no-paywall rule is unchanged. Per-channel detail in
+[`TRAFFIC_FUNNEL.md`](../TRAFFIC_FUNNEL.md).
 
 ---
 

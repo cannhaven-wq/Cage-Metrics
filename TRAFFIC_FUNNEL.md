@@ -102,6 +102,49 @@ Drop this anywhere on the site:
 …and `_shared.js` auto-wires it. Sets `source` on the
 `email_subscribers` row so we can see which page is winning subscribers.
 
+### Timed email prompt
+
+A second, softer entry into the same list. After **two minutes on site** a
+small card slides into the bottom corner:
+
+> Want next week's picks when they drop? — **Send me the picks**
+
+Wired by `cfl.initEmailPrompt` in `_shared.js`, armed automatically on every
+page that loads `_shared.js`. It writes through the same
+`cflAuth.subscribeEmail` path as the inline widget, so a prompt subscriber is
+an ordinary `email_subscribers` row with `source = timed-prompt-<page>`.
+
+**It is a prompt, not a gate.** There is no backdrop and no scroll lock — the
+page behind it stays readable and clickable, and nothing on the site is hidden
+or blurred for a visitor who never gives an email. If it ever grows a dimmed
+overlay it has stopped being a prompt.
+
+What suppresses it:
+
+| condition | stored where |
+|---|---|
+| dismissed once (X, "No thanks", or Escape) | `localStorage.cfl_email_prompt_v1 = dismissed` |
+| subscribed once, from the prompt *or* an inline widget | `localStorage.cfl_email_prompt_v1 = subscribed` |
+| visitor is signed in (before or during the countdown) | — |
+| page is in `EMAIL_PROMPT_SKIP_PAGES` (auth, My Book, legal, pricing, lab) | — |
+| page sets `<body data-cfl-no-email-prompt>` | — |
+
+The two-minute clock is **time on site, not time on page** — the visit start
+sits in `sessionStorage.cfl_visit_started_at`, so three forty-second page
+views add up instead of restarting the timer on every navigation.
+
+Three Plausible events, all carrying a `source` prop:
+
+| event | when |
+|---|---|
+| `Email capture shown` | the card became visible |
+| `Email capture dismissed` | X / "No thanks" / Escape (a `via` prop says which) |
+| `Email capture submitted` | the write succeeded — fired by the inline widget too |
+
+Custom events go through `cfl.track(name, props)`, which installs Plausible's
+queue stub and swallows its own errors, so a blocked analytics script is a
+no-op rather than a broken page.
+
 Same idea for the account-signup CTA:
 
 ```html
@@ -111,6 +154,7 @@ Same idea for the account-signup CTA:
 Auto-hides for visitors already signed in.
 
 Currently placed on:
+- every page that loads `_shared.js` — the timed prompt (minus the skip list above)
 - `index.html` — both widgets (bottom of page)
 - `fighters.html` — signup CTA
 - `stats.html` — email capture

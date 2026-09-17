@@ -153,3 +153,36 @@ status `draft`. Twelve decided rules and eleven open questions, each question
 carrying a proposed level; five are marked L3 because they change what a
 published number means. No historical comparison was run to choose among any of
 them, and `tests/test_clv_protocol.py` requires each question to record that.
+
+---
+
+## D-004 — The email ask is a prompt, never a gate
+
+| field | value |
+|---|---|
+| date | 2026-09-17 |
+| decided by | Claude |
+| task | T-009 |
+| level | L2 |
+| reversible | yes — revertible in git, writes no row to an append-only table, changes no frozen file. It does publish site copy, which is why this is L2 and not L1. |
+
+**Decision.** A visitor who has been on the site for two minutes gets asked,
+once, whether they want the weekly preview email. The ask is a small card in
+the corner of the page with no backdrop and no scroll lock. One dismissal is
+permanent.
+
+**Why not a centred modal.** A dimmed overlay over the card is indistinguishable
+from a paywall in the two seconds before a visitor reads it, and the product
+rule is that every pick is free with no email required. A corner card cannot be
+misread that way: the picks stay visible and clickable behind it. If a future
+change adds an overlay, it has reversed this decision, and
+`.cfl-email-prompt` carries that note in `_shared.css`.
+
+**What it is not.** No model logic changed, no paywall exists, no tier check
+gates anything on the card, and no number or performance claim appears in the
+copy — which is what keeps this off the L3 list (item 8).
+
+**Reed's call, not recorded here.** This is an L2 decision made by Claude under
+the standing "default: proceed" rule, flagged in the handoff. If Reed wants the
+site to never interrupt a reader, that reverses it and the removal is one
+commit.

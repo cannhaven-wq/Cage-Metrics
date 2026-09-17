@@ -142,7 +142,9 @@ Recurring secrets live as environment variables on the Claude Code environment (
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`, `REDDIT_SUBREDDIT` | `build/social-post.js` | Script-app creds for posting to Reddit. Missing → that platform is skipped. |
 | `ODDS_API_KEY` | `build/fetch-odds.js` (disabled workflow) | The Odds API. |
 
-Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
+Per-channel funnel docs: `TRAFFIC_FUNNEL.md` — including the timed email
+prompt (`cfl.initEmailPrompt`), which is armed on every page and is a prompt,
+not a gate: **nothing on the site is ever hidden behind an email.**
 
 ### Verdict / edge logic
 
@@ -217,6 +219,7 @@ GitHub Pages caches `_shared.js` and `_auth.js` aggressively. After shipping a c
 
 - All currency / numbers go through helpers in `_shared.js` (`cfl.formatRecord`, `cfl.formatHeight`, `cfl.formatReach`, `cfl.formatDate`, `cfl.formatDateShort`, `cfl.daysUntil`).
 - For Supabase reads that may exceed the 1000-row per-call cap, use `cfl.fetchAll(() => sb.from(...).select(...))` — it pages through with `.range()`.
+- Analytics events go through `cfl.track(name, props)` in `_shared.js` (Plausible custom events). It installs the queue stub and swallows its own errors — never let a tracking call sit in a code path that breaks if it throws.
 - HTML escaping: every interpolated string from the DB goes through `cfl.escapeHtml`. There is no template framework — XSS protection is manual.
 - **Don't hardcode a live figure into prose.** The data behind `factor-rates.json` and the graded views is regenerated every few hours, so a sentence that says "57.0% on 128 fights" is wrong by the next cron run — this has already happened. Prose carries the *claim* ("the range still crosses a coin flip"); the live surface carries the *measurement*. Where a specific number genuinely has to appear in copy, label it as a dated snapshot the way `index.html` does ("Numbers on this panel are a snapshot as of ...").
 - Per-page SEO meta is documented in `SEO_PER_PAGE.md`.

@@ -31,6 +31,7 @@ it died is usually worth more than the task was.
 | id | task | level | owner | status |
 |---|---|---|---|---|
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
+| T-009 | Timed email prompt — soft, dismissible, no paywall | L2 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |
 
 ---
@@ -56,6 +57,14 @@ approved en bloc and are split by risk in the register. Six of them change data
 eligibility, scoring, model behaviour or interpretation; three are governance
 only. The three low-risk ones could move first if Reed wants to clear the
 backlog without touching anything that affects a result.
+
+**T-009** shipped under [D-004](DECISIONS.md). It is L2 rather than L1 because
+it publishes site copy, which the four-part reversibility test in
+[`CRITICAL_GATES.md`](CRITICAL_GATES.md) counts as a public claim — not L3,
+because the copy makes no performance claim and carries no number. The thing
+ChatGPT should attack is whether a corner card is the right reading of "soft":
+the alternative was a centred modal, and a dimmed overlay over the card is the
+one shape that would contradict the no-paywall rule.
 
 **T-003** is with ChatGPT now. The draft is
 [`research/clv/CLV_MEASUREMENT_PROTOCOL.md`](../research/clv/CLV_MEASUREMENT_PROTOCOL.md);

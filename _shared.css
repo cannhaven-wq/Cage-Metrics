@@ -1164,3 +1164,138 @@ footer.cfl-footer {
   .cfl-email-capture-form { flex-direction: column; }
   .cfl-email-capture-form input[type=email] { min-width: 0; width: 100%; }
 }
+
+/* =============================================================================
+   Timed email prompt — the soft two-minute ask (cfl.initEmailPrompt).
+
+   Docked to a corner on purpose. It carries NO backdrop and no scroll lock:
+   the card behind it stays readable and clickable, because nothing on this
+   site is gated behind an email. If this ever grows a dimmed overlay it has
+   stopped being a prompt and become a wall.
+   ============================================================================= */
+.cfl-email-prompt {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 98;                 /* under the nav (100) and its drawer (99) */
+  max-width: 360px;
+  width: calc(100vw - 40px);
+  opacity: 0;
+  transform: translateY(14px);
+  transition: opacity 0.22s ease, transform 0.22s ease;
+  pointer-events: none;
+}
+.cfl-email-prompt.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+.cfl-email-prompt-card {
+  position: relative;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 18px 20px 16px;
+}
+.cfl-email-prompt-card strong {
+  display: block;
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
+  padding-right: 22px;          /* clears the close button */
+  margin-bottom: 5px;
+}
+.cfl-email-prompt-card span {
+  display: block;
+  color: var(--text-2);
+  font-size: 13px;
+  line-height: 1.45;
+  margin-bottom: 12px;
+}
+.cfl-email-prompt-x {
+  position: absolute;
+  top: 8px;
+  right: 10px;
+  background: none;
+  border: 0;
+  color: var(--text-3);
+  font-size: 20px;
+  line-height: 1;
+  padding: 4px 6px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.cfl-email-prompt-x:hover { color: var(--text); }
+/* Stacked, not side-by-side: at this width a shared row squeezes the field
+   down to about a dozen visible characters. */
+.cfl-email-prompt-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cfl-email-prompt-form input[type=email] {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  background: var(--bg-3);
+  border: 1px solid var(--border-2);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: inherit;
+}
+.cfl-email-prompt-form input[type=email]:focus {
+  outline: none;
+  border-color: var(--red);
+}
+.cfl-email-prompt-form button {
+  background: var(--red);
+  color: #fff;
+  border: 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  white-space: nowrap;
+}
+.cfl-email-prompt-form button:hover { background: var(--red-dark); }
+.cfl-email-prompt-form button:disabled { opacity: 0.6; cursor: wait; }
+.cfl-email-prompt-msg {
+  font-size: 13px;
+  min-height: 1em;
+  margin-top: 8px;
+}
+.cfl-email-prompt-msg.ok  { color: var(--green); }
+.cfl-email-prompt-msg.err { color: var(--red); }
+.cfl-email-prompt-no {
+  background: none;
+  border: 0;
+  padding: 6px 0 0;
+  margin: 0;
+  color: var(--text-3);
+  font-size: 12px;
+  font-family: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.cfl-email-prompt-no:hover { color: var(--text-2); }
+
+@media (max-width: 640px) {
+  .cfl-email-prompt {
+    right: 12px;
+    left: 12px;
+    bottom: 12px;
+    max-width: none;
+    width: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfl-email-prompt { transition: opacity 0.22s ease; transform: none; }
+  .cfl-email-prompt.show { transform: none; }
+}
