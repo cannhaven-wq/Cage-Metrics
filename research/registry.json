@@ -225,7 +225,7 @@
     },
     {
       "experiment_id": "DUR-002",
-      "status": "armed",
+      "status": "collecting",
       "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
       "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
       "population": "identical to DUR-001",
@@ -279,6 +279,11 @@
           "path": "cfl_engine/features/build_features.py",
           "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
           "frozen_at_commit": "6be7198ebe4d56b27366268318b757e99e3074c5"
+        },
+        {
+          "path": "cfl_engine/dur002/lock_prop0002.py",
+          "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+          "frozen_at_commit": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073"
         }
       ],
       "approved_by": "Reed Cannon",
@@ -296,8 +301,7 @@
         "exists": true,
         "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
         "written": "2026-09-16",
-        "frozen": false,
-        "freezes_at_first_collection": true,
+        "frozen": true,
         "role": "Operational implementation of the already-frozen DUR-002 specification. Contains no modelling decisions. A thin wrapper: PITWorld, fit_prop0001, serve_fight, build_lock_rows, the loaders and the threshold mapping are all imported from the frozen lock_prop0001.py, which is neither modified nor copied. The only behavioural difference is model.iso_ = None, so every prediction is the raw hazard.",
         "conformance_tests": "cfl_engine/dur002/test_lock_prop0002.py",
         "guards": [
@@ -306,20 +310,31 @@
           "refuses to write from a dirty working tree (git status --porcelain, so untracked files count) unless --allow-dirty, which records the tree-state hash on every row",
           "every row records lock_prop0002.py's own sha256 in notes, so the implementation behind any v2 forecast is identifiable from the row alone"
         ],
-        "note": "Section 0.3 of the frozen preregistration says this script does not exist. That is a true statement about the state AT FREEZE and is deliberately not updated - the preregistration is not altered to reflect a file created after it was frozen. Current state lives here."
+        "note": "FROZEN as of first collection. A substantive change now requires an amendment to the DUR-002 preregistration or a new model version. Section 0.3 of the frozen preregistration says this script does not exist; that is true of the state AT FREEZE and is deliberately not updated.",
+        "frozen_at_first_collection": "2026-09-16T01:29:00.054095+00:00"
       },
       "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration.",
       "first_collection": {
-        "status": "not started",
-        "first_v2_lock_at": null,
-        "first_v2_lock_commit": null,
-        "procedure": "On the successful first insert of a PROP-0001@v2 row, record here: the exact first-lock UTC timestamp, the workflow run id and commit SHA, lock_prop0002.py's sha256, and the number of rows written. Then set lock_script.frozen = true, move the script into frozen_files, change status from 'armed' to 'collecting', and rerun the full guards.",
-        "expected_via": ".github/workflows/prop-locks.yml, daily 11:00 UTC, as a separate step after the v1 lock step",
-        "rows_written": 0,
-        "first_lock_at": null,
-        "workflow_run_id": null,
-        "commit_sha": null,
-        "lock_script_sha256": null
+        "status": "collected",
+        "first_lock_at": "2026-09-16T01:29:00.054095+00:00",
+        "rows_written": 48,
+        "fights": 12,
+        "workflow_run_id": 35044179800,
+        "workflow_run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/35044179800",
+        "commit_sha": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073",
+        "code_version_on_rows": "97ed4aa544f6",
+        "lock_script_sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+        "dirty": false,
+        "verification": {
+          "predicted_probability_reproduced_from_stored_hazards": "48/48 at 1e-5",
+          "max_abs_error": 8.76752760281541e-07,
+          "feature_keys_per_row": 49,
+          "rows_recording_raw_hazard_in_notes": 48,
+          "rows_recording_lock_script_sha256_in_notes": 48,
+          "rows_carrying_a_dirty_diff_marker": 0,
+          "distinct_code_versions": 1
+        },
+        "note": "Complete provenance chain, which is what v1 lacks: code_version on every row is the clean merge commit (no -dirty), and every row carries the lock script's own sha256 prefix 92d28d8638c15016, matching the file on main."
       }
     }
   ],
