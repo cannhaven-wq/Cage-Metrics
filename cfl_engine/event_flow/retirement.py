@@ -150,3 +150,77 @@ def verdict_for(rows: list[dict], fight_id: int,
     return Verdict(PENDING, missing, required, seen,
                    f"absent from the latest {missing} observation(s); "
                    f"{required} needed. A single bad read looks exactly like this")
+
+
+# ---------------------------------------------------------------------------
+# Turning verdicts into a plan
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class RetirementPlan:
+    """What the current card implies about `fights.is_active`.
+
+    `awaiting_confirmation` is the load-bearing one, and it exists because of a
+    property of `plan_append` that is easy to miss: a stale fight produces no
+    change entry, because the comparison loop walks the PAGE's bouts. So once
+    the remaining bouts settle at their new positions, nothing differs, nothing
+    is appended, and a first absence would sit at one confirmation for ever —
+    the rule could never reach two and no booking would ever retire.
+
+    When a retirement is pending, the card is therefore re-observed on purpose.
+    That is an honest append: we did read the card again, at a new instant, and
+    it said the same thing. It is bounded — one extra observation per pending
+    retirement, and once confirmed the reason to append goes away.
+    """
+
+    deactivate: tuple[int, ...]
+    reactivate: tuple[int, ...]
+    pending: tuple[tuple[int, int], ...]     # (fight_id, consecutive absences)
+    awaiting_confirmation: bool
+
+    @property
+    def is_empty(self) -> bool:
+        return not (self.deactivate or self.reactivate or self.pending)
+
+
+def plan_retirements(
+    ledger_rows: list[dict],
+    on_page_fight_ids: set[int],
+    active_by_fight: dict[int, bool | None] | None = None,
+    required: int = REQUIRED_CONFIRMATIONS,
+) -> RetirementPlan:
+    """Decide which bookings to retire, which to bring back, which to wait on.
+
+    `active_by_fight` maps fight id -> current `is_active`. A missing entry or
+    None means unknown — which is the state before the column exists — and is
+    treated as active, so the plan reports what it WOULD do rather than going
+    quiet.
+    """
+    active_by_fight = active_by_fight or {}
+    observations = card_observations(ledger_rows)
+    ever_observed = {fid for o in observations for fid in o.fight_ids}
+
+    deactivate: list[int] = []
+    pending: list[tuple[int, int]] = []
+
+    for fid in sorted(ever_observed - on_page_fight_ids):
+        v = verdict_for(ledger_rows, fid, required=required)
+        if v.state == CONFIRMED:
+            if active_by_fight.get(fid) is not False:   # already inactive -> nothing to do
+                deactivate.append(fid)
+        elif v.state == PENDING and v.confirmations >= 1:
+            pending.append((fid, v.confirmations))
+
+    # A booking that was retired and is on the card again. The card is the
+    # authority on what is current, in both directions — retiring is not a
+    # one-way door, and a reinstated bout must come back rather than need a
+    # human to notice.
+    reactivate = sorted(
+        fid for fid in on_page_fight_ids if active_by_fight.get(fid) is False
+    )
+
+    return RetirementPlan(
+        deactivate=tuple(deactivate),
+        reactivate=tuple(reactivate),
+        pending=tuple(pending),
+        awaiting_confirmation=bool(pending),
+    )

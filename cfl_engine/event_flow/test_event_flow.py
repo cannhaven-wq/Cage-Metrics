@@ -846,3 +846,182 @@ class TestRunnerGuards(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# ---------------------------------------------------------------------------
+# The stale-booking lifecycle, end to end through the runner
+# ---------------------------------------------------------------------------
+class ActiveFlagLedger(FakeLedger):
+    """A FakeLedger that also carries `fights.is_active` and records PATCHes.
+
+    Modelling the column here is the point: the flag is the ONLY thing the
+    lifecycle is allowed to change, so a test that did not model it could not
+    prove the rest of the row is left alone.
+    """
+
+    def __init__(self, fights, active_column: bool = True, **kw):
+        super().__init__(fights, **kw)
+        self.active_column = active_column
+        self.is_active = {f.id: True for f in fights}
+        self.patches: list[tuple[int, bool]] = []
+
+    def rest_get(self, base_url, key, path, params):
+        if path == "fights":
+            if "is_active" in params.get("select", ""):
+                if not self.active_column:
+                    import urllib.error
+                    raise urllib.error.HTTPError("u", 400, "Bad Request", {}, None)
+                return [{"id": f.id, "ufc_fight_id": f.ufc_fight_id,
+                         "event_id": f.event_id, "is_active": self.is_active[f.id]}
+                        for f in self.fights]
+            return [{"id": f.id, "ufc_fight_id": f.ufc_fight_id,
+                     "event_id": f.event_id} for f in self.fights]
+        return super().rest_get(base_url, key, path, params)
+
+    def patch_fight(self, base_url, key, fight_id, is_active):
+        self.patches.append((fight_id, is_active))
+        self.is_active[fight_id] = is_active
+
+
+class TestStaleBookingLifecycle(unittest.TestCase):
+    """observed -> missing once -> missing twice -> inactive -> back -> active."""
+
+    MAIN = ("f" + "0" * 15, "Main A", "Main B")
+    SECOND = ("f" + "1" * 15, "Second A", "Second B")
+    WITHDRAWN = ("f" + "2" * 15, "Withdrawn A", "Withdrawn B")
+    REPLACEMENT = ("f" + "4" * 15, "Replacement A", "Replacement B")
+
+    EVENT = {"id": CFL_EVENT_ID, "name": "UFC Fixture", "event_date": "2026-09-19",
+             "ufc_event_id": FIXTURE_EVENT_ID}
+
+    def setUp(self):
+        self.fights = [
+            FightRow(id=900 + i, ufc_fight_id=fid, event_id=CFL_EVENT_ID)
+            for i, (fid, _, _) in enumerate(
+                [self.MAIN, self.SECOND, self.WITHDRAWN, self.REPLACEMENT])
+        ]
+        self.withdrawn_id = next(f.id for f in self.fights
+                                 if f.ufc_fight_id == self.WITHDRAWN[0])
+        self.main_id = next(f.id for f in self.fights
+                            if f.ufc_fight_id == self.MAIN[0])
+
+    def run_page(self, ledger, matchups, execute=True):
+        import cfl_engine.event_flow.ingest_bout_order as ing
+        get, append, patch = ing.rest_get, ing.rest_append, ing._patch_fight
+        ing.rest_get, ing.rest_append = ledger.rest_get, ledger.rest_append
+        ing._patch_fight = lambda b, k, fid, act: ledger.patch_fight(b, k, fid, act)
+        try:
+            return ing.ingest_event(self.EVENT, "https://x.supabase.co", "k",
+                                    execute=execute,
+                                    page_html=build_page(matchups),
+                                    log=lambda *a, **k: None)
+        finally:
+            ing.rest_get, ing.rest_append, ing._patch_fight = get, append, patch
+
+    def test_the_whole_lifecycle(self):
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+
+        # observed
+        self.assertEqual(self.run_page(ledger, full), "written")
+        self.assertTrue(ledger.is_active[self.withdrawn_id])
+        history_rows = [r for r in ledger.rows if r["fight_id"] == self.withdrawn_id]
+        self.assertEqual(len(history_rows), 1)
+
+        # missing once -> PENDING, nothing flagged
+        self.assertEqual(self.run_page(ledger, without), "written")
+        self.assertTrue(ledger.is_active[self.withdrawn_id],
+                        "one absence retired a booking")
+        self.assertEqual(ledger.patches, [])
+
+        # missing twice -> CONFIRMED, flag flips. The card is UNCHANGED here, so
+        # this only happens because a pending retirement forces the observation.
+        self.assertEqual(self.run_page(ledger, without), "written")
+        self.assertFalse(ledger.is_active[self.withdrawn_id])
+        self.assertEqual(ledger.patches, [(self.withdrawn_id, False)])
+
+        # reappears -> active again
+        self.assertEqual(self.run_page(ledger, full), "written")
+        self.assertTrue(ledger.is_active[self.withdrawn_id])
+        self.assertEqual(ledger.patches[-1], (self.withdrawn_id, True))
+
+    def test_history_is_never_rewritten_across_the_whole_lifecycle(self):
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+
+        self.run_page(ledger, full)
+        first_observation = [dict(r) for r in ledger.rows]
+
+        self.run_page(ledger, without)
+        self.run_page(ledger, without)
+        self.assertFalse(ledger.is_active[self.withdrawn_id])
+
+        # every original row still present, byte for byte
+        for row in first_observation:
+            self.assertIn(row, ledger.rows,
+                          "an earlier observation was rewritten or dropped")
+        # the withdrawn booking's own history stands
+        self.assertTrue(
+            any(r["fight_id"] == self.withdrawn_id for r in ledger.rows),
+            "the withdrawn booking's ledger history was erased")
+        # and the fight row itself was never removed
+        self.assertIn(self.withdrawn_id, [f.id for f in ledger.fights])
+        # only is_active was ever written
+        self.assertTrue(all(isinstance(v, bool) for _, v in ledger.patches))
+
+    def test_a_replay_of_the_same_observation_does_not_count_twice(self):
+        """Re-running an unchanged card with nothing pending writes nothing."""
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        self.assertEqual(self.run_page(ledger, full), "written")
+        rows_after_first = len(ledger.rows)
+        for _ in range(3):
+            self.assertEqual(self.run_page(ledger, full), "unchanged")
+        self.assertEqual(len(ledger.rows), rows_after_first)
+        self.assertEqual(ledger.patches, [])
+
+    def test_a_dry_run_changes_nothing(self):
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+        self.run_page(ledger, full)
+        self.run_page(ledger, without)
+
+        rows_before = [dict(r) for r in ledger.rows]
+        active_before = dict(ledger.is_active)
+        self.assertEqual(self.run_page(ledger, without, execute=False), "dry-run")
+        self.assertEqual(ledger.rows, rows_before, "a dry run appended")
+        self.assertEqual(ledger.is_active, active_before, "a dry run flipped a flag")
+        self.assertEqual(ledger.patches, [])
+
+    def test_without_the_column_nothing_is_flagged_and_nothing_breaks(self):
+        """The column is unapplied today. That must not stop ingestion."""
+        ledger = ActiveFlagLedger(self.fights, active_column=False)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+        self.assertEqual(self.run_page(ledger, full), "written")
+        self.assertEqual(self.run_page(ledger, without), "written")
+        self.assertEqual(self.run_page(ledger, without), "written")
+        self.assertEqual(ledger.patches, [],
+                         "wrote is_active while the column does not exist")
+
+    def test_an_opponent_swap_retires_only_the_superseded_booking(self):
+        """Event 4282's shape: one booking leaves, a replacement arrives."""
+        ledger = ActiveFlagLedger(self.fights)
+        before = [self.MAIN, self.WITHDRAWN]
+        after = [self.MAIN, self.REPLACEMENT]
+        replacement_id = next(f.id for f in self.fights
+                              if f.ufc_fight_id == self.REPLACEMENT[0])
+
+        self.assertEqual(self.run_page(ledger, before), "written")
+        self.assertEqual(self.run_page(ledger, after), "written")
+        self.assertEqual(self.run_page(ledger, after), "written")
+
+        self.assertFalse(ledger.is_active[self.withdrawn_id])
+        self.assertTrue(ledger.is_active[replacement_id],
+                        "the replacement was retired")
+        self.assertTrue(ledger.is_active[self.main_id])
+        self.assertEqual([p for p in ledger.patches if p[1] is False],
+                         [(self.withdrawn_id, False)])

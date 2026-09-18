@@ -69,6 +69,10 @@ from cfl_engine.event_flow.ufcstats_card import (  # noqa: E402
     CardParseError,
     parse_event_page,
 )
+from cfl_engine.event_flow.retirement import (  # noqa: E402
+    REQUIRED_CONFIRMATIONS,
+    plan_retirements,
+)
 
 LEDGER = "fight_bout_order"
 MIGRATION = "research/clv/proposed_2026-09-16_event_flow.sql"
@@ -312,6 +316,96 @@ def fetch_page(ufc_event_id: str) -> str:
 # ---------------------------------------------------------------------------
 # One event
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Stale bookings: reading, reporting, applying
+# ---------------------------------------------------------------------------
+def _ledger_rows(observations: list[Observation]) -> list[dict]:
+    """Observations -> the plain rows `retirement` reads.
+
+    `observed_at` is normalised to a string because the retirement rule groups
+    a card by that value, and two spellings of one instant would split a single
+    append into two observations — which would hand a pending retirement a
+    second confirmation it never earned.
+    """
+    return [{"fight_id": o.fight_id,
+             "observed_at": o.observed_at.isoformat()
+                            if hasattr(o.observed_at, "isoformat") else str(o.observed_at),
+             "bout_order": o.bout_order}
+            for o in observations]
+
+
+def _read_fights(base_url: str, key: str, event_id: int) -> tuple[list[dict], bool]:
+    """This event's fights, with `is_active` when the column exists.
+
+    Returns (rows, column_present). The column is proposed in
+    add_bout_order_migration.sql and unapplied, so its absence is the normal
+    case today and must not be an error.
+    """
+    params = {"event_id": f"eq.{event_id}", "limit": 200}
+    try:
+        rows = rest_get(base_url, key, "fights",
+                        {**params, "select": "id,ufc_fight_id,event_id,is_active"})
+        return rows, True
+    except urllib.error.HTTPError:
+        rows = rest_get(base_url, key, "fights",
+                        {**params, "select": "id,ufc_fight_id,event_id"})
+        return rows, False
+
+
+def _report_retirements(retire, active_column: bool, log=print) -> None:
+    """Say what the card implies, whether or not anything can be written."""
+    if retire.is_empty:
+        return
+    for fight_id, seen in retire.pending:
+        log(f"   stale PENDING: fight {fight_id} absent from the latest {seen} "
+            f"observation(s); {REQUIRED_CONFIRMATIONS} needed. One bad parse "
+            f"looks exactly like this, so nothing is retired yet")
+    if retire.deactivate:
+        log(f"   stale CONFIRMED: {list(retire.deactivate)} — absent from the "
+            f"latest {REQUIRED_CONFIRMATIONS} complete card observations")
+    if retire.reactivate:
+        log(f"   back on the card: {list(retire.reactivate)} — is_active would "
+            f"return to true")
+    if not active_column and (retire.deactivate or retire.reactivate):
+        log(f"   note: `fights.is_active` does not exist, so nothing can be "
+            f"flagged. Apply add_bout_order_migration.sql. The fight rows and "
+            f"every prediction, quote and snapshot against them are untouched "
+            f"either way.")
+
+
+def _apply_retirements(base_url: str, key: str, retire, active_column: bool,
+                       log=print) -> None:
+    """Flip `is_active`, and nothing else, ever.
+
+    This is the only write in this module that touches `fights`, and it writes
+    exactly one boolean. The fight row is never deleted, its history in
+    `fight_bout_order` is never rewritten, and no prediction, quote, snapshot or
+    result is touched — a booking that was published was published.
+    """
+    if not (retire.deactivate or retire.reactivate):
+        return
+    if not active_column:
+        log("   is_active not applied: the column does not exist yet")
+        return
+    for fight_id in retire.deactivate:
+        _patch_fight(base_url, key, fight_id, False)
+        log(f"   set is_active=false on fight {fight_id}")
+    for fight_id in retire.reactivate:
+        _patch_fight(base_url, key, fight_id, True)
+        log(f"   set is_active=true on fight {fight_id}")
+
+
+def _patch_fight(base_url: str, key: str, fight_id: int, is_active: bool) -> None:
+    url = f"{base_url}/rest/v1/fights?id=eq.{fight_id}"
+    body = json.dumps({"is_active": is_active}).encode()
+    req = urllib.request.Request(url, data=body, method="PATCH", headers={
+        "apikey": key, "Authorization": f"Bearer {key}",
+        "Content-Type": "application/json", "Prefer": "return=minimal",
+    })
+    with urllib.request.urlopen(req, timeout=TIMEOUT):
+        pass
+
+
 def ingest_event(
     event: dict,
     base_url: str,
@@ -347,13 +441,16 @@ def ingest_event(
         )
         return "refused"
 
+    # `is_active` may not be on the table yet (add_bout_order_migration.sql is
+    # unapplied). Ask for it, fall back without it, and carry "unknown" rather
+    # than guessing — the plan then reports what it WOULD do instead of going
+    # quiet, which is the useful behaviour before the column lands.
+    raw, active_column = _read_fights(base_url, key, eid)
     fights = [
         FightRow(id=f["id"], ufc_fight_id=f["ufc_fight_id"], event_id=f["event_id"])
-        for f in rest_get(
-            base_url, key, "fights",
-            {"select": "id,ufc_fight_id,event_id", "event_id": f"eq.{eid}", "limit": 200},
-        )
+        for f in raw
     ]
+    active_by_fight = {f["id"]: f.get("is_active") for f in raw} if active_column else {}
 
     try:
         rows = build_rows(card, fights, eid)
@@ -375,7 +472,8 @@ def ingest_event(
     # This is the whole change-detection rule, and it compares against the
     # LATEST observation only. A position the card held at some point in the
     # past never blocks a later observation of the same position.
-    plan = plan_append(rows, read_ledger(base_url, key, eid))
+    ledger = read_ledger(base_url, key, eid)
+    plan = plan_append(rows, ledger)
     log(f"   {plan.reason}")
     for line in plan.changes:
         log(f"     {line}")
@@ -386,13 +484,33 @@ def ingest_event(
             f"are not on the page now — their last observation stands: "
             f"{list(plan.stale_fights)}")
 
-    if not plan.append:
+    # --- stale bookings -----------------------------------------------------
+    retire = plan_retirements(
+        _ledger_rows(ledger),
+        {r.fight_id for r in rows},
+        active_by_fight,
+    )
+    _report_retirements(retire, active_column, log)
+
+    # A pending retirement is a reason to append even when nothing moved. See
+    # RetirementPlan's docstring: a stale fight contributes no change entry, so
+    # without this the absence would sit at one confirmation for ever.
+    should_append = plan.append or retire.awaiting_confirmation
+    if not plan.append and retire.awaiting_confirmation:
+        log("   appending anyway: a retirement is awaiting its second "
+            "observation, and an unchanged card would never supply one")
+
+    if not should_append:
         log("   nothing to append.")
         return "unchanged"
 
     if not execute:
         log(f"   DRY RUN — would append {len(rows)} row(s) as one observation. "
             f"Pass --execute to write.")
+        if retire.deactivate:
+            log(f"   DRY RUN — would set is_active=false on {list(retire.deactivate)}")
+        if retire.reactivate:
+            log(f"   DRY RUN — would set is_active=true on {list(retire.reactivate)}")
         return "dry-run"
 
     try:
@@ -411,6 +529,18 @@ def ingest_event(
                 f"  Nothing was written.\n  {detail}")
         raise
     log(f"   appended {appended} row(s) as one observation")
+
+    # Re-plan against the ledger INCLUDING the observation just persisted.
+    # "Absent from two persisted observations" has to be counted after the
+    # second one exists, not before it — planning only beforehand would leave
+    # every retirement a run late, and on a card that then stops changing it
+    # would never arrive at all.
+    retire = plan_retirements(
+        _ledger_rows(read_ledger(base_url, key, eid)),
+        {r.fight_id for r in rows},
+        active_by_fight,
+    )
+    _apply_retirements(base_url, key, retire, active_column, log)
     return "written"
 
 
