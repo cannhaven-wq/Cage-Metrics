@@ -225,6 +225,91 @@ purpose, and publishing a reviewed candidate is a deliberate commit in a pull
 request where the moved verdicts appear in the diff. That is still gate #8 and
 still the owner's — it is simply no longer something a merge can do by accident.
 
+## The corrected run — 2026-09-18, and it confirms the diagnosis
+
+Run through
+[`factor-rates-validate.yml`](../../.github/workflows/factor-rates-validate.yml)
+on `main` at `71ec020d`
+([run 35377644563](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/35377644563)).
+**Nothing was published.** The job ended with *"Clean: the published
+factor-rates.json is untouched."*
+
+Recorded here because the workflow artifact expires in 30 days and a log is not
+an evidence base.
+
+### The headline
+
+| | published | corrected |
+|---|---|---|
+| `fights_scored` | 8,739 | **8,739** |
+| `market_even_cohort` | 869 | **1,220** |
+
+**The control held.** `fights_scored` was correct before the fix and is
+unchanged by it, which is what distinguishes "the reader was dropping odds
+rows" from "the change moved something it should not have".
+
+And the corrected cohort is **1,220 — exactly the figure FE-001 reached by
+querying the database directly.** Two independent routes to the same number,
+one of which never touched this script. The pagination hypothesis is no longer
+a hypothesis.
+
+### Verdicts that moved: 7
+
+| factor / bucket | before | after | market-even n | rate |
+|---|---|---|---|---|
+| `ufc_record` / headline | `lean` | **`real`** | 136 → 185 | 55.1% → 58.4% |
+| `ufc_record` / factor verdict | `lean` | **`real`** | — | — |
+| `age` / 7–9 years younger | `real` | **`lean`** | 151 → 201 | 58.9% → 56.7% |
+| `reach` / 6+ inches longer | `unproven` | `proxy` | 77 → 114 | 58.4% → 54.4% |
+| `southpaw_reach` / when it fires | `unproven` | `proxy` | 77 → 103 | 49.4% → 49.5% |
+| `southpaw_reach` / factor verdict | `unproven` | `proxy` | — | — |
+| `td_def` / 20–30 point edge | `unproven` | `proxy` | 84 → 121 | 51.2% → 51.2% |
+
+FE-001 predicted three of these — `ufc_record` up, `age` 7–9 down, `td_def`
+20–30 out of `unproven` — and all three landed, in the predicted direction, at
+close to the predicted samples. The other four were not predicted and are new.
+
+**A verdict moved DOWN as well as up.** Age's 7–9 band loses its `real` status
+on a 33% larger sample. A correction that only ever flattered us would be the
+suspicious kind.
+
+28 further buckets changed sample size without changing verdict — every one
+gaining roughly 30–40%, which is the shape you would expect if the reader had
+been dropping odds rows roughly uniformly rather than in one region.
+
+### ⚠ The finding that needs the most care before anything ships
+
+**`ufc_record` becomes `real` — and that is not the factor FE-001 found dead.**
+
+They are different measurements that both get called "record" in conversation:
+
+| | Factor Lab `ufc_record` | FE-001's `edges.js` record |
+|---|---|---|
+| Record used | **UFC-only** | **professional, whole career** |
+| Quantity | raw win-rate gap | Laplace-smoothed `(w+2)/(w+l+4)` |
+| Bands | 10 / 15 / 22 / 30 points | 0.08 / 0.15 / 0.25 / 0.40 |
+| Corrected market-even result | **58.4%, `real`** | **50.2%, a coin flip** |
+
+So publishing this candidate would put a `real` verdict on a record factor on
+`stats.html` in the same week FE-001 concluded the record factor the product
+actually ships is market echo. Both can be true — they are different
+definitions — but a reader will not make that distinction on their own, and
+`CLAUDE.md`'s standing rule is that a UFC bettor with no stats background must
+be able to follow it.
+
+**Consequences if the candidate is published as-is:**
+
+1. `CLAUDE.md`'s line *"Only age currently survives market control"* becomes
+   false and needs correcting in the same change.
+2. `stats.html` would assert that UFC record predicts winners under market
+   control — a **new public performance claim**, gate #8 in its own right, not
+   merely the restoration of a correct old one.
+3. The distinction between the two record factors would have to be visible on
+   the page, or the site contradicts its own research artifact.
+
+None of that is an argument against publishing. It is an argument against
+publishing it as a routine refresh.
+
 ## Not fixed here
 
 The same OFFSET-without-order pattern is in `build/prerender.js:37`,
