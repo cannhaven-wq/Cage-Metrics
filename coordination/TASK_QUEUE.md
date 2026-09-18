@@ -26,6 +26,13 @@ it died is usually worth more than the task was.
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
 | T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
+| T-020 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
+| T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
+| T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | in-progress |
+| T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | in-progress |
+| T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control | L1 | Claude | blocked |
+| T-025 | Dated correction to the `edges.html` factor table, once T-024 lands | L3 | Owner | blocked |
+| T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | in-progress |
 
 ## Closed
 
@@ -93,6 +100,68 @@ Q-08 (minimum sample), Q-11 (how it may be described). Each changes what a
 published number means. It is blocked behind T-003 — ChatGPT reviews the
 methodology first, so the questions reaching the owner have been through a
 statistician.
+
+
+**T-010 to T-025 come out of the 2026-09-18 read-only audit**
+([`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md)). Three are the owner's.
+
+**T-010** is the one with the best ratio of value to risk in the whole audit.
+Seven test files — 168 tests, 4,227 subtests and 71 JS assertions — guard the
+frozen-file hashes, the CLV publication gate, the proof-gate record separation
+and the coordination invariants. They all pass. Nothing runs them: only
+`event-flow.yml` invokes a single unittest module. A frozen hash could drift on
+`main` and no gate would notice.
+
+**T-020 and T-021 are L3 because of gate #8**, not because the finding is
+debatable. Four public claims on `index.html` contradict artifacts in this
+repository — including "graded at real closing prices", which is exactly the
+claim CLV-001 exists to withhold. Replacement copy is drafted and no public
+claim has been edited. What needs the owner is the wording that ships, not
+whether the current wording is wrong.
+
+**T-021 carries a standing direction** from the owner, 2026-09-18: the
+governance rule in `CLAUDE.md` is preserved, and `CLAUDE.md` is **not** to be
+amended merely to keep the percentage UI. The replacement must express the
+model-versus-market comparison without asserting an edge the evidence does not
+support.
+
+**T-022 and T-023 are L2** — reversible, publish no new number, and T-023 can
+only narrow what the page asserts. Proceed and notify.
+
+**Ids T-020 to T-026 were renumbered on 2026-09-18, and the reason matters.**
+They were first allocated as T-011 to T-016. While this session was working, a
+second session allocated **T-011 to a different task** on the
+`claude/brave-cray-rssmll-ci` branch. Two live meanings for one id in an
+append-only log is the failure this file's "ids are never reused" rule exists
+to prevent, so this session's block moved up and out of the way rather than
+contest it. The gap from T-017 to T-019 is deliberate slack against the same
+race happening again. Nothing was deleted: T-011 as used here never reached
+`main`.
+
+**T-022 and T-023 are implemented but NOT shipped.** They exist only on
+`claude/brave-cray-rssmll` and its split PRs. They were briefly marked `done`,
+which was wrong — branch-only work is not shipped work — and they stay
+`in-progress` until their PR merges. Caught in ChatGPT's review, 2026-09-18.
+
+**T-026 is L3 because it changes a published number**, not because the defect
+is arguable. The homepage headline was computed over the live and replay
+records pooled together; the fix computes it over one. The number moves, and
+which record it should be is the owner's call. PR #23.
+
+**T-024 is blocked on egress, not on a decision.** The measurement script and
+its 18 offline tests are written and on the branch; the run needs a service key
+and an environment that can reach Supabase, and this one had neither. What
+could be measured without a live pull was, and it is already decisive for
+takedown defence — `factor-rates.json` bands that factor at exactly `edges.js`'s
+own edges (10 / 20 / 30). See
+[`research/factors/FACTOR_EVIDENCE_2026-09-18.md`](../research/factors/FACTOR_EVIDENCE_2026-09-18.md).
+
+**T-024 is read-only** and produces an artifact before any factor claim moves.
+`edges.js` publishes 60–72% for a record gap that `factor-rates.json` measures
+at 55.1% (CI 46.8–63.3) under market control, and 52–56% for takedown defence
+that measures 49.3% (CI 43.7–55.0). Age — the only factor with a `real` verdict
+— is the one that was retired. The measurement comes first; **T-025** is the
+correction, and it is the owner's.
 
 ---
 
