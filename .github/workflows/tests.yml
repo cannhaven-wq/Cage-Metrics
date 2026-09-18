@@ -1,0 +1,95 @@
+name: Tests
+
+# Runs the test suites that already exist in this repo. Nothing new is asserted
+# here — this workflow only pulls tripwires that were already built and were,
+# until now, only run when somebody remembered to run them locally.
+#
+# What is at stake if these do not run:
+#
+#   tests/test_research_state.py    frozen-file sha256s. A frozen file drifting
+#                                   silently invalidates every experiment that
+#                                   rests on it.
+#   tests/test_clv_protocol.py      the CLV publication gate, and the machine
+#                                   mirror (protocol.json) against the module's
+#                                   own constants.
+#   tests/test_coordination.py      an L3 task cannot reach `done` without a
+#                                   decision recorded against its id.
+#   tests/test_migrations_idempotent.py / test_sql_behaviour.py
+#                                   the migrations stay re-runnable.
+#   tests/proof-gates.test.js       live and replay records never total together;
+#                                   gates fail closed.
+#   tests/proof-copy.test.js        shipped Proof Center copy matches what the
+#                                   data actually supports.
+#
+# Read-only by construction: every test in this repo is stdlib-only Python or
+# dependency-free Node, reads files from the checkout, and touches no network
+# and no database. There are no secrets here and none are needed — so this
+# workflow is safe to run on pull requests from forks.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      # The tests import nothing outside the standard library. pytest is here
+      # as a runner only: `unittest discover` cannot walk tests/ (no
+      # __init__.py), and naming each module by hand means a new test file
+      # would be skipped in silence, which is the one failure mode a tripwire
+      # suite cannot have.
+      - name: Install the test runner
+        run: python -m pip install --disable-pip-version-check --quiet pytest
+
+      - name: Run tests
+        run: python -m pytest tests/ -q -rs
+
+  node:
+    name: Node test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No framework and no dependencies: each file is a script that prints its
+      # own count and exits non-zero on the first failure. Looped rather than
+      # listed so a new tests/*.test.js is picked up without editing this file.
+      - name: Run tests
+        run: |
+          shopt -s nullglob
+          files=(tests/*.test.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No tests/*.test.js found — expected at least one."
+            exit 1
+          fi
+          status=0
+          for f in "${files[@]}"; do
+            echo "--- $f"
+            node "$f" || status=1
+          done
+          exit $status
+        shell: bash
