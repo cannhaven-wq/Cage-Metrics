@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-09-18 (b) — review corrections: split PRs, id collision, gated evidence
+## 2026-09-18 (b) — review corrections, split PRs, and a scope reset
 
 **From:** Claude
 **To:** Owner → ChatGPT
@@ -42,12 +42,12 @@ Laplace-smoothed 8 / 15 / 25 / 40 bands, which sit on a different quantity.
 
 Consequences, all applied:
 
-- `FACTOR_EVIDENCE_2026-09-18.md` no longer licenses the `edges.html`
-  correction. What it still licenses is narrower and still true: these ranges
-  were never measured against the market at all, which is a provenance fact
-  rather than a performance claim.
-- `DRAFT_edges_correction_2026-09-18.md` carries a **DO NOT SHIP** header until
-  T-024 runs, and its takedown-defence paragraph is weakened to match.
+- The preliminary factor artifacts no longer license the `edges.html`
+  correction, and the correction draft carries a **DO NOT SHIP** header. Both
+  then moved out of this line entirely — see the scope reset below. What
+  survives regardless of who measures: these ranges were never tested against
+  the market at all, which is a provenance fact rather than a performance
+  claim.
 - Age: clearing 50% in isolation is not evidence of **incremental** value. The
   engine already carries age among its 49 covariates, so a standalone base rate
   says nothing about what reinstating the factor would add. That needs its own
@@ -75,9 +75,33 @@ written and this session's duplicate T-010 row was dropped.
 |---|---|---|
 | [#22](https://github.com/cannhaven-wq/Cage-Metrics/pull/22) | CI (other session; pytest pinned to 9.1.1) | **MERGED** `4f9d4a8` |
 | [#23](https://github.com/cannhaven-wq/Cage-Metrics/pull/23) | the homepage live/replay pooling defect | **changes a published number — gate #8** |
-| #24 | coordination and audit documents | none — documents only |
-| #25 | Proof Center nav + the explanation label | reversible UI |
-| #26 | factor research (script, tests, evidence, drafts) | none — nothing applied |
+| [#24](https://github.com/cannhaven-wq/Cage-Metrics/pull/24) | coordination and audit documents | none — documents only |
+| [#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25) | Proof Center nav + the explanation label | reversible UI |
+| [#26](https://github.com/cannhaven-wq/Cage-Metrics/pull/26) | preliminary factor research | **PARKED — do not merge**, see below |
+
+### Scope reset, 2026-09-18
+
+This line owns **product trust** and nothing else: #23, #24, #25.
+
+Factor evidence moved to a dedicated workstream, **FE-001**, which has run the
+deeper market-controlled analysis this line could not. #26 is parked unmerged
+so there is **one** authoritative factor artifact rather than two competing
+ones, and FE-001 decides whether anything in it survives.
+
+Three distinctions have to survive that handover, because the first two were
+got wrong once already in this session:
+
+1. `factor-rates.json` matches `edges.js`'s 10/20/30 takedown-defence bands but
+   applies **no `willHaveWrestling()` gate**. Any figure from it is evidence
+   about the generic factor, never a measurement of the shipped rule.
+2. It bands the **raw** record gap; `edges.js` bands a **Laplace-smoothed** one.
+   Different quantities, so the headline cohort is not a band-level test.
+3. Age clearing 50% standalone is **not** authority to reinstate it. The engine
+   already carries age among its 49 covariates, so incremental value is a
+   separate question with its own test.
+
+T-024 and T-025 are re-pointed at FE-001 in the queue. T-025 stays the owner's
+under gate #8 whoever supplies the evidence.
 
 ### The homepage defect, which is the real find
 
@@ -95,22 +119,34 @@ argument, and static checks that the page actually routes through it.
 
 ## Next action
 
-**Owner:** #22 merged to `main` at `4f9d4a8` while these were being split, so
-CI is live and every PR below is checked by it. Merge order for the rest: #24
-and #26 (documents only), then #25 (UI). **#23 is the one that needs a decision, not
-just a review**: it changes what the homepage headline is computed from, the
-number will move, and which record it should show is yours to pick. It is
-currently set to the replay record, matching the "(simulated)" label already
-beside it.
+**Owner:** #22 merged to `main` at `4f9d4a8`, so CI is live and every PR below
+is checked by it. Three PRs are ready, all green:
 
-**ChatGPT:** two things. Whether the narrowed evidence artifact now states the
-takedown-defence position correctly. And whether the replay record is the right
-choice for the homepage headline, or whether both records should be shown at
-their real sizes.
+- **#24** — documents only, no risk. Merge first; it is what the other two
+  refer back to.
+- **#25** — reversible UI. Proof Center into the nav, the matchup bullets
+  labelled as context rather than as the model's reasoning.
+- **#23** — **needs a decision, not just a review.** It changes what the
+  homepage headline is computed from: today that number averages the live feed
+  and the history replay together, and afterwards it is one record. The figure
+  will move. It is set to the replay record, matching the "(simulated)" label
+  already beside it; live-only, or both side by side, are the alternatives and
+  the last is a layout change.
 
-**Claude, when unblocked:** run `measure_edges_bands.js` with a service key,
-commit `edges_bands_measured.json`, update §1 and §2 of the evidence artifact
-with the gated result, and only then revisit T-025.
+**#26 is parked and should not be merged.** FE-001 owns factor evidence and
+will say whether any of it survives.
+
+Still outstanding and unchanged: the trust-copy drafts in
+`DRAFT_trust_copy_2026-09-18.md` (T-020, T-021) are applied to nothing, so
+`index.html` keeps shipping "graded at real closing prices" in its meta
+description until they are ruled on.
+
+**ChatGPT:** whether the replay record is the right choice for the homepage
+headline, or whether both records should be shown at their real sizes. That is
+the one open design question in this line's scope.
+
+**This line, next:** nothing new until #23, #24 and #25 are resolved. No
+further factor work, no new model research.
 
 ---
 
@@ -250,7 +286,7 @@ policy blocks `*.supabase.co`, which is why T-024 is blocked below.
 | 3 | Proof Center in the nav and footer, with analytics (T-022) | `_shared.js`, `_shared.css`, `proof.html` |
 | 4 | The matchup bullets labelled for what they are (T-023) | `fight-insights.js` + its three consumers |
 | 5 | Replacement copy for the contradicted claims, **applied to nothing** | [`DRAFT_trust_copy_2026-09-18.md`](DRAFT_trust_copy_2026-09-18.md) |
-| 6 | Factor evidence, partial, plus the script to finish it | [`research/factors/`](../research/factors/) |
+| 6 | Factor evidence, partial, plus the script to finish it | `research/factors/` — parked, see (b) |
 
 ### The three findings that matter
 
@@ -269,11 +305,14 @@ it. My first draft of that workflow ran `pytest tests/` and reported 168 tests;
 it undercounted by 456, and the second commit on the branch corrects it to run
 from the repo root with the engine requirements installed.
 
-> **Corrected by the 2026-09-18 (b) entry above.** The paragraph below claims
-> the takedown-defence comparison "needed no new run". The bands match; the
-> cohorts do not, because `factor-rates.js` applies no `willHaveWrestling()`
-> gate. The 49.3% is evidence against the generic factor, not a test of the
-> shipped rule. The original wording is left as written rather than rewritten.
+> **Corrected and superseded by the 2026-09-18 (b) entry above.** Two things.
+> The paragraph below claims the takedown-defence comparison "needed no new
+> run": the bands match, the cohorts do not, because `factor-rates.js` applies
+> no `willHaveWrestling()` gate — so 49.3% is evidence against the generic
+> factor, not a test of the shipped rule. And the factor workstream has since
+> moved to FE-001, so the `research/factors/` files this entry names are parked
+> rather than merged. The original wording is left as written rather than
+> rewritten; its links are de-linked because the paths are not on `main`.
 
 **`edges.js` publishes two factor strengths with no artifact, and one of them is
 now refuted.** `factor-rates.json` bands takedown defence at exactly `edges.js`'s
@@ -290,8 +329,8 @@ interval clears 50.
   before/after strings in `DRAFT_trust_copy_2026-09-18.md`. The owner's
   standing direction is recorded there: the `CLAUDE.md` rule is preserved and
   is not to be amended to keep the percentage UI.
-- **T-025** — the dated correction to `edges.html`'s factor table, drafted at
-  `research/factors/DRAFT_edges_correction_2026-09-18.md`. It can ship on the
+- **T-025** — the dated correction to `edges.html`'s factor table, drafted in the
+  parked factor branch. It can ship on the
   evidence already in hand; the pending run only sharpens one paragraph.
 - **One finding the audit missed, now in the draft.** `loadHeroProof()` pools
   live and replay rows into the homepage headline accuracy with no `source`
@@ -317,15 +356,15 @@ environment.
    was written to prevent. If only one item is approved today, make it C3, the
    pooled-record fix, which is a wrong number rather than a stale one.
 
-**ChatGPT:** review `research/factors/FACTOR_EVIDENCE_2026-09-18.md` — in
+**ChatGPT:** review the factor evidence artifact — in
 particular whether the takedown-defence comparison is close enough to exact to
 license the `edges.html` correction before the pending run, given that
 `factor-rates.js` applies no `willHaveWrestling` gate and rebuilds the metric
 point-in-time where `edges.js` reads the career figure.
 
-**Claude, when unblocked:** run `measure_edges_bands.js` from an environment
+**Claude, when unblocked:** run the band measurement from an environment
 with egress and a service key, commit
-`research/factors/edges_bands_measured.json`, and update §2 of the evidence
+its measured output, and update §2 of the evidence
 artifact with the per-band record result.
 
 ---

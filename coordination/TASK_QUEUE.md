@@ -30,8 +30,8 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | in-progress |
 | T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | in-progress |
-| T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control | L1 | Claude | blocked |
-| T-025 | Dated correction to the `edges.html` factor table, once T-024 lands | L3 | Owner | blocked |
+| T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
+| T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | in-progress |
 
 ## Closed
@@ -102,7 +102,7 @@ methodology first, so the questions reaching the owner have been through a
 statistician.
 
 
-**T-010 to T-025 come out of the 2026-09-18 read-only audit**
+**T-010 to T-026 come out of the 2026-09-18 read-only audit**
 ([`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md)). Three are the owner's.
 
 **T-010** is the one with the best ratio of value to risk in the whole audit.
@@ -148,20 +148,24 @@ is arguable. The homepage headline was computed over the live and replay
 records pooled together; the fix computes it over one. The number moves, and
 which record it should be is the owner's call. PR #23.
 
-**T-024 is blocked on egress, not on a decision.** The measurement script and
-its 18 offline tests are written and on the branch; the run needs a service key
-and an environment that can reach Supabase, and this one had neither. What
-could be measured without a live pull was, and it is already decisive for
-takedown defence — `factor-rates.json` bands that factor at exactly `edges.js`'s
-own edges (10 / 20 / 30). See
-[`research/factors/FACTOR_EVIDENCE_2026-09-18.md`](../research/factors/FACTOR_EVIDENCE_2026-09-18.md).
+**T-024 and T-025 moved out of this line on 2026-09-18.** A dedicated
+factor-evidence workstream (**FE-001**) now owns the exact market-controlled
+measurement and has run it; this line's preliminary work is parked rather than
+merged, so there is one authoritative factor artifact instead of two competing
+ones. Nothing about the finding changed — `edges.js` publishes 60–72% for a
+record gap and 52–56% for takedown defence, and neither range traces to an
+artifact — only who establishes the replacement numbers.
 
-**T-024 is read-only** and produces an artifact before any factor claim moves.
-`edges.js` publishes 60–72% for a record gap that `factor-rates.json` measures
-at 55.1% (CI 46.8–63.3) under market control, and 52–56% for takedown defence
-that measures 49.3% (CI 43.7–55.0). Age — the only factor with a `real` verdict
-— is the one that was retired. The measurement comes first; **T-025** is the
-correction, and it is the owner's.
+**The distinction that must survive the handover**, because it is the one that
+was got wrong once already: `factor-rates.json` matches `edges.js`'s 10/20/30
+takedown-defence bands but applies **no `willHaveWrestling()` gate**, and it
+bands the **raw** record gap where `edges.js` bands a **Laplace-smoothed** one.
+So any figure taken from it is evidence about the generic factor, never a
+measurement of the shipped rule. Age clearing 50% standalone is likewise not
+authority to reinstate it: the engine already carries age among its 49
+covariates, so incremental value is a separate question.
+
+**T-025 stays the owner's** under gate #8 whoever supplies the evidence.
 
 ---
 

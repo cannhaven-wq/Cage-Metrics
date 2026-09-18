@@ -319,10 +319,11 @@ it. Three findings are load-bearing:
    claims 52–56% and measures 49.3% (CI 43.7–55.0); age, retired in May, is the
    only `real` verdict. **Neither of the first two is yet an exact test of the
    shipped rule** — `factor-rates.json` applies no `willHaveWrestling()` gate
-   and bands the raw rather than the smoothed record gap. **T-024** runs the
-   exact measurement and is blocked on egress; **T-025** is the correction and
-   does not ship before it. `computeEdges` has no production consumer, but
-   `edges.html` still publishes the ranges as **Active**.
+   and bands the raw rather than the smoothed record gap. **The exact
+   measurement is owned by the factor-evidence workstream (FE-001), not by this
+   line**; T-024 and T-025 sit with it. `computeEdges` has no production
+   consumer, but `edges.html` still publishes the ranges as **Active**, so the
+   correction is still owed — just not from here.
 
 The trust pages keep their split by owner direction of 2026-09-18:
 `track-record.html` is results and history, `proof.html` is evidence, method,
