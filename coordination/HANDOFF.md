@@ -11,6 +11,83 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 (d) — T-027 diagnosed: the Factor Lab was reading the wrong rows
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+Measurement integrity only. No feature, no migration, no Event Flow, no public
+factor copy.
+
+### Root cause
+
+`build/factor-rates.js` paged every read with `.range(from, from+999)` and no
+`.order()`. Those are separate SQL statements, and Postgres does not promise the
+same row order across them — so page n+1 was a window into a differently ordered
+result. Rows near every boundary were dropped and others duplicated, and the
+duplicates also skewed the median-across-books.
+
+**The count still looked right**, which is why it survived: ~16,000 rows either
+way, just not the same ~16,000.
+
+### Why it is the odds read, and not a definitional difference
+
+`factor-rates.json` records `fights_scored: 8739`; FE-001's independent SQL
+counts the same 8,739. So `events`, `fights` and `fighters` all came back
+complete. The market-even flag has exactly one further input — the `fight_odds`
+array — and both sides use the same ±140 band, the same `is_closer` filter and
+the same median rule. Same denominator, different numerator, one possible
+cause.
+
+`fight_odds` is also the only one of the four reads that is large **and**
+filtered (~110k narrowed to ~16k over sixteen requests), which is where a
+parallel scan can reorder, and the only one being written to while it runs.
+
+### Fixed with keyset, not with `.order()`
+
+Ordering alone fixes unstable order and leaves the concurrent-write race:
+`fight_odds` is append-only and written every five minutes, so an insert ahead
+of the cursor still shifts every later OFFSET page. Keyset paging defines a page
+by data rather than position and survives both. `build/paginate.js`, with 10
+regression assertions that need no network or key.
+
+The paginator throws on a missing or non-unique key rather than returning a
+short result — silent truncation is the bug being removed. Writing that guard
+caught a real defect in the first version of the fix.
+
+### ⚠ The decision this needs
+
+**Merging is the publish action.** `prerender.yml` runs `npm run factor-rates`
+on a 6-hour cron and commits `factor-rates.json` to `main`. Merging the fix
+therefore performs a corrected run unattended and puts the new verdicts on
+`stats.html` with nobody having looked at them first. Gate #8.
+
+So the PR is open and **not merged**. The rerun command, the environment it
+needs, and `build/compare-factor-rates.js` (which exits non-zero if any verdict
+moved) are in
+[`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md).
+
+### Not fixed, reported
+
+The same OFFSET-without-order pattern is in `build/prerender.js:37`,
+`build/send-digest.js:261` and `build/fetch-odds.js`. In `prerender.js` it would
+show as missing or duplicated SEO stubs rather than a wrong number. Left alone
+to keep T-027 scoped; `build/paginate.js` is there for whoever takes them.
+
+## Next action
+
+**Owner:** pick how the corrected numbers reach the page — merge and let the
+cron publish, or run it manually and compare first. Nothing else in T-027 can
+proceed without that, because every remaining step regenerates the artifact.
+
+**ChatGPT:** the diagnosis is in the document above. The part worth challenging
+is the elimination argument — that an identical `fights_scored` on both sides
+proves the other three reads were complete. If that holds, the cause is the odds
+read alone; if it does not, the remaining gap needs its own investigation.
+
+---
+
 ## 2026-09-18 (c) — consolidation: #24, #25 and #23 merged
 
 **From:** Claude (integration / release)

@@ -30,7 +30,7 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
-| T-027 | Settle the suspected unordered `.range()` paging in `build/factor-rates.js` — the published market-even cohort may be short | L1 | Claude | queued |
+| T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js` — diagnosed and fixed; the corrected rerun is the owner's | L3 | Owner | in-progress |
 
 ## Closed
 
@@ -185,20 +185,25 @@ covariates, so incremental value is a separate question.
 
 **T-025 stays the owner's** under gate #8 whoever supplies the evidence.
 
-**T-027 comes out of FE-001, and it is queued rather than fixed.** The
-factor-evidence run reported that `build/factor-rates.js` pages `fight_odds`
-through `fetchAll` without an `.order('id')`, and that the market-even cohort it
-publishes looks roughly 30% short against FE-001's own count. PostgREST
-`.range()` without an explicit order has no guaranteed row order between pages,
-so pages can overlap or skip.
+**T-027 is diagnosed and fixed in code; it became L3 on the way.** See
+[`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md).
 
-It is queued and not done because **every verdict on `stats.html` rests on that
-cohort size** and several would move. That makes it a measurement change, not a
-one-line patch: the fix is `.order('id')` (or keyset paging), but it has to be
-followed by a re-run with a service key and a stated before/after, and the
-re-run needs egress this environment does not have. Fixing the paging without
-the re-run would leave the page publishing numbers nobody had checked against
-the new cohort.
+`build/factor-rates.js` paged every read with `.range()` and no `.order()` —
+separate statements whose row order Postgres does not fix, so pages overlapped
+and skipped. The evidence localises the loss to the `fight_odds` read alone:
+`fights_scored` is 8,739 in both the published artifact and FE-001's independent
+SQL, so the other three reads came back complete, and the market-even flag has
+no other input. Replaced with keyset paging (`build/paginate.js`), which also
+survives the concurrent writes `fight_odds` takes every five minutes; ordering
+alone would not.
+
+**It is L3, and owned by the owner, because merging is itself the publish
+action.** `prerender.yml` runs `npm run factor-rates` on a 6-hour cron and
+commits `factor-rates.json` to `main`, so the fix does not merely permit a
+corrected run — within six hours it performs one unattended and publishes the
+resulting verdicts to `stats.html`. That is gate #8. The rerun command, the
+comparison script and the two options are in the document above; the code is
+held unmerged until the owner picks one.
 
 Deliberately excluded from the 2026-09-18 consolidation, which was merging
 finished work rather than opening new lines.

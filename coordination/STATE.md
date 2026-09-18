@@ -426,6 +426,18 @@ staleness limit, so the governor costs **lead time, never correctness**.
 All five original CLV L3 questions (Q-05, Q-06, Q-07, Q-08, Q-11) are resolved
 and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.
 
+### Measurement integrity
+
+**T-027 — the Factor Lab was reading the wrong rows.**
+`build/factor-rates.js` paged with `.range()` and no `.order()`, so pages
+overlapped and skipped; the published `market_even_cohort` is 869 where a direct
+query counts 1,220, on an identical 8,739-fight denominator. Diagnosed and fixed
+with keyset paging ([`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md)).
+
+**Held unmerged.** `prerender.yml` regenerates and commits `factor-rates.json`
+on a 6-hour cron, so merging the fix republishes every affected verdict to
+`stats.html` unattended. That is gate #8 and it is the owner's.
+
 ### Site
 
 Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
