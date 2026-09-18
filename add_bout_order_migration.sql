@@ -23,42 +23,49 @@ COMMENT ON COLUMN fights.is_active IS
   'False when the booking fell off the UFCStats event page (opponent change / scrapped fight). Rows are never deleted — locked picks reference them.';
 
 -- ---------------------------------------------------------------------------
--- One-time cleanup of damage already in the table, scoped to UPCOMING events
--- (past events graded fine; their order is cosmetic and the scraper will
--- backfill bout_order on its recent-events pass anyway).
+-- NO DATA CLEANUP IN THIS MIGRATION. Deliberately.
 -- ---------------------------------------------------------------------------
-
--- 1) A fighter can only fight once per card: where the same fighter appears in
---    two fights of one upcoming event, retire the older booking.
-WITH upcoming_fights AS (
-  SELECT f.id, f.event_id, f.fighter_a_id, f.fighter_b_id
-  FROM fights f JOIN events e ON e.id = f.event_id
-  WHERE e.is_upcoming = true
-),
-sides AS (
-  SELECT id, event_id, fighter_a_id AS fighter_id FROM upcoming_fights WHERE fighter_a_id IS NOT NULL
-  UNION ALL
-  SELECT id, event_id, fighter_b_id FROM upcoming_fights WHERE fighter_b_id IS NOT NULL
-),
-stale AS (
-  SELECT id FROM (
-    SELECT id, ROW_NUMBER() OVER (PARTITION BY event_id, fighter_id ORDER BY id DESC) AS rn
-    FROM sides
-  ) ranked WHERE rn > 1
-)
-UPDATE fights SET is_active = false WHERE id IN (SELECT id FROM stale);
-
--- 2) One main event per upcoming card: clear the flag everywhere except the
---    newest row still claiming it. (The scraper re-asserts the correct flag
---    and bout_order on its next pass; the site independently resolves the
---    main event from the event name.)
-WITH claims AS (
-  SELECT f.id, ROW_NUMBER() OVER (PARTITION BY f.event_id ORDER BY f.id DESC) AS rn
-  FROM fights f JOIN events e ON e.id = f.event_id
-  WHERE e.is_upcoming = true AND f.is_main_event = true AND f.is_active = true
-)
-UPDATE fights SET is_main_event = false
-WHERE id IN (SELECT id FROM claims WHERE rn > 1);
+-- This file previously carried two one-time UPDATEs: retire a booking when the
+-- same fighter appears twice on an upcoming card, and clear every is_main_event
+-- flag but the newest. Both were removed on 2026-09-18 and are NOT replaced
+-- with another heuristic.
+--
+-- Why they were removed, measured against production rather than assumed:
+--
+--   * Both matched ZERO rows. The eight upcoming events carry no
+--     double-booked fighter and exactly one main-event claim each. The
+--     cleanup was inert, so removing it changes nothing today -- which is
+--     precisely why now is the time to remove it, rather than after it has
+--     silently retired something.
+--
+--   * Both ranked by `id DESC` and kept the highest. Insert id is arrival
+--     order, not truth. On the next opponent swap it would keep whichever row
+--     happened to be written last, which is a guess dressed as a rule.
+--
+--   * Neither caught the case that motivated all of this. UFC 331 carried a
+--     cancelled booking (Moicano vs Ortega, withdrawn injured) that appears
+--     exactly ONCE on the card, so a double-booking test cannot see it. The
+--     heuristic addresses opponent swaps only, and a straight withdrawal is
+--     the more common shape.
+--
+--   * A booking carries published evidence. That one row has 12 predictions
+--     and 40 captured quotes against it. Retiring it is a claim about what is
+--     on a card, and a claim like that is made from an observation, not from
+--     a row-number tiebreak.
+--
+-- Retirement belongs to the observation-based signal instead: a booking that
+-- was observed on a card and is then absent from successive complete card
+-- parses. `plan_append` in cfl_engine/event_flow/bout_order.py already computes
+-- exactly that as `stale_fights`. See
+-- cfl_engine/event_flow/STALE_BOOKING_LIFECYCLE.md.
+--
+-- This migration is therefore ADDITIVE ONLY:
+--   * no UPDATE, no DELETE, no DROP
+--   * no row's meaning is reinterpreted
+--   * `is_active` defaults to true, so every existing row -- including all 790
+--     past events -- stays active and no historical reporting changes
+--
+-- ---------------------------------------------------------------------------
 
 -- Sanity check: upcoming events with their active fights and flags.
 SELECT e.name, f.id, f.bout_order, f.is_main_event, f.is_active,
