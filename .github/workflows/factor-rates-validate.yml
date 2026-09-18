@@ -96,6 +96,27 @@ jobs:
             exit "$CMP"
           fi
 
+      # Also emit the candidate INTO THE LOG, checksummed.
+      #
+      # The artifact is the nice way to get this file, and it is not always a
+      # usable one: it expires after 30 days, and its download redirects to
+      # blob storage that a restricted network may refuse while the GitHub API
+      # itself is reachable. A reviewer who cannot fetch the artifact would
+      # otherwise be reduced to retyping numbers out of the comparison table,
+      # which is exactly how a published figure acquires a typo.
+      #
+      # gzip+base64 keeps it to a few KB, and the sha256 of the RAW json is
+      # printed beside it so a reconstruction can be proved byte-identical
+      # rather than assumed to be.
+      - name: Emit candidate to the log (checksummed)
+        run: |
+          echo "candidate sha256: $(sha256sum factor-rates.json | cut -d' ' -f1)"
+          echo "candidate bytes:  $(wc -c < factor-rates.json)"
+          echo "--- BEGIN CANDIDATE (gzip+base64) ---"
+          gzip -9 -c factor-rates.json | base64 -w0
+          echo ""
+          echo "--- END CANDIDATE ---"
+
       # The candidate leaves as a downloadable artifact, never as a commit.
       - name: Upload candidate
         uses: actions/upload-artifact@v4
