@@ -25,6 +25,13 @@ it died is usually worth more than the task was.
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
+| T-010 | Run the existing Python and JS test suites in CI, on push and PR | L1 | Claude | in-progress |
+| T-011 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
+| T-012 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
+| T-013 | Proof Center into the nav and footer, with analytics | L2 | Claude | in-progress |
+| T-014 | Label the explanation layer as matchup context, not model internals | L2 | Claude | in-progress |
+| T-015 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control | L1 | Claude | in-progress |
+| T-016 | Dated correction to the `edges.html` factor table, once T-015 lands | L3 | Owner | blocked |
 
 ## Closed
 
@@ -77,6 +84,40 @@ Q-08 (minimum sample), Q-11 (how it may be described). Each changes what a
 published number means. It is blocked behind T-003 — ChatGPT reviews the
 methodology first, so the questions reaching the owner have been through a
 statistician.
+
+
+**T-010 to T-016 come out of the 2026-09-18 read-only audit**
+([`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md)). Three are the owner's.
+
+**T-010** is the one with the best ratio of value to risk in the whole audit.
+Seven test files — 168 tests, 4,227 subtests and 71 JS assertions — guard the
+frozen-file hashes, the CLV publication gate, the proof-gate record separation
+and the coordination invariants. They all pass. Nothing runs them: only
+`event-flow.yml` invokes a single unittest module. A frozen hash could drift on
+`main` and no gate would notice.
+
+**T-011 and T-012 are L3 because of gate #8**, not because the finding is
+debatable. Four public claims on `index.html` contradict artifacts in this
+repository — including "graded at real closing prices", which is exactly the
+claim CLV-001 exists to withhold. Replacement copy is drafted and no public
+claim has been edited. What needs the owner is the wording that ships, not
+whether the current wording is wrong.
+
+**T-012 carries a standing direction** from the owner, 2026-09-18: the
+governance rule in `CLAUDE.md` is preserved, and `CLAUDE.md` is **not** to be
+amended merely to keep the percentage UI. The replacement must express the
+model-versus-market comparison without asserting an edge the evidence does not
+support.
+
+**T-013 and T-014 are L2** — reversible, publish no new number, and T-014 can
+only narrow what the page asserts. Proceed and notify.
+
+**T-015 is read-only** and produces an artifact before any factor claim moves.
+`edges.js` publishes 60–72% for a record gap that `factor-rates.json` measures
+at 55.1% (CI 46.8–63.3) under market control, and 52–56% for takedown defence
+that measures 49.3% (CI 43.7–55.0). Age — the only factor with a `real` verdict
+— is the one that was retired. The measurement comes first; **T-016** is the
+correction, and it is the owner's.
 
 ---
 
