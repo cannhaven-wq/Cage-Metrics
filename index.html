@@ -512,6 +512,9 @@
 
 <script src="_shared.js?v=rd17"></script>
 <script src="_auth.js"></script>
+<!-- The record-separation rulebook. index.html uses it for the hero headline so
+     the homepage and the Proof Center cannot disagree about what one record is. -->
+<script src="proof-gates.js"></script>
 <script src="fight-insights.js?v=7"></script>
 <script src="distanceEdges.js"></script>
 <script>
@@ -525,37 +528,52 @@ async function loadHomepageStats() {
   await Promise.all([loadHeroProof(), loadPastEvents()]);
 }
 
-// Engine record for the hero proof line, from the graded picks view. Every
-// row is out-of-sample by construction (walk-forward replay + locked live
-// picks), so no window clamp applies. The static HTML numbers are the
-// fallback. Labeled "simulated" while the live record is still small.
+// Engine record for the hero proof line, from the graded picks view.
+//
+// ONE RECORD ONLY. This used to call fetchEnginePicks() with no `source`
+// filter, which meant the headline accuracy, the graded-fight count, the
+// Lock-tier rate and the "Why trust it?" tiles were all computed over the
+// prospective live feed and the history replay pooled into one average —
+// the exact operation proof-gates.js throws rather than perform, running on
+// the most prominent number on the site.
+//
+// It reads the REPLAY record, which is what the "(simulated)" label beside it
+// has always said. The live record is much smaller and is not mixed in; it has
+// its own home on the Proof Center, at its real size, and that is the only
+// honest place for it until it is big enough to stand on its own.
+//
+// The arithmetic is cflProof.headlineFromPicks, not local code: a page that
+// computes its own headline can drift back to pooling, a page that asks the
+// rulebook cannot, because the assertion lives on the rulebook's side. If a
+// mixed set ever reaches it, it throws and the page keeps its static fallback
+// rather than publishing a blended figure.
+const HERO_RECORD_SOURCE = 'backtest';   // proof-gates RECORD.REPLAY
+
 async function loadHeroProof() {
   try {
-    const rows = await cfl.fetchEnginePicks(q => q.not('hit', 'is', null));
-    const graded = (rows || []).filter(r => r.hit === true || r.hit === false);
-    if (graded.length >= 100) {
-      const hits = graded.filter(r => r.hit === true).length;
-      const acc = (100 * hits / graded.length).toFixed(1);
-      const locks = graded.filter(r => r.tier === 'Lock');
-      const lockHits = locks.filter(r => r.hit === true).length;
-      const lockStr = locks.length >= 50
-        ? ' · Locks hit <b>' + (100 * lockHits / locks.length).toFixed(1) + '%</b>'
-        : '';
+    const rows = await cfl.fetchEnginePicks(q =>
+      q.not('hit', 'is', null).eq('source', HERO_RECORD_SOURCE));
+    const P = window.cflProof;
+    const head = P ? P.headlineFromPicks(rows, P.RECORD.REPLAY) : null;
+    if (head && head.publishable) {
+      const acc = head.accuracy.toFixed(1);
+      const lockAcc = head.locksPublishable ? head.lockAccuracy.toFixed(1) : null;
+      const lockStr = lockAcc ? ' · Locks hit <b>' + lockAcc + '%</b>' : '';
       const el = document.getElementById('hpProof');
       if (el) el.innerHTML = '<b>' + acc + '%</b> straight-up across ' +
-        graded.length.toLocaleString() + ' never-seen fights' + lockStr + ' (simulated)';
+        head.n.toLocaleString() + ' never-seen fights' + lockStr + ' (simulated)';
       // Every other place the record is quoted reads these same numbers, so
       // the site never shows two sample sizes for one record.
       const setText = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
-      setText('mProof', acc + '% on ' + graded.length.toLocaleString() + ' fights the model never saw · every miss posted');
-      setText('hpN2', graded.length.toLocaleString());
+      setText('mProof', acc + '% on ' + head.n.toLocaleString() + ' fights the model never saw · every miss posted');
+      setText('hpN2', head.n.toLocaleString());
       setText('hpAcc2', acc + '%');
-      if (locks.length >= 50) { setText('hpLockAcc2', (100 * lockHits / locks.length).toFixed(1) + '%'); setText('hpLockN2', locks.length.toLocaleString()); }
-      // Keep the "Why trust it?" tiles on the same live numbers as the hero.
+      if (lockAcc) { setText('hpLockAcc2', lockAcc + '%'); setText('hpLockN2', head.lockN.toLocaleString()); }
+      // Keep the "Why trust it?" tiles on the same numbers as the hero.
       const tg = document.getElementById('tileGraded');
-      if (tg) tg.textContent = graded.length.toLocaleString();
+      if (tg) tg.textContent = head.n.toLocaleString();
       const tl = document.getElementById('tileLock');
-      if (tl && locks.length >= 50) tl.innerHTML = (100 * lockHits / locks.length).toFixed(1) + '<span class="u">%</span>';
+      if (tl && lockAcc) tl.innerHTML = lockAcc + '<span class="u">%</span>';
     }
     const sb = window.cflSupabase;
     const { count } = await sb.from('fights').select('id', { count: 'exact', head: true });
