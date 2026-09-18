@@ -519,6 +519,78 @@ class TestIngestEventEndToEnd(unittest.TestCase):
         )
         self.assertEqual(len(ledger.rows), 12, "three complete 4-bout observations")
 
+    # -- regression: a booking that fell off the card ------------------------
+    # UFC 331 (CFL event 4433), 2026-09-18. The live UFCStats page carried TWELVE
+    # bouts; `fights` carried THIRTEEN. The extra row was Moicano vs Ortega, a
+    # real booking that was announced and then cancelled when Ortega withdrew
+    # injured — not a scrape defect and not a parser defect.
+    #
+    # The failure this guards against is arithmetic, not cosmetic. bout_order is
+    # n_bouts - page_index, so if a cancelled booking were ever allowed to inflate
+    # n_bouts, EVERY bout on the card would be numbered one too high and the main
+    # event would land at 13 on a 12-bout card. Nothing would raise. The running
+    # order must come from the page, and only from the page.
+    CANCELLED = ("f" + "9" * 15, "Withdrawn A", "Withdrawn B")
+
+    def test_a_cancelled_booking_does_not_inflate_the_running_order(self):
+        """The card's length is what the page says, not what `fights` holds."""
+        ledger = FakeLedger(self.fights + [
+            FightRow(id=947328, ufc_fight_id=self.CANCELLED[0], event_id=CFL_EVENT_ID)
+        ])
+
+        # Four bouts on the page; five bookings in the database.
+        page = [self.TOP, self.SECOND, self.WATCHED, self.OTHER]
+        self.assertEqual(self.run_page(ledger, page), "written")
+
+        self.assertEqual(len(ledger.rows), 4,
+                         "the cancelled booking was numbered as if it were on the card")
+
+        orders = sorted(r["bout_order"] for r in ledger.rows)
+        self.assertEqual(orders, [1, 2, 3, 4],
+                         "running order must be contiguous over the PAGE's bouts")
+
+        top_id = next(f.id for f in ledger.fights
+                      if f.ufc_fight_id == self.TOP[0])
+        self.assertEqual(
+            ledger.resolves_to(top_id), 4,
+            "the main event took its number from the database's count, not the "
+            "page's — this is the UFC 331 defect",
+        )
+
+        self.assertNotIn(947328, [r["fight_id"] for r in ledger.rows],
+                         "a cancelled booking must never receive a bout_order")
+
+    def test_a_booking_that_disappears_between_refreshes_is_reported_not_erased(self):
+        """Announced, observed, then withdrawn. The first observation stands."""
+        ledger = FakeLedger(self.fights)
+
+        # First refresh: four bouts, all on the card.
+        before = [self.TOP, self.SECOND, self.WATCHED, self.OTHER]
+        self.assertEqual(self.run_page(ledger, before), "written")
+        self.assertEqual(ledger.resolves_to(self.watched_id), 2)
+        rows_before = len(ledger.rows)
+
+        # Second refresh: WATCHED has fallen off the card entirely.
+        after = [self.TOP, self.SECOND, self.OTHER]
+        self.assertEqual(self.run_page(ledger, after), "written")
+
+        # Its history survives — an append-only ledger never unsays an
+        # observation, and the pick locked against it still needs to resolve.
+        self.assertEqual(
+            ledger.resolves_to(self.watched_id), 2,
+            "the withdrawn booking's last observation was erased or overwritten",
+        )
+        self.assertGreater(len(ledger.rows), rows_before)
+
+        # …and the three that remain renumber over the SHORTER card.
+        newest = max(r["observed_at"] for r in ledger.rows)
+        current = {r["fight_id"]: r["bout_order"]
+                   for r in ledger.rows if r["observed_at"] == newest}
+        self.assertEqual(len(current), 3, "the new observation is the whole card")
+        self.assertEqual(sorted(current.values()), [1, 2, 3])
+        self.assertNotIn(self.watched_id, current,
+                         "a fight absent from the page joined the current card")
+
     def test_re_running_an_unchanged_card_writes_nothing(self):
         ledger = FakeLedger(self.fights)
         page = [self.TOP, self.SECOND, self.WATCHED, self.OTHER]
