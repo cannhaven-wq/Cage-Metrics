@@ -1,0 +1,121 @@
+name: Factor Lab validation (manual, publishes nothing)
+
+# Regenerates the Factor Lab and reports what WOULD change, without changing it.
+#
+# T-027. The Factor Lab reader had a pagination defect: it paged by position
+# with no ORDER BY, so it read an unstable subset of the closing-odds rows. The
+# published market-even cohort is 869 where a direct query counts 1,220, on an
+# identical 8,739-fight denominator. Correcting the reader therefore MOVES
+# published verdicts on stats.html.
+#
+# Those verdicts are public performance claims, so the correction has to be
+# looked at before it ships. This workflow exists so it can be: it produces a
+# candidate artifact and a before/after comparison, and commits nothing.
+#
+# THE SAFETY PROPERTY IS `permissions: contents: read`.
+# Not a convention, not a comment — the token this job is handed cannot write to
+# the repository. Adding `contents: write` here would defeat the entire point of
+# separating measurement from publication, so don't.
+#
+# To publish a reviewed candidate: download the artifact, replace
+# factor-rates.json, and commit it in a pull request where the moved verdicts
+# are visible in the diff.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: factor-rates-validate
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Keep the published artifact for comparison
+        run: cp factor-rates.json /tmp/published.json
+
+      # Needs the service key: fight_odds has no SELECT policy for anon and
+      # returns 0 rows silently, which would produce an empty market-control
+      # column. factor-rates.js hard-fails on that rather than shipping it.
+      - name: Regenerate (candidate only)
+        working-directory: build
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npm run factor-rates
+
+      - name: Compare published vs candidate
+        run: |
+          cp factor-rates.json /tmp/candidate.json
+
+          if [ ! -f build/compare-factor-rates.js ]; then
+            echo "::warning::build/compare-factor-rates.js is not on this ref."
+            echo "It lands with the T-027 pagination fix. Re-run this workflow"
+            echo "once that has merged; the candidate artifact is still uploaded."
+            exit 0
+          fi
+
+          echo '## Factor Lab: published vs candidate' >> "$GITHUB_STEP_SUMMARY"
+          echo '' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          set +e
+          node build/compare-factor-rates.js /tmp/published.json /tmp/candidate.json \
+            | tee /tmp/compare.txt
+          CMP=${PIPESTATUS[0]}
+          set -e
+
+          cat /tmp/compare.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # Exit 1 from the comparison means "a verdict moved". That is the
+          # expected finding here, not a failure — this job reports, it does not
+          # gate. It fails only if the comparison itself could not run.
+          if [ "$CMP" -eq 0 ]; then
+            echo "No verdict moved." | tee -a "$GITHUB_STEP_SUMMARY"
+          elif [ "$CMP" -eq 1 ]; then
+            echo "At least one verdict moved — review before publishing." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::comparison failed to run (exit $CMP)"
+            exit "$CMP"
+          fi
+
+      # The candidate leaves as a downloadable artifact, never as a commit.
+      - name: Upload candidate
+        uses: actions/upload-artifact@v4
+        with:
+          name: factor-rates-candidate
+          path: |
+            factor-rates.json
+            /tmp/compare.txt
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Confirm nothing was published
+        run: |
+          # Belt and braces. `contents: read` already makes a push impossible;
+          # this makes an accidental attempt visible in the log instead of
+          # silent, and documents the invariant at the place it matters.
+          git checkout -- factor-rates.json
+          if ! git diff --quiet || ! git diff --staged --quiet; then
+            echo "::error::working tree is dirty — this job must publish nothing"
+            git status --short
+            exit 1
+          fi
+          echo "Clean: the published factor-rates.json is untouched."

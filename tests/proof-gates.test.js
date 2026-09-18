@@ -83,6 +83,105 @@ t('straightRecord refuses to total a mixed record', function () {
   }, 'mixed record');
 });
 
+// ------------------------------------- aggregates fail closed on unknown rows
+//
+// The same defect the homepage headline was fixed for, in the two functions
+// that publish the Proof Center's live record and its money ledger.
+//
+// assertOneRecord deletes UNKNOWN from the kinds it inspects, so a row whose
+// `source` is neither 'live' nor 'backtest' passed the gate — and was then
+// counted anyway, because the arithmetic runs over the rows the CALLER passed,
+// not over the rows the assertion approved. Skipping a row in an assertion does
+// not skip it in the sum underneath.
+//
+// CURRENT EXPOSURE IS NIL, AND THAT IS NOT THE POINT. proof.html fetches with
+// .eq('source', 'live'), so nothing unresolvable reaches these functions today.
+// The protection lives in the caller's query rather than in the module whose
+// whole job is to be the rulebook — which is exactly the argument that moved
+// the headline arithmetic into this file. A caller that switches to
+// .in('source', [...]) or .neq('source', 'backtest'), or a new `source` value
+// arriving in v_model_picks_graded, and the guarantee is gone with no test
+// failing. This is defence in depth, deliberately.
+//
+// NOTE the difference from headlineFromPicks, which is intentional:
+// headlineFromPicks derives `graded` internally and asserts over that, so a
+// PENDING row of unknown source is exempt — it never reaches the number. These
+// two assert over everything passed in, because `pending` and `unpriced` are
+// themselves published figures here, so a row of unknown provenance inflating
+// them is the same problem.
+
+t('flatStakeLedger throws on a graded row whose source resolves to no record', function () {
+  throws(function () {
+    P.flatStakeLedger([liveWin, weird], { expectRecord: P.RECORD.LIVE });
+  }, 'unknown-source row in the money ledger');
+});
+
+t('straightRecord throws on a graded row whose source resolves to no record', function () {
+  throws(function () {
+    P.straightRecord([liveWin, weird], { expectRecord: P.RECORD.LIVE });
+  }, 'unknown-source row in the record');
+});
+
+t('the harm is arithmetic, and the throw is what prevents it', function () {
+  // Two live wins plus an unknown-source win. Under the old behaviour this
+  // published a 3-0 live record and a three-bet ledger, one of whose bets
+  // nobody could account for.
+  throws(function () {
+    P.straightRecord([liveWin, liveWin, weird], { expectRecord: P.RECORD.LIVE });
+  }, 'an unknown row padding the record');
+
+  // The clean subset still totals, so the refusal is about provenance and not
+  // about the arithmetic being broken.
+  const r = P.straightRecord([liveWin, liveWin], { expectRecord: P.RECORD.LIVE });
+  eq(r.hits, 2, 'clean hits');
+});
+
+t('a PENDING unknown-source row is refused too, because pending is published', function () {
+  throws(function () {
+    P.flatStakeLedger([liveWin, { source: 'paper', won: null, odds_at_publish: 110 }],
+      { expectRecord: P.RECORD.LIVE });
+  }, 'unknown-source pending row');
+});
+
+t('the strict check is the one wired in, not the permissive one', function () {
+  // Static, on this module's own source: swapping assertEveryRow back to
+  // assertOneRecord in either function restores the defect while every
+  // functional test above still has something to call.
+  const fs = require('fs');
+  const path = require('path');
+  const SRC = fs.readFileSync(path.join(__dirname, '..', 'proof-gates.js'), 'utf8');
+  const n = (SRC.match(/if \(o\.expectRecord\) assertEveryRow\(rows, o\.expectRecord\);/g) || []).length;
+  eq(n, 2, 'both flatStakeLedger and straightRecord must use the strict assertion');
+  ok(!/if \(o\.expectRecord\) assertOneRecord\(/.test(SRC),
+    'an aggregate has fallen back to the permissive assertion');
+});
+
+t('assertOneRecord keeps its looser contract for non-publishing callers', function () {
+  // Two different questions, and collapsing them would be wrong: "is this all
+  // one record?" legitimately tolerates an unclassifiable row, and splitByRecord
+  // depends on that. Only aggregates that PUBLISH need the strict form.
+  ok(P.assertOneRecord([liveWin, weird], P.RECORD.LIVE), 'assertOneRecord tolerates it');
+  throws(function () { P.assertEveryRow([liveWin, weird], P.RECORD.LIVE); }, 'assertEveryRow does not');
+});
+
+t('proof.html still constrains the record at the query, belt as well as braces', function () {
+  // The module-level guarantee above does not make the caller-level filter
+  // redundant; losing it would change which rows are fetched, not merely which
+  // are refused. Both are load-bearing and both are pinned.
+  const fs = require('fs');
+  const path = require('path');
+  const HTML = fs.readFileSync(path.join(__dirname, '..', 'proof.html'), 'utf8');
+  ok(/fetchEnginePicks\(q => q\.eq\('source', 'live'\)\)/.test(HTML), 'picks fetch filters by source');
+  ok(/fetchEngineEdges\(q => q\.eq\('source', 'live'\)\)/.test(HTML), 'edges fetch filters by source');
+  // And every aggregate call names the record it is summarising: expectRecord
+  // is optional in the API, so omitting it would silently skip the assertion.
+  const calls = HTML.match(/P\.(straightRecord|flatStakeLedger)\([^;]*?\)/g) || [];
+  ok(calls.length >= 4, `expected the four aggregate calls, found ${calls.length}`);
+  calls.forEach(function (c) {
+    ok(/expectRecord/.test(c), `a Proof Center aggregate call omits expectRecord: ${c}`);
+  });
+});
+
 // ----------------------------------------------- gates: CLV deferred to CLV-001
 // REGRESSION (correction 1). The CLV publication rule belongs to the CLV-001
 // protocol. Proof Center must hold no threshold of its own, must derive no
