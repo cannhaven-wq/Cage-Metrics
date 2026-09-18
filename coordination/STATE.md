@@ -434,6 +434,19 @@ overlapped and skipped; the published `market_even_cohort` is 869 where a direct
 query counts 1,220, on an identical 8,739-fight denominator. Diagnosed and fixed
 with keyset paging ([`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md)).
 
+**The corrected run is in, and it confirms the diagnosis.** Run manually
+2026-09-18: `market_even_cohort` 869 → **1,220**, which is exactly FE-001's
+independent figure, while the `fights_scored` control held at 8,739. **7
+verdicts moved** (one of them down), 28 buckets gained 30–40% sample. Nothing
+was published. Full table in the document above.
+
+**The one to read carefully:** `ufc_record` becomes `real`, and that is *not*
+the record factor FE-001 found dead — the Factor Lab tests a UFC-only raw gap,
+`edges.js` ships a smoothed professional-record gap. Publishing the candidate
+would therefore make a **new** public performance claim, falsify `CLAUDE.md`'s
+"only age currently survives market control", and put a `real` record verdict
+beside research saying the shipped record factor is market echo. Owner's call.
+
 **Publication is gated separately, and that gate landed first.**
 `prerender.yml` used to regenerate and commit `factor-rates.json` every six
 hours, so merging the fix would have republished every affected verdict

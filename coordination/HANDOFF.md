@@ -86,10 +86,17 @@ to keep T-027 scoped; `build/paginate.js` is there for whoever takes them.
 
 ## Next action
 
-**Owner:** the corrected numbers cannot reach the page by accident any more, so
-the remaining decision is only whether to publish them once the comparison is
-in. Run "Factor Lab validation" from the Actions tab (or let this session
-trigger it), read the before/after, then decide.
+**Owner:** the comparison is in — see STATE.md and
+[`T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md). The cohort
+corrects 869 → 1,220, matching FE-001 exactly, and 7 verdicts move. Nothing is
+published; the candidate is a workflow artifact.
+
+The decision is whether to publish, and it is **not** a routine refresh:
+`ufc_record` becomes `real`, which is a new public performance claim, falsifies
+`CLAUDE.md`'s "only age currently survives market control", and sits awkwardly
+beside FE-001's finding that the *shipped* record factor is a coin flip — a
+different factor with the same everyday name. Publishing well probably means
+publishing the distinction too, not just the number.
 
 **ChatGPT:** the diagnosis is in the document above. The part worth challenging
 is the elimination argument — that an identical `fights_scored` on both sides
