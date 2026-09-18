@@ -432,6 +432,17 @@ Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
 One Node build step (prerender + factor rates) runs on a 6-hour cron. Nothing
 on the card is gated in the frontend during beta.
 
+**The homepage headline is one record as of 2026-09-18** (T-026,
+[D-007](DECISIONS.md), PR #23 at `b1bc881a`). It was computed over the live feed
+and the history replay pooled together; it is now the **replay** record only,
+matching the `(simulated)` label beside it, and **the published figure moved as
+a result**. The live record stays on the Proof Center at its real size under its
+own `TOO EARLY` chip until it can stand alone. The arithmetic lives in
+`proof-gates.js::headlineFromPicks`, behind the assertion, so the page cannot go
+back to computing its own headline — and that assertion now fails closed: a
+graded row whose `source` resolves to no record stops the number rather than
+being waved past the gate and counted anyway.
+
 **Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
 `e91a7da`). The Proof Center is reachable from the nav and footer rather than
 from one line inside `track-record.html`. The per-fight bullets are headed

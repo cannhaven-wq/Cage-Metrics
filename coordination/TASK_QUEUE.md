@@ -30,7 +30,7 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
-| T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | in-progress |
+| T-027 | Settle the suspected unordered `.range()` paging in `build/factor-rates.js` — the published market-even cohort may be short | L1 | Claude | queued |
 
 ## Closed
 
@@ -42,6 +42,7 @@ it died is usually worth more than the task was.
 | T-010 | Run the existing Python and JS test suites in CI, on push and pull request | L0 | Claude | done |
 | T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
 | T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
+| T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
 
 ---
 
@@ -150,10 +151,20 @@ have received the new heading over a cached script with no `CONTEXT_NOTE` — th
 new heading with its explanation silently missing, which asserts less than the
 copy it replaced. Bumped to `?v=7` on all three consumers before merge.
 
-**T-026 is L3 because it changes a published number**, not because the defect
-is arguable. The homepage headline was computed over the live and replay
-records pooled together; the fix computes it over one. The number moves, and
-which record it should be is the owner's call. PR #23.
+**T-026 shipped 2026-09-18** in
+[#23](https://github.com/cannhaven-wq/Cage-Metrics/pull/23), merged to `main` at
+`b1bc881a`, under [D-007](DECISIONS.md). It was L3 because it changes a
+published number, not because the defect was arguable: the headline was computed
+over the live and replay records pooled together, the fix computes it over one,
+and **the number moves**. The owner chose the replay record, matching the
+`(simulated)` label already beside it.
+
+It also carries a second fix found reviewing the first. `assertOneRecord`
+ignores UNKNOWN, so a graded row whose `source` resolved to no record passed the
+gate and was then counted anyway — the aggregate runs over the graded rows, not
+over the rows the assertion approved. `headlineFromPicks` now fails closed via
+`assertEveryRow`. `flatStakeLedger` and `straightRecord` still use the
+permissive assertion; extending it to them is open and named in the handoff.
 
 **T-024 and T-025 moved out of this line on 2026-09-18.** A dedicated
 factor-evidence workstream (**FE-001**) now owns the exact market-controlled
@@ -173,6 +184,24 @@ authority to reinstate it: the engine already carries age among its 49
 covariates, so incremental value is a separate question.
 
 **T-025 stays the owner's** under gate #8 whoever supplies the evidence.
+
+**T-027 comes out of FE-001, and it is queued rather than fixed.** The
+factor-evidence run reported that `build/factor-rates.js` pages `fight_odds`
+through `fetchAll` without an `.order('id')`, and that the market-even cohort it
+publishes looks roughly 30% short against FE-001's own count. PostgREST
+`.range()` without an explicit order has no guaranteed row order between pages,
+so pages can overlap or skip.
+
+It is queued and not done because **every verdict on `stats.html` rests on that
+cohort size** and several would move. That makes it a measurement change, not a
+one-line patch: the fix is `.order('id')` (or keyset paging), but it has to be
+followed by a re-run with a service key and a stated before/after, and the
+re-run needs egress this environment does not have. Fixing the paging without
+the re-run would leave the page publishing numbers nobody had checked against
+the new cohort.
+
+Deliberately excluded from the 2026-09-18 consolidation, which was merging
+finished work rather than opening new lines.
 
 ---
 
