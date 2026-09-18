@@ -380,3 +380,72 @@ surfaces, raised in the handoff rather than decided here.
 
 **Attribution note.** As D-006: "Reed Cannon" per `CLAUDE.md`; normalising
 against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the owner's.
+
+---
+
+## D-008 — Publish the corrected Factor Lab, and name the two record factors apart
+
+| field | value |
+|---|---|
+| date | 2026-09-18 |
+| decided by | Reed Cannon |
+| task | T-027 |
+| level | L3 |
+| reversible | the artifact is; the claim is not. `git revert` restores 869, but a visitor who read "UFC-only record works" has read it. That asymmetry is why this entry exists |
+
+**Decision.** Publish the corrected `factor-rates.json` — the market-even cohort
+goes from 869 to **1,220** — and ship the copy that stops one true sentence being
+read as a different, false one.
+
+**Quoted.** The owner, 2026-09-18: *"Approved direction for step 8… prepare one
+deliberate Factor Lab correction / publication PR. Goal: publish the corrected
+1,220-fight market-even artifact without creating a false contradiction between
+Factor Lab and the shipped factor system."* And on final review: *"Make the
+Factor Lab's displayed name unambiguously 'UFC-only record'… Remove the stale
+freshness/automation claims created when the publish gate was installed… If
+green, merge #34."*
+
+**Why it is L3.** Gate #8 — a change to a published performance claim. It is
+also a **new** claim, not a restored one: `ufc_record` moves `lean` → `real`, so
+the site now asserts something it did not assert before.
+
+**What was published.** The byte-verified candidate from the validation run,
+sha256 `ba3c9077…`, 16,800 bytes. The artifact download redirects to blob
+storage the build network refuses, so the candidate was reconstructed from the
+run's own checksummed log and proved identical rather than retyped from a
+comparison table. `fights_scored` — the control, already correct before the
+paging fix — held at 8,739. Seven verdicts moved, **one of them downward**
+(`age` 7–9 loses `real` on a 33% larger sample).
+
+**The distinction this decision turns on.** Two measurements share one everyday
+word, and only one of them survives market control:
+
+| | Factor Lab `ufc_record` | `edges.js` `recordEdge` |
+|---|---|---|
+| record | UFC-only | whole-career professional |
+| quantity | raw win-rate gap | Laplace-smoothed |
+| market-even | **58.4%**, `real` | **~50.2%** (FE-001), a coin flip |
+
+Publishing the first without saying so would have read as evidence for the
+second — the one that actually picks fights. So the displayed name is
+**"UFC-only record"** (a page-side override, so the verified artifact is not
+edited), `stats.html` carries a standing caveat, and `edges.html` and
+`methodology.html` carry dated corrections that keep the shipped factor
+unsupported in the same breath. `tests/record-factors-distinct.test.js` — 20
+assertions — is what stops it collapsing back.
+
+**Explicitly NOT decided here.** The shipped `edges.js` record and takedown-
+defence heuristics remain unsupported and unchanged. Nothing in this decision
+validates them, and what to do about them is the next product question, not a
+consequence of this one.
+
+**Age stays retired.** A standalone base rate says nothing about incremental
+value over the engine's 49 covariates.
+
+**The automatic publication gate stays shut.** This is one reviewed commit of
+`factor-rates.json`, not a return to unattended refreshes — which is the whole
+reason the correction could be reviewed at all.
+
+**Attribution note.** As D-006 and D-007: "Reed Cannon" per `CLAUDE.md`;
+normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
+owner's.

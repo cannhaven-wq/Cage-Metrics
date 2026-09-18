@@ -428,11 +428,14 @@ and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.
 
 ### Measurement integrity
 
-**T-027 — the Factor Lab was reading the wrong rows.**
+**T-027 — closed 2026-09-18, corrected numbers published.**
 `build/factor-rates.js` paged with `.range()` and no `.order()`, so pages
-overlapped and skipped; the published `market_even_cohort` is 869 where a direct
-query counts 1,220, on an identical 8,739-fight denominator. Diagnosed and fixed
-with keyset paging ([`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md)).
+overlapped and skipped and the Factor Lab scored 869 market-even fights where
+the real cohort is 1,220 — on an identical 8,739-fight denominator. Fixed with
+keyset paging, re-run manually, compared, and published under
+[D-008](DECISIONS.md) at `f40fd27c`. Seven verdicts moved, one downward. The
+artifact shipped is byte-verified against the validation run
+([`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md)).
 
 **The corrected run is in, and it confirms the diagnosis.** Run manually
 2026-09-18: `market_even_cohort` 869 → **1,220**, which is exactly FE-001's
@@ -452,7 +455,14 @@ collapsing back into one generic "Record" claim.
 **Age stays retired.** A standalone base rate says nothing about incremental
 value over the engine's 49 covariates, and nothing here reinstates it.
 
-**Publication is gated separately, and that gate landed first.**
+**Open, and the next product question:** `edges.js`'s record and takedown-defence
+heuristics are still shipped and still unsupported. FE-001 put the record factor
+at ~50.2% market-even and takedown defence on the line. Nothing in T-027
+validates either — what to do about them (retire, restate, or leave with the
+caveat) has not been decided.
+
+**The publication gate stays shut, and that is what made the correction
+reviewable.**
 `prerender.yml` used to regenerate and commit `factor-rates.json` every six
 hours, so merging the fix would have republished every affected verdict
 unattended. It no longer does: regeneration moved to a manual workflow that runs
