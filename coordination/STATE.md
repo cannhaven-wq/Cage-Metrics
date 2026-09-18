@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -50,6 +50,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 | [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-004**, retiring `backfill_odds.py` |
 | [`HANDOFF.md`](HANDOFF.md) | the live baton — newest entry at the top |
 | [`CRITICAL_GATES.md`](CRITICAL_GATES.md) | the L0–L3 ladder and the closed L3 list |
+| [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) | the read-only product audit — where the five workstreams actually stand |
 
 Git history is the audit trail. These files are the working surface.
 
@@ -297,6 +298,37 @@ under the new path. Nothing renders CLV today; `track-record.html` carries a
 placeholder. Legacy `clv_pp` settlement continues on its cron, untouched —
 bookkeeping under the old convention, never labelled CLV.
 
+### Product — audited 2026-09-18
+
+A read-only audit of the five active workstreams is at
+[`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md). Nothing was changed to produce
+it. Three findings are load-bearing:
+
+1. **Four public claims on `index.html` contradict artifacts in this
+   repository** — most seriously "value flags graded at real closing prices",
+   which is the claim CLV-001 exists to withhold, and which ships in every
+   social unfurl. Replacement copy is drafted; nothing public has been edited.
+   **T-020**, L3.
+2. **The test suite ran nowhere — fixed.** 624 tests, 4,567 subtests and the
+   Node suites guard the frozen hashes, the CLV gate, the proof-gate separation
+   and DUR-002's conformance guarantee. All passed, and nothing pulled them.
+   **T-010 is merged** (`4f9d4a8`), so every PR is now checked. `cfl_engine/
+   requirements.txt` is still unpinned — T-011.
+3. **`edges.js` publishes factor strengths with no artifact.** Record claims
+   60–72% and measures 55.1% market-even (CI 46.8–63.3); takedown defence
+   claims 52–56% and measures 49.3% (CI 43.7–55.0); age, retired in May, is the
+   only `real` verdict. **Neither of the first two is yet an exact test of the
+   shipped rule** — `factor-rates.json` applies no `willHaveWrestling()` gate
+   and bands the raw rather than the smoothed record gap. **The exact
+   measurement is owned by the factor-evidence workstream (FE-001), not by this
+   line**; T-024 and T-025 sit with it. `computeEdges` has no production
+   consumer, but `edges.html` still publishes the ranges as **Active**, so the
+   correction is still owed — just not from here.
+
+The trust pages keep their split by owner direction of 2026-09-18:
+`track-record.html` is results and history, `proof.html` is evidence, method,
+provenance and the publication gates.
+
 ### Where the work moves next
 
 Stated in the research register, in priority order:
@@ -399,6 +431,54 @@ and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.
 Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
 One Node build step (prerender + factor rates) runs on a 6-hour cron. Nothing
 on the card is gated in the frontend during beta.
+
+**The homepage headline is one record as of 2026-09-18** (T-026,
+[D-007](DECISIONS.md), PR #23 at `b1bc881a`). It was computed over the live feed
+and the history replay pooled together; it is now the **replay** record only,
+matching the `(simulated)` label beside it, and **the published figure moved as
+a result**. The live record stays on the Proof Center at its real size under its
+own `TOO EARLY` chip until it can stand alone. The arithmetic lives in
+`proof-gates.js::headlineFromPicks`, behind the assertion, so the page cannot go
+back to computing its own headline — and that assertion now fails closed: a
+graded row whose `source` resolves to no record stops the number rather than
+being waved past the gate and counted anyway.
+
+**Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
+`e91a7da`). The Proof Center is reachable from the nav and footer rather than
+from one line inside `track-record.html`. The per-fight bullets are headed
+*"What stands out in this matchup"* and carry a line saying they are matchup
+context, not the model's reasoning — they come from `fight-insights.js`, an
+independent heuristic, and nothing in that file feeds the engine that produces
+the percentage.
+
+### CI — the tripwires are now pulled automatically
+
+**`.github/workflows/tests.yml` runs the whole suite on every push and pull
+request** (T-010, 2026-09-18). Before it, seventeen test modules existed and no
+workflow ran any of them — the only test invoked anywhere was one `unittest`
+module inside `event-flow.yml`. Everything passed; nothing was checking. For the
+frozen-file hash check, the CLV publication gate, the L3 gate and
+`test_lock_prop0002.py`'s conformance proof, that is the difference between a
+guard and a note.
+
+`pytest` runs from the **repo root**, not `tests/`: 624 Python tests, not the 168
+under `tests/` alone. The other 456 are `cfl_engine/` and `research/` — the
+frozen model path, the CLV-001 scorer, the integrity checks. Two jobs, Python and
+Node, so a failure names its suite.
+
+No secret is passed and none is needed, which is what lets it run as
+`contents: read` and stay safe on fork pull requests. Two suites are worth
+knowing precisely: `test_sql_behaviour.py` builds its own throwaway Postgres with
+`initdb` and tears it down, and one test in `cfl_engine/dur001/test_dur001.py`
+talks to the **production** Supabase management API, gated on
+`SUPABASE_ACCESS_TOKEN`. It skips here and **must keep skipping** — adding a
+secret to this workflow would make every fork pull request a production write.
+
+**Residual gap: the engine dependencies are not pinned.** `pytest` is pinned
+exactly; `cfl_engine/requirements.txt` is `>=` ranges, so the job can still
+redden on an upstream release. Pinning it is a change to the engine's manifest,
+not to CI. Queued as **T-011**. Audit:
+[`reviews/2026-09-18-claude-ci-audit.md`](reviews/2026-09-18-claude-ci-audit.md).
 
 ---
 

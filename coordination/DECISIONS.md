@@ -270,3 +270,113 @@ genuine mis-attribution is **not** something an AI may settle by inference, and
 this log is append-only precisely so that attribution is not quietly rewritten.
 No name has been normalised anywhere. Flagged for the owner to confirm; the
 correction, when it comes, is a new entry, not an edit to an old one.
+
+---
+
+## D-006 — Ship the Proof Center link and the matchup-context label
+
+| field | value |
+|---|---|
+| date | 2026-09-18 |
+| decided by | Reed Cannon |
+| task | T-022, T-023 |
+| level | L2 |
+| reversible | yes — presentation only; publishes no new number, writes no row, and a revert restores the previous copy exactly |
+
+**Decision.** Ship both, as merged in
+[#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25):
+
+1. Proof Center gets a link in the nav and the footer.
+2. The per-fight heading becomes *"What stands out in this matchup"*, replacing
+   *"Why the model likes it"*.
+3. A line is added saying those bullets are matchup context rather than the
+   model's reasoning, carried as `cflInsights.CONTEXT_NOTE` so the three
+   surfaces that render it cannot drift on the wording.
+
+**Quoted.** The owner, 2026-09-18: *"PR #25 — trust UX: approved. Ship: Proof
+Center in nav/footer, 'Why the model likes it' → 'What stands out in this
+matchup', the clarification that those bullets are matchup context, not the
+model's internal reasoning."*
+
+**Why it is L2 and not L3.** It publishes no new number and restates no
+existing claim. Item 3 can only *narrow* what the page asserts: the bullets
+come from `fight-insights.js`, an independent heuristic over cardio tier, age,
+reach, record and takedown defence, and nothing in that file feeds the
+gradient-boosted engine that produces the percentage. The old heading invited a
+reader to conclude the model weighed exactly those things in that order. It did
+not. Recorded here because `CRITICAL_GATES.md` requires an L2 to be written
+down even though it does not require asking first — and in this case the owner
+approved it explicitly anyway.
+
+**Carried with it.** `fight-insights.js` went to `?v=7` on `index.html`,
+`event.html` and `fighter.html`. The branch changed that file without bumping
+its cache-bust, and GitHub Pages caches it aggressively: a returning visitor
+would have got the new heading over the old script, whose `CONTEXT_NOTE` is
+undefined. All three consumers guard on it with a ternary, so the note would
+have silently not rendered — shipping the relabel without the explanation that
+justifies it.
+
+**Attribution note.** "Reed Cannon" is used as `CLAUDE.md` names the owner. The
+governance records also carry "Michael Cannon"; normalising the two is
+[T-009](TASK_QUEUE.md), still blocked on the owner, and is deliberately not
+pre-empted here.
+
+---
+
+## D-007 — The homepage headline shows the replay record, not a blend
+
+| field | value |
+|---|---|
+| date | 2026-09-18 |
+| decided by | Reed Cannon |
+| task | T-026 |
+| level | L3 |
+| reversible | the code is; the published figure is not. A visitor who read the pooled number has read it, and it was on the site for months. This entry is the record of the change, which is why it exists |
+
+**Decision.** The headline accuracy on `index.html` is computed from the
+**replay record only** — `source='backtest'`, the engine re-run through history.
+The live prospective record is **not** mixed into it, and is not shown beside
+it. It stays on the Proof Center, at its real size, under its own `TOO EARLY`
+chip, until it is large enough to stand on its own.
+
+**Quoted.** The owner, 2026-09-18: *"PR #23 — homepage record: use the replay /
+backtest record only for the homepage headline, matching the existing
+(simulated) label. Do not mix it with the live prospective record. Keep the live
+record separate in Proof Center until it is large enough to stand on its own."*
+
+**Why this was the owner's and not Claude's.** Gate #8 — any change to how an
+existing public performance claim is computed. The defect was not arguable; the
+replacement was. Showing the live record, or both side by side, were real
+alternatives, and the last is a layout change. Claude built it set to replay and
+did not assume the answer.
+
+**What was actually wrong.** `loadHeroProof()` called `cfl.fetchEnginePicks()`
+with no `source` filter. `v_model_picks_graded` carries both records, so the
+headline accuracy, the graded-fight count, the Lock-tier rate and all three
+"Why trust it?" tiles were averages over the live feed and the history replay
+pooled together — the one operation `proof-gates.js` exists to refuse, running
+on the most prominent number on the site. **The published figure moves as a
+result of this fix.** It was never the quantity its label claimed.
+
+**The fix is not a filter.** A `.eq('source', …)` would close the hole and leave
+the page owning the arithmetic, free to drift back. The computation moved into
+`proof-gates.js::headlineFromPicks`, behind the assertion, and the page renders
+what it is handed.
+
+**A second defect, found in review of the first.** `assertOneRecord` deletes
+UNKNOWN from the kinds it inspects, so a graded row whose `source` is neither
+`live` nor `backtest` passed the gate — and was then counted anyway, because the
+aggregate runs over the graded rows rather than over the rows the assertion
+approved. Skipping a row in an assertion does not remove it from the arithmetic
+after it. On the owner's instruction the headline now fails closed via
+`assertEveryRow`: every row in a published figure must resolve to the record
+being claimed, and a row that does not stops the number instead of joining it.
+Eight regression assertions cover it, verified to bite.
+
+**Left open, deliberately.** `flatStakeLedger` and `straightRecord` still take
+`expectRecord` as an option and still use the permissive assertion. Whether the
+fail-closed rule should extend to them is a separate call about separate
+surfaces, raised in the handoff rather than decided here.
+
+**Attribution note.** As D-006: "Reed Cannon" per `CLAUDE.md`; normalising
+against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the owner's.

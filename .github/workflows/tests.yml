@@ -1,0 +1,161 @@
+name: Tests
+
+# Runs the test suites that already exist in this repo. Nothing new is asserted
+# here — this workflow only pulls tripwires that were already built and were,
+# until now, only run when somebody remembered to run them locally.
+#
+# What is at stake if these do not run:
+#
+#   tests/test_research_state.py    frozen-file sha256s. A frozen file drifting
+#                                   silently invalidates every experiment that
+#                                   rests on it.
+#   tests/test_clv_protocol.py      the CLV publication gate, and the machine
+#                                   mirror (protocol.json) against the module's
+#                                   own constants.
+#   tests/test_coordination.py      an L3 task cannot reach `done` without a
+#                                   decision recorded against its id.
+#   tests/test_migrations_idempotent.py / test_sql_behaviour.py
+#                                   the migrations stay re-runnable.
+#   cfl_engine/dur002/test_lock_prop0002.py
+#                                   24 conformance tests proving PROP-0001@v2
+#                                   equals the raw pre-calibration probability
+#                                   of the existing pipeline, exactly. DUR-002
+#                                   is collecting against that guarantee.
+#   cfl_engine/clv/test_scoring.py  CLV-001 scoring: per-row eligibility, the
+#                                   per-quote forecast lock, write-once
+#                                   settlement, the 20-event floor by event_id.
+#   cfl_engine/event_flow/*         the running order resolves as a complete
+#                                   card, and read-only reconciliation stays
+#                                   read-only.
+#   cfl_engine/integrity/           the 21 production data-integrity checks.
+#   tests/proof-gates.test.js       live and replay records never total together;
+#                                   gates fail closed.
+#   tests/proof-copy.test.js        shipped Proof Center copy matches what the
+#                                   data actually supports.
+#
+# SCOPE — the whole repo, not just tests/
+#
+# The first draft of this workflow ran `pytest tests/` and reported 168 passing
+# tests. The repo actually has 624 across 17 modules: the other 456 live under
+# cfl_engine/ and research/, and they are the ones guarding the frozen model
+# path. Running only tests/ would have produced a green tick over an untested
+# engine, which is worse than no tick at all. So this runs pytest from the repo
+# root.
+#
+# That is why the engine dependencies are installed: three modules import
+# numpy/pandas/sklearn/xgboost through cfl_engine/engine.py, and without them
+# eight tests fail on ModuleNotFoundError rather than on anything real.
+#
+# WHAT THIS RUNS AGAINST — stated precisely, because it is the justification
+# for `permissions: contents: read` and for running on fork pull requests.
+#
+# No secret is passed to either job, and nothing here needs one. Two suites are
+# worth naming rather than waving at, because "reads only files in the checkout"
+# is not true of the whole repo:
+#
+#   tests/test_sql_behaviour.py     uses a database — one it builds itself.
+#                                   `initdb` makes a throwaway cluster in a temp
+#                                   directory on a unix socket, torn down in
+#                                   tearDownClass. SUPABASE_DB_URL is never
+#                                   read. Skips where initdb is absent;
+#                                   ubuntu-latest ships PostgreSQL, so it runs.
+#   cfl_engine/dur001/test_dur001.py
+#                                   holds ONE test that talks to the production
+#                                   Supabase management API, gated on
+#                                   SUPABASE_ACCESS_TOKEN. This workflow passes
+#                                   no secrets, so it skips here — and it must
+#                                   keep skipping. If a secret is ever added to
+#                                   this workflow, that test starts writing
+#                                   probe rows to production on every pull
+#                                   request, including from forks. Don't.
+#
+# Everything else reads files from the checkout and touches no network.
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  python:
+    name: Python test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+          cache-dependency-path: cfl_engine/requirements.txt
+
+      # pytest is a runner only, not a repo dependency: `unittest discover`
+      # cannot walk tests/ (it has no __init__.py), and naming each module by
+      # hand would let a newly added test file be skipped in silence — the one
+      # failure mode a tripwire suite must not have.
+      #
+      # Pinned exactly, on purpose. A tripwire suite that installs whatever is
+      # newest can go red on a runner change rather than a repo change, and a
+      # build that reddens for reasons nobody caused is a build people stop
+      # reading. 9.1.1 is the version the 2026-09-18 green run was made on;
+      # bump it deliberately, with a run to show for it.
+      #
+      # The engine requirements are needed because three modules reach
+      # cfl_engine/engine.py, which imports numpy and pandas at module scope.
+      # Without them eight tests fail on ModuleNotFoundError, which looks like
+      # a red suite and is really a missing wheel.
+      #
+      # Those are NOT pinned here, and that is a known gap rather than an
+      # oversight: cfl_engine/requirements.txt carries `>=` ranges and is the
+      # engine's own manifest, shared with the jobs that actually run the
+      # model — pinning it is a change to the engine, not to CI. So this job
+      # can still redden on an upstream release. Tracked as T-011.
+      - name: Install dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --quiet pytest==9.1.1
+          python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
+
+      # From the repo root, so all 17 test modules are collected.
+      - name: Run tests
+        run: python -m pytest -q -rs
+
+  node:
+    name: Node test suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No framework and no dependencies: each file is a script that prints its
+      # own count and exits non-zero on the first failure. Looped rather than
+      # listed so a new tests/*.test.js is picked up without editing this file.
+      - name: Run tests
+        run: |
+          shopt -s nullglob
+          files=(tests/*.test.js)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No tests/*.test.js found — expected at least one."
+            exit 1
+          fi
+          status=0
+          for f in "${files[@]}"; do
+            echo "--- $f"
+            node "$f" || status=1
+          done
+          exit $status
+        shell: bash

@@ -25,6 +25,12 @@ it died is usually worth more than the task was.
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
+| T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
+| T-020 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
+| T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
+| T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
+| T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
+| T-027 | Settle the suspected unordered `.range()` paging in `build/factor-rates.js` — the published market-even cohort may be short | L1 | Claude | queued |
 
 ## Closed
 
@@ -33,6 +39,10 @@ it died is usually worth more than the task was.
 | T-001 | Automate DUR-002's `armed → collecting` transition, guard-gated, with provenance recorded | L1 | Claude | dropped |
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |
+| T-010 | Run the existing Python and JS test suites in CI, on push and pull request | L0 | Claude | done |
+| T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
+| T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
+| T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
 
 ---
 
@@ -71,12 +81,150 @@ backfilled — every card that goes by without it is permanently unavailable to
 that definition. It does not wait on the protocol freeze, because capturing more
 than you end up needing costs nothing and capturing less is irreversible.
 
+**T-011** is what T-010 left unpinned. `tests.yml` pins its runner exactly
+(`pytest==9.1.1`) but installs `cfl_engine/requirements.txt` as written, and that
+file carries `>=` ranges for pandas, numpy, scikit-learn, scipy, statsmodels,
+pyarrow, xgboost and tabulate. So the suite can go red on somebody else's
+release, with no change in this repo behind it — the exact failure the pytest pin
+exists to prevent, left standing on the larger half of the dependency set.
+
+It was not fixed inside T-010 because `requirements.txt` is the **engine's** own
+manifest, shared with the jobs that actually run the model. Pinning it is a
+change to the engine's runtime, not to CI, and it deserves a deliberate run
+rather than a line slipped into a CI pull request. The likely shape is a
+CI-only constraints file rather than narrowing the manifest, so the engine keeps
+its ranges and the test job stops floating.
+
 **T-007** is the freeze. Five questions need the owner: Q-05 (vigged or de-vigged),
 Q-06 (published probability or wager price), Q-07 (aggregation and weighting),
 Q-08 (minimum sample), Q-11 (how it may be described). Each changes what a
 published number means. It is blocked behind T-003 — ChatGPT reviews the
 methodology first, so the questions reaching the owner have been through a
 statistician.
+
+
+**T-010 to T-026 come out of the 2026-09-18 read-only audit**
+([`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md)). Three are the owner's.
+
+**T-010** is the one with the best ratio of value to risk in the whole audit.
+Seven test files — 168 tests, 4,227 subtests and 71 JS assertions — guard the
+frozen-file hashes, the CLV publication gate, the proof-gate record separation
+and the coordination invariants. They all pass. Nothing runs them: only
+`event-flow.yml` invokes a single unittest module. A frozen hash could drift on
+`main` and no gate would notice.
+
+**T-020 and T-021 are L3 because of gate #8**, not because the finding is
+debatable. Four public claims on `index.html` contradict artifacts in this
+repository — including "graded at real closing prices", which is exactly the
+claim CLV-001 exists to withhold. Replacement copy is drafted and no public
+claim has been edited. What needs the owner is the wording that ships, not
+whether the current wording is wrong.
+
+**T-021 carries a standing direction** from the owner, 2026-09-18: the
+governance rule in `CLAUDE.md` is preserved, and `CLAUDE.md` is **not** to be
+amended merely to keep the percentage UI. The replacement must express the
+model-versus-market comparison without asserting an edge the evidence does not
+support.
+
+**T-022 and T-023 are L2** — reversible, publish no new number, and T-023 can
+only narrow what the page asserts. Proceed and notify.
+
+**Ids T-020 to T-026 were renumbered on 2026-09-18, and the reason matters.**
+They were first allocated as T-011 to T-016. While this session was working, a
+second session allocated **T-011 to a different task** on the
+`claude/brave-cray-rssmll-ci` branch. Two live meanings for one id in an
+append-only log is the failure this file's "ids are never reused" rule exists
+to prevent, so this session's block moved up and out of the way rather than
+contest it. The gap from T-017 to T-019 is deliberate slack against the same
+race happening again. Nothing was deleted: T-011 as used here never reached
+`main`.
+
+**T-022 and T-023 shipped 2026-09-18** in
+[#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25), merged to `main`
+at `e91a7da`. They were briefly marked `done` while existing only on a branch,
+which was wrong — branch-only work is not shipped work — and they stayed
+`in-progress` until the merge. Recorded as [D-006](DECISIONS.md).
+
+The merge carried one addition found during consolidation: `fight-insights.js`
+was changed without bumping its `?v=6` cache-bust, so a returning visitor would
+have received the new heading over a cached script with no `CONTEXT_NOTE` — the
+new heading with its explanation silently missing, which asserts less than the
+copy it replaced. Bumped to `?v=7` on all three consumers before merge.
+
+**T-026 shipped 2026-09-18** in
+[#23](https://github.com/cannhaven-wq/Cage-Metrics/pull/23), merged to `main` at
+`b1bc881a`, under [D-007](DECISIONS.md). It was L3 because it changes a
+published number, not because the defect was arguable: the headline was computed
+over the live and replay records pooled together, the fix computes it over one,
+and **the number moves**. The owner chose the replay record, matching the
+`(simulated)` label already beside it.
+
+It also carries a second fix found reviewing the first. `assertOneRecord`
+ignores UNKNOWN, so a graded row whose `source` resolved to no record passed the
+gate and was then counted anyway — the aggregate runs over the graded rows, not
+over the rows the assertion approved. `headlineFromPicks` now fails closed via
+`assertEveryRow`. `flatStakeLedger` and `straightRecord` still use the
+permissive assertion; extending it to them is open and named in the handoff.
+
+**T-024 and T-025 moved out of this line on 2026-09-18.** A dedicated
+factor-evidence workstream (**FE-001**) now owns the exact market-controlled
+measurement and has run it; this line's preliminary work is parked rather than
+merged, so there is one authoritative factor artifact instead of two competing
+ones. Nothing about the finding changed — `edges.js` publishes 60–72% for a
+record gap and 52–56% for takedown defence, and neither range traces to an
+artifact — only who establishes the replacement numbers.
+
+**The distinction that must survive the handover**, because it is the one that
+was got wrong once already: `factor-rates.json` matches `edges.js`'s 10/20/30
+takedown-defence bands but applies **no `willHaveWrestling()` gate**, and it
+bands the **raw** record gap where `edges.js` bands a **Laplace-smoothed** one.
+So any figure taken from it is evidence about the generic factor, never a
+measurement of the shipped rule. Age clearing 50% standalone is likewise not
+authority to reinstate it: the engine already carries age among its 49
+covariates, so incremental value is a separate question.
+
+**T-025 stays the owner's** under gate #8 whoever supplies the evidence.
+
+**T-027 comes out of FE-001, and it is queued rather than fixed.** The
+factor-evidence run reported that `build/factor-rates.js` pages `fight_odds`
+through `fetchAll` without an `.order('id')`, and that the market-even cohort it
+publishes looks roughly 30% short against FE-001's own count. PostgREST
+`.range()` without an explicit order has no guaranteed row order between pages,
+so pages can overlap or skip.
+
+It is queued and not done because **every verdict on `stats.html` rests on that
+cohort size** and several would move. That makes it a measurement change, not a
+one-line patch: the fix is `.order('id')` (or keyset paging), but it has to be
+followed by a re-run with a service key and a stated before/after, and the
+re-run needs egress this environment does not have. Fixing the paging without
+the re-run would leave the page publishing numbers nobody had checked against
+the new cohort.
+
+Deliberately excluded from the 2026-09-18 consolidation, which was merging
+finished work rather than opening new lines.
+
+---
+
+## Notes on the closed rows
+
+**T-010 — done 2026-09-18.** The repo had seventeen test modules and no workflow
+that ran them; the only test invoked anywhere in `.github/workflows/` was a
+single `unittest` module inside `event-flow.yml`. `.github/workflows/tests.yml`
+now runs the whole suite on every push and pull request — `pytest` from the repo
+root, not `pytest tests/`, so `cfl_engine/` and `research/` are in it too. 624
+Python tests and two Node files, against the 168 the first draft of the workflow
+would have covered.
+
+It is **L0**, not L1: it adds no feature, asserts nothing new, and changes no
+product behaviour — it pulls tripwires that were already built. What it buys is
+that the frozen-file hash check, the CLV publication gate, the L3 gate and
+`test_lock_prop0002.py`'s conformance proof stop depending on somebody
+remembering to run them. For a gate, that is the difference between a guard and
+a note.
+
+The audit that found it is
+[`reviews/2026-09-18-claude-ci-audit.md`](reviews/2026-09-18-claude-ci-audit.md).
+The one thing it did not settle is **T-011**, above.
 
 ---
 
