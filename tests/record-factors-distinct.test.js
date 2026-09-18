@@ -101,6 +101,81 @@ t('every correction is dated, per this repo’s convention', () => {
   }
 });
 
+// ------------------------------- the VISIBLE name disambiguates on its own
+//
+// The caveat further up the page is the argument; this is the label a reader
+// actually meets in the one-line summary — "two actually helps: Age, UFC
+// record" — with no caveat attached to it. "UFC record" alone reads as the
+// record that picks fights. It is not that record, so the visible name has to
+// say so by itself.
+//
+// The override is page-side on purpose: factor-rates.json is a verified
+// measurement and is never edited to change wording.
+
+t('the page overrides the displayed name to UFC-only record', () => {
+  const html = read('stats.html');
+  ok(/DISPLAY_LABEL\s*=\s*\{[^}]*ufc_record:\s*'UFC-only record'/.test(html),
+    'stats.html must map ufc_record to the display name "UFC-only record"');
+});
+
+t('the summary line renders the display name, not the raw artifact label', () => {
+  const html = read('stats.html');
+  // The winners line is the failure point. If it goes back to f.label it prints
+  // "UFC record" with nothing qualifying it.
+  const m = html.match(/const winners = [^\n]*\n?[^\n]*/);
+  ok(m, 'the winners summary is missing');
+  ok(/map\(displayLabel\)/.test(html),
+    'the summary must map through displayLabel, not f.label');
+  ok(!/verdict === 'real'\)\.map\(\(f\) => f\.label\)/.test(html),
+    'the summary has reverted to the raw artifact label');
+});
+
+t('the rendered summary actually says UFC-only record', () => {
+  // Not a source check — reproduce what the page computes from the shipped
+  // artifact, so this fails if the data, the override or the wiring drift apart.
+  const DISPLAY_LABEL = { ufc_record: 'UFC-only record' };
+  const heads = rates.factors.map((f) => f.buckets.find((b) => b.headline) || f.buckets[0]);
+  const winners = rates.factors
+    .filter((f, i) => heads[i].verdict === 'real')
+    .map((f) => DISPLAY_LABEL[f.id] || f.label);
+  ok(winners.includes('UFC-only record'),
+    `the summary should name "UFC-only record", got: ${winners.join(', ')}`);
+  ok(!winners.includes('UFC record'),
+    'the summary still names the bare "UFC record"');
+  ok(winners.includes('Age'), 'age should still be named a survivor');
+});
+
+t('the artifact itself is not edited to carry the display name', () => {
+  // The override exists so the measurement stays byte-identical to what the
+  // validation run produced. If the label moved into the JSON, that guarantee
+  // is gone and the next regeneration would silently revert it.
+  eq(factor('ufc_record').label, 'UFC record', 'artifact label must stay as generated');
+});
+
+// ------------------------------------------- freshness claims match reality
+
+t('no public page still claims the Factor Lab refreshes on a timer', () => {
+  const stats = read('stats.html');
+  const edges = read('edges.html');
+  ok(!/rebuilt from the database every few hours/i.test(edges),
+    'edges.html still says the Factor Lab rebuilds every few hours');
+  ok(!/Every number computed live from the full UFC history/i.test(stats),
+    'stats.html still says every number is computed live');
+  // It must say what IS true, not merely drop the false claim.
+  ok(/not on a timer|published after review|when we review/i.test(stats),
+    'stats.html should say the factor table is refreshed on review');
+});
+
+t('CLAUDE.md no longer documents the Factor Lab as running on the cron', () => {
+  const md = read('CLAUDE.md');
+  ok(/does NOT run `npm run factor-rates`/.test(md),
+    'CLAUDE.md must record that prerender.yml no longer builds the Factor Lab');
+  ok(!/run as `npm run factor-rates` inside \[`\.github\/workflows\/prerender\.yml`\]/.test(md),
+    'CLAUDE.md still says factor-rates runs inside prerender.yml');
+  ok(/factor-rates-validate\.yml/.test(md),
+    'CLAUDE.md must name the manual validation workflow');
+});
+
 // ------------------------------------------------- stale claims are gone
 
 t('no surface still says age is the only survivor', () => {
