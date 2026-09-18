@@ -77,6 +77,45 @@
     return true;
   }
 
+  // The stricter form, for a number that gets published on its own.
+  //
+  // assertOneRecord answers "is this all one record?", and deliberately ignores
+  // UNKNOWN rows so that a set carrying a stray unclassifiable row is still
+  // recognised as one record. That is the right question for a split or a
+  // sanity check. It is the WRONG question for an aggregate, because ignoring a
+  // row in the assertion does not remove it from the arithmetic that follows:
+  // the row still lands in n, in hits and in the accuracy that reaches a
+  // reader, contributed by a row we cannot say the provenance of.
+  //
+  // So this asks the question an aggregate actually needs: does EVERY row
+  // resolve to the record we are about to call this? An unrecognised `source`
+  // is a hard failure here, not a row to step over. If a new source value is
+  // ever added to v_model_picks_graded, this throws on the next deploy rather
+  // than quietly folding a third kind of row into a published trust statistic.
+  function assertEveryRow(rows, expected) {
+    if (!expected) {
+      throw new Error('proof-gates: assertEveryRow needs the record it is checking against');
+    }
+    assertOneRecord(rows, expected);
+    const unknown = (rows || []).filter(function (r) {
+      return recordKind(r) === RECORD.UNKNOWN;
+    });
+    if (unknown.length) {
+      const seen = [];
+      unknown.forEach(function (r) {
+        const v = (r && typeof r.source === 'string') ? r.source : String(r && r.source);
+        if (seen.indexOf(v) === -1 && seen.length < 5) seen.push(v);
+      });
+      throw new Error(
+        'proof-gates: refusing to summarise the ' + expected + ' record — ' +
+        unknown.length + ' row(s) carry a source that resolves to no record (' +
+        seen.join(', ') + '). Every row in a published figure must resolve, ' +
+        'because an unresolved row still counts toward it.'
+      );
+    }
+    return true;
+  }
+
   // --------------------------------------------------------------- headline
   // The engine's headline accuracy, for a surface that shows ONE number.
   //
@@ -110,7 +149,11 @@
     // Throws rather than returning a blended figure. A mixed set arriving here
     // is a bug upstream, and the one thing that must not happen is it reaching
     // a reader instead.
-    assertOneRecord(graded, expected);
+    //
+    // assertEveryRow, not assertOneRecord: this number is published on its own,
+    // so a graded row whose source resolves to no record must stop it rather
+    // than be waved through the gate and then counted anyway. Fail closed.
+    assertEveryRow(graded, expected);
 
     const hits = graded.filter(function (r) { return r.hit === true; }).length;
     const locks = graded.filter(function (r) { return r.tier === 'Lock'; });
@@ -500,6 +543,7 @@
     recordKind: recordKind,
     splitByRecord: splitByRecord,
     assertOneRecord: assertOneRecord,
+    assertEveryRow: assertEveryRow,
     headlineFromPicks: headlineFromPicks,
     statusCopy: statusCopy,
     evaluateGate: evaluateGate,

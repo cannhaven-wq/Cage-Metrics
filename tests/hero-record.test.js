@@ -78,15 +78,99 @@ t('asking for one record and being handed the other throws', () => {
     'replay rows asked to be live');
 });
 
-t('an unrecognised source is never folded into either record', () => {
-  // A row we cannot classify must not be counted as live by default.
+// --------------------------------------- unknown sources, and failing closed
+//
+// THE SECOND DEFECT, found in review after the first fix.
+//
+// assertOneRecord deletes UNKNOWN from the set of record kinds it inspects, so
+// a graded row whose `source` is neither 'live' nor 'backtest' passed the gate.
+// It was then counted anyway: headlineFromPicks aggregates over `graded`, not
+// over the rows the assertion approved. So an unclassifiable row contributed to
+// n, to hits and to the published accuracy, having been explicitly waved past
+// the check meant to protect that number.
+//
+// An earlier version of this very file asserted that behaviour was correct
+// (`eq(h.n, 3, 'unknown rows are still graded rows')`), which is how it
+// survived. For a published trust statistic the rule is the other way round:
+// every row that reaches the arithmetic must resolve to the record being
+// claimed, and a row that does not stops the number rather than joining it.
+
+t('an unrecognised source throws rather than contributing to the number', () => {
   const rows = [replay(true), replay(false), { source: 'something-new', hit: true }];
-  const h = P.headlineFromPicks(rows, P.RECORD.REPLAY);
-  eq(h.n, 3, 'unknown rows are still graded rows');
-  // It does not throw — unknown is not a second record — but it is also never
-  // silently relabelled. That property belongs to recordKind and is pinned here
-  // so a future "default to live" change fails.
-  eq(P.recordKind(rows[2]), P.RECORD.UNKNOWN, 'unknown stays unknown');
+  throws(() => P.headlineFromPicks(rows, P.RECORD.REPLAY),
+    'a graded row with an unresolvable source');
+});
+
+t('the error names the offending source, so it can be diagnosed', () => {
+  let msg = '';
+  try {
+    P.headlineFromPicks([replay(true), { source: 'shadow-feed', hit: true }], P.RECORD.REPLAY);
+  } catch (e) { msg = e.message; }
+  ok(msg.includes('shadow-feed'), `the message should name the source, got: ${msg}`);
+});
+
+t('a missing or non-string source throws too', () => {
+  throws(() => P.headlineFromPicks([replay(true), { hit: true }], P.RECORD.REPLAY),
+    'a graded row with no source at all');
+  throws(() => P.headlineFromPicks([replay(true), { source: null, hit: false }], P.RECORD.REPLAY),
+    'a graded row with a null source');
+});
+
+t('the harm is arithmetic, and it is what the throw prevents', () => {
+  // 2 replay rows, both hits, plus one unknown-source miss. Under the old
+  // behaviour this published 2/3 = 66.7% "replay accuracy" while the replay
+  // record it claimed to describe was 2/2 = 100%. The number on screen was
+  // moved by a row nobody could account for.
+  const rows = [replay(true), replay(true), { source: 'something-new', hit: false }];
+  throws(() => P.headlineFromPicks(rows, P.RECORD.REPLAY), 'an unknown row skewing the rate');
+
+  // And the clean subset still summarises, so the throw is about provenance
+  // and not about the arithmetic being broken.
+  const clean = P.headlineFromPicks(rows.slice(0, 2), P.RECORD.REPLAY, { minPicks: 1, minLocks: 1 });
+  eq(clean.n, 2, 'clean n');
+  eq(clean.accuracy, 100, 'clean accuracy');
+});
+
+t('an UNGRADED unknown-source row does not throw — it never reaches the number', () => {
+  // Only graded rows are aggregated, so a pending row of unknown provenance is
+  // filtered out before the assertion and is not an error. Failing closed means
+  // refusing what would be counted, not refusing everything.
+  const h = P.headlineFromPicks(
+    [replay(true), replay(false), { source: 'something-new', hit: null }],
+    P.RECORD.REPLAY, { minPicks: 1, minLocks: 1 });
+  eq(h.n, 2, 'pending unknown rows are excluded, not fatal');
+});
+
+t('unknown is still never relabelled as live', () => {
+  // The original property, kept: a row we cannot classify must not be treated
+  // as live by default. This guards recordKind itself.
+  eq(P.recordKind({ source: 'something-new', hit: true }), P.RECORD.UNKNOWN, 'unknown stays unknown');
+  eq(P.recordKind({ hit: true }), P.RECORD.UNKNOWN, 'missing source is unknown');
+});
+
+t('assertEveryRow is the strict form, and assertOneRecord keeps the loose one', () => {
+  // Two different questions, deliberately. assertOneRecord asks "is this all
+  // one record?" and tolerates an unknown row; assertEveryRow asks "does every
+  // row resolve?" and does not. Aggregates that publish must use the second.
+  // Pinned so the two cannot be quietly collapsed into one.
+  const rows = [replay(true), { source: 'something-new', hit: true }];
+  ok(P.assertOneRecord(rows, P.RECORD.REPLAY), 'assertOneRecord tolerates an unknown row');
+  throws(() => P.assertEveryRow(rows, P.RECORD.REPLAY), 'assertEveryRow must not');
+  throws(() => P.assertEveryRow(rows), 'assertEveryRow with no expected record');
+});
+
+t('the headline routes through the strict assertion, not the loose one', () => {
+  // Static check on the module's own source: swapping assertEveryRow back to
+  // assertOneRecord inside headlineFromPicks would restore the defect while
+  // every functional test above still had something to call. This is the line
+  // that stops that.
+  const SRC = fs.readFileSync(path.join(__dirname, '..', 'proof-gates.js'), 'utf8');
+  const body = SRC.slice(SRC.indexOf('function headlineFromPicks'));
+  const fn = body.slice(0, body.indexOf('\n  }'));
+  ok(/assertEveryRow\(graded, expected\)/.test(fn),
+    'headlineFromPicks must call assertEveryRow on the graded rows');
+  ok(!/assertOneRecord\(graded/.test(fn),
+    'headlineFromPicks must not fall back to the permissive assertion');
 });
 
 t('a clean single-record set summarises correctly', () => {
