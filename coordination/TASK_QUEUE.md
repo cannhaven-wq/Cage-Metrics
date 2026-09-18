@@ -25,6 +25,7 @@ it died is usually worth more than the task was.
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
+| T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
 
 ## Closed
 
@@ -33,6 +34,7 @@ it died is usually worth more than the task was.
 | T-001 | Automate DUR-002's `armed → collecting` transition, guard-gated, with provenance recorded | L1 | Claude | dropped |
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |
+| T-010 | Run the existing Python and JS test suites in CI, on push and pull request | L0 | Claude | done |
 
 ---
 
@@ -71,12 +73,49 @@ backfilled — every card that goes by without it is permanently unavailable to
 that definition. It does not wait on the protocol freeze, because capturing more
 than you end up needing costs nothing and capturing less is irreversible.
 
+**T-011** is what T-010 left unpinned. `tests.yml` pins its runner exactly
+(`pytest==9.1.1`) but installs `cfl_engine/requirements.txt` as written, and that
+file carries `>=` ranges for pandas, numpy, scikit-learn, scipy, statsmodels,
+pyarrow, xgboost and tabulate. So the suite can go red on somebody else's
+release, with no change in this repo behind it — the exact failure the pytest pin
+exists to prevent, left standing on the larger half of the dependency set.
+
+It was not fixed inside T-010 because `requirements.txt` is the **engine's** own
+manifest, shared with the jobs that actually run the model. Pinning it is a
+change to the engine's runtime, not to CI, and it deserves a deliberate run
+rather than a line slipped into a CI pull request. The likely shape is a
+CI-only constraints file rather than narrowing the manifest, so the engine keeps
+its ranges and the test job stops floating.
+
 **T-007** is the freeze. Five questions need the owner: Q-05 (vigged or de-vigged),
 Q-06 (published probability or wager price), Q-07 (aggregation and weighting),
 Q-08 (minimum sample), Q-11 (how it may be described). Each changes what a
 published number means. It is blocked behind T-003 — ChatGPT reviews the
 methodology first, so the questions reaching the owner have been through a
 statistician.
+
+---
+
+## Notes on the closed rows
+
+**T-010 — done 2026-09-18.** The repo had seventeen test modules and no workflow
+that ran them; the only test invoked anywhere in `.github/workflows/` was a
+single `unittest` module inside `event-flow.yml`. `.github/workflows/tests.yml`
+now runs the whole suite on every push and pull request — `pytest` from the repo
+root, not `pytest tests/`, so `cfl_engine/` and `research/` are in it too. 624
+Python tests and two Node files, against the 168 the first draft of the workflow
+would have covered.
+
+It is **L0**, not L1: it adds no feature, asserts nothing new, and changes no
+product behaviour — it pulls tripwires that were already built. What it buys is
+that the frozen-file hash check, the CLV publication gate, the L3 gate and
+`test_lock_prop0002.py`'s conformance proof stop depending on somebody
+remembering to run them. For a gate, that is the difference between a guard and
+a note.
+
+The audit that found it is
+[`reviews/2026-09-18-claude-ci-audit.md`](reviews/2026-09-18-claude-ci-audit.md).
+The one thing it did not settle is **T-011**, above.
 
 ---
 

@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-17
+Last updated: 2026-09-18
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -399,6 +399,35 @@ and recorded, along with Q-12, Q-13 and Q-14, and Q-02's list is frozen.
 Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
 One Node build step (prerender + factor rates) runs on a 6-hour cron. Nothing
 on the card is gated in the frontend during beta.
+
+### CI — the tripwires are now pulled automatically
+
+**`.github/workflows/tests.yml` runs the whole suite on every push and pull
+request** (T-010, 2026-09-18). Before it, seventeen test modules existed and no
+workflow ran any of them — the only test invoked anywhere was one `unittest`
+module inside `event-flow.yml`. Everything passed; nothing was checking. For the
+frozen-file hash check, the CLV publication gate, the L3 gate and
+`test_lock_prop0002.py`'s conformance proof, that is the difference between a
+guard and a note.
+
+`pytest` runs from the **repo root**, not `tests/`: 624 Python tests, not the 168
+under `tests/` alone. The other 456 are `cfl_engine/` and `research/` — the
+frozen model path, the CLV-001 scorer, the integrity checks. Two jobs, Python and
+Node, so a failure names its suite.
+
+No secret is passed and none is needed, which is what lets it run as
+`contents: read` and stay safe on fork pull requests. Two suites are worth
+knowing precisely: `test_sql_behaviour.py` builds its own throwaway Postgres with
+`initdb` and tears it down, and one test in `cfl_engine/dur001/test_dur001.py`
+talks to the **production** Supabase management API, gated on
+`SUPABASE_ACCESS_TOKEN`. It skips here and **must keep skipping** — adding a
+secret to this workflow would make every fork pull request a production write.
+
+**Residual gap: the engine dependencies are not pinned.** `pytest` is pinned
+exactly; `cfl_engine/requirements.txt` is `>=` ranges, so the job can still
+redden on an upstream release. Pinning it is a change to the engine's manifest,
+not to CI. Queued as **T-011**. Audit:
+[`reviews/2026-09-18-claude-ci-audit.md`](reviews/2026-09-18-claude-ci-audit.md).
 
 ---
 

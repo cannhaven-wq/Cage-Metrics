@@ -32,8 +32,6 @@ name: Tests
 #                                   gates fail closed.
 #   tests/proof-copy.test.js        shipped Proof Center copy matches what the
 #                                   data actually supports.
-#   tests/edges-bands.test.js       the T-015 factor measurement still
-#                                   reproduces edges.js's own triggers and bands.
 #
 # SCOPE — the whole repo, not just tests/
 #
@@ -48,9 +46,30 @@ name: Tests
 # numpy/pandas/sklearn/xgboost through cfl_engine/engine.py, and without them
 # eight tests fail on ModuleNotFoundError rather than on anything real.
 #
-# Read-only by construction: every test reads files from the checkout and
-# touches no network and no database. There are no secrets here and none are
-# needed — so this workflow is safe on pull requests from forks.
+# WHAT THIS RUNS AGAINST — stated precisely, because it is the justification
+# for `permissions: contents: read` and for running on fork pull requests.
+#
+# No secret is passed to either job, and nothing here needs one. Two suites are
+# worth naming rather than waving at, because "reads only files in the checkout"
+# is not true of the whole repo:
+#
+#   tests/test_sql_behaviour.py     uses a database — one it builds itself.
+#                                   `initdb` makes a throwaway cluster in a temp
+#                                   directory on a unix socket, torn down in
+#                                   tearDownClass. SUPABASE_DB_URL is never
+#                                   read. Skips where initdb is absent;
+#                                   ubuntu-latest ships PostgreSQL, so it runs.
+#   cfl_engine/dur001/test_dur001.py
+#                                   holds ONE test that talks to the production
+#                                   Supabase management API, gated on
+#                                   SUPABASE_ACCESS_TOKEN. This workflow passes
+#                                   no secrets, so it skips here — and it must
+#                                   keep skipping. If a secret is ever added to
+#                                   this workflow, that test starts writing
+#                                   probe rows to production on every pull
+#                                   request, including from forks. Don't.
+#
+# Everything else reads files from the checkout and touches no network.
 
 on:
   push:
@@ -85,13 +104,25 @@ jobs:
       # hand would let a newly added test file be skipped in silence — the one
       # failure mode a tripwire suite must not have.
       #
+      # Pinned exactly, on purpose. A tripwire suite that installs whatever is
+      # newest can go red on a runner change rather than a repo change, and a
+      # build that reddens for reasons nobody caused is a build people stop
+      # reading. 9.1.1 is the version the 2026-09-18 green run was made on;
+      # bump it deliberately, with a run to show for it.
+      #
       # The engine requirements are needed because three modules reach
       # cfl_engine/engine.py, which imports numpy and pandas at module scope.
       # Without them eight tests fail on ModuleNotFoundError, which looks like
       # a red suite and is really a missing wheel.
+      #
+      # Those are NOT pinned here, and that is a known gap rather than an
+      # oversight: cfl_engine/requirements.txt carries `>=` ranges and is the
+      # engine's own manifest, shared with the jobs that actually run the
+      # model — pinning it is a change to the engine, not to CI. So this job
+      # can still redden on an upstream release. Tracked as T-011.
       - name: Install dependencies
         run: |
-          python -m pip install --disable-pip-version-check --quiet pytest
+          python -m pip install --disable-pip-version-check --quiet pytest==9.1.1
           python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
 
       # From the repo root, so all 17 test modules are collected.
