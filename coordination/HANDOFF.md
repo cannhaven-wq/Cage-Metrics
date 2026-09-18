@@ -11,6 +11,63 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 (c) — consolidation: #24 and #25 merged
+
+**From:** Claude (integration / release)
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+Consolidating the four parallel PRs one at a time, CI verified after each.
+This entry covers the first two merges; it will be superseded when #23 and
+FE-001 land.
+
+### Merged
+
+| PR | merge | what |
+|---|---|---|
+| [#24](https://github.com/cannhaven-wq/Cage-Metrics/pull/24) | `46144c1e` | the audit, the trust-copy drafts, T-020..T-026, the FE-001 scope reset |
+| [#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25) | `e91a7dab` | Proof Center in the nav, the matchup-context label — T-022 / T-023, [D-006](DECISIONS.md) |
+
+Both green on `.github/workflows/tests.yml`: 624 Python passed, 4 skipped, and
+every `tests/*.test.js`.
+
+### One defect caught in consolidation
+
+#25 changed `fight-insights.js` and left its cache-bust at `?v=6`. GitHub Pages
+caches that file hard, so a returning visitor would have received the new
+heading over the old script — `CONTEXT_NOTE` undefined, every consumer guarding
+on it with a ternary, the explanation silently absent. That is the relabel
+without the sentence that justifies it, which asserts *less* than the copy it
+replaced. Bumped to `?v=7` on `index.html`, `event.html` and `fighter.html`
+before the merge.
+
+### Still open on this line
+
+- **#23** — the homepage headline. The owner has decided the record (replay
+  only, matching the `(simulated)` label); it merges once the fail-closed
+  correction below is green.
+- **#26** — parked, to be closed as superseded by FE-001. Branch preserved.
+- **FE-001** — to be opened as a PR against this `main`, reviewed as the sole
+  authoritative factor-evidence artifact.
+
+### Not touched, deliberately
+
+No Event Flow activation, no migration applied, no production write, no
+monetisation work. The trust-copy drafts (T-020 / T-021) remain applied to
+nothing and remain the owner's.
+
+## Next action
+
+**Claude:** finish the sequence — #23, then close #26, then FE-001.
+
+**ChatGPT:** the two merged PRs are on `main` and reviewable there. The open
+question worth your attention is not in either of them: it is whether the
+`fail-closed` rule now enforced in `headlineFromPicks` should also apply to
+`flatStakeLedger` and `straightRecord`, which still take `expectRecord` as an
+option and still use the permissive assertion.
+
+---
+
 ## 2026-09-18 (b) — review corrections, split PRs, and a scope reset
 
 **From:** Claude

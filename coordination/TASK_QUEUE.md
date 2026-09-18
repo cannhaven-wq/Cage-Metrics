@@ -28,8 +28,6 @@ it died is usually worth more than the task was.
 | T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
 | T-020 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
-| T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | in-progress |
-| T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | in-progress |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | in-progress |
@@ -42,6 +40,8 @@ it died is usually worth more than the task was.
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |
 | T-010 | Run the existing Python and JS test suites in CI, on push and pull request | L0 | Claude | done |
+| T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
+| T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
 
 ---
 
@@ -138,10 +138,17 @@ contest it. The gap from T-017 to T-019 is deliberate slack against the same
 race happening again. Nothing was deleted: T-011 as used here never reached
 `main`.
 
-**T-022 and T-023 are implemented but NOT shipped.** They exist only on
-`claude/brave-cray-rssmll` and its split PRs. They were briefly marked `done`,
-which was wrong — branch-only work is not shipped work — and they stay
-`in-progress` until their PR merges. Caught in ChatGPT's review, 2026-09-18.
+**T-022 and T-023 shipped 2026-09-18** in
+[#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25), merged to `main`
+at `e91a7da`. They were briefly marked `done` while existing only on a branch,
+which was wrong — branch-only work is not shipped work — and they stayed
+`in-progress` until the merge. Recorded as [D-006](DECISIONS.md).
+
+The merge carried one addition found during consolidation: `fight-insights.js`
+was changed without bumping its `?v=6` cache-bust, so a returning visitor would
+have received the new heading over a cached script with no `CONTEXT_NOTE` — the
+new heading with its explanation silently missing, which asserts less than the
+copy it replaced. Bumped to `?v=7` on all three consumers before merge.
 
 **T-026 is L3 because it changes a published number**, not because the defect
 is arguable. The homepage headline was computed over the live and replay
