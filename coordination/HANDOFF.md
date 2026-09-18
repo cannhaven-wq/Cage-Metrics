@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-09-18 (c) — consolidation: #24 and #25 merged
+## 2026-09-18 (c) — consolidation: #24, #25 and #23 merged
 
 **From:** Claude (integration / release)
 **To:** Owner → ChatGPT
@@ -41,14 +41,41 @@ without the sentence that justifies it, which asserts *less* than the copy it
 replaced. Bumped to `?v=7` on `index.html`, `event.html` and `fighter.html`
 before the merge.
 
+### #23 merged — and the number on the homepage moved
+
+`b1bc881a`, under [D-007](DECISIONS.md). The owner chose the **replay** record,
+matching the `(simulated)` label. The live record stays on the Proof Center.
+
+Two defects, not one. The original: `loadHeroProof()` fetched with no `source`
+filter, so the headline pooled the live feed and the history replay. The second,
+found reviewing the fix: `assertOneRecord` ignores UNKNOWN, so a graded row whose
+`source` resolved to no record passed the gate — and was counted anyway, because
+the aggregate runs over the graded rows rather than over the rows the assertion
+approved. Skipping a row in an assertion does not remove it from the arithmetic
+after it. `headlineFromPicks` now calls `assertEveryRow` and fails closed.
+
+The test file had pinned the second defect as correct
+(`eq(h.n, 3, 'unknown rows are still graded rows')`), which is how it survived
+the first review. Replaced by eight assertions, verified to bite.
+
+### One conflict, resolved without loss
+
+#23 and #25 both edit `index.html`'s script block — flagged when the PRs were
+split, and made real by the `?v=7` cache-bust. Both kept: `proof-gates.js` loads
+before the inline script that calls it, `fight-insights.js` keeps `?v=7`,
+`_shared.js` stays at `?v=rd17`. Verified after the resolution that the page
+still filters by `source`, still asks `headlineFromPicks` for the number, and
+still carries #25's heading and `CONTEXT_NOTE`.
+
 ### Still open on this line
 
-- **#23** — the homepage headline. The owner has decided the record (replay
-  only, matching the `(simulated)` label); it merges once the fail-closed
-  correction below is green.
 - **#26** — parked, to be closed as superseded by FE-001. Branch preserved.
 - **FE-001** — to be opened as a PR against this `main`, reviewed as the sole
   authoritative factor-evidence artifact.
+- **T-027** — the `build/factor-rates.js` paging finding, queued not fixed. It
+  is a measurement change, not a one-line patch: the cohort size it would move
+  is what every `stats.html` verdict rests on, so the fix needs a re-run with a
+  service key and a stated before/after.
 
 ### Not touched, deliberately
 
@@ -60,11 +87,18 @@ nothing and remain the owner's.
 
 **Claude:** finish the sequence — #23, then close #26, then FE-001.
 
-**ChatGPT:** the two merged PRs are on `main` and reviewable there. The open
-question worth your attention is not in either of them: it is whether the
-`fail-closed` rule now enforced in `headlineFromPicks` should also apply to
-`flatStakeLedger` and `straightRecord`, which still take `expectRecord` as an
-option and still use the permissive assertion.
+**ChatGPT:** three merged PRs are on `main` and reviewable there. Two questions
+are worth your attention, and neither is inside them:
+
+1. Whether the fail-closed rule now enforced in `headlineFromPicks` should also
+   apply to `flatStakeLedger` and `straightRecord`, which still take
+   `expectRecord` as an option and still use the permissive assertion. They feed
+   Proof Center surfaces, so the same argument appears to apply; it has not been
+   made.
+2. **T-027.** FE-001 reports the published market-even cohort is ~30% short
+   because `build/factor-rates.js` pages without an explicit order. If that
+   holds, several `stats.html` verdicts move, and the re-run matters more than
+   the one-line fix.
 
 ---
 
