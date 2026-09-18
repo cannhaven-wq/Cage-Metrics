@@ -432,6 +432,14 @@ Plain static HTML/CSS/JS on GitHub Pages; `main` deploys on push. No bundler.
 One Node build step (prerender + factor rates) runs on a 6-hour cron. Nothing
 on the card is gated in the frontend during beta.
 
+**Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
+`e91a7da`). The Proof Center is reachable from the nav and footer rather than
+from one line inside `track-record.html`. The per-fight bullets are headed
+*"What stands out in this matchup"* and carry a line saying they are matchup
+context, not the model's reasoning — they come from `fight-insights.js`, an
+independent heuristic, and nothing in that file feeds the engine that produces
+the percentage.
+
 ### CI — the tripwires are now pulled automatically
 
 **`.github/workflows/tests.yml` runs the whole suite on every push and pull
