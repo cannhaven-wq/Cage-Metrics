@@ -50,6 +50,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 | [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-004**, retiring `backfill_odds.py` |
 | [`HANDOFF.md`](HANDOFF.md) | the live baton — newest entry at the top |
 | [`CRITICAL_GATES.md`](CRITICAL_GATES.md) | the L0–L3 ladder and the closed L3 list |
+| [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) | the read-only product audit — where the five workstreams actually stand |
 
 Git history is the audit trail. These files are the working surface.
 
@@ -296,6 +297,37 @@ No CLV statistic was computed, and none is computable until a card is captured
 under the new path. Nothing renders CLV today; `track-record.html` carries a
 placeholder. Legacy `clv_pp` settlement continues on its cron, untouched —
 bookkeeping under the old convention, never labelled CLV.
+
+### Product — audited 2026-09-18
+
+A read-only audit of the five active workstreams is at
+[`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md). Nothing was changed to produce
+it. Three findings are load-bearing:
+
+1. **Four public claims on `index.html` contradict artifacts in this
+   repository** — most seriously "value flags graded at real closing prices",
+   which is the claim CLV-001 exists to withhold, and which ships in every
+   social unfurl. Replacement copy is drafted; nothing public has been edited.
+   **T-020**, L3.
+2. **The test suite ran nowhere — fixed.** 624 tests, 4,567 subtests and the
+   Node suites guard the frozen hashes, the CLV gate, the proof-gate separation
+   and DUR-002's conformance guarantee. All passed, and nothing pulled them.
+   **T-010 is merged** (`4f9d4a8`), so every PR is now checked. `cfl_engine/
+   requirements.txt` is still unpinned — T-011.
+3. **`edges.js` publishes factor strengths with no artifact.** Record claims
+   60–72% and measures 55.1% market-even (CI 46.8–63.3); takedown defence
+   claims 52–56% and measures 49.3% (CI 43.7–55.0); age, retired in May, is the
+   only `real` verdict. **Neither of the first two is yet an exact test of the
+   shipped rule** — `factor-rates.json` applies no `willHaveWrestling()` gate
+   and bands the raw rather than the smoothed record gap. **The exact
+   measurement is owned by the factor-evidence workstream (FE-001), not by this
+   line**; T-024 and T-025 sit with it. `computeEdges` has no production
+   consumer, but `edges.html` still publishes the ranges as **Active**, so the
+   correction is still owed — just not from here.
+
+The trust pages keep their split by owner direction of 2026-09-18:
+`track-record.html` is results and history, `proof.html` is evidence, method,
+provenance and the publication gates.
 
 ### Where the work moves next
 

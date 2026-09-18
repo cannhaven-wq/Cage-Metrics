@@ -60,7 +60,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=nav2">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -510,12 +510,12 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
+<script src="_shared.js?v=rd17"></script>
 <script src="_auth.js"></script>
 <!-- The record-separation rulebook. index.html uses it for the hero headline so
      the homepage and the Proof Center cannot disagree about what one record is. -->
 <script src="proof-gates.js"></script>
-<script src="fight-insights.js?v=6"></script>
+<script src="fight-insights.js?v=7"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -1161,7 +1161,7 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   // Edge bullets — the top factors driving the pick, anchored to base rates
   const bulletsArr = pick ? buildEdgeBullets(pick.picked, pick.opponent, fight.weight_class) : [];
   const bulletsHtml = bulletsArr.length
-    ? '<div class="edges-hd">Why the model likes it</div><ul class="edges">' + bulletsArr.slice(0, 3).map(t =>
+    ? '<div class="edges-hd">What stands out in this matchup</div><ul class="edges">' + bulletsArr.slice(0, 3).map(t =>
         '<li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>'
     : (pick ? '<div class="fight-note">Model favors ' + cfl.escapeHtml(pick.picked.name) + ' on aggregate signals — no single dominant factor.</div>' : '');
 
@@ -1170,6 +1170,13 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   const flagsHtml = flagsArr.length
     ? '<ul class="redflags"><span class="rf-hd">Why the model might be wrong</span>' +
       flagsArr.slice(0, 2).map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>'
+    : '';
+
+  // These lists are matchup context, not the engine's internals. The note that
+  // says so is shared from fight-insights.js so the three surfaces rendering
+  // these bullets cannot describe them differently.
+  const noteHtml = (bulletsArr.length || flagsArr.length) && window.cflInsights
+    ? '<div class="insight-note">' + cfl.escapeHtml(window.cflInsights.CONTEXT_NOTE) + '</div>'
     : '';
 
   const cf = confidence >= 65 ? '' : (confidence >= 55 ? ' med' : ' low');
@@ -1191,6 +1198,7 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
       ${probsHtml}
       ${bulletsHtml}
       ${flagsHtml}
+      ${noteHtml}
       <a href="${cfl.eventUrl(eventId)}" class="btn btn-ghost btn-block">View matchup</a>
     </div>`;
 
@@ -1211,7 +1219,7 @@ function fighterSideHtml(f, isPick) {
     </a>`;
 }
 
-// "Why the model likes it" / "why it might be wrong" — shared logic lives in
+// "What stands out" / "why it might be wrong" — shared logic lives in
 // fight-insights.js so every surface that shows the card stays in step.
 function insightCtx(weightClass) {
   return { cardioMap: _cardioMap, weightClass, baseRates: _baseRates };

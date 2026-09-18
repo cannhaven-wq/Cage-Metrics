@@ -11,6 +11,145 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 (b) — review corrections, split PRs, and a scope reset
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+ChatGPT reviewed the branch and found two things wrong. Both are fixed here,
+and one of them changes a conclusion.
+
+### Correction 1 — branch-only work was marked shipped
+
+T-022 and T-023 were marked `done` while existing only on
+`claude/brave-cray-rssmll`, with no PR and nothing on `main`. They are
+`in-progress` until their PR merges. Branch-only work is not shipped work.
+
+### Correction 2 — the takedown-defence conclusion was overstated
+
+This one matters more. The claim was that `factor-rates.json` bands takedown
+defence at exactly `edges.js`'s own edges, so the comparison needed no new run.
+The bands do match — 10, 20, 30 — but **the cohorts do not**. `edges.js` fires
+its takedown-defence factor only when `willHaveWrestling()` is true, i.e. only
+when somebody in the fight actually shoots. `factor-rates.js` applies no such
+gate and scores every fight with a takedown-defence gap.
+
+Same bands, different population. So 49.3% market-even is **evidence against
+takedown defence as a general signal, not a measurement of the shipped rule.**
+The same caution applies to record: the headline cohort is not a test of the
+Laplace-smoothed 8 / 15 / 25 / 40 bands, which sit on a different quantity.
+
+Consequences, all applied:
+
+- The preliminary factor artifacts no longer license the `edges.html`
+  correction, and the correction draft carries a **DO NOT SHIP** header. Both
+  then moved out of this line entirely — see the scope reset below. What
+  survives regardless of who measures: these ranges were never tested against
+  the market at all, which is a provenance fact rather than a performance
+  claim.
+- Age: clearing 50% in isolation is not evidence of **incremental** value. The
+  engine already carries age among its 49 covariates, so a standalone base rate
+  says nothing about what reinstating the factor would add. That needs its own
+  test and is not proposed.
+
+### A task-id collision, and how it was resolved
+
+A second session allocated **T-011 to a different task** on
+`claude/brave-cray-rssmll-ci` while this session was using T-011 to T-016. Two
+live meanings for one id is exactly what this repo's "ids are never reused"
+rule exists to prevent.
+
+This session's block moved to **T-020 to T-026**, leaving T-017 to T-019 as
+deliberate slack against the race recurring. Nothing was deleted; the earlier
+numbering never reached `main`.
+
+**Worth the owner's attention, now resolved:** that branch marked its T-010
+`done` while #22 was unmerged. #22 has since merged, so the row is accurate as
+it stands and needs no change. On the rebase its T-011 was kept exactly as
+written and this session's duplicate T-010 row was dropped.
+
+### The branch is now four PRs, not one merge
+
+| PR | what | risk |
+|---|---|---|
+| [#22](https://github.com/cannhaven-wq/Cage-Metrics/pull/22) | CI (other session; pytest pinned to 9.1.1) | **MERGED** `4f9d4a8` |
+| [#23](https://github.com/cannhaven-wq/Cage-Metrics/pull/23) | the homepage live/replay pooling defect | **changes a published number — gate #8** |
+| [#24](https://github.com/cannhaven-wq/Cage-Metrics/pull/24) | coordination and audit documents | none — documents only |
+| [#25](https://github.com/cannhaven-wq/Cage-Metrics/pull/25) | Proof Center nav + the explanation label | reversible UI |
+| [#26](https://github.com/cannhaven-wq/Cage-Metrics/pull/26) | preliminary factor research | **PARKED — do not merge**, see below |
+
+### Scope reset, 2026-09-18
+
+This line owns **product trust** and nothing else: #23, #24, #25.
+
+Factor evidence moved to a dedicated workstream, **FE-001**, which has run the
+deeper market-controlled analysis this line could not. #26 is parked unmerged
+so there is **one** authoritative factor artifact rather than two competing
+ones, and FE-001 decides whether anything in it survives.
+
+Three distinctions have to survive that handover, because the first two were
+got wrong once already in this session:
+
+1. `factor-rates.json` matches `edges.js`'s 10/20/30 takedown-defence bands but
+   applies **no `willHaveWrestling()` gate**. Any figure from it is evidence
+   about the generic factor, never a measurement of the shipped rule.
+2. It bands the **raw** record gap; `edges.js` bands a **Laplace-smoothed** one.
+   Different quantities, so the headline cohort is not a band-level test.
+3. Age clearing 50% standalone is **not** authority to reinstate it. The engine
+   already carries age among its 49 covariates, so incremental value is a
+   separate question with its own test.
+
+T-024 and T-025 are re-pointed at FE-001 in the queue. T-025 stays the owner's
+under gate #8 whoever supplies the evidence.
+
+### The homepage defect, which is the real find
+
+`loadHeroProof()` called `fetchEnginePicks()` with no `source` filter, so the
+headline accuracy, the graded-fight count, the Lock rate and the trust tiles
+were averages over the live feed and the history replay **pooled together** —
+the operation `proof-gates.js` throws rather than perform, on the most
+prominent number on the site.
+
+Fixed by moving the arithmetic into `proof-gates.js::headlineFromPicks`, which
+asserts one record before computing and requires the caller to name which one.
+A filter alone would have let the page drift back. 16 regression assertions,
+including a reconstruction of the original defect that throws for either
+argument, and static checks that the page actually routes through it.
+
+## Next action
+
+**Owner:** #22 merged to `main` at `4f9d4a8`, so CI is live and every PR below
+is checked by it. Three PRs are ready, all green:
+
+- **#24** — documents only, no risk. Merge first; it is what the other two
+  refer back to.
+- **#25** — reversible UI. Proof Center into the nav, the matchup bullets
+  labelled as context rather than as the model's reasoning.
+- **#23** — **needs a decision, not just a review.** It changes what the
+  homepage headline is computed from: today that number averages the live feed
+  and the history replay together, and afterwards it is one record. The figure
+  will move. It is set to the replay record, matching the "(simulated)" label
+  already beside it; live-only, or both side by side, are the alternatives and
+  the last is a layout change.
+
+**#26 is parked and should not be merged.** FE-001 owns factor evidence and
+will say whether any of it survives.
+
+Still outstanding and unchanged: the trust-copy drafts in
+`DRAFT_trust_copy_2026-09-18.md` (T-020, T-021) are applied to nothing, so
+`index.html` keeps shipping "graded at real closing prices" in its meta
+description until they are ruled on.
+
+**ChatGPT:** whether the replay record is the right choice for the homepage
+headline, or whether both records should be shown at their real sizes. That is
+the one open design question in this line's scope.
+
+**This line, next:** nothing new until #23, #24 and #25 are resolved. No
+further factor work, no new model research.
+
+---
+
 ## 2026-09-18 — CI: the test suite now actually runs, and it is bigger than `tests/`
 
 **From:** Claude
@@ -127,179 +266,105 @@ governance records should carry.
 
 ---
 
-## 2026-09-17 — consolidation: three merges landed, CLV-001 rebased and held
+## 2026-09-18 — audit, CI, and the first trust fixes
 
 **From:** Claude
 **To:** Owner → ChatGPT
-**Date:** 2026-09-17
+**Date:** 2026-09-18
 
-**No migration applied. No production write. No CLV published. No paid API call.**
-No `fight_odds` row deleted or rewritten, here or anywhere. Every database call
-made in this session was read-only.
+**No migration applied. No production write. No CLV published. No paid API
+call. No public performance claim changed.** Every database call attempted in
+this session was read-only, and all of them failed: the environment's network
+policy blocks `*.supabase.co`, which is why T-024 is blocked below.
 
 ### What landed
 
-Consolidation in a fixed order, each step verified on the remote before the next
-began — not merely committed locally.
-
-| # | what | result |
+| # | what | where |
 |---|---|---|
-| 1 | PR #14 — DUR-002's first collection | merged, `1a5cf890` |
-| 2 | PR #15 — the `coordination/` layer | merged, `934721ba` |
-| 3 | odds scrapper retirement | merged, `cage-metrics-odds-scrapper@af54180` (PR #1) |
-| 4 | PR #16 — CLV-001 v1.0.10 | rebased onto the new `main`, **held unmerged** |
+| 1 | Read-only audit of the five active workstreams | [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) |
+| 2 | CI running the whole test suite on push and PR | PR #22, **merged** `4f9d4a8` |
+| 3 | Proof Center in the nav and footer, with analytics (T-022) | `_shared.js`, `_shared.css`, `proof.html` |
+| 4 | The matchup bullets labelled for what they are (T-023) | `fight-insights.js` + its three consumers |
+| 5 | Replacement copy for the contradicted claims, **applied to nothing** | [`DRAFT_trust_copy_2026-09-18.md`](DRAFT_trust_copy_2026-09-18.md) |
+| 6 | Factor evidence, partial, plus the script to finish it | `research/factors/` — parked, see (b) |
 
-**Step 1** put DUR-002's 48 prospective observations on `main`. Verified before
-merge: `lock_prop0002.py`'s sha256 on `main` is byte-identical to the value
-recorded in `registry.json` and the register.
+### The three findings that matter
 
-**Step 2** put the coordination layer on `main` and wired it into `CLAUDE.md`.
+**Four public claims on `index.html` contradict artifacts in this repository.**
+The worst is *"value flags graded at real closing prices"* — the claim CLV-001
+exists to withhold — and it sits in the meta description, so it ships in every
+share. The hero says *"Find where the betting line is wrong"* while
+`benchmark_report.md` records the engine losing to the close at 0.6511 log-loss
+against 0.5978. Replacement copy is drafted for every one of them; **nothing
+public was edited**, because that is gate #8.
 
-**Step 3** is the one that was only ever a branch. `backfill_odds.py` is now
-retired on `main`: it imports `sys` alone, holds no write verb, and exits
-non-zero. Confirmed before merge that no workflow and no `nixpacks.toml` start
-command invokes it.
+**The test suite ran nowhere.** 624 tests, 4,565 subtests and 71 JS assertions —
+including the 24 conformance tests DUR-002 is collecting against and the
+frozen-file hash register — all passing, and nothing pulled them. PR #22 fixes
+it. My first draft of that workflow ran `pytest tests/` and reported 168 tests;
+it undercounted by 456, and the second commit on the branch corrects it to run
+from the repo root with the engine requirements installed.
 
-**Step 4** rebased 19 commits onto the new `main` with **zero conflicts**, and
-confirmed the rebase did not revert DUR-002 to `armed` — both branches edit
-`research/registry.json` and only that check rules it out.
+> **Corrected and superseded by the 2026-09-18 (b) entry above.** Two things.
+> The paragraph below claims the takedown-defence comparison "needed no new
+> run": the bands match, the cohorts do not, because `factor-rates.js` applies
+> no `willHaveWrestling()` gate — so 49.3% is evidence against the generic
+> factor, not a test of the shipped rule. And the factor workstream has since
+> moved to FE-001, so the `research/factors/` files this entry names are parked
+> rather than merged. The original wording is left as written rather than
+> rewritten; its links are de-linked because the paths are not on `main`.
 
-### What I corrected in the rebase
+**`edges.js` publishes two factor strengths with no artifact, and one of them is
+now refuted.** `factor-rates.json` bands takedown defence at exactly `edges.js`'s
+own edges, so that comparison needed no new run: in the 30+ band the page claims
+56% and the market-even measurement is **44.6%**, interval 35.2–54.3 — the claim
+sits outside it and the band is worse than a coin flip. Record's headline is
+55.1% with an interval that still includes 50, which cannot support a published
+72%. Age, which `edges.js` retired in May, is the only one of the three whose
+interval clears 50.
 
-The coordination records were written before steps 1–3 landed and had gone stale:
+### What is drafted and waiting, not done
 
-- `STATE.md` — DUR-002 read "**armed**, zero observations". Now collecting, 48
-  rows on 12 fights. **This was the load-bearing one**: `STATE.md` is the file
-  `CLAUDE.md` tells every session to read first, and nothing cross-checks it
-  against the research register, so it would have gone on being wrong silently.
-- `CRITICAL_GATES.md` — same stale assertion in the read-only clause.
-- `TASK_QUEUE.md` — T-001 **dropped**. It asked to automate a one-shot
-  transition that has now happened; automation for it has no remaining value.
-  Reason recorded rather than deleted.
-- `FIGHT_ODDS_WRITER_INVENTORY.md` — the retirement is merged, not a branch.
+- **T-020 / T-021** — the claims rewrite and the `Edge` representation. Exact
+  before/after strings in `DRAFT_trust_copy_2026-09-18.md`. The owner's
+  standing direction is recorded there: the `CLAUDE.md` rule is preserved and
+  is not to be amended to keep the percentage UI.
+- **T-025** — the dated correction to `edges.html`'s factor table, drafted in the
+  parked factor branch. It can ship on the
+  evidence already in hand; the pending run only sharpens one paragraph.
+- **One finding the audit missed, now in the draft.** `loadHeroProof()` pools
+  live and replay rows into the homepage headline accuracy with no `source`
+  filter — the operation `proof-gates.js` throws rather than perform. That is a
+  code fix, not a wording fix, and it should land before any copy moves.
 
-### The Railway service is still open, and it is a gate
+### T-024 is blocked, and on what
 
-The odds scrapper's README describes a **second Railway service** whose start
-command was overridden to `backfill_odds.py`. Railway config is not in git and
-this session holds no Railway credential, so it cannot be confirmed from here.
-
-Measured instead, read-only, to bound the risk: the backfill's last write sits
-at `fight_odds.id ≤ 384002`, and the rows written immediately after it captured
-at **2026-05-26T23:02:20Z**. It has not written in nearly four months, and as of
-`af54180` it cannot write if invoked. That shows the service has not *run*. It
-cannot show it does not *exist*.
-
-**`proposed_2026-09-16_fight_odds_immutability.sql` stays gated on the owner's
-dashboard check.** The other four migrations are additive and not gated on it.
+The measurement script and 18 offline tests are written, and the tests are
+verified to fail when the constants are tampered with. The run needs a service
+key and egress to Supabase. Nothing about it is a decision — it is an
+environment.
 
 ## Next action
 
-**Owner:** remove or disable the second Railway backfill service, and confirm —
-that closes the last precondition on the immutability migration. PR #16 is
-rebased, green and waiting on your word to merge; it was deliberately not
-merged in this session.
+**Owner:** two things, in this order.
 
-**ChatGPT:** the migration application plan, for five migrations applied
-deliberately and sequentially. Every one is still unapplied.
+1. **Merge PR #22** if the workflow reads right. It adds one file, changes no
+   product behaviour, and it is the thing that protects everything after it.
+2. **Rule on `DRAFT_trust_copy_2026-09-18.md`** — approve the wording, amend
+   it, or reject it. Until then `index.html` keeps shipping "graded at real
+   closing prices" in its meta description, and that is the one claim CLV-001
+   was written to prevent. If only one item is approved today, make it C3, the
+   pooled-record fix, which is a wrong number rather than a stale one.
 
----
+**ChatGPT:** review the factor evidence artifact — in
+particular whether the takedown-defence comparison is close enough to exact to
+license the `edges.html` correction before the pending run, given that
+`factor-rates.js` applies no `willHaveWrestling` gate and rebuilds the metric
+point-in-time where `edges.js` reads the career figure.
 
-## 2026-09-16 — D-004: the legacy BFO backfill is retired
-
-**From:** Claude
-**To:** Owner → ChatGPT review
-**Date:** 2026-09-16
-
-**No migration applied. No production write. No CLV published. No paid API call.**
-No `fight_odds` row deleted or rewritten, here or anywhere.
-
-Two repositories:
-
-| repo | commit | branch |
-|---|---|---|
-| `cage-metrics-odds-scrapper` | `d8e1908` | `retire/backfill-odds-2026-09-16` (pushed, **not merged** — it is not my default branch to push to) |
-| `Cage-Metrics` | see below | `research/clv-001-revision` |
-
-### The retirement
-
-`backfill_odds.py` now prints a retirement notice and **exits non-zero**. It
-holds no `delete`, `insert`, `update` or `upsert` — verified by grep after the
-change, and by running it.
-
-Non-zero is the deliberate part. A scheduler that read a silent success would go
-on calling it forever and nobody would learn it had been retired.
-
-The docstring carries the full reasoning rather than a one-line "retired":
-what it did, the R-01 clause it collides with, the fact that its
-delete-before-insert was *the* mechanism of its idempotency, and — for whoever
-wants the capability back — that the append-only replacement appends a second
-observation and resolves by `(observed_at DESC, id DESC)`, the pattern
-`fight_bout_completions` already uses. The implementation is preserved in git
-history at `1ad1aa6`.
-
-### No automation referenced it
-
-Checked before changing anything:
-
-- `.github/workflows/` — three workflows, running `polymarket/backfill_history.py`,
-  `polymarket/probe_history.py`, and the nightly model-training loop. None
-  mentions it.
-- `nixpacks.toml` — `[start] cmd = "python odds_scraper.py"`.
-- No `Procfile`, no `railway.json`/`railway.toml`.
-- The only references anywhere were **documentation**: two in `README.md` and one
-  comment in `backtest_queries.sql`. All three updated.
-
-**One thing I cannot verify.** The README described a *second Railway service*
-whose start command was overridden to `backfill_odds.py`. Railway configuration
-is not in git. If that service still exists it will now exit non-zero with the
-notice instead of deleting anything — loud and harmless — and it should be
-removed. Flagged in the README and the inventory.
-
-### Nothing scorable was lost
-
-BFO publishes the price but not when it was observed, so the script stamped
-`captured_at` as the Unix epoch *by design* — the source comment reads
-"placeholder; opener time isn't precisely known". R-13 excludes every such row
-from scoring permanently; they are the bulk of the 30,724 it names. The rows it
-already wrote are untouched and still feed `model/v5`, `model/v6` and the rest,
-which read opener/closer prices without needing a capture instant.
-
-### Cage-Metrics side
-
-- **`CLAUDE.md`** — `cage-metrics-odds-scrapper` added to the related-repos
-  list, named as the main writer to `fight_odds`, linked to the inventory.
-- **`FIGHT_ODDS_WRITER_INVENTORY.md`** — status block at the top: no known
-  repository-based writer conflict remains. The blocker is left described in
-  full rather than deleted; a retired conflict nobody can read the reasoning for
-  is one somebody re-creates.
-- **`DECISIONS.md`** — **D-004**, quoting the owner, recording that the repo
-  change is revertible and the rule it protects is not: a ledger that has been
-  append-only and then is not was never append-only.
-- **`STATE.md`**, **`HANDOFF.md`** — this.
-
-### Tests
-
-| suite | result |
-|---|---|
-| `tests/` (repo, incl. static migration + Postgres behavioural) | **171 passed**, 3 skipped |
-| `cfl_engine/clv/` | **200 passed** (`test_scoring` 167 + `test_devig` 33) |
-| `build/test-fetch-odds.js` (Node) | **66 passed** |
-
-**437 total, all green.** No CLV-001 code changed in this pass. Still locally
-reported.
-
-### Where this leaves the migration
-
-`proposed_2026-09-16_fight_odds_immutability.sql` has **no known
-repository-based writer conflict**. It remains unapplied, with the other four.
-
-## Next action
-
-**ChatGPT:** the migration application plan.
-
-**Owner:** merge `retire/backfill-odds-2026-09-16` in the odds scrapper (pushed
-as a branch, not to `main`), and check whether the second Railway service still
-exists.
+**Claude, when unblocked:** run the band measurement from an environment
+with egress and a service key, commit
+its measured output, and update §2 of the evidence
+artifact with the per-band record result.
 
 ---

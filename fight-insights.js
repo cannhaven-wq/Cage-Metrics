@@ -147,7 +147,32 @@
     }[c]));
   }
 
-  const api = { CARDIO_RANK, lastName, cardioFor, hasTape, buildEdgeBullets, buildRedFlags };
+  // ---------------------------------------------------------------------
+  // What these bullets are, and what they are not.
+  //
+  // The pick and its percentage come from the engine: a gradient-boosted model
+  // over 49 point-in-time covariates (cfl_engine/engine.py). NOTHING in this
+  // file feeds that model, and the model does not report which of its features
+  // moved a given prediction.
+  //
+  // What buildEdgeBullets and buildRedFlags do is compare the two fighters on
+  // the handful of matchup facts a bettor would check by hand -- cardio tier,
+  // age, reach, record, takedown defence. They are supporting context, chosen
+  // to be readable, and they are true statements about the fighters. They are
+  // not a readout of the engine's reasoning, and presenting them as one would
+  // be a misrepresentation: a reader would reasonably conclude the model
+  // weighed exactly these things, in this order, and it did not.
+  //
+  // So every surface that renders these lists renders this note with them.
+  // It lives here rather than in the pages so the three consumers (index.html,
+  // event.html, fighter.html) cannot drift apart on how they describe it --
+  // the same reason the bullets themselves live here.
+  const CONTEXT_NOTE = 'Matchup context, not the model\u2019s reasoning \u2014 ' +
+    'these are the things worth checking by hand. The percentage comes from the ' +
+    'engine, which weighs far more than this and does not report which factor ' +
+    'moved it.';
+
+  const api = { CARDIO_RANK, CONTEXT_NOTE, lastName, cardioFor, hasTape, buildEdgeBullets, buildRedFlags };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.cflInsights = api;
 })();

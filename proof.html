@@ -27,13 +27,16 @@
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+<!-- ===== Analytics ===== -->
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
 <!-- ===== Fonts & styles ===== -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=nav2">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -390,7 +393,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
+<script src="_shared.js?v=rd17"></script>
 <script src="_auth.js"></script>
 <script src="proof-gates.js"></script>
 <script>
@@ -410,7 +413,7 @@
 // FAILS CLOSED. A load error renders an honest failure, never a zero. A gate
 // with no data renders "still collecting", never a placeholder figure.
 // =============================================================================
-cfl.renderNav();
+cfl.renderNav('proof');
 cfl.renderFooter();
 
 const P = window.cflProof;
