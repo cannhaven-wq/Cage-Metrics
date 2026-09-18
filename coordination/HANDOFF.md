@@ -56,16 +56,25 @@ The paginator throws on a missing or non-unique key rather than returning a
 short result — silent truncation is the bug being removed. Writing that guard
 caught a real defect in the first version of the fix.
 
-### ⚠ The decision this needs
+### The publish gate went in first
 
-**Merging is the publish action.** `prerender.yml` runs `npm run factor-rates`
-on a 6-hour cron and commits `factor-rates.json` to `main`. Merging the fix
-therefore performs a corrected run unattended and puts the new verdicts on
-`stats.html` with nobody having looked at them first. Gate #8.
+This was going to be the hard part: `prerender.yml` regenerated and committed
+`factor-rates.json` every six hours, so merging the reader fix would have
+performed a corrected run unattended and put the new verdicts on `stats.html`
+with nobody having looked.
 
-So the PR is open and **not merged**. The rerun command, the environment it
-needs, and `build/compare-factor-rates.js` (which exits non-zero if any verdict
-moved) are in
+That route is closed. The Factor Lab is out of the scheduled job, and
+regeneration is now
+[`factor-rates-validate.yml`](../.github/workflows/factor-rates-validate.yml) —
+manual, `contents: read`, produces a candidate artifact and a comparison, and
+commits nothing. `tests/publish-gate.test.js` keeps it that way.
+
+**Consequence:** `factor-rates.json` goes stale until someone refreshes it on
+purpose. That is the right way round — a stale number that was reviewed beats a
+fresh one that was not.
+
+The rerun procedure and `build/compare-factor-rates.js` (which exits non-zero if
+any verdict moved) are in
 [`research/factors/T-027_PAGINATION.md`](../research/factors/T-027_PAGINATION.md).
 
 ### Not fixed, reported
@@ -77,9 +86,10 @@ to keep T-027 scoped; `build/paginate.js` is there for whoever takes them.
 
 ## Next action
 
-**Owner:** pick how the corrected numbers reach the page — merge and let the
-cron publish, or run it manually and compare first. Nothing else in T-027 can
-proceed without that, because every remaining step regenerates the artifact.
+**Owner:** the corrected numbers cannot reach the page by accident any more, so
+the remaining decision is only whether to publish them once the comparison is
+in. Run "Factor Lab validation" from the Actions tab (or let this session
+trigger it), read the before/after, then decide.
 
 **ChatGPT:** the diagnosis is in the document above. The part worth challenging
 is the elimination argument — that an identical `fights_scored` on both sides

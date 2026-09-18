@@ -197,13 +197,17 @@ no other input. Replaced with keyset paging (`build/paginate.js`), which also
 survives the concurrent writes `fight_odds` takes every five minutes; ordering
 alone would not.
 
-**It is L3, and owned by the owner, because merging is itself the publish
-action.** `prerender.yml` runs `npm run factor-rates` on a 6-hour cron and
-commits `factor-rates.json` to `main`, so the fix does not merely permit a
-corrected run — within six hours it performs one unattended and publishes the
-resulting verdicts to `stats.html`. That is gate #8. The rerun command, the
-comparison script and the two options are in the document above; the code is
-held unmerged until the owner picks one.
+**It is L3, and the owner's, because a corrected run moves published
+verdicts.** It was briefly worse than that: `prerender.yml` regenerated and
+committed `factor-rates.json` every six hours, so merging the reader fix would
+have performed and published a corrected run unattended. That route is closed —
+the Factor Lab is out of the cron, and regeneration is now a manual workflow
+running under `contents: read` that commits nothing.
+
+So the remaining decision is narrower and cleaner: run the validation workflow,
+read the comparison, and decide whether to publish the candidate. Publishing is
+a deliberate commit of `factor-rates.json` in a pull request where the moved
+verdicts show in the diff. The procedure is in the document above.
 
 Deliberately excluded from the 2026-09-18 consolidation, which was merging
 finished work rather than opening new lines.

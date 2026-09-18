@@ -121,6 +121,18 @@ proxy refuses `CONNECT` to `*.supabase.co` with a 403, and `fight_odds` has no
 
 ### Command
 
+**Preferred: the validation workflow.** It already holds the service key as an
+Actions secret, has egress, and cannot write to the repository.
+
+```
+Actions -> "Factor Lab validation (manual, publishes nothing)" -> Run workflow
+```
+
+It prints the comparison to the run summary and uploads the candidate as an
+artifact. Nothing is committed.
+
+**Locally**, if you have the key and egress:
+
 ```bash
 cd build
 npm ci
@@ -182,29 +194,36 @@ story and the remaining gap needs its own investigation.
 
 ---
 
-## ⚠ Merging the fix is itself the publish action
+## Publishing is now a separate, deliberate act
 
-[`.github/workflows/prerender.yml`](../../.github/workflows/prerender.yml) runs
-`npm run factor-rates` on a **6-hour cron** with a service key and **commits
-`factor-rates.json` to `main`**.
+**This section used to say that merging the fix was itself the publish action.
+That was true when it was written and is no longer true.** It is corrected here
+rather than deleted, because the reasoning is the reason the gate exists.
 
-So merging the code fix does not just enable a corrected rerun — within six
-hours it *performs* one, unattended, and publishes whatever verdicts come out to
-`stats.html`. There is no review step between the merge and the public page.
+**What it said.** `prerender.yml` ran `npm run factor-rates` on a 6-hour cron
+with a service key and committed `factor-rates.json` to `main`. So merging the
+reader fix would not merely have permitted a corrected run — within six hours it
+would have *performed* one, unattended, and published the resulting verdicts to
+`stats.html` with nobody having looked at them.
 
-That is a change to published performance figures, which is **gate #8, L3, the
-owner's**. The fix is therefore held unmerged pending that decision rather than
-merged on the reasoning that it is "only a bug fix". It is a bug fix whose
-deployment republishes the numbers.
+**What changed.** The publish gate landed first, deliberately ahead of this fix:
 
-Two ways to take it, both the owner's call:
+- `prerender.yml` no longer regenerates the Factor Lab and no longer stages
+  `factor-rates.json`. It still does stubs, sitemap and feed on the same cron.
+- [`factor-rates-validate.yml`](../../.github/workflows/factor-rates-validate.yml)
+  is manual only, runs under `permissions: contents: read` — so the token it is
+  handed **cannot write to the repository** — and produces a candidate artifact
+  plus a comparison, committing nothing.
+- `tests/publish-gate.test.js` keeps it that way.
 
-1. **Merge and let the cron publish.** Simplest. The new figures are more
-   correct than the old ones, and the old ones are known to be wrong — but the
-   first person to see the corrected verdicts is a visitor, not the owner.
-2. **Run it manually first**, compare against the table above, and merge once
-   the movement has been seen and accepted. Costs one manual run; means nothing
-   reaches the page unreviewed.
+**So the sequence is now:** merge the reader fix → run the validation workflow
+by hand → read the comparison → decide. Merging changes what a *future*
+regeneration would compute; it no longer performs or publishes one.
+
+**`factor-rates.json` therefore goes stale** until someone refreshes it on
+purpose, and publishing a reviewed candidate is a deliberate commit in a pull
+request where the moved verdicts appear in the diff. That is still gate #8 and
+still the owner's — it is simply no longer something a merge can do by accident.
 
 ## Not fixed here
 
