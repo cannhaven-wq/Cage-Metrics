@@ -16,15 +16,41 @@ name: Tests
 #                                   decision recorded against its id.
 #   tests/test_migrations_idempotent.py / test_sql_behaviour.py
 #                                   the migrations stay re-runnable.
+#   cfl_engine/dur002/test_lock_prop0002.py
+#                                   24 conformance tests proving PROP-0001@v2
+#                                   equals the raw pre-calibration probability
+#                                   of the existing pipeline, exactly. DUR-002
+#                                   is collecting against that guarantee.
+#   cfl_engine/clv/test_scoring.py  CLV-001 scoring: per-row eligibility, the
+#                                   per-quote forecast lock, write-once
+#                                   settlement, the 20-event floor by event_id.
+#   cfl_engine/event_flow/*         the running order resolves as a complete
+#                                   card, and read-only reconciliation stays
+#                                   read-only.
+#   cfl_engine/integrity/           the 21 production data-integrity checks.
 #   tests/proof-gates.test.js       live and replay records never total together;
 #                                   gates fail closed.
 #   tests/proof-copy.test.js        shipped Proof Center copy matches what the
 #                                   data actually supports.
+#   tests/edges-bands.test.js       the T-015 factor measurement still
+#                                   reproduces edges.js's own triggers and bands.
 #
-# Read-only by construction: every test in this repo is stdlib-only Python or
-# dependency-free Node, reads files from the checkout, and touches no network
-# and no database. There are no secrets here and none are needed — so this
-# workflow is safe to run on pull requests from forks.
+# SCOPE — the whole repo, not just tests/
+#
+# The first draft of this workflow ran `pytest tests/` and reported 168 passing
+# tests. The repo actually has 624 across 17 modules: the other 456 live under
+# cfl_engine/ and research/, and they are the ones guarding the frozen model
+# path. Running only tests/ would have produced a green tick over an untested
+# engine, which is worse than no tick at all. So this runs pytest from the repo
+# root.
+#
+# That is why the engine dependencies are installed: three modules import
+# numpy/pandas/sklearn/xgboost through cfl_engine/engine.py, and without them
+# eight tests fail on ModuleNotFoundError rather than on anything real.
+#
+# Read-only by construction: every test reads files from the checkout and
+# touches no network and no database. There are no secrets here and none are
+# needed — so this workflow is safe on pull requests from forks.
 
 on:
   push:
@@ -51,17 +77,26 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
+          cache: pip
+          cache-dependency-path: cfl_engine/requirements.txt
 
-      # The tests import nothing outside the standard library. pytest is here
-      # as a runner only: `unittest discover` cannot walk tests/ (no
-      # __init__.py), and naming each module by hand means a new test file
-      # would be skipped in silence, which is the one failure mode a tripwire
-      # suite cannot have.
-      - name: Install the test runner
-        run: python -m pip install --disable-pip-version-check --quiet pytest
+      # pytest is a runner only, not a repo dependency: `unittest discover`
+      # cannot walk tests/ (it has no __init__.py), and naming each module by
+      # hand would let a newly added test file be skipped in silence — the one
+      # failure mode a tripwire suite must not have.
+      #
+      # The engine requirements are needed because three modules reach
+      # cfl_engine/engine.py, which imports numpy and pandas at module scope.
+      # Without them eight tests fail on ModuleNotFoundError, which looks like
+      # a red suite and is really a missing wheel.
+      - name: Install dependencies
+        run: |
+          python -m pip install --disable-pip-version-check --quiet pytest
+          python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
 
+      # From the repo root, so all 17 test modules are collected.
       - name: Run tests
-        run: python -m pytest tests/ -q -rs
+        run: python -m pytest -q -rs
 
   node:
     name: Node test suite
