@@ -3,6 +3,10 @@ name: Prerender static stubs
 # Generates /f/<slug>-<id>.html and /e/<slug>-<id>.html for every fighter and
 # event in Supabase, regenerates sitemap.xml, commits any changes back to main.
 #
+# It does NOT touch factor-rates.json. That file is a set of published
+# performance verdicts and is refreshed only through factor-rates-validate.yml,
+# which is manual and commits nothing. T-027.
+#
 # Triggers:
 #   - schedule: every 6 hours (catches scraper updates)
 #   - workflow_dispatch: manual run from the Actions tab
@@ -48,20 +52,36 @@ jobs:
         working-directory: build
         run: npm run prerender
 
-      # Needs the service key: fight_odds has no SELECT policy for anon and
-      # returns 0 rows silently, which would publish an empty market-control
-      # column. factor-rates.js hard-fails on that rather than shipping it.
-      - name: Recompute factor rates
-        working-directory: build
-        env:
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-        run: npm run factor-rates
+      # The Factor Lab is NOT regenerated here any more. See T-027.
+      #
+      # This job used to run `npm run factor-rates` with the service key and
+      # commit the result, so every six hours it recomputed and published the
+      # Factor Lab's verdicts with nobody reviewing them. That was fine while
+      # the numbers were believed correct. It stopped being fine the moment a
+      # reader defect was found in the script that produces them: the fix would
+      # have been deployed and its effects published in the same unattended
+      # step, and the first person to see the corrected verdicts would have been
+      # a visitor.
+      #
+      # `stats.html` verdicts are public performance claims, so changing what
+      # they are computed from is an owner decision, not a cron job.
+      #
+      # Regeneration now lives in factor-rates-validate.yml: manual only,
+      # `contents: read`, produces a candidate artifact and commits nothing.
+      # Publishing a reviewed candidate is a deliberate commit of
+      # factor-rates.json, which is exactly the reviewable event this removes
+      # from the schedule.
+      #
+      # CONSEQUENCE, STATED PLAINLY: factor-rates.json now goes stale until
+      # somebody refreshes it on purpose. That is the trade — a stale number
+      # that was reviewed beats a fresh one that was not.
 
       - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add f/ e/ preview/ card/ sitemap.xml feed.xml factor-rates.json
+          # factor-rates.json is deliberately NOT staged here — see above.
+          git add f/ e/ preview/ card/ sitemap.xml feed.xml
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
