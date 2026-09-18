@@ -309,9 +309,10 @@ it. Three findings are load-bearing:
    which is the claim CLV-001 exists to withhold, and which ships in every
    social unfurl. Replacement copy is drafted; nothing public has been edited.
    **T-011**, L3.
-2. **The test suite runs nowhere.** 168 tests, 4,227 subtests and 71 JS
-   assertions guard the frozen hashes, the CLV gate and the proof-gate
-   separation. All pass. Only `event-flow.yml` runs anything. **T-010**.
+2. **The test suite runs nowhere.** 624 tests, 4,565 subtests and 71 JS
+   assertions guard the frozen hashes, the CLV gate, the proof-gate separation
+   and DUR-002's conformance guarantee. All pass. Only `event-flow.yml` runs
+   anything. **T-010**, in a PR.
 3. **`edges.js` publishes factor strengths with no artifact**, and
    `factor-rates.json` contradicts two of them while vindicating the one that
    was retired — record claims 60–72% and measures 55.1%; takedown defence

@@ -11,6 +11,100 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 — audit, CI, and the first trust fixes
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+**No migration applied. No production write. No CLV published. No paid API
+call. No public performance claim changed.** Every database call attempted in
+this session was read-only, and all of them failed: the environment's network
+policy blocks `*.supabase.co`, which is why T-015 is blocked below.
+
+### What landed
+
+| # | what | where |
+|---|---|---|
+| 1 | Read-only audit of the five active workstreams | [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) |
+| 2 | CI running the whole test suite on push and PR | PR #22, **unmerged** |
+| 3 | Proof Center in the nav and footer, with analytics (T-013) | `_shared.js`, `_shared.css`, `proof.html` |
+| 4 | The matchup bullets labelled for what they are (T-014) | `fight-insights.js` + its three consumers |
+| 5 | Replacement copy for the contradicted claims, **applied to nothing** | [`DRAFT_trust_copy_2026-09-18.md`](DRAFT_trust_copy_2026-09-18.md) |
+| 6 | Factor evidence, partial, plus the script to finish it | [`research/factors/`](../research/factors/) |
+
+### The three findings that matter
+
+**Four public claims on `index.html` contradict artifacts in this repository.**
+The worst is *"value flags graded at real closing prices"* — the claim CLV-001
+exists to withhold — and it sits in the meta description, so it ships in every
+share. The hero says *"Find where the betting line is wrong"* while
+`benchmark_report.md` records the engine losing to the close at 0.6511 log-loss
+against 0.5978. Replacement copy is drafted for every one of them; **nothing
+public was edited**, because that is gate #8.
+
+**The test suite ran nowhere.** 624 tests, 4,565 subtests and 71 JS assertions —
+including the 24 conformance tests DUR-002 is collecting against and the
+frozen-file hash register — all passing, and nothing pulled them. PR #22 fixes
+it. My first draft of that workflow ran `pytest tests/` and reported 168 tests;
+it undercounted by 456, and the second commit on the branch corrects it to run
+from the repo root with the engine requirements installed.
+
+**`edges.js` publishes two factor strengths with no artifact, and one of them is
+now refuted.** `factor-rates.json` bands takedown defence at exactly `edges.js`'s
+own edges, so that comparison needed no new run: in the 30+ band the page claims
+56% and the market-even measurement is **44.6%**, interval 35.2–54.3 — the claim
+sits outside it and the band is worse than a coin flip. Record's headline is
+55.1% with an interval that still includes 50, which cannot support a published
+72%. Age, which `edges.js` retired in May, is the only one of the three whose
+interval clears 50.
+
+### What is drafted and waiting, not done
+
+- **T-011 / T-012** — the claims rewrite and the `Edge` representation. Exact
+  before/after strings in `DRAFT_trust_copy_2026-09-18.md`. The owner's
+  standing direction is recorded there: the `CLAUDE.md` rule is preserved and
+  is not to be amended to keep the percentage UI.
+- **T-016** — the dated correction to `edges.html`'s factor table, drafted at
+  `research/factors/DRAFT_edges_correction_2026-09-18.md`. It can ship on the
+  evidence already in hand; the pending run only sharpens one paragraph.
+- **One finding the audit missed, now in the draft.** `loadHeroProof()` pools
+  live and replay rows into the homepage headline accuracy with no `source`
+  filter — the operation `proof-gates.js` throws rather than perform. That is a
+  code fix, not a wording fix, and it should land before any copy moves.
+
+### T-015 is blocked, and on what
+
+The measurement script and 18 offline tests are written, and the tests are
+verified to fail when the constants are tampered with. The run needs a service
+key and egress to Supabase. Nothing about it is a decision — it is an
+environment.
+
+## Next action
+
+**Owner:** two things, in this order.
+
+1. **Merge PR #22** if the workflow reads right. It adds one file, changes no
+   product behaviour, and it is the thing that protects everything after it.
+2. **Rule on `DRAFT_trust_copy_2026-09-18.md`** — approve the wording, amend
+   it, or reject it. Until then `index.html` keeps shipping "graded at real
+   closing prices" in its meta description, and that is the one claim CLV-001
+   was written to prevent. If only one item is approved today, make it C3, the
+   pooled-record fix, which is a wrong number rather than a stale one.
+
+**ChatGPT:** review `research/factors/FACTOR_EVIDENCE_2026-09-18.md` — in
+particular whether the takedown-defence comparison is close enough to exact to
+license the `edges.html` correction before the pending run, given that
+`factor-rates.js` applies no `willHaveWrestling` gate and rebuilds the metric
+point-in-time where `edges.js` reads the career figure.
+
+**Claude, when unblocked:** run `measure_edges_bands.js` from an environment
+with egress and a service key, commit
+`research/factors/edges_bands_measured.json`, and update §2 of the evidence
+artifact with the per-band record result.
+
+---
+
 ## 2026-09-17 — consolidation: three merges landed, CLV-001 rebased and held
 
 **From:** Claude

@@ -28,9 +28,9 @@ it died is usually worth more than the task was.
 | T-010 | Run the existing Python and JS test suites in CI, on push and PR | L1 | Claude | in-progress |
 | T-011 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
 | T-012 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
-| T-013 | Proof Center into the nav and footer, with analytics | L2 | Claude | in-progress |
-| T-014 | Label the explanation layer as matchup context, not model internals | L2 | Claude | in-progress |
-| T-015 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control | L1 | Claude | in-progress |
+| T-013 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
+| T-014 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
+| T-015 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control | L1 | Claude | blocked |
 | T-016 | Dated correction to the `edges.html` factor table, once T-015 lands | L3 | Owner | blocked |
 
 ## Closed
@@ -111,6 +111,14 @@ support.
 
 **T-013 and T-014 are L2** — reversible, publish no new number, and T-014 can
 only narrow what the page asserts. Proceed and notify.
+
+**T-015 is blocked on egress, not on a decision.** The measurement script and
+its 18 offline tests are written and on the branch; the run needs a service key
+and an environment that can reach Supabase, and this one had neither. What
+could be measured without a live pull was, and it is already decisive for
+takedown defence — `factor-rates.json` bands that factor at exactly `edges.js`'s
+own edges (10 / 20 / 30). See
+[`research/factors/FACTOR_EVIDENCE_2026-09-18.md`](../research/factors/FACTOR_EVIDENCE_2026-09-18.md).
 
 **T-015 is read-only** and produces an artifact before any factor claim moves.
 `edges.js` publishes 60–72% for a record gap that `factor-rates.json` measures
