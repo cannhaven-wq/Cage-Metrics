@@ -356,7 +356,10 @@
     const stake = o.stake == null ? 100 : Number(o.stake);
     const priceOf = o.priceOf || function (r) { return r.odds_at_publish; };
     const wonOf = o.wonOf || function (r) { return r.won; };
-    if (o.expectRecord) assertOneRecord(rows, o.expectRecord);
+    // Strict, like the homepage headline: naming the record means every row has
+    // to belong to it. See the note on assertEveryRow — a row skipped by the
+    // assertion is not skipped by the arithmetic underneath it.
+    if (o.expectRecord) assertEveryRow(rows, o.expectRecord);
 
     let wins = 0, losses = 0, pending = 0, unpriced = 0, pnl = 0;
     (rows || []).forEach(function (r) {
@@ -385,7 +388,8 @@
   function straightRecord(rows, opts) {
     const o = opts || {};
     const hitOf = o.hitOf || function (r) { return r.hit; };
-    if (o.expectRecord) assertOneRecord(rows, o.expectRecord);
+    // Strict, as above.
+    if (o.expectRecord) assertEveryRow(rows, o.expectRecord);
     let hits = 0, misses = 0, pending = 0;
     (rows || []).forEach(function (r) {
       const h = hitOf(r);
