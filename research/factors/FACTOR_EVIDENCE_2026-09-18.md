@@ -1,6 +1,6 @@
 # Factor evidence — what edges.js claims, and what the data says
 
-**T-015. Read-only. 2026-09-18.**
+**T-024. Read-only. 2026-09-18.**
 
 This is the artifact that has to exist before any factor claim moves. It is
 **partial, and says exactly where it stops.**
@@ -14,9 +14,13 @@ strengths were typed in by hand and never checked. We checked what we could
 check today.
 
 - **Takedown defence.** The site says a big gap is worth 56%. Measured on
-  fights the betting market priced even, the big-gap group wins **44.6%** —
-  the claim sits outside the range the data supports, and the group is
-  slightly worse than a coin flip.
+  fights the betting market priced even, fighters with a big takedown-defence
+  edge win **44.6%** — outside the range the claim needs, and slightly worse
+  than a coin flip. **But this is not yet a test of the exact rule the site
+  runs.** The site only applies takedown defence when someone in the fight
+  actually wrestles; the measurement we have includes every fight. So this is
+  strong evidence against takedown defence in general, and the shipped rule
+  has still to be tested on its own terms.
 - **Pro record.** The site says a wide record gap is worth up to 72%. Measured
   the same way, the whole factor is **55.1%**, with a range that still includes
   50. 65%, 70% and 72% are all outside that range.
@@ -33,10 +37,16 @@ shown to.
 
 | | status |
 |---|---|
-| Takedown defence, at **edges.js's own band edges** | **measured** — see below |
-| Pro record, at edges.js's own band edges | **not yet** — needs the live run |
-| Pro record, headline (does the rule beat a coin flip at all) | **measured** |
+| Takedown defence, at edges.js's band edges, **without its wrestling gate** | **measured** — see §1 |
+| Takedown defence, at edges.js's band edges, **with** `willHaveWrestling()` | **not yet** — needs the live run |
+| Pro record, at edges.js's own smoothed bands | **not yet** — needs the live run |
+| Pro record, headline (does the rule beat a coin flip at all) | **measured**, generic form |
 | Age, at the Factor Lab's bands | **measured** |
+
+**Nothing here is an exact test of a rule as shipped.** Two of the four lines
+above are pending, and both pending lines are the ones that would license a
+change. That is deliberate: this document exists to be the evidence, not to
+stand in for it.
 
 **Why the record bands are not done.** `build/factor-rates.js` bands the
 **raw** win-rate gap at 10 / 15 / 22 / 30 points and requires five prior UFC
@@ -44,11 +54,25 @@ fights a side. `edges.js` bands the **Laplace-smoothed** gap at 8 / 15 / 25 /
 40 and requires three combined. Those are different cuts of a different
 quantity, so the per-band numbers are not comparable and are not reported.
 
-The takedown-defence bands, by contrast, are the **same edges** — 10, 20 and 30
-points — in both files, so that comparison is near-exact. Two differences
-remain and are stated rather than smoothed over: `factor-rates.js` applies no
-`willHaveWrestling` gate, and it rebuilds takedown defence point-in-time where
-`edges.js` reads the present-day career figure.
+**Why the takedown-defence bands are close but still not exact.** Both files
+cut at the same edges — 10, 20 and 30 points — so the band structure needs no
+translation. Two differences remain, and the first is **material**:
+
+1. **`factor-rates.js` applies no `willHaveWrestling()` gate.** `edges.js`
+   fires its takedown-defence factor only when at least one fighter has a
+   career `td_avg >= 1.0` — i.e. only when somebody in the fight actually
+   shoots. The Factor Lab measurement includes every fight with a takedown-
+   defence gap, wrestler or not. Those are **different cohorts**, and the
+   excluded one is exactly the population where takedown defence is least
+   likely to matter. Gating could plausibly move the number in either
+   direction: it removes fights where the metric is irrelevant (which should
+   help) but also shrinks the sample (which widens the interval).
+2. It rebuilds takedown defence point-in-time where `edges.js` reads the
+   present-day career figure.
+
+So the 49.3% is **evidence against takedown defence as a general signal**. It
+is not a verdict on the gated rule the site actually runs, and this document
+does not treat it as one.
 
 `research/factors/measure_edges_bands.js` closes the remaining gap by scoring
 `edges.js`'s own triggers and bands. **It could not be run in the session that
@@ -83,9 +107,14 @@ cohort.
 
 ---
 
-## 1. Takedown defence — the claim is refuted at the top band
+## 1. Takedown defence — strong evidence against, exact test still pending
 
-`edges.js` fires at a 10-point gap and claims 52.5 / 54 / 56%.
+`edges.js` fires at a 10-point gap **when wrestling is in play** and claims
+52.5 / 54 / 56%.
+
+**The table below omits the wrestling gate.** It is the ungated cohort: every
+fight with a takedown-defence gap. Read it as evidence about the metric, not as
+a measurement of the shipped rule.
 
 | Band | edges.js claims | Measured, market-even | 95% interval | n | Verdict on the claim |
 |---|---|---|---|---|---|
@@ -94,17 +123,23 @@ cohort.
 | 20–30 points | 54.0% | 51.2% | 40.7 – 61.6 | 84 | **untested** — below the 100-fight floor |
 | 30+ points | **56.0%** | **44.6%** | 35.2 – 54.3 | 101 | **claim is above the interval** |
 
-Two things worth separating.
+Three things worth separating.
 
-**The claim fails where it is boldest.** The 30+ band is where `edges.js` is
-most confident, and it is the band that measures *below* a coin flip. The
-interval's upper bound is 54.3; the claim is 56.0.
+**Ungated, the claim fails where it is boldest.** The 30+ band is where
+`edges.js` is most confident, and it is the band that measures *below* a coin
+flip. The interval's upper bound is 54.3; the claim is 56.0.
 
-**The factor as a whole does not survive market control.** 49.3% on 298
-market-even fights, with an interval centred almost exactly on 50. Raw, it
-reads 54.8% on 2,601 fights — which is what reading the favourite looks like.
+**Ungated, the factor does not survive market control.** 49.3% on 298
+market-even fights, with an interval centred almost exactly on 50. Raw it reads
+54.8% on 2,601 fights — which is what reading the favourite looks like. This is
+the same shape, and the same test, that retired cardio in August 2026.
 
-This is the same shape, and the same test, that retired cardio in August 2026.
+**And none of that is yet a measurement of the rule on the site.** The shipped
+factor fires only when someone in the fight wrestles. Restricting to that
+cohort is what `measure_edges_bands.js` does and what has not been run. Until
+it has, the honest statement is: *takedown defence looks like a market proxy,
+and we have not yet tested the gated form.* Anything stronger is borrowing
+confidence from a cohort we did not measure.
 
 ## 2. Pro record — the headline does not support the top three bands
 
@@ -176,11 +211,20 @@ that substitution is not a convenience.
 
 **Licensed by this artifact:**
 
-- A dated correction to `edges.html`'s factor table — **T-016, the owner's
-  under gate #8.** A draft is at
-  [`DRAFT_edges_correction_2026-09-18.md`](DRAFT_edges_correction_2026-09-18.md).
-- Recording, in `CFL_RESEARCH_STATE.md`, that two published factor ranges have
-  no supporting artifact.
+- Recording that two published factor ranges have **no supporting artifact** —
+  which is a statement about provenance, not about the factors' merit, and is
+  true independent of any pending run.
+- Prioritising the gated run. The ungated result is suggestive enough that
+  finishing the exact measurement is clearly worth the credits.
+
+**NOT licensed, corrected 2026-09-18 after review:**
+
+- **Shipping the `edges.html` correction.** An earlier version of this section
+  licensed it on the evidence in hand. That was wrong: the correction's central
+  sentence is about the shipped takedown-defence rule, and the shipped rule is
+  gated where the measurement is not. The draft at
+  [`DRAFT_edges_correction_2026-09-18.md`](DRAFT_edges_correction_2026-09-18.md)
+  is marked do-not-ship until T-024 runs. **T-025 stays blocked.**
 
 **Not licensed:**
 
@@ -189,8 +233,13 @@ that substitution is not a convenience.
   consumer** — `index.html` no longer loads `edges.js`, `event.html` loads it
   only for `cardioFor`, and the `cfl-snapshotter` cron has been dead since
   2026-05-29. The claim ships on `edges.html`; the code does not run.
-- Reinstating age. See §3.
-- Any statement about record's individual bands. See §2.
+- **Reinstating age.** See §3. Clearing 50% under market control in isolation
+  is not the same as adding value on top of what the engine already knows —
+  the engine carries age among its 49 covariates, so a standalone base rate
+  says nothing about incremental contribution. That needs its own test.
+- Any statement about record's individual bands. See §2. The headline cohort
+  is not a test of the Laplace-smoothed 8 / 15 / 25 / 40 bands; those bands sit
+  on a different quantity and have not been scored.
 
 ---
 

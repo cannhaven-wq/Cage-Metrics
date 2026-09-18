@@ -3,7 +3,7 @@
 **Status: DRAFT FOR REVIEW. Nothing in here has been applied.**
 `index.html` is untouched. Every "after" string below is a proposal.
 
-Covers T-011 (the four contradicted claims) and T-012 (the `Edge`
+Covers T-020 (the four contradicted claims) and T-021 (the `Edge`
 representation). Both are **L3 under gate #8** — a change to how an existing
 public performance claim is described.
 
@@ -184,7 +184,7 @@ exception rather than perform, on the most prominent statistic on the site. The
 over-claims — but "3,288 never-seen fights" is still a mixed-record total, and
 the page presents one number where there are two records.
 
-Proposed fix, for review with T-011 because it changes what a published number
+Proposed fix, for review with T-020 because it changes what a published number
 means:
 
 ```js

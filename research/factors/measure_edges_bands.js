@@ -1,4 +1,4 @@
-// T-015 / T-H — remeasure the exact bands edges.js publishes, under market control.
+// T-024 / T-H — remeasure the exact bands edges.js publishes, under market control.
 //
 // READ-ONLY. Issues SELECTs and writes one JSON file under research/factors/.
 // It touches no production surface, no migration, and no append-only table.
@@ -333,7 +333,7 @@ async function main() {
 
   const result = {
     generated_at: new Date().toISOString(),
-    purpose: 'T-015 — score edges.js\'s own trigger conditions and band edges under '
+    purpose: 'T-024 — score edges.js\'s own trigger conditions and band edges under '
       + 'the market control build/factor-rates.js applies.',
     method: {
       point_in_time: true,

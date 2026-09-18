@@ -1,9 +1,26 @@
 # Draft — dated correction to the edges.html factor table
 
+> ## ⛔ DO NOT SHIP YET
+>
+> **Corrected 2026-09-18 after review.** An earlier version of this draft said
+> it could ship on the evidence already in hand. That was wrong.
+>
+> Its central claim is about the **shipped** takedown-defence rule, which fires
+> only when `willHaveWrestling()` is true. The measurement behind it,
+> `factor-rates.json`, applies **no such gate** — it scores every fight with a
+> takedown-defence gap. Same bands, different cohort. The 49.3% is evidence
+> against takedown defence as a general signal; it is not a measurement of the
+> rule this page describes.
+>
+> **This draft ships only after `measure_edges_bands.js` has run with the gate
+> applied (T-024).** The wording below is kept so the shape of the correction
+> is reviewable now, and every sentence that overstated the evidence has been
+> weakened to match what is actually established.
+
 **Status: DRAFT FOR REVIEW. Nothing has been applied.** `edges.html` is
 untouched.
 
-**T-016. L3 under gate #8** — a change to how an existing public performance
+**T-025. L3 under gate #8** — a change to how an existing public performance
 claim is described.
 
 Evidence: [`FACTOR_EVIDENCE_2026-09-18.md`](FACTOR_EVIDENCE_2026-09-18.md).
@@ -36,11 +53,14 @@ existing paragraph.
 > way we tested cardio: on fights the market priced even, where a factor can no
 > longer score by quietly re-reading the favourite.
 >
-> **Takedown defence does not survive that test.** Across every fight the rule
-> fires on, the better takedown defender wins 49.3% of evenly-priced fights —
-> a coin flip. In the band where this page claims the most, a 30-point gap, it
-> is 44.6%, and the range the data supports tops out at 54.3%, below the 56% we
-> published.
+> **Takedown defence does not look like it survives that test.** Across
+> evenly-priced fights where one fighter holds a clear takedown-defence edge,
+> that fighter wins 49.3% of the time — a coin flip. In the band where this
+> page claims the most, a 30-point gap, it is 44.6%. We are re-running the
+> measurement restricted to fights where somebody actually wrestles, which is
+> the narrower situation this factor is supposed to apply to, and we will post
+> that number when it lands. What we can already say is that the 52–56% range
+> below was never measured against the market at all.
 >
 > **The record range is not supported above 60%.** The factor as a whole wins
 > 55.1% of evenly-priced fights, on a range that still includes 50. The 65%,
@@ -66,7 +86,7 @@ Two rows change status. No row is deleted and no range is rewritten.
 | Factor | Status today | Proposed status |
 |---|---|---|
 | Record | `Active` | `Range unsupported — Sept 2026` |
-| TD defense | `Active` | `Range refuted — Sept 2026` |
+| TD defense | `Active` | `Range unsupported — under review Sept 2026` |
 | Age | `Retired May 17` | `Retired May 17 — but see the September 2026 note` |
 | Cardio | `Retired Aug 19` | unchanged |
 | everything else | `Retired May 17` | unchanged |
@@ -98,17 +118,23 @@ on this page has no way to know that.
   consumer, so the urgency is on the page rather than the file.
 - **No reinstatement of age.**
 - **No claim about record's individual bands** until the pending run lands.
+- **No claim about the gated takedown-defence rule** until the same run lands.
 - **No deletion of anything already published**, including the superseded
   68.4% figure and its existing hindsight note.
 
-## Sequencing
+## Sequencing — corrected
 
-This correction can ship on the evidence already in hand — the takedown-defence
-bands are measured at `edges.js`'s own edges, and the record headline is enough
-to retire "60–72%" as a supported range.
+**This does not ship before T-024.** The reasoning that said otherwise confused
+two cohorts: `edges.js`'s takedown-defence factor is gated on
+`willHaveWrestling()` and the measurement in hand is not, so a correction
+asserting something about "this factor" would be asserting it from a different
+population.
 
-The pending run only sharpens Change 1's middle paragraph, from *"whether any
-individual band holds up is still being measured"* to a per-band result. If the
-owner would rather publish once, wait for it. If the preference is to stop
-publishing an unsupported number as early as possible, ship now and follow with
-a second dated line.
+One part of the correction *is* independent of any pending run and stays true
+whatever T-024 returns: **these ranges were never measured against the market
+in the first place.** That is a provenance fact, not a performance claim. If
+the owner wants to say something now rather than wait, that is the sentence
+that can be said — and Change 3, which simply states that these factors no
+longer drive the site's picks, is likewise true today.
+
+The full correction, with numbers, waits for the gated run.

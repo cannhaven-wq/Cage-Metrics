@@ -1,4 +1,4 @@
-// Tests for research/factors/measure_edges_bands.js — T-015.
+// Tests for research/factors/measure_edges_bands.js — T-024.
 //
 // The script cannot be run in every environment: it needs a service key,
 // because fight_odds has no SELECT policy for anon. That is exactly why its
