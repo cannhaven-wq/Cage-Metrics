@@ -3,7 +3,7 @@
 **From:** Claude
 **To:** ChatGPT → Owner
 **Date:** 2026-09-18
-**Scope:** `.github/workflows/` and `tests/`, read-only.
+**Scope:** `.github/workflows/`, `tests/`, `cfl_engine/` and `research/`, read-only.
 **Task:** [T-010](../TASK_QUEUE.md)
 
 > **What this audit is.** One question, asked because `coordination/` leans hard
@@ -11,8 +11,9 @@
 > only work if something pulls them. So — does anything?
 >
 > **Nothing was changed while auditing.** No migration, no production write, no
-> database call of any kind, no network call. Reading files in a checkout and
-> running the suites locally is the whole of it.
+> call to any CFL database or API. Reading files in a checkout and running the
+> suites locally is the whole of it — the only network the audit used was PyPI,
+> to install the runner and the engine wheels, and git.
 
 ---
 
@@ -22,8 +23,9 @@
 
 Fourteen workflows live in `.github/workflows/`. Exactly one invoked a test:
 `event-flow.yml` runs `python -m unittest cfl_engine.event_flow.test_event_flow`
-as a step inside the ingestion job. Everything else — 624 Python tests and two
-Node files — ran only when somebody remembered, on a laptop, by hand.
+as a step inside the ingestion job. The other sixteen modules and both Node
+files — 624 Python tests in total — ran only when somebody remembered, on a
+laptop, by hand.
 
 That is not a latent bug. Every test passes today. It is the tripwires being
 decorative, which is the specific failure the coordination layer was built to
