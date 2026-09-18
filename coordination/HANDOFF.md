@@ -11,6 +11,63 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 (f) — Factor Lab correction published; T-027 closed
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+**T-027 is done.** PR #34 merged at `f40fd27c` under [D-008](DECISIONS.md), the
+L3 that permits it — verified by removing the entry and watching
+`test_a_done_L3_task_has_a_recorded_decision` go red.
+
+### What is now live
+
+`market_even_cohort` 869 → **1,220**, `fights_scored` held at 8,739, seven
+verdicts moved. The artifact is byte-verified: sha256 `ba3c9077…`, reconstructed
+from the validation run's own checksummed log because the artifact download
+redirects to blob storage the build network refuses.
+
+The Factor Lab's summary now reads **"Age, UFC-only record"**. That name is a
+page-side override, so `factor-rates.json` stays byte-identical to what the run
+produced and a future regeneration cannot silently revert the wording.
+
+Also corrected: three freshness claims the publish gate had quietly falsified
+(`stats.html`, `edges.html`, `CLAUDE.md` all said the Lab rebuilt on a timer),
+and a pre-existing error that printed 8,739 into a sentence describing the
+1,220-fight market-even cohort.
+
+### The episode in one line
+
+A reader defect in a build script had been publishing itself every six hours.
+The fix required separating measurement from publication first, then correcting
+the numbers, then correcting the words — in that order, because merging the fix
+on its own would have published its effects unreviewed.
+
+### What this deliberately did NOT settle
+
+`edges.js`'s **record** and **takedown-defence** heuristics are still shipped and
+still unsupported. FE-001 put record at ~50.2% market-even and takedown defence
+on the line. `ufc_record` clearing the bar is a different measurement and is not
+evidence for either. Nothing about them changed, and nothing should be inferred
+from the Factor Lab's green light.
+
+## Next action
+
+**Owner:** the measurement-integrity line is closed. The open product question is
+what to do with the two unsupported shipped heuristics — retire them the way
+cardio was retired in August, restate their published ranges honestly, or leave
+them with a caveat. That is a copy-and-product decision, not a measurement one;
+the evidence for it already exists in FE-001.
+
+**ChatGPT:** worth a skeptical read of whether the `stats.html` caveat plus the
+"UFC-only record" label are together enough that a casual reader cannot come away
+believing the pick engine's record factor was validated. That was the failure
+mode this whole publication was shaped around, and it is a judgement about
+wording rather than data.
+
+---
+
 ## 2026-09-18 (e) — the corrected Factor Lab, prepared for publication
 
 **From:** Claude

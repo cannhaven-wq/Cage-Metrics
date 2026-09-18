@@ -30,7 +30,6 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
-| T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js` — fixed, rerun, compared; publication of the corrected artifact awaiting final review | L3 | Owner | in-progress |
 
 ## Closed
 
@@ -43,6 +42,7 @@ it died is usually worth more than the task was.
 | T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
 | T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
+| T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js`, and publish the corrected cohort | L3 | Owner | done |
 
 ---
 
@@ -209,13 +209,18 @@ read the comparison, and decide whether to publish the candidate. Publishing is
 a deliberate commit of `factor-rates.json` in a pull request where the moved
 verdicts show in the diff. The procedure is in the document above.
 
-**The corrected run is in and the publication is prepared, not merged.** 869 →
-1,220, matching FE-001 exactly; the `fights_scored` control held at 8,739; seven
-verdicts moved. The publication PR carries the byte-verified candidate plus the
-copy changes that keep it honest — because `ufc_record` clearing the bar is
-**not** evidence for `edges.js`'s record factor, and a reader will merge those
-two into one "Record" claim unless the page refuses to.
-`tests/record-factors-distinct.test.js` is what stops that drifting back.
+**T-027 closed 2026-09-18** under [D-008](DECISIONS.md), PR #34 at `f40fd27c`.
+869 → 1,220, matching FE-001 exactly; the `fights_scored` control held at 8,739;
+seven verdicts moved, one downward. The artifact published is the byte-verified
+candidate (sha256 `ba3c9077…`), alongside the copy that keeps it honest —
+`ufc_record` clearing the bar is **not** evidence for `edges.js`'s record
+factor, and the displayed name is now "UFC-only record" so the one-line summary
+says which record it means without relying on a caveat above it.
+`tests/record-factors-distinct.test.js` stops that drifting back.
+
+**What T-027 did not settle, deliberately:** the shipped `edges.js` record and
+takedown-defence heuristics are still unsupported and still shipped. That is the
+next product question and it is not a consequence of this one.
 
 Deliberately excluded from the 2026-09-18 consolidation, which was merging
 finished work rather than opening new lines.
