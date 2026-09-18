@@ -440,12 +440,17 @@ independent figure, while the `fights_scored` control held at 8,739. **7
 verdicts moved** (one of them down), 28 buckets gained 30–40% sample. Nothing
 was published. Full table in the document above.
 
-**The one to read carefully:** `ufc_record` becomes `real`, and that is *not*
-the record factor FE-001 found dead — the Factor Lab tests a UFC-only raw gap,
-`edges.js` ships a smoothed professional-record gap. Publishing the candidate
-would therefore make a **new** public performance claim, falsify `CLAUDE.md`'s
-"only age currently survives market control", and put a `real` record verdict
-beside research saying the shipped record factor is market echo. Owner's call.
+**Two factors now survive market control, and they are not interchangeable.**
+Age, and the Factor Lab's `ufc_record` — the **raw UFC** win-loss gap, ~58% on
+the corrected cohort. `edges.js`'s record factor is a *different* measurement
+(Laplace-smoothed, whole-career professional) that FE-001 put at ~50.2%, and it
+**remains unsupported**. The publication PR states that distinction on
+`stats.html`, `edges.html` and `methodology.html`, corrects `CLAUDE.md`'s "only
+age" line, and adds `tests/record-factors-distinct.test.js` to stop the two
+collapsing back into one generic "Record" claim.
+
+**Age stays retired.** A standalone base rate says nothing about incremental
+value over the engine's 49 covariates, and nothing here reinstates it.
 
 **Publication is gated separately, and that gate landed first.**
 `prerender.yml` used to regenerate and commit `factor-rates.json` every six

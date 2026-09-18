@@ -230,6 +230,14 @@
     margin: 0 0 22px;
   }
   .lab-intro strong { color: var(--text-1); }
+  /* The two-record caveat. Set apart from the intro so it reads as a standing
+     qualification on every verdict below, not as one more line of preamble. */
+  .lab-caveat {
+    border-left: 2px solid var(--border);
+    padding: 2px 0 2px 14px;
+    margin-top: 14px;
+    font-size: 14px;
+  }
   .lab-loading { color: var(--text-3); text-align: center; padding: 40px 0; }
 
   .fl-finding {
@@ -357,8 +365,19 @@
   <h2 class="section-h">Which stats actually help?</h2>
   <p class="lab-intro">
     Some stats look like they predict fights when really they just point at the betting favourite.
-    So we tested each one on the <strong id="lab-n">—</strong> fights where the odds were even.
+    So we scored each one across <strong id="lab-n">—</strong> fights, then scored it again on
+    just the <strong id="lab-even">—</strong> where both men were priced close to even.
     If it still wins there, it knows something the odds don't.
+  </p>
+
+  <p class="lab-intro lab-caveat">
+    <strong>&ldquo;UFC record&rdquo; here is not the record our pick engine uses.</strong>
+    This page tests the plain UFC win&ndash;loss gap you can read off a fight card, counted only
+    from fights that had already happened. The engine&rsquo;s own record factor uses each
+    fighter&rsquo;s whole professional career, adjusted so a 2&ndash;0 fighter isn&rsquo;t treated as
+    a flawless 100%. Those are different measurements, and they do not agree: tested the same way,
+    the engine&rsquo;s version lands on a coin flip. So a green light here is not a green light for
+    the pick engine&rsquo;s record factor, which we have not shown to work on its own.
   </p>
 
   <div class="fl-finding" id="fl-finding" hidden></div>
@@ -576,7 +595,12 @@ async function loadFactorLab() {
   }
 
   const floor = d.rules.min_sample;
+  // Two different numbers, and the page used to print the first one into a
+  // sentence that described the second — it said we tested each factor on
+  // "the 8,739 fights where the odds were even" when 8,739 is every scored
+  // fight and the even-money cohort is a seventh of that. Both are named now.
   document.getElementById('lab-n').textContent = d.dataset.fights_scored.toLocaleString();
+  document.getElementById('lab-even').textContent = d.dataset.market_even_cohort.toLocaleString();
 
   const factors = d.factors.slice().sort((x, y) => {
     const hx = x.buckets.find((b) => b.headline) || x.buckets[0];

@@ -30,7 +30,7 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
-| T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js` — diagnosed and fixed; the corrected rerun is the owner's | L3 | Owner | in-progress |
+| T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js` — fixed, rerun, compared; publication of the corrected artifact awaiting final review | L3 | Owner | in-progress |
 
 ## Closed
 
@@ -208,6 +208,14 @@ So the remaining decision is narrower and cleaner: run the validation workflow,
 read the comparison, and decide whether to publish the candidate. Publishing is
 a deliberate commit of `factor-rates.json` in a pull request where the moved
 verdicts show in the diff. The procedure is in the document above.
+
+**The corrected run is in and the publication is prepared, not merged.** 869 →
+1,220, matching FE-001 exactly; the `fights_scored` control held at 8,739; seven
+verdicts moved. The publication PR carries the byte-verified candidate plus the
+copy changes that keep it honest — because `ufc_record` clearing the bar is
+**not** evidence for `edges.js`'s record factor, and a reader will merge those
+two into one "Record" claim unless the page refuses to.
+`tests/record-factors-distinct.test.js` is what stops that drifting back.
 
 Deliberately excluded from the 2026-09-18 consolidation, which was merging
 finished work rather than opening new lines.
