@@ -532,6 +532,9 @@
         <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
           <span class="full">Track Record</span><span class="short">Record</span>
         </a>
+        <a href="proof.html" ${active === 'proof' ? 'class="active"' : ''}>
+          <span class="full">Proof Center</span><span class="short">Proof</span>
+        </a>
         <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>
           <span class="full">Prop Board</span><span class="short">Props</span>
         </a>
@@ -589,6 +592,7 @@
       <div class="cfl-footer-links">
         <a href="about.html">About</a>
         <a href="contact.html">Contact</a>
+        <a href="proof.html">Proof Center</a>
         <a href="methodology.html">Methodology</a>
         <a href="disclaimer.html">Disclaimer</a>
         <a href="privacy.html">Privacy</a>

@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=flag3">
+<link rel="stylesheet" href="_shared.css?v=nav2">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -281,7 +281,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd16"></script>
+<script src="_shared.js?v=rd17"></script>
 <script src="_auth.js"></script>
 <script src="fight-insights.js?v=6"></script>
 <script>
@@ -961,8 +961,10 @@ async function loadNextFight(f, fights) {
       const bullets = window.cflInsights.buildEdgeBullets(picked, other, ctx).slice(0, 3);
       const flags = window.cflInsights.buildRedFlags(picked, other, ctx, null, conf).slice(0, 2);
       const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
-      why = (bullets.length ? `<div class="nx-hd">Why the model likes ${cfl.escapeHtml(lastName(pickedName))}</div><ul class="nx-list">${bullets.map(li).join('')}</ul>` : '')
-          + (flags.length ? `<div class="nx-hd against">Why it might be wrong</div><ul class="nx-list against">${flags.map(li).join('')}</ul>` : '');
+      why = (bullets.length ? `<div class="nx-hd">What stands out for ${cfl.escapeHtml(lastName(pickedName))}</div><ul class="nx-list">${bullets.map(li).join('')}</ul>` : '')
+          + (flags.length ? `<div class="nx-hd against">Why it might be wrong</div><ul class="nx-list against">${flags.map(li).join('')}</ul>` : '')
+          + ((bullets.length || flags.length)
+              ? `<div class="insight-note">${cfl.escapeHtml(window.cflInsights.CONTEXT_NOTE)}</div>` : '');
     }
     pickHtml = `<div class="nx-pick">Model pick: <strong>${cfl.escapeHtml(pickedName)}</strong> <span class="nx-pct">${Math.round(conf)}%</span> <span class="nx-word">${word}</span></div>${why}`;
   } else {
