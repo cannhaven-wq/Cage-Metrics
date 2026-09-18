@@ -26,6 +26,7 @@
 const fs = require('fs');
 const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
+const { fetchAllKeyset } = require('./paginate');
 
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = process.env.SUPABASE_SECRET_KEY
@@ -58,17 +59,14 @@ const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 // ---------------------------------------------------------------------------
 // Supabase paging
 // ---------------------------------------------------------------------------
-async function fetchAll(build) {
-  const out = [];
-  const page = 1000;
-  for (let from = 0; ; from += page) {
-    const { data, error } = await build().range(from, from + page - 1);
-    if (error) throw new Error(error.message);
-    out.push(...data);
-    if (data.length < page) break;
-  }
-  return out;
-}
+// Keyset, not OFFSET. See build/paginate.js for why, and T-027 for what it
+// cost: this file's market-even cohort was short, and every verdict on
+// stats.html that depends on it was computed over the short cohort.
+//
+// Every select below must therefore include `id`. fight_odds is the one that
+// mattered — it is the only large, filtered read here, and the only table
+// being written to while this runs.
+const fetchAll = (build) => fetchAllKeyset(build, { key: 'id', page: 1000 });
 
 // ---------------------------------------------------------------------------
 // Stats helpers
@@ -313,7 +311,7 @@ async function main() {
       'id, event_id, fighter_a_id, fighter_b_id, winner_id, method, end_round, end_time, '
       + 'a_sig_str_landed, b_sig_str_landed, a_td_landed, b_td_landed, a_td_attempted, b_td_attempted')),
     fetchAll(() => sb.from('fighters').select('id, name, dob, reach_in, height_in, stance')),
-    fetchAll(() => sb.from('fight_odds').select('fight_id, fighter_id, american_odds, is_closer').eq('is_closer', true)),
+    fetchAll(() => sb.from('fight_odds').select('id, fight_id, fighter_id, american_odds, is_closer').eq('is_closer', true)),
   ]);
   console.log(`  events=${events.length} fights=${fights.length} fighters=${fighters.length} closing-odds rows=${odds.length}`);
 
