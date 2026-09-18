@@ -11,6 +11,72 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-18 (e) — the corrected Factor Lab, prepared for publication
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-18
+
+Measurement integrity only. Prepared, **not merged**.
+
+### What is in the publication PR
+
+The corrected artifact, byte-verified rather than retyped: the candidate was
+reconstructed from the validation run's own log (gzip+base64) and its sha256
+matches what that run printed — `ba3c9077…`, 16,800 bytes. Its comparison
+against the published file reproduces run 35377644563 exactly: same seven
+verdicts, same 28 resized buckets, `fights_scored` control unmoved at 8,739.
+
+The artifact download could not be used: it redirects to blob storage the
+network refuses. So the validation workflow now also emits the candidate to its
+log, checksummed — a reviewer who cannot fetch the artifact should not be
+reduced to retyping numbers out of a table.
+
+### The problem the copy exists to prevent
+
+`ufc_record` clearing the bar is **not** evidence for `edges.js`'s record
+factor. Two measurements, one everyday word:
+
+| | Factor Lab `ufc_record` | `edges.js` recordEdge |
+|---|---|---|
+| record | **UFC-only** | **whole-career professional** |
+| quantity | raw win-rate gap | Laplace-smoothed |
+| market-even | **58.4%, `real`** | **~50.2%, a coin flip** (FE-001) |
+
+Left alone, the site would publish a green light on one and a reader would take
+it for the other — the one that actually picks fights. So `stats.html` carries a
+standing caveat, and `edges.html` and `methodology.html` carry **dated**
+corrections that report the new result and keep the shipped factor unsupported
+in the same breath. `tests/record-factors-distinct.test.js` (14 assertions)
+stops that drifting back.
+
+### A pre-existing error found on the way
+
+`stats.html` printed `fights_scored` into a sentence describing the market-even
+cohort — *"tested each one on the 8,739 fights where the odds were even"*, when
+8,739 is every scored fight and the even-money cohort is a seventh of that. Both
+numbers are named now. It was wrong before this work and is not caused by it.
+
+### Held to scope
+
+`edges.js`, thresholds, engine behaviour, Event Flow, migrations and
+monetisation are untouched — checked, not assumed. The scheduled publication
+gate stays shut: this is one reviewed commit of `factor-rates.json`, not a
+return to unattended refreshes. **Age stays retired.**
+
+## Next action
+
+**Owner:** final review of the publication PR. It is the only thing standing
+between the corrected numbers and `stats.html`.
+
+**ChatGPT:** the claim worth attacking is the copy, not the arithmetic. The
+arithmetic has two independent routes to 1,220. The question is whether a reader
+of `stats.html` could still come away believing the pick engine's record factor
+has been validated — because that is the failure this PR is shaped to prevent,
+and it is a judgement about wording rather than about data.
+
+---
+
 ## 2026-09-18 (d) — T-027 diagnosed: the Factor Lab was reading the wrong rows
 
 **From:** Claude

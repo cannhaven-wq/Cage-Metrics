@@ -216,13 +216,16 @@ t('factor-rates.js pages by keyset and every select carries the key', () => {
   }
 });
 
-t('the published artifact is untouched by this change', () => {
-  // T-027 fixes the reader. Regenerating the numbers is a separate, owner-gated
-  // step, because stats.html verdicts move. If this file changes in the same
-  // commit as the fix, that gate was skipped.
+t('the corrected cohort is what the fix was supposed to produce', () => {
+  // This asserted 869 while the fix was unmerged, to prove the regeneration had
+  // not ridden along with it. The artifact has since been reviewed and published
+  // separately, so it now pins the corrected figure — and 1,220 is the number
+  // FE-001 reached by querying the database directly, without this script.
+  // Two independent routes to the same cohort is the evidence that the reader,
+  // not the definition, was what had been wrong.
   const j = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'factor-rates.json'), 'utf8'));
-  eq(j.dataset.market_even_cohort, 869,
-    'factor-rates.json was regenerated alongside the paging fix — that publishes new verdicts');
+  eq(j.dataset.market_even_cohort, 1220, 'published market-even cohort');
+  eq(j.dataset.fights_scored, 8739, 'fights_scored — the control, unchanged by the fix');
 });
 
 // ----------------------------------------------------------------- report

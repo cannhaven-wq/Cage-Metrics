@@ -98,14 +98,23 @@ t('the validation workflow actually produces something to review', () => {
 
 // ------------------------------------------------- the published file is unchanged
 
-t('the published Factor Lab still reads 869 — this PR publishes nothing', () => {
+t('the published Factor Lab is the reviewed corrected cohort', () => {
+  // This read 869 until 2026-09-18 and was updated in the commit that published
+  // the corrected artifact — deliberately, which is what it asked for. It is not
+  // a formality: it pins the published cohort to a number a human approved, so a
+  // later unreviewed regeneration cannot slide a different one in unnoticed.
   const j = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'factor-rates.json'), 'utf8'));
-  if (j.dataset.market_even_cohort !== 869) {
+  if (j.dataset.market_even_cohort !== 1220) {
     throw new Error(
-      `market_even_cohort is ${j.dataset.market_even_cohort}, expected 869. `
-      + 'If a corrected run has been published, that is an owner decision (gate #8) '
-      + 'and this assertion should be updated in the same commit that publishes it '
-      + '— deliberately, so the change is visible in a diff.');
+      `market_even_cohort is ${j.dataset.market_even_cohort}, expected 1220 `
+      + '(the corrected cohort, reviewed and published 2026-09-18). '
+      + 'Publishing a different one is an owner decision (gate #8), and this '
+      + 'assertion is updated in the same commit that publishes it, so the '
+      + 'change is visible in a diff rather than arriving silently.');
+  }
+  // The control. It was already correct before the paging fix and must not move.
+  if (j.dataset.fights_scored !== 8739) {
+    throw new Error(`fights_scored is ${j.dataset.fights_scored}, expected 8739 — the control moved`);
   }
 });
 

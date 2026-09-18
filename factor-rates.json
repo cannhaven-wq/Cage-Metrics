@@ -1,8 +1,8 @@
 {
-  "generated_at": "2026-09-18T15:30:30.166Z",
+  "generated_at": "2026-09-18T18:32:22.951Z",
   "dataset": {
     "fights_scored": 8739,
-    "market_even_cohort": 869,
+    "market_even_cohort": 1220,
     "first_event": "1994-03-11",
     "last_event": "2026-09-12"
   },
@@ -33,11 +33,11 @@
             "ci_hi": 58.1
           },
           "even": {
-            "n": 868,
-            "wins": 492,
-            "pct": 56.7,
-            "ci_lo": 53.4,
-            "ci_hi": 59.9
+            "n": 1219,
+            "wins": 689,
+            "pct": 56.5,
+            "ci_lo": 53.7,
+            "ci_hi": 59.3
           },
           "verdict": "real"
         },
@@ -51,11 +51,11 @@
             "ci_hi": 54.2
           },
           "even": {
-            "n": 260,
-            "wins": 138,
-            "pct": 53.1,
-            "ci_lo": 47,
-            "ci_hi": 59.1
+            "n": 369,
+            "wins": 193,
+            "pct": 52.3,
+            "ci_lo": 47.2,
+            "ci_hi": 57.3
           },
           "verdict": "proxy"
         },
@@ -69,10 +69,10 @@
             "ci_hi": 58.7
           },
           "even": {
-            "n": 238,
-            "wins": 138,
-            "pct": 58,
-            "ci_lo": 51.6,
+            "n": 331,
+            "wins": 195,
+            "pct": 58.9,
+            "ci_lo": 53.5,
             "ci_hi": 64.1
           },
           "verdict": "real"
@@ -87,11 +87,11 @@
             "ci_hi": 58.5
           },
           "even": {
-            "n": 157,
-            "wins": 92,
-            "pct": 58.6,
-            "ci_lo": 50.8,
-            "ci_hi": 66
+            "n": 229,
+            "wins": 136,
+            "pct": 59.4,
+            "ci_lo": 52.9,
+            "ci_hi": 65.5
           },
           "verdict": "real"
         },
@@ -105,13 +105,13 @@
             "ci_hi": 64.2
           },
           "even": {
-            "n": 151,
-            "wins": 89,
-            "pct": 58.9,
-            "ci_lo": 51,
-            "ci_hi": 66.5
+            "n": 201,
+            "wins": 114,
+            "pct": 56.7,
+            "ci_lo": 49.8,
+            "ci_hi": 63.4
           },
-          "verdict": "real"
+          "verdict": "lean"
         },
         {
           "label": "10+ years younger",
@@ -123,11 +123,11 @@
             "ci_hi": 71
           },
           "even": {
-            "n": 62,
-            "wins": 35,
-            "pct": 56.5,
-            "ci_lo": 44.1,
-            "ci_hi": 68.1
+            "n": 89,
+            "wins": 51,
+            "pct": 57.3,
+            "ci_lo": 46.9,
+            "ci_hi": 67.1
           },
           "verdict": "unproven"
         }
@@ -152,11 +152,11 @@
             "ci_hi": 53.2
           },
           "even": {
-            "n": 712,
-            "wins": 376,
-            "pct": 52.8,
-            "ci_lo": 49.1,
-            "ci_hi": 56.5
+            "n": 983,
+            "wins": 515,
+            "pct": 52.4,
+            "ci_lo": 49.3,
+            "ci_hi": 55.5
           },
           "verdict": "proxy"
         },
@@ -170,11 +170,11 @@
             "ci_hi": 52.2
           },
           "even": {
-            "n": 187,
-            "wins": 99,
-            "pct": 52.9,
-            "ci_lo": 45.8,
-            "ci_hi": 60
+            "n": 265,
+            "wins": 141,
+            "pct": 53.2,
+            "ci_lo": 47.2,
+            "ci_hi": 59.1
           },
           "verdict": "proxy"
         },
@@ -188,11 +188,11 @@
             "ci_hi": 52.8
           },
           "even": {
-            "n": 292,
-            "wins": 148,
-            "pct": 50.7,
-            "ci_lo": 45,
-            "ci_hi": 56.4
+            "n": 406,
+            "wins": 209,
+            "pct": 51.5,
+            "ci_lo": 46.6,
+            "ci_hi": 56.3
           },
           "verdict": "proxy"
         },
@@ -206,11 +206,11 @@
             "ci_hi": 56.2
           },
           "even": {
-            "n": 156,
-            "wins": 84,
-            "pct": 53.8,
-            "ci_lo": 46,
-            "ci_hi": 61.5
+            "n": 198,
+            "wins": 103,
+            "pct": 52,
+            "ci_lo": 45.1,
+            "ci_hi": 58.9
           },
           "verdict": "proxy"
         },
@@ -224,13 +224,13 @@
             "ci_hi": 62.5
           },
           "even": {
-            "n": 77,
-            "wins": 45,
-            "pct": 58.4,
-            "ci_lo": 47.3,
-            "ci_hi": 68.8
+            "n": 114,
+            "wins": 62,
+            "pct": 54.4,
+            "ci_lo": 45.2,
+            "ci_hi": 63.2
           },
-          "verdict": "unproven"
+          "verdict": "proxy"
         }
       ]
     },
@@ -253,11 +253,11 @@
             "ci_hi": 53.4
           },
           "even": {
-            "n": 698,
-            "wins": 357,
-            "pct": 51.1,
-            "ci_lo": 47.4,
-            "ci_hi": 54.8
+            "n": 976,
+            "wins": 501,
+            "pct": 51.3,
+            "ci_lo": 48.2,
+            "ci_hi": 54.5
           },
           "verdict": "proxy"
         },
@@ -271,11 +271,11 @@
             "ci_hi": 52.9
           },
           "even": {
-            "n": 454,
-            "wins": 234,
-            "pct": 51.5,
-            "ci_lo": 47,
-            "ci_hi": 56.1
+            "n": 618,
+            "wins": 314,
+            "pct": 50.8,
+            "ci_lo": 46.9,
+            "ci_hi": 54.7
           },
           "verdict": "proxy"
         },
@@ -289,11 +289,11 @@
             "ci_hi": 56
           },
           "even": {
-            "n": 194,
-            "wins": 97,
-            "pct": 50,
-            "ci_lo": 43,
-            "ci_hi": 57
+            "n": 276,
+            "wins": 151,
+            "pct": 54.7,
+            "ci_lo": 48.8,
+            "ci_hi": 60.5
           },
           "verdict": "proxy"
         },
@@ -307,11 +307,11 @@
             "ci_hi": 56.9
           },
           "even": {
-            "n": 50,
-            "wins": 26,
-            "pct": 52,
-            "ci_lo": 38.5,
-            "ci_hi": 65.2
+            "n": 82,
+            "wins": 36,
+            "pct": 43.9,
+            "ci_lo": 33.7,
+            "ci_hi": 54.7
           },
           "verdict": "unproven"
         }
@@ -323,7 +323,7 @@
       "question": "Does the southpaw with the longer reach beat the orthodox fighter?",
       "basis": "physical",
       "note": "Exactly one southpaw, facing an orthodox fighter, holding a reach edge. Single cohort — no gap buckets.",
-      "verdict": "unproven",
+      "verdict": "proxy",
       "buckets": [
         {
           "label": "When it fires",
@@ -335,13 +335,13 @@
             "ci_hi": 60.7
           },
           "even": {
-            "n": 77,
-            "wins": 38,
-            "pct": 49.4,
-            "ci_lo": 38.5,
-            "ci_hi": 60.3
+            "n": 103,
+            "wins": 51,
+            "pct": 49.5,
+            "ci_lo": 40.1,
+            "ci_hi": 59
           },
-          "verdict": "unproven"
+          "verdict": "proxy"
         }
       ]
     },
@@ -351,7 +351,7 @@
       "question": "Does the fighter with the better UFC record win?",
       "basis": "point-in-time",
       "note": "Win rate over UFC fights that had already happened, rebuilt fight by fight — never the career total off the fighters table, which contains the result being scored. Both fighters need five prior UFC fights. The bands are the raw gap between the two win rates, so you can check one off a fight card: 9-1 is 90%, 6-4 is 60%, that fight is a 30-point gap.",
-      "verdict": "lean",
+      "verdict": "real",
       "buckets": [
         {
           "label": "Any gap (all fights it fires on)",
@@ -364,13 +364,13 @@
             "ci_hi": 65.3
           },
           "even": {
-            "n": 136,
-            "wins": 75,
-            "pct": 55.1,
-            "ci_lo": 46.8,
-            "ci_hi": 63.3
+            "n": 185,
+            "wins": 108,
+            "pct": 58.4,
+            "ci_lo": 51.2,
+            "ci_hi": 65.2
           },
-          "verdict": "lean"
+          "verdict": "real"
         },
         {
           "label": "10–15 points better (like 6-4 vs 5-5)",
@@ -382,11 +382,11 @@
             "ci_hi": 63.7
           },
           "even": {
-            "n": 51,
-            "wins": 23,
-            "pct": 45.1,
-            "ci_lo": 32.3,
-            "ci_hi": 58.6
+            "n": 71,
+            "wins": 39,
+            "pct": 54.9,
+            "ci_lo": 43.4,
+            "ci_hi": 66
           },
           "verdict": "unproven"
         },
@@ -400,11 +400,11 @@
             "ci_hi": 67.2
           },
           "even": {
-            "n": 48,
-            "wins": 31,
-            "pct": 64.6,
-            "ci_lo": 50.4,
-            "ci_hi": 76.6
+            "n": 63,
+            "wins": 43,
+            "pct": 68.3,
+            "ci_lo": 56,
+            "ci_hi": 78.4
           },
           "verdict": "unproven"
         },
@@ -418,11 +418,11 @@
             "ci_hi": 68.6
           },
           "even": {
-            "n": 21,
-            "wins": 10,
-            "pct": 47.6,
-            "ci_lo": 28.3,
-            "ci_hi": 67.6
+            "n": 31,
+            "wins": 15,
+            "pct": 48.4,
+            "ci_lo": 32,
+            "ci_hi": 65.2
           },
           "verdict": "unproven"
         },
@@ -436,11 +436,11 @@
             "ci_hi": 75.4
           },
           "even": {
-            "n": 16,
+            "n": 20,
             "wins": 11,
-            "pct": 68.8,
-            "ci_lo": 44.4,
-            "ci_hi": 85.8
+            "pct": 55,
+            "ci_lo": 34.2,
+            "ci_hi": 74.2
           },
           "verdict": "unproven"
         }
@@ -465,11 +465,11 @@
             "ci_hi": 56.7
           },
           "even": {
-            "n": 298,
-            "wins": 147,
-            "pct": 49.3,
-            "ci_lo": 43.7,
-            "ci_hi": 55
+            "n": 430,
+            "wins": 216,
+            "pct": 50.2,
+            "ci_lo": 45.5,
+            "ci_hi": 54.9
           },
           "verdict": "proxy"
         },
@@ -483,11 +483,11 @@
             "ci_hi": 56.5
           },
           "even": {
-            "n": 113,
-            "wins": 59,
-            "pct": 52.2,
-            "ci_lo": 43.1,
-            "ci_hi": 61.2
+            "n": 167,
+            "wins": 85,
+            "pct": 50.9,
+            "ci_lo": 43.4,
+            "ci_hi": 58.4
           },
           "verdict": "proxy"
         },
@@ -501,13 +501,13 @@
             "ci_hi": 59.2
           },
           "even": {
-            "n": 84,
-            "wins": 43,
+            "n": 121,
+            "wins": 62,
             "pct": 51.2,
-            "ci_lo": 40.7,
-            "ci_hi": 61.6
+            "ci_lo": 42.4,
+            "ci_hi": 60
           },
-          "verdict": "unproven"
+          "verdict": "proxy"
         },
         {
           "label": "30+ point edge",
@@ -519,11 +519,11 @@
             "ci_hi": 59.2
           },
           "even": {
-            "n": 101,
-            "wins": 45,
-            "pct": 44.6,
-            "ci_lo": 35.2,
-            "ci_hi": 54.3
+            "n": 142,
+            "wins": 69,
+            "pct": 48.6,
+            "ci_lo": 40.5,
+            "ci_hi": 56.7
           },
           "verdict": "proxy"
         }
@@ -548,11 +548,11 @@
             "ci_hi": 55.5
           },
           "even": {
-            "n": 328,
-            "wins": 149,
-            "pct": 45.4,
-            "ci_lo": 40.1,
-            "ci_hi": 50.8
+            "n": 440,
+            "wins": 213,
+            "pct": 48.4,
+            "ci_lo": 43.8,
+            "ci_hi": 53.1
           },
           "verdict": "proxy"
         },
@@ -566,11 +566,11 @@
             "ci_hi": 54.9
           },
           "even": {
-            "n": 170,
-            "wins": 81,
-            "pct": 47.6,
-            "ci_lo": 40.3,
-            "ci_hi": 55.1
+            "n": 242,
+            "wins": 123,
+            "pct": 50.8,
+            "ci_lo": 44.6,
+            "ci_hi": 57.1
           },
           "verdict": "proxy"
         },
@@ -584,11 +584,11 @@
             "ci_hi": 58.9
           },
           "even": {
-            "n": 129,
-            "wins": 58,
-            "pct": 45,
-            "ci_lo": 36.6,
-            "ci_hi": 53.6
+            "n": 166,
+            "wins": 79,
+            "pct": 47.6,
+            "ci_lo": 40.1,
+            "ci_hi": 55.2
           },
           "verdict": "proxy"
         },
@@ -602,11 +602,11 @@
             "ci_hi": 58.4
           },
           "even": {
-            "n": 29,
-            "wins": 10,
-            "pct": 34.5,
-            "ci_lo": 19.9,
-            "ci_hi": 52.7
+            "n": 32,
+            "wins": 11,
+            "pct": 34.4,
+            "ci_lo": 20.4,
+            "ci_hi": 51.7
           },
           "verdict": "unproven"
         }
@@ -631,11 +631,11 @@
             "ci_hi": 52.8
           },
           "even": {
-            "n": 186,
-            "wins": 93,
-            "pct": 50,
-            "ci_lo": 42.9,
-            "ci_hi": 57.1
+            "n": 243,
+            "wins": 127,
+            "pct": 52.3,
+            "ci_lo": 46,
+            "ci_hi": 58.5
           },
           "verdict": "proxy"
         },
@@ -649,11 +649,11 @@
             "ci_hi": 52.2
           },
           "even": {
-            "n": 104,
-            "wins": 54,
-            "pct": 51.9,
-            "ci_lo": 42.4,
-            "ci_hi": 61.3
+            "n": 137,
+            "wins": 73,
+            "pct": 53.3,
+            "ci_lo": 45,
+            "ci_hi": 61.4
           },
           "verdict": "proxy"
         },
@@ -667,11 +667,11 @@
             "ci_hi": 55.4
           },
           "even": {
-            "n": 62,
-            "wins": 29,
-            "pct": 46.8,
-            "ci_lo": 34.9,
-            "ci_hi": 59
+            "n": 78,
+            "wins": 38,
+            "pct": 48.7,
+            "ci_lo": 37.9,
+            "ci_hi": 59.6
           },
           "verdict": "unproven"
         },
@@ -685,11 +685,11 @@
             "ci_hi": 62.6
           },
           "even": {
-            "n": 20,
-            "wins": 10,
-            "pct": 50,
-            "ci_lo": 29.9,
-            "ci_hi": 70.1
+            "n": 28,
+            "wins": 16,
+            "pct": 57.1,
+            "ci_lo": 39.1,
+            "ci_hi": 73.5
           },
           "verdict": "unproven"
         }

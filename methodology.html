@@ -300,7 +300,7 @@ win_rate(bucket) = sum(younger_won where age_gap in bucket) / count(age_gap in b
         <li>The sample size (3,831 fights) is large enough to be statistically meaningful</li>
         <li>The pattern is monotonic — larger age gaps produce larger win-rate gaps for the younger fighter, which is what you would expect if the effect is real and not noise</li>
         <li>Age is exogenous — fighters cannot manipulate it, and matchmaking does not systematically pair younger versus older fighters in a way that would confound the result</li>
-        <li>Age is the only factor we measure that survives market control — the younger fighter still wins about 57% of the fights the betting market priced as even. UFC record used to sit beside it here; re-measured on the raw record in August 2026 it no longer clears the bar. <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
+        <li>Age survives market control — the younger fighter still wins about 57% of the fights the betting market priced as even. <em>Corrected 18 September 2026:</em> the raw UFC win&ndash;loss gap now clears the bar too, at about 58%. It had been read off a short sample: the builder was paging its odds rows without a fixed order and was working from 869 evenly-priced fights instead of 1,220. <strong>That is the plain record off the fight card — not the whole-career smoothed record our pick engine uses, which tested the same way is a coin flip.</strong> <a href="stats.html" style="color:var(--red); text-decoration: underline;">See the Factor Lab</a></li>
       </ul>
 
       <h3>Known caveats</h3>
