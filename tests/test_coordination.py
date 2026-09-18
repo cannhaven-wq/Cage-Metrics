@@ -2,18 +2,18 @@
 
     python -m unittest tests/test_coordination.py -v
 
-`coordination/` is how Claude and ChatGPT hand work back and forth without Reed
+`coordination/` is how Claude and ChatGPT hand work back and forth without the owner
 in the middle. It is plain markdown, which means nothing stops it rotting — a
 task marked done with no decision behind it, a handoff with no next action, a
 decision pointing at a task id that no longer exists. Each of those reads fine
 and quietly breaks the loop.
 
 The load-bearing check is `test_a_done_L3_task_has_a_recorded_decision`. L3 is
-the set of things only Reed decides. If an L3 row can reach `done` with nothing
+the set of things only the owner decides. If an L3 row can reach `done` with nothing
 in DECISIONS.md against its id, the gate is decorative.
 
 This file checks structure and cross-references only. It cannot check whether a
-decision was Reed's — that is what quoting him in the entry is for.
+decision was the owner's — that is what quoting them in the entry is for.
 """
 from __future__ import annotations
 
@@ -34,10 +34,14 @@ GATES = COORD / "CRITICAL_GATES.md"
 REQUIRED_FILES = [STATE, QUEUE, DECISIONS, HANDOFF, GATES]
 
 LEVELS = {"L0", "L1", "L2", "L3"}
-OWNERS = {"Claude", "ChatGPT", "Reed"}
+# The OWNER role, not a person: live coordination text names the role so a
+# change of who holds it is not a repo-wide rename. Historical entries in
+# DECISIONS.md and older handoffs keep the name they were written with -
+# rewriting those would falsify who actually decided what.
+OWNERS = {"Claude", "ChatGPT", "Owner"}
 STATUSES = {"proposed", "queued", "in-progress", "blocked", "done", "dropped"}
 
-# | T-001 | some task | L3 | Reed | blocked |
+# | T-001 | some task | L3 | Owner | blocked |
 TASK_ROW = re.compile(
     r"^\|\s*(T-\d{3})\s*\|\s*(.+?)\s*\|\s*(L[0-3])\s*\|\s*(\w+)\s*\|\s*([a-z-]+)\s*\|\s*$"
 )
@@ -142,8 +146,8 @@ class TestTaskQueue(unittest.TestCase):
                 continue
             with self.subTest(task=tid):
                 self.assertEqual(
-                    row["owner"], "Reed",
-                    f"{tid} is L3 but owned by {row['owner']}. L3 is Reed's by "
+                    row["owner"], "Owner",
+                    f"{tid} is L3 but owned by {row['owner']}. L3 is the owner's by "
                     f"definition — see coordination/CRITICAL_GATES.md.",
                 )
 
@@ -159,7 +163,7 @@ class TestTaskQueue(unittest.TestCase):
                     tid, recorded,
                     f"\n\n{tid} is an L3 task marked done, but no entry in "
                     f"coordination/DECISIONS.md references it.\n"
-                    f"An L3 is Reed's decision. Record it — with the date, the "
+                    f"An L3 is the owner's decision. Record it — with the date, the "
                     f"decider, and what he actually said — or move the task back "
                     f"off done.\n",
                 )

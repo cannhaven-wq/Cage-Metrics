@@ -3,13 +3,170 @@
   "title": "CLV measurement protocol",
   "kind": "measurement_protocol",
   "not_an_experiment": "CLV has no hypothesis, challenger or verdict. It defines how an already-published number is scored against the market, so it does not belong in the DUR register and carries no model_version.",
-  "status": "draft",
-  "version": "0.1.0-draft",
+  "status": "frozen",
+  "version": "1.0.10",
   "created": "2026-09-16",
   "protocol_path": "research/clv/CLV_MEASUREMENT_PROTOCOL.md",
-  "protocol_sha256": null,
-  "frozen_at": null,
-  "frozen_by": null,
+  "protocol_sha256": "8167dcf1d4bead1ba3b886bf2935615cfe6025580f4f90d334360a41ec31ee71",
+  "benchmark_name": {
+    "short": "CFL closing-price proxy",
+    "long": "late pre-fight closing-price proxy",
+    "never": "the exact sportsbook closing line",
+    "rule": "no surface, artifact or summary may describe this benchmark as the exact closing line. For bouts after the first the cutoff is the previous bout's completion, so the proxy can sit several minutes before the bell - declared, and recorded per row, rather than hidden.",
+    "frozen_by": "Amendment 5, 2026-09-16"
+  },
+  "capture_cadence": {
+    "target_minutes": 5,
+    "scope": "h2h moneyline, all remaining fights, through a live card",
+    "every_snapshot_stored": true,
+    "ladder": [
+      5,
+      10,
+      15,
+      30
+    ],
+    "governor": "before each call the job reads the provider's own x-requests-remaining header (persisted in the append-only odds_api_usage ledger), counts the cards still to come this month, RESERVES the floor cost of each card after this one, and takes the finest cadence on the ladder that fits. If NO rung fits it returns STOP - it never falls through to the coarsest rung, because a ceiling that yields under pressure is not a ceiling. Below a hard floor it also stops.",
+    "hard_ceiling": {
+      "monthly_credit_cap": 500,
+      "reserve": 75,
+      "hard_floor": 10,
+      "paid_tier": "never, without an L3",
+      "reserve_note": "75, not 45. Walked across months of 1 to 8 cards, a 45-credit reserve goes 8 credits over at seven cards; 75 leaves a worst case of +19.",
+      "env_cannot_raise": true
+    },
+    "measured_basis": {
+      "events_per_month_avg": 3.7,
+      "events_per_month_max_observed": 6,
+      "fights_per_card_avg": 12.5,
+      "window": "2025-01 to 2026-08",
+      "credits_per_card_at_5min": 123,
+      "why_a_governor_and_not_a_schedule": "six cards at five-minute cadence would exceed a 500-credit allowance on their own",
+      "credits_per_card_at_coarsest_rung": 35
+    },
+    "degradation_costs_lead_time_not_correctness": "every rung on the ladder is 30 minutes or finer, inside the frozen 45-minute staleness limit, so degrading costs lead time and never correctness. Running out entirely stops capture rather than overspending."
+  },
+  "eligible_books": [
+    "FanDuel",
+    "DraftKings",
+    "BetMGM",
+    "Caesars",
+    "BetRivers",
+    "BetWay",
+    "Unibet",
+    "BetOnline.ag",
+    "Bovada",
+    "BetUS"
+  ],
+  "eligible_books_provenance": {
+    "frozen_by": "Amendment 2, 2026-09-16, approved by Reed Cannon",
+    "source": "the membership of v_odds_books_sportsbooks, a view shipped in dur001_migration.sql BEFORE CLV-001 existed: every odds_books row whose name does not contain 'consensus' and is not Polymarket or Kalshi",
+    "why_that_matters": "the list was not assembled by looking at which books would suit a CLV number - it already existed in the repo, for the totals market, under a rule anyone can read",
+    "verifiable_not_result_motivated": "no CLV figure has ever been computed, and the 2026-09-16 dry run establishes none is computable on the present record. A list frozen in that state cannot have been chosen for its effect on a result.",
+    "coverage_deliberately_not_a_criterion": "Caesars, BetWay and Unibet have not appeared in the feed since 2026-05-31 and are on the list anyway. Dropping a book for thin coverage is a judgement about which prices count, made now, which is what freezing forecloses. A book that never quotes never enters a consensus.",
+    "excluded_by_kind_not_by_this_list": {
+      "aggregates": [
+        "BFO Consensus",
+        "CFL Consensus (Odds API)"
+      ],
+      "aggregates_why": "a consensus row is already a blend of other books' margins, so de-vigging it is a different operation, and counting it toward the three-book floor would double-count its constituents",
+      "prediction_markets": [
+        "Polymarket",
+        "Kalshi"
+      ],
+      "prediction_markets_why": "Q-03 - commission rather than vig",
+      "enforced_by": "is_eligible_book in cfl_engine/clv/scoring.py, by name, so neither can re-enter through a book-id renumbering"
+    },
+    "additions_require": "a dated amendment of their own"
+  },
+  "close_reference": {
+    "frozen_by": "Amendment 5, 2026-09-16, approved by Reed Cannon (L3)",
+    "source_view": "v_clv_close_reference (research/clv/proposed_2026-09-16_event_flow.sql, NOT APPLIED)",
+    "not_v_fight_start_best": "that view is defined in dur001_migration.sql, a FROZEN file serving a running experiment, and it always answers - falling back to the event date at 18:00 UTC. CLV-001 reads its own view rather than reinterpreting DUR-001's.",
+    "principle": "bout 1's cutoff is the card's scheduled start; bouts 2..N take the exact completion of the immediately previous bout. Those two, always. The scored price is the latest eligible sportsbook snapshot strictly before that cutoff.",
+    "tiers": [
+      {
+        "basis": "scheduled_first_bout",
+        "applies_to": "the card's FIRST bout",
+        "note": "the card's scheduled start"
+      },
+      {
+        "basis": "previous_bout_completion",
+        "applies_to": "bouts 2..N",
+        "note": "the exact completion of the bout immediately before; PRECEDES the bell by the walkout interval, which is accepted and marked per row"
+      }
+    ],
+    "lead_time": {
+      "recorded": "selected quote -> cutoff, exact, on every scored row",
+      "exact_bases": [
+        "scheduled_first_bout"
+      ],
+      "precedes_bell_bases": [
+        "previous_bout_completion"
+      ],
+      "flag": "clv_lead_time_is_lower_bound is TRUE exactly when the cutoff precedes the bell, so the recorded lead time is a lower bound on the true gap to the fight starting",
+      "unknown_basis": "null, never false - false asserts the cutoff was the start"
+    },
+    "inadmissible": [
+      "event_date_fallback",
+      "provider_commence applied to a later bout as if it named its start"
+    ],
+    "unknown_running_order": "without a running order no fight can be identified as bout 1 and no bout has a 'previous' one, so nothing scores. Running order is free to obtain - ufcstats lists a card in order.",
+    "supersedes": "Amendment 4.2, which refused this cutoff because it precedes the bell and in doing so refused to score anything at all. A consistently-early cutoff, named as a proxy with its lead time recorded, is a better measurement than no measurement.",
+    "narrowing_not_widening": false,
+    "is_a_proxy": "accepted deliberately for this protocol version: it is the most consistent, observable and reproducible cutoff implementable with the tools currently available, and every such observation shares the same rule. CFL does not wait for a confirmed bell in order to score later fights under this version.",
+    "previous_bout_completion_has_two_roles": [
+      "this protocol version's scoring cutoff for the upcoming fight",
+      "the trigger for aggressive card-night capture for that fight"
+    ],
+    "preserved_per_scored_observation": [
+      "cutoff timestamp",
+      "cutoff basis",
+      "selected quote timestamp",
+      "lead time to cutoff (+ precedes-bell flag)",
+      "exact source quote ids and consensus provenance",
+      "protocol version"
+    ],
+    "future_bell_timestamps": "a NEW protocol version, not a revision of this one. Observations scored under this version are never retroactively reinterpreted or overwritten, which is why every row carries its own clv_protocol_version.",
+    "still_excluded": {
+      "basis": "card_scheduled_start",
+      "why": "applied to a later bout it sits hours early (Amendment 4.1)",
+      "treatment": "reported, never scored; unscored reason only_pre_card_price"
+    },
+    "unscorable_states": [
+      {
+        "reason": "only_pre_card_price",
+        "meaning": "only the card's scheduled start is on file for a later bout"
+      },
+      {
+        "reason": "no_previous_bout_completion",
+        "meaning": "bout 2..N with no exact completion recorded for the bout before it",
+        "fix": "record one completion and the already-captured snapshots become scorable"
+      },
+      {
+        "reason": "no_scheduled_start",
+        "meaning": "no cutoff of any kind"
+      }
+    ],
+    "bell_at_is_audit_only": {
+      "withdrawn_by": "Amendment 5.1, 2026-09-16",
+      "why": "an earlier draft let a confirmed bell outrank the frozen cutoff 'where one exists'. That silently makes one version behave as two - fights with a bell scored one way, fights without scored another, inside the same summary statistic. A rule that depends on which optional field happens to be populated is not frozen.",
+      "treatment": "carried on the row and in v_clv_close_reference.actual_bell_at; never substituted for the cutoff",
+      "scoring_against_real_bells": "a NEW protocol version, not a per-row upgrade inside this one"
+    },
+    "completion_corrections": "fight_bout_completions is append-only, so a correction is a new row. v_clv_close_reference resolves the LATEST OBSERVATION (observed_at DESC, id DESC), not max(completed_at) - a correction usually moves the instant EARLIER, and max() would keep the superseded value forever.",
+    "not_a_claim_about_the_start": "the previous bout's completion is an operational proxy CUTOFF, never a claim that the next fight began then. fight_odds.bout_started_at and is_live are filled only by a confirmed bell; the cutoff lives in fight_odds.proxy_cutoff_at, and scoring excludes quotes at or after it directly rather than manufacturing a liveness fact."
+  },
+  "trigger_is_not_the_close": {
+    "superseded_by": "Amendment 5",
+    "note": "the previous bout's completion is BOTH this version's scoring cutoff for the next fight AND the capture trigger for it. It is not a claim about when that fight began."
+  },
+  "audit_fields": {
+    "fights.bell_at": "the record of when a fight ACTUALLY began. Reserved for a confirmed bell, never written by the odds job, never synthesised.",
+    "fight_odds.bout_started_at": "the capture-time BELIEF about when this bout began, stamped per quote so the close a quote was judged against stays recoverable if a better account arrives later.",
+    "kept_apart_because": "a correction to one must never silently rewrite the other"
+  },
+  "frozen_at": "2026-09-16T10:30:00Z",
+  "frozen_by": "Reed Cannon",
   "governs": [
     "cfl_engine/settle_clv.py",
     ".github/workflows/settle-clv.yml"
@@ -20,13 +177,31 @@
   },
   "publication_gate": {
     "publication_allowed": false,
-    "blocked_until": "status == 'frozen'",
+    "evaluation": "publication_allowed is the AND of every condition below. Any condition false, or not yet evaluable, blocks publication. Fail-closed: unknown is treated as not satisfied.",
+    "conditions": {
+      "protocol_frozen": true,
+      "sample_floor_met": false,
+      "interval_excludes_zero": false
+    },
+    "blocked_by": [
+      "sample_floor_met",
+      "interval_excludes_zero"
+    ],
+    "why_still_blocked": "Reed, on approving the freeze: 'do not publish the first CLV number immediately after freeze.' Freezing settles HOW the number is measured. It does not create a number worth showing. Zero scored observations exist.",
+    "sample_floor": {
+      "scored_observations_required": 100,
+      "distinct_events_required": 20,
+      "scored_observations_current": 0,
+      "distinct_events_current": 0,
+      "applies_to_breakouts": true,
+      "source": "Q-08 and Q-13, both approved 2026-09-16"
+    },
     "covers": [
       "any CLV figure on a user-facing page",
       "any CLV figure in a post, email or digest",
       "any CLV summary statistic computed from captured quotes"
     ],
-    "not_covered": "Row-level settlement into model_edges.clv_pp continues — it is bookkeeping under the already-shipped convention, not a published result."
+    "not_covered": "Row-level settlement into model_edges continues - bookkeeping, not a published result."
   },
   "results_computed_before_freeze": false,
   "disclosure": "No historical CLV comparison was run while drafting. No alternative definition was evaluated against captured data. Every recommendation rests on argument from principle or precedent, never on which option produced a better number.",
@@ -90,6 +265,13 @@
       "id": "R-12",
       "title": "Copy governance — CLV wording follows COPY_STYLE.md",
       "basis": "Q-11 fixes substance, COPY_STYLE.md fixes wording"
+    },
+    {
+      "id": "R-13",
+      "title": "A sentinel timestamp is not a timestamp",
+      "basis": "measured 2026-09-16: 30,724 of 110,032 fight_odds rows - 27.9%, across 7,681 fights - carry captured_at = 1970-01-01, the Unix epoch. R-02 as written excludes a MISSING timestamp but not a populated fake one, so these rows would pass it.",
+      "rule": "a quote whose captured_at is not a credible capture instant is ineligible, the same as a missing one. Credible means strictly after the live-capture era began (2026-05-22) and not in the future. Such rows are retained raw under R-01 and excluded at scoring time, never deleted.",
+      "consequence": "CLV can only ever be computed on fights from the live-capture era. The 7,681 historical fights have prices but no usable capture timing and can never enter the measure. That is a coverage fact to report under R-05, not a gap to paper over."
     }
   ],
   "open_questions": [
@@ -105,7 +287,23 @@
       ],
       "recommendation": "last quote before scheduled start, subject to a staleness limit set from capture cadence",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "last quote before SCHEDULED start, named a 'scheduled-close proxy' and never 'the closing line'. A staleness limit is still set from capture cadence. Staleness limit: 45 minutes, derived from the measured 30-minute near-card capture interval plus a 15-minute grace.",
+      "resolved_by": "ChatGPT review 2026-09-16",
+      "note": "Corroborated independently: fights.bell_at is populated on 0 of 8,992 fights, so no row in the database currently supports a literal closing line. The proxy naming is forced by the data, not just prudent.",
+      "staleness_rule": {
+        "limit_minutes": 45,
+        "derivation": "one normal capture interval (30 min, measured) + 15 min operational grace",
+        "measured_from": "fight_odds captured_at, live-capture era only (>= 2026-05-22), 668 minute-level batch gaps",
+        "measured_cadence": {
+          "p50_min": 30.0,
+          "p75_min": 32.0,
+          "min_min": 1.0
+        },
+        "fixed_before_results": true,
+        "caveat_bimodal": "The gap distribution is BIMODAL: ~30 min during a fight week, ~24 h between cards (p90 = 1426.6 min, 50 gaps over 24 h, max 2952 min). Only the near-card mode is relevant, because a staleness limit only binds near the close. A limit naively derived from the overall p90 would be ~24 hours and would be useless.",
+        "set_by": "Claude, on ChatGPT second-pass review 2026-09-16's instruction to derive it from actual cadence"
+      }
     },
     {
       "id": "Q-02",
@@ -118,7 +316,10 @@
       ],
       "recommendation": "fixed named list; DUR-001 already forbids selecting books after results are visible, and a fixed list makes that unbreakable rather than merely prohibited",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "fixed NAMED sportsbook list frozen at protocol freeze; require >= 3 eligible books with valid TWO-SIDED closing markets. De-vig each book SEPARATELY first, then take the median of the per-book fair probabilities.",
+      "note": "Order matters and is easy to get backwards: de-vig per book, then median. Taking the median of vigged prices and de-vigging once afterwards is a different estimator and mixes books' margins together."
     },
     {
       "id": "Q-03",
@@ -132,7 +333,9 @@
       ],
       "recommendation": "exclude from the primary; commission-based pricing mixed into a vig-based consensus is cleanly neither",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "exclude exchanges and prediction markets from the primary metric",
+      "resolved_by": "ChatGPT review 2026-09-16"
     },
     {
       "id": "Q-04",
@@ -145,9 +348,11 @@
         "liquidity-weighted"
       ],
       "recommendation": "median — robust to one mispriced book, and the shipped implementation already takes the median book's own booked price rather than a reconstructed one",
-      "note": "best available price is the option that would most flatter CLV; that asymmetry is why it must be settled by argument now",
+      "note": "The review was explicitly asked to challenge the rejection of 'best available price' rather than agree with it, and rejected it on the same grounds.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "median across eligible sportsbooks remains the primary aggregation",
+      "resolved_by": "ChatGPT review 2026-09-16"
     },
     {
       "id": "Q-05",
@@ -157,12 +362,19 @@
       "options": [
         "raw vigged both ends (ships today)",
         "power de-vig both ends per DUR-001 Amendment 1",
-        "raw as primary, de-vigged as a frozen sensitivity"
+        "raw as primary, de-vigged as a frozen sensitivity",
+        "vigged at publish, de-vigged at close (the CLV_return construction)"
       ],
-      "recommendation": "raw as primary, de-vigged as a frozen sensitivity once two-sided publish capture exists",
-      "blocks": "two-sided capture at publish time must start immediately — the de-vigged variant can never be backfilled",
+      "recommendation": "vigged at publish, de-vigged at close. This is a FOURTH option, not one of the original three: the posted price is used as posted and only the closing side is de-vigged.",
+      "blocks": "two-sided capture AT CLOSE must start immediately - the closing side is de-vigged and can never be backfilled. NOTE: this corrects v0.2.0, which still said 'at publish time'. Under CLV_return the publish side is used as posted and is never de-vigged.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "supersedes_prior_recommendation": "'raw as primary, de-vigged as a frozen sensitivity' - the review's judgement is that this deferred the contradiction rather than resolving it",
+      "still_open": "which de-vig method applies at close - see Q-12",
+      "blocks_corrected": "2026-09-16, flagged by ChatGPT second-pass review 2026-09-16",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: CLV_return = closing_fair_probability * decimal_odds_at_publish - 1. Real posted price at publish; power-de-vigged fair probability at close."
     },
     {
       "id": "Q-06",
@@ -174,9 +386,13 @@
         "market anticipation of the published probability",
         "both, reported separately"
       ],
-      "recommendation": "both, with the term CLV reserved strictly for the price measure; market anticipation is a different quantity and must never carry the CLV label",
+      "recommendation": "the bettor's CLV on the POSTED PRICE is the primary and sole headline number. Market anticipation of the published probability may still be reported separately and may never carry the CLV label.",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "supersedes_prior_recommendation": "'both, reported separately' - the review makes the price measure primary rather than co-equal",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: bettor-price CLV is the sole headline CLV metric. Model probability vs market movement is separately named 'market anticipation / convergence' and is never called CLV."
     },
     {
       "id": "Q-07",
@@ -188,10 +404,13 @@
         "stake or Kelly weighted",
         "liquidity weighted"
       ],
-      "recommendation": "equal weight per fight; a stake weighting invents a staking strategy CFL does not publish in order to score it",
+      "recommendation": "equal weight per scored fight. No Kelly or stake weighting without a SEPARATELY FROZEN staking system - the weighting may not be invented as part of the scoring.",
       "cluster_unit": "the UFC event, matching DUR-001",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: equal weight per scored forecast. No Kelly or stake weighting unless a separate staking protocol is frozen first."
     },
     {
       "id": "Q-08",
@@ -203,9 +422,13 @@
         "a different floor",
         "per-breakout floors as well as overall"
       ],
-      "recommendation": "100 scored observations overall and the same floor on any breakout, following Factor Lab's MIN_SAMPLE pattern including its explicit 'not enough data yet' state",
+      "recommendation": "keep the 100 scored-observation floor AND add a minimum number of DISTINCT EVENTS, so one or two cards cannot dominate the published figure",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "recommended_by": "ChatGPT review 2026-09-16",
+      "still_open": "the distinct-event minimum is not numerically specified - see Q-13",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: 100 scored observations, subject also to Q-13. The same thresholds apply to any breakout shown as a finding."
     },
     {
       "id": "Q-09",
@@ -218,7 +441,11 @@
       ],
       "recommendation": "report a cluster-robust interval on mean clv_pp and a Wilson interval on the beat rate; they answer different questions and the pair is harder to cherry-pick",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolution": "event-cluster bootstrap is PRIMARY; Wilson on the beat rate is demoted to a secondary descriptive figure",
+      "resolved_by": "ChatGPT review 2026-09-16",
+      "rationale": "fights on the same card are correlated, so an interval that treats them as independent overstates precision",
+      "note": "Matches DUR-001 section 8, which already resamples whole events and never individual fights. DUR-001 amendment (e) would further gate cluster intervals as descriptive-only below 20 cards; (e) is still HELD, so it is a precedent to consider, not a rule to inherit."
     },
     {
       "id": "Q-10",
@@ -231,7 +458,13 @@
       ],
       "recommendation": "score neither for a rescheduled fight, and exclude a fight whose opponent changed after the forecast lock; keyed mechanically on whether either fighter id changed",
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "cancelled, rescheduled and opponent-changed fights become UNSCORED unless CFL re-locks / re-publishes the new matchup. Matching is mechanical on fighter identity + provider market ID.",
+      "depends_on_capture": [
+        "opponent identities at quote time",
+        "provider market IDs"
+      ]
     },
     {
       "id": "Q-11",
@@ -243,7 +476,7 @@
         "stricter — descriptive reporting only, with no comparative framing of any kind",
         "more permissive — allow comparison against public benchmarks once past the Q-08 floor"
       ],
-      "recommendation": "adopt the list as written; it permits the measurement to be stated plainly with its interval and n, and forbids every phrasing that converts a price measurement into a claim about winning money",
+      "recommendation": "permit \"positive closing-line value over this sample\" ONLY when the cluster interval excludes zero AND the sample floor is met. Never \"proven edge\", \"beats the market\", expected profit, ROI, or bankroll growth.",
       "never_permitted": [
         "any projection of profit, ROI or bankroll growth from a CLV figure",
         "'beats the market', 'proven edge', or any phrasing converting a price measurement into a claim about winning money",
@@ -252,25 +485,563 @@
         "any claim at all while the interval crosses zero — reported as 'we can't tell yet'"
       ],
       "chosen_by_historical_comparison": false,
-      "status": "open"
+      "status": "resolved",
+      "recommended_by": "ChatGPT second-pass review 2026-09-16",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED with the stricter language: may report 'positive closing-line value over this sample' with n, event count, interval and unscored count. Never 'proven edge', 'beats the market', expected profit, ROI or bankroll growth."
+    },
+    {
+      "id": "Q-12",
+      "question": "which de-vig method applies to the closing side of CLV_return",
+      "level": "L2",
+      "raised_by": "Claude, revising against the review",
+      "why": "the review says 'de-vigged' without naming a method, and the repo already has a frozen precedent",
+      "options": [
+        "power, matching DUR-001 Amendment 1.1",
+        "proportional",
+        "Shin",
+        "a CLV-specific method with a stated reason"
+      ],
+      "recommendation": "power, for consistency with DUR-001 Amendment 1.1, with proportional and Shin as frozen sensitivities on the same pattern. Diverging from the frozen house method needs a reason; adopting it silently is also a choice and should be recorded.",
+      "chosen_by_historical_comparison": false,
+      "status": "resolved",
+      "resolved_by": "ChatGPT second-pass review 2026-09-16",
+      "resolution": "POWER de-vig as primary, matching DUR-001 Amendment 1.1; proportional and Shin as frozen sensitivities only."
+    },
+    {
+      "id": "Q-13",
+      "question": "the minimum number of distinct events before a CLV summary is displayed",
+      "level": "L3",
+      "raised_by": "Claude, revising against the review",
+      "why": "the review requires a distinct-event minimum but does not give a number, and the number is the whole content of the rule",
+      "interacts_with": "Q-09 - an event-cluster bootstrap over very few clusters has coverage well below nominal, so the floor and the interval method are one decision, not two",
+      "options": [
+        "a number set by the cluster-bootstrap coverage requirement",
+        "20 completed events, matching DUR-001 amendment (e)",
+        "a fixed small floor such as 8 or 10"
+      ],
+      "recommendation": "100 scored picks AND 20 distinct UFC events before any headline CLV summary",
+      "chosen_by_historical_comparison": false,
+      "status": "resolved",
+      "why_l3": "the floor is the number itself: it decides when a public CLV figure may appear at all",
+      "recommended_by": "ChatGPT second-pass review 2026-09-16",
+      "note": "20 events matches DUR-001 amendment (e)'s proposed cluster-CI floor, which is still held - the two now agree, which is worth more than either alone.",
+      "resolved_by": "Reed Cannon",
+      "resolution": "APPROVED: 20 distinct completed UFC events in addition to 100 scored observations."
+    },
+    {
+      "id": "Q-14",
+      "question": "may CLV appear in the user interface at all",
+      "level": "L3",
+      "why_l3": "two governing documents give opposite answers, and Q-11 presupposes one of them. This is a product rule, not a measurement rule.",
+      "raised_by": "Claude, revising against the second pass",
+      "conflict": {
+        "CLAUDE.md_line_3": "'No closing line value, no edge percentages, and no market language anywhere in the user interface.'",
+        "COPY_STYLE.md_rule_3": "'CLV is the north star, not win rate. When we talk about whether we're good, the honest answer is closing-line value ... Say so.'"
+      },
+      "options": [
+        "CLAUDE.md governs: CLV stays an internal measure, never on a surface, and Q-11 becomes moot",
+        "COPY_STYLE.md governs: CLV may be shown under Q-11's constraints, and CLAUDE.md line 3 is amended",
+        "a middle rule: CLV shown only in a named methodology surface, never on the product pages"
+      ],
+      "recommendation": "no recommendation - this is a product-voice decision that belongs to Reed, and the two documents he owns disagree. Whichever way it goes, ONE of them must be amended so they stop contradicting.",
+      "chosen_by_historical_comparison": false,
+      "status": "resolved",
+      "resolved_by": "Reed Cannon",
+      "resolution": "YES - CLV may appear in the UI, but only under the currently frozen protocol with every publication threshold satisfied. CLAUDE.md's absolute prohibition is amended; COPY_STYLE.md rule 3 wins on direction.",
+      "amended_claude_md": true,
+      "replacement_rule": "No CLV figure may appear on a user-facing surface unless it was produced under the currently frozen CLV measurement protocol and every publication threshold in that protocol is satisfied.",
+      "preserved_prohibitions": [
+        "vague 'edge percentages'",
+        "unsupported market claims"
+      ],
+      "rationale": "the prohibition was useful when CFL had no defensible CLV measurement system; it should not permanently forbid the metric the project is explicitly building as its primary credibility measure. Authorising ONE narrowly defined auditable metric is not opening the door to sportsbook-style marketing.",
+      "blocked_before_resolution": "Q-11",
+      "blocking_history": "Q-14 blocked Q-11 until 2026-09-16: Q-11 governs how a CLV figure may be phrased on a surface, which presupposed Q-14's answer that one may appear at all. Both resolved together."
     }
   ],
   "capture_requirements_that_cannot_be_backfilled": [
     "book, fighter, American price and UTC capture instant on every quote",
-    "both sides captured at the publish instant",
+    "BOTH SIDES AT CLOSE - required by the primary definition's de-vig",
+    "both sides captured at the publish instant (retained: enables the fair-to-fair sensitivity)",
     "every quote retained raw, append-only",
     "capture cadence recorded, including gaps",
-    "provider and feed version stored per quote"
+    "provider and feed version stored per quote",
+    "scheduled AND actual bout-start timing wherever available",
+    "market suspension / takedown status",
+    "provider market IDs",
+    "opponent identities at quote time",
+    "provider timestamp AND retrieval timestamp, stored as separate fields",
+    "an immutable link from CFL's posted price to the exact source quote"
   ],
   "freeze_procedure": [
     "status becomes frozen, with the UTC instant and Reed as approver",
-    "the sha256 of the protocol markdown is recorded here and in the frozen-file tripwire",
-    "publication_gate.publication_allowed becomes true",
+    "the sha256 of the protocol markdown is recorded in protocol.json",
+    "publication_gate.conditions.protocol_frozen becomes true - publication_allowed does NOT, because the sample floor is a separate condition. Corrected 2026-09-16: the earlier procedure said publication_allowed becomes true, which would have published on a sample of zero.",
     "every open question is resolved in place, with rejected options retained as rejected",
     "settle_clv.py is reconciled with the frozen rules"
   ],
   "post_freeze_change_routes": [
     "a dated amendment recorded with both hashes and a reason, motivated_by_observed_results false and true",
     "a new protocol version"
-  ]
+  ],
+  "revised": "2026-09-16",
+  "revision_note": "v0.3.0 applies ChatGPT's SECOND-pass review (same review file, second-pass section). The methodological review is complete. Remaining owner-level choices are Q-05, Q-06, Q-07, Q-08, Q-11, Q-13 - plus Q-14, which the revision raised and which blocks Q-11.",
+  "primary_definition": {
+    "name": "CLV_return",
+    "formula": "CLV_return = closing_fair_probability * decimal_odds_at_publish - 1",
+    "reads_as": "expected return per unit staked at the price CFL actually posted, evaluated against the de-vigged closing fair probability",
+    "publish_side": "the ACTUAL posted price, vigged, exactly as a bettor would take it",
+    "closing_side": "de-vigged fair probability, which requires both sides at close",
+    "sign_convention": "positive means CFL's posted price beat the market's later fair value; zero means exactly fair closing value was obtained after paying the posted price",
+    "conservative_by_construction": "Because the publish side keeps the book's margin, the bar is fair-closing probability > VIGGED implied probability at publish. CLV_return = 0 is not 'no edge' in a fair-to-fair sense - it is 'exactly fair value after paying the vig'. This must never be described as a fair-versus-fair comparison.",
+    "source": "ChatGPT review 2026-09-16",
+    "status": "proposed, not frozen",
+    "supersedes": "raw implied-probability movement, the construction settle_clv.py ships today",
+    "blocking_dependency": "two-sided capture AT CLOSE. The publish side is used as posted and is never de-vigged, so two-sided capture at PUBLISH is not required - this differs from the blocker the 0.1.0 draft recorded."
+  },
+  "capture_requirements_source": "Items 7-12 added from the ChatGPT review of 2026-09-16. Item 2 promoted from the definition change. Capture starts immediately under R-01; none of this waits on the freeze, because none of it can be recreated later.",
+  "review_coverage_audit": {
+    "reviewed_by": "ChatGPT, first pass + second pass, 2026-09-16",
+    "l2_asked": 6,
+    "l2_resolved": 6,
+    "l2_outstanding": [],
+    "l3_asked": 5,
+    "l3_recommended": 5,
+    "l3_outstanding": [],
+    "note": "Complete after the second pass. Q-02, Q-10 and Q-11 - unanswered in the first pass - came back. Q-12 resolved, Q-13 recommended. Q-14 was raised by the revision after the review and has no reviewer recommendation by design: it is a product-voice decision."
+  },
+  "next_action": {
+    "owner": "Reed",
+    "action": "resolve the two blockers the 2026-09-16 dry run found: name the Q-02 eligible sportsbook list (research/clv/AMENDMENT_PROPOSAL_2026-09-16_eligible_books.md), and decide whether to change the capture path so a scored observation becomes possible at all",
+    "done": "settle_clv.py is reconciled - it has a CLV-001 report mode and a gated write mode, and refuses to score anything until the preconditions hold",
+    "not_yet": "no CLV figure may be published; the sample floor is unmet at 0 of 100"
+  },
+  "dry_run": {
+    "date": "2026-09-16",
+    "report": "research/clv/DRY_RUN_2026-09-16.md",
+    "mode": "report - read-only, nothing written, no migration applied",
+    "scored_observations": 0,
+    "unscored_observations": 47,
+    "sole_unscored_reason": "no_scheduled_start",
+    "write_mode": "refused at preflight",
+    "preflight_blockers": [
+      "eligible_book_list_frozen - Q-02 froze the RULE but the LIST was never written down",
+      "schema_present - the CLV-001 columns are proposed and unapplied",
+      "provider_market_ids_captured - fight_odds carries no provider market id",
+      "scheduled_start_available - fights.bell_at is populated on 0 of 8994 fights"
+    ],
+    "structural_finding": "Even with a scheduled start instant, 0 of 47 rows would score: the freshest two-sided sportsbook quote on any past card was captured 157.8 hours before it, against a 45-minute staleness limit. Near-card capture today is aggregate-and-exchange only, and CLV-001 excludes both by kind.",
+    "no_statistic_computed": true
+  },
+  "l3_approval": {
+    "approved_by": "Reed Cannon",
+    "approved_at": "2026-09-16T10:30:00Z",
+    "questions": [
+      "Q-05",
+      "Q-06",
+      "Q-07",
+      "Q-08",
+      "Q-11",
+      "Q-13",
+      "Q-14"
+    ],
+    "l2_also_approved": [
+      "fixed eligible sportsbook list with >= 3 valid books",
+      "power de-vig",
+      "event-cluster bootstrap",
+      "median consensus",
+      "scheduled-close proxy",
+      "reschedule / opponent-change exclusions"
+    ],
+    "r13_approved": true,
+    "instruction": "do not publish the first CLV number immediately after freeze - it waits for 100 scored forecasts + 20 distinct events and the other eligibility requirements"
+  },
+  "amendments": [
+    {
+      "number": 1,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "title": "Inherited correction: de-vig bisection direction",
+      "kind": "inherited - the substantive correction is DUR-001 Amendment 2",
+      "where_the_defect_was": "cfl_engine/dur001/PREREGISTRATION.md, Amendment 1.1 - NOT in this protocol. CLV-001 Q-12 references that text for the power method, so the correction reaches CLV-001 by reference.",
+      "version_before": "1.0.0",
+      "version_after": "1.0.1",
+      "sha256_before": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+      "sha256_after": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
+      "output_change": "none - the two conventions are exact reparametrisations",
+      "motivated_by_observed_results": false
+    },
+    {
+      "number": 2,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "title": "Freeze the Q-02 eligible sportsbook list, and fix which start bases count",
+      "kind": "closes a gap in the freeze - Q-02 froze the RULE and the LIST was never written down",
+      "version_before": "1.0.1",
+      "version_after": "1.0.2",
+      "sha256_before": "c2e3f5aa19e9de371ba972705cd8df4b5feb1273dc5117f848959e76bcd1875e",
+      "sha256_after": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+      "parts": {
+        "a": "ten named sportsbooks frozen as eligible_books, taken from v_odds_books_sportsbooks, which predates CLV-001",
+        "b": "only bell_at and provider_commence are admissible as a scheduled start; event_date_fallback is not, and a fight resting on it is unscored"
+      },
+      "output_change": "none yet - zero observations were scorable before this amendment and zero are scorable after it. It removes a blocker, it does not produce a number.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record, so neither part can have been chosen for its effect on a result"
+    },
+    {
+      "number": 3,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The event-flow rule: a card is one scheduled start and then a queue",
+      "kind": "narrows Amendment 2 (b)",
+      "version_before": "1.0.2",
+      "version_after": "1.0.3",
+      "sha256_before": "06fa587ad219c7d8fd9bacdc56ca9d9c2b1007c1edd47859012b605d97e19666",
+      "sha256_after": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
+      "parts": {
+        "a": "close reference per fight: actual bell, else the previous bout's exact completion, else (first bout only) the card's scheduled start",
+        "b": "the previous bout ending is a CAPTURE trigger and never the close; the close is the last valid pre-live quote for the upcoming fight, and any quote at or after that fight started is excluded",
+        "c": "actual bout-start time kept as a separate audit field (fights.bell_at), distinct from the capture-time belief (fight_odds.bout_started_at)"
+      },
+      "output_change": "none yet - zero observations were scorable before and zero after. It corrects a rule that would have been wrong for twelve fights in thirteen once capture began, and it does so before any of those quotes exist.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": 4,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The late pre-fight price proxy: exact start detection stops being a blocker",
+      "kind": "extends Amendment 3 with a fourth tier; nothing in Amendment 3 is withdrawn",
+      "version_before": "1.0.3",
+      "version_after": "1.0.4",
+      "sha256_before": "577c21d1291eea435ebbd8c557834c9cd4e4c92d2d14ecd52c223bc592f88f26",
+      "sha256_after": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+      "parts": {
+        "a": "tier 4 - the card's scheduled start as a LOWER BOUND on any fight's start. A fight cannot begin before its own card begins, so a quote strictly before it is verifiably pre-fight for every fight on the card. It bounds; it does not guess.",
+        "b": "the benchmark is named the late pre-fight price proxy (long: scheduled/late closing-price proxy) and may never be called the closing line",
+        "c": "lead time to the best-known fight start is retained and reported, and every lower-bound row is marked as such",
+        "d": "h2h captured every 5 minutes through a live card for all remaining fights, every snapshot stored with its exact timestamp, under a hard usage ceiling that keeps CFL inside the existing free API allowance",
+        "e": "previous-bout completion remains useful for event flow and for upgrading a lower bound to an exact lead time, but is no longer a prerequisite for collecting or scoring"
+      },
+      "output_change": "none yet - the publication gate is unchanged and still at 0. It changes how fast observations can accumulate: roughly 1 per card becomes roughly 12.5, and the 100/20 floor becomes bound by the event count at about 20 cards rather than about 100.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "4.1",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "A pre-card price is not a late pre-fight proxy: tier 4 withdrawn from scoring",
+      "kind": "narrows Amendment 4; naming, lead-time reporting, 5-minute capture and the credit ceiling all stand",
+      "version_before": "1.0.4",
+      "version_after": "1.0.5",
+      "sha256_before": "cd2a4d55d7124ed77345ae3d8164ede55c3b3ac8b19b8b9090d86c325493ff55",
+      "sha256_after": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
+      "parts": {
+        "a": "card_scheduled_start removed as a scoring reference for later fights; recognised and reported, never scored",
+        "b": "new unscored reason only_pre_card_price, distinct from no_scheduled_start - a verifiably pre-fight price that is not late enough is a different problem from holding nothing",
+        "c": "every scoring basis names the start, so every scored row's lead time is exact; the lower-bound set is empty and asserted so",
+        "d": "snapshots are kept; capture coverage is unchanged"
+      },
+      "output_change": "none - the publication gate is unchanged and still at 0. It reduces scoring coverage from ~12.5 observations a card back to ~1 (the first bout) until a running order and exact bout completions exist.",
+      "cost_stated_plainly": "100 observations returns to the order of 100 cards rather than the ~8 Amendment 4 projected. That is the price of a consistently measured benchmark: an hours-early pre-card price and a five-minute-old price cannot both be called the same thing.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "4.2",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "An opener is not a cutoff: previous_bout_completion removed from scoring",
+      "kind": "corrects a methodological bug introduced by Amendment 3",
+      "version_before": "1.0.5",
+      "version_after": "1.0.6",
+      "sha256_before": "962aa5449777226414132745e1849fdc8b027cf2b3aea0c2ac6fbfc4d4167be6",
+      "sha256_after": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
+      "parts": {
+        "a": "previous_bout_completion removed from CLOSE_REFERENCE_BASES and from v_clv_close_reference.reference_at",
+        "b": "window_opens_at added, carrying the opener so snapshots inside the window become scorable retrospectively once a confirmed bell arrives",
+        "c": "new unscored reason fight_start_unverified, distinguishing the one-bell-away state from only_pre_card_price and no_scheduled_start",
+        "d": "the approved free allowance is hard-coded; env may lower the cap and raise the reserve but never the reverse, and a provider quota above the ceiling is clamped and flagged"
+      },
+      "the_bug": "Amendment 3 used the window OPENER as the cutoff. If bout 4 ends at 9:30 and bout 5 walks out at 9:38, taking 9:30 as bout 5's cutoff selects the last quote before 9:30 - quoted while bout 4 was still being fought - and discards the eight minutes that actually priced bout 5. The documentation already said 'the trigger is not the close'; the rule did not.",
+      "output_change": "none - the publication gate is unchanged and still at 0. No CLV figure has ever been computed.",
+      "coverage_change": "bouts 2..N become unscored rather than wrongly scored. No end-of-window marker is manufactured to compensate.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": 5,
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "The operational cutoff, frozen: scheduled start for bout 1, previous-bout completion for bouts 2..N",
+      "kind": "supersedes Amendment 4.2",
+      "version_before": "1.0.6",
+      "version_after": "1.0.7",
+      "sha256_before": "1e5dcbd55bdd84da5f3dbad13a7352a22ea26b83003036188e1b015499ca91ea",
+      "sha256_after": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
+      "parts": {
+        "a": "bout 1 cutoff = card's scheduled start; bouts 2..N cutoff = exact completion of the immediately previous bout; a confirmed bell outranks both",
+        "b": "the scored price is the latest eligible sportsbook snapshot strictly before that cutoff",
+        "c": "named the CFL closing-price proxy; never the exact sportsbook closing line",
+        "d": "previous-bout completion has two roles - scoring cutoff and capture trigger - and the opener-only language is removed",
+        "e": "every scored observation preserves cutoff timestamp, basis, selected quote timestamp, lead time, source quote provenance and protocol version",
+        "f": "reliable bell timestamps would be a NEW protocol version; no retroactive reinterpretation"
+      },
+      "output_change": "none yet - the publication gate is unchanged and still at 0. It restores scoring for bouts 2..N once bout completions are recorded.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "5.1",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "Consistency fixes to Amendment 5: no bell override, cutoff is not a start, corrections by observation",
+      "kind": "corrects Amendment 5; the v1.0.7 methodology stands",
+      "version_before": "1.0.7",
+      "version_after": "1.0.8",
+      "sha256_before": "7a50d07954164a5aebe8c31f3dee640d7aa79c851b58006c638a9a24e8fd0a59",
+      "sha256_after": "a009bb17f298d92443f7a2ed8da8d82b49c82501250c0fc54a9a6c1b7c515923",
+      "parts": {
+        "a": "bell_at withdrawn as a cutoff. This version's cutoff is exactly two cases, always. A bell override would silently make one version behave as two - fights with a bell scored one way, fights without another, inside the same summary statistic. bell_at is retained as an audit field; scoring against real bells is a NEW version.",
+        "b": "the cutoff is not a claim about when the fight started. fight_odds.bout_started_at and is_live are filled only by a confirmed bell; the frozen cutoff moves to its own column, fight_odds.proxy_cutoff_at. CLV scoring excludes quotes at or after the cutoff directly rather than manufacturing a liveness fact.",
+        "c": "v_clv_close_reference resolves the latest applicable completion by observed_at DESC, id DESC, not max(completed_at). A correction from 9:31 to 9:30 resolves to 9:30; max() would keep the superseded 9:31 forever, leaving a minute of in-window quotes wrongly eligible. The capture job uses the same ordering.",
+        "d": "all Tier-4-era language removed. Exact previous-bout completions are REQUIRED for bouts 2..N under Amendment 5, not an improvement."
+      },
+      "output_change": "none - the publication gate is unchanged and still at 0. No CLV figure has ever been computed.",
+      "motivated_by_observed_results": false,
+      "why_that_is_checkable_here": "no CLV figure has ever been computed and none is computable on the present record"
+    },
+    {
+      "number": "6",
+      "date": "2026-09-16",
+      "approved_by": "Reed Cannon",
+      "level": "L3",
+      "title": "Provenance, enforced per row",
+      "kind": "conformance: the rules already frozen are now enforced where they apply. No cutoff, de-vig, staleness, book-list or gate change.",
+      "version_before": "1.0.8",
+      "version_after": "1.0.9",
+      "sha256_before": "a009bb17f298d92443f7a2ed8da8d82b49c82501250c0fc54a9a6c1b7c515923",
+      "sha256_after": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
+      "parts": {
+        "a": "eligibility is a property of the ROW, not of the schema. A quote is usable only if that quote carries source_event_id, feed_version, opponent_fighter_id, provider_last_update, retrieved_at, market_status and raw (S4 items 9, 6, 10, 11, 8, 12). Present means populated - an empty string or empty jsonb records nothing. Rows captured before the capture migration are permanently unscorable, reported under R-05. New reason: incomplete_quote_provenance.",
+        "b": "R-07 is applied PER QUOTE: forecast_locked_at < close_quoted_at, strictly, for every quote entering the consensus. Checking published_at < cutoff is far weaker - it lets a forecast locked at 9:28 be scored against a 9:20 quote because the cutoff is 9:30, which is a price the forecast could have been read off. closing_pairs takes the lock as a required argument with no default, because a default would be a silent bypass.",
+        "c": "the lock must come from an IMMUTABLE record (R-07's second sentence). pre_fight_snapshots is that record - unique on fight_id, UPDATE/DELETE rejected by trigger for every role including service_role - and it carries edge_side, edge_bet_fighter_id and edge_odds_at_publish, so it is matched to THIS edge and not merely to its fight. All three must agree. No dedicated publish-lock ledger is needed. The effective lock is the LATER of the immutable instant and model_edges.published_at: later is strictly harder, so an edited published_at can only cost observations, never admit a quote the immutable record excluded. New reason: no_immutable_forecast_lock.",
+        "d": "S4 item 12: model_edges.clv_publish_quote_id names the exact fight_odds row odds_at_publish came from, and the scorer VERIFIES it - same American price, bet fighter, opponent (Q-10), provider market id (R-06), credible capture instant (R-13), full S4 provenance. Historical edges get no fabricated link. Closing quotes must name the same provider market and the same opponent as the publish quote. New reasons: no_publish_quote_link, market_identity_changed.",
+        "e": "clv_cutoff_at is stored on every scored row, and cutoff_at, forecast_locked_at and publish_quote_id go INSIDE the hashed consensus artifact. A consensus is a set of prices selected BY a cutoff; hashing the prices alone leaves the selection rule outside the integrity check. Especially necessary for bout 1, where clv_window_opened_at does not hold the scheduled-start cutoff.",
+        "f": "v_clv_close_reference resolves the card's scheduled start from the BOUT-1 FIGHT'S OWN latest odds_api_commence observation, within the latest complete card snapshot - not from the latest observation of any fight sharing the event. The provider publishes a commence time per market and later bouts' estimates drift, so bout 1's cutoff was being set from another bout's schedule. No running order means no identified first bout and no scheduled start.",
+        "g": "fight_odds is made durable (R-01). proposed_2026-09-16_fight_odds_immutability.sql rejects DELETE and TRUNCATE outright and rejects any UPDATE that changes anything other than the derived flags is_opener/is_closer, which are recomputable, carry no observation and are not read by CLV-001. Whitelist by construction: the guard compares to_jsonb(old) and to_jsonb(new) minus those keys, so a column added later is covered as soon as it exists. That migration is NOT additive-only and is filed separately.",
+        "h": "the frozen 45-minute staleness limit stays measured from captured_at, the observation instant it was derived from. provider_last_update is required provenance (S4 item 11) and is explicitly NOT the clock; re-pointing the limit at it would change which rows score under the same version number and is a methodological amendment. Recorded as STALENESS_MEASURED_FROM.",
+        "i": "S5 of the markdown no longer says publication_allowed becomes true at freeze. It was the one sentence in the document that could be read as authorising a number to appear. publication_allowed is the AND of protocol_frozen, the sample floor and an interval excluding zero, and is false."
+      },
+      "unchanged": "cutoff bases, de-vig method and order, 45-minute limit, three-book minimum, the ten named books, benchmark naming, credit ceiling, publication gate and its floor",
+      "retroactive_reinterpretation": "none possible: zero rows have been scored",
+      "motivated_by_observed_results": false
+    },
+    {
+      "number": "7",
+      "date": "2026-09-16",
+      "approved_by": "Michael Cannon (owner)",
+      "level": "L3",
+      "title": "Settlement is write-once; edge identity; the edge publication instant",
+      "kind": "conformance and provenance. The estimator is unchanged.",
+      "version_before": "1.0.9",
+      "version_after": "1.0.10",
+      "sha256_before": "f8c6e68a4fe159b0b57d9b537d453d46f260180150e41491df3eaa29c6e4aee2",
+      "sha256_after": "8167dcf1d4bead1ba3b886bf2935615cfe6025580f4f90d334360a41ec31ee71",
+      "parts": {
+        "a": "a scored observation is written ONCE and thereafter only verified. The settler re-scored every historical live edge on every run and re-PATCHed every result with no check for an existing clv_protocol_version, clv_consensus_sha256 or clv_scored_at - so a second run could reinterpret an earlier observation against later database state and refresh clv_scored_at to hide it. Now: never scored -> write once; scored under this version and reproduces -> zero writes; scored and does not reproduce -> abort the run loudly; scored under another version -> untouched. clv_scored_at is never refreshed.",
+        "b": "clv_publish_quote_id stays fail-closed. Until the external edge publisher records the exact fight_odds.id contemporaneously with odds_at_publish, no edge scores - historical or future - and nothing backfills the link by matching prices.",
+        "c": "edge identity. The side + bet_fighter_id + odds_at_publish tuple is a cross-check, not an identity: one fight can be republished with the same three, and snapshot_predictions.py keeps only the latest of several live edges per fight. pre_fight_snapshots.edge_model_edge_id is added and written by the snapshotter (which probes for the column, so migration and deploy need no ordering). Where it is absent the tuple must be UNIQUE among the fight's live edges; two matches, or a cohort never established, is ambiguous_edge_identity and scores nothing. No snapshot is backfilled with an inferred id.",
+        "d": "live coordination text names the OWNER by role rather than by personal name, so a change of who holds it is not a repo-wide rename. Historical records - DECISIONS.md, earlier handoffs, every amendment above - keep the name they were written with; rewriting those would falsify who decided what.",
+        "e": "the immutable lock is the EDGE's publication instant, never the model pick's. pre_fight_snapshots.engine_published_at is model_picks.published_at, and a pick and a value edge are different records published at different times - the engine posts a pick, and the edge derived from it appears later, once the price has moved far enough to flag one. Reading the pick's instant as the edge's places the lock early and admits quotes from before the edge existed: a lookahead violation wearing an immutable record's clothes. pre_fight_snapshots.edge_published_at is added and written by snapshot_predictions.py beside edge_model_edge_id; both are required together, because an instant with no edge id cannot be attached to a particular publication. Historical snapshots fall back to snapshot_at only - later than publication, therefore conservative - labelled immutable_is_conservative_fallback on the row, and NEVER to engine_published_at, which stays as provenance for the main model prediction. The publish-quote bound follows the same instant."
+      },
+      "unchanged": "the estimator, cutoff bases, de-vig and its order, the 45-minute limit, the book list, Amendment 6's provenance requirements, the publication gate",
+      "retroactive_reinterpretation": "none possible: zero rows have been scored",
+      "motivated_by_observed_results": false,
+      "approval_status": "APPROVED 2026-09-16 (L3). Filed PROPOSED and ratified after review; settle_clv.preflight held write mode shut while it was pending and still governs the next unratified amendment.",
+      "approved_substance": "A scored CLV-001 observation is permanent. Later runs may verify it but never overwrite it. Any genuine correction is a new auditable superseding record, not a mutation of the original observation. The superseding MECHANISM is deliberately not designed in this version: zero observations have been scored, so there is nothing to correct, and the half that cannot wait - that nothing overwrites an observation - is what this version guarantees.",
+      "superseding_mechanism": "deferred by owner decision; to be designed before the first real correction",
+      "conformance_correction": "2026-09-16, same day, no change of rule. protocol.json's live forecast_lock block still carried the pre-amendment 'engine_published_at, falling back to snapshot_at' and described edge matching as the tuple rather than the id - the mirror a program reads disagreeing with the markdown and the code. Corrected, together with a stale forecast_lock() docstring saying the pick instant was preferred under an implementation that did the opposite, and with the DB pairing of edge_model_edge_id and edge_published_at now enforced in both directions. tests/test_clv_protocol.py asserts the mirror cannot drift back."
+    }
+  ],
+  "frozen_at_v1_0_0": "2026-09-16T10:30:00Z",
+  "sha256_at_v1_0_0": "ef912fcea18b560476755e797d2e5001832a4ba2230fe8daf368544bb61aba1a",
+  "spending_rule": {
+    "approved_free_allowance": 500,
+    "hard_coded": true,
+    "env_may_lower_the_cap": true,
+    "env_may_raise_the_cap": false,
+    "env_may_raise_the_reserve": true,
+    "env_may_lower_the_reserve": false,
+    "provider_quota_above_the_ceiling": "clamped to the ceiling and flagged, never spent",
+    "rationale": "any spend above the approved free allowance is money, and money is L3. An automated job must never be able to authorise one - not through an environment variable, and not by noticing the provider is willing to sell more. Both look like extra headroom to a naive governor and neither is permission.",
+    "frozen_by": "Amendment 4.2, 2026-09-16",
+    "accounting": "month-to-date spend is the SUM of odds_api_usage.credits_charged for the current month - our own count, which nothing upstream can reset. The provider's remaining-balance header is a cross-check and is believed only when SMALLER. Clamping a large provider balance to 500 on every run was a bug: it made the budget read 500 every time, so it never declined and the ceiling was decorative.",
+    "priority": "lower priority than the methodology; must not block it"
+  },
+  "required_inputs": {
+    "running_order": {
+      "state": "absent - `fights` has no order column, only is_main_event (the LAST bout)",
+      "required_for": "everything: without it no fight is identifiable as bout 1 and no bout has a \"previous\" one",
+      "cost_to_obtain": "free - ufcstats lists a card in order and the existing event scraper can write fight_bout_order on the same pass",
+      "why_not_id_order": "sorting by id is an inference dressed as a record, and it breaks exactly when a card is reshuffled"
+    },
+    "exact_bout_completions": {
+      "state": "absent - nothing records when a bout ended",
+      "required_for": "bouts 2..N. Under Amendment 5 the previous bout's exact completion IS the scoring cutoff, so without it those fights cannot be scored at all - this is a REQUIREMENT, not an accuracy improvement.",
+      "why_the_result_scraper_will_not_do": "it yields completion PLUS unknown lag, an upper bound. fight_bout_completions.is_exact=false marks such rows and v_clv_close_reference ignores them.",
+      "corrections": "append-only: a correction is a NEW row and v_clv_close_reference resolves the latest observation by observed_at DESC, id DESC. A correction from 9:31 to 9:30 resolves to 9:30.",
+      "cost_to_obtain": "a live feed or a person entering times during the card - both new standing commitments",
+      "escalated_as": "L3, per Reed's standing instruction that no paid infrastructure or API spend is assumed"
+    },
+    "coverage": "bout 1 of every card once running order exists; bouts 2..N only where an exact previous-bout completion is recorded. Roughly 1 versus roughly 12.5 observations per card."
+  },
+  "row_level_eligibility": {
+    "frozen_by": "Amendment 6 (a), 2026-09-16, approved by Reed Cannon (L3)",
+    "principle": "a quote is eligible because THAT ROW carries the S4 provenance, never because the columns exist on the table",
+    "required_quote_provenance": [
+      "source_event_id",
+      "feed_version",
+      "opponent_fighter_id",
+      "provider_last_update",
+      "retrieved_at",
+      "market_status",
+      "raw"
+    ],
+    "present_means": "populated. An empty string and an empty jsonb object survive a NULL check while recording nothing.",
+    "pre_migration_rows": "permanently unscorable. NULL in these columns correctly means 'this row predates the column', and S4 says these cannot be backfilled. Counted and reported under R-05.",
+    "unscored_reason": "incomplete_quote_provenance"
+  },
+  "forecast_lock": {
+    "frozen_by": "Amendment 6 (b) and (c), 2026-09-16; the instant and the identity corrected by Amendment 7 (c) and (e), approved by Michael Cannon (owner, L3)",
+    "rule": "forecast_locked_at < close_quoted_at, strictly, in UTC, for EVERY quote entering the consensus - not once per edge against the cutoff",
+    "worked_example": "a forecast locked at 9:28 cannot be scored against a book quote from 9:20 even though the cutoff is 9:30: that price was on the screen before the forecast existed",
+    "immutable_record": "pre_fight_snapshots. IDENTITY: pre_fight_snapshots.edge_model_edge_id = model_edges.id is primary and exact. Matching on (edge_side, edge_bet_fighter_id, edge_odds_at_publish), all three agreeing, is the LEGACY FALLBACK only - for snapshots taken before the id column existed - and it must additionally be unique among the fight's live edges, because one fight can be republished with the same three. Two matches, or a cohort never established, is ambiguous_edge_identity and scores nothing.",
+    "instant_within_snapshot": "pre_fight_snapshots.edge_published_at - the EDGE's own publication instant - required together with edge_model_edge_id. LEGACY FALLBACK: pre_fight_snapshots.snapshot_at, which is later than publication and therefore fail-closed, recorded on the scored row as immutable_is_conservative_fallback = true. NEVER engine_published_at.",
+    "effective_lock": "the LATER of the immutable instant and model_edges.published_at - later is strictly harder to satisfy, so a mutated published_at can only cost observations",
+    "why_not_published_at_alone": "model_edges is a working table with no append-only trigger; a row rewritten after the fact is a claim about what we published, not a record of it",
+    "dedicated_ledger_needed": false,
+    "dedicated_ledger_note": "pre_fight_snapshots already identifies the exact edge and predates CLV-001, which is what makes it good evidence. A new ledger would be a second copy with less provenance.",
+    "unscored_reason": [
+      "no_immutable_forecast_lock",
+      "ambiguous_edge_identity"
+    ],
+    "engine_published_at": "model_picks.published_at - the MODEL PICK's publication. A pick and a value edge are different records published at different times: the engine posts a pick, and the edge derived from it appears later, once the price has moved far enough to flag one. Using it as the edge's lock places the lock early and admits quotes from before the edge existed. It is carried as provenance for the main model prediction and is NOT an edge lock in any branch (NOT_AN_EDGE_LOCK_FIELDS in cfl_engine/clv/scoring.py)."
+  },
+  "publish_price_provenance": {
+    "frozen_by": "Amendment 6 (d), 2026-09-16; the temporal requirement added by Amendment 7 (c) and bound to the edge instant by 7 (e), approved by Michael Cannon (owner, L3)",
+    "requirement": "S4 item 12: an immutable link from odds_at_publish to the exact source quote",
+    "column": "model_edges.clv_publish_quote_id -> fight_odds.id",
+    "verified_not_trusted": [
+      "the exact offered American price equals odds_at_publish",
+      "fighter identity is the bet fighter",
+      "opponent identity is the fight's other corner (Q-10)",
+      "provider market id is present (R-06)",
+      "the quote instant is credible (R-13)",
+      "the quote was captured AT OR BEFORE the immutable edge publication bound - a quote captured after the edge was published cannot be the source of its posted price, however exactly the price matches",
+      "full S4 provenance on the quote row"
+    ],
+    "closing_side_must_match": [
+      "the same provider market id as the publish quote (R-06)",
+      "the same opponent as the forecast (Q-10)"
+    ],
+    "historical_rows": "no link exists and none is fabricated. Searching for the row whose price matches would manufacture the record the rule requires, and would afterwards be indistinguishable from a real one.",
+    "unscored_reasons": [
+      "no_publish_quote_link",
+      "market_identity_changed"
+    ],
+    "producer_status": "NONE. Whatever writes model_edges does not record clv_publish_quote_id yet, so no edge can score - historical or future. Fail-closed and confirmed as such by Amendment 7 (b); the link is never backfilled by matching prices.",
+    "temporal_bound": "captured_at <= min(model_edges.published_at, the immutable edge instant), where the immutable instant is edge_published_at or the snapshot_at fallback - the same instant the lock uses, never engine_published_at. The EARLIER of the two, deliberately: the lock takes the later because a later lock only shrinks the closing window, but this comparison runs the other way, so a published_at edited forwards would admit a quote captured after the real publication. A mutable timestamp may narrow this window and may never widen it. Consequence: the publish side can never be drawn from inside the window the closing side is measured over.",
+    "why_the_price_match_is_not_enough": "a book that has not moved for an hour leaves several rows at the same price, and only one of them precedes publication. Selecting on price alone picks the wrong one routinely rather than rarely."
+  },
+  "staleness": {
+    "limit_minutes": 45,
+    "measured_from": "captured_at",
+    "frozen_by": "Q-01b; clarified without change by Amendment 6 (h)",
+    "why": "the limit was derived from CFL's own observation cadence - one measured near-card capture interval plus grace - so it answers 'how long ago did we look?'",
+    "provider_last_update": "required provenance (S4 item 11), reported, and explicitly not the clock",
+    "changing_it": "a methodological amendment, not an implementation choice: re-pointing the limit would change which rows score under the same version number"
+  },
+  "scored_row_must_persist": [
+    "clv_cutoff_at",
+    "clv_close_basis",
+    "clv_proxy_quoted_at",
+    "clv_lead_time_minutes",
+    "clv_lead_time_is_lower_bound",
+    "clv_protocol_version",
+    "clv_publish_quote_id",
+    "clv_source_quote_ids",
+    "clv_closing_consensus",
+    "clv_consensus_sha256"
+  ],
+  "raw_quote_durability": {
+    "frozen_by": "Amendment 6 (g), 2026-09-16, approved by Reed Cannon (L3)",
+    "rule": "R-01: the raw quote store rejects UPDATE and DELETE by trigger for every role including service_role",
+    "migration": "research/clv/proposed_2026-09-16_fight_odds_immutability.sql (NOT APPLIED, and NOT additive-only)",
+    "mutable_whitelist": [
+      "is_opener",
+      "is_closer"
+    ],
+    "why_whitelisted": "derived flags, recomputable from (fight, book, fighter, captured_at) and the fight's start, carrying no observation of their own, and not read by CLV-001. The legacy closer promotion in build/fetch-odds.js maintains them and touches nothing else.",
+    "protected": "everything else, by construction: the guard compares to_jsonb(old) and to_jsonb(new) minus the whitelist, so a column added later is protected the moment it exists",
+    "why": "clv_source_quote_ids points at these rows as evidence, and evidence that can be rewritten afterwards is not evidence. The consensus hash would still match, because it covers the artifact rather than the rows it names."
+  },
+  "write_once_settlement": {
+    "frozen_by": "Amendment 7 (a), 2026-09-16, Amendment 7, 2026-09-16, approved by Michael Cannon (owner, L3)",
+    "rule": "a CLV-001 observation is written once; every later run verifies and writes nothing",
+    "marker": "model_edges.clv_scored_at - set on exactly the rows the writer wrote",
+    "verified_fields": [
+      "clv_protocol_version",
+      "clv_return",
+      "closing_fair_probability",
+      "closing_book_count",
+      "clv_source_quote_ids",
+      "clv_consensus_sha256",
+      "clv_close_basis",
+      "clv_lead_time_minutes",
+      "clv_lead_time_is_lower_bound",
+      "clv_proxy_quoted_at",
+      "clv_cutoff_at",
+      "clv_publish_quote_id"
+    ],
+    "artifact_check": "clv_closing_consensus is re-hashed and compared against its own stored clv_consensus_sha256, which catches a jsonb edited in place",
+    "never_verified": "clv_scored_at - it records when the row was FIRST scored and is never rewritten",
+    "on_drift": "abort the whole run, write nothing, name every disagreeing field. A PATCH at that moment is the one thing that would make the disagreement disappear.",
+    "other_versions": "a row scored under a different protocol version is never re-scored and never touched",
+    "corrections": "a genuine correction is a NEW auditable superseding record, never a mutation of the original observation. The mechanism is deferred by owner decision - nothing has been scored, so there is nothing to correct - and inherits an intact record because nothing overwrites one."
+  },
+  "edge_identity": {
+    "frozen_by": "Amendment 7 (c), 2026-09-16, Amendment 7, 2026-09-16, approved by Michael Cannon (owner, L3)",
+    "preferred": "pre_fight_snapshots.edge_model_edge_id = model_edges.id - an identity",
+    "fallback": "side + bet_fighter_id + odds_at_publish, which must match EXACTLY ONE live edge on the fight",
+    "why_the_tuple_is_not_enough": "one fight can be republished with the same side, fighter and price; snapshot_predictions.py keeps only the latest of several live edges per fight, so the snapshot records one particular publication",
+    "ambiguous": "two or more live edges sharing the snapshot's tuple, or a cohort that was never established. Both score nothing.",
+    "recorded_on_the_row": "forecast_lock.edge_identity = 'shared_edge_id' | 'tuple_unique_in_cohort'",
+    "backfill": "never. An inferred id would manufacture the evidence the column exists to require.",
+    "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)",
+    "unscored_reason": "ambiguous_edge_identity"
+  },
+  "version_status": "1.0.10 is RATIFIED. Amendment 7 was approved by Michael Cannon (owner, L3) on 2026-09-16.",
+  "last_ratified_version": "1.0.10",
+  "edge_publication_instant": {
+    "frozen_by": "Amendment 7 (e), 2026-09-16, approved by Michael Cannon (owner, L3)",
+    "rule": "the immutable lock is the EDGE's publication instant, never the model pick's",
+    "preferred": "pre_fight_snapshots.edge_published_at, required together with edge_model_edge_id",
+    "fallback": "pre_fight_snapshots.snapshot_at - later than publication, therefore conservative, and labelled immutable_is_conservative_fallback",
+    "never": "pre_fight_snapshots.engine_published_at. It is model_picks.published_at - the MODEL PICK's publication, a different record at a different time - and stays as provenance for the main model prediction.",
+    "why": "the engine posts a pick, and the edge derived from it appears later, once the price has moved far enough to flag one. Reading the pick's instant as the edge's places the lock early and admits quotes from before the edge existed.",
+    "publish_quote_bound": "the same instant, tightened by model_edges.published_at when that is earlier. A mutable timestamp may narrow the window and may never widen it.",
+    "migration": "research/clv/proposed_2026-09-16_snapshot_edge_identity.sql (NOT APPLIED)",
+    "db_pairing": "edge_model_edge_id and edge_published_at are required TOGETHER, enforced in both directions by pre_fight_snapshots_edge_published_needs_an_id and pre_fight_snapshots_edge_id_needs_published_at. Historical rows carry NULL in both and satisfy them untouched. The producer drops both halves when either is missing, so an edge with no published_at degrades to the legacy path rather than failing the snapshot batch."
+  }
 }

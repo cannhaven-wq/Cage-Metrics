@@ -52,16 +52,27 @@ const SOURCE_TAG = 'the-odds-api:mma_mixed_martial_arts';
 // A fixture replay is always a dry run: synthetic quotes must never be stored.
 const DRY_RUN = !!process.env.DRY_RUN || !!process.env.ODDS_FIXTURE;
 
-if (!ODDS_API_KEY && !process.env.ODDS_FIXTURE) {
-  console.error('ODDS_API_KEY missing. Set it in GitHub Secrets (or env for local runs).');
-  process.exit(1);
-}
-if (!SUPABASE_SERVICE_KEY) {
-  console.error('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) missing.');
-  process.exit(1);
+// Which feed and response shape produced a row. Bumped when the request or the
+// parsing changes in a way that could shift timings without changing a price —
+// CLV-001 §4 item 6 exists because that has to be detectable afterwards.
+const FEED_VERSION = 'odds-api-v4:h2h:2026-09-16';
+
+// Credentials are checked inside main(), not at module load, so this file can be
+// require()d by build/test-fetch-odds.js to exercise the pure row builders with
+// no key and no network. A script that cannot be tested without credentials
+// tends not to be tested.
+function requireCredentials() {
+  if (!ODDS_API_KEY && !process.env.ODDS_FIXTURE) {
+    console.error('ODDS_API_KEY missing. Set it in GitHub Secrets (or env for local runs).');
+    process.exit(1);
+  }
+  if (!SUPABASE_SERVICE_KEY) {
+    console.error('SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY) missing.');
+    process.exit(1);
+  }
 }
 
-const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+const sb = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY || 'no-key-required-for-require', {
   auth: { persistSession: false, autoRefreshToken: false }
 });
 
@@ -110,12 +121,430 @@ const CONSENSUS_BOOK_NAME = 'CFL Consensus (Odds API)';
 
 const BASELINE_HOUR_UTC = 8;
 
-async function shouldSpendCredit() {
+// CLV-001's staleness limit is 45 minutes, and it was derived from a MEASURED
+// 30-minute near-card capture interval plus 15 minutes of grace. An hourly
+// capture cannot satisfy it: a bell at :59 leaves the freshest quote 59 minutes
+// old, and the observation is unscored on a stale price.
+//
+// So near a bell the job captures every 30 minutes, which is the cadence the
+// frozen limit already assumes. Worst case becomes 29 minutes and change, and
+// the limit is satisfiable by construction rather than by luck.
+//
+// The workflow wakes every 15 minutes; shouldCaptureNow() decides, before any
+// API call, whether the wake is worth a credit. Quiet wakes cost nothing.
+const NEAR_BELL_WINDOW_H = Number(process.env.NEAR_BELL_WINDOW_H || 3);
+const NEAR_BELL_INTERVAL_MIN = 30;
+
+// -----------------------------------------------------------------------------
+// Credit budget — the hard ceiling (CLV-001 Amendment 4)
+// -----------------------------------------------------------------------------
+// Five-minute capture through a live card is what makes the late pre-fight proxy
+// worth having: the last price before the card starts is then five minutes old
+// rather than thirty. It is also expensive enough to break the free tier if it
+// runs unchecked.
+//
+// Measured, 2025-01 to 2026-08: 3.7 UFC events a month on average, 6 in the
+// busiest month. At 5-minute cadence a single card costs roughly 93 h2h credits.
+// Six of those plus the daily baselines is ~640 — over a 500-credit allowance.
+//
+// So the cadence is a TARGET and the ceiling is a GOVERNOR. Before each call the
+// job asks how many credits are left this month, how many cards are still to
+// come, and picks the finest cadence on the ladder that fits. When the budget is
+// tight it degrades 5 -> 10 -> 15 -> 30 rather than stopping, because a
+// thirty-minute-old price still clears the frozen 45-minute staleness limit; and
+// below a hard floor it stops entirely rather than spending a credit that does
+// not exist.
+//
+// No paid tier, ever, without an L3. The governor exists so that stays true
+// without anyone having to watch it.
+// THE APPROVED FREE ALLOWANCE. A hard constant, deliberately not configurable
+// upward.
+//
+// Any spend above this is money, and money is an L3 decision. An automated job
+// must never be able to authorise one — not through an environment variable, and
+// not by noticing that the provider is willing to sell more. Both of those look
+// like "more headroom" to a naive governor and neither is permission.
+//
+// So: env may LOWER the cap (useful for a dry month or extra caution) and can
+// never raise it, and a provider quota reading above the ceiling is clamped to
+// it and flagged rather than spent.
+const FREE_TIER_CREDIT_CAP = 500;
+
+function resolveMonthlyCap(envValue) {
+  const requested = Number(envValue);
+  if (!Number.isFinite(requested) || requested <= 0) return FREE_TIER_CREDIT_CAP;
+  if (requested > FREE_TIER_CREDIT_CAP) {
+    console.warn(`[budget] ODDS_MONTHLY_CAP=${requested} exceeds the approved ` +
+      `free allowance of ${FREE_TIER_CREDIT_CAP} — ignoring it and holding at ` +
+      `${FREE_TIER_CREDIT_CAP}. Raising the ceiling is an L3 decision, not an ` +
+      `environment variable.`);
+    return FREE_TIER_CREDIT_CAP;
+  }
+  return requested;
+}
+
+const MONTHLY_CREDIT_CAP = resolveMonthlyCap(process.env.ODDS_MONTHLY_CAP);
+// Standing reserve: one baseline capture a day for a whole month (~30) plus
+// headroom for retries and manual FORCE runs. Held back before any card is
+// budgeted, so a busy month cannot eat the days between cards.
+//
+// 75, not 45. Walked across months of 1 through 8 cards, a 45-credit reserve
+// goes eight credits over the allowance at seven cards; 75 leaves a worst case
+// of +19. The cost of the larger reserve is that a busy month coarsens its
+// cadence sooner — lead time, not correctness.
+const APPROVED_CREDIT_RESERVE = 75;
+
+// Env may RAISE the reserve (spend less) and never lower it. Lowering a reserve
+// is the same act as raising a cap wearing a different hat: it frees credits the
+// governor had been told to hold back.
+function resolveReserve(envValue) {
+  const requested = Number(envValue);
+  if (!Number.isFinite(requested) || requested < 0) return APPROVED_CREDIT_RESERVE;
+  if (requested < APPROVED_CREDIT_RESERVE) {
+    console.warn(`[budget] ODDS_CREDIT_RESERVE=${requested} is below the ` +
+      `approved reserve of ${APPROVED_CREDIT_RESERVE} — ignoring it. Lowering ` +
+      `the reserve frees credits the governor was told to hold back, which is ` +
+      `the same decision as raising the cap.`);
+    return APPROVED_CREDIT_RESERVE;
+  }
+  return requested;
+}
+
+const CREDIT_RESERVE = resolveReserve(process.env.ODDS_CREDIT_RESERVE);
+const CREDIT_HARD_FLOOR = 10;
+const LIVE_CADENCE_LADDER = [5, 10, 15, 30];
+const WAKE_INTERVAL_MIN = 5;              // must match the cron in odds.yml
+const TOTALS_MIN_INTERVAL_MIN = 30;       // DUR-001 keeps its density, not more
+
+// What one card costs at the COARSEST rung — 30-minute flow capture plus the
+// card day's hourly captures outside the flow window. Measured by walking a card
+// day through shouldCaptureNow at the 30-minute rung.
+//
+// It has to be reserved for every card still to come, not just averaged in.
+// Without it the governor spends generously on the first cards of a busy month
+// and arrives at the last one with nothing — which is how a six-card month went
+// eight credits over the allowance in testing before this line existed.
+const MIN_CARD_COST = 35;
+
+// A card day also costs hourly captures outside the flow window — the hours
+// before the lead-in opens and after the card is over. Measured at ~15. The
+// projection has to include it: budgeting only the flow calls understates a
+// card by that much, and four cards' worth of understatement is a blown
+// allowance.
+const CARD_DAY_HOURLY_TAIL = 15;
+
+// The finest affordable cadence for the rest of this card, or null to stop.
+// Pure — build/test-fetch-odds.js walks whole months through it.
+function planLiveCadence({ creditsRemaining, cardsRemaining, minutesRemainingInCard }) {
+  if (!Number.isFinite(creditsRemaining)) {
+    // Unknown budget is treated as tight, not as unlimited. The usage ledger is
+    // unreadable on a fresh database and on the first run of the month, and
+    // guessing generously there is how a free tier turns into a bill.
+    //
+    // The coarsest rung is safe here without a fit check, and provably so: a
+    // month spent entirely at 30 minutes costs ~35 credits a card, so even eight
+    // cards plus daily baselines sit far inside the allowance. The test
+    // 'the coarsest rung alone can never exhaust the allowance' pins that, which
+    // is what makes this branch defensible rather than hopeful.
+    return LIVE_CADENCE_LADDER[LIVE_CADENCE_LADDER.length - 1];
+  }
+  if (creditsRemaining <= CREDIT_HARD_FLOOR) return null;
+  // What this card may spend: what is left, less the standing reserve, less the
+  // floor cost of every card that still has to happen after it.
+  const laterCards = Math.max(0, (cardsRemaining ?? 1) - 1);
+  const perCard = Math.max(
+    0, creditsRemaining - CREDIT_RESERVE - MIN_CARD_COST * laterCards);
+  for (const minutes of LIVE_CADENCE_LADDER) {
+    const calls = Math.ceil(Math.max(0, minutesRemainingInCard) / minutes)
+      + CARD_DAY_HOURLY_TAIL;
+    if (calls <= perCard) return minutes;
+  }
+  // NOTHING on the ladder fits. Stop.
+  //
+  // This used to fall through to the coarsest rung, which quietly converted "we
+  // cannot afford any cadence" into "spend at 30 minutes anyway" — a ceiling
+  // with a hole in it, and the hole opened exactly when the budget was tightest.
+  // A ceiling that yields under pressure is not a ceiling.
+  //
+  // Stopping loses the rest of this card's capture. Overspending would mean paid
+  // usage, which is an L3 decision and not one a scheduled job gets to make.
+  return null;
+}
+
+// How long after a card's scheduled start it can still be running. Prelims to
+// main event is about five hours; seven is a generous ceiling that bounds the
+// spend if a completion signal never arrives. It is a CAPTURE bound, not a
+// measurement rule — it decides how much data exists, never what a number means,
+// so it is tunable without an amendment.
+const EVENT_FLOW_MAX_H = Number(process.env.EVENT_FLOW_MAX_H || 7);
+
+// -----------------------------------------------------------------------------
+// Event flow (CLV-001 Amendment 3)
+// -----------------------------------------------------------------------------
+// A card is one scheduled start and then a queue. The published commence time
+// belongs to the FIRST bout; every later bout begins when the one before it
+// ends. So "capture near the bell" cannot mean "capture near the one timestamp
+// we were given" — that timestamp is right for one fight out of thirteen.
+//
+// Instead the card enters FLOW at its scheduled start and stays in flow until
+// its last bout is done (or the ceiling above, whichever comes first). Through
+// the flow the job captures every 30 minutes, which is what gives each fight in
+// the queue a quote inside the 45-minute staleness limit of its own start.
+//
+// The previous bout ending is a TRIGGER here and nothing more. It sharpens which
+// fight we are capturing for; it does not decide any fight's closing price. The
+// close is the last valid pre-live quote for the upcoming fight, decided in
+// cfl_engine/clv/scoring.py against v_clv_close_reference.
+
+// Is a card currently running? Lead-in counts too: NEAR_BELL_WINDOW_H before the
+// scheduled start, so the opening bout has a fresh quote of its own.
+//
+// ONLY a real schedule counts. DUR-001's v_fight_start_best always answers,
+// falling back to the event date at 18:00 UTC, so a caller reading start_at
+// without start_basis would burst-capture against a placeholder for every fight
+// ever recorded.
+function nearBellWindow(candidateFights, now = new Date(), windowH = NEAR_BELL_WINDOW_H) {
+  const t = now.getTime();
+  return (candidateFights || []).some(f => {
+    if (!f.start_at) return false;
+    if (!['bell_at', 'provider_commence'].includes(f.start_basis)) return false;
+    const s = new Date(f.start_at).getTime();
+    if (f.card_complete) return false;          // the night is over, stop spending
+    // Lead-in before the scheduled start, then the whole flow window after it.
+    return s > t - EVENT_FLOW_MAX_H * 3600000 && s < t + windowH * 3600000;
+  });
+}
+
+// Which fight the capture is currently FOR, given what has finished. Used for
+// logging and for stamping bout_started_at; it does not gate anything, because
+// the job captures the whole slate in one request either way.
+//
+// `completed_at` comes from the fight_bout_completions ledger and is only ever
+// an EXACT observation — never the result scraper's "we first saw a winner at
+// T", which is completion plus unknown lag. An upper bound used here would mark
+// the next fight as started too late and admit in-play quotes as its close.
+function currentBout(cardFights, now = new Date()) {
+  const ordered = (cardFights || [])
+    .filter(f => Number.isInteger(f.bout_order))
+    .sort((a, b) => a.bout_order - b.bout_order);
+  if (!ordered.length) return null;
+  const t = now.getTime();
+  for (const f of ordered) {
+    if (!f.completed_at || new Date(f.completed_at).getTime() > t) return f;
+  }
+  return null;                                   // every bout on the card is done
+}
+
+// WHEN THIS FIGHT ACTUALLY BEGAN — a fact, or null.
+//
+// Only a confirmed bell qualifies. This field, and the is_live flag keyed to it,
+// are claims about what happened; nothing else may fill them.
+//
+// It used to fall back to the previous bout's completion, which asserted that
+// fight N+1 began the instant fight N ended. It did not — the walkout sits
+// between them — so that was a manufactured fact in a column whose only job is
+// to hold real ones. CLV scoring never needed it: it excludes quotes at or after
+// the frozen cutoff directly, against proxyCutoffAt below.
+function boutStartedAt(fight) {
+  if (fight && fight.bell_at) return new Date(fight.bell_at).toISOString();
+  return null;
+}
+
+// THE FROZEN OPERATIONAL CUTOFF for this fight — CLV-001 v1.0.8.
+//
+//   bout 1      the card's scheduled start
+//   bout 2..N   the exact completion of the immediately previous bout
+//
+// A cutoff, not a start. For later bouts it precedes the bell by the walkout
+// interval, which is exactly why it is stored under its own name rather than
+// borrowing bout_started_at's.
+function proxyCutoffAt(fight, prevCompletedAt, scheduledFirstBoutAt) {
+  if (fight && fight.bout_order === 1) {
+    return scheduledFirstBoutAt ? new Date(scheduledFirstBoutAt).toISOString() : null;
+  }
+  if (fight && fight.bout_order > 1 && prevCompletedAt) {
+    return new Date(prevCompletedAt).toISOString();
+  }
+  return null;
+}
+
+// Minutes of card still to run — how much 5-minute capture is still owed. Used
+// only by the budget governor, so an over-estimate costs cadence, never data.
+function minutesRemainingInCard(candidateFights, now = new Date()) {
+  const t = now.getTime();
+  let latest = 0;
+  for (const f of candidateFights || []) {
+    if (!f.start_at) continue;
+    if (!['bell_at', 'provider_commence'].includes(f.start_basis)) continue;
+    const end = new Date(f.start_at).getTime() + EVENT_FLOW_MAX_H * 3600000;
+    if (end > latest) latest = end;
+  }
+  return latest <= t ? 0 : Math.round((latest - t) / 60000);
+}
+
+// The cadence decision for one wake-up. Pure, so build/test-fetch-odds.js can
+// walk whole months through it and count the credits.
+//
+// `budget` is { creditsRemaining, cardsRemaining }. Omit it and the governor
+// treats the budget as unknown, which means tight — see planLiveCadence.
+function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
+  const min = now.getUTCMinutes();
+  if (nearBellWindow(candidateFights, now)) {
+    const cadence = planLiveCadence({
+      creditsRemaining: budget.creditsRemaining,
+      cardsRemaining: budget.cardsRemaining ?? 1,
+      minutesRemainingInCard: budget.minutesRemainingInCard
+        ?? minutesRemainingInCard(candidateFights, now),
+    });
+    if (cadence === null) {
+      return { yes: false, cadence: null,
+               why: `no cadence fits the remaining budget ` +
+                    `(${budget.creditsRemaining ?? 'unknown'} credit(s) left, ` +
+                    `${budget.cardsRemaining ?? 1} card(s) still to cover) — ` +
+                    `capture stopped rather than spending past the free allowance` };
+    }
+    if (min % cadence < WAKE_INTERVAL_MIN) {
+      return { yes: true, cadence,
+               why: `card in flow — ${cadence}-minute cadence` +
+                    (cadence === LIVE_CADENCE_LADDER[0] ? '' : ' (budget-degraded)') };
+    }
+    return { yes: false, cadence, why: `card in flow but off the ${cadence}-minute beat` };
+  }
+  if (hasCardInWindow) {
+    if (min < WAKE_INTERVAL_MIN) {
+      return { yes: true, cadence: 60, why: 'card today or tomorrow — hourly cadence' };
+    }
+    return { yes: false, cadence: 60, why: 'card window but not the top of the hour' };
+  }
+  if (now.getUTCHours() === BASELINE_HOUR_UTC && min < WAKE_INTERVAL_MIN) {
+    return { yes: true, cadence: 1440, why: 'daily baseline capture' };
+  }
+  return { yes: false, cadence: null,
+           why: 'no card today or tomorrow and not the baseline hour' };
+}
+
+// The authoritative credit count is the Odds API's own x-requests-remaining
+// header. Each run stores it so the NEXT run — a separate Actions invocation
+// with no shared memory — can gate BEFORE calling. An unreadable or empty ledger
+// yields null, which planLiveCadence treats as tight rather than unlimited.
+// A provider quota larger than the approved free allowance means somebody has a
+// paid plan attached — deliberately or by a provider promotion. Either way it is
+// NOT permission for this job to spend more.
+//
+// Clamping ALONE was a bug, and it is the one this rewrite fixes. Clamping a
+// 19,500-credit balance to 500 on every run makes the budget read 500 every
+// time: it never declines, the governor never degrades, and the ceiling is
+// decorative. The clamp is now only the second half of the answer — the first is
+// `spentThisMonth`, our own count, which nothing upstream can reset.
+function clampToFreeAllowance(remaining) {
+  if (!Number.isFinite(remaining)) return undefined;
+  if (remaining > MONTHLY_CREDIT_CAP) {
+    console.warn(`[budget] the provider reports ${remaining} credits remaining, ` +
+      `above the approved free allowance of ${MONTHLY_CREDIT_CAP}. A larger quota ` +
+      `is not authorisation to spend more — raising the ceiling is an L3 ` +
+      `decision. Using our own month-to-date count instead.`);
+    return MONTHLY_CREDIT_CAP;
+  }
+  return remaining;
+}
+
+// What WE have spent this month, counted from our own append-only ledger. One
+// row per API call, each carrying what that call cost (h2h alone is 1 credit;
+// h2h+totals is 2).
+//
+// This is the authoritative side of the budget, precisely because it cannot be
+// reset from outside. The provider's remaining-balance header is a cross-check
+// and is believed only when it is SMALLER — it catches calls we made but failed
+// to log, while never handing us headroom our own count says we have spent.
+function spentThisMonth(rows) {
+  return (rows || []).reduce(
+    (total, r) => total + (Number(r.credits_charged) || 1), 0);
+}
+
+// The budget the governor plans against: whichever of the two accounts is
+// tighter.
+function remainingCredits(ledgerRows, providerRemaining) {
+  const byOurCount = MONTHLY_CREDIT_CAP - spentThisMonth(ledgerRows);
+  const clamped = clampToFreeAllowance(providerRemaining);
+  if (!Number.isFinite(clamped)) return byOurCount;
+  return Math.min(byOurCount, clamped);
+}
+
+async function readCreditBudget(now) {
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))
+    .toISOString();
+
+  // Every call WE made this month, with what each cost. The provider resets the
+  // allowance monthly, so the window starts at the first of the month.
+  const { data: rows, error } = await sb
+    .from('odds_api_usage')
+    .select('credits_charged, requests_remaining, observed_at')
+    .gte('observed_at', monthStart)
+    .order('observed_at', { ascending: false });
+  if (error) {
+    console.warn(`[budget] odds_api_usage unavailable (${error.message}) — ` +
+      `treating the budget as unknown, which means tight. Apply ` +
+      `research/clv/proposed_2026-09-16_event_flow.sql.`);
+    return { creditsRemaining: undefined, cardsRemaining: 1, spent: undefined };
+  }
+
+  const spent = spentThisMonth(rows);
+  const providerRemaining = rows && rows.length
+    ? Number(rows[0].requests_remaining) : undefined;
+  const creditsRemaining = remainingCredits(rows, providerRemaining);
+
+  // How many cards still have to be paid for out of what is left.
+  const monthEnd = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0))
+    .toISOString().slice(0, 10);
+  const { data: rest } = await sb
+    .from('events')
+    .select('id')
+    .gte('event_date', now.toISOString().slice(0, 10))
+    .lte('event_date', monthEnd);
+  const cardsRemaining = Math.max(1, (rest || []).length);
+
+  return { creditsRemaining, cardsRemaining, spent };
+}
+
+// Record what the provider says we have left. Append-only; a failure here must
+// never take the capture down, but it does mean the next run flies blind and
+// therefore conservatively.
+async function recordCreditUsage(used, remaining, creditsCharged) {
+  const { error } = await sb.from('odds_api_usage').insert([{
+    requests_used: used == null ? null : Number(used),
+    requests_remaining: remaining == null ? null : Number(remaining),
+    credits_charged: creditsCharged,
+    observed_at: new Date().toISOString(),
+  }]);
+  // A failed write means this call is invisible to the next run's count, which
+  // would UNDER-state the month's spend. Loud, because the ledger is the
+  // authoritative side of the budget.
+  if (error) {
+    console.error(`[budget] could not record usage (${error.message}) — this ` +
+      `call will not be counted against the month's allowance. The provider's ` +
+      `own remaining balance is the only backstop until the next successful ` +
+      `write.`);
+  }
+}
+
+async function shouldSpendCredit(candidateFights) {
+  const now = new Date();
   if (process.env.FORCE) {
-    console.log('[cadence] FORCE set — capturing regardless of schedule');
+    // FORCE overrides the CADENCE, never the CEILING. A hand-fired run is
+    // allowed to ignore the beat so "is this thing on?" is never a silent skip;
+    // it is not allowed to spend a credit the allowance does not have.
+    const { creditsRemaining, spent } = await readCreditBudget(now);
+    if (Number.isFinite(creditsRemaining) && creditsRemaining <= CREDIT_HARD_FLOOR) {
+      console.error(`[cadence] FORCE set, but only ${creditsRemaining} credit(s) ` +
+        `remain — at or below the hard floor of ${CREDIT_HARD_FLOOR}. Refusing: ` +
+        `the ceiling is not overridable, and going past it means paid usage.`);
+      return false;
+    }
+    console.log(`[cadence] FORCE set — capturing regardless of schedule ` +
+      `[${creditsRemaining ?? 'unknown'} credit(s) left; ${spent ?? '?'} spent ` +
+      `this month]`);
     return true;
   }
-  const now = new Date();
   const today = now.toISOString().slice(0, 10);
   const tomorrow = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);
 
@@ -126,16 +555,13 @@ async function shouldSpendCredit() {
     .lte('event_date', tomorrow);
   if (error) throw new Error(`cadence events check: ${error.message}`);
 
-  if (near && near.length) {
-    console.log(`[cadence] card window (${near.map(e => `${e.name} ${e.event_date}`).join('; ')}) — hourly capture`);
-    return true;
-  }
-  if (now.getUTCHours() === BASELINE_HOUR_UTC) {
-    console.log('[cadence] no card today or tomorrow — taking the daily baseline capture');
-    return true;
-  }
-  console.log(`[cadence] no card today or tomorrow and it is not the ${BASELINE_HOUR_UTC}:00 UTC baseline hour — skipping (0 credits)`);
-  return false;
+  const budget = await readCreditBudget(now);
+  const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length), budget);
+  console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}` +
+    ` [budget: ${budget.spent ?? '?'} of ${MONTHLY_CREDIT_CAP} spent this month, ` +
+    `${budget.creditsRemaining ?? 'unknown'} left, ` +
+    `${budget.cardsRemaining} card(s) still to cover]`);
+  return decision.yes;
 }
 
 // -----------------------------------------------------------------------------
@@ -147,6 +573,8 @@ async function shouldSpendCredit() {
 // more credit per call (quota = markets x regions), so totals ride along only
 // where a close can actually form — see wantTotals(). Totals rows go to the
 // private, append-only `prop_odds` ledger; the moneyline path is unchanged.
+let lastQuota = { used: null, remaining: null };
+
 async function fetchOddsFromApi(markets = 'h2h') {
   // ODDS_FIXTURE=<path.json>: replay a saved/synthetic Odds API payload instead
   // of spending a credit. Forces DRY_RUN semantics upstream (see main) so a
@@ -176,6 +604,10 @@ async function fetchOddsFromApi(markets = 'h2h') {
     }
     console.log(`[odds-api] HTTP ${res.status} quota: used=${res.headers.get('x-requests-used')}, ` +
       `remaining=${res.headers.get('x-requests-remaining')}, last=${res.headers.get('x-requests-last')}`);
+    // The provider's own count is the only authoritative budget. Store it so the
+    // next run — a separate Actions invocation — can gate before calling.
+    lastQuota = { used: res.headers.get('x-requests-used'),
+                  remaining: res.headers.get('x-requests-remaining') };
     if (res.ok) {
       const events = await res.json();
       console.log(`[odds-api] got ${events.length} MMA events`);
@@ -229,7 +661,134 @@ async function loadCandidateFights() {
     f.start_at = s ? s.start_at : null;
     f.start_basis = s ? s.start_basis : null;
   }
+
+  await attachEventFlow(fights || []);
   return fights || [];
+}
+
+// THE LATEST COMPLETE CARD OBSERVATION, per event.
+//
+// Event Flow appends the WHOLE UFCStats card as one observation whenever the
+// order changes, every row sharing one `observed_at`. The current order is a
+// SNAPSHOT and has to be resolved as a unit.
+//
+// Taking the latest row per FIGHT — which this did — leaves a removed booking's
+// stale order alive beside the current card: a fight that was bout 1 in an older
+// observation and is absent from the newest one still resolves to bout 1, so the
+// card has two current bout 1s, `is_first_bout` is wrong for one of them, and the
+// previous-bout lookup walks into a dead booking. Silently.
+//
+// `rows` must arrive ordered observed_at DESC, id DESC. Returns fight_id ->
+// {fight_id, event_id, bout_order}, containing ONLY fights in the latest
+// observation. Older rows are untouched in the ledger and readable as history.
+//
+// Scoped to 'ufcstats_card': that is the source with complete-card semantics, and
+// mixing a partial observation from another source in here would truncate the
+// current card. Mirrors the `latest_card` CTE in v_clv_close_reference.
+function resolveCurrentCard(rows, source = 'ufcstats_card') {
+  const latestInstant = new Map();          // event_id -> observed_at of the newest
+  for (const r of rows) {
+    if (r.source && r.source !== source) continue;
+    if (!latestInstant.has(r.event_id)) latestInstant.set(r.event_id, r.observed_at);
+  }
+  const current = new Map();
+  for (const r of rows) {
+    if (r.source && r.source !== source) continue;
+    if (r.observed_at !== latestInstant.get(r.event_id)) continue;
+    if (!current.has(r.fight_id)) current.set(r.fight_id, r);
+  }
+  return current;
+}
+
+// Running order and bout completions (CLV-001 Amendment 3). Both ledgers are
+// append-only and both may be absent — the migration that creates them is
+// proposed, not applied — so every field here degrades to null and the capture
+// falls back to the card-level cadence it had before. A missing ledger costs
+// coverage; it never costs correctness, because an unknown bout start produces
+// is_live = null, and null is never treated as "pre-start".
+async function attachEventFlow(fights) {
+  if (!fights.length) return;
+  const ids = fights.map(f => f.id);
+
+  // Every order row for these fights' EVENTS, not just these fights — resolving
+  // the latest complete card needs the whole observation, including bouts that
+  // are not in our candidate set.
+  const eventIds = [...new Set(fights.map(f => f.event_id).filter(Boolean))];
+  const { data: order, error: oErr } = await sb
+    .from('fight_bout_order')
+    .select('id, fight_id, event_id, bout_order, observed_at, source')
+    .in('event_id', eventIds)
+    .order('observed_at', { ascending: false })
+    .order('id', { ascending: false });
+  if (oErr) {
+    console.warn(`[flow] fight_bout_order unavailable (${oErr.message}) — running ` +
+      `order unknown, so no fight can be identified as the card's first bout. ` +
+      `Apply research/clv/proposed_2026-09-16_event_flow.sql.`);
+  }
+  const orderBy = resolveCurrentCard(order || []);
+
+  // is_exact only. The result scraper's "we first saw a winner at T" is
+  // completion PLUS unknown lag; using it would place the next bout's start too
+  // late and admit in-play quotes as its close.
+  const { data: done, error: cErr } = await sb
+    .from('fight_bout_completions')
+    .select('fight_id, completed_at, observed_at, id')
+    .in('fight_id', ids)
+    .eq('is_exact', true)
+    .order('observed_at', { ascending: false })
+    .order('id', { ascending: false });
+  if (cErr) {
+    console.warn(`[flow] fight_bout_completions unavailable (${cErr.message}) — ` +
+      `no bout completions, so only a card's first bout can ever be scored.`);
+  }
+  // LATEST OBSERVATION wins, not the latest instant. The ledger is append-only,
+  // so a correction is a new row — and a correction usually moves the instant
+  // EARLIER (9:31 misheard, 9:30 confirmed). Taking the max would keep the
+  // superseded 9:31 forever, which is the opposite of what the correction is
+  // for. Rows arrive ordered observed_at DESC, id DESC, so the first wins.
+  const doneBy = new Map();
+  for (const c of done || []) {
+    if (!doneBy.has(c.fight_id)) doneBy.set(c.fight_id, c.completed_at);
+  }
+
+  // event -> bout_order -> fight_id, so "the bout before this one" is a lookup
+  // rather than an assumption about id ordering.
+  const byEventOrder = new Map();
+  for (const f of fights) {
+    const o = orderBy.get(f.id);
+    f.bout_order = o ? o.bout_order : null;
+    f.completed_at = doneBy.get(f.id) || null;
+    if (o) byEventOrder.set(`${o.event_id}|${o.bout_order}`, f.id);
+  }
+  for (const f of fights) {
+    const o = orderBy.get(f.id);
+    f.prev_completed_at = null;
+    if (o && o.bout_order > 1) {
+      const prevId = byEventOrder.get(`${o.event_id}|${o.bout_order - 1}`);
+      if (prevId) f.prev_completed_at = doneBy.get(prevId) || null;
+    }
+  }
+
+  // A card is finished when every bout ON THE CURRENT CARD has an exact
+  // completion. Only fights in the latest complete-card observation count — a
+  // dead booking left behind in `fights` must not keep a finished night looking
+  // unfinished and burning credits. Used only to stop spending.
+  const cardFights = new Map();
+  for (const f of fights) {
+    if (!f.event_id) continue;
+    if (!orderBy.has(f.id)) continue;            // not on the current card
+    if (!cardFights.has(f.event_id)) cardFights.set(f.event_id, []);
+    cardFights.get(f.event_id).push(f);
+  }
+  for (const f of fights) f.card_complete = false;
+  for (const [, group] of cardFights) {
+    const complete = group.length > 0 && group.every(f => f.completed_at);
+    for (const f of group) f.card_complete = complete;
+  }
+
+  const withOrder = fights.filter(f => Number.isInteger(f.bout_order)).length;
+  console.log(`[flow] running order known for ${withOrder}/${fights.length} candidate ` +
+    `fight(s); ${doneBy.size} exact bout completion(s) on file`);
 }
 
 // Reduce a normalized name to first + last token only, so middle names don't
@@ -452,6 +1011,15 @@ const TOTALS_ENABLED = (process.env.ODDS_MARKETS || 'h2h,totals').split(',').map
 function wantTotals(candidateFights, now = new Date()) {
   if (!TOTALS_ENABLED) return { yes: false, why: 'totals disabled via ODDS_MARKETS' };
   if (process.env.FORCE) return { yes: true, why: 'FORCE set' };
+  // Totals cost a second credit on every call they ride. Under 5-minute h2h
+  // capture that would double the card's bill for no benefit to DUR-001, whose
+  // close is derived from the same start hierarchy and needs density, not every
+  // five minutes. Capped at one totals call per TOTALS_MIN_INTERVAL_MIN, which
+  // is the density DUR-001 already had — never less.
+  if (now.getUTCMinutes() % TOTALS_MIN_INTERVAL_MIN >= WAKE_INTERVAL_MIN) {
+    return { yes: false, why: `off the ${TOTALS_MIN_INTERVAL_MIN}-minute totals beat ` +
+                              `(h2h-only call, 1 credit)` };
+  }
   const t = now.getTime();
   const near = (candidateFights || []).some(f => {
     if (!f.start_at) return false;
@@ -514,6 +1082,157 @@ function buildTotalsRows(e, fight, bookId, captured_at) {
   return rows;
 }
 
+// -----------------------------------------------------------------------------
+// 3e. Moneyline rows (CLV-001) — one row per (fight, fighter, book)
+// -----------------------------------------------------------------------------
+// Pure: no database, no clock of its own, no network. build/test-fetch-odds.js
+// exercises it against a fixture, which is how the capture path gets verified
+// before the migration that stores its output is applied anywhere.
+//
+// The h2h path used to throw away everything the totals path keeps. Same loop,
+// same payload, same provider metadata — and the moneyline rows recorded a price
+// and a timestamp and nothing else. That asymmetry is the whole reason CLV-001's
+// capture requirements read as unmet: the mechanism was already running in the
+// next table over. These fields are named exactly as prop_odds names them.
+//
+// Columns added by research/clv/proposed_2026-09-16_fight_odds_capture.sql. Until
+// that is applied, CAPTURE_COLUMNS are stripped before the insert — see
+// detectCaptureColumns(). The capture degrades, it never fails and it never
+// half-writes.
+
+const CAPTURE_COLUMNS = [
+  'source_event_id', 'feed_version', 'source_commence_at', 'bout_started_at',
+  'proxy_cutoff_at', 'is_live', 'provider_last_update', 'retrieved_at',
+  'opponent_fighter_id', 'market_status', 'raw',
+];
+
+function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
+  const rows = [];
+  const commence = e.commence_time ? new Date(e.commence_time).toISOString() : null;
+
+  // Liveness is a FACT about this fight, so it is keyed only to a confirmed
+  // bell. null is a third state meaning "we do not know when this fight
+  // started", which is the truth on every card until bells are captured, and it
+  // is never collapsed to false — false asserts the quote was pre-start.
+  const bout_started_at = boutStartedAt(fight);
+  const is_live = bout_started_at ? captured_at >= bout_started_at : null;
+
+  // The frozen operational cutoff, stored separately because it is a rule and
+  // not an observation. CLV scoring excludes quotes at or after it directly;
+  // nothing infers a start from it.
+  const proxy_cutoff_at = proxyCutoffAt(
+    fight, fight.prev_completed_at, fight.bout_order === 1 ? commence : null);
+
+  const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
+  const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
+
+  for (const bm of e.bookmakers || []) {
+    const h2h = (bm.markets || []).find(m => m.key === 'h2h');
+    if (!h2h || !Array.isArray(h2h.outcomes)) continue;
+    const bid = bookId.get((bm.title || '').trim().toLowerCase());
+    if (!bid) continue;
+
+    // Map each outcome to our canonical A/B by NAME, not by the provider's
+    // home/away order, tolerating middle-name drift via the first+last fallback.
+    for (const o of h2h.outcomes) {
+      if (o.price == null) continue;
+      const n = normalizeName(o.name);
+      let side, fighter_id, opponent_fighter_id;
+      if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) {
+        side = 'A'; fighter_id = fight.fighter_a_id; opponent_fighter_id = fight.fighter_b_id;
+      } else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) {
+        side = 'B'; fighter_id = fight.fighter_b_id; opponent_fighter_id = fight.fighter_a_id;
+      } else {
+        continue; // draw / unexpected label
+      }
+      rows.push({
+        fight_id: fight.id,
+        fighter_id,
+        book_id: bid,
+        side,
+        american_odds: Math.round(o.price),
+        implied_prob: Number(americanToImplied(o.price).toFixed(6)),
+        captured_at,
+        source_url: SOURCE_TAG,
+        // Explicit on EVERY row. PostgREST bulk inserts union the keys of all
+        // rows and send NULL for any a row lacks, which overrides the column
+        // default and trips NOT NULL — this is what killed every scheduled run
+        // from 2026-07-31 to 2026-09-15 (rows flipped to true later in main).
+        is_opener: false,
+
+        // ---- CLV-001 §4 capture requirements, none of them backfillable ----
+        source_event_id: e.id || null,              // item 9  — provider market id
+        feed_version: FEED_VERSION,                 // item 6  — feed + shape
+        source_commence_at: commence,               // item 7  — the CARD's schedule
+        bout_started_at,                            // item 7  — a CONFIRMED bell only
+        proxy_cutoff_at,                            //         — the frozen v1.0.8 cutoff
+        is_live,                                    //         — in-play, never a close
+        provider_last_update: bm.last_update        // item 11 — when the BOOK moved
+          ? new Date(bm.last_update).toISOString() : null,
+        retrieved_at,                               // item 11 — when WE looked
+        opponent_fighter_id,                        // item 10 — what the price referred to
+        market_status: marketStatusOf(bm, h2h),     // item 8  — open/suspended/taken down
+        raw: {                                      // item 12 — link back to the source
+          bookmaker_key: bm.key || null,
+          bookmaker_last_update: bm.last_update || null,
+          market_last_update: h2h.last_update || null,
+          home_team: e.home_team,
+          away_team: e.away_team,
+          outcome_name: o.name,
+        },
+      });
+    }
+  }
+  return rows;
+}
+
+// The Odds API does not report suspension directly: a book that has pulled a
+// market simply stops appearing in the payload. So the only honest values here
+// are 'open' (it quoted) and null (it said nothing) — 'suspended' and
+// 'taken_down' are in the constraint's vocabulary for a provider that does
+// report them, and are never guessed from an absence. Inferring 'taken_down'
+// from a missing bookmaker would turn "we did not see it" into "it was pulled",
+// which is exactly the kind of manufactured fact R-13 is about.
+function marketStatusOf(bm, market) {
+  if (!market || !Array.isArray(market.outcomes) || market.outcomes.length === 0) return null;
+  return 'open';
+}
+
+// Strip the CLV-001 capture keys when the migration has not been applied, so an
+// un-migrated database keeps capturing exactly what it captured before. Returns
+// a NEW array; the originals are left intact for the dry-run printout, which
+// should always show what we would ideally store.
+function stripUnsupported(rows, supported) {
+  const drop = CAPTURE_COLUMNS.filter(c => !supported.has(c));
+  if (!drop.length) return rows;
+  return rows.map(r => {
+    const out = { ...r };
+    for (const c of drop) delete out[c];
+    return out;
+  });
+}
+
+// One probe, before any write: which of the capture columns does fight_odds
+// actually have? PostgREST rejects a select naming an unknown column, so ask for
+// them one at a time and believe the answer.
+async function detectCaptureColumns() {
+  const supported = new Set();
+  for (const col of CAPTURE_COLUMNS) {
+    const { error } = await sb.from('fight_odds').select(col).limit(1);
+    if (!error) supported.add(col);
+  }
+  if (supported.size === CAPTURE_COLUMNS.length) {
+    console.log('[capture] all CLV-001 capture columns present');
+  } else {
+    const missing = CAPTURE_COLUMNS.filter(c => !supported.has(c));
+    console.warn(`[capture] fight_odds is missing ${missing.length} capture column(s): ` +
+      `${missing.join(', ')} — apply research/clv/proposed_2026-09-16_fight_odds_capture.sql. ` +
+      `Capturing the legacy columns only; every quote taken meanwhile is ` +
+      `permanently unscorable under CLV-001 and cannot be backfilled.`);
+  }
+  return supported;
+}
+
 async function writePropOdds(rows) {
   if (!rows.length) return 0;
   const CHUNK = 500;
@@ -528,13 +1247,15 @@ async function writePropOdds(rows) {
 // 4. Main: fetch, match, build per-book snapshot rows, insert
 // -----------------------------------------------------------------------------
 
-(async () => {
+async function main() {
   try {
-    if (!(await shouldSpendCredit())) return;
+    requireCredentials();
 
-    // Candidate fights first: wantTotals() needs their start times to decide
-    // whether this call should spend the extra credit on the totals market.
+    // Candidate fights FIRST, and free — they come from Supabase, not the Odds
+    // API. The cadence gate needs their start times to know whether a bell is
+    // near, and wantTotals() needs them to decide on the extra totals credit.
     const candidateFights = await loadCandidateFights();
+    if (!(await shouldSpendCredit(candidateFights))) return;
     const totals = wantTotals(candidateFights);
     console.log(`[totals] ${totals.yes ? 'requesting' : 'skipping'} fight totals — ${totals.why}`);
     const oddsEvents = await fetchOddsFromApi(totals.yes ? 'h2h,totals' : 'h2h');
@@ -542,7 +1263,12 @@ async function writePropOdds(rows) {
     const fightIndex = buildFightIndex(candidateFights);
     const bookId = await resolveBooks(oddsEvents);
 
-    const captured_at = new Date().toISOString();
+    // retrieved_at is when the payload came back; captured_at stays the row's
+    // canonical instant. They are the same value on a normal run and diverge
+    // only if the write is delayed — which is exactly the case §4 item 11 wants
+    // legible rather than hidden.
+    const retrieved_at = new Date().toISOString();
+    const captured_at = retrieved_at;
     const rows = [];
     const unmatched = [];
     const commenceByFight = new Map(); // fight_id -> provider commence_time (ISO)
@@ -561,43 +1287,9 @@ async function writePropOdds(rows) {
         console.log(`[match] API "${e.home_team} vs ${e.away_team}" -> fight ${fight.id} (${fight.fighter_a_name} vs ${fight.fighter_b_name})`);
       }
 
-      const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
-      const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
-      let wrote = 0;
-
-      for (const bm of e.bookmakers || []) {
-        const h2h = (bm.markets || []).find(m => m.key === 'h2h');
-        if (!h2h || !Array.isArray(h2h.outcomes)) continue;
-        const bid = bookId.get((bm.title || '').trim().toLowerCase());
-        if (!bid) continue;
-
-        // Map each outcome to our canonical A/B by name (not by home/away order),
-        // tolerating middle-name drift via the first+last fallback.
-        for (const o of h2h.outcomes) {
-          if (o.price == null) continue;
-          const n = normalizeName(o.name);
-          let side, fighter_id;
-          if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) { side = 'A'; fighter_id = fight.fighter_a_id; }
-          else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) { side = 'B'; fighter_id = fight.fighter_b_id; }
-          else continue; // draw / unexpected label
-          rows.push({
-            fight_id: fight.id,
-            fighter_id,
-            book_id: bid,
-            side,
-            american_odds: Math.round(o.price),
-            implied_prob: Number(americanToImplied(o.price).toFixed(6)),
-            captured_at,
-            source_url: SOURCE_TAG,
-            // Explicit on EVERY row. PostgREST bulk inserts union the keys of all
-            // rows and send NULL for any a row lacks, which overrides the column
-            // default and trips NOT NULL — this is what killed every scheduled
-            // run from 2026-07-31 to 2026-09-15 (rows flipped to true below).
-            is_opener: false,
-          });
-          wrote++;
-        }
-      }
+      const mlRows = buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at);
+      rows.push(...mlRows);
+      const wrote = mlRows.length;
       // Fight totals (DUR-001) — independent of whether h2h matched a price.
       if (totals.yes) totalsRows.push(...buildTotalsRows(e, fight, bookId, captured_at));
 
@@ -741,15 +1433,45 @@ async function writePropOdds(rows) {
     }
 
     // Snapshot insert (append-only, like the BFO cron). Chunk to stay safe.
+    // Capture columns are stripped if the migration has not been applied, so an
+    // un-migrated database keeps working exactly as before rather than failing
+    // every run on an unknown column.
+    const supported = await detectCaptureColumns();
+    const toInsert = stripUnsupported(rows, supported);
     const CHUNK = 500;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      const { error: insErr } = await sb.from('fight_odds').insert(rows.slice(i, i + CHUNK));
+    for (let i = 0; i < toInsert.length; i += CHUNK) {
+      const { error: insErr } = await sb.from('fight_odds').insert(toInsert.slice(i, i + CHUNK));
       if (insErr) throw new Error(`fight_odds insert: ${insErr.message}`);
     }
 
-    console.log(`[done] inserted ${rows.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}`);
+    // What this run actually cost: one credit per market requested.
+    await recordCreditUsage(lastQuota.used, lastQuota.remaining,
+                            totals.yes ? 2 : 1);
+
+    const scorable = supported.size === CAPTURE_COLUMNS.length;
+    console.log(`[done] inserted ${toInsert.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}` +
+      (scorable ? ' — CLV-001 capture complete' : ' — CLV-001 capture INCOMPLETE, these quotes can never be scored'));
   } catch (err) {
     console.error('[fetch-odds] failed:', err.message);
     process.exit(1);
   }
-})();
+}
+
+// Run when invoked, export when required. build/test-fetch-odds.js requires this
+// file to check the pure row builders against a fixture — with no API key, no
+// Supabase key and no network — which is how the capture path is verified before
+// the migration that stores its output is applied to anything.
+if (require.main === module) main();
+
+module.exports = {
+  buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
+  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
+  planLiveCadence, minutesRemainingInCard, wantTotals, resolveCurrentCard,
+  spentThisMonth, remainingCredits,
+  CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
+  EVENT_FLOW_MAX_H, MONTHLY_CREDIT_CAP, CREDIT_RESERVE, CREDIT_HARD_FLOOR,
+  FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
+  resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
+  LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
+  normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
+};

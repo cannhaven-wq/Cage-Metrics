@@ -153,6 +153,73 @@ distinct `model_version`, and never be written to `prop_model_locks`.
 
 ## Amendments
 
+### Amendment 2 — 2026-09-16 — de-vig bisection direction (mathematical correction)
+
+**Approved by:** Reed Cannon, 2026-09-16.
+**Status:** in force.
+**Severity:** documentation only. **No output changes, now or retrospectively.**
+**Motivated by observed results:** **no** — found while implementing the formula
+in `cfl_engine/clv/devig.py`. No CLV or DUR-001 figure has been computed.
+
+#### The defect
+
+Amendment 1.1 specifies the power de-vig as
+`q_over^(1/k) + q_under^(1/k) = 1`, and states that **"the sum is strictly
+decreasing in `k`"**.
+
+For the formula as written, the sum is strictly **increasing** in `k`. For
+`0 < q < 1`, raising `k` lowers the exponent `1/k` toward zero, pushing
+`q^(1/k)` up toward 1. Measured on `q_a = 0.55`, `q_b = 0.52` (overround 1.07):
+
+| `k` | 0.5 | 0.75 | 1.0 | 2.0 | 5.0 |
+|---|---|---|---|---|---|
+| sum − 1 | −0.4271 | −0.1312 | +0.0700 | +0.4627 | +0.7647 |
+
+The claim is true only of the other common convention, `q^k`.
+
+#### Why no number changes
+
+The two conventions are **exact reparametrisations**: the `q^k` root is the
+reciprocal of the `q^(1/k)` root, so they produce **bit-identical** fair
+probabilities, and both roots fall inside the `[0.5, 5.0]` bracket.
+
+| pair | `q^(1/k)` root | `q^k` root | fair_a, both ways |
+|---|---|---|---|
+| (0.55, 0.52) | 0.902328 | 1.108245 | 0.5155352112 |
+| (0.70, 0.35) | 0.922810 | 1.083647 | 0.6794241586 |
+| (0.48, 0.58) | 0.915341 | 1.092489 | 0.4484971366 |
+
+No de-vigged probability produced under Amendment 1.1 is affected. Nothing is
+recomputed and no prior result is reinterpreted.
+
+#### Amended text
+
+In Amendment 1.1, replace:
+
+> the sum is strictly decreasing in `k`, so the root is unique
+
+with:
+
+> the sum is strictly **increasing** in `k` — raising `k` lowers the exponent
+> `1/k` and pushes each `q^(1/k)` toward 1 — so the root is unique. (Under the
+> equivalent `q^k` parameterisation the sum decreases and the root is the
+> reciprocal; the fair probabilities are identical either way.)
+
+Formula, bracket, tolerance and drop rule are unchanged.
+
+#### Why it was worth an amendment
+
+An implementer trusting the stated direction inverts the bisection's sign test
+and converges on a bracket edge or not at all. It is also a false mathematical
+statement inside a document whose value is that its claims need not be
+re-derived.
+
+`cfl_engine/clv/devig.py` does not rely on the direction either way — `_bisect`
+reads the sign at both bracket ends — and carries a test that begins **failing**
+if this claim ever becomes true, so the workaround cannot outlive its cause.
+
+---
+
 ### Amendment 1 — 2026-09-16 — de-vig method and historical timing rule
 
 **Approved by:** Reed Cannon, 2026-09-16.
@@ -185,7 +252,8 @@ legible and the change is dated.
 >
 >   and take `p_over = q_over^(1/k)`. Solved by bisection on `k` over
 >   `[0.5, 5.0]` to a tolerance of 1e-10; the sum is strictly decreasing in `k`,
->   so the root is unique. A book whose two-way overround is non-positive, or
+>   so the root is unique. **[Corrected by Amendment 2 — the sum is strictly
+>   INCREASING in `k`. See below; no number changes.]** A book whose two-way overround is non-positive, or
 >   for which no root exists in that bracket, is dropped from the consensus for
 >   that (fight, threshold) and the drop is logged.
 >

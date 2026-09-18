@@ -216,9 +216,18 @@ def collect(base_url, key, event, log=print):
         f"implied_prob_b,bookmaker_count,fetched_at&fight_id=in.{idl}")}
 
     # --- flagged value edges (live only) ---
+    # `id` is selected so the snapshot can record WHICH edge it froze.
+    #
+    # Several live edges can exist for one fight and only the latest is kept
+    # below, so the snapshot is a record of one particular publication. Without
+    # the id, a later reader can only match it back by (side, bet_fighter_id,
+    # odds_at_publish) — a tuple two publications can share, by coincidence or
+    # because the price had not moved. CLV-001 R-07 needs to know exactly which
+    # forecast was locked, and refuses to score an ambiguous match
+    # (`ambiguous_edge_identity`).
     edges = {}
     for e in fetch_all(base_url, key, "model_edges",
-                       "select=fight_id,side,bet_fighter_id,edge,stake_frac,"
+                       "select=id,fight_id,side,bet_fighter_id,edge,stake_frac,"
                        f"odds_at_publish,published_at&fight_id=in.{idl}&source=eq.live"):
         cur = edges.get(e["fight_id"])
         if cur is None or (e["published_at"] or "") > (cur["published_at"] or ""):
@@ -277,6 +286,18 @@ def collect(base_url, key, event, log=print):
             "bookmaker_count": od and od["bookmaker_count"],
             "odds_fetched_at": od and od["fetched_at"],
 
+            # The immutable identity of the edge this snapshot froze (CLV-001
+            # R-07, Amendment 7). Dropped from every row by `publish` when the
+            # column is not there, so this is a no-op until
+            # research/clv/proposed_2026-09-16_snapshot_edge_identity.sql is
+            # applied and never a reason for the cron to fail.
+            "edge_model_edge_id": ed and ed["id"],
+            # WHEN THE EDGE WAS PUBLISHED - not engine_published_at above, which
+            # is the model PICK's publication. The engine can post a pick on
+            # Monday and the edge derived from it on Tuesday, when the price has
+            # moved far enough to flag one; CLV-001 scores the edge, so R-07
+            # locks the edge's own instant. Same optional-column treatment.
+            "edge_published_at": ed and ed["published_at"],
             "edge_side": ed and ed["side"],
             "edge_bet_fighter_id": ed and ed["bet_fighter_id"],
             "edge_value": ed and ed["edge"],
@@ -335,11 +356,64 @@ def report(rows, log=print):
 
 
 # -------------------------------------------------------------------- publishing
+# Columns this script writes that may not exist on the table yet. Each is dropped
+# from every row when the table does not have it, so a proposed-but-unapplied
+# migration can never take the snapshot cron down — and applying it needs no
+# matching deploy here.
+OPTIONAL_COLUMNS = ("edge_model_edge_id", "edge_published_at")
+
+
+def _drop_unknown_columns(base_url, key, rows, log=print):
+    """Remove OPTIONAL_COLUMNS the table does not have, probing once each."""
+    for column in OPTIONAL_COLUMNS:
+        try:
+            fetch_all(base_url, key, SNAP_TABLE, f"select={column}&limit=1")
+        except Exception:                       # noqa: BLE001 - unknown is absent
+            log(f"  note: {SNAP_TABLE}.{column} is not present — omitting it. "
+                f"CLV-001 then falls back to matching an edge by "
+                f"(side, bet_fighter_id, odds_at_publish), refuses to score any "
+                f"fight where that tuple is not unique, and uses snapshot_at as "
+                f"the conservative edge lock rather than engine_published_at.")
+            for r in rows:
+                r.pop(column, None)
+    return rows
+
+
+# edge_model_edge_id and edge_published_at are required TOGETHER, in both
+# directions, and the database enforces it. An edge whose published_at is NULL —
+# possible, since model_edges does not require it — would otherwise produce a row
+# with an id and no instant, and the INSERT would fail for the whole batch.
+EDGE_IDENTITY_PAIR = ("edge_model_edge_id", "edge_published_at")
+
+
+def _pair_edge_identity(rows, log=print):
+    """Drop both halves of the edge-identity pair unless both are present.
+
+    Degrading to the legacy path costs precision — CLV-001 falls back to
+    matching by tuple and locking on snapshot_at — and that is the right trade
+    against failing the whole snapshot batch. It is logged, because a fight
+    silently losing its edge identity is exactly the kind of thing that is only
+    noticed months later.
+    """
+    for r in rows:
+        present = [c for c in EDGE_IDENTITY_PAIR if r.get(c) is not None]
+        if present and len(present) < len(EDGE_IDENTITY_PAIR):
+            missing = [c for c in EDGE_IDENTITY_PAIR if r.get(c) is None]
+            log(f"  note: fight {r.get('fight_id')} has {', '.join(present)} but "
+                f"no {', '.join(missing)} — dropping both. CLV-001 will match "
+                f"this edge by tuple and lock on snapshot_at.")
+            for c in EDGE_IDENTITY_PAIR:
+                r.pop(c, None)
+    return rows
+
+
 def publish(base_url, key, rows, label, log=print):
     """Insert, ignoring any fight already on record. Never updates: the table's
     triggers reject UPDATE outright, so a duplicate must be dropped, not merged."""
     for r in rows:
         r["snapshot_label"] = label
+    rows = _pair_edge_identity(rows, log=log)
+    rows = _drop_unknown_columns(base_url, key, rows, log=log)
     inserted = _rest(base_url, key, "POST", SNAP_TABLE, rows,
                      prefer="return=representation,resolution=ignore-duplicates")
     log(f"  froze {len(inserted)} of {len(rows)} row(s) into {SNAP_TABLE} "
