@@ -77,6 +77,60 @@
     return true;
   }
 
+  // --------------------------------------------------------------- headline
+  // The engine's headline accuracy, for a surface that shows ONE number.
+  //
+  // This exists because index.html was computing that number itself, from
+  // cfl.fetchEnginePicks() with no `source` filter at all — so the homepage
+  // headline, the graded-fight count, the Lock-tier rate and the "Why trust
+  // it?" tiles were averages over the live feed and the history replay pooled
+  // together. That is precisely the operation assertOneRecord exists to refuse,
+  // running on the most prominent statistic on the site.
+  //
+  // The fix is not a filter bolted onto the page. A page that computes its own
+  // headline can always drift back; a page that asks this module for it cannot,
+  // because the assertion sits on this side of the call. So the rule and the
+  // arithmetic live here together, and the page renders what it is handed.
+  //
+  // `expected` is required, not optional. "Which record is this?" is the whole
+  // question, and a caller that has not answered it has no business publishing
+  // a number.
+  function headlineFromPicks(rows, expected, opts) {
+    if (!expected) {
+      throw new Error('proof-gates: headlineFromPicks needs the record it is summarising');
+    }
+    const o = opts || {};
+    const minPicks = o.minPicks == null ? 100 : o.minPicks;
+    const minLocks = o.minLocks == null ? 50 : o.minLocks;
+
+    const graded = (rows || []).filter(function (r) {
+      return r && (r.hit === true || r.hit === false);
+    });
+
+    // Throws rather than returning a blended figure. A mixed set arriving here
+    // is a bug upstream, and the one thing that must not happen is it reaching
+    // a reader instead.
+    assertOneRecord(graded, expected);
+
+    const hits = graded.filter(function (r) { return r.hit === true; }).length;
+    const locks = graded.filter(function (r) { return r.tier === 'Lock'; });
+    const lockHits = locks.filter(function (r) { return r.hit === true; }).length;
+    const pct = function (w, n) { return n ? +((100 * w) / n).toFixed(1) : null; };
+
+    return {
+      record: expected,
+      n: graded.length,
+      hits: hits,
+      accuracy: pct(hits, graded.length),
+      lockN: locks.length,
+      lockHits: lockHits,
+      lockAccuracy: pct(lockHits, locks.length),
+      // Small samples do not get to be a headline. Same floors the page used.
+      publishable: graded.length >= minPicks,
+      locksPublishable: locks.length >= minLocks,
+    };
+  }
+
   // ------------------------------------------------------------------ status
   // What a number on screen is allowed to say about itself. Every figure the
   // Proof Center renders carries exactly one of these.
@@ -446,6 +500,7 @@
     recordKind: recordKind,
     splitByRecord: splitByRecord,
     assertOneRecord: assertOneRecord,
+    headlineFromPicks: headlineFromPicks,
     statusCopy: statusCopy,
     evaluateGate: evaluateGate,
     winProfit: winProfit,
