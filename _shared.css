@@ -238,6 +238,36 @@ nav.cfl-nav.cfl-nav-open .cfl-nav-burger span:nth-child(3) {
 }
 .cfl-nav-links a .full { display: inline; }
 .cfl-nav-links a .short { display: none; }
+
+/* The short nav labels were dead CSS until 2026-09-18: .short was set to
+   display:none at every width, so every link always rendered its long form and
+   the bar had no way to give. With Proof Center added there are four top-level
+   links plus the Tools menu and Pricing, which is more than fits between the
+   logo and the auth slot on a narrow laptop. Below 1040px the links fall back
+   to their short form.
+
+   This deliberately does NOT apply inside the mobile drawer: the @media
+   (max-width: 768px) block further down re-asserts the long labels and, being
+   later in the file at equal specificity, wins. So 769-1040px gets short
+   labels in the bar, and <=768px gets long labels in the drawer, where there
+   is a full screen of room for them. */
+@media (max-width: 1040px) {
+  .cfl-nav-links a .full { display: none; }
+  .cfl-nav-links a .short { display: inline; }
+}
+/* The one-line note under the matchup bullets. Deliberately quiet: it is a
+   scope statement, not a warning, and it should not compete with the bullets
+   it qualifies. Rendered by index.html, event.html and fighter.html from
+   cflInsights.CONTEXT_NOTE so the wording cannot drift between them. */
+.insight-note {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-3);
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
 .cfl-nav-tag {
   background: var(--red);
   color: #fff;
