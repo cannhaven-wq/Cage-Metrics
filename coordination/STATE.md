@@ -324,8 +324,8 @@ it. Three findings are load-bearing:
 1. **Four public claims on `index.html` contradict artifacts in this
    repository** — most seriously "value flags graded at real closing prices",
    which is the claim CLV-001 exists to withhold, and which ships in every
-   social unfurl. Replacement copy is drafted; nothing public has been edited.
-   **T-020**, L3.
+   social unfurl. **Resolved 2026-09-19** under [D-010](DECISIONS.md): all four
+   are off the page (T-020, done).
 2. **The test suite ran nowhere — fixed.** 624 tests, 4,567 subtests and the
    Node suites guard the frozen hashes, the CLV gate, the proof-gate separation
    and DUR-002's conformance guarantee. All passed, and nothing pulled them.
@@ -504,6 +504,26 @@ One Node build step (prerender: stubs, sitemap, feed) runs on a 6-hour cron;
 the Factor Lab is no longer part of it. Nothing
 on the card is gated in the frontend during beta.
 
+**The homepage is the card, and it claims no edge — shipped 2026-09-19 on
+UFC 331 night** (T-020 + T-021, [D-010](DECISIONS.md)). The hero names the
+current event ("*UFC 331: Van vs. Pantoja 2* — Model vs Market"), the rail
+counts what the backend holds (fights, forecasts locked and since when,
+sportsbook lines with book range and quote age, big disagreements) and lists
+the three widest gaps. Every fight row shows the model's number and the
+**sportsbooks-only vig-free** market number (`v_fight_market_vigfree`, book
+count and age on the cell, "stale" past three hours on a fight day) — the
+15-point suppression that hid real lines is gone from `index.html` and
+`event.html` — and the third cell is "Difference: N pts · CFL higher /
+market higher / mostly agree", never "Edge". The Value badge, the Value sort,
+the parlay strip and the "+N% model over market" figure are gone; the four
+contradicted claims from the audit are gone from the meta, hero, track note
+and how-to steps; the live record is described and linked, never numbered
+beside the simulation (D-007). `tests/model-vs-market.test.js` guards it.
+`Verify live site` (`.github/workflows/verify-live.yml`, manual, read-only)
+compares served bytes with the checkout and loads the live page in a browser.
+**Not shipped:** the rest of `fight-week-v2`, `revenue/trust-funnel-v1`, the
+email modal — T-033 to T-035.
+
 **The homepage headline is one record as of 2026-09-18** (T-026,
 [D-007](DECISIONS.md), PR #23 at `b1bc881a`). It was computed over the live feed
 and the history replay pooled together; it is now the **replay** record only,
@@ -535,9 +555,10 @@ ever in the direction that flatters the model. Meanwhile gaps of 4 to 15 points
 **ship as green edge percentages** ("+10% model over market"), which is the thing
 `CLAUDE.md`'s first rule prohibits and Q-14 explicitly did not touch. Direction
 approved: always show the line, remove every edge percentage, replace with
-neutral language. Not shipped on the night because `value` also drives the
+neutral language. Not shipped in the first pass because `value` also drives the
 `Value alert` badge and the Value sort — removing the suppression alone would
-start touting a +502 underdog at +33.7.
+start touting a +502 underdog at +33.7. **Shipped later the same night with all
+three pieces moved together** — see "Site" below and [D-010](DECISIONS.md).
 
 **Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
 `e91a7da`). The Proof Center is reachable from the nav and footer rather than

@@ -26,14 +26,16 @@ it died is usually worth more than the task was.
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
 | T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
-| T-020 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | blocked |
-| T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
 | T-029 | Seed `odds_api_usage` from the provider's own `x-requests-remaining` before applying the event-flow migration — an empty ledger reads as "0 spent, 500 left" | L1 | Claude | queued |
 | T-030 | Event Flow activation: produce `REAL_PAGE_CHECK.json` from a real UFCStats fetch, then uncomment the schedule | L1 | Claude | blocked |
 | T-031 | Apply `proposed_2026-09-16_fight_odds_immutability.sql` — **between cards**, never during one | L3 | Owner | queued |
 | T-032 | Retire a stale booking from the Event Flow observation instead of by hand, per `STALE_BOOKING_LIFECYCLE.md` §1 | L1 | Claude | queued |
+| T-033 | Bring the rest of `fight-week-v2` onto `main` — Event Hub pages, fight pages, Market Board, Fight Week Brief, pre/post-card digest, `hub_visits` prune, funnel events, sitemap ordering — rebased on the current tree and reconciled with D-007 | L2 | Claude | queued |
+| T-034 | Reconcile `revenue/trust-funnel-v1` with D-007: retire or re-route its claims manifest through `proof-gates.js`; keep the "forecast" wording, the single signup component and the funnel events | L2 | Claude | queued |
+| T-035 | `claude/email-capture-modal-gbkqri` — an email prompt after two minutes on every page. Never approved; the owner's call | L3 | Owner | proposed |
+| T-036 | The shared funnel CTA in `_shared.js` still says "every edge factor unlocked"; reword to match D-010 ("full matchup detail") and bump `_shared.js?v=` on all 26 consumers in one pass | L1 | Claude | queued |
 
 ## Closed
 
@@ -43,6 +45,8 @@ it died is usually worth more than the task was.
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |
 | T-010 | Run the existing Python and JS test suites in CI, on push and pull request | L0 | Claude | done |
+| T-020 | Replacement copy for the four contradicted public claims on `index.html` | L3 | Owner | done |
+| T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | done |
 | T-022 | Proof Center into the nav and footer, with analytics | L2 | Claude | done |
 | T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
@@ -214,6 +218,41 @@ the suppression on its own and Tuivasa's +33.7 stops being hidden and starts
 rendering a **Value alert** — the single most tout-y thing the site could
 publish, on a +502 underdog. The three pieces (percentage text, badge + sort,
 suppression) are coupled and have to move together, which is T-021 proper.
+
+**T-020 and T-021 shipped together, later the same night**, in
+[#38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38) under [D-010](DECISIONS.md), on the owner's instruction to make the approved
+changes live during the card. The three coupled pieces moved as one: the
+suppression is gone (from `event.html` too, which carried the same guard), the
+badge and sort became a neutral "Far from the market" badge and a
+"Disagreement" sort, and the percentage became "N pts · CFL higher / market
+higher / mostly agree" — the approved `fight-week-v2` wording — with the
+sub-label "a flag on the model, not the price" from ten points up. The market
+cell now reads the sportsbooks-only vig-free view with its book count and
+quote age, so "6 books" means six books and a stale line says so.
+`tests/model-vs-market.test.js` stops any of it drifting back. The isolation
+claim above was re-verified before shipping: nothing in the diff touches
+`build/`, the workflows that capture, or the database.
+
+### T-033 to T-035 — what this week's branches still hold
+
+**T-033.** `fight-week-v2` is the owner's own branch (2026-09-15) and the
+source of the approved event-first direction. D-010 carried its homepage
+wording and its sportsbooks-only market view; the rest — 128 files, 125
+commits behind `main` — was not merged during a live card. It also carries a
+three-tile record block that would put a live figure on the homepage, which
+D-007 decided against; that part needs reconciling, not rebasing.
+
+**T-034.** `revenue/trust-funnel-v1` (also 2026-09-15) predates D-007 and
+computes the homepage and Proof Center headline through its own claims
+manifest. `proof-gates.js` is now the one place that arithmetic may live, so
+the manifest either goes through the rulebook or goes. The wording work in it
+("forecast" for "pick", "model forecasts and market analysis, not handicapper
+picks" — already used by D-010), the single signup component and the funnel
+events are still wanted.
+
+**T-035.** `claude/email-capture-modal-gbkqri` (2026-09-17) asks for an email
+after two minutes on every page. No decision records it. It is the kind of
+launch-UX change COPY_STYLE.md's anti-tout rule is sensitive to, so it waits.
 
 **T-022 and T-023 are L2** — reversible, publish no new number, and T-023 can
 only narrow what the page asserts. Proceed and notify.

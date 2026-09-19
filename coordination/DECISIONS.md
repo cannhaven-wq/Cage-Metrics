@@ -547,3 +547,152 @@ gate is untouched.
 **Attribution note.** As D-006 through D-008: "Reed Cannon" per `CLAUDE.md`;
 normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
 owner's.
+
+---
+
+## D-010 — The homepage is the card, model vs market, and no edge is claimed
+
+| field | value |
+|---|---|
+| date | 2026-09-19 |
+| decided by | Reed Cannon |
+| task | T-020, T-021 |
+| level | L3 |
+| reversible | the code is; the claims are not, in either direction. The old copy was read for months and a retraction does not unread it; the new copy withdraws claims rather than making them, which is the direction gate #8 exists to force. Nothing here writes a row, applies a migration, or touches a frozen file |
+
+**Decision.** Ship, tonight, on the UFC 331 card — [PR #38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38) —
+the homepage centred on the current card; the sportsbook number always shown; every edge percentage, the
+`✦ Value alert` badge, the Value sort and the parlay strip removed; the four
+contradicted public claims replaced; the historical simulation and the live
+published record kept apart in the copy.
+
+**Quoted.** The owner, 2026-09-19:
+
+> "Make the approved Cannon Fight Lab website changes live tonight. People
+> will use the site during the card."
+
+> "A homepage centered on the current card, reflecting the approved
+> event-first direction and showing the real information already available
+> in the backend."
+
+> "Verified sportsbook consensus lines remain visible even when the model
+> strongly disagrees. Do not label available odds as 'no consensus line'
+> because of model disagreement."
+
+> "Remove unsupported edge percentages and associated Value badges, alerts,
+> and sorting coherently. Use neutral model-versus-market language without
+> implying proven betting value."
+
+> "Show appropriate timestamps and source/book counts. Distinguish stale or
+> unavailable data honestly."
+
+> "Remove unsupported or stale performance claims. Clearly separate verified
+> historical simulations from the live published record."
+
+> "Protect the active collection system. Do not change models, thresholds,
+> collection schedules, immutable snapshots, the odds ledger, or database
+> schema for this frontend release."
+
+> "You are authorized to merge and deploy the verified website changes."
+
+**Why it is L3.** Gate #8 twice over: it changes how existing public
+performance claims are described (T-020), and it changes how the
+model-vs-market comparison reads (T-021). The 2026-09-18 direction on T-021
+already stood — keep the governance rule, do not amend `CLAUDE.md` to keep the
+percentage UI — and the 2026-09-19 direction after the live finding said
+always show the line, remove every edge percentage, replace with neutral
+language. This entry is the approval to ship it, and the record of what shipped.
+
+**What ships, and where the wording comes from.**
+
+1. **The hero is the card.** "*[Event]* — Model vs Market", the lede, the
+   panel title "This card at a glance" and its foot ("CFL publishes model
+   forecasts and market analysis, not handicapper picks. A disagreement is not
+   a proven betting edge.") are taken from the owner's own `fight-week-v2`
+   branch (2026-09-15, decisions "approved by Reed 2026-09-16" in its PR body),
+   which is the approved event-first direction. The panel shows counts only:
+   fights on the card, forecasts locked and since when, sportsbook lines with
+   the book range and the last capture time, big disagreements, then the three
+   widest gaps linking to their rows.
+2. **The market number is always shown.** The 15-point suppression guard is
+   gone from `index.html` and from `event.html`, which carried the same guard.
+   The market cell now reads the **sportsbooks-only vig-free median**
+   (`v_fight_market_vigfree`, applied 2026-09-15 by the owner and approved in
+   the same branch as "sportsbooks-only vig-free consensus"), with the book
+   count and the quote's age on every cell, falling back to
+   `v_fight_odds_consensus` — labelled "sources", because that view counts
+   prediction markets and the synthetic consensus row too. A line older than
+   three hours on a fight day, or 36 hours otherwise, says **stale**; a fight
+   with no line says **no sportsbook line captured yet**. No message blames
+   the odds for a model disagreement.
+3. **The third cell is "Difference", in points, never "Edge".** "N pts · CFL
+   higher / market higher / mostly agree", with bands of 5 and 10 points taken
+   from the approved branch's `fight-week-core.js`. This follows that branch's
+   approved spec ("difference in points, a plain label") over the 2026-09-18
+   draft's no-number variant, because it is the later and more specific owner
+   direction; the number is the arithmetic between two figures already on
+   screen, it is never coloured green, never signed with a plus, and never
+   called an edge. At ten points or more the row carries a neutral "Far from
+   the market" badge and the sub-label says the gap is **a flag on the model,
+   not the price** — the owner's framing of 2026-09-19.
+4. **Removed outright:** the `+N% model over market` figure, the `✦ Value
+   alert` badge, the green value rail, the "Value" sort (now "Disagreement",
+   by absolute gap), the "N picks clear our 4% value bar" parlay strip, the
+   "Top edge · next card" hero panel, and `event.html`'s "Edge +Npp" figure
+   and "⚡ Value" badge.
+5. **The four contradicted claims** (AUDIT_2026-09-18 §1): the meta, Open
+   Graph and Twitter descriptions no longer say "graded at real closing
+   prices" and carry no hardcoded percentage; the hero no longer says the
+   betting line is wrong; the `track-note` no longer types `519-139`,
+   `+10.0%`, `12-5`, `down $61` or an "as of Aug 18" snapshot into prose; the
+   how-to steps no longer name age / cardio / takedown defence as the drivers
+   or tell the reader to "bet only on value". The closing-favourite sentence
+   stays, now sourced "in our own benchmark".
+6. **Two records, kept apart.** The homepage headline stays the replay record
+   through `proof-gates.js::headlineFromPicks`, labelled "(simulated)" on the
+   phone strip as well as on desktop now. The live published record is
+   described, not numbered, and points at the Proof Center — per D-007, it is
+   not shown beside the simulation until it can stand on its own. The
+   `fight-week-v2` three-tile record block, which would have put a live figure
+   on the homepage, is **not** carried for that reason.
+7. **Two shared-copy defects fixed on the way**, in `fight-insights.js`
+   (`?v=8` on all three consumers): the "books lean the other way" flag tested
+   `confidence - marketPct <= -3`, which — a pick always being above 50 —
+   could only fire when the market was *more* sure of the same fighter, and
+   then said the books leaned the other way; it now keys on the market side,
+   and a new flag covers the model sitting ten or more points above the
+   market. And a generational suffix is no longer a surname ("they give Jr.
+   about a 39% chance").
+
+**Explicitly NOT shipped, and why.**
+
+- The rest of `fight-week-v2` — Event Hub pages, per-fight pages, the Market
+  Board, the Fight Week Brief signup, the pre/post-card digest, `hub_visits`
+  and its prune workflow, funnel events, sitemap ordering. 128 files, 125
+  commits behind `main`, touching `_shared.js`, `prerender.js` and two
+  workflows. Merging it during a live card is not a verified release, and its
+  record block conflicts with D-007. Queued as **T-033**.
+- `revenue/trust-funnel-v1` — its claims manifest computes the headline its
+  own way, which D-007 and `proof-gates.js` have since superseded. Queued as
+  **T-034** so the parts still wanted (the "forecast" wording, one signup
+  component, funnel events) are not lost.
+- `claude/email-capture-modal-gbkqri` — never approved. **T-035**, the owner's.
+- No model, threshold, schedule, snapshot, ledger or schema change. Checked,
+  not assumed: the diff touches `index.html`, `event.html`, `fighter.html`
+  (a cache-bust only), `fight-insights.js`, one new test, one new read-only
+  workflow, and the coordination files. `fight_week_views.sql` is added to the
+  tree as the record of views already live in the database; nothing applies it.
+
+**How it was verified before merge.** Every Node suite and all 624 Python
+tests green, including the new `tests/model-vs-market.test.js`; the page
+rendered in headless Chromium against the real UFC 331 rows (12 active
+fights, the retired Moicano–Ortega booking dropped, every market cell shown
+with "6 books · vig removed" and its age, Tuivasa's 34-point gap first under
+the Disagreement sort, no horizontal overflow at 390 px). A new
+`Verify live site` workflow (`contents: read`, manual) compares the served
+bytes at cannonfightlab.com against the checkout and loads the live page in a
+browser, because the agent environment cannot reach the site directly.
+
+**Attribution note.** As D-006 through D-009: "Reed Cannon" per `CLAUDE.md`;
+normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
+owner's.

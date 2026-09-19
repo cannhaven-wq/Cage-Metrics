@@ -16,8 +16,13 @@
 (function () {
   const CARDIO_RANK = { tireless: 5, steady: 4, tapers: 3, fades: 2, collapses: 1 };
 
+  // Surname for tight copy. A generational suffix ("Jr.", "III") is not a
+  // name — "Michael Aswell Jr." is Aswell, not Jr. — so it is skipped when
+  // there is a name in front of it.
+  const NAME_SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
   function lastName(n) {
     const p = String(n || '').trim().split(/\s+/);
+    while (p.length > 1 && NAME_SUFFIX.test(p[p.length - 1])) p.pop();
     return p[p.length - 1] || n;
   }
 
@@ -111,9 +116,22 @@
     if (!hasTape(picked)) {
       flags.push(`${lastName(picked.name)} has no UFC fights on record — the model is working off very little tape here.`);
     }
-    // The market likes the other guy
-    if (marketPct != null && confidence - marketPct <= -3) {
+    // What the market says about this pick. marketPct is the vig-free market
+    // probability of the PICKED fighter, so:
+    //   * below 50, the books favour the opponent — they lean the other way;
+    //   * at or above 50 but well under our number, the books agree on the
+    //     winner and are much less sure — a gap that wide is more often the
+    //     model missing something than the books mispricing it. The market
+    //     deserves the presumption of correctness until we have shown
+    //     otherwise, and we have not.
+    // (This used to test `confidence - marketPct <= -3`, which — because a
+    // pick is always above 50 — could only fire when the market was MORE
+    // confident in the same fighter, and then said the books leaned the other
+    // way. Wrong in every case it fired.)
+    if (marketPct != null && marketPct < 50) {
       flags.push(`The books lean the other way — they give ${lastName(opp.name)} about a ${Math.round(100 - marketPct)}% chance, and the market's price is right more often than any model.`);
+    } else if (marketPct != null && confidence - marketPct >= 10) {
+      flags.push(`The books are much less sure — they give ${lastName(picked.name)} about a ${Math.round(marketPct)}% chance. A gap this wide is more often the model missing something than the market being wrong.`);
     }
     // Opponent has the cardio edge
     const cp = cardioFor(ctx.cardioMap, picked.id, ctx.weightClass);
