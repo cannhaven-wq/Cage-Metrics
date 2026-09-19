@@ -30,6 +30,10 @@ it died is usually worth more than the task was.
 | T-021 | A model-vs-market representation that makes no unsupported edge claim | L3 | Owner | blocked |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
+| T-029 | Seed `odds_api_usage` from the provider's own `x-requests-remaining` before applying the event-flow migration — an empty ledger reads as "0 spent, 500 left" | L1 | Claude | queued |
+| T-030 | Event Flow activation: produce `REAL_PAGE_CHECK.json` from a real UFCStats fetch, then uncomment the schedule | L1 | Claude | blocked |
+| T-031 | Apply `proposed_2026-09-16_fight_odds_immutability.sql` — **between cards**, never during one | L3 | Owner | queued |
+| T-032 | Retire a stale booking from the Event Flow observation instead of by hand, per `STALE_BOOKING_LIFECYCLE.md` §1 | L1 | Claude | queued |
 
 ## Closed
 
@@ -43,6 +47,7 @@ it died is usually worth more than the task was.
 | T-023 | Label the explanation layer as matchup context, not model internals | L2 | Claude | done |
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
 | T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js`, and publish the corrected cohort | L3 | Owner | done |
+| T-028 | UFC 331 launch activation — apply the additive capture migrations, reconcile the card | L3 | Owner | done |
 
 ---
 
@@ -264,3 +269,45 @@ is worth more than the task was: the *shape* of the work — detect first row,
 record provenance, freeze the script, rerun guards, and **stop if any guard
 fails** — is the template for the next experiment that arms, and D-002's
 classification of it as L1 execution rather than an L3 decision still stands.
+
+---
+
+## The UFC 331 launch block (T-028 to T-032)
+
+**T-028 — done 2026-09-19** under [D-009](DECISIONS.md). It is L3 because it
+applies production migrations (gate #5), not because any step was arguable.
+
+The finding that made it urgent rather than routine: **the odds job had captured
+nothing on a card day.** `.github/workflows/odds.yml` wakes on `*/5`, and every
+cadence tier gated on the wall clock — `min % cadence < WAKE_INTERVAL_MIN`.
+That is equivalent to a cadence only if the cron really fires every five
+minutes. GitHub throttles a `*/5` schedule to a handful of deliveries a day at
+arbitrary minutes: on 2026-09-19 they landed at :43, :30, :35 and :35, never
+once inside minutes 0–4. So the gate never opened, and the only UFC 331
+moneyline rows on file that morning came from another writer.
+
+Fixed in `build/fetch-odds.js` by measuring **elapsed time since our own last
+capture** instead of the clock's phase, falling back to the phase test whenever
+the last capture is unreadable — so a missing ledger degrades to the old
+behaviour and never to "capture every wake". Seven regression tests, two of them
+mutation-checked, including a replay of the four real wakes. Simulated against
+tonight's card the same throttled wakes yield **10 captures instead of 1**.
+
+**T-029** is the reason the event-flow migration did not go with it. It creates
+`odds_api_usage` empty, and `remainingCredits([], undefined)` returns the full
+500 — so the governor would read "nothing spent this month", which is false, and
+take the finest rung. Seed the ledger from the provider's own
+`x-requests-remaining` on a capture first; then the migration is safe.
+
+**T-030** is blocked on the environment, not on a decision. `--execute` refuses
+until `cfl_engine/event_flow/REAL_PAGE_CHECK.json` exists, and it cannot be
+produced from CI or from an agent session: UFCStats answers 403 to both.
+
+**T-031** carries its own timing rule. It adds triggers to `fight_odds` while
+another repository writes to it, so it lands **between cards**. D-004 already
+records that it is the owner's to apply.
+
+**T-032** is the principled version of what T-028 did by hand. 47328 was retired
+from three independent observations, but `STALE_BOOKING_LIFECYCLE.md` §1 wants
+the retirement to fall out of `plan_append`'s `stale_fights` automatically. That
+needs T-030 first.

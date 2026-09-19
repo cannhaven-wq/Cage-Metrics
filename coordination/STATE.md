@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-18
+Last updated: 2026-09-19
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -23,8 +23,25 @@ R-07 is applied per quote against an immutable lock from `pre_fight_snapshots`;
 the posted price must name and prove its source quote; the cutoff is stored and
 hashed. **Amendment 7 makes settlement write-once**: an observation is written
 once and every later run verifies it and writes nothing, aborting loudly on
-drift. **Five migrations written and none applied. Publication is still shut** —
-0 of 100 observations, 0 of 20 events.
+drift. **Two of the five migrations are now APPLIED** (2026-09-19,
+[D-009](DECISIONS.md)) — the `fight_odds` capture columns and
+`add_bout_order_migration.sql`. **Publication is still shut** — 0 of 100
+observations, 0 of 20 events.
+
+**UFC 331 is the first card captured under the capture path.** At 15:49 UTC on
+2026-09-19, 142 rows across 6 books landed with **118 carrying the full §4
+provenance set** — the first CLV-eligible quotes CFL has recorded. Nothing is
+scored and nothing is published; the capture gate and the publication gate stay
+as separate as D-003 made them.
+
+**It nearly did not happen, and the reason is worth keeping.** Every cadence
+tier in `build/fetch-odds.js` gated on the wall clock (`min % cadence <
+WAKE_INTERVAL_MIN`), which equals a cadence only if the `*/5` cron really fires
+every five minutes. GitHub throttles it to a handful of deliveries a day at
+arbitrary minutes — on the 19th they were :43, :30, :35 and :35, never inside
+minutes 0–4 — so on a **card day** the job captured nothing at all. The gate now
+measures elapsed time since our own last capture and falls back to the phase
+test when that is unreadable. Same throttled wakes, **10 captures instead of 1**.
 
 **This file does not own research truth.**
 [`CFL_RESEARCH_STATE.md`](../CFL_RESEARCH_STATE.md) is authoritative for every
@@ -357,7 +374,16 @@ Amendment 4's tier 4 removed the dependency; completions now buy **lead-time
 precision**, not the metric. Doing nothing costs precision, not coverage.
 Nothing has been bought, priced or enabled.
 
-**Three CLV-001 migrations are written and unapplied, and the order matters.**
+**Migration status, corrected 2026-09-19.** (1) below is **APPLIED**, as is
+`add_bout_order_migration.sql`, which adds `fights.is_active` and `bout_order` —
+two columns `cfl.orderCard` in `_shared.js` had been reading for months against
+a schema that did not have them. (2) and (3) are **still unapplied**, and (2)
+was deliberately held on the 19th: it creates `odds_api_usage` **empty**, and an
+empty ledger reads as *"0 spent, 500 remaining"*, which is false and would send
+the credit governor to its finest rung on a wrong premise. Seed it first —
+**T-029**.
+
+**Three CLV-001 migrations are written, and the order matters.**
 All additive-only — no DROP, no DELETE, no destructive UPDATE, no existing
 trigger changed — and all filed outside the repo root so the "apply root `*.sql`"
 habit cannot pick them up. None touches `v_fight_start_best`, which lives in a
@@ -488,6 +514,16 @@ own `TOO EARLY` chip until it can stand alone. The arithmetic lives in
 back to computing its own headline — and that assertion now fails closed: a
 graded row whose `source` resolves to no record stops the number rather than
 being waved past the gate and counted anyway.
+
+**The UFC 331 card is reconciled, 2026-09-19.** UFC removed Moicano–Ortega
+(fight 47328); `fights` still carried it, so the card read 13 where the real one
+is 12. It is now `is_active = false` — the **only** retired row in the database —
+and `cfl.orderCard` drops it with no frontend change. Nothing was deleted: its
+snapshot, its model pick and all 40 captured quotes stand, because a prediction
+published against a bout later cancelled *was* published. Retired means "not on
+the current card", never "did not happen". Doing it by hand is the stopgap;
+`STALE_BOOKING_LIFECYCLE.md` §1 wants it falling out of Event Flow's own
+`stale_fights` — **T-032**, behind **T-030**.
 
 **Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
 `e91a7da`). The Proof Center is reachable from the nav and footer rather than

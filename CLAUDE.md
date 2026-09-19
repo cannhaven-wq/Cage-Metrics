@@ -157,8 +157,17 @@ This file used to describe the odds workflow as **disabled**. It is not, and was
 not — `Fetch UFC odds` (`.github/workflows/odds.yml`) is an **active** workflow.
 Anything reasoning from "that one's off" was reasoning from a wrong premise.
 
-Its cron wakes **every 5 minutes** (`*/5`). That is a wake rate, not a capture
-rate, and the two are deliberately different:
+Its cron *asks* to wake **every 5 minutes** (`*/5`). That is a request, not a
+schedule, and not a capture rate either. **GitHub throttles high-frequency
+schedules**: measured 2026-09-19 this workflow was delivered four times in a
+day, at :43, :30, :35 and :35. Never reason as though `*/5` means every five
+minutes — it does not, and a tier that needs a wake at a particular *minute*
+will simply never fire (that defect cost a whole card day of capture; see
+`coordination/STATE.md`). The cadence gate therefore measures **elapsed time
+since our own last capture**, which is robust to whenever a wake happens to
+arrive.
+
+The three tiers are:
 
 - `build/fetch-odds.js::shouldCaptureNow()` decides **before any API call**
   whether the wake is worth a credit. A quiet wake queries Supabase and exits,
@@ -171,17 +180,18 @@ rate, and the two are deliberately different:
   month, and degrades 5 → 10 → 15 → 30 minutes to fit. **An unreadable ledger
   reads as tight, never as unlimited.** No paid tier without an L3.
 
-**Until the CLV-001 migrations are applied, effective capture stays on the
-hourly / daily tiers.** The "in flow" tier needs `fight_bout_order` and
-`fight_bout_completions` to know a card's running order, and the budget ceiling
-needs `odds_api_usage` — all three are created by
-`research/clv/proposed_2026-09-16_event_flow.sql` and
-`proposed_2026-09-16_fight_odds_capture.sql`, which are **written and not
-applied**. Each missing object is handled explicitly: the script warns, treats
-the budget as tight, and no card can be identified as in flow. So the `*/5` wake
-is real today but the 5-minute cadence is not reachable yet — applying those
-migrations is what turns it on, and that is the change to plan for, not the
-merge.
+**Migration status (updated 2026-09-19).**
+`proposed_2026-09-16_fight_odds_capture.sql` is **applied** — quotes now carry
+the CLV-001 §4 provenance fields, and the first card captured under it was UFC
+331. `proposed_2026-09-16_event_flow.sql` is **not**, deliberately: it creates
+`odds_api_usage` **empty**, and an empty ledger reads as *"0 spent, 500
+remaining"*, which is false and would send the credit governor to its finest
+rung on a wrong premise. Seed it from the provider's own
+`x-requests-remaining` first (T-029). Until it lands, `fight_bout_order` and
+`fight_bout_completions` are absent, so no card can be identified as **in
+flow** by running order and the budget reads as unknown — which the governor
+treats as tight, giving the 30-minute rung. That still clears the frozen
+45-minute staleness limit, so it costs **lead time, never correctness**.
 
 Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
