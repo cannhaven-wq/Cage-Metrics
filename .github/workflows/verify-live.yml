@@ -1,0 +1,117 @@
+name: Verify live site
+
+# Read-only check of what cannonfightlab.com actually serves, run on demand.
+#
+# Two things, both printed to the log so they can be read without downloading
+# anything:
+#
+#   1. The served bytes. It fetches the homepage and the scripts it loads,
+#      prints the response headers that matter for caching (cache-control,
+#      age, etag, last-modified, x-served-by) and compares each body's sha256
+#      against the same file in this checkout. MATCH means visitors are being
+#      handed the commit this ran against; MISMATCH names the file.
+#
+#   2. What a visitor sees. Headless Chromium opens the live page with the
+#      production database behind it, waits for the card, and prints the hero,
+#      the odds-status line, every fight row's model / market / difference
+#      cells and a set of yes/no checks. Screenshots (desktop and phone) are
+#      uploaded as an artifact.
+#
+# No secret is used and none is needed. `contents: read` — it can neither
+# push nor comment. It is manual because it is a check, not a gate: the thing
+# it verifies (a Pages deploy) happens outside pull requests.
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Site to verify'
+        required: false
+        default: 'https://cannonfightlab.com'
+
+permissions:
+  contents: read
+
+jobs:
+  served-bytes:
+    name: Served bytes match this checkout
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fetch and compare
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://cannonfightlab.com' }}
+        shell: bash
+        run: |
+          set -u
+          echo "checkout: $(git rev-parse HEAD)"
+          status=0
+          compare() {
+            local url="$1" local="$2" label="$3"
+            echo "::group::$label"
+            # Plain fetch: what a visitor gets, CDN cache included.
+            curl -sS -L -D /tmp/h.txt -o /tmp/plain.bin "$BASE_URL$url" || true
+            grep -iE '^(HTTP/|cache-control|age|etag|last-modified|x-served-by|x-cache|content-type)' /tmp/h.txt | sed 's/^/  plain: /'
+            # Cache-busted fetch: the origin's current copy.
+            curl -sS -L -D /tmp/h2.txt -o /tmp/fresh.bin "$BASE_URL$url?nocache=$GITHUB_RUN_ID" || true
+            grep -iE '^(HTTP/|age|x-cache)' /tmp/h2.txt | sed 's/^/  fresh: /'
+            local want got_plain got_fresh
+            want=$(sha256sum "$local" | cut -c1-64)
+            got_plain=$(sha256sum /tmp/plain.bin | cut -c1-64)
+            got_fresh=$(sha256sum /tmp/fresh.bin | cut -c1-64)
+            echo "  checkout sha256: $want"
+            echo "  served (plain):  $got_plain  $([ "$want" = "$got_plain" ] && echo MATCH || echo MISMATCH)"
+            echo "  served (fresh):  $got_fresh  $([ "$want" = "$got_fresh" ] && echo MATCH || echo MISMATCH)"
+            if [ "$want" != "$got_fresh" ]; then status=1; fi
+            echo "::endgroup::"
+          }
+          compare /index.html index.html "index.html"
+          compare / index.html "/ (root)"
+          compare "/fight-insights.js" fight-insights.js "fight-insights.js (plain path)"
+          compare "/_shared.js" _shared.js "_shared.js"
+          compare "/proof-gates.js" proof-gates.js "proof-gates.js"
+          compare "/event.html" event.html "event.html"
+          compare "/fighter.html" fighter.html "fighter.html"
+          echo "::group::cache-bust query strings the served homepage asks for"
+          grep -oE 'src="[^"]+\?v=[^"]+"' /tmp/fresh.bin || true
+          curl -sS -o /dev/null -w '  fight-insights.js?v=8 -> HTTP %{http_code}, %{size_download} bytes\n' "$BASE_URL/fight-insights.js?v=8"
+          echo "::endgroup::"
+          if [ "$status" -ne 0 ]; then
+            echo "The origin is not serving this checkout for at least one file (see MISMATCH above)."
+            exit 1
+          fi
+          echo "Every fetched file matches this checkout at the origin."
+
+  rendered-page:
+    name: What a visitor sees
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Load the live page and report
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://cannonfightlab.com' }}
+          OUT_DIR: live-shots
+        run: node .github/scripts/verify-live.js
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-screenshots-${{ github.run_id }}
+          path: live-shots/
+          if-no-files-found: warn

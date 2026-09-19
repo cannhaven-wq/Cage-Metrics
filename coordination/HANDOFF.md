@@ -11,6 +11,73 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-19 (b) — The homepage is the card, and it claims no edge
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-19
+
+Frontend release on UFC 331 night, on the owner's instruction to make the
+approved website changes live during the card. Recorded as
+[D-010](DECISIONS.md); T-020 and T-021 are done.
+
+### What is now live
+
+| | |
+|---|---|
+| hero | the current card — "*UFC 331: Van vs. Pantoja 2* — Model vs Market" — with a rail of counts (fights, forecasts locked since Sep 7, sportsbook lines with book range and quote age, big disagreements) and the three widest gaps |
+| market cell | always shown; sportsbooks-only vig-free median (`v_fight_market_vigfree`), "6 books, vig removed · N min ago", **stale** past 3 h on a fight day / 36 h otherwise, "no sportsbook line captured yet" when there is none |
+| third cell | "Difference · N pts · CFL higher / market higher / mostly agree"; from 10 points a neutral "Far from the market" badge and "a flag on the model, not the price" |
+| removed | `+N% model over market`, `✦ Value alert`, the Value sort, the parlay strip, "Top edge · next card", and `event.html`'s "Edge +Npp" / "⚡ Value" |
+| claims | "graded at real closing prices" and the hardcoded 61% / 75% out of every meta/OG/Twitter string; "find where the betting line is wrong" out of the hero; `519-139`, `+10.0%`, `12-5`, `down $61`, "as of Aug 18" out of the prose; the how-to steps no longer name retired drivers |
+| records | replay headline unchanged, via `proof-gates.js`, "(simulated)" on the phone strip too; the live record described and linked, not numbered (D-007) |
+| shared copy | `fight-insights.js?v=8`: "books lean the other way" now fires only when the books favour the opponent (it used to fire only when they were *more* sure of our pick); a new flag for the model ten or more points above the market; "Jr." is no longer a surname |
+
+### The reconciliation, in one paragraph
+
+`main` at `194e1e9` was live and no PR was open. The week's unmerged work was
+three branches: the owner's `fight-week-v2` and `revenue/trust-funnel-v1`
+(both 2026-09-15, both >120 commits behind `main`) and an unapproved email
+modal. D-010 carried the approved *direction* and the approved *wording* from
+`fight-week-v2` — event-first hero, "model vs market", the sportsbooks-only
+market view it added to the database on the 15th, its 5/10-point bands — into
+the current `index.html` rather than merging 128 files during a live card. The
+rest is T-033 to T-035, each with its reason. No Codex changes were found on
+any branch or in the working tree.
+
+### Verified
+
+Every Node suite and all 624 Python tests green, including the new
+`tests/model-vs-market.test.js` (14 assertions). Rendered in headless Chromium
+against the real UFC 331 rows: 12 active fights, the retired Moicano–Ortega
+booking dropped, every market cell present, Tuivasa's 34-point gap first under
+Disagreement, no overflow at 390 px, no console errors. The agent environment
+cannot reach cannonfightlab.com or Supabase directly, so the served bytes and
+the rendered live page are checked by the new `Verify live site` workflow.
+
+### Held to scope
+
+No model, threshold, schedule, snapshot, ledger or schema change. `build/` is
+untouched. The `odds.yml` capture and the immutability plan (T-031) are exactly
+where the previous entry left them.
+
+## Next action
+
+**Owner:** two calls. (1) **T-035** — the email modal, yes or no. (2) The
+order of **T-033** and **T-034**: the Event Hub / Market Board work is the
+larger product step and the claims manifest is the thing it must not
+reintroduce.
+
+**ChatGPT:** the claim worth attacking is that "N pts · CFL higher" is a
+disagreement and not an edge percentage under `CLAUDE.md` line 1. The defence
+is that it is the arithmetic between two numbers already on screen, neutral in
+colour and sign, never called an edge, and carrying a flag against the model
+from ten points up. If a reader would still take "34 pts · CFL higher" as a
+reason to bet, the third cell should lose the number, as the 2026-09-18 draft
+proposed, and only the label should stay.
+
+---
+
 ## 2026-09-19 — UFC 331: the first card captured under the CLV capture path
 
 **From:** Claude
@@ -149,71 +216,3 @@ the evidence for it already exists in FE-001.
 believing the pick engine's record factor was validated. That was the failure
 mode this whole publication was shaped around, and it is a judgement about
 wording rather than data.
-
----
-
-## 2026-09-18 (e) — the corrected Factor Lab, prepared for publication
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-18
-
-Measurement integrity only. Prepared, **not merged**.
-
-### What is in the publication PR
-
-The corrected artifact, byte-verified rather than retyped: the candidate was
-reconstructed from the validation run's own log (gzip+base64) and its sha256
-matches what that run printed — `ba3c9077…`, 16,800 bytes. Its comparison
-against the published file reproduces run 35377644563 exactly: same seven
-verdicts, same 28 resized buckets, `fights_scored` control unmoved at 8,739.
-
-The artifact download could not be used: it redirects to blob storage the
-network refuses. So the validation workflow now also emits the candidate to its
-log, checksummed — a reviewer who cannot fetch the artifact should not be
-reduced to retyping numbers out of a table.
-
-### The problem the copy exists to prevent
-
-`ufc_record` clearing the bar is **not** evidence for `edges.js`'s record
-factor. Two measurements, one everyday word:
-
-| | Factor Lab `ufc_record` | `edges.js` recordEdge |
-|---|---|---|
-| record | **UFC-only** | **whole-career professional** |
-| quantity | raw win-rate gap | Laplace-smoothed |
-| market-even | **58.4%, `real`** | **~50.2%, a coin flip** (FE-001) |
-
-Left alone, the site would publish a green light on one and a reader would take
-it for the other — the one that actually picks fights. So `stats.html` carries a
-standing caveat, and `edges.html` and `methodology.html` carry **dated**
-corrections that report the new result and keep the shipped factor unsupported
-in the same breath. `tests/record-factors-distinct.test.js` (14 assertions)
-stops that drifting back.
-
-### A pre-existing error found on the way
-
-`stats.html` printed `fights_scored` into a sentence describing the market-even
-cohort — *"tested each one on the 8,739 fights where the odds were even"*, when
-8,739 is every scored fight and the even-money cohort is a seventh of that. Both
-numbers are named now. It was wrong before this work and is not caused by it.
-
-### Held to scope
-
-`edges.js`, thresholds, engine behaviour, Event Flow, migrations and
-monetisation are untouched — checked, not assumed. The scheduled publication
-gate stays shut: this is one reviewed commit of `factor-rates.json`, not a
-return to unattended refreshes. **Age stays retired.**
-
-## Next action
-
-**Owner:** final review of the publication PR. It is the only thing standing
-between the corrected numbers and `stats.html`.
-
-**ChatGPT:** the claim worth attacking is the copy, not the arithmetic. The
-arithmetic has two independent routes to 1,220. The question is whether a reader
-of `stats.html` could still come away believing the pick engine's record factor
-has been validated — because that is the failure this PR is shaped to prevent,
-and it is a judgement about wording rather than about data.
-
----

@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>Cannon Fight Lab — UFC Models That Show Their Work</title>
-<meta name="description" content="A tape-only UFC engine graded in public — 61% straight-up on 3,200+ fights it never trained on, Locks at 75% — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights. Every miss shown.">
-<meta name="keywords" content="UFC predictions, MMA betting analytics, UFC fighter stats, UFC cardio score, UFC fight model, MMA edge factors, accurate UFC picks">
+<title>Cannon Fight Lab — UFC Model vs Market, Every Card</title>
+<meta name="description" content="The next UFC card, model vs market: CFL's odds-blind forecast for every fight, locked before the bell, beside the sportsbook number with the cut removed. Graded in public, misses included. Model forecasts and market analysis, not handicapper picks.">
+<meta name="keywords" content="UFC predictions, UFC odds, UFC model vs market, MMA betting analytics, UFC fight forecast, UFC card analysis, UFC fighter stats">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/">
@@ -15,8 +15,8 @@
 <!-- ===== Open Graph (Facebook, LinkedIn, Discord, iMessage) ===== -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
-<meta property="og:description" content="A tape-only UFC engine graded in public — 61% straight-up on 3,200+ fights it never trained on, Locks at 75% — plus value flags graded at real closing prices and the Factor Lab: which stats actually predict fights. Every miss shown.">
+<meta property="og:title" content="Cannon Fight Lab — UFC Model vs Market, Every Card">
+<meta property="og:description" content="The next UFC card, model vs market: CFL's odds-blind forecast for every fight, locked before the bell, beside the vig-free sportsbook number. Graded in public, misses included. Model forecasts and market analysis, not handicapper picks.">
 <meta property="og:url" content="https://cannonfightlab.com/">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -26,8 +26,8 @@
 
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Cannon Fight Lab — UFC Models That Show Their Work">
-<meta name="twitter:description" content="A tape-only UFC engine graded in public — 61% on 3,200+ never-seen fights, every pick locked, every miss shown — plus the Factor Lab: which stats actually predict fights.">
+<meta name="twitter:title" content="Cannon Fight Lab — UFC Model vs Market, Every Card">
+<meta name="twitter:description" content="The next UFC card, model vs market. Every forecast locked before the bell, every miss shown, and the one test we have not passed named on the page. Plus the Factor Lab: which fight stats actually predict winners.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -43,7 +43,7 @@
   "name": "Cannon Fight Lab",
   "alternateName": "CFL",
   "url": "https://cannonfightlab.com/",
-  "description": "UFC fight models that show their work: a tape-only predictor, a value model graded against the opening line, and the Factor Lab — every stat tested against 8,600+ decided fights, then again on evenly-priced fights alone.",
+  "description": "UFC fight forecasts that show their work: an odds-blind model forecast for every fight on the next card, locked before the bell and shown beside the vig-free sportsbook number, graded in public. Plus the Factor Lab — which fight stats survive a market-controlled test.",
   "applicationCategory": "SportsApplication",
   "operatingSystem": "Any",
   "creator": {
@@ -128,6 +128,24 @@
 #home .spot-stats .cell .n.green { color: var(--green); }
 #home .spot-note { font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
 
+/* "This card at a glance" — counts of what the backend actually holds for
+   the card, then the widest model-vs-market gaps. No edge, no value. */
+#home .glance { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+#home .glance .cell { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; }
+#home .glance .cell .t { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#home .glance .cell .n { font-family: var(--font-display); font-weight: 800; font-size: 22px; color: #fff; line-height: 1.15; font-variant-numeric: tabular-nums; }
+#home .glance .cell .n.small { font-size: 14px; }
+#home .glance .cell .s { font-size: 10.5px; color: var(--text-3); line-height: 1.3; margin-top: 2px; }
+#home .glance .cell.stale .s { color: var(--amber); }
+#home .gap-hd { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin: 14px 0 6px; }
+#home .gap-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+#home .gap-list a { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 9px; background: var(--bg-2); text-decoration: none; color: inherit; transition: .15s; }
+#home .gap-list a:hover { border-color: var(--line-2); }
+#home .gap-list .gm { font-size: 12.5px; font-weight: 600; color: var(--text); }
+#home .gap-list .gl { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; color: var(--text-2); white-space: nowrap; align-self: center; }
+#home .gap-list .gn { grid-column: 1 / -1; font-size: 11px; color: var(--text-3); font-variant-numeric: tabular-nums; }
+#home .gap-empty { font-size: 12px; color: var(--text-3); padding: 4px 0; }
+
 /* Accuracy proof panel */
 #home .panel { background: linear-gradient(180deg, var(--bg-1), var(--bg)); border: 1px solid var(--line);
   border-radius: 18px; padding: 24px; box-shadow: var(--shadow); }
@@ -158,6 +176,11 @@
 #home .card-head .eyebrow-live .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); }
 #home .card-head h2 { font-family: var(--font-display); font-weight: 800; font-size: 30px; color: #fff; margin-top: 6px; }
 #home .card-head .meta { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+/* Sportsbook-line status for the whole card: how many fights carry a line,
+   how many books, and when the last quote landed. Stale is said out loud. */
+#home .card-head .odds-status { font-size: 12px; color: var(--text-3); margin-top: 5px; }
+#home .card-head .odds-status.stale { color: var(--amber); }
+#home .card-head .odds-status:empty { display: none; }
 #home .filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin: 10px 0 14px; }
 #home .fl-label { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
 #home .fl-hint { font-size: 12.5px; color: var(--text-3); }
@@ -172,7 +195,6 @@
 #home .fight { position: relative; overflow: hidden; background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: flex; flex-direction: column; gap: 14px; transition: .16s; }
 /* Tier rail across the top — reads the card's verdict before any of its text. */
 #home .fight::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; background: var(--tier, transparent); }
-#home .fight.tier-value { --tier: var(--green); }
 #home .fight.tier-high { --tier: rgba(63,208,122,.5); }
 #home .fight.tier-med { --tier: rgba(255,181,71,.55); }
 #home .fight.tier-low { --tier: rgba(160,168,180,.3); }
@@ -189,7 +211,10 @@
 #home .cbadge.high { background: rgba(63,208,122,.15); color: var(--green); }
 #home .cbadge.med { background: rgba(255,181,71,.15); color: var(--amber); }
 #home .cbadge.low { background: rgba(160,168,180,.12); color: var(--text-2); }
-#home .cbadge.value { background: transparent; border: 1px solid var(--green); color: var(--green); }
+/* A wide model-vs-market gap. Deliberately not green: it is a flag that the
+   two numbers disagree, not a signal that one of them is a bet. */
+#home .cbadge.gap { background: transparent; border: 1px solid var(--line-2); color: var(--text-2); }
+#home .badges { display: inline-flex; gap: 5px; flex-wrap: wrap; justify-content: flex-end; }
 #home .cbadge.pending { background: var(--bg-3); color: var(--text-3); }
 #home .matchup { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; }
 #home .side { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; padding: 12px 6px; border-radius: 10px; border: 1px solid transparent; text-decoration: none; }
@@ -220,6 +245,7 @@
 #home .probs .cell .n.green { color: var(--green); }
 #home .probs .cell .n.flat { color: var(--text-3); }
 #home .probs .cell .s { font-size: 9.5px; color: var(--text-3); line-height: 1.2; }
+#home .probs .cell.stale .s { color: var(--amber); }
 
 /* Factor + red-flag lists */
 #home .edges-hd { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: -6px; }
@@ -233,17 +259,13 @@
 #home .edges li svg { width: 14px; height: 14px; fill: none; stroke: var(--green); stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; margin-top: 3px; flex-shrink: 0; }
 #home .fight-note { font-size: 12px; color: var(--text-3); }
 
-/* Below-the-card CTA + fineprint */
-#home .hp-parlay { display: flex; align-items: center; justify-content: space-between; gap: 14px 20px; flex-wrap: wrap; margin-top: 20px; padding: 16px 18px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; }
-#home .hp-parlay[hidden] { display: none; }
-#home .hp-parlay .tx { flex: 1; min-width: 260px; font-size: 13px; line-height: 1.55; color: var(--text-2); }
-#home .hp-parlay .tx strong { color: var(--text); }
-#home .hp-parlay .tx a { color: var(--green); font-weight: 600; }
+/* Below-the-card fineprint */
 #home .card-foot { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 22px; }
 #home .card-foot .fineprint { font-size: 11.5px; color: var(--text-3); text-align: center; }
 
 /* ===== Track record ===== */
-#home .track-note { color: var(--text-2); font-size: 13.5px; line-height: 1.55; max-width: 860px; margin: 6px 0 20px; }
+#home .track-note { color: var(--text-2); font-size: 13.5px; line-height: 1.55; max-width: 860px; margin: 6px 0 12px; }
+#home .track-note + .track-note { margin-top: 0; margin-bottom: 20px; }
 #home .track-note strong { color: var(--text); }
 #home .track-note a { color: var(--red); }
 #home .past-events-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
@@ -381,7 +403,7 @@
 <!-- Beta premium banner — logged-out only, dismissible. -->
 <div class="beta-banner" id="betaBanner">
   <span class="tag">Beta</span>
-  <span class="msg"><strong>Free premium during beta</strong> — full edge factors, no card required.</span>
+  <span class="msg"><strong>Free premium during beta</strong> — full matchup detail, no card required.</span>
   <a class="cta" href="/signup.html">Create account →</a>
   <button class="dismiss" id="betaBannerDismiss" aria-label="Dismiss">&times;</button>
 </div>
@@ -392,30 +414,31 @@
 
   <!-- 1a · MOBILE PITCH STRIP — phones only; the full hero sits below the card. -->
   <div class="m-pitch">
-    <b>Find where the betting line is <span class="hl">wrong.</span></b>
-    <span id="mProof">Every pick graded in public &middot; every miss posted</span>
+    <b id="mPitchTitle">The next UFC card — <span class="hl">model vs market.</span></b>
+    <span id="mProof">Every forecast locked before the bell &middot; every miss posted</span>
   </div>
 
-  <!-- 1 · HERO -->
-  <section class="hero">
+  <!-- 1 · HERO — the next card, model vs market. The event name is filled in
+       once the card loads; the static text is the fallback a crawler sees. -->
+  <section class="hero" id="hero">
     <div>
-      <div class="hp-eyebrow">UFC Betting Analytics</div>
-      <h1>Find where the betting line is <span class="hl">wrong.</span></h1>
-      <p class="lede">UFC picks with the math shown and the losses posted. One model calls every fight without ever seeing the odds; a second flags the fights where the price looks off.</p>
+      <div class="hp-eyebrow" id="heroEyebrow">Next UFC card</div>
+      <h1 id="heroTitle">The next UFC card — <span class="hl">Model vs Market.</span></h1>
+      <p class="lede" id="heroLede">CFL's odds-blind forecast for every fight, locked before the bell, beside the sportsbook number with the cut removed. Where the two disagree is the story of the card — and a disagreement is not a proven betting edge.</p>
       <div class="hero-cta">
-        <a href="#next" class="btn btn-primary btn-lg">Analyze next card →</a>
+        <a href="#next" class="btn btn-primary btn-lg">See the card →</a>
         <a href="track-record.html" class="btn btn-ghost btn-lg">See the graded track record</a>
       </div>
       <div class="hero-proofline" id="heroProofline">
-        <span class="pf" id="hpProof"><b>61.6%</b> straight-up across 3,288 never-seen fights · Locks hit <b>74.7%</b> (simulated)</span>
-        <span class="pf">Picks locked at first write · misses shown · live record since July 2026</span>
+        <span class="pf" id="hpProof"><b>61.5%</b> straight-up across 3,235 never-seen fights · Locks hit <b>74.5%</b> (simulated)</span>
+        <span class="pf">Forecasts locked before the bell · misses shown at the same size as hits</span>
         <a class="pf link" href="track-record.html">Verify it →</a>
       </div>
     </div>
     <aside class="panel">
-      <div class="panel-head"><span class="t">Top edge · next card</span><span class="v" id="heroEdgeWhen"></span></div>
-      <div id="heroEdge"><div class="models-loading">Scanning the next card for value…</div></div>
-      <div class="panel-foot" id="heroEdgeFoot">Edge is how much higher our number is than what today's odds say.</div>
+      <div class="panel-head"><span class="t">This card at a glance</span><span class="v" id="heroWhen"></span></div>
+      <div id="heroGlance"><div class="models-loading">Loading the next card…</div></div>
+      <div class="panel-foot" id="heroGlanceFoot">CFL publishes model forecasts and market analysis, not handicapper picks. A disagreement is not a proven betting edge — the market's price is right more often than any model.</div>
       <details class="model-how" id="modelHow"><summary>How the engine works</summary><div id="modelHowBody"></div></details>
     </aside>
   </section>
@@ -431,35 +454,32 @@
       <div class="seg" id="sortSeg">
         <button data-sort="order" class="active">Card order</button>
         <button data-sort="conf">Confidence</button>
-        <button data-sort="value">Value</button>
+        <button data-sort="disagree">Disagreement</button>
       </div>
       <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
     </div>
     <div class="fights" id="fightsList"></div>
     <p class="model-def" id="hpModelDef"></p>
-    <div class="hp-parlay" id="hpParlay" hidden>
-      <div class="tx" id="hpParlayText"></div>
-      <a class="btn btn-primary" href="parlay.html">Stack them in the Parlay Builder →</a>
-    </div>
     <div class="card-foot">
-      <div class="fineprint">Model probabilities are estimates, not guarantees. Nothing here is betting advice — bet the price, not the pick.</div>
+      <div class="fineprint">Model probabilities are estimates, not guarantees. Nothing here is betting advice. Where our number and the sportsbook's differ, that is a disagreement, not a proven edge — the market's price is right more often than any model.</div>
     </div>
   </section>
 
   <!-- 3 · TRACK RECORD -->
   <section class="section" id="track">
-    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Every pick graded in public, misses included.</div></div><a href="track-record.html">See the full graded record →</a></div>
-    <p class="track-note">One engine, two honest numbers. <strong>Fight IQ</strong> — the engine's tape-only face — has been graded on <strong id="hpN2">3,288</strong> fights it never trained on: <strong id="hpAcc2">61.6%</strong> of its picks were right, and its highest-confidence Locks hit <strong id="hpLockAcc2">74.7%</strong> (<span id="hpLockN2">722</span> picks). Just backing the closing favorite gets about 68% — we publish a number that loses to Vegas because a model within seven points of the market without ever looking at the market is a model you can actually trust to be independent of it. <strong>Value</strong> — the money face — flags a bet only when the engine's number beats the vig-free market price by 4+ points: its 658 simulated bets, graded at real closing prices, went <strong>519-139</strong> (+10.0% when bets are sized to the edge; roughly break-even at flat $100 — short-priced favorites pay small). Those results are the walk-forward replay, simulated point-in-time and labeled as such; the replay's first, uncalibrated year is excluded from everything we publish. The live record started July 2026 and is still tiny — <strong>12-5</strong> on settled flags, down $61 at flat $100 so far. The <a href="track-record.html">Proof Center</a> grades every pick, and the <a href="stats.html">Factor Lab</a> shows which stats survive the market. The Fight IQ numbers refresh from the pick database on every load; the Value numbers are a snapshot as of Aug 18, 2026.</p>
+    <div class="sec-head"><div><h2>Track record</h2><div class="sub">Two records, kept apart on purpose. Every forecast graded in public, misses included.</div></div><a href="track-record.html">See the full graded record →</a></div>
+    <p class="track-note"><strong>Historical simulation.</strong> <strong>Fight IQ</strong> — the engine's tape-only face — replayed through history, only ever forecasting fights it had never seen: <strong id="hpN2">3,235</strong> fights, <strong id="hpAcc2">61.5%</strong> of its picks right, its highest-confidence Locks at <strong id="hpLockAcc2">74.5%</strong> (<span id="hpLockN2">707</span> picks). That is a simulation, and it is labeled as one; the replay's first, uncalibrated year is excluded from everything we publish. Just backing the closing favorite gets about 68% on the same fights, in our own benchmark — we publish a number that loses to Vegas because a model that lands within seven points of the market without ever looking at it is a model you can trust to be independent of it.</p>
+    <p class="track-note"><strong>Live published record.</strong> Forecasts written before the bell, added once, never revised. It started in July 2026 and is still far too small to read, so it is graded on the <a href="track-record.html">Proof Center</a> at its real size and never mixed into the simulation above. <strong>Model vs market.</strong> Where the engine's number and the vig-free sportsbook price disagree, we show both and say so. Whether disagreeing with the market has ever paid is a closing-line question, and CFL has not published an answer: the measurement rules are frozen and the sample is not there yet. Until it is, no edge is claimed. The <a href="stats.html">Factor Lab</a> shows which stats survive the market. The simulation numbers refresh from the pick database on every load.</p>
     <div class="past-events-grid" id="pastEventsGrid" hidden></div>
   </section>
 
   <!-- 4 · TOOLKIT -->
   <section class="section">
-    <div class="sec-head"><div><h2>The toolkit</h2><div class="sub">Everything you need to work a card, framed around one question: where's the value?</div></div></div>
+    <div class="sec-head"><div><h2>The toolkit</h2><div class="sub">Everything you need to work a card, with the model's number and the book's side by side.</div></div></div>
     <div class="tools" style="margin-top:14px">
       <a class="tool" href="parlay.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
-        <h3>Stack only the strongest edges</h3><p>The Parlay Builder pre-fills the best available price we track and shows the model's verdict on every leg before you stack it.</p><span class="go">Build a parlay →</span>
+        <h3>Build a parlay with every leg's number shown</h3><p>The Parlay Builder pre-fills the best available price we track and puts the model's number beside the book's on every leg before you stack it.</p><span class="go">Build a parlay →</span>
       </a>
       <a class="tool" href="cardio.html">
         <div class="tool-ic"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
@@ -481,12 +501,12 @@
     <div class="sec-head"><div><h2>Why trust it?</h2></div></div>
     <div class="trust" style="margin-top:14px">
       <div class="trust-grid">
-        <div class="trust-item"><div class="n" id="tileGraded">3,288</div><div class="l">never-seen fights graded</div></div>
-        <div class="trust-item"><div class="n" id="tileLock">74.7<span class="u">%</span></div><div class="l">Lock-tier accuracy (simulated)</div></div>
-        <div class="trust-item"><div class="n" id="tileFights">8,937</div><div class="l">fights in the database</div></div>
-        <div class="trust-item"><div class="n">Locked</div><div class="l">every live pick at first write</div></div>
+        <div class="trust-item"><div class="n" id="tileGraded">3,235</div><div class="l">never-seen fights graded (simulated)</div></div>
+        <div class="trust-item"><div class="n" id="tileLock">74.5<span class="u">%</span></div><div class="l">Lock-tier accuracy (simulated)</div></div>
+        <div class="trust-item"><div class="n" id="tileFights">8,992</div><div class="l">fights in the database</div></div>
+        <div class="trust-item"><div class="n">Locked</div><div class="l">every forecast before the bell, never revised</div></div>
       </div>
-      <div class="trust-foot">The record numbers refresh from the pick database on every load — accuracy, calibration, profit, and the misses, graded in the open. <a href="track-record.html">See the full track record →</a> · <a href="methodology.html">Read the methodology</a></div>
+      <div class="trust-foot">The simulation numbers refresh from the pick database on every load — accuracy, the misses, and whether our percentages hold up, graded in the open. The live record is on the Proof Center, at its real size. <a href="track-record.html">See the full track record →</a> · <a href="methodology.html">Read the methodology</a></div>
     </div>
   </section>
 
@@ -494,11 +514,11 @@
   <section class="section">
     <div class="sec-head"><div><h2>How to use CFL before a card</h2></div></div>
     <div class="steps" style="margin-top:14px">
-      <div class="step"><div class="num">1</div><div class="st">Check the model pick</div><div class="sd">Who the model likes, and by how much.</div></div>
+      <div class="step"><div class="num">1</div><div class="st">Check the model forecast</div><div class="sd">Who the model likes, and how sure it is.</div></div>
       <div class="step"><div class="num">2</div><div class="st">Review confidence</div><div class="sd">High, medium, or a thin lean worth a second look.</div></div>
-      <div class="step"><div class="num">3</div><div class="st">Compare edge factors</div><div class="sd">The reasons driving the pick — age, cardio, takedown defense.</div></div>
-      <div class="step"><div class="num">4</div><div class="st">Check sportsbook odds</div><div class="sd">Line up the model's number against the price.</div></div>
-      <div class="step"><div class="num">5</div><div class="st">Bet only on value</div><div class="sd">When the price gives an edge — never on hype.</div></div>
+      <div class="step"><div class="num">3</div><div class="st">Read what stands out</div><div class="sd">Matchup context — cardio, age, reach, record. Not the model's reasoning.</div></div>
+      <div class="step"><div class="num">4</div><div class="st">Compare the sportsbook number</div><div class="sd">Vig removed, book count and time shown — always displayed when we have it.</div></div>
+      <div class="step"><div class="num">5</div><div class="st">Decide for yourself</div><div class="sd">A disagreement is not a proven edge. The market's price is right more often than any model.</div></div>
     </div>
   </section>
 
@@ -515,7 +535,7 @@
 <!-- The record-separation rulebook. index.html uses it for the hero headline so
      the homepage and the Proof Center cannot disagree about what one record is. -->
 <script src="proof-gates.js"></script>
-<script src="fight-insights.js?v=7"></script>
+<script src="fight-insights.js?v=8"></script>
 <script src="distanceEdges.js"></script>
 <script>
 cfl.renderNav('home');
@@ -565,7 +585,7 @@ async function loadHeroProof() {
       // Every other place the record is quoted reads these same numbers, so
       // the site never shows two sample sizes for one record.
       const setText = (id, v) => { const n = document.getElementById(id); if (n) n.textContent = v; };
-      setText('mProof', acc + '% on ' + head.n.toLocaleString() + ' fights the model never saw · every miss posted');
+      setText('mProof', acc + '% on ' + head.n.toLocaleString() + ' fights the model never saw (simulated) · every miss posted');
       setText('hpN2', head.n.toLocaleString());
       setText('hpAcc2', acc + '%');
       if (lockAcc) { setText('hpLockAcc2', lockAcc + '%'); setText('hpLockN2', head.lockN.toLocaleString()); }
@@ -582,83 +602,167 @@ async function loadHeroProof() {
   } catch (err) { console.warn('[home] hero proof fetch failed', err); }
 }
 
-// Vig-free market probability for one side of a fight. The consensus row's
-// implied_prob_a/b still contain the book's cut (they sum to ~1.05); the copy
-// sitewide promises edges against the TRUE price, so normalize the pair before
-// differencing. Falls back to the raw implied prob if the other side is missing.
-function devigProb(oddsRow, sideIsA) {
-  const a = oddsRow ? +oddsRow.implied_prob_a : null;
-  const b = oddsRow ? +oddsRow.implied_prob_b : null;
-  const own = sideIsA ? a : b;
-  if (own == null || isNaN(own)) return null;
-  if (a != null && b != null && !isNaN(a) && !isNaN(b) && a + b > 0) return own / (a + b);
-  return own;
+// Vig-free market probability for one side of a fight, from the row that
+// loadOddsMap() normalised: { pA, pB, books, updatedAt, src }. The book's cut
+// is already out of pA/pB, so this is the number the model is compared to.
+function marketProbFor(oddsRow, sideIsA) {
+  if (!oddsRow) return null;
+  const p = sideIsA ? oddsRow.pA : oddsRow.pB;
+  return (p == null || isNaN(p)) ? null : p;
 }
 
-// The single best model-vs-market gap on the next card, rendered into the hero.
-// Called after loadFights() has _leanState and _oddsMap in hand.
-function renderHeroEdge(event) {
-  const el = document.getElementById('heroEdge');
-  if (!el || !_leanState) return;
-  const { fights, fighterMap, picksByFight } = _leanState;
+// How old a sportsbook line is, and whether that counts as stale. On a fight
+// day the capture job runs every few minutes, so a line more than three hours
+// old is stale; on any other day it captures once, so the bar is 36 hours.
+// The threshold only decides the word "stale" — the timestamp is always shown.
+function oddsFreshness(updatedAt) {
+  if (!updatedAt) return null;
+  const t = new Date(updatedAt).getTime();
+  if (isNaN(t)) return null;
+  const ageMin = Math.max(0, (Date.now() - t) / 60000);
+  const staleAfterMin = _fightDay ? 3 * 60 : 36 * 60;
+  return { t, ageMin, stale: ageMin > staleAfterMin, when: fmtAgo(ageMin, t) };
+}
+function fmtAgo(ageMin, t) {
+  if (ageMin < 1) return 'just now';
+  if (ageMin < 60) return `${Math.round(ageMin)} min ago`;
+  if (ageMin < 24 * 60) return `${Math.round(ageMin / 60)} h ago`;
+  return fmtStampUtc(t);
+}
+function fmtStampUtc(t) {
+  const d = new Date(t);
+  const p = n => String(n).padStart(2, '0');
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+  return `${mon} ${d.getUTCDate()}, ${p(d.getUTCHours())}:${p(d.getUTCMinutes())} UTC`;
+}
+function fmtDateUtc(t) {
+  const d = new Date(t);
+  const mon = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()];
+  return `${mon} ${d.getUTCDate()}`;
+}
 
-  let best = null;
+// Every fight on the card, with the model's number and the market's number
+// side by side. This is the one place the comparison is computed, so the
+// hero panel, the card header and the fight rows cannot disagree with each
+// other about what the backend holds.
+function cardComparison() {
+  if (!_leanState) return null;
+  const { fights, fighterMap, picksByFight } = _leanState;
+  const rows = [];
   fights.forEach(fight => {
     const a = fighterMap[fight.fighter_a_id], b = fighterMap[fight.fighter_b_id];
     if (!a || !b) return;
     const slot = picksByFight[fight.id];
     const pick = pickForFight(slot, a, b, slot && slot.engine ? 'engine' : 'consensus');
-    if (!pick) return;
     const oddsRow = _oddsMap && _oddsMap[fight.id];
-    let impl = null, value = null;
-    if (oddsRow) {
-      impl = devigProb(oddsRow, pick.picked.id === a.id);
-      if (impl != null) {
-        value = pick.pct - (impl * 100);
-        if (value > 15) { impl = null; value = null; }   // stale/mismatched odds guard
-      }
-    }
-    const cand = { fight, a, b, pick, impl, value };
-    const score = c => (c.value != null ? c.value * 100 : -1e6) + c.pick.pct;
-    if (!best || score(cand) > score(best)) best = cand;
+    const marketPct = pick && oddsRow ? (m => m == null ? null : m * 100)(marketProbFor(oddsRow, pick.picked.id === a.id)) : null;
+    const gap = (pick && marketPct != null) ? pick.pct - marketPct : null;
+    rows.push({ fight, a, b, pick, oddsRow, marketPct, gap,
+      lockedAt: slot && slot.engine && slot.engine.published_at ? slot.engine.published_at : null });
   });
+  return rows;
+}
 
-  const whenEl = document.getElementById('heroEdgeWhen');
+// The hero rail: what the backend actually holds for this card — fights,
+// locked forecasts, sportsbook lines (with book count and freshness), and how
+// many fights the model and the market are far apart on — then the widest
+// gaps, each linking to its fight row. Counts and timestamps only.
+function renderHeroGlance(event) {
+  const el = document.getElementById('heroGlance');
+  if (!el) return;
+  const rows = cardComparison();
+  if (!rows) return;
+
+  const whenEl = document.getElementById('heroWhen');
   if (whenEl && event) {
     const days = cfl.daysUntil(event.event_date);
-    whenEl.textContent = days > 1 ? `in ${days} days` : (days === 1 ? 'tomorrow' : 'fight day');
-  }
-  if (!best) {
-    el.innerHTML = '<div class="models-loading">Model picks for this card aren\'t locked yet — check back closer to fight night.</div>';
-    return;
+    whenEl.textContent = days > 1 ? `in ${days} days` : (days === 1 ? 'tomorrow' : (days === 0 ? 'fight day' : 'settled'));
   }
 
-  const tier = best.pick.pct >= 65 ? '<span class="cbadge high">High confidence</span>'
-    : (best.pick.pct >= 55 ? '<span class="cbadge med">Medium confidence</span>'
-    : '<span class="cbadge low">Lean</span>');
-  const marketCell = best.impl != null
-    ? `<div class="cell"><div class="t">Market</div><div class="n">${Math.round(best.impl * 100)}%</div></div>`
-    : `<div class="cell"><div class="t">Market</div><div class="n" style="color:var(--text-3)">—</div></div>`;
-  const edgeCell = best.value != null
-    ? `<div class="cell"><div class="t">Edge</div><div class="n ${best.value >= 1 ? 'green' : ''}">${best.value >= 0 ? '+' : ''}${best.value.toFixed(0)}%</div></div>`
-    : `<div class="cell"><div class="t">Edge</div><div class="n" style="color:var(--text-3)">—</div></div>`;
-  const note = best.impl != null
-    ? (best.value >= 5 ? 'The model thinks the market is underpricing this pick — the biggest gap on the card.'
-      : best.value >= 1 ? 'A modest gap over the market price — the best value the model sees on this card.'
-      : 'No real gap vs the market on this card yet — the line is fair. Bet value, not picks.')
-    : 'Consensus odds land closer to fight night — the model probability is locked now.';
+  const locked = rows.filter(r => r.pick);
+  const priced = rows.filter(r => r.oddsRow && r.oddsRow.pA != null);
+  const compared = rows.filter(r => r.gap != null);
+  const big = compared.filter(r => Math.abs(r.gap) >= BIG_POINTS);
 
-  el.innerHTML = `
-    <div class="spot-wt">${cfl.escapeHtml(event ? event.name : 'Next card')} · ${cfl.escapeHtml(best.fight.weight_class || 'Bout')}</div>
-    <div class="spot-matchup">${cfl.escapeHtml(best.a.name)} vs ${cfl.escapeHtml(best.b.name)}</div>
-    <div class="spot-pick"><div><div class="lab">Model pick</div><div class="nm">${cfl.escapeHtml(best.pick.picked.name)}</div></div>${tier}</div>
-    <div class="spot-stats">
-      <div class="cell"><div class="t">Model</div><div class="n">${Math.round(best.pick.pct)}%</div></div>
-      ${marketCell}
-      ${edgeCell}
-    </div>
-    <div class="spot-note">${note}</div>
-  `;
+  let lockedAt = null;
+  locked.forEach(r => { if (r.lockedAt) { const t = new Date(r.lockedAt).getTime(); if (!isNaN(t) && (lockedAt == null || t < lockedAt)) lockedAt = t; } });
+
+  let latest = null, booksMin = null, booksMax = null, allSportsbooks = true;
+  priced.forEach(r => {
+    const t = r.oddsRow.updatedAt ? new Date(r.oddsRow.updatedAt).getTime() : NaN;
+    if (!isNaN(t) && (latest == null || t > latest)) latest = t;
+    const n = +r.oddsRow.books;
+    if (!isNaN(n)) { booksMin = booksMin == null ? n : Math.min(booksMin, n); booksMax = booksMax == null ? n : Math.max(booksMax, n); }
+    if (r.oddsRow.src !== 'sportsbooks') allSportsbooks = false;
+  });
+  const fresh = latest != null ? oddsFreshness(new Date(latest).toISOString()) : null;
+  const srcWord = allSportsbooks ? 'book' : 'source';
+  const booksTxt = booksMin == null ? '' : (booksMin === booksMax ? `${booksMin} ${srcWord}${booksMin === 1 ? '' : 's'}` : `${booksMin}–${booksMax} ${srcWord}s`);
+
+  const cells = [
+    { t: 'Fights', n: String(rows.length), s: 'on the card' },
+    { t: 'Forecasts locked', n: String(locked.length), s: locked.length ? (lockedAt ? 'since ' + fmtDateUtc(lockedAt) : 'before the bell') : 'not locked yet' },
+    { t: 'Sportsbook lines', n: priced.length ? String(priced.length) : '—',
+      s: priced.length ? [booksTxt, fresh ? (fresh.stale ? 'stale — ' + fresh.when : 'updated ' + fresh.when) : ''].filter(Boolean).join(' · ') : 'no line yet',
+      stale: !!(fresh && fresh.stale) },
+    { t: 'Big disagreements', n: compared.length ? String(big.length) : '—', s: compared.length ? `${BIG_POINTS}+ points apart` : 'needs both numbers' },
+  ];
+  const cellsHtml = '<div class="glance">' + cells.map(c =>
+    `<div class="cell${c.stale ? ' stale' : ''}"><div class="t">${cfl.escapeHtml(c.t)}</div><div class="n">${cfl.escapeHtml(c.n)}</div><div class="s">${cfl.escapeHtml(c.s)}</div></div>`
+  ).join('') + '</div>';
+
+  let gapsHtml;
+  if (!locked.length) {
+    gapsHtml = '<div class="gap-empty">Model forecasts for this card aren\'t locked yet — check back closer to fight night.</div>';
+  } else if (!compared.length) {
+    gapsHtml = '<div class="gap-empty">No sportsbook line on this card yet, so there is nothing to compare the model to.</div>';
+  } else {
+    const top = compared.slice().sort((x, y) => Math.abs(y.gap) - Math.abs(x.gap)).slice(0, 3);
+    if (Math.abs(top[0].gap) < AGREE_POINTS) {
+      gapsHtml = `<div class="gap-hd">Widest gaps on this card</div><div class="gap-empty">Our number and the sportsbooks' are within ${AGREE_POINTS} points on every fight.</div>`;
+    } else {
+      gapsHtml = '<div class="gap-hd">Widest gaps on this card</div><ul class="gap-list">' + top.map(r => {
+        const who = lastName(r.pick.picked.name);
+        const label = Math.abs(r.gap) < AGREE_POINTS ? 'Mostly agree' : (r.gap > 0 ? 'CFL higher' : 'Market higher');
+        return `<li><a href="#fight-${r.fight.id}">` +
+          `<span class="gm">${cfl.escapeHtml(lastName(r.a.name))} vs ${cfl.escapeHtml(lastName(r.b.name))}</span>` +
+          `<span class="gl">${cfl.escapeHtml(label)}</span>` +
+          `<span class="gn">${cfl.escapeHtml(who)} — CFL ${Math.round(r.pick.pct)}% · market ${Math.round(r.marketPct)}% · ${Math.round(Math.abs(r.gap))} pts apart</span>` +
+          `</a></li>`;
+      }).join('') + '</ul>';
+    }
+  }
+
+  el.innerHTML = cellsHtml + gapsHtml;
+}
+
+// One line under the card header: how much of the card the sportsbooks have
+// priced, from how many books, and when the last quote landed. If the line is
+// old it says stale; if there is none it says so. It never blames the odds
+// for a model disagreement, because those are different things.
+function renderOddsStatus() {
+  const el = document.getElementById('oddsStatus');
+  if (!el) return;
+  const rows = cardComparison();
+  if (!rows) { el.textContent = ''; return; }
+  const priced = rows.filter(r => r.oddsRow && r.oddsRow.pA != null);
+  el.classList.remove('stale');
+  if (!priced.length) { el.textContent = 'No sportsbook lines captured for this card yet.'; return; }
+  let latest = null, booksMin = null, booksMax = null, allSportsbooks = true;
+  priced.forEach(r => {
+    const t = r.oddsRow.updatedAt ? new Date(r.oddsRow.updatedAt).getTime() : NaN;
+    if (!isNaN(t) && (latest == null || t > latest)) latest = t;
+    const n = +r.oddsRow.books;
+    if (!isNaN(n)) { booksMin = booksMin == null ? n : Math.min(booksMin, n); booksMax = booksMax == null ? n : Math.max(booksMax, n); }
+    if (r.oddsRow.src !== 'sportsbooks') allSportsbooks = false;
+  });
+  const fresh = latest != null ? oddsFreshness(new Date(latest).toISOString()) : null;
+  const srcWord = allSportsbooks ? 'sportsbook' : 'source';
+  const booksTxt = booksMin == null ? '' : (booksMin === booksMax ? `${booksMin} ${srcWord}${booksMin === 1 ? '' : 's'}` : `${booksMin}–${booksMax} ${srcWord}s per fight`);
+  const parts = [`Sportsbook lines on ${priced.length} of ${rows.length} fights`, booksTxt, 'vig removed'];
+  if (fresh) parts.push(fresh.stale ? `stale — last quote ${fresh.when}` : `last quote ${fresh.when}`);
+  el.textContent = parts.filter(Boolean).join(' · ');
+  if (fresh && fresh.stale) el.classList.add('stale');
 }
 
 async function loadPastEvents() {
@@ -760,10 +864,10 @@ loadHomepageStats().catch(err => {
   console.warn('[home] homepage stats load failed', err);
 });
 setTimeout(() => {
-  const heroEdge = document.getElementById('heroEdge');
-  const loadingEl = heroEdge && heroEdge.querySelector('.models-loading');
-  if (loadingEl && loadingEl.textContent.indexOf('Scanning') === 0) {
-    heroEdge.innerHTML = '<div class="models-loading">Card data unavailable — check ad blocker / tracking prevention</div>';
+  const glance = document.getElementById('heroGlance');
+  const loadingEl = glance && glance.querySelector('.models-loading');
+  if (loadingEl && loadingEl.textContent.indexOf('Loading') === 0) {
+    glance.innerHTML = '<div class="models-loading">Card data unavailable — check ad blocker / tracking prevention</div>';
   }
 }, 15000);
 
@@ -781,17 +885,23 @@ let _oddsMap = null;
 let _leanState = null;   // { fights, fighterMap, picksByFight, eventId, modelNames }
 let _hpSortKey = 'order';
 let _hpModelMode = 'engine';
+let _fightDay = false;   // set by renderCardHead; decides the "stale" bar for a line's age
 
-// The single definition of "value" — same bar as the graded Value record on
-// the track record (flags at 4+ points). Drives the Value badge, edge colour,
-// the summary strip, and the parlay strip. Keep in step with card-lab.
-const VALUE_EDGE = 4;
+// Model vs market is shown as a DISAGREEMENT, never as an edge. The gap
+// between CFL's number and the vig-free sportsbook number is computed so the
+// card can be sorted by it and the widest ones named, but it is not a value
+// flag, a bet, or a claim about the price: our own benchmark has the engine
+// losing to the closing line, and the closing-line measurement that could
+// change that has not published a number. These thresholds label a gap; they
+// decide nothing.
+const AGREE_POINTS = 5;    // under this the two numbers mostly agree
+const BIG_POINTS = 10;     // at or above this it is a big disagreement
 
 // Longer-form explanation for the "How each model works" panel. The engine
 // gets a richer blurb here; every other model falls back to its shared
 // one-line definition (cfl.modelDef) so copy lives in exactly one place.
 const MODEL_EXPLAIN = {
-  engine: 'The engine calls every fight from fighter history, fight stats, and physical attributes — height, reach, stance, age — without ever seeing a betting line. It lands about 61% straight-up on never-seen fights, with its highest-confidence Locks hitting about 75%. Its Value face then flags the fights where its number disagrees with the market price by 4+ points.',
+  engine: 'The engine calls every fight from fighter history, fight stats, and physical attributes — height, reach, stance, age — without ever seeing a betting line. In the historical simulation it lands about 61% straight-up on never-seen fights, with its highest-confidence Locks near 75%. We then put its number beside the vig-free sportsbook price so you can see where the two disagree — a disagreement, not a bet.',
 };
 
 // Per-model input-weight graphs — real feature importances exported from each
@@ -839,7 +949,25 @@ async function load() {
   if (!event) { showCardError('No events found in the database.'); return; }
 
   renderCardHead(event, phase);
+  renderHeroEvent(event, phase);
   await loadFights(event);
+}
+
+// The hero is the card. Once we know which event is next, the headline, the
+// eyebrow and the phone pitch strip name it; the static copy is the fallback
+// a crawler (or a visitor with a blocked database) sees.
+function renderHeroEvent(event, phase) {
+  const days = cfl.daysUntil(event.event_date);
+  const eyebrow = phase === 'happening' ? 'Fight night' : (phase === 'fallback' ? 'Most recent card' : (days === 0 ? 'Tonight' : 'Next UFC card'));
+  const set = (id, fn) => { const n = document.getElementById(id); if (n) fn(n); };
+  set('heroEyebrow', n => { n.textContent = eyebrow; });
+  set('heroTitle', n => { n.innerHTML = cfl.escapeHtml(event.name) + ' — <span class="hl">Model vs Market.</span>'; });
+  set('mPitchTitle', n => { n.innerHTML = cfl.escapeHtml(event.name) + ' — <span class="hl">model vs market.</span>'; });
+  set('heroLede', n => {
+    n.textContent = phase === 'fallback'
+      ? 'The latest card, graded: CFL\'s odds-blind forecast for every fight, locked before the bell, beside the sportsbook number with the cut removed — and the result. A disagreement is not a proven betting edge.'
+      : 'CFL\'s odds-blind forecast for every fight, locked before the bell, beside the sportsbook number with the cut removed. Where the two disagree is the story of the card — and a disagreement is not a proven betting edge.';
+  });
 }
 
 function showCardError(msg) {
@@ -858,10 +986,12 @@ function renderCardHead(event, phase) {
   else if (days === 1) live = 'Tomorrow';
   else if (days > 1) live = `In ${days} days`;
   else live = 'Next card';
+  _fightDay = phase === 'happening' || days <= 1;
   el.innerHTML = `
     <div class="eyebrow-live"><span class="dot"></span> ${cfl.escapeHtml(live)}</div>
     <h2>${cfl.escapeHtml(event.name)}</h2>
     <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
+    <div class="meta odds-status" id="oddsStatus"></div>
   `;
 }
 
@@ -918,7 +1048,7 @@ async function loadFights(event) {
       : Promise.resolve({ data: [] }),
     fightIds.length
       ? sb.from('model_picks')
-          .select('fight_id, pick_fighter_id, p_cal, tier, source')
+          .select('fight_id, pick_fighter_id, p_cal, tier, source, published_at')
           .in('fight_id', fightIds)
       : Promise.resolve({ data: [] }),
   ]);
@@ -946,7 +1076,7 @@ async function loadFights(event) {
     });
     Object.values(byFight).forEach(p => {
       const slot = picksByFight[p.fight_id] || (picksByFight[p.fight_id] = {});
-      slot.engine = { fighter_id: p.pick_fighter_id, model_p: +p.p_cal, tier: p.tier };
+      slot.engine = { fighter_id: p.pick_fighter_id, model_p: +p.p_cal, tier: p.tier, published_at: p.published_at || null };
     });
   }
 
@@ -954,7 +1084,8 @@ async function loadFights(event) {
   populateModelSelect(modelNames);
   renderModelExplanations(modelNames);
   renderLeanCards();
-  renderHeroEdge(event);
+  renderOddsStatus();
+  renderHeroGlance(event);
   wireControls();
 }
 
@@ -966,26 +1097,17 @@ function renderLeanCards() {
   const cards = fights.map((fight, idx) => buildFightModel(fight, idx, fighterMap, picksByFight, eventId))
     .filter(Boolean);
 
+  // "Disagreement" is the absolute gap between the model's number and the
+  // market's, either direction. Fights with no sportsbook line, then fights
+  // with no forecast, sink to the bottom rather than sorting as agreement.
   const sorters = {
     order: (a, b) => a.order - b.order,
     conf:  (a, b) => b.confidence - a.confidence,
-    value: (a, b) => b.value - a.value,
+    disagree: (a, b) => (b.gap == null ? -1 : Math.abs(b.gap)) - (a.gap == null ? -1 : Math.abs(a.gap)) || a.order - b.order,
   };
   cards.sort(sorters[_hpSortKey] || sorters.order);
 
   list.innerHTML = cards.map(c => c.html).join('');
-
-  // Parlay strip — the fights that clear the value bar. No ROI figure above the
-  // CTA (that reads as a tout); frame it as raw material + risk + CLV.
-  const valuePlays = cards.filter(c => c.value >= VALUE_EDGE).length;
-  const pstrip = document.getElementById('hpParlay');
-  if (valuePlays >= 2) {
-    document.getElementById('hpParlayText').innerHTML =
-      `<strong>${valuePlays} picks</strong> on this card clear our ${VALUE_EDGE}% value bar — the model's number beats the book's by at least that much. That's the raw material for a parlay, not a green light: a parlay multiplies the swings as fast as the payout, so keep stakes small. We grade every one of these in the open — <a href="track-record.html">see the record</a>, wins and losses.`;
-    pstrip.hidden = false;
-  } else {
-    pstrip.hidden = true;
-  }
 }
 
 // Pick for a fight under the selected model mode (consensus or a single model).
@@ -1004,7 +1126,9 @@ function getTrainedPick(modelKey, fightPicks, a, b) {
   return { picked, opponent, pct: p.model_p * 100 };
 }
 
-function lastName(n) { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; }
+// Surname for tight copy. Shared with fight-insights.js; a suffix ("Jr.",
+// "III") is not a name, so it is skipped when there is a name before it.
+function lastName(n) { return window.cflInsights ? window.cflInsights.lastName(n) : (String(n || '').trim().split(/\s+/).pop() || n); }
 
 // The engine is the one pick we stand behind, so it's all a normal visitor
 // sees. Consensus + the numbered models (v1–v6) hide behind "Compare other
@@ -1079,8 +1203,8 @@ function wireControls() {
     seg._wired = true;
     const hints = {
       order: 'Main event first, top of the card down.',
-      conf: 'Most confident picks first.',
-      value: 'Biggest edge over the market first.',
+      conf: 'Most confident forecasts first.',
+      disagree: 'Furthest from the sportsbook number first — a disagreement, not an edge.',
     };
     seg.addEventListener('click', (e) => {
       const btn = e.target.closest('button'); if (!btn) return;
@@ -1115,46 +1239,44 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   else if (confidence >= 55) { badge = '<span class="cbadge med">Medium confidence</span>'; tier = 'med'; }
   else { badge = '<span class="cbadge low">Low confidence · lean</span>'; tier = 'low'; }
 
-  // Value vs market
-  let value = -999, marketPct = null;
+  // Model vs market. The sportsbook number is ALWAYS shown when we have one —
+  // there is no gap large enough to hide it behind, because a wide gap is a
+  // fact about the model's confidence, not evidence that the odds are wrong.
+  // (This used to blank the market cell above a 15-point gap and report the
+  // line as missing, which hid real prices on 3 of 12 UFC 331 bouts.)
+  let gap = null, marketPct = null;
   const oddsRow = _oddsMap && _oddsMap[fight.id];
   if (pick && oddsRow) {
-    const impl = devigProb(oddsRow, pickedIsA);
-    if (impl != null) {
-      marketPct = impl * 100;
-      value = confidence - marketPct;
-      if (value > 15) {
-        // Implausibly large gap — almost always stale or mismatched odds, not a
-        // real edge. Suppress rather than surface a tout-y number.
-        marketPct = null;
-        value = 0;
-      } else if (value >= VALUE_EDGE) {
-        badge = '<span class="cbadge value">✦ Value alert</span>';
-        tier = 'value';
-      }
-    }
+    const m = marketProbFor(oddsRow, pickedIsA);
+    if (m != null) { marketPct = m * 100; gap = confidence - marketPct; }
   }
-  if (value === -999) value = pick ? -100 : -1000;  // sink no-odds / no-pick fights in value sort
+  const absGap = gap == null ? null : Math.abs(gap);
+  const gapBadge = absGap != null && absGap >= BIG_POINTS ? '<span class="cbadge gap">Far from the market</span>' : '';
+  const badgesHtml = `<span class="badges">${badge}${gapBadge}</span>`;
 
-  // Model vs market strip — the "is there a bet here?" row
+  // Model vs market strip — two numbers side by side, and the difference
+  // between them labeled as what it is.
   let probsHtml = '';
   if (pick) {
+    const fresh = oddsFreshness(oddsRow && oddsRow.updatedAt);
+    const srcWord = oddsRow && oddsRow.src === 'sportsbooks' ? 'book' : 'source';
+    const booksTxt = oddsRow && oddsRow.books != null ? `${oddsRow.books} ${srcWord}${+oddsRow.books === 1 ? '' : 's'}` : 'consensus';
     const marketCell = marketPct != null
-      ? `<div class="cell"><div class="t">Market</div><div class="n">${Math.round(marketPct)}%</div><div class="s">implied by the line</div></div>`
-      : `<div class="cell"><div class="t">Market</div><div class="n flat">—</div><div class="s">no consensus line yet</div></div>`;
-    let edgeCell;
-    if (marketPct == null) {
-      edgeCell = `<div class="cell"><div class="t">Edge</div><div class="n flat">—</div><div class="s">needs a market price</div></div>`;
-    } else if (value >= VALUE_EDGE) {
-      edgeCell = `<div class="cell"><div class="t">Edge</div><div class="n green">+${value.toFixed(0)}%</div><div class="s">model over market</div></div>`;
-    } else if (value > 0) {
-      edgeCell = `<div class="cell"><div class="t">Edge</div><div class="n">+${value.toFixed(0)}%</div><div class="s">slim — not value</div></div>`;
+      ? `<div class="cell${fresh && fresh.stale ? ' stale' : ''}"><div class="t">Market</div><div class="n">${Math.round(marketPct)}%</div><div class="s">${cfl.escapeHtml(booksTxt)}, vig removed${fresh ? (fresh.stale ? ' · stale, ' + cfl.escapeHtml(fresh.when) : ' · ' + cfl.escapeHtml(fresh.when)) : ''}</div></div>`
+      : `<div class="cell"><div class="t">Market</div><div class="n flat">—</div><div class="s">no sportsbook line captured yet</div></div>`;
+    let gapCell;
+    if (gap == null) {
+      gapCell = `<div class="cell"><div class="t">Difference</div><div class="n flat">—</div><div class="s">needs a sportsbook line</div></div>`;
+    } else if (absGap < AGREE_POINTS) {
+      gapCell = `<div class="cell"><div class="t">Difference</div><div class="n flat">${Math.round(absGap)} pts</div><div class="s">mostly agree</div></div>`;
+    } else if (gap > 0) {
+      gapCell = `<div class="cell"><div class="t">Difference</div><div class="n">${Math.round(absGap)} pts</div><div class="s">CFL higher${absGap >= BIG_POINTS ? ' — a flag on the model, not the price' : ' — not a proven edge'}</div></div>`;
     } else {
-      edgeCell = `<div class="cell"><div class="t">Edge</div><div class="n flat">${value.toFixed(0)}%</div><div class="s">line's fair — pass</div></div>`;
+      gapCell = `<div class="cell"><div class="t">Difference</div><div class="n">${Math.round(absGap)} pts</div><div class="s">market higher${absGap >= BIG_POINTS ? ' — the books are surer than we are' : ''}</div></div>`;
     }
     probsHtml = `<div class="probs">
       <div class="cell"><div class="t">Model</div><div class="n">${Math.round(confidence)}%</div><div class="s">${cfl.escapeHtml(lastName(pick.picked.name))} wins</div></div>
-      ${marketCell}${edgeCell}
+      ${marketCell}${gapCell}
     </div>`;
   }
 
@@ -1191,8 +1313,8 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
   const sideB = fighterSideHtml(b, pick && !pickedIsA);
 
   const html = `
-    <div class="fight tier-${tier}${fight.is_main_event ? ' is-main' : ''}" data-fid="${fight.id}">
-      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badge}</div>
+    <div class="fight tier-${tier}${fight.is_main_event ? ' is-main' : ''}" data-fid="${fight.id}" id="fight-${fight.id}">
+      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}</div>
       <div class="matchup">${sideA}<div class="vs">VS</div>${sideB}</div>
       ${pickbar}
       ${probsHtml}
@@ -1202,7 +1324,7 @@ function buildFightModel(fight, idx, fmap, picksByFight, eventId) {
       <a href="${cfl.eventUrl(eventId)}" class="btn btn-ghost btn-block">View matchup</a>
     </div>`;
 
-  return { order: idx, confidence, value, html };
+  return { order: idx, confidence, gap, html };
 }
 
 function fighterSideHtml(f, isPick) {
@@ -1231,25 +1353,6 @@ function buildRedFlags(picked, opp, weightClass, marketPct, confidence) {
   return window.cflInsights.buildRedFlags(picked, opp, insightCtx(weightClass), marketPct, confidence);
 }
 
-function wireSort() {
-  const seg = document.getElementById('sortSeg');
-  const hint = document.getElementById('sortHint');
-  if (!seg || seg._wired) { return; }
-  seg._wired = true;
-  const hints = {
-    order: 'Main event first, top of the card down.',
-    conf: 'Most confident picks first.',
-    value: 'Biggest edge over the market first.',
-  };
-  seg.addEventListener('click', (e) => {
-    const btn = e.target.closest('button'); if (!btn) return;
-    [].forEach.call(seg.querySelectorAll('button'), b => b.classList.toggle('active', b === btn));
-    const key = btn.dataset.sort;
-    renderLeanCards(key);
-    if (hint) hint.textContent = hints[key] || '';
-  });
-}
-
 // Consensus pick across visible trained models (preserved logic).
 function getConsensusPick(fightPicks, a, b) {
   if (!fightPicks) return null;
@@ -1270,17 +1373,47 @@ function getConsensusPick(fightPicks, a, b) {
   return { picked, opponent, pct, voteCount: Math.max(aVotes, bVotes), totalVotes: aVotes + bVotes };
 }
 
+// The market's number for every fight on the card, normalised to
+// { pA, pB, books, updatedAt, src } with the book's cut already removed.
+//
+// First choice is v_fight_market_vigfree (fight_week_views.sql): real
+// sportsbooks only, each book de-vigged on its own pair, the median across
+// books, with the book count and the last capture time. It leaves out the
+// prediction-market rows and the synthetic consensus row that fight_odds also
+// holds, so "6 books" means six books. If that view is unavailable the page
+// falls back to v_fight_odds_consensus, normalising its implied pair, and
+// labels the count as "sources" because that view counts everything.
 async function loadOddsMap(eventId) {
   if (_oddsMap !== null) return _oddsMap;
   const sb = window.cflSupabase;
   _oddsMap = {};
+  const norm = (pa, pb) => {
+    pa = +pa; pb = +pb;
+    if (isNaN(pa) || isNaN(pb) || pa + pb <= 0) return [null, null];
+    return [pa / (pa + pb), pb / (pa + pb)];
+  };
   try {
     const { data, error } = await sb
-      .from('v_fight_odds_consensus')
-      .select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b')
+      .from('v_fight_market_vigfree')
+      .select('fight_id, market_p_a, market_p_b, book_count, last_updated')
       .eq('event_id', eventId);
-    if (error) { console.warn('Market odds not available:', error.message); return _oddsMap; }
-    (data || []).forEach(r => { _oddsMap[r.fight_id] = r; });
+    if (!error && data && data.length) {
+      data.forEach(r => {
+        const [pA, pB] = norm(r.market_p_a, r.market_p_b);
+        _oddsMap[r.fight_id] = { pA, pB, books: r.book_count, updatedAt: r.last_updated, src: 'sportsbooks' };
+      });
+      return _oddsMap;
+    }
+    if (error) console.warn('Sportsbook market view not available, falling back to the consensus view:', error.message);
+    const cons = await sb
+      .from('v_fight_odds_consensus')
+      .select('fight_id, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at')
+      .eq('event_id', eventId);
+    if (cons.error) { console.warn('Market odds not available:', cons.error.message); return _oddsMap; }
+    (cons.data || []).forEach(r => {
+      const [pA, pB] = norm(r.implied_prob_a, r.implied_prob_b);
+      _oddsMap[r.fight_id] = { pA, pB, books: r.bookmaker_count, updatedAt: r.fetched_at, src: 'all-sources' };
+    });
   } catch (e) { console.warn('Market odds not available:', e.message); }
   return _oddsMap;
 }

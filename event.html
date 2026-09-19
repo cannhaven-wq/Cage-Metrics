@@ -661,7 +661,7 @@
 <script src="_auth.js"></script>
 <script src="edges.js?v=cardio-retired"></script>
 <script src="distanceEdges.js"></script>
-<script src="fight-insights.js?v=7"></script>
+<script src="fight-insights.js?v=8"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -1156,27 +1156,24 @@ function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, market
   if (marketOdds && picked) {
     const marketProb   = pickIsA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
     const marketOddsAm = pickIsA ? marketOdds.american_odds_a : marketOdds.american_odds_b;
-    if (marketProb != null) {
-      marketPct = marketProb * 100;
-      const edgePp = conf - marketPct;
-      const edgeRound = Math.round(edgePp);
-      // Same guard the homepage uses: a gap this wide is almost always a stale
-      // or mismatched line, not a real disagreement. Don't print it.
-      if (edgePp > 15) { marketPct = null; }
-    }
+    // The market's number is always shown when we have one. This used to blank
+    // it above a 15-point gap (the same guard the homepage carried), which hid
+    // real lines exactly where the model disagreed most. A wide gap is a fact
+    // about the model, not evidence against the odds. And the difference is
+    // shown as a disagreement in points — never as an "edge" or a value flag
+    // (CLAUDE.md line 1; D-010).
+    if (marketProb != null) marketPct = marketProb * 100;
     if (marketPct != null) {
-      const edgePp = conf - marketPct;
-      const edgeRound = Math.round(edgePp);
-      const edgeStr = (edgeRound > 0 ? '+' : '') + edgeRound + 'pp';
-      const isValue = edgePp >= 3;
+      const gap = conf - marketPct;
+      const abs = Math.round(Math.abs(gap));
       const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
-      const labelText = isUpcoming ? 'Market' : 'Closing market';
-      const valueBadge = isValue ? '<span class="value-badge">⚡ Value</span>' : '';
+      const labelText = isUpcoming ? 'Market' : 'Last market line';
+      const gapStr = Math.abs(gap) < 5 ? `${abs} pts · mostly agree`
+        : (gap > 0 ? `${abs} pts · CFL higher` : `${abs} pts · market higher`);
       html += `<div class="fight-verdict market">
         <span class="label">${labelText}</span>
         <span class="pick">${cfl.escapeHtml(picked.name)} <span class="market-odds">${oddsStr}</span> <span class="pct">${Math.round(marketPct)}%</span></span>
-        <span class="edge ${edgePp > 0 ? 'pos' : (edgePp < 0 ? 'neg' : '')}">Edge ${edgeStr}</span>
-        ${valueBadge}
+        <span class="edge">Difference ${gapStr}</span>
       </div>`;
     }
   }

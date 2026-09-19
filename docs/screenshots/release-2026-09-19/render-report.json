@@ -1,0 +1,755 @@
+{
+  "desktop": {
+    "title": "Cannon Fight Lab — UFC Model vs Market, Every Card",
+    "heroTitle": "UFC 331: Van vs. Pantoja 2 — Model vs Market.",
+    "heroEyebrow": "Fight night",
+    "hpProof": "61.5% straight-up across 3,235 never-seen fights · Locks hit 74.5% (simulated)",
+    "heroWhen": "fight day",
+    "glance": [
+      "Fights12on the card",
+      "Forecasts locked12since Sep 7",
+      "Sportsbook lines124–6 books · updated 37 min ago",
+      "Big disagreements610+ points apart"
+    ],
+    "gaps": [
+      {
+        "text": "Tuivasa vs DespaigneCFL higherTuivasa — CFL 55% · market 21% · 34 pts apart",
+        "href": "#fight-47332"
+      },
+      {
+        "text": "Van vs PantojaCFL higherVan — CFL 80% · market 59% · 20 pts apart",
+        "href": "#fight-47325"
+      },
+      {
+        "text": "Chikadze vs BritoMarket higherBrito — CFL 59% · market 78% · 19 pts apart",
+        "href": "#fight-47334"
+      }
+    ],
+    "cardHead": "Live tonight UFC 331: Van vs. Pantoja 2 Sat, Sep 19, 2026 · Los Angeles, California, USA Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "oddsStatus": "Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "sortButtons": [
+      "Card order",
+      "Confidence",
+      "Disagreement"
+    ],
+    "fights": [
+      {
+        "id": "fight-47325",
+        "head": "Main event · FlyweightHigh confidenceFar from the market",
+        "pick": "Model pickJoshua Van 80%",
+        "probs": [
+          "Model80%Van wins",
+          "Market59%6 books, vig removed · 37 min ago",
+          "Difference20 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Van about a 59% chance. A gap this wide is more often the model missing something than the market being wrong."
+        ]
+      },
+      {
+        "id": "fight-47326",
+        "head": "LightweightHigh confidence",
+        "pick": "Model pickArman Tsarukyan 68%",
+        "probs": [
+          "Model68%Tsarukyan wins",
+          "Market73%6 books, vig removed · 37 min ago",
+          "Difference5 ptsmostly agree"
+        ],
+        "flags": [
+          "Tsarukyan is giving up 3\" of reach — Ruffy can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47327",
+        "head": "FeatherweightHigh confidence",
+        "pick": "Model pickDooho Choi 79%",
+        "probs": [
+          "Model79%Choi wins",
+          "Market69%4 books, vig removed · 37 min ago",
+          "Difference9 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Pitbull has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47329",
+        "head": "Light HeavyweightHigh confidence",
+        "pick": "Model pickIwo Baraniewski 79%",
+        "probs": [
+          "Model79%Baraniewski wins",
+          "Market69%6 books, vig removed · 37 min ago",
+          "Difference10 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Baraniewski is giving up 3\" of reach — Menifield can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47330",
+        "head": "HeavyweightHigh confidence",
+        "pick": "Model pickGable Steveson 88%",
+        "probs": [
+          "Model88%Steveson wins",
+          "Market92%6 books, vig removed · 37 min ago",
+          "Difference4 ptsmostly agree"
+        ],
+        "flags": [
+          "Steveson has no UFC fights on record — the model is working off very little tape here.",
+          "Steveson is giving up 3\" of reach — Sharaf can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47331",
+        "head": "BantamweightHigh confidence",
+        "pick": "Model pickCharles Jourdain 71%",
+        "probs": [
+          "Model71%Jourdain wins",
+          "Market64%6 books, vig removed · 37 min ago",
+          "Difference7 ptsCFL higher — not a proven edge"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47332",
+        "head": "HeavyweightLow confidence · leanFar from the market",
+        "pick": "Model pickTai Tuivasa 55%",
+        "probs": [
+          "Model55%Tuivasa wins",
+          "Market21%6 books, vig removed · 37 min ago",
+          "Difference34 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books lean the other way — they give Despaigne about a 79% chance, and the market's price is right more often than any model.",
+          "Tuivasa is giving up 9\" of reach — Despaigne can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47333",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickEdmen Shahbazyan 80%",
+        "probs": [
+          "Model80%Shahbazyan wins",
+          "Market62%6 books, vig removed · 37 min ago",
+          "Difference18 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Shahbazyan about a 62% chance. A gap this wide is more often the model missing something than the market being wrong.",
+          "Ferreira has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47334",
+        "head": "FeatherweightMedium confidenceFar from the market",
+        "pick": "Model pickJoanderson Brito 59%",
+        "probs": [
+          "Model59%Brito wins",
+          "Market78%6 books, vig removed · 37 min ago",
+          "Difference19 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47335",
+        "head": "FlyweightMedium confidenceFar from the market",
+        "pick": "Model pickCasey O'Neill 55%",
+        "probs": [
+          "Model55%O'Neill wins",
+          "Market67%6 books, vig removed · 37 min ago",
+          "Difference12 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47336",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickRyan Gandra 67%",
+        "probs": [
+          "Model67%Gandra wins",
+          "Market81%6 books, vig removed · 37 min ago",
+          "Difference13 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": [
+          "Gandra is giving up 5\" of reach — Diaz can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47337",
+        "head": "FeatherweightLow confidence · lean",
+        "pick": "Model pickJooSang Yoo 54%",
+        "probs": [
+          "Model54%Yoo wins",
+          "Market61%6 books, vig removed · 37 min ago",
+          "Difference7 ptsmarket higher"
+        ],
+        "flags": [
+          "Yoo is 7 years older — age catches up fast, not slowly.",
+          "This is a lean, not a strong pick — the model barely separates these two."
+        ]
+      }
+    ],
+    "tiles": [
+      "3,235never-seen fights graded (simulated)",
+      "74.5%Lock-tier accuracy (simulated)",
+      "8,992fights in the database",
+      "Lockedevery forecast before the bell, never revised"
+    ],
+    "bodyHasValueAlert": false,
+    "bodyHasNoConsensus": false,
+    "bodyHasEdgeCell": false,
+    "overflow": false,
+    "scrollWidth": 1440,
+    "innerWidth": 1440,
+    "navLinks": [
+      "Cannon Fight Lab\n        CFL",
+      "Card Lab",
+      "Track RecordRecord",
+      "Proof CenterProof",
+      "Prop BoardProps",
+      "Fighters",
+      "Head-to-Head",
+      "Parlay Builder",
+      "Cardio Scores",
+      "Factor Lab",
+      "Pricing",
+      "Sign in",
+      "Sign up"
+    ],
+    "consoleErrors": [
+      "Failed to load resource: net::ERR_FAILED"
+    ],
+    "consoleWarnings": [],
+    "sortedByDisagreement": [
+      "fight-47332 Difference34 ptsCFL higher — a flag on the model, not the price",
+      "fight-47325 Difference20 ptsCFL higher — a flag on the model, not the price",
+      "fight-47334 Difference19 ptsmarket higher — the books are surer than we are",
+      "fight-47333 Difference18 ptsCFL higher — a flag on the model, not the price",
+      "fight-47336 Difference13 ptsmarket higher — the books are surer than we are",
+      "fight-47335 Difference12 ptsmarket higher — the books are surer than we are",
+      "fight-47329 Difference10 ptsCFL higher — not a proven edge",
+      "fight-47327 Difference9 ptsCFL higher — not a proven edge",
+      "fight-47331 Difference7 ptsCFL higher — not a proven edge",
+      "fight-47337 Difference7 ptsmarket higher",
+      "fight-47326 Difference5 ptsmostly agree",
+      "fight-47330 Difference4 ptsmostly agree"
+    ],
+    "sortHint": "Furthest from the sportsbook number first — a disagreement, not an edge.",
+    "sortedByConfidence": [
+      "88%",
+      "80%",
+      "80%",
+      "79%",
+      "79%",
+      "71%",
+      "68%",
+      "67%",
+      "59%",
+      "55%",
+      "55%",
+      "54%"
+    ],
+    "anchorLanded": true
+  },
+  "mobile": {
+    "title": "Cannon Fight Lab — UFC Model vs Market, Every Card",
+    "heroTitle": "UFC 331: Van vs. Pantoja 2 — Model vs Market.",
+    "heroEyebrow": "Fight night",
+    "hpProof": "61.5% straight-up across 3,235 never-seen fights · Locks hit 74.5% (simulated)",
+    "heroWhen": "fight day",
+    "glance": [
+      "Fights12on the card",
+      "Forecasts locked12since Sep 7",
+      "Sportsbook lines124–6 books · updated 37 min ago",
+      "Big disagreements610+ points apart"
+    ],
+    "gaps": [
+      {
+        "text": "Tuivasa vs DespaigneCFL higherTuivasa — CFL 55% · market 21% · 34 pts apart",
+        "href": "#fight-47332"
+      },
+      {
+        "text": "Van vs PantojaCFL higherVan — CFL 80% · market 59% · 20 pts apart",
+        "href": "#fight-47325"
+      },
+      {
+        "text": "Chikadze vs BritoMarket higherBrito — CFL 59% · market 78% · 19 pts apart",
+        "href": "#fight-47334"
+      }
+    ],
+    "cardHead": "Live tonight UFC 331: Van vs. Pantoja 2 Sat, Sep 19, 2026 · Los Angeles, California, USA Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "oddsStatus": "Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "sortButtons": [
+      "Card order",
+      "Confidence",
+      "Disagreement"
+    ],
+    "fights": [
+      {
+        "id": "fight-47325",
+        "head": "Main event · FlyweightHigh confidenceFar from the market",
+        "pick": "Model pickJoshua Van 80%",
+        "probs": [
+          "Model80%Van wins",
+          "Market59%6 books, vig removed · 37 min ago",
+          "Difference20 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Van about a 59% chance. A gap this wide is more often the model missing something than the market being wrong."
+        ]
+      },
+      {
+        "id": "fight-47326",
+        "head": "LightweightHigh confidence",
+        "pick": "Model pickArman Tsarukyan 68%",
+        "probs": [
+          "Model68%Tsarukyan wins",
+          "Market73%6 books, vig removed · 37 min ago",
+          "Difference5 ptsmostly agree"
+        ],
+        "flags": [
+          "Tsarukyan is giving up 3\" of reach — Ruffy can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47327",
+        "head": "FeatherweightHigh confidence",
+        "pick": "Model pickDooho Choi 79%",
+        "probs": [
+          "Model79%Choi wins",
+          "Market69%4 books, vig removed · 37 min ago",
+          "Difference9 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Pitbull has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47329",
+        "head": "Light HeavyweightHigh confidence",
+        "pick": "Model pickIwo Baraniewski 79%",
+        "probs": [
+          "Model79%Baraniewski wins",
+          "Market69%6 books, vig removed · 37 min ago",
+          "Difference10 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Baraniewski is giving up 3\" of reach — Menifield can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47330",
+        "head": "HeavyweightHigh confidence",
+        "pick": "Model pickGable Steveson 88%",
+        "probs": [
+          "Model88%Steveson wins",
+          "Market92%6 books, vig removed · 37 min ago",
+          "Difference4 ptsmostly agree"
+        ],
+        "flags": [
+          "Steveson has no UFC fights on record — the model is working off very little tape here.",
+          "Steveson is giving up 3\" of reach — Sharaf can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47331",
+        "head": "BantamweightHigh confidence",
+        "pick": "Model pickCharles Jourdain 71%",
+        "probs": [
+          "Model71%Jourdain wins",
+          "Market64%6 books, vig removed · 37 min ago",
+          "Difference7 ptsCFL higher — not a proven edge"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47332",
+        "head": "HeavyweightLow confidence · leanFar from the market",
+        "pick": "Model pickTai Tuivasa 55%",
+        "probs": [
+          "Model55%Tuivasa wins",
+          "Market21%6 books, vig removed · 37 min ago",
+          "Difference34 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books lean the other way — they give Despaigne about a 79% chance, and the market's price is right more often than any model.",
+          "Tuivasa is giving up 9\" of reach — Despaigne can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47333",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickEdmen Shahbazyan 80%",
+        "probs": [
+          "Model80%Shahbazyan wins",
+          "Market62%6 books, vig removed · 37 min ago",
+          "Difference18 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Shahbazyan about a 62% chance. A gap this wide is more often the model missing something than the market being wrong.",
+          "Ferreira has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47334",
+        "head": "FeatherweightMedium confidenceFar from the market",
+        "pick": "Model pickJoanderson Brito 59%",
+        "probs": [
+          "Model59%Brito wins",
+          "Market78%6 books, vig removed · 37 min ago",
+          "Difference19 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47335",
+        "head": "FlyweightMedium confidenceFar from the market",
+        "pick": "Model pickCasey O'Neill 55%",
+        "probs": [
+          "Model55%O'Neill wins",
+          "Market67%6 books, vig removed · 37 min ago",
+          "Difference12 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47336",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickRyan Gandra 67%",
+        "probs": [
+          "Model67%Gandra wins",
+          "Market81%6 books, vig removed · 37 min ago",
+          "Difference13 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": [
+          "Gandra is giving up 5\" of reach — Diaz can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47337",
+        "head": "FeatherweightLow confidence · lean",
+        "pick": "Model pickJooSang Yoo 54%",
+        "probs": [
+          "Model54%Yoo wins",
+          "Market61%6 books, vig removed · 37 min ago",
+          "Difference7 ptsmarket higher"
+        ],
+        "flags": [
+          "Yoo is 7 years older — age catches up fast, not slowly.",
+          "This is a lean, not a strong pick — the model barely separates these two."
+        ]
+      }
+    ],
+    "tiles": [
+      "3,235never-seen fights graded (simulated)",
+      "74.5%Lock-tier accuracy (simulated)",
+      "8,992fights in the database",
+      "Lockedevery forecast before the bell, never revised"
+    ],
+    "bodyHasValueAlert": false,
+    "bodyHasNoConsensus": false,
+    "bodyHasEdgeCell": false,
+    "overflow": false,
+    "scrollWidth": 423,
+    "innerWidth": 423,
+    "navLinks": [
+      "Cannon Fight Lab\n        CFL",
+      "Card Lab",
+      "Track RecordRecord",
+      "Proof CenterProof",
+      "Prop BoardProps",
+      "Fighters",
+      "Head-to-Head",
+      "Parlay Builder",
+      "Cardio Scores",
+      "Factor Lab",
+      "Pricing",
+      "Sign in",
+      "Sign up"
+    ],
+    "consoleErrors": [
+      "Failed to load resource: net::ERR_FAILED"
+    ],
+    "consoleWarnings": [],
+    "sortedByDisagreement": [
+      "fight-47332 Difference34 ptsCFL higher — a flag on the model, not the price",
+      "fight-47325 Difference20 ptsCFL higher — a flag on the model, not the price",
+      "fight-47334 Difference19 ptsmarket higher — the books are surer than we are",
+      "fight-47333 Difference18 ptsCFL higher — a flag on the model, not the price",
+      "fight-47336 Difference13 ptsmarket higher — the books are surer than we are",
+      "fight-47335 Difference12 ptsmarket higher — the books are surer than we are",
+      "fight-47329 Difference10 ptsCFL higher — not a proven edge",
+      "fight-47327 Difference9 ptsCFL higher — not a proven edge",
+      "fight-47331 Difference7 ptsCFL higher — not a proven edge",
+      "fight-47337 Difference7 ptsmarket higher",
+      "fight-47326 Difference5 ptsmostly agree",
+      "fight-47330 Difference4 ptsmostly agree"
+    ],
+    "sortHint": "Furthest from the sportsbook number first — a disagreement, not an edge.",
+    "sortedByConfidence": [
+      "88%",
+      "80%",
+      "80%",
+      "79%",
+      "79%",
+      "71%",
+      "68%",
+      "67%",
+      "59%",
+      "55%",
+      "55%",
+      "54%"
+    ],
+    "anchorLanded": true
+  },
+  "mobile1x": {
+    "title": "Cannon Fight Lab — UFC Model vs Market, Every Card",
+    "heroTitle": "UFC 331: Van vs. Pantoja 2 — Model vs Market.",
+    "heroEyebrow": "Fight night",
+    "hpProof": "61.5% straight-up across 3,235 never-seen fights · Locks hit 74.5% (simulated)",
+    "heroWhen": "fight day",
+    "glance": [
+      "Fights12on the card",
+      "Forecasts locked12since Sep 7",
+      "Sportsbook lines124–6 books · updated 37 min ago",
+      "Big disagreements610+ points apart"
+    ],
+    "gaps": [
+      {
+        "text": "Tuivasa vs DespaigneCFL higherTuivasa — CFL 55% · market 21% · 34 pts apart",
+        "href": "#fight-47332"
+      },
+      {
+        "text": "Van vs PantojaCFL higherVan — CFL 80% · market 59% · 20 pts apart",
+        "href": "#fight-47325"
+      },
+      {
+        "text": "Chikadze vs BritoMarket higherBrito — CFL 59% · market 78% · 19 pts apart",
+        "href": "#fight-47334"
+      }
+    ],
+    "cardHead": "Live tonight UFC 331: Van vs. Pantoja 2 Sat, Sep 19, 2026 · Los Angeles, California, USA Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "oddsStatus": "Sportsbook lines on 12 of 12 fights · 4–6 sportsbooks per fight · vig removed · last quote 37 min ago",
+    "sortButtons": [
+      "Card order",
+      "Confidence",
+      "Disagreement"
+    ],
+    "fights": [
+      {
+        "id": "fight-47325",
+        "head": "Main event · FlyweightHigh confidenceFar from the market",
+        "pick": "Model pickJoshua Van 80%",
+        "probs": [
+          "Model80%Van wins",
+          "Market59%6 books, vig removed · 37 min ago",
+          "Difference20 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Van about a 59% chance. A gap this wide is more often the model missing something than the market being wrong."
+        ]
+      },
+      {
+        "id": "fight-47326",
+        "head": "LightweightHigh confidence",
+        "pick": "Model pickArman Tsarukyan 68%",
+        "probs": [
+          "Model68%Tsarukyan wins",
+          "Market73%6 books, vig removed · 37 min ago",
+          "Difference5 ptsmostly agree"
+        ],
+        "flags": [
+          "Tsarukyan is giving up 3\" of reach — Ruffy can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47327",
+        "head": "FeatherweightHigh confidence",
+        "pick": "Model pickDooho Choi 79%",
+        "probs": [
+          "Model79%Choi wins",
+          "Market69%4 books, vig removed · 37 min ago",
+          "Difference9 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Pitbull has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47329",
+        "head": "Light HeavyweightHigh confidence",
+        "pick": "Model pickIwo Baraniewski 79%",
+        "probs": [
+          "Model79%Baraniewski wins",
+          "Market69%6 books, vig removed · 37 min ago",
+          "Difference10 ptsCFL higher — not a proven edge"
+        ],
+        "flags": [
+          "Baraniewski is giving up 3\" of reach — Menifield can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47330",
+        "head": "HeavyweightHigh confidence",
+        "pick": "Model pickGable Steveson 88%",
+        "probs": [
+          "Model88%Steveson wins",
+          "Market92%6 books, vig removed · 37 min ago",
+          "Difference4 ptsmostly agree"
+        ],
+        "flags": [
+          "Steveson has no UFC fights on record — the model is working off very little tape here.",
+          "Steveson is giving up 3\" of reach — Sharaf can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47331",
+        "head": "BantamweightHigh confidence",
+        "pick": "Model pickCharles Jourdain 71%",
+        "probs": [
+          "Model71%Jourdain wins",
+          "Market64%6 books, vig removed · 37 min ago",
+          "Difference7 ptsCFL higher — not a proven edge"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47332",
+        "head": "HeavyweightLow confidence · leanFar from the market",
+        "pick": "Model pickTai Tuivasa 55%",
+        "probs": [
+          "Model55%Tuivasa wins",
+          "Market21%6 books, vig removed · 37 min ago",
+          "Difference34 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books lean the other way — they give Despaigne about a 79% chance, and the market's price is right more often than any model.",
+          "Tuivasa is giving up 9\" of reach — Despaigne can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47333",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickEdmen Shahbazyan 80%",
+        "probs": [
+          "Model80%Shahbazyan wins",
+          "Market62%6 books, vig removed · 37 min ago",
+          "Difference18 ptsCFL higher — a flag on the model, not the price"
+        ],
+        "flags": [
+          "The books are much less sure — they give Shahbazyan about a 62% chance. A gap this wide is more often the model missing something than the market being wrong.",
+          "Ferreira has the better late-round cardio — if this goes long, our pick fades."
+        ]
+      },
+      {
+        "id": "fight-47334",
+        "head": "FeatherweightMedium confidenceFar from the market",
+        "pick": "Model pickJoanderson Brito 59%",
+        "probs": [
+          "Model59%Brito wins",
+          "Market78%6 books, vig removed · 37 min ago",
+          "Difference19 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47335",
+        "head": "FlyweightMedium confidenceFar from the market",
+        "pick": "Model pickCasey O'Neill 55%",
+        "probs": [
+          "Model55%O'Neill wins",
+          "Market67%6 books, vig removed · 37 min ago",
+          "Difference12 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": []
+      },
+      {
+        "id": "fight-47336",
+        "head": "MiddleweightHigh confidenceFar from the market",
+        "pick": "Model pickRyan Gandra 67%",
+        "probs": [
+          "Model67%Gandra wins",
+          "Market81%6 books, vig removed · 37 min ago",
+          "Difference13 ptsmarket higher — the books are surer than we are"
+        ],
+        "flags": [
+          "Gandra is giving up 5\" of reach — Diaz can pick at range all night."
+        ]
+      },
+      {
+        "id": "fight-47337",
+        "head": "FeatherweightLow confidence · lean",
+        "pick": "Model pickJooSang Yoo 54%",
+        "probs": [
+          "Model54%Yoo wins",
+          "Market61%6 books, vig removed · 37 min ago",
+          "Difference7 ptsmarket higher"
+        ],
+        "flags": [
+          "Yoo is 7 years older — age catches up fast, not slowly.",
+          "This is a lean, not a strong pick — the model barely separates these two."
+        ]
+      }
+    ],
+    "tiles": [
+      "3,235never-seen fights graded (simulated)",
+      "74.5%Lock-tier accuracy (simulated)",
+      "8,992fights in the database",
+      "Lockedevery forecast before the bell, never revised"
+    ],
+    "bodyHasValueAlert": false,
+    "bodyHasNoConsensus": false,
+    "bodyHasEdgeCell": false,
+    "overflow": false,
+    "scrollWidth": 423,
+    "innerWidth": 423,
+    "navLinks": [
+      "Cannon Fight Lab\n        CFL",
+      "Card Lab",
+      "Track RecordRecord",
+      "Proof CenterProof",
+      "Prop BoardProps",
+      "Fighters",
+      "Head-to-Head",
+      "Parlay Builder",
+      "Cardio Scores",
+      "Factor Lab",
+      "Pricing",
+      "Sign in",
+      "Sign up"
+    ],
+    "consoleErrors": [
+      "Failed to load resource: net::ERR_FAILED"
+    ],
+    "consoleWarnings": [],
+    "sortedByDisagreement": [
+      "fight-47332 Difference34 ptsCFL higher — a flag on the model, not the price",
+      "fight-47325 Difference20 ptsCFL higher — a flag on the model, not the price",
+      "fight-47334 Difference19 ptsmarket higher — the books are surer than we are",
+      "fight-47333 Difference18 ptsCFL higher — a flag on the model, not the price",
+      "fight-47336 Difference13 ptsmarket higher — the books are surer than we are",
+      "fight-47335 Difference12 ptsmarket higher — the books are surer than we are",
+      "fight-47329 Difference10 ptsCFL higher — not a proven edge",
+      "fight-47327 Difference9 ptsCFL higher — not a proven edge",
+      "fight-47331 Difference7 ptsCFL higher — not a proven edge",
+      "fight-47337 Difference7 ptsmarket higher",
+      "fight-47326 Difference5 ptsmostly agree",
+      "fight-47330 Difference4 ptsmostly agree"
+    ],
+    "sortHint": "Furthest from the sportsbook number first — a disagreement, not an edge.",
+    "sortedByConfidence": [
+      "88%",
+      "80%",
+      "80%",
+      "79%",
+      "79%",
+      "71%",
+      "68%",
+      "67%",
+      "59%",
+      "55%",
+      "55%",
+      "54%"
+    ],
+    "anchorLanded": true
+  }
+}
