@@ -731,12 +731,22 @@ async function loadCandidateFights() {
   }
 
   const ids = events.map(e => e.id);
-  const { data: fights, error: fErr } = await sb
+  const { data: fightsRaw, error: fErr } = await sb
     .from('fights')
-    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, bell_at')
+    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, bell_at, is_active')
     .in('event_id', ids);
   if (fErr) throw new Error(`fights fetch: ${fErr.message}`);
-  console.log(`[supabase] ${fights ? fights.length : 0} candidate fights across ${events.length} events`);
+
+  // Drop retired bookings. A cancelled bout keeps its row forever — locked
+  // picks, snapshots and captured quotes all reference it — but it is not on
+  // the card, so it has no bell, no close and nothing worth capturing. Filtered
+  // client-side on `!== false` (rather than .eq in the query) so a database
+  // without the column behaves exactly as before, which is the same rule
+  // cfl.orderCard applies in _shared.js.
+  const fights = (fightsRaw || []).filter(f => f.is_active !== false);
+  const retired = (fightsRaw || []).length - fights.length;
+  console.log(`[supabase] ${fights.length} candidate fights across ${events.length} events` +
+    (retired ? ` (${retired} retired booking(s) skipped)` : ''));
 
   // Best-known start time per fight (bell_at > provider commence > event-date
   // fallback), from the DUR-001 start hierarchy view. Used by wantTotals() and
@@ -1062,17 +1072,29 @@ async function promoteClosers(candidateFights) {
     const toSet = [...keep].filter(id => !caps.find(c => c.id === id).is_closer);
     const toClear = caps.filter(c => c.is_closer && !keep.has(c.id)).map(c => c.id);
 
-    if (toSet.length) {
-      const { error: e1 } = await sb
-        .from('fight_odds').update({ is_closer: true }).in('id', toSet);
-      if (e1) throw new Error(`closer set (fight ${f.id}): ${e1.message}`);
-      promoted += toSet.length;
-    }
+    // CLEAR BEFORE SET — the order is load-bearing, not stylistic.
+    //
+    // `uq_fight_odds_closer` is UNIQUE (fight_id, side, book_id) WHERE
+    // is_closer. Promoting first means that, for any (side, book) whose closer
+    // MOVES to a newer capture, the new row is flagged while the old one still
+    // is — two closers for one key — and the insert dies on the constraint.
+    // The whole job then exits non-zero and captures nothing for ANY fight.
+    //
+    // That is not hypothetical: it took capture down on UFC 331 night
+    // (2026-09-19, run 35469887759) on the retired Moicano-Ortega booking,
+    // whose closer had to move from a 09-15 quote to a 09-16 one. Clearing
+    // first leaves the key momentarily empty, which no constraint minds.
     if (toClear.length) {
       const { error: e2 } = await sb
         .from('fight_odds').update({ is_closer: false }).in('id', toClear);
       if (e2) throw new Error(`closer clear (fight ${f.id}): ${e2.message}`);
       demoted += toClear.length;
+    }
+    if (toSet.length) {
+      const { error: e1 } = await sb
+        .from('fight_odds').update({ is_closer: true }).in('id', toSet);
+      if (e1) throw new Error(`closer set (fight ${f.id}): ${e1.message}`);
+      promoted += toSet.length;
     }
   }
   if (promoted || demoted) {
