@@ -560,8 +560,8 @@ owner's.
 | level | L3 |
 | reversible | the code is; the claims are not, in either direction. The old copy was read for months and a retraction does not unread it; the new copy withdraws claims rather than making them, which is the direction gate #8 exists to force. Nothing here writes a row, applies a migration, or touches a frozen file |
 
-**Decision.** Ship, tonight, on the UFC 331 card: the homepage centred on the
-current card; the sportsbook number always shown; every edge percentage, the
+**Decision.** Ship, tonight, on the UFC 331 card — [PR #38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38) —
+the homepage centred on the current card; the sportsbook number always shown; every edge percentage, the
 `✦ Value alert` badge, the Value sort and the parlay strip removed; the four
 contradicted public claims replaced; the historical simulation and the live
 published record kept apart in the copy.

@@ -219,8 +219,8 @@ rendering a **Value alert** — the single most tout-y thing the site could
 publish, on a +502 underdog. The three pieces (percentage text, badge + sort,
 suppression) are coupled and have to move together, which is T-021 proper.
 
-**T-020 and T-021 shipped together, later the same night**, under
-[D-010](DECISIONS.md), on the owner's instruction to make the approved
+**T-020 and T-021 shipped together, later the same night**, in
+[#38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38) under [D-010](DECISIONS.md), on the owner's instruction to make the approved
 changes live during the card. The three coupled pieces moved as one: the
 suppression is gone (from `event.html` too, which carried the same guard), the
 badge and sort became a neutral "Far from the market" badge and a

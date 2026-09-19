@@ -18,8 +18,8 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 **Date:** 2026-09-19
 
 Frontend release on UFC 331 night, on the owner's instruction to make the
-approved website changes live during the card. Recorded as
-[D-010](DECISIONS.md); T-020 and T-021 are done.
+approved website changes live during the card. [PR #38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38),
+recorded as [D-010](DECISIONS.md); T-020 and T-021 are done.
 
 ### What is now live
 
