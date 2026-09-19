@@ -131,6 +131,90 @@ amended merely to keep the percentage UI. The replacement must express the
 model-versus-market comparison without asserting an edge the evidence does not
 support.
 
+### T-021 — what the page actually does, found live on UFC 331 night
+
+**Observed 2026-09-19, ~21:00 UTC, on the live card. Nothing was changed.** The
+owner spotted a main-event card reading *"Market — no consensus line yet"* and
+*"Edge — needs a market price"*. Both statements were false.
+
+**The sportsbook data was fine.** Verified end to end **as the `anon` role**,
+which is what the browser is: `v_fight_odds_consensus` returned all 13 fights,
+Van −157 / Pantoja +134 across **8 bookmakers**, `fetched_at` 20:46:09 — twenty
+minutes old. Grants correct, view is `security_invoker=false` so it reads
+through `fight_odds`'s RLS, query runs in **235 ms** against `anon`'s 3-second
+`statement_timeout`. No data problem, and nothing to do with that day's
+migration.
+
+**The cause is a suppression guard in `index.html`** (~line 1126):
+
+```js
+value = confidence - marketPct;
+if (value > 15) {   // "almost always stale or mismatched odds"
+  marketPct = null; // ...and a null renders as "no consensus line yet"
+  value = 0;
+}
+```
+
+Three separate defects stacked:
+
+1. **It blames the odds.** The comment says a big gap means stale or mismatched
+   odds. Measured: eight books, fresh, provenance-complete. The odds were right
+   and **the model was overconfident** — the code treats a model problem as a
+   data problem.
+2. **It then misreports that to the user** as an absence of data. The site has
+   the line and says it does not.
+3. **It is one-sided.** It fires only when the model is *above* the market.
+   Chikadze (−19.2) and Gandra (−13.6) displayed their lines normally, so the
+   page hides exactly the fights where CFL disagrees most bullishly.
+
+Blast radius that night — **3 of 12 bouts, including the main event**:
+
+| bout | model | market | gap | cell |
+|---|---|---|---|---|
+| Tuivasa vs Despaigne | 54.7% | 21.0% | **+33.7** | suppressed |
+| Van vs Pantoja (main) | 79.6% | 58.9% | **+20.7** | suppressed |
+| Shahbazyan vs Ferreira | 79.6% | 62.1% | **+17.5** | suppressed |
+
+**The worse half: edge percentages are live.** Gaps between `VALUE_EDGE` (4) and
+15 render as a green figure captioned "model over market" —
+
+```js
+edgeCell = `…<div class="n green">+${value.toFixed(0)}%</div>
+            <div class="s">model over market</div>`
+```
+
+On that card, **Menifield +10%, Pitbull +9%, Vera +7%**. That is an edge
+percentage in the user interface, which `CLAUDE.md`'s first rule prohibits
+outright, and Q-14 explicitly left that prohibition standing. The rule has no
+size exemption: the large gaps are hidden and the mid-size ones ship.
+
+**Why no edge figure is defensible at any size.** `benchmark_report.md` records
+the engine losing to the close — **0.6511 log-loss against 0.5978**. A model
+worse calibrated than the market cannot claim to have found 21 points of edge
+in it, and FE-001 left the shipped record and takedown-defence factors
+unsupported. The owner's framing, 2026-09-19: *"a giant model/market
+disagreement should trigger scrutiny of the model, not excitement about the
+bet… the market deserves the presumption of correctness until CFL demonstrates
+otherwise."*
+
+**Direction approved by the owner 2026-09-19**, to implement after the card:
+
+- **always show the verified consensus line** — hiding a real price and
+  inventing a reason is strictly worse than showing it;
+- **remove edge percentages entirely**, every size, not just the suppressed
+  ones;
+- **replace them with neutral model-vs-market language** that states where the
+  model sits without asserting the difference is money.
+
+**Why this was not shipped the same night.** Not pipeline risk — capture is
+fully isolated from `index.html`, and `odds.yml` runs on schedule/dispatch, not
+on push. The blocker is that the change is **not** the two-line edit it looks
+like. `value` also drives the `✦ Value alert` badge and the "Value" sort. Delete
+the suppression on its own and Tuivasa's +33.7 stops being hidden and starts
+rendering a **Value alert** — the single most tout-y thing the site could
+publish, on a +502 underdog. The three pieces (percentage text, badge + sort,
+suppression) are coupled and have to move together, which is T-021 proper.
+
 **T-022 and T-023 are L2** — reversible, publish no new number, and T-023 can
 only narrow what the page asserts. Proceed and notify.
 

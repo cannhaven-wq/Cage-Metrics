@@ -525,6 +525,20 @@ the current card", never "did not happen". Doing it by hand is the stopgap;
 `STALE_BOOKING_LIFECYCLE.md` §1 wants it falling out of Event Flow's own
 `stale_fights` — **T-032**, behind **T-030**.
 
+**T-021 has a concrete, measured case as of 2026-09-19** — found on the live UFC
+331 card, documented in [`TASK_QUEUE.md`](TASK_QUEUE.md). `index.html` blanks the
+market cell whenever the model sits more than 15 points above the market, then
+reports that to the user as *"no consensus line yet"*. The data was verified
+healthy **as `anon`**: 8 bookmakers, 235 ms, fresh. So the page hid a real price
+and gave a false reason, on 3 of 12 bouts including the main event — and only
+ever in the direction that flatters the model. Meanwhile gaps of 4 to 15 points
+**ship as green edge percentages** ("+10% model over market"), which is the thing
+`CLAUDE.md`'s first rule prohibits and Q-14 explicitly did not touch. Direction
+approved: always show the line, remove every edge percentage, replace with
+neutral language. Not shipped on the night because `value` also drives the
+`Value alert` badge and the Value sort — removing the suppression alone would
+start touting a +502 underdog at +33.7.
+
 **Trust UX shipped 2026-09-18** (T-022 / T-023, [D-006](DECISIONS.md), PR #25 at
 `e91a7da`). The Proof Center is reachable from the nav and footer rather than
 from one line inside `track-record.html`. The per-fight bullets are headed
