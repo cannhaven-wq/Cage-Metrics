@@ -27,7 +27,8 @@ const path = require('path');
 
 const {
   buildMoneylineRows, marketStatusOf, stripUnsupported,
-  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
+  nearBellWindow, shouldCaptureNow, dueSinceLastCapture,
+  currentBout, boutStartedAt, proxyCutoffAt,
   planLiveCadence, minutesRemainingInCard, wantTotals, resolveCurrentCard,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_INTERVAL_MIN, EVENT_FLOW_MAX_H,
@@ -829,4 +830,116 @@ test('a spent-out month reaches the STOP condition through our own count alone',
                       minutesRemainingInCard: 60 }), null,
     'an exhausted allowance must stop capture even while the provider would ' +
     'happily sell more');
+});
+
+// -----------------------------------------------------------------------------
+// The elapsed-time cadence gate (2026-09-19)
+// -----------------------------------------------------------------------------
+// Why these exist. The cadence tiers were gated on where the wall clock sat
+// (`min % cadence < WAKE_INTERVAL_MIN`), which is only equivalent to a cadence
+// if the cron truly fires every WAKE_INTERVAL_MIN minutes. GitHub throttles a
+// `*/5` schedule to a handful of runs a day at arbitrary minutes. On UFC 331
+// (2026-09-19) the wakes landed at :43, :30, :35 and :35 — never inside minutes
+// 0-4 — so the hourly tier never opened and the job captured nothing all day on
+// a card day.
+//
+// The gate now measures elapsed time since OUR last capture when that is known,
+// and falls back to the old phase test when it is not.
+
+const FLOW_CARD = [{ id: 1, start_at: new Date('2026-09-20T02:00:00Z').toISOString(),
+                     start_basis: 'provider_commence' }];
+
+test('dueSinceLastCapture returns null when the last capture is unknowable', () => {
+  const now = new Date('2026-09-19T14:43:00Z');
+  assert.strictEqual(dueSinceLastCapture(null, now, 60), null);
+  assert.strictEqual(dueSinceLastCapture(undefined, now, 60), null);
+  assert.strictEqual(dueSinceLastCapture(new Date('nope'), now, 60), null);
+  assert.strictEqual(dueSinceLastCapture('2026-09-19T13:00:00Z', now, 60), null,
+    'a string is not a Date — do not silently parse it into a suppression');
+});
+
+test('a last capture in the future is clock skew, and never suppresses', () => {
+  const now = new Date('2026-09-19T14:43:00Z');
+  const ahead = new Date('2026-09-19T15:43:00Z');
+  assert.strictEqual(dueSinceLastCapture(ahead, now, 60), null,
+    'falls back rather than treating skew as a fresh capture');
+});
+
+test('the throttled-cron wake pattern that lost UFC 331 now captures', () => {
+  // The real deliveries, as recorded in the Actions log for 2026-09-19.
+  const wakes = ['01:35', '06:35', '11:30', '14:43'];
+  const underPhaseGate = wakes.filter(hhmm =>
+    shouldCaptureNow([], new Date(`2026-09-19T${hhmm}:00Z`), true).yes);
+  assert.strictEqual(underPhaseGate.length, 0,
+    'the old gate captured on none of the four real wakes — this is the defect');
+
+  // Same wakes, elapsed gate, starting from the 08:29 baseline actually on file.
+  let last = new Date('2026-09-19T08:29:00Z');
+  const captured = [];
+  for (const hhmm of wakes) {
+    const at = new Date(`2026-09-19T${hhmm}:00Z`);
+    if (at <= last) continue;
+    if (shouldCaptureNow([], at, true, {}, last).yes) { captured.push(hhmm); last = at; }
+  }
+  assert.deepStrictEqual(captured, ['11:30', '14:43'],
+    'both post-baseline wakes are more than an hour on, so both capture');
+});
+
+test('the elapsed gate still refuses to beat its own cadence', () => {
+  const last = new Date('2026-09-19T14:00:00Z');
+  // Hourly tier: a wake 20 minutes later is not due, however convenient.
+  assert.strictEqual(
+    shouldCaptureNow([], new Date('2026-09-19T14:20:00Z'), true, {}, last).yes, false);
+  assert.strictEqual(
+    shouldCaptureNow([], new Date('2026-09-19T15:00:00Z'), true, {}, last).yes, true);
+});
+
+test('elapsed mode cannot spend more than the phase gate over a whole card', () => {
+  // A reliable */5 cron through a seven-hour flow window, unknown budget (so
+  // the governor picks the coarsest 30-minute rung). Elapsed mode must not
+  // exceed what the beat would have spent.
+  const start = new Date('2026-09-20T02:00:00Z');
+  const walk = (useElapsed) => {
+    let last = useElapsed ? new Date(start.getTime() - 3600000) : null;
+    let credits = 0;
+    for (let m = -180; m < 7 * 60; m += 5) {
+      const at = new Date(start.getTime() + m * 60000);
+      const d = shouldCaptureNow(FLOW_CARD, at, true, {}, useElapsed ? last : null);
+      if (d.yes) { credits++; if (useElapsed) last = at; }
+    }
+    return credits;
+  };
+  const phase = walk(false);
+  const elapsed = walk(true);
+  assert.ok(elapsed <= phase + 1,
+    `elapsed mode spent ${elapsed} against the beat's ${phase} — a rung was widened`);
+  assert.ok(elapsed > 0, 'and it must actually capture');
+});
+
+test('an unreadable last capture leaves every existing tier exactly as it was', () => {
+  // The fallback is what keeps the whole pre-existing suite meaningful: with no
+  // lastCaptureAt the decisions must be byte-identical to the phase gate.
+  for (const hhmm of ['00:00', '00:04', '00:05', '08:00', '08:15', '12:00', '12:15']) {
+    for (const hasCard of [true, false]) {
+      const at = new Date(`2026-09-20T${hhmm}:00Z`);
+      assert.deepStrictEqual(
+        shouldCaptureNow([], at, hasCard, {}, null),
+        shouldCaptureNow([], at, hasCard, {}),
+        `tier drifted at ${hhmm} hasCard=${hasCard}`);
+    }
+  }
+});
+
+test('the daily baseline survives a wake that misses the top of the hour', () => {
+  const yesterdayBaseline = new Date('2026-09-18T08:02:00Z');
+  // 08:41, no card: the old gate skips the day entirely; elapsed mode takes it.
+  const at = new Date('2026-09-19T08:41:00Z');
+  assert.strictEqual(shouldCaptureNow([], at, false).yes, false,
+    'the phase gate misses the baseline on a throttled wake');
+  assert.strictEqual(shouldCaptureNow([], at, false, {}, yesterdayBaseline).yes, true);
+  // And it stays one capture a day, not one per wake after 08:00.
+  const justTaken = new Date('2026-09-19T08:41:00Z');
+  assert.strictEqual(
+    shouldCaptureNow([], new Date('2026-09-19T11:00:00Z'), false, {}, justTaken).yes, false,
+    'the baseline is one capture a day, not every wake after the anchor hour');
 });

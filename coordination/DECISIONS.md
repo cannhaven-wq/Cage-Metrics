@@ -449,3 +449,101 @@ reason the correction could be reviewed at all.
 **Attribution note.** As D-006 and D-007: "Reed Cannon" per `CLAUDE.md`;
 normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
 owner's.
+
+---
+
+## D-009 — UFC 331 launch activation: capture columns applied, the card reconciled
+
+| field | value |
+|---|---|
+| date | 2026-09-19 |
+| decided by | Reed Cannon |
+| task | T-028 |
+| level | L3 |
+| reversible | **partly.** The migrations are additive and the `is_active` flag flips back. The quotes captured tonight are not: `fight_odds` is append-only, and a card that goes by uncaptured is permanently unscorable. That asymmetry is why this ran today rather than after the card |
+
+**Decision.** Apply the additive production migrations needed for UFC 331 to be
+capturable, and take the cancelled Moicano–Ortega booking off the live card
+without deleting anything.
+
+**Quoted.** The owner, 2026-09-19:
+
+> "Finish production activation. […] applying the approved migrations, enabling
+> the Event Flow schedule, and allowing the production write path that we
+> intentionally kept disabled during testing."
+
+> "Reconcile the actual UFC 331 card. UFC officially removed Moicano–Ortega, so
+> CFL needs to show the real 12-fight card without destroying the historical
+> record for that removed bout."
+
+**A correction to the premise, recorded because it matters.** The instruction
+says *"the approved migrations"*. **No migration had an approval on record.**
+This log ended at D-008 and carried no entry applying any of the five; D-004
+says in terms that the immutability migration *"remains unapplied and is the
+owner's to apply"*. So this entry is not a citation of an earlier approval —
+**it is the approval**, given today, and it is scoped to what is quoted above
+rather than to all five files.
+
+**What was applied.**
+
+| migration | why now |
+|---|---|
+| `research/clv/proposed_2026-09-16_fight_odds_capture.sql` | the deadline was the bell. `build/fetch-odds.js` already probes for these columns and fills them; without them every quote taken tonight is permanently unscorable |
+| `add_bout_order_migration.sql` | adds `fights.is_active` and `bout_order`, both of which `cfl.orderCard` in `_shared.js` has been reading for months against columns that did not exist |
+
+Both are ADD COLUMN / CREATE INDEX only — no DROP, no DELETE, no destructive
+UPDATE, no trigger created or altered. Verified after applying: all 110,980
+pre-existing `fight_odds` rows carry NULL in every new column. Nothing was
+backfilled, and nothing should be.
+
+**What was deliberately NOT applied, against the instruction.** Three of the
+five, plus the two activations, and the reasons are engineering rather than
+governance:
+
+1. **`proposed_2026-09-16_fight_odds_immutability.sql`** — it adds triggers to a
+   table being written to, by a writer in another repository, during a live
+   card. Its own filing says to apply it *between* cards. A capture that starts
+   failing at 21:00 UTC costs the thing this whole day was for.
+2. **`proposed_2026-09-16_event_flow.sql`** — it creates `odds_api_usage`
+   **empty**, and an empty ledger reads as *"0 spent, 500 remaining"*. That is
+   false: the job has been spending all month with nowhere to record it. The
+   governor would then pick the 5-minute rung on a known-wrong premise, and
+   overspending the free allowance is paid usage, which is L3 under gate #6.
+   The designed fail-safe — an unreadable ledger reads as tight — is the safer
+   state tonight, and it costs lead time rather than correctness.
+3. **`proposed_2026-09-16_clv001_columns.sql`** — it stores a computed result
+   and nothing is computable until a card has been captured. Its own header says
+   apply it last.
+4. **The Event Flow schedule** stays commented out. Its two preconditions are
+   enforced in code and one is unmet: `cfl_engine/event_flow/REAL_PAGE_CHECK.json`
+   does not exist, so `--execute` refuses. It cannot be produced from here —
+   UFCStats returns 403 to this environment.
+5. **CLV write mode** stays shut. It changes nothing tonight: the publication
+   gate is a sample floor of 100 scored observations across 20 events, and it
+   stands at 0 and 0 whatever the write mode says.
+
+**The retirement, and why it is an observation rather than a tidy-up.**
+`fights.is_active = false` on id 47328. `add_bout_order_migration.sql` argues at
+length that a booking must be retired from an observation and never from a
+row-number heuristic, and names this exact bout. Three independent observations
+support it:
+
+- the Tier-1 parse of the live UFCStats page for UFC 331 on 2026-09-18 — twelve
+  bouts on the page against thirteen in `fights`
+  (`cfl_engine/event_flow/STALE_BOOKING_LIFECYCLE.md`);
+- the market: **zero quotes in 36 hours**, last quote 2026-09-16, while all
+  twelve live bouts took 30 each;
+- the owner, in the message quoted above.
+
+Nothing was deleted. The snapshot, the model pick and all 40 captured quotes for
+47328 stand, and the fight stays fully visible in history. Exactly one row in the
+database is retired.
+
+**What it produced on the night.** The first CLV-eligible quotes CFL has ever
+recorded: 15:49:51 UTC, 142 rows across 6 books, **118 carrying the full §4
+provenance set**. No CLV figure is computed or published, and the publication
+gate is untouched.
+
+**Attribution note.** As D-006 through D-008: "Reed Cannon" per `CLAUDE.md`;
+normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
+owner's.

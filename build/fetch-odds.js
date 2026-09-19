@@ -382,12 +382,54 @@ function minutesRemainingInCard(candidateFights, now = new Date()) {
   return latest <= t ? 0 : Math.round((latest - t) / 60000);
 }
 
+// How much early a wake may be and still count as due. Absorbs scheduler jitter
+// so a cadence polled at 29.98 minutes does not slip a whole rung. One minute
+// cannot meaningfully move the spend: at the 30-minute rung it is worth under
+// two extra calls across a seven-hour card.
+const DUE_TOLERANCE_MIN = 1;
+
+// Is a capture DUE, measured from when we last captured rather than from where
+// the wall clock happens to sit?
+//
+// The phase test in shouldCaptureNow (`min % cadence < WAKE_INTERVAL_MIN`) is
+// only correct if the cron really fires every WAKE_INTERVAL_MIN minutes.
+// GitHub Actions does not promise that, and on this repository it does not
+// deliver it: a `*/5` schedule is throttled to a handful of runs a day at
+// arbitrary minutes. Measured 2026-09-19, the wakes landed at :43, :30, :35 and
+// :35 — not one inside minutes 0-4 — so the hourly tier's gate never opened.
+// UFC 331 was a card day and this job captured NOTHING; the only moneyline rows
+// on file for it that morning came from another writer.
+//
+// Elapsed time is what the cadence was always trying to express, and it is
+// robust to an unreliable wake. It also cannot spend faster than the ladder
+// already permits — a capture still needs `cadenceMin` minutes to have passed —
+// so the credit ceiling is untouched and no rung is widened.
+//
+// Returns true/false when the last capture is known and null when it is not, so
+// the caller falls back to the phase test. A missing or unreadable ledger
+// therefore degrades to the OLD behaviour, never to "capture on every wake".
+function dueSinceLastCapture(lastCaptureAt, now, cadenceMin) {
+  if (!(lastCaptureAt instanceof Date)) return null;
+  const t = lastCaptureAt.getTime();
+  if (!Number.isFinite(t)) return null;
+  const elapsedMin = (now.getTime() - t) / 60000;
+  // A last capture in the future is clock skew or a bad row, not a fresh
+  // capture. Do not trust it to suppress a capture; fall back instead.
+  if (elapsedMin < 0) return null;
+  return elapsedMin >= cadenceMin - DUE_TOLERANCE_MIN;
+}
+
 // The cadence decision for one wake-up. Pure, so build/test-fetch-odds.js can
 // walk whole months through it and count the credits.
 //
 // `budget` is { creditsRemaining, cardsRemaining }. Omit it and the governor
 // treats the budget as unknown, which means tight — see planLiveCadence.
-function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
+//
+// `lastCaptureAt` is when THIS job last wrote a quote, or null/undefined when
+// that is unknown. Supplied, the tiers below become elapsed-time gates;
+// omitted, they keep the original wall-clock phase behaviour exactly.
+function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {},
+                          lastCaptureAt = null) {
   const min = now.getUTCMinutes();
   if (nearBellWindow(candidateFights, now)) {
     const cadence = planLiveCadence({
@@ -403,20 +445,35 @@ function shouldCaptureNow(candidateFights, now, hasCardInWindow, budget = {}) {
                     `${budget.cardsRemaining ?? 1} card(s) still to cover) — ` +
                     `capture stopped rather than spending past the free allowance` };
     }
-    if (min % cadence < WAKE_INTERVAL_MIN) {
+    const flowDue = dueSinceLastCapture(lastCaptureAt, now, cadence);
+    if (flowDue === null ? (min % cadence < WAKE_INTERVAL_MIN) : flowDue) {
       return { yes: true, cadence,
                why: `card in flow — ${cadence}-minute cadence` +
                     (cadence === LIVE_CADENCE_LADDER[0] ? '' : ' (budget-degraded)') };
     }
-    return { yes: false, cadence, why: `card in flow but off the ${cadence}-minute beat` };
+    return { yes: false, cadence,
+             why: flowDue === null
+               ? `card in flow but off the ${cadence}-minute beat`
+               : `card in flow, ${cadence}-minute cadence not due yet` };
   }
   if (hasCardInWindow) {
-    if (min < WAKE_INTERVAL_MIN) {
+    const hourlyDue = dueSinceLastCapture(lastCaptureAt, now, 60);
+    if (hourlyDue === null ? (min < WAKE_INTERVAL_MIN) : hourlyDue) {
       return { yes: true, cadence: 60, why: 'card today or tomorrow — hourly cadence' };
     }
-    return { yes: false, cadence: 60, why: 'card window but not the top of the hour' };
+    return { yes: false, cadence: 60,
+             why: hourlyDue === null
+               ? 'card window but not the top of the hour'
+               : 'card window, hourly cadence not due yet' };
   }
-  if (now.getUTCHours() === BASELINE_HOUR_UTC && min < WAKE_INTERVAL_MIN) {
+  // The daily baseline stays anchored to BASELINE_HOUR_UTC so a quiet month
+  // captures at a predictable hour. With an elapsed clock the anchor becomes
+  // "at or after that hour", so a throttled wake at 08:41 still takes the
+  // baseline instead of skipping the day entirely.
+  const baselineDue = dueSinceLastCapture(lastCaptureAt, now, 1440);
+  if (baselineDue === null
+        ? (now.getUTCHours() === BASELINE_HOUR_UTC && min < WAKE_INTERVAL_MIN)
+        : (now.getUTCHours() >= BASELINE_HOUR_UTC && baselineDue)) {
     return { yes: true, cadence: 1440, why: 'daily baseline capture' };
   }
   return { yes: false, cadence: null,
@@ -527,6 +584,39 @@ async function recordCreditUsage(used, remaining, creditsCharged) {
   }
 }
 
+// When did THIS job last write a quote for one of the candidate fights?
+//
+// Scoped to rows carrying `feed_version`, which only this script sets, so the
+// other writers to `fight_odds` — the Railway scraper and the Polymarket
+// capture — cannot suppress our cadence. Their rows are not CLV-eligible (they
+// carry none of the §4 capture fields), so treating one as "we just captured"
+// would trade a scorable observation for an unscorable one.
+//
+// Any failure returns null, and a null puts shouldCaptureNow back on the
+// wall-clock beat. That is the conservative direction: the old behaviour
+// under-captures, it never overspends.
+async function readLastCaptureAt(candidateFights) {
+  const ids = (candidateFights || []).map(f => f.id).filter(id => id != null);
+  if (ids.length === 0) return null;
+  const { data, error } = await sb
+    .from('fight_odds')
+    .select('captured_at')
+    .in('fight_id', ids)
+    .not('feed_version', 'is', null)
+    .order('captured_at', { ascending: false })
+    .limit(1);
+  if (error) {
+    console.warn(`[cadence] could not read our last capture (${error.message}) — ` +
+      `falling back to the wall-clock beat. Apply ` +
+      `research/clv/proposed_2026-09-16_fight_odds_capture.sql if feed_version ` +
+      `is missing.`);
+    return null;
+  }
+  if (!data || !data.length || !data[0].captured_at) return null;
+  const d = new Date(data[0].captured_at);
+  return Number.isFinite(d.getTime()) ? d : null;
+}
+
 async function shouldSpendCredit(candidateFights) {
   const now = new Date();
   if (process.env.FORCE) {
@@ -556,11 +646,14 @@ async function shouldSpendCredit(candidateFights) {
   if (error) throw new Error(`cadence events check: ${error.message}`);
 
   const budget = await readCreditBudget(now);
-  const decision = shouldCaptureNow(candidateFights, now, !!(near && near.length), budget);
+  const lastCaptureAt = await readLastCaptureAt(candidateFights);
+  const decision = shouldCaptureNow(
+    candidateFights, now, !!(near && near.length), budget, lastCaptureAt);
   console.log(`[cadence] ${decision.yes ? 'capturing' : 'skipping (0 credits)'} — ${decision.why}` +
     ` [budget: ${budget.spent ?? '?'} of ${MONTHLY_CREDIT_CAP} spent this month, ` +
     `${budget.creditsRemaining ?? 'unknown'} left, ` +
-    `${budget.cardsRemaining} card(s) still to cover]`);
+    `${budget.cardsRemaining} card(s) still to cover` +
+    `; last capture ${lastCaptureAt ? lastCaptureAt.toISOString() : 'unknown (wall-clock beat)'}]`);
   return decision.yes;
 }
 
@@ -1465,7 +1558,8 @@ if (require.main === module) main();
 
 module.exports = {
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
-  nearBellWindow, shouldCaptureNow, currentBout, boutStartedAt, proxyCutoffAt,
+  nearBellWindow, shouldCaptureNow, dueSinceLastCapture,
+  currentBout, boutStartedAt, proxyCutoffAt,
   planLiveCadence, minutesRemainingInCard, wantTotals, resolveCurrentCard,
   spentThisMonth, remainingCredits,
   CAPTURE_COLUMNS, FEED_VERSION, NEAR_BELL_WINDOW_H, NEAR_BELL_INTERVAL_MIN,
