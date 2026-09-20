@@ -6,15 +6,8 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>
   <language>en-us</language>
-  <lastBuildDate>Sat, 19 Sep 2026 21:20:35 GMT</lastBuildDate>
+  <lastBuildDate>Sun, 20 Sep 2026 02:34:29 GMT</lastBuildDate>
 
-  <item>
-    <title>UFC 331: Van vs. Pantoja 2</title>
-    <link>https://cannonfightlab.com/event.html?id=4433</link>
-    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4433</guid>
-    <pubDate>Sat, 19 Sep 2026 00:00:00 GMT</pubDate>
-    <description>Full model verdicts and edge factors for every fight on the UFC 331: Van vs. Pantoja 2 card — Los Angeles, California, USA.</description>
-  </item>
   <item>
     <title>UFC Fight Night: Rosas Jr. vs. Barcelos</title>
     <link>https://cannonfightlab.com/event.html?id=4550</link>
