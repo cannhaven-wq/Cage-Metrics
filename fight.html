@@ -136,6 +136,7 @@
     <div class="fl-eyebrow" id="flEyebrow">Fight Lab</div>
     <h1 id="flTitle">Loading matchup…</h1>
     <div class="fl-sub" id="flSub"></div>
+    <div id="flStar" style="margin-top:10px"></div>
   </header>
 
   <section class="sec" id="secMarket">
@@ -168,6 +169,16 @@
     <div id="flStats"></div>
   </section>
 
+  <section class="sec" id="secAlerts">
+    <h2>Alert me when&hellip;</h2>
+    <div class="sec-sub">
+      We will email you once when this happens, and stay quiet when the market is
+      too thin to say anything honest about. Nothing here is a pick or a
+      suggestion to bet &mdash; it reports what a price did.
+    </div>
+    <div id="flAlerts"></div>
+  </section>
+
   <div class="cta-row" id="flCtas"></div>
 </main>
 
@@ -180,6 +191,8 @@
 <script src="market.js?v=2"></script>
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
+<script src="alerts.js"></script>
+<script src="watchlist-ui.js"></script>
 <script>
 cfl.renderNav('fight');
 cfl.renderFooter();
@@ -364,6 +377,136 @@ async function load() {
   renderStats(a, b);
   renderCtas(fight, event, a, b);
   setMeta(a, b, event, mvt);
+  renderWatch(fight, a, b);          // star + alert setup, signed-in only
+}
+
+/* ---------------------------------------------------------------------------
+   The star and the alert form.
+
+   Both live in watchlist-ui.js so Card Lab and the watchlist page cannot drift
+   from this one. What this function owns is the SHAPE of the offer on this
+   page: which alerts are available for this fight, and what the member is told
+   when one of them cannot honestly be offered.
+
+   Nothing is tier-gated. Watchlists and alerts are intended to become CFL Pro
+   features, but D-019 moved enforcement behind the gates that make paying
+   possible — there is no paywall in front of a product nobody can buy.
+   --------------------------------------------------------------------------- */
+async function renderWatch(fight, a, b) {
+  const starEl = document.getElementById('flStar');
+  const el = document.getElementById('flAlerts');
+  const fid = Number(fight.id);
+
+  await cflAuth.ready();
+  const signedIn = !!cflAuth.getUser();
+
+  if (!signedIn) {
+    starEl.innerHTML = '';
+    el.innerHTML = '<div class="empty"><strong>Alerts need a free account.</strong><br>' +
+      'Not a paywall — an alert has to be stored against somebody, and we have to ' +
+      'have somewhere to email it. Everything on this page stays free either way. ' +
+      '<a href="/signup.html?next=' + encodeURIComponent(location.pathname + location.search) +
+      '" style="color:var(--red)">Create a free account →</a></div>';
+    return;
+  }
+
+  await cflWatchlist.loadStarred();
+  starEl.innerHTML = cflWatchlist.starButton(fid, { from: 'fight' }) +
+    '<span style="font-size:12px;color:var(--text-3);margin-left:6px;vertical-align:middle">' +
+    (cflWatchlist.isStarred(fid) ? 'On your watchlist' : 'Add to your watchlist') + '</span>';
+
+  // What the market will actually allow. A form that offers a movement alert on
+  // a fight with no honest movement figure is a form that promises an email
+  // that can never arrive.
+  const { data: am } = await cflSupabase
+    .from('v_fight_alert_market').select('*').eq('fight_id', fid).maybeSingle();
+  const { data: mine } = await cflSupabase
+    .from('v_my_alerts').select('*').eq('fight_id', fid);
+
+  const existing = (mine || []).map(m => m.kind);
+  const moveBlocked  = !am || am.move_refusal;
+  const priceBlocked = !am || am.price_refusal;
+  const why = r => cflWatchlist.explainState(r).text;
+
+  el.innerHTML =
+    '<div class="alert-form" id="alForm">' +
+      '<div class="row">' +
+        '<label for="alKind">Tell me when</label>' +
+        '<select id="alKind">' +
+          '<option value="price_target">a price reaches my number</option>' +
+          '<option value="market_move">the market moves</option>' +
+        '</select>' +
+      '</div>' +
+
+      '<div class="row" id="alPriceRow">' +
+        '<select id="alSide">' +
+          '<option value="A">' + esc(a.name) + '</option>' +
+          '<option value="B">' + esc(b.name) + '</option>' +
+        '</select>' +
+        '<label for="alTarget">reaches</label>' +
+        '<input id="alTarget" type="number" step="5" placeholder="+150" style="width:110px">' +
+        '<span style="font-size:12px;color:var(--text-3)">or better</span>' +
+      '</div>' +
+
+      '<div class="row" id="alMoveRow" hidden>' +
+        '<label for="alPts">moves</label>' +
+        '<input id="alPts" type="number" step="0.5" min="0.5" value="3" style="width:84px">' +
+        '<span style="font-size:12px;color:var(--text-3)">points</span>' +
+        '<select id="alDir">' +
+          '<option value="either">either way</option>' +
+          '<option value="toward_a">toward ' + esc(a.name) + '</option>' +
+          '<option value="toward_b">toward ' + esc(b.name) + '</option>' +
+        '</select>' +
+      '</div>' +
+
+      '<div class="row">' +
+        '<button type="button" class="btn" id="alSave">Set alert</button>' +
+        '<span class="err" id="alErr"></span>' +
+      '</div>' +
+
+      (priceBlocked ? '<div class="wl-state wait">Price alerts are off for this fight right now: ' +
+        esc(why(am ? am.price_refusal : 'no_market_yet')) + '</div>' : '') +
+      (moveBlocked ? '<div class="wl-state wait">Movement alerts are off for this fight right now: ' +
+        esc(why(am ? am.move_refusal : 'no_market_yet')) + '</div>' : '') +
+      (existing.length ? '<div class="wl-state ok">You already have ' + existing.length +
+        ' alert' + (existing.length === 1 ? '' : 's') + ' on this fight. ' +
+        '<a href="/watchlist.html" style="color:var(--red)">Manage them</a>.</div>' : '') +
+    '</div>';
+
+  const kind = document.getElementById('alKind');
+  kind.addEventListener('change', () => {
+    const isMove = kind.value === 'market_move';
+    document.getElementById('alPriceRow').hidden = isMove;
+    document.getElementById('alMoveRow').hidden = !isMove;
+  });
+
+  document.getElementById('alSave').addEventListener('click', async () => {
+    const errEl = document.getElementById('alErr');
+    errEl.textContent = '';
+    const isMove = kind.value === 'market_move';
+    const fields = isMove
+      ? { fight_id: fid, kind: 'market_move',
+          threshold_pts: Number(document.getElementById('alPts').value),
+          direction: document.getElementById('alDir').value }
+      : { fight_id: fid, kind: 'price_target',
+          side: document.getElementById('alSide').value,
+          target_american: Number(document.getElementById('alTarget').value) };
+
+    const res = await cflWatchlist.createAlert(fields);
+    if (!res.ok) {
+      errEl.textContent = cflWatchlist.CREATE_ERRORS[res.reason] ||
+                          cflWatchlist.CREATE_ERRORS.failed;
+      return;
+    }
+    // Starring is implied by caring enough to set an alert on it.
+    if (!cflWatchlist.isStarred(fid)) {
+      await cflSupabase.from('user_watchlist')
+        .insert({ user_id: cflAuth.getUser().id, fight_id: fid });
+    }
+    cflWatchlist.toast('Alert set. We will email you when it happens.',
+                       { href: '/watchlist.html', cta: 'See your alerts' });
+    renderWatch(fight, a, b);
+  });
 }
 
 function fail(title, sub) {
@@ -636,6 +779,14 @@ function setMeta(a, b, event, mvt) {
 load().catch(err => {
   console.warn('[fight-lab] load failed', err);
   fail('Couldn’t load this fight.', 'Try refreshing, or go back to <a href="index.html#next">Card Lab</a>.');
+});
+
+// One delegated listener for every star on the page, bound once.
+cflWatchlist.bindStars(document, () => {
+  const el = document.getElementById('flStar');
+  const label = el && el.querySelector('span:last-child');
+  if (label) label.textContent = cflWatchlist.isStarred(Number(qparam('id')))
+    ? 'On your watchlist' : 'Add to your watchlist';
 });
 
 if (cfl.renderEmailCaptures) cfl.renderEmailCaptures();

@@ -149,11 +149,12 @@ purchase is possible and nothing when it is not.
 | 6 | **T-069** checkout exercised in Stripe test mode | Claude | blocked on 4–5 |
 | 7 | **T-061** apply the Free/Pro boundary | Claude | **moved here** |
 | 8 | **T-066** turn checkout live | Owner (L3) | blocked on 2–7 |
-| 9 | watchlists / movement alerts | Claude | **unblocked** |
+| 9 | watchlists / movement alerts | Claude | **done** ([D-020](DECISIONS.md)) |
 
-**Steps 2 through 6 are not Claude's**, and step 7 is gated behind them, so the
-only unblocked build work in the sequence is step 9. Two standing gates are
-unchanged: **T-049** before any affiliate link, **T-048** before live checkout.
+**Step 9 is done** ([D-020](DECISIONS.md)). Steps 2 through 6 are not Claude's
+and step 7 is gated behind them, so **there is no unblocked build work left in
+the sequence** — everything now waits on the legal and payment gates. Two
+standing gates are unchanged: **T-049** before any affiliate link, **T-048** before live checkout.
 Social automation stays behind payments.
 
 **On the price:** the owner's stated default is ~$9.99–$11.99 monthly and
@@ -177,6 +178,45 @@ not name Plausible, and no Terms page exists. Draft wording and the open legal
 questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md),
 deliberately outside production — no legal language was written into a live page
 and no jurisdiction claim was invented.
+
+
+### Recurring use — watchlists and alerts, 2026-09-21
+
+Members can star fights and ask to be emailed when a price reaches their number
+or a market moves past their threshold. [D-020](DECISIONS.md), T-070 / T-071.
+
+**The rule the whole thing is built around: an alert must never fire from a
+comparison CFL would refuse to print.** An email is a stronger claim than a
+number on a page — the member did not go looking for it and may act on it at a
+sportsbook — so the refusals are at least as strict as the display path's, every
+one is **named** rather than silent, and nothing widens a cohort to produce an
+alert.
+
+**The matched-cohort methodology is preserved and extended.** A movement alert
+stores the **fingerprint** of the cohort it fired over (an md5 of the sorted
+matched book ids, not the count — one book leaving as another joins holds the
+count still and moves the median). If the fingerprint or the baseline changes,
+the alert **re-baselines and stays silent**: subtracting two medians over
+different book sets is the D-012 error, measured at up to 12.7 points.
+
+**A price and a move do not share a staleness rule.** A price is an offer
+(120 min); a move is a historical fact (24 h). The first version used one
+45-minute ceiling for both and made **0 of 79 fights alertable** — the feature
+would have shipped permanently silent.
+
+**Suppression:** a UNIQUE dedupe key claimed *before* the email is sent, one
+email per member per run rather than one per alert, a cooldown, a daily cap, and
+quiet hours that stay **off** until a time zone is collected rather than guessed.
+
+**Email only.** `channel CHECK (channel IN ('email'))`, so SMS or push is a
+migration and a decision, not a config change. **Nothing is gated**: the
+Free/Pro split has one future home, `public.alert_quota()`.
+
+**A P0-class grant defect was found and closed on the way**: `authenticated`
+inherited **TRUNCATE** on three of the four new tables, which bypasses RLS
+entirely. Two further faults made the suppression-memory trigger inert. All
+three were found by checking behaviour after applying, not by reading the
+migration.
 
 
 ### Market movement — settled 2026-09-21

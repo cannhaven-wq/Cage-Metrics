@@ -1,0 +1,65 @@
+name: Send market alerts
+
+# Checks every active member alert and emails the ones whose thing actually
+# happened. Everything it decides is decided elsewhere: the market refusals are
+# in v_fight_alert_market, the firing and suppression rules are in alerts.js.
+#
+# WHY THE SCHEDULE LOOKS OVER-EAGER AND IS NOT
+# GitHub throttles high-frequency crons hard — odds.yml asks for every 5 minutes
+# and was measured being delivered four times in a day at arbitrary minutes
+# (CLAUDE.md). So this asks for every 15 and treats whatever arrives as a
+# best-effort wake. Nothing in the sender assumes it ran when it asked to: every
+# rule is written against elapsed time from a stored timestamp, and running
+# often is harmless because the per-member cooldown and the UNIQUE dedupe key
+# mean extra passes send nothing.
+#
+# Alerts are inherently a fight-week feature. Outside fight week the odds job
+# captures once a day, every price is past the 120-minute offer ceiling, and
+# this correctly sends nothing.
+#
+# Falls back to dry run when RESEND_API_KEY is absent, like the digest, so a
+# fork without secrets logs what it would have sent instead of failing.
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Evaluate and log, send nothing (override the secret)'
+        required: false
+        default: 'true'
+
+permissions:
+  contents: read
+
+# Never two passes at once. The dedupe key would stop a double send anyway —
+# that is what it is for — but an overlap wastes a run and muddles the log.
+concurrency:
+  group: send-alerts
+  cancel-in-progress: false
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install deps
+        working-directory: build
+        run: npm install --no-audit --no-fund
+
+      - name: Evaluate and send
+        working-directory: build
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          RESEND_FROM: ${{ secrets.RESEND_FROM }}
+          ALERTS_DRY_RUN: ${{ github.event.inputs.dry_run }}
+        run: npm run send-alerts

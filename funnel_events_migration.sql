@@ -58,11 +58,15 @@ CREATE TABLE IF NOT EXISTS public.funnel_events (
 -- The closed event list, mirrored in ANALYTICS_SCHEMA.md and in _shared.js
 -- (cfl.EVENTS). A typo becomes a rejected insert rather than a phantom funnel
 -- step nobody notices is missing. Adding an event means editing all three.
+-- Dropped and recreated rather than added-if-absent. The add-if-absent form is
+-- re-run safe and is NOT re-run correct: once the constraint exists it can
+-- never learn a new name, so editing the list here would change the file and
+-- not the database, and the two would silently disagree about which events are
+-- legal. Five names were added on 2026-09-21 (watchlists and alerts) and that
+-- is exactly the case it would have failed at.
+ALTER TABLE public.funnel_events DROP CONSTRAINT IF EXISTS funnel_events_known_event;
 DO $$
 BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint WHERE conname = 'funnel_events_known_event'
-  ) THEN
     ALTER TABLE public.funnel_events ADD CONSTRAINT funnel_events_known_event
       CHECK (event IN (
         'landing_view',
@@ -81,11 +85,15 @@ BEGIN
         'card_brief_signup_completed',
         'pricing_view',
         'pro_cta_clicked',
+        'watchlist_added',
+        'watchlist_removed',
+        'alert_created',
+        'alert_fired',
+        'alert_clicked',
         'checkout_started',
         'checkout_completed',
         'return_visit'
       ));
-  END IF;
 
   -- A runaway props object is how an analytics table becomes a data-retention
   -- problem. 2 KB is far more than any event in the schema needs.

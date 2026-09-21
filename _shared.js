@@ -539,12 +539,13 @@
           <span class="full">Proof Center</span><span class="short">Proof</span>
         </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','props','fighters','h2h','track','fight'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">More</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','props','fighters','h2h','track','fight','watchlist'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">More</button>
           <div class="cfl-nav-menu-panel">
             <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
             <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
+            <a href="watchlist.html" ${active === 'watchlist' ? 'class="active"' : ''}>My Watchlist</a>
             <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>Model Archive</a>
           </div>
         </div>
@@ -825,6 +826,11 @@
     'methodology_opened', 'fighter_page_view', 'event_page_view',
     'best_price_clicked', 'fight_shared', 'card_brief_signup_started',
     'card_brief_signup_completed', 'pricing_view', 'pro_cta_clicked',
+    // recurring use: watchlists and alerts. `alert_fired` is the one event on
+    // this list emitted by the SERVER (build/send-alerts.js), not the browser —
+    // nothing a visitor does causes an alert to fire.
+    'watchlist_added', 'watchlist_removed', 'alert_created', 'alert_fired',
+    'alert_clicked',
     // declared, not emitted: no checkout exists yet. They live here so the
     // sprint that builds one does not invent its own names.
     'checkout_started', 'checkout_completed', 'return_visit'

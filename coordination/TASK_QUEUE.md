@@ -84,6 +84,9 @@ it died is usually worth more than the task was.
 | T-063 | Stripe subscription lifecycle end to end: `billing_migration.sql`, `billing-lifecycle.js`, the `stripe-checkout` and `stripe-webhook` edge functions, 39 offline tests, verified against the real DB. Charges nobody | L1 | Claude | done |
 | T-064 | `pricing.html` presents the plan with the Subscribe button disabled **in the served HTML** and the reason on the page, read from `entitlements.js` rather than hardcoded. Also fixed `<footer</div>`, broken markup live on `main` | L1 | Claude | done |
 | T-065 | `account.html` showed every beta member as "Free" (read `profiles.tier` alone, ignoring `beta_premium`) and promised billing "launches soon". Now reads `v_my_billing` and describes state through the shared state machine | L1 | Claude | done |
+| T-070 | Fight watchlists: `user_watchlist`, the star on Card Lab / Fight Lab / the watchlist page, `v_my_watchlist`. Owner-scoped, nothing gated | L1 | Claude | done |
+| T-071 | Price-target and market-movement alerts: `user_alerts` / `user_alert_prefs` / `user_alert_deliveries`, `v_fight_alert_market`, `alerts.js`, `build/send-alerts.js`, `alerts.yml`. **An alert cannot fire from a comparison CFL would refuse to print**; the matched-cohort rule is preserved and a re-arm across a cohort change re-baselines silently | L1 | Claude | done |
+| T-072 | **P0-class, FIXED** — `REVOKE ALL FROM anon` left `authenticated` holding **TRUNCATE** on three new tables via Supabase default privileges. TRUNCATE bypasses RLS, so any signed-in member could have emptied every other member's watchlist and alerts. Plus two faults in the pin trigger that made it inert. All three found by checking behaviour, not by reading | L0 | Claude | done |
 
 ---
 

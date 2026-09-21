@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>My Watchlist — Cannon Fight Lab</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/watchlist.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rl3">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<style>
+  .wl-wrap { max-width: 980px; margin: 28px auto 64px; padding: 0 20px; }
+  .wl-wrap h1 {
+    font-family: var(--font-display); font-size: 38px; font-weight: 800;
+    color: var(--text); letter-spacing: -0.5px; margin: 0 0 6px;
+  }
+  .wl-lede { color: var(--text-2); font-size: 15px; line-height: 1.7; max-width: 640px; margin: 0 0 8px; }
+  .wl-section { margin-top: 34px; }
+  .wl-section h2 {
+    font-family: var(--font-display); font-size: 22px; font-weight: 800;
+    color: var(--text); margin: 0 0 4px;
+  }
+  .wl-section .sub { color: var(--text-3); font-size: 13px; line-height: 1.65; margin: 0 0 16px; max-width: 640px; }
+  .prefs-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+  .prefs-grid .f { background: var(--bg-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+  .prefs-grid label { display: block; font-size: 11px; letter-spacing: .07em; text-transform: uppercase;
+                      color: var(--text-3); font-weight: 700; margin-bottom: 6px; }
+  .prefs-grid select, .prefs-grid input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border-2); border-radius: 8px;
+    color: var(--text); padding: 8px 10px; font-size: 13px; font-family: inherit;
+  }
+  .prefs-note { color: var(--text-3); font-size: 12px; line-height: 1.65; margin-top: 12px; max-width: 640px; }
+  .honest { border: 1px dashed var(--border-2); border-radius: 12px; padding: 16px 20px;
+            color: var(--text-3); font-size: 13px; line-height: 1.7; margin-top: 26px; }
+  .honest strong { color: var(--text-2); }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="wl-wrap" id="wlContent" style="display:none">
+  <h1>My Watchlist</h1>
+  <p class="wl-lede">
+    The fights you are following, what the market is doing to them, and the
+    alerts you asked for. We email you when the thing you asked about actually
+    happens &mdash; and stay quiet when the market is too thin to say.
+  </p>
+
+  <div class="wl-section">
+    <h2>Fights you are following</h2>
+    <p class="sub">Star a fight anywhere on the site to add it here.</p>
+    <div id="wlList"></div>
+  </div>
+
+  <div class="wl-section">
+    <h2>Your alerts</h2>
+    <p class="sub">
+      Each one says what it is watching and what it is doing right now. If an
+      alert is quiet, the reason is written underneath it rather than left to
+      guess at.
+    </p>
+    <div id="alertList"></div>
+  </div>
+
+  <div class="wl-section" id="prefs">
+    <h2>How often we email you</h2>
+    <p class="sub">
+      We send one email per round of checks, however many of your alerts fired
+      in it &mdash; never one per alert.
+    </p>
+    <div class="prefs-grid">
+      <div class="f">
+        <label for="pEmail">Alert emails</label>
+        <select id="pEmail">
+          <option value="true">On</option>
+          <option value="false">Off</option>
+        </select>
+      </div>
+      <div class="f">
+        <label for="pCooldown">At most one email every</label>
+        <select id="pCooldown">
+          <option value="60">1 hour</option>
+          <option value="180">3 hours</option>
+          <option value="360">6 hours</option>
+          <option value="720">12 hours</option>
+          <option value="1440">24 hours</option>
+        </select>
+      </div>
+      <div class="f">
+        <label for="pMax">Most emails in a day</label>
+        <select id="pMax">
+          <option value="1">1</option><option value="3">3</option>
+          <option value="6">6</option><option value="10">10</option>
+          <option value="20">20</option>
+        </select>
+      </div>
+    </div>
+    <p class="prefs-note" id="prefsMsg"></p>
+    <p class="prefs-note">
+      <strong>Quiet hours are not set up yet, deliberately.</strong> We do not know
+      what time zone you are in, and a guessed quiet window silences the alerts
+      you asked for at exactly the hours you most wanted them. Until we ask you
+      for a time zone, the cooldown and the daily cap above are what keep this
+      quiet.
+    </p>
+  </div>
+
+  <div class="honest">
+    <strong>What an alert will never do.</strong> It will not tell you who to back,
+    it will not suggest a stake, and it will not claim CFL knows something the
+    market does not. It reports what happened to a price. Every number we email
+    you carries how many sportsbooks were behind it and when we captured it, and
+    the prices are the last ones we captured &mdash; never live. Check the
+    sportsbook before you act on anything.
+    <br><br>
+    <strong>And it will stay quiet rather than guess.</strong> A movement alert needs
+    at least three sportsbooks quoting at both ends of the comparison. Below that
+    we have no honest figure, so you hear nothing &mdash; that is the alert working,
+    not failing.
+  </div>
+</div>
+
+<div id="wlLoading" style="max-width:980px;margin:60px auto;padding:0 20px;color:var(--text-3)">Loading your watchlist&hellip;</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rl4"></script>
+<script src="_auth.js?v=rl2"></script>
+<script src="alerts.js"></script>
+<script src="watchlist-ui.js"></script>
+<script>
+cfl.renderNav('watchlist');
+cfl.renderFooter();
+
+// Followed back from an alert email. No id of any kind in the link — a stable
+// per-member identifier in a URL is a stable per-member identifier in analytics.
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (p.get('src') === 'alert') cfl.track('alert_clicked', { kind: p.get('kind') || 'unknown' });
+})();
+
+const fmtA = n => cflAlerts.fmtAmerican(n);
+const esc  = s => cfl.escapeHtml(s == null ? '' : String(s));
+
+function ageText(mins) {
+  const m = Math.round(Number(mins));
+  if (!isFinite(m)) return 'unknown age';
+  if (m < 60) return m + ' min ago';
+  const h = Math.round(m / 60);
+  if (h < 48) return h + (h === 1 ? ' hour ago' : ' hours ago');
+  return Math.round(h / 24) + ' days ago';
+}
+
+// A market cell never appears without its book count and its age, on this page
+// as on every other (market.js holds the same rule for the public surfaces).
+function cell(k, v, s) {
+  return '<div class="wl-cell"><div class="k">' + esc(k) + '</div>' +
+         '<div class="v">' + v + '</div>' +
+         (s ? '<div class="s">' + esc(s) + '</div>' : '') + '</div>';
+}
+
+function renderWatchlist(rows) {
+  const el = document.getElementById('wlList');
+  if (!rows.length) {
+    el.innerHTML = '<div class="wl-empty">Nothing starred yet.<br>' +
+      'Open <a href="/index.html#next" style="color:var(--red)">Card Lab</a> and tap the star ' +
+      'beside any fight.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const hasMarket = r.book_count != null;
+    const move = (r.move_refusal == null && r.movement_pts_a != null)
+      ? cell('Market move', (Number(r.movement_pts_a) >= 0 ? '+' : '') +
+             Number(r.movement_pts_a).toFixed(1) + ' pts',
+             'across ' + r.matched_book_count + ' books quoting at both ends')
+      : cell('Market move', '&mdash;', cflWatchlist.explainState(r.move_refusal || 'no_movement_figure').text);
+
+    return '<div class="wl-row">' +
+      '<div class="wl-head">' +
+        cflWatchlist.starButton(r.fight_id, { from: 'watchlist' }) +
+        '<div class="wl-names">' + esc(r.fighter_a_name) + ' <span style="color:var(--text-3)">v</span> ' +
+          esc(r.fighter_b_name) +
+          '<div class="wl-meta">' + esc(r.event_name || 'Event TBC') +
+            (r.event_date ? ' &middot; ' + esc(cfl.formatDateShort(r.event_date)) : '') +
+            (r.active_alert_count ? ' &middot; ' + r.active_alert_count + ' alert' +
+              (r.active_alert_count === 1 ? '' : 's') : '') +
+          '</div>' +
+        '</div>' +
+        '<a class="btn ghost" style="padding:6px 12px;font-size:12px" href="/fight.html?id=' +
+          Number(r.fight_id) + '">Open Fight Lab</a>' +
+      '</div>' +
+      (hasMarket ? '<div class="wl-cells">' +
+        cell('Best price ' + esc(r.fighter_a_name), fmtA(r.best_american_a),
+             r.best_book_a ? 'at ' + r.best_book_a : null) +
+        cell('Best price ' + esc(r.fighter_b_name), fmtA(r.best_american_b),
+             r.best_book_b ? 'at ' + r.best_book_b : null) +
+        move +
+        cell('Captured', ageText(r.market_age_minutes), r.book_count + ' sportsbooks') +
+      '</div>'
+      : '<div class="wl-cells">' + cell('Market', '&mdash;', 'No sportsbook prices for this fight yet') + '</div>') +
+    '</div>';
+  }).join('');
+}
+
+function describeAlert(a) {
+  if (a.kind === 'price_target') {
+    const who = a.side === 'A' ? a.fighter_a_name : a.fighter_b_name;
+    return esc(who) + ' reaches ' + fmtA(a.target_american) + ' or better';
+  }
+  const dir = a.direction === 'toward_a' ? 'toward ' + esc(a.fighter_a_name)
+            : a.direction === 'toward_b' ? 'toward ' + esc(a.fighter_b_name)
+            : 'either way';
+  return 'Market moves ' + Number(a.threshold_pts).toFixed(1) + ' points ' + dir;
+}
+
+function renderAlerts(rows) {
+  const el = document.getElementById('alertList');
+  if (!rows.length) {
+    el.innerHTML = '<div class="wl-empty">No alerts yet.<br>' +
+      'Open any fight and set one under <strong>Alert me when&hellip;</strong>.</div>';
+    return;
+  }
+  el.innerHTML = rows.map(a => {
+    const st = cflWatchlist.explainState(a.alert_state);
+    return '<div class="wl-row"><div class="wl-alert" style="border-top:0;padding-top:0;margin-top:0">' +
+      '<div class="wl-alert-what">' +
+        '<div class="t">' + describeAlert(a) + '</div>' +
+        '<div class="wl-meta">' + esc(a.fighter_a_name) + ' v ' + esc(a.fighter_b_name) +
+          ' &middot; ' + esc(a.event_name || 'Event TBC') +
+          (a.fire_count ? ' &middot; sent ' + a.fire_count + ' time' + (a.fire_count === 1 ? '' : 's') : '') +
+        '</div>' +
+        '<div class="wl-state ' + st.tone + '">' + esc(st.text) + '</div>' +
+      '</div>' +
+      '<div class="row" style="display:flex;gap:6px">' +
+        '<button class="btn ghost" style="padding:6px 12px;font-size:12px" data-toggle="' + a.id + '">' +
+          (a.is_active ? 'Pause' : 'Resume') + '</button>' +
+        '<button class="btn ghost" style="padding:6px 12px;font-size:12px" data-del="' + a.id + '">Delete</button>' +
+      '</div>' +
+    '</div></div>';
+  }).join('');
+}
+
+async function loadAll() {
+  await cflWatchlist.loadStarred();
+  const [{ data: wl, error: e1 }, { data: al, error: e2 }] = await Promise.all([
+    cflSupabase.from('v_my_watchlist').select('*').order('event_date', { ascending: true }),
+    cflSupabase.from('v_my_alerts').select('*').order('created_at', { ascending: false })
+  ]);
+  if (e1) console.error(e1);
+  if (e2) console.error(e2);
+  renderWatchlist(wl || []);
+  renderAlerts(al || []);
+}
+
+async function loadPrefs() {
+  const { data } = await cflSupabase.from('user_alert_prefs').select('*').maybeSingle();
+  const p = data || cflAlerts.DEFAULT_PREFS;
+  document.getElementById('pEmail').value    = String(!!p.email_enabled);
+  document.getElementById('pCooldown').value = String(p.cooldown_minutes || 360);
+  document.getElementById('pMax').value      = String(p.max_per_day || 6);
+}
+
+async function savePrefs() {
+  const row = {
+    user_id: cflAuth.getUser().id,
+    email_enabled: document.getElementById('pEmail').value === 'true',
+    cooldown_minutes: Number(document.getElementById('pCooldown').value),
+    max_per_day: Number(document.getElementById('pMax').value),
+    updated_at: new Date().toISOString()
+  };
+  const { error } = await cflSupabase.from('user_alert_prefs')
+    .upsert(row, { onConflict: 'user_id' });
+  document.getElementById('prefsMsg').textContent =
+    error ? 'Could not save that just now.' : 'Saved.';
+}
+
+['pEmail', 'pCooldown', 'pMax'].forEach(id =>
+  document.getElementById(id).addEventListener('change', savePrefs));
+
+document.addEventListener('click', async ev => {
+  const t = ev.target.closest && ev.target.closest('[data-toggle]');
+  const d = ev.target.closest && ev.target.closest('[data-del]');
+  if (t) {
+    const id = Number(t.dataset.toggle);
+    const resume = /resume/i.test(t.textContent);
+    await cflSupabase.from('user_alerts').update({ is_active: resume }).eq('id', id);
+    await loadAll();
+  } else if (d) {
+    const id = Number(d.dataset.del);
+    await cflSupabase.from('user_alerts').delete().eq('id', id);
+    await loadAll();
+  }
+});
+
+cflWatchlist.bindStars(document, () => loadAll());
+
+// requireAuth resolves true/false and redirects to login itself when false.
+cflAuth.requireAuth().then(async ok => {
+  if (!ok) return;
+  await Promise.all([loadAll(), loadPrefs()]);
+  document.getElementById('wlLoading').style.display = 'none';
+  document.getElementById('wlContent').style.display = 'block';
+});
+</script>
+</body>
+</html>

@@ -11,6 +11,106 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (h) — Watchlists and alerts, and an alert that would rather say nothing
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+PR #45 merged (`7edd4e3`). Step 9 of the resequenced order — watchlists and
+alerts — is done. [D-020](DECISIONS.md), T-070 / T-071 / T-072.
+
+**There is now no unblocked build work left in the sequence.** Steps 2–5 are
+yours and a lawyer's, step 6 needs your Stripe keys, and step 7 is gated behind
+all of them.
+
+### Read this first: a P0-class grant defect, and two inert protections
+
+`REVOKE ALL ... FROM anon` left **`authenticated` holding TRUNCATE** on three of
+the four new tables, inherited from Supabase's default privileges. **TRUNCATE
+bypasses row level security entirely** — any signed-in member could have emptied
+every other member's watchlist and alerts, with RLS never consulted. Same shape
+as the `funnel_events` finding, and found the same way: by querying
+`role_table_grants` after applying rather than by reading the migration.
+
+Two further faults, both in the trigger pinning the suppression memory, both
+found by testing behaviour rather than reading code:
+
+1. It keyed on `auth.role()`, the JWT claim. A migration or psql session has no
+   JWT, so it reverted **the sender's own writes** — alerts would never arm.
+2. The fix used `current_user` but was `SECURITY DEFINER`, where `current_user`
+   is the function's **owner**. The guard was always true: the protection read
+   as though it worked and **did nothing at all**.
+
+All three closed and verified as the `authenticated` role in a rolled-back
+transaction.
+
+### The rule the feature is built around
+
+**An alert must never fire from a comparison CFL would refuse to print.** An
+email is a stronger claim than a number on a page: the member did not go looking
+for it, and it may send them to a sportsbook to act.
+
+**The matched-cohort methodology is preserved and extended.** A movement alert
+stores the **fingerprint** of the cohort it fired over — an md5 of the sorted
+matched book ids, *not the count*, because one book leaving as another joins
+holds the count still and moves the median. If the fingerprint or the baseline
+changes, the alert **re-baselines and stays silent**. Subtracting two medians
+over different book sets is the D-012 error, measured at up to 12.7 points.
+
+### The finding that changed the design
+
+The first version applied **one 45-minute staleness ceiling** to both kinds of
+alert, borrowed from the frozen CLV limit. Against CFL's real capture cadence —
+5 min only in flow, hourly on card day, otherwise **once a day** — that makes
+**0 of 79 fights alertable**. Measured on the live table. The feature would have
+shipped permanently silent, and a silent alert system is indistinguishable from
+a broken one.
+
+A price and a move are different claims and cannot share a rule: **a price is an
+offer** (120 min, inside the hourly fight-week tier) and **a move is a
+historical fact** (24 h). Alerts are inherently a fight-week feature; outside it
+they correctly say nothing.
+
+### Suppression
+
+A **UNIQUE dedupe key claimed before the email is sent** — send-then-record
+loses the record on a crash and re-sends forever; this way a crash costs one
+email a member should have had rather than an unbounded number they should not.
+The key is the alert plus its occurrence number, never the value, because keying
+on the value mints a fresh key every tick. Then **one email per member per run**
+rather than per alert, a cooldown, a daily cap, and quiet hours that stay
+**off** until a time zone is collected rather than guessed.
+
+### Verified
+
+52 new assertions in `tests/alerts.test.js`, 20 suites green. The evaluator was
+run against **live rows** from `v_fight_alert_market`: the biggest real move
+(7.0 pts over 3 matched books) fires at a 3-point threshold, refuses to re-arm
+after a cohort change, and every price alert is correctly refused as
+`stale_for_price` at 8.6 hours old.
+
+**Not verified, and it cannot be from here:** `build/send-alerts.js` has never
+actually sent an email. This environment has no secrets and its network policy
+blocks the Supabase host, so the sender can only run in CI. `alerts.yml` is
+manually dispatchable with `dry_run` defaulting to **true**.
+
+## Next action
+
+**Owner:** dispatch **Send market alerts** with `dry_run: true` once this
+merges, and read the log — it prints every refusal and its count. Then steps 2–5
+of [D-019](DECISIONS.md), which nothing else moves without. Cheapest first is
+**T-054**: one disclosure clause, draft already written.
+
+**ChatGPT:** review the re-arm rule in `alerts.js::evaluate` specifically for a
+case where re-baselining silently is the wrong call, and the two staleness
+ceilings against what the odds cadence actually delivers in a fight week.
+
+**Nobody:** relaxes a refusal to make an alert fire, or turns the quota into a
+Pro gate before step 7.
+
+---
+
 ## 2026-09-21 (g) — No paywall before there is a way to pay
 
 **From:** Claude
@@ -209,77 +309,5 @@ specifically for statuses CFL has not enumerated, and review whether
 
 **Nobody:** removes an entry from `CHECKOUT_BLOCKERS` to make something pass.
 T-066 is the L3 that turns checkout on, and it is the owner's.
-
----
-
-## 2026-09-21 (e) — Entitlement moves into Postgres, and a P0 came with it
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #42 merged (`ce2c55c`). Item 4 of the monetization sequence — auth + Pro
-entitlements — is done. [D-017](DECISIONS.md), T-059 / T-060.
-
-### Read this first: a live privilege escalation, now closed
-
-The `profiles` UPDATE policy pinned `tier`, `tier_expires_at` and
-`stripe_customer_id`. It did **not** pin `is_admin` or `beta_premium`.
-`current_user_is_admin()` reads `is_admin`, and that function *is* the SELECT
-policy on `fight_odds` and `odds_books`; `email_subscribers` checks it
-directly. **Any signed-in user could make themselves an admin and read every
-subscriber's email address.**
-
-`_auth.js` strips those fields client-side and said "RLS will reject anyway".
-It did not — and the publishable key is public by design, so the REST endpoint
-never needed our JavaScript.
-
-Fixed and **verified as the `authenticated` role in a rolled-back
-transaction**: both escalations now fail 42501, ordinary profile edits still
-work. A sweep of every other UPDATE/INSERT policy found **no second instance**.
-Treated as L0 and executed rather than queued; the reasoning is in D-017.
-
-Worth knowing: the first version of that verification was **confounded** —
-`beta_premium` is `true` for everyone during beta, so setting it to `true` is a
-no-op, not an escalation, and it read as a false failure until the test flipped
-the value instead. The empirical check was right to be run and wrong on the
-first pass.
-
-### The entitlement layer
-
-`current_user_entitlement()` (`free | pro`) and `current_user_is_pro()` —
-`SECURITY DEFINER`, pinned `search_path`, safe in RLS. `v_my_entitlement` gives
-the browser its own standing and no one else's. Verified across six cases
-including **paid-but-expired → free**.
-
-That last one is a second bug fixed: `tier_expires_at` was honoured nowhere, so
-a lapsed subscription would have kept access indefinitely. Free today, because
-nobody has paid; expensive on the first renewal failure.
-
-### Nothing is gated, and checkout is blocked in code
-
-Every surface is `enforced: false`. Applying the boundary is step 5, after
-Stripe. When a gate lands it goes in a view or policy calling
-`current_user_is_pro()`, never an `if (cflAuth.isPro())` around a fetch.
-
-`entitlements.js::CHECKOUT_BLOCKERS` names **T-054** and **T-048**;
-`checkoutMayBeEnabled()` is false while either stands and a test fails if a
-checkout entry point ships. Auth, pricing and Stripe wiring can all be built
-meanwhile — only taking money is blocked, which is what the owner asked for.
-**Turning checkout on now means deleting a named legal blocker**, deliberately.
-
-### Verified
-
-13 Node suites, **315 assertions**; 168 Python tests, 4,369 subtests. All green.
-
-### Next action
-
-**Stripe + pricing** (item 5 in the owner's ordering of the remaining work),
-built against `current_user_is_pro()` and behind the checkout gate. Then apply
-the Free/Pro boundary (**T-061**), then watchlists and alerts.
-
-**Owner:** T-054 and T-048 are now the literal blocker on revenue, not a note —
-the code will not let checkout ship until they are resolved. Draft wording and
-the open legal questions: [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md).
 
 ---
