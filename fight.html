@@ -195,6 +195,16 @@
 <script src="watchlist-ui.js"></script>
 <script>
 cfl.renderNav('fight');
+
+// Followed back from an alert email. Fight Lab is the PRIMARY link in that
+// email — "Open this fight in Fight Lab" — so without this the alert_clicked
+// count would miss the click most likely to happen and read as though nobody
+// engaged. No id of any kind travels with it: a stable per-member identifier
+// in a URL is a stable per-member identifier in analytics.
+(function () {
+  const p = new URLSearchParams(location.search);
+  if (p.get('src') === 'alert') cfl.track('alert_clicked', { kind: p.get('kind') || 'unknown' });
+})();
 cfl.renderFooter();
 
 // Funnel: Fight Lab is entered from search far more often than from the site,
