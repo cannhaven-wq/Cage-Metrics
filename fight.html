@@ -34,7 +34,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=rl1">
+<link rel="stylesheet" href="_shared.css?v=rl2">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 
@@ -144,6 +144,12 @@
     <div id="flMarket"><div class="empty">Loading the market…</div></div>
   </section>
 
+  <section class="sec" id="secChart">
+    <h2>How the market moved</h2>
+    <div class="sec-sub">The middle sportsbook price over time, with the book's cut removed. Every point on the line comes from the same sportsbooks — the ones quoting both at the start of the window and now — so a book arriving later cannot look like the market moving.</div>
+    <div id="flChart"><div class="empty">Loading the history…</div></div>
+  </section>
+
   <section class="sec" id="secBooks">
     <h2>Sportsbook by sportsbook</h2>
     <div class="sec-sub">The latest quote we hold from every sportsbook we track on this fight. Sorted by the best price on the first corner. Ordering is by the American number and nothing else — no book pays to sit at the top of this table.</div>
@@ -172,6 +178,7 @@
 <script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=2"></script>
+<script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('fight');
@@ -199,6 +206,115 @@ const M = window.cflMarket;
 const esc = cfl.escapeHtml;
 
 function qparam(k) { return new URLSearchParams(location.search).get(k); }
+
+// ---------------------------------------------------------------------------
+// The movement chart. Three things it must always do, all enforced in
+// market-chart.js rather than here so a second surface cannot drift:
+//   the cohort is fixed and asserted, not trusted;
+//   the cohort size is on screen, not only in a tooltip;
+//   a refusal explains itself instead of rendering an empty box.
+// ---------------------------------------------------------------------------
+async function renderChart(fightId, a, b) {
+  const el = document.getElementById('flChart');
+  if (!el || !window.cflChart) return;
+  const CH = window.cflChart;
+
+  const { meta, series } = await CH.load(fightId);
+  const nameA = lastName(a.name), nameB = lastName(b.name);
+
+  // Controls and the methodology disclosure are rendered whatever the outcome,
+  // because "why is there no chart" is a methodology question too.
+  el.innerHTML =
+    '<div class="mc-controls">' +
+      '<button type="button" id="mcBooks" aria-pressed="false">Show each sportsbook</button>' +
+      '<button type="button" id="mcTable" aria-pressed="false">Show the numbers</button>' +
+    '</div>' +
+    '<div id="mcPlot"></div>' +
+    '<div id="mcTableWrap" class="mc-scroll" hidden></div>' +
+    '<details class="mc-method"><summary>How this line is calculated</summary>' +
+      '<div class="mc-method-body" id="mcMethod"></div></details>';
+
+  const plot = document.getElementById('mcPlot');
+  let showBooks = false, books = null;
+
+  function draw() {
+    const res = CH.render(plot, {
+      meta, series, books: books || [], showBooks,
+      nameA, nameB
+    });
+    return res;
+  }
+  const first = draw();
+
+  // Methodology, written from what actually happened rather than in general.
+  const m = document.getElementById('mcMethod');
+  const cohort = (meta && +meta.cohort_books) || 0;
+  const everBooks = (meta && +meta.books_ever) || 0;
+  m.innerHTML =
+    '<p><strong>The line is the middle sportsbook price</strong> with each book\'s ' +
+    'margin removed, so it reads as a probability rather than a payout.</p>' +
+    '<p><strong>The same sportsbooks at every point.</strong> ' +
+    (first.ok
+      ? 'This chart uses the ' + cohort + ' sportsbook' + (cohort === 1 ? '' : 's') +
+        ' that were quoting both when CFL first saw this fight priced by three or ' +
+        'more books and now' +
+        (everBooks > cohort
+          ? '. ' + (everBooks - cohort) + ' other book' + ((everBooks - cohort) === 1 ? '' : 's') +
+            ' have quoted at some point and are left out of the line, because a book ' +
+            'joining halfway through would show a step the market never made.'
+          : '.')
+      : 'A line is only drawn when at least ' + CH.MIN_COHORT_BOOKS + ' sportsbooks ' +
+        'quoted at both ends of the window. Fewer than that and CFL shows nothing ' +
+        'rather than a line built on a changing set of books.') +
+    '</p>' +
+    '<p><strong>The line steps, it does not slope.</strong> Between its own quotes a ' +
+    'sportsbook\'s price does not move — the number it posted stands until it posts ' +
+    'another — so the line holds flat and then jumps. A diagonal would claim the ' +
+    'price passed through values it never held. Nothing is smoothed and nothing is ' +
+    'filled in.</p>' +
+    '<p><strong>Every point is a real capture.</strong> There is no fixed grid: the x ' +
+    'positions are the moments CFL actually recorded a price. <strong>CFL does not ' +
+    'see sportsbook openers</strong> — the window starts when we started watching ' +
+    'properly, not when the market opened.</p>' +
+    (showBooks || true
+      ? '<p><strong>Individual sportsbook lines</strong> use that book\'s own quotes ' +
+        'with no cohort and no median — they are observations of one book, so the ' +
+        'reasons the consensus needs a fixed cohort do not apply.</p>'
+      : '');
+
+  document.getElementById('mcBooks').addEventListener('click', async (ev) => {
+    const btn = ev.currentTarget;
+    showBooks = !showBooks;
+    btn.setAttribute('aria-pressed', showBooks ? 'true' : 'false');
+    btn.textContent = showBooks ? 'Hide sportsbook lines' : 'Show each sportsbook';
+    if (showBooks && books === null) {
+      btn.disabled = true;
+      books = await CH.loadBooks(fightId);
+      btn.disabled = false;
+    }
+    draw();
+    if (window.cfl && cfl.track) cfl.track('methodology_opened', { surface: 'fight_lab', topic: 'per_book_lines' });
+  });
+
+  const tw = document.getElementById('mcTableWrap');
+  document.getElementById('mcTable').addEventListener('click', (ev) => {
+    const btn = ev.currentTarget;
+    const on = tw.hasAttribute('hidden');
+    if (on) {
+      tw.innerHTML = CH.tableHtml(series, nameA, cohort);
+      tw.removeAttribute('hidden');
+    } else { tw.setAttribute('hidden', ''); }
+    btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    btn.textContent = on ? 'Hide the numbers' : 'Show the numbers';
+  });
+
+  const det = el.querySelector('.mc-method');
+  if (det) det.addEventListener('toggle', () => {
+    if (det.open && window.cfl && cfl.track) {
+      cfl.track('methodology_opened', { surface: 'fight_lab', topic: 'chart_method' });
+    }
+  });
+}
 
 // ---------------------------------------------------------------------------
 // Load one fight: the booking, both fighters, the market row, the per-book
@@ -231,6 +347,15 @@ async function load() {
   const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name || 'Corner B' };
 
   const [cardioMap, baseRates] = await Promise.all([loadCardio([a.id, b.id]), loadBaseRates()]);
+
+  // The movement chart loads on its own and is allowed to fail on its own.
+  // Single fight only — see §Performance in market_chart_views.sql.
+  renderChart(fight.id, a, b).catch(err => {
+    console.warn('[fight-lab] chart failed', err);
+    const el = document.getElementById('flChart');
+    if (el) el.innerHTML = '<div class="mc-empty"><div class="mc-empty-h">Chart unavailable</div>' +
+      '<div class="mc-empty-b">The market history could not be loaded. The numbers above are unaffected.</div></div>';
+  });
 
   renderHead(fight, event, a, b);
   renderMarket(mvt, a, b, event);

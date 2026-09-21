@@ -1059,3 +1059,83 @@ the product — it belongs to the research layer. D-011 is explicit that model
 infrastructure is not deleted to tidy up, so it stays and is measured correctly.
 
 **Attribution note.** As D-006 through D-014.
+
+
+---
+
+## D-016 — The chart draws one cohort, or it draws nothing
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-056, T-040, T-057 |
+| level | L1 |
+| reversible | yes — read-only views, one JS module, CSS, one new Fight Lab section. Writes no row, changes no append-only table, publishes no new claim about CFL's accuracy |
+
+**Plain version.** The line on the chart is the middle sportsbook price over
+time. Every point on it comes from the same sportsbooks. If a book starts
+quoting halfway through, it does not join the line halfway through — a line
+that gains a book shows a step no market actually made.
+
+**Decision.** Four rules, and each is enforced in `market-chart.js` rather than
+in the page, so a second surface cannot drift:
+
+1. **One fixed cohort** for the whole plotted window — and it is *asserted in
+   JS*, not trusted from SQL. If `cohort_books` is not identical on every
+   point the chart is refused outright, with copy that says it is **our bug**,
+   not a quiet market. A chart is the easiest place to hide a cohort change,
+   so it is the place to check hardest.
+2. **No interpolation.** The path is a **step** (`H`/`V` only — a test parses
+   the emitted `d` attribute and fails on any line-to or curve command).
+   Between its own quotes a book's price does not move, so the line holds flat
+   and jumps. A diagonal would claim the price passed through values no book
+   posted. Every x is a real capture instant; there is no synthetic time grid.
+3. **Refuse rather than thin.** Below three matched books there is no
+   consensus line — not a dashed one, not a shorter window, not a smaller
+   cohort quietly substituted.
+4. **The cohort size is on screen**, in the footer, not only in a tooltip.
+
+**The cohort is not a new definition.** It *is* the `broad_baseline` matched
+cohort from T-046. That fixes the window for free: the plot starts at
+`baseline_at`, the instant a third sportsbook first priced the fight. Before
+that there were fewer than three books, so there was never a defensible
+consensus to draw.
+
+**Per-book lines are exempt from rules 1 and 3** and use their own native
+history — one book's quotes are observations, not an average. Rule 2 still
+applies. A fight whose consensus is refused can still show its per-book lines,
+and the SQL is shaped so that gate sits on the series view and not on the book
+view.
+
+**A 155x performance fix, found on the way (T-057).**
+`v_fight_market_quotes` used `WITH q AS (...)` referenced twice — once per
+side. A CTE referenced more than once is an **optimization fence** in Postgres:
+it is materialised, so `WHERE fight_id = X` never pushes into it and every
+reference re-scanned ~85k rows. One fight's series took **3,412 ms**. Rewritten
+as a direct self-join with identical semantics and identical column order
+(verified: 30,559 rows, 79 fights, unchanged), the same query takes **22 ms**.
+Every market surface on the site gets that, not just the chart.
+
+**What that fix does NOT buy.** Measured after it:
+
+| query | cost |
+|---|---|
+| one fight, literal `fight_id` | 22 ms |
+| twelve fights, literal `IN (...)` | 4,607 ms |
+| `fight_id IN (SELECT ...)` | times out |
+| whole view, no predicate | times out |
+
+**`v_fight_chart_series` is a single-fight view.** That is why the chart lives
+on Fight Lab, one fight to a page, and why **Market Lab has no per-row
+sparkline** — a twelve-row board would cost 4.6 seconds. Card-wide charts need
+a materialized view or a set-returning function, which is **T-058**, queued
+rather than guessed at.
+
+**T-040 closed.** `v_fight_odds_latest_by_book` carried
+`event_date >= CURRENT_DATE - 14`, so a fight page older than a fortnight lost
+its sportsbook table entirely — empty, with no error and no explanation. The
+window is gone: **51 fights older than 14 days now have their detail back**,
+the oldest event covered being 2026-05-30.
+
+**Attribution note.** As D-006 through D-015.

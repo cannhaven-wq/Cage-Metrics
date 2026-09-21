@@ -90,6 +90,17 @@ Git history is the audit trail. These files are the working surface.
 
 ### Monetization sprint — started 2026-09-21
 
+**Items 1–3 done.** T-047 analytics ([D-014](DECISIONS.md)), T-046
+matched-cohort everywhere ([D-015](DECISIONS.md)), movement charts
+([D-016](DECISIONS.md)). Next is auth + Pro entitlements, then Stripe, then
+Free-vs-Pro enforcement, then watchlist/alerts.
+
+**The chart rule:** one fixed cohort for the whole window, asserted in JS and
+not trusted from SQL; stepped, never interpolated; refused below three books;
+cohort size always on screen. `v_fight_chart_series` is **single-fight only** —
+22 ms for one fight, 4.6 s for twelve — so Market Lab has no sparkline and
+card-wide charts are T-058.
+
 The owner's locked order: **T-047 analytics → T-046 matched-cohort everywhere →
 movement charts → auth/Pro entitlements → Stripe → Free-vs-Pro enforcement →
 watchlist/alerts.** No scope beyond those seven. Two standing gates: **T-049**
