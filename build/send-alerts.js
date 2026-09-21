@@ -86,8 +86,16 @@ const note = r => { tally.refused[r] = (tally.refused[r] || 0) + 1; };
 
 async function main() {
   const now = Date.now();
+  // Say WHICH dry run this is. "Nothing was sent" has two very different
+  // causes — the operator asked for a rehearsal, or the mailer was never
+  // configured — and a controlled delivery test needs to tell them apart
+  // before it concludes anything. Presence only; no secret is printed.
+  const why = !RESEND_KEY ? 'no RESEND_API_KEY — the mailer is not configured'
+            : 'ALERTS_DRY_RUN was set';
   console.log('[alerts] run at ' + new Date(now).toISOString() +
-              (DRY_RUN ? '  (DRY RUN — nothing will be sent)' : ''));
+              (DRY_RUN ? '  (DRY RUN: ' + why + ')' : '  (LIVE — emails will be sent)'));
+  console.log('[alerts] mailer: RESEND_API_KEY ' + (RESEND_KEY ? 'present' : 'ABSENT') +
+              ' · RESEND_FROM ' + (process.env.RESEND_FROM ? 'set' : 'defaulted to ' + FROM));
 
   // ---- 1. every active alert, with the market beside it --------------------
   const { data: alerts, error: aErr } = await sb
