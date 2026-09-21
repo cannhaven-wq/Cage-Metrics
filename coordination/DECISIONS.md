@@ -1366,3 +1366,63 @@ and the entitlement cannot disagree. It also stopped promising that "premium
 billing launches soon", which is a date nobody has.
 
 **Attribution note.** As D-006 through D-017.
+
+---
+
+## D-019 — No paywall before there is a way to pay
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-061, T-066 |
+| level | L3 |
+| reversible | yes as an ordering — it changes what is built when, not what is built. The thing it defers (enforcing the boundary) is the irreversible-feeling one, and deferring it is the safe direction |
+
+**Plain version.** Do not put anything behind a paywall until someone can
+actually buy their way past it. Build order changes; nothing already built is
+undone.
+
+**What changed.** The locked order had **Free/Pro enforcement immediately after
+Stripe** — enforcement was item 6 of seven, and the legal work sat beside the
+sequence rather than inside it. The owner moved enforcement behind the gates
+that make paying possible. The order from here:
+
+| # | step | whose | state |
+|---|---|---|---|
+| 1 | Merge the Stripe backbone (#44) | Claude | **done** |
+| 2 | **T-054** — privacy discloses the analytics processor | Owner + lawyer | blocked on legal |
+| 3 | **T-048** — Terms of Service exists | Owner + lawyer | blocked on legal |
+| 4 | Set the CFL Pro price | Owner (L3) | not set |
+| 5 | Stripe account, products, secrets | Owner | no account connected |
+| 6 | Checkout exercised in Stripe **test mode** | Claude, once 4–5 exist | blocked |
+| 7 | **T-061** — apply the Free/Pro boundary | Claude | **moved here from #6** |
+| 8 | **T-066** — turn checkout live | Owner (L3) | blocked on 2–7 |
+| 9 | Watchlists / movement alerts | Claude | unblocked |
+
+**Why it is right, and it is not only about courtesy.** A paywall in front of a
+product with no checkout is not a soft launch, it is a dead end: the member
+meets a wall, and the door behind it does not exist. It also destroys the one
+measurement the funnel instrumentation (D-014) was built to take — `paywall_hit`
+means something when a purchase is possible and means nothing when it is not,
+and a month of unbuyable paywall hits is a baseline nobody can read afterwards.
+
+**What this does NOT change.** T-054 and T-048 are still **checkout blockers**
+and the code still enforces them: `entitlements.js::CHECKOUT_BLOCKERS` and the
+503 from `stripe-checkout` are untouched by this decision. Step 7 moving later
+does not make step 8 easier — it makes the two independent, which they always
+should have been.
+
+**On the price.** The owner's stated default is in the region of $9.99–$11.99
+monthly and $79–$99 annually, with a founding-member rate for the first cohort.
+**Recorded as a preference, not set.** No price is configured anywhere,
+`STRIPE_PRICE_ID` is unset, and `CRITICAL_GATES.md` item 7 keeps the number with
+the owner. Three things it implies are also undecided and are flagged in
+`legal-review/PROPOSED_WORDING.md`: whether both periods are offered, whether
+the founding rate is for life or for a term, and what happens to it on lapse.
+
+**The boundary itself is unchanged and stays simple** — free shows the market
+now; Pro adds history, depth and monitoring. `PRODUCT_BOUNDARY.md` already says
+that and every surface is still `enforced: false`.
+
+**Attribution note.** As D-006 through D-018.

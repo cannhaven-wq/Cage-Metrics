@@ -100,6 +100,53 @@ Facts a drafter needs, all verifiable in this repo:
 - Users can store their own bet records in My Book. That data is theirs and is
   protected per-row in the database.
 
+### How billing actually behaves (added 2026-09-21)
+
+This is a description of shipped, tested code, offered so the Terms describe the
+system rather than a guess at it. Source of truth is `billing-lifecycle.js`;
+`tests/billing-lifecycle.test.js` asserts each line below. **None of this is
+proposed wording** — it is the factual input a drafter needs.
+
+- **Payment is processed by Stripe. CFL never sees or stores card details.**
+  CFL stores a Stripe customer id, a subscription id, the subscription status
+  and the current period end. Nothing else about the payment instrument.
+- **Renewal is automatic** at the end of each billing period, as Stripe
+  subscriptions work by default.
+- **Cancellation takes effect at the end of the paid period, not immediately.**
+  A member who cancels keeps full access until the period they have already paid
+  for runs out. This is implemented (`cancel_at_period_end`), not merely
+  intended, and the account page tells them the exact date.
+- **A failed payment does not cut access off immediately.** While Stripe retries
+  (`past_due`), access continues to the end of the paid period. Access ends when
+  Stripe stops retrying (`unpaid`), or when the period ends, whichever is
+  applicable.
+- **Access ends automatically when the paid period ends.** It is not open-ended:
+  entitlement is decided in the database against a stored expiry, so a lapsed
+  subscription cannot keep access by oversight.
+- **An unrecognised subscription state ends access rather than continuing it.**
+  Deliberate: the alternative is a lapsed member retaining a subscription
+  indefinitely.
+- **Every billing event Stripe sends is recorded** in an append-only audit table
+  (`billing_events`) that no member and no browser can read.
+
+**Two things a drafter should NOT infer from the above.** There is no trial
+implemented, so nothing here describes one; and **nothing in the system issues a
+refund** — if the Terms promise one, it is a manual process today.
+
+### What is still not decided, and is the owner's
+
+- **Price.** The owner's stated default as of 2026-09-21 is in the region of
+  $9.99–$11.99 monthly and $79–$99 annually, with a founding-member rate for the
+  first cohort. That is a stated preference, not a set price: no number is
+  configured anywhere, and setting one is L3 (`CRITICAL_GATES.md` item 7).
+- **Which periods are offered.** Monthly, annual, or both.
+- **Whether the founding-member rate is locked for life or for a term**, and
+  what happens to it on lapse and resubscription. This interacts with item 5
+  below (the beta grant), and neither is decided.
+- **Refunds.** No policy, and no implementation.
+
+---
+
 ### What a lawyer needs to decide
 
 1. Governing law and jurisdiction, and whether CFL's activity requires any
@@ -108,9 +155,13 @@ Facts a drafter needs, all verifiable in this repo:
    `disclaimer.html`** — those were not verified by this work, and the Tennessee
    REDLINE reference should be checked against where CFL actually operates and
    who it actually serves.
-2. Subscription terms once Pro exists: billing period, renewal, cancellation,
-   refunds. None of this is decided (`PRODUCT_BOUNDARY.md` deliberately leaves
-   price and billing open) and all of it is L3.
+2. Subscription terms once Pro exists. **Updated 2026-09-21: most of the
+   mechanics are now implemented and tested, so the drafter is describing real
+   behaviour rather than inventing it — see "How billing actually behaves"
+   below.** What is still undecided and still L3: the **price**, the **billing
+   period** offered (monthly, annual, or both), whether a **trial** is offered
+   at all, and the **refund policy**. Refunds in particular are a policy choice
+   with no code behind it yet: nothing in the system issues one.
 3. Limitation of liability, and how it interacts with the fact that CFL
    publishes numbers users may act on financially.
 4. Whether age-gating must be enforced rather than stated.

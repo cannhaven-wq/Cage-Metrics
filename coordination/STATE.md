@@ -124,8 +124,7 @@ sweep found no second instance.
 
 **Items 1–3 done.** T-047 analytics ([D-014](DECISIONS.md)), T-046
 matched-cohort everywhere ([D-015](DECISIONS.md)), movement charts
-([D-016](DECISIONS.md)). **Next is item 6, the Free-vs-Pro boundary**, then
-watchlist/alerts.
+([D-016](DECISIONS.md)).
 
 **The chart rule:** one fixed cohort for the whole window, asserted in JS and
 not trusted from SQL; stepped, never interpolated; refused below three books;
@@ -133,11 +132,34 @@ cohort size always on screen. `v_fight_chart_series` is **single-fight only** �
 22 ms for one fight, 4.6 s for twelve — so Market Lab has no sparkline and
 card-wide charts are T-058.
 
-The owner's locked order: **T-047 analytics → T-046 matched-cohort everywhere →
-movement charts → auth/Pro entitlements → Stripe → Free-vs-Pro enforcement →
-watchlist/alerts.** No scope beyond those seven. Two standing gates: **T-049**
-before any affiliate link, **T-048** before live checkout. Social automation
-stays behind payments.
+**The order changed on 2026-09-21 ([D-019](DECISIONS.md)): no paywall before
+there is a way to pay.** Free-vs-Pro enforcement used to sit immediately after
+Stripe; it now sits behind the gates that make paying possible. A paywall in
+front of a product with no checkout is a dead end for the member, and it
+destroys `paywall_hit` as a measurement — the number means something when a
+purchase is possible and nothing when it is not.
+
+| # | step | whose | state |
+|---|---|---|---|
+| 1 | Stripe backbone (#44) | Claude | **done** |
+| 2 | **T-054** privacy names the analytics processor | Owner + lawyer | blocked on legal |
+| 3 | **T-048** Terms of Service exists | Owner + lawyer | blocked on legal |
+| 4 | **T-067** set the price | Owner (L3) | not set |
+| 5 | **T-068** Stripe account, product, secrets | Owner | no account connected |
+| 6 | **T-069** checkout exercised in Stripe test mode | Claude | blocked on 4–5 |
+| 7 | **T-061** apply the Free/Pro boundary | Claude | **moved here** |
+| 8 | **T-066** turn checkout live | Owner (L3) | blocked on 2–7 |
+| 9 | watchlists / movement alerts | Claude | **unblocked** |
+
+**Steps 2 through 6 are not Claude's**, and step 7 is gated behind them, so the
+only unblocked build work in the sequence is step 9. Two standing gates are
+unchanged: **T-049** before any affiliate link, **T-048** before live checkout.
+Social automation stays behind payments.
+
+**On the price:** the owner's stated default is ~$9.99–$11.99 monthly and
+$79–$99 annually with a founding rate for the first cohort. **Recorded as a
+preference, not set** — no number is configured, `STRIPE_PRICE_ID` is unset, and
+`CRITICAL_GATES.md` item 7 keeps it with the owner.
 
 **T-046 is done** ([D-015](DECISIONS.md)): every market horizon — first broad
 capture, 24 hours, research forecast lock — reads one shared matched-cohort
