@@ -161,13 +161,15 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl2"></script>
+<script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('market');
 cfl.renderFooter();
+
+cfl.track('market_lab_view');
 
 const M = window.cflMarket;
 const esc = cfl.escapeHtml;
@@ -399,6 +401,10 @@ function toggleBooks(btn, rows) {
   tr.insertAdjacentElement('afterend', el);
   btn.setAttribute('aria-expanded', 'true');
   btn.textContent = 'Hide';
+  // Funnel: expanding the per-book table is the clearest signal that someone is
+  // doing real comparison work, which is what Pro is meant to sell. Fires on
+  // expand only — collapsing is not a second interaction.
+  cfl.track('book_breakdown_expanded', { fight_id: Number(fid) || 0, book_count: books.length });
 }
 
 load().catch(err => {

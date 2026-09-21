@@ -1,16 +1,31 @@
 # Funnel analytics — the event schema
 
-Status: **specified, not yet instrumented.** Written 2026-09-21 as the design
-[T-047](coordination/TASK_QUEUE.md) implements. Nothing on the site emits these
-events today, and this file exists so that when something does, there is one
-list rather than three.
+Status: **instrumented 2026-09-21** (T-047). Fifteen of the nineteen events
+emit today; the other four are declared hooks with nothing to fire on yet, and
+the table below says which is which. Storage is
+[`funnel_events_migration.sql`](funnel_events_migration.sql); the emitter is
+`cfl.track` in `_shared.js`; `tests/analytics-events.test.js` holds the three
+rules.
 
 ## The rule that comes first
 
-**No third-party analytics vendor is added without an owner decision.** A
+**No NEW third-party analytics vendor is added without an owner decision.** A
 vendor script is a third party reading every page view of a gambling-adjacent
-site, and that is a privacy commitment, not a build step — `privacy.html` would
-have to change with it. The default below uses infrastructure CFL already owns.
+site, and that is a privacy commitment, not a build step.
+
+**Correction, 2026-09-21.** This section previously implied no vendor existed.
+One already did: **Plausible** (`plausible.io/js/script.js`) has been loaded on
+25 of the 30 root pages, and was there before this document was written. The
+five without it are the two redirect stubs, `lab.html`, `reset.html` and
+`unsubscribe.html`. So the choice was never "vendor or no vendor" — it was
+whether to add a second one, and the answer is no.
+
+**A gap that came with that discovery: `privacy.html` does not name Plausible.**
+A third-party processor runs on every page and the privacy policy does not
+disclose it. That is a compliance gap, not a preference, and the wording of a
+privacy policy is an owner-and-lawyer decision under
+`coordination/CRITICAL_GATES.md` item 9 — so it is queued as **T-054** with
+draft wording, not shipped quietly.
 
 ## What we actually need to answer
 
@@ -32,6 +47,10 @@ else; an event that answers none of them does not get added.
 One emitter, `cfl.track(name, props)`, in `_shared.js`. One name per row. Names
 are `snake_case` and never change meaning — a renamed event is a new event.
 
+Fifteen emit today. Four are **declared, not emitted** — marked below with the
+reason. They are in the list and in the database's CHECK constraint so the
+sprint that builds a checkout or a share button does not invent its own names.
+
 | event | fires when | props |
 |---|---|---|
 | `landing_view` | first page of a session, whatever it is | `path`, `referrer_host`, `utm_source` |
@@ -44,18 +63,19 @@ are `snake_case` and never change meaning — a renamed event is a new event.
 | `methodology_opened` | any "how we calculate this" disclosure is opened | `surface`, `topic` |
 | `fighter_page_view` | `/fighter.html` or an `/f/` stub | `fighter_id` |
 | `event_page_view` | `/event.html` or an `/e/` stub | `event_id` |
-| `best_price_clicked` | a best-price cell is clicked | `fight_id`, `book` |
-| `fight_shared` | a share control is used | `fight_id`, `channel` |
+| `best_price_clicked` | **declared, not emitted** — the best-price cell is not a clickable element. It becomes one only if there is somewhere to click, which is gated behind T-049 | `fight_id`, `book` |
+| `fight_shared` | **declared, not emitted** — no share control exists on any page | `fight_id`, `channel` |
 | `card_brief_signup_started` | the signup form is focused | `source` (which CTA) |
 | `card_brief_signup_completed` | the insert succeeds | `source` |
 | `pricing_view` | `/pricing.html` renders | — |
 | `pro_cta_clicked` | any upgrade CTA | `source` |
-| `checkout_started` | **future hook** — no checkout exists | `plan` |
-| `checkout_completed` | **future hook** — no checkout exists | `plan` |
+| `checkout_started` | **declared, not emitted** — no checkout exists | `plan` |
+| `checkout_completed` | **declared, not emitted** — no checkout exists | `plan` |
 | `return_visit` | a session begins with a prior session inside 7 days | `days_since`, `same_fight_week` |
 
-The last three are declared and not emitted. They are here so that the sprint
-that builds checkout does not invent its own names.
+`landing_view` and `return_visit` fire from `cfl.trackSessionStart()` in
+`_shared.js`, once per session, on every page. Everything else is wired at the
+surface that owns it.
 
 ## What is deliberately not collected
 
@@ -82,12 +102,31 @@ never joined to an account.
 
 ## Where the events go
 
-The default is a `funnel_events` table in the Supabase project CFL already
-runs: insert-only, RLS `INSERT TO anon, authenticated` with no `SELECT` for
-either, read through a definer view that exposes counts and never rows. That
-keeps the data in infrastructure the project already discloses, needs no new
-vendor and no `privacy.html` change, and costs one table.
+**Two sinks, one emitter**, and the split is deliberate.
 
-The alternative — a hosted, cookieless product analytics vendor — is easier to
-query and is an owner decision, because it is a third party and a privacy
-disclosure. It is not made here.
+**`funnel_events`** (Supabase, applied 2026-09-21) is the one CFL owns.
+`INSERT` for `anon` and `authenticated`; **no `SELECT` for either**, because an
+analytics table a visitor can read back is a list of what every other visitor
+did. Everything else — `SELECT`, `UPDATE`, `DELETE`, `TRUNCATE`, `REFERENCES`,
+`TRIGGER` — is explicitly revoked. Counts are read through `v_funnel_daily`, an
+owner-rights view that returns aggregates and never a row. This sink is what
+answers *"did they come back during the same fight week"*, which a hosted
+dashboard cannot without joining to our own card calendar.
+
+**Plausible**, already present, receives the **event name only**. Custom
+properties are a paid Plausible feature, and spending money is an L3 decision
+that would otherwise get taken by accident through a props argument. Name only
+costs nothing and gives an immediate dashboard.
+
+If either sink is missing or throws, the other still fires and the page is
+unaffected — `tests/analytics-events.test.js` asserts both directions.
+
+### One thing the revokes taught us
+
+On first apply, `anon` held `UPDATE` and `DELETE` on the new table. Not from
+anything in the migration — a new table in `public` **inherits** broad grants
+from Supabase's default privileges. RLS denied both (no policy means deny), so
+nothing was exploitable, but that is one layer doing the work of two, and it
+becomes zero layers the day someone adds a permissive `FOR ALL` policy. The
+revokes are load-bearing. **Verify grants after applying; do not assume the
+migration's own text describes the result.**

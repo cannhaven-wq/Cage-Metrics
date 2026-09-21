@@ -561,7 +561,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl2"></script>
+<script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
 <!-- Every market number on this page is formatted by market.js, so the rules
      about showing a price (book count, age, movement measured only across the
@@ -572,6 +572,20 @@
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
+
+// Funnel: Card Lab is the homepage, so a landing here is also a card view.
+// landing_view / return_visit fire from _shared.js once per session.
+cfl.track('card_lab_view');
+
+// Funnel: the "where these numbers come from" disclosure. Opening it is the
+// sharp-user signal — it says someone wanted the method, not just the number.
+(function () {
+  const d = document.getElementById('modelHow');
+  if (!d) return;
+  d.addEventListener('toggle', () => {
+    if (d.open) cfl.track('methodology_opened', { surface: 'card_lab', topic: 'where_numbers_come_from' });
+  });
+})();
 
 // =============================================================================
 // HERO rail + "what's behind it" tiles + past events
@@ -1073,6 +1087,7 @@ function wireControls() {
     seg.addEventListener('click', (e) => {
       const btn = e.target.closest('button'); if (!btn) return;
       [].forEach.call(seg.querySelectorAll('button'), b => b.classList.toggle('active', b === btn));
+      if (btn.dataset.sort !== _hpSortKey) cfl.track('market_sort_changed', { sort: btn.dataset.sort, surface: 'card_lab' });
       _hpSortKey = btn.dataset.sort;
       renderCards();
       if (hint) hint.textContent = hints[_hpSortKey] || '';

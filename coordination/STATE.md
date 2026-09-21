@@ -88,6 +88,22 @@ Git history is the audit trail. These files are the working surface.
 
 ## Where the project is
 
+### Monetization sprint — started 2026-09-21
+
+The owner's locked order: **T-047 analytics → T-046 matched-cohort everywhere →
+movement charts → auth/Pro entitlements → Stripe → Free-vs-Pro enforcement →
+watchlist/alerts.** No scope beyond those seven. Two standing gates: **T-049**
+before any affiliate link, **T-048** before live checkout. Social automation
+stays behind payments.
+
+**T-047 is done** ([D-014](DECISIONS.md)): fifteen of nineteen funnel events
+emit, into a `funnel_events` table CFL owns (`INSERT` only, no `SELECT` for
+anyone) plus the Plausible that was already installed, name only. Nothing that
+identifies a person is sent, and the emitter strips it rather than trusting the
+call sites. **T-054** is new and blocks checkout: `privacy.html` does not name
+Plausible, which has been running on every page all along.
+
+
 ### Market movement — settled 2026-09-21
 
 Movement is measured over the **matched book cohort** — the sportsbooks quoting

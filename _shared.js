@@ -676,6 +676,8 @@
           </div>
         </div>
       `;
+      const cta = el.querySelector('.cfl-funnel-cta-actions a');
+      if (cta) cta.addEventListener('click', () => cfl.track('pro_cta_clicked', { source: source }));
     });
     // Re-evaluate on auth change so the banner disappears immediately after
     // signup without a hard reload.
@@ -722,6 +724,15 @@
       const input = el.querySelector('input[type=email]');
       const btn = el.querySelector('button');
       const msg = el.querySelector('.cfl-email-capture-msg');
+      // Fires once per capture element, on first focus. Focus rather than
+      // keystroke, and once rather than per event, so "started" means a person
+      // engaged the form and not that a browser autofilled it thirty times.
+      input.addEventListener('focus', () => {
+        if (el.getAttribute('data-cfl-started')) return;
+        el.setAttribute('data-cfl-started', '1');
+        cfl.track('card_brief_signup_started', { source: source });
+      }, { once: false });
+
       form.addEventListener('submit', async (ev) => {
         ev.preventDefault();
         msg.textContent = '';
@@ -737,6 +748,9 @@
         const { error } = await window.cflAuth.subscribeEmail(input.value, source);
         btn.disabled = false;
         btn.textContent = originalLabel;
+        // Completed means the insert succeeded. The event records THAT a signup
+        // happened and its source — never the address. See ANALYTICS_SCHEMA.md.
+        if (!error) cfl.track('card_brief_signup_completed', { source: source });
         if (error) {
           msg.classList.add('err');
           msg.textContent = error.message || 'Something went wrong. Try again.';
@@ -756,10 +770,175 @@
     document.addEventListener('DOMContentLoaded', () => {
       cfl.renderFunnelCtas();
       cfl.renderEmailCaptures();
+      cfl.trackSessionStart();
     });
   } else {
-    setTimeout(() => { cfl.renderFunnelCtas(); cfl.renderEmailCaptures(); }, 0);
+    setTimeout(() => {
+      cfl.renderFunnelCtas();
+      cfl.renderEmailCaptures();
+      cfl.trackSessionStart();
+    }, 0);
   }
+
+  // ===========================================================================
+  // Funnel analytics — cfl.track()
+  // ===========================================================================
+  // PLAIN ENGLISH: counts which pages people open and which things they click,
+  // so we can tell whether anyone reaches Card Lab or opens a fight. A visitor
+  // sees nothing. No cookie is set. No new third party is added.
+  //
+  // One emitter, two sinks, and the split is deliberate:
+  //
+  //   funnel_events (Supabase)  the one we own. Joins to our own data, no
+  //                             per-property cost, and answers "did they come
+  //                             back during the same fight week", which a
+  //                             hosted dashboard cannot without more.
+  //   Plausible                 ALREADY installed on 25 pages before this
+  //                             existed. Firing the same name at it costs
+  //                             nothing, adds no vendor, and gives a dashboard
+  //                             immediately. Name only — no props, because
+  //                             custom properties are a paid Plausible feature
+  //                             and spending money is an L3 decision.
+  //
+  // Specification, including the nine questions this exists to answer and what
+  // is deliberately NOT collected: ANALYTICS_SCHEMA.md.
+  //
+  // THREE RULES, and each one is why this is a function rather than inline code:
+  //
+  //  1. It never throws and never blocks. Analytics is the least important
+  //     thing on any page; a tracker that breaks a render has done more damage
+  //     than it could ever measure. Every path is wrapped and failure is
+  //     silent.
+  //  2. It never sends anything that identifies a person. There is no argument
+  //     for an email, a name, a user id or a bet amount in a prop, so the
+  //     emitter strips any key that looks like one rather than trusting every
+  //     future call site to remember.
+  //  3. Event names come from cfl.EVENTS. The database has the same list as a
+  //     CHECK constraint, so a typo is a rejected insert, not a funnel step
+  //     that silently reads zero forever.
+
+  // Mirrored in funnel_events_migration.sql (funnel_events_known_event) and in
+  // ANALYTICS_SCHEMA.md. Adding an event means editing all three.
+  cfl.EVENTS = [
+    'landing_view', 'card_lab_view', 'fight_opened', 'market_lab_view',
+    'book_breakdown_expanded', 'market_sort_changed', 'factor_lab_view',
+    'methodology_opened', 'fighter_page_view', 'event_page_view',
+    'best_price_clicked', 'fight_shared', 'card_brief_signup_started',
+    'card_brief_signup_completed', 'pricing_view', 'pro_cta_clicked',
+    // declared, not emitted: no checkout exists yet. They live here so the
+    // sprint that builds one does not invent its own names.
+    'checkout_started', 'checkout_completed', 'return_visit'
+  ];
+
+  // Keys we refuse to send even if a call site passes them. Rule 2 above.
+  const PROP_DENY = /(^|_)(email|mail|name|user|uid|user_id|token|password|ip|address|phone|stake|amount|wager|bankroll)($|_)/i;
+
+  const SESSION_KEY = 'cfl_sid';
+  const LAST_SEEN_KEY = 'cfl_last_seen';
+
+  function sessionId() {
+    try {
+      let id = sessionStorage.getItem(SESSION_KEY);
+      if (!id) {
+        // Random, per session, never joined to an account.
+        id = 's' + Math.random().toString(36).slice(2, 12) +
+                   Math.random().toString(36).slice(2, 8);
+        sessionStorage.setItem(SESSION_KEY, id);
+      }
+      return id;
+    } catch (e) {
+      // Private mode, blocked storage, or a thrown accessor. An un-grouped
+      // event still counts; a broken page does not.
+      return 'nostore';
+    }
+  }
+
+  function cleanProps(props) {
+    const out = {};
+    if (!props || typeof props !== 'object') return out;
+    Object.keys(props).forEach(k => {
+      if (PROP_DENY.test(k)) return;
+      const v = props[k];
+      if (v === null || v === undefined) return;
+      if (typeof v === 'number' && isFinite(v)) { out[k] = v; return; }
+      if (typeof v === 'boolean') { out[k] = v; return; }
+      // Strings are capped: a prop is a label, never a payload.
+      const s = String(v);
+      if (s.length) out[k] = s.slice(0, 120);
+    });
+    return out;
+  }
+
+  cfl.track = function (event, props) {
+    try {
+      if (cfl.EVENTS.indexOf(event) === -1) {
+        // Loud in development, silent to the visitor either way.
+        if (window.console && console.warn) {
+          console.warn('[cfl.track] unknown event "' + event + '" — add it to ' +
+                       'cfl.EVENTS, ANALYTICS_SCHEMA.md and the DB constraint.');
+        }
+        return;
+      }
+      const clean = cleanProps(props);
+
+      // Sink 1: the table we own. Fire-and-forget; a rejected insert is not a
+      // page problem, so the promise is swallowed rather than surfaced.
+      try {
+        if (window.cflSupabase) {
+          window.cflSupabase.from('funnel_events').insert({
+            event: event,
+            session_id: sessionId(),
+            path: (location.pathname || '/').slice(0, 200),
+            props: clean
+          }).then(function () {}, function () {});
+        }
+      } catch (e) { /* never block */ }
+
+      // Sink 2: Plausible, already on the page. Name only, per the note above.
+      try {
+        if (typeof window.plausible === 'function') window.plausible(event);
+      } catch (e) { /* never block */ }
+    } catch (e) { /* never block */ }
+  };
+
+  // Fires landing_view once per session, and return_visit when this session
+  // follows an earlier one. "Same fight week" is answered here rather than in
+  // SQL because localStorage is the only place the previous visit is known.
+  cfl.trackSessionStart = function () {
+    try {
+      const sid = sessionId();
+      const started = 'cfl_started_' + sid;
+      if (sessionStorage.getItem(started)) return;   // already counted
+      sessionStorage.setItem(started, '1');
+
+      let ref = '';
+      try { ref = document.referrer ? new URL(document.referrer).hostname : ''; }
+      catch (e) { ref = ''; }
+      const sameSite = ref === location.hostname;
+
+      cfl.track('landing_view', {
+        // utm_source only — never the full query string, which can carry
+        // anything a link-builder put in it.
+        utm_source: cfl.getQueryParam('utm_source') || '',
+        referrer_host: sameSite ? '' : ref
+      });
+
+      const prev = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);
+      const now = Date.now();
+      if (prev) {
+        const days = Math.round((now - prev) / 86400000);
+        if (days >= 0 && days <= 30) {
+          cfl.track('return_visit', {
+            days_since: days,
+            // A fight week is the seven days before a card. Within a week of
+            // the last visit is the question the retention side actually asks.
+            same_fight_week: days <= 7
+          });
+        }
+      }
+      localStorage.setItem(LAST_SEEN_KEY, String(now));
+    } catch (e) { /* never block */ }
+  };
 
   window.cfl = cfl;
 })();
