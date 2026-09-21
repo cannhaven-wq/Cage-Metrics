@@ -290,10 +290,17 @@ function renderChanged(rows) {
   const moved = rows.filter(r => r.read && r.read.move24h != null && Math.abs(r.read.move24h) >= 1)
     .sort((x, y) => Math.abs(y.read.move24h) - Math.abs(x.read.move24h));
   if (!moved.length) {
+    // Two different reasons for an empty list, and they mean opposite things:
+    // a quiet market, or not enough comparable books to measure one. Saying
+    // "quiet" when we actually cannot tell would be the dishonest option.
     const anyHistory = rows.some(r => r.read && r.read.move24h != null);
+    const anyRefused = rows.some(r => r.read && r.read.move24h == null &&
+                                      r.read.movementStatus24h === 'insufficient_matched_books');
     el.innerHTML = '<div class="empty">' + (anyHistory
       ? 'No fight on this card has moved a full point in the last 24 hours. A quiet board is information too — it usually means no news has landed and no large money has arrived.'
-      : 'We have not been capturing this card for a full day yet, so there is nothing to compare against. The 24-hour column fills in once we have a day of history.') + '</div>';
+      : (anyRefused
+        ? 'Not enough sportsbooks are quoting both 24 hours ago and now to compare like with like, so there is no 24-hour figure on this card yet. It fills in as more books post.'
+        : 'We have not been capturing this card for a full day yet, so there is nothing to compare against. The 24-hour column fills in once we have a day of history.')) + '</div>';
     return;
   }
   el.innerHTML = '<ul class="chg">' + moved.map(r => {
@@ -343,7 +350,9 @@ function renderBoard(rows) {
       ${mvCell(r.read.moveSinceBaseline,
                r.read.movementStatus === 'no_broad_capture' ? 'under 3 books'
                                                             : 'not comparable')}
-      ${mvCell(r.read.move24h, 'under 24h old')}
+      ${mvCell(r.read.move24h,
+               r.read.movementStatus24h === 'insufficient_matched_books'
+                 ? 'not comparable' : 'under 24h old')}
       <td class="sp${r.read.spreadPts >= M.SPREAD_WIDE_PTS ? ' wide' : ''}">${r.read.spreadPts == null ? '—' : r.read.spreadPts.toFixed(1)}</td>
       <td class="age${fresh && fresh.stale ? ' stale' : ''}">${esc(fresh ? fresh.when : '—')}
         <button class="exp" type="button" data-fid="${f.id}" aria-expanded="false">Books</button></td>

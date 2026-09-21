@@ -21,11 +21,16 @@
         at all was reported as moving 3+ points. A caveat a reader may not act
         on is worse than a number we decline to print. See D-012 and
         `market_movement_views.sql`.
-     3. Best price means the best price in the data. `bestSide()` orders by the
+     3. EVERY horizon obeys rule 2, not just the baseline. The 24-hour lookback
+        and the research forecast-lock comparison are computed over their own
+        matched cohorts in SQL (`v_fight_market_horizons`, T-046) and read
+        straight from it. Nothing here subtracts one median from another — that
+        is how two cohorts get mixed without anyone noticing.
+     4. Best price means the best price in the data. `bestSide()` orders by the
         American number and by nothing else — not by affiliate economics, not
         by a house list. If that ever changes, it changes here, in the open,
         and every surface changes with it.
-     4. Nothing in this file scores, ranks or recommends a fight. It reports
+     5. Nothing in this file scores, ranks or recommends a fight. It reports
         what books are posting and how that has changed. There is no CFL
         number, no edge, no confidence and no pick anywhere in it.
 
@@ -157,7 +162,18 @@
       moveSinceBaseline: movePtsA == null ? null : (isA ? movePtsA : -movePtsA),
 
       prob24h: h24,
-      move24h: (h24 == null || now == null) ? null : (now - h24) * 100,
+      // T-046: the 24 h move comes from SQL, over its OWN matched cohort. It is
+      // NOT `now - h24`: subtracting a matched-cohort median from an all-books
+      // median mixes two cohorts, which is the exact defect D-012 removed from
+      // the baseline and T-046 removed from here.
+      matchedBooks24h: row.book_count_24h == null ? null : +row.book_count_24h,
+      movementStatus24h: row.movement_status_24h || 'insufficient_matched_books',
+      move24h: (function () {
+        const st = row.movement_status_24h;
+        const pts = num(row.movement_pts_a_24h);
+        if (st !== 'ok' || pts == null) return null;
+        return isA ? pts : -pts;
+      })(),
 
       bestAmerican: bestAm == null ? null : +bestAm,
       bestBook: bestBook || null,

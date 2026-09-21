@@ -993,3 +993,69 @@ there is how a retired column gets reintroduced. It now describes the
 matched-cohort rule and says explicitly that `open_p_a` must not return.
 
 **Attribution note.** As D-006 through D-013.
+
+
+---
+
+## D-015 — Every market horizon on one matched-cohort rule
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-046 |
+| level | L1 |
+| reversible | yes — read-only views recreated by `market_horizon_views.sql`, one JS read path, tests. Writes no row, changes no append-only table, publishes no new claim |
+
+**Plain version.** "The line moved" now means the same thing everywhere on the
+site — comparing to last week, to yesterday, or to the moment a research
+forecast was written down. In every case only the sportsbooks quoting at **both**
+ends are compared, and below three of them we say we cannot tell.
+
+**Decision.** The matched-cohort intersection lives in exactly one place,
+`v_fight_market_horizon_cohorts`, and all three horizons aggregate it. Adding a
+fourth horizon means adding a row to one CTE — there is no second copy of the
+cohort logic to keep in step.
+
+**Two things were still on the old footing, and one of them was mine.**
+
+1. **`v_fight_market_at_lock`** compared a lock-time cohort against a current
+   one. Of 14 fights with a lock: 4 had a different cohort at the two ends,
+   **1 rested on a single book at lock**, and the worst disagreement against a
+   matched cohort was **5.2 points**. `fight_week_views.sql` no longer defines
+   it — two files defining one view is how the two drift, the same lesson
+   `market_lab_views.sql` learned the same day.
+
+2. **The 24-hour lookback inside `v_fight_market_movement` — which D-012 itself
+   shipped — had exactly the defect D-012 was written to remove.**
+   `market_p_a_24h` medianed every book with a quote at least 24 h old against
+   every book quoting now. I fixed the baseline horizon and left the short one.
+   Of 77 fights, 8 had a different cohort at the two ends and 2 fall below the
+   three-book floor.
+
+**Did any value materially change?** For the 24 h horizon, **no**: the worst
+disagreement was **0.5 points**, under the 0.5 pt display threshold, so no
+rendered figure moved. That is worth stating precisely rather than claiming a
+fix that mattered more than it did — and it is worth writing down *why* it was
+small. A day is short enough that a book quoting yesterday is almost always
+quoting today. It is **not** small in the case that matters most: a book pulling
+a market during fight week is exactly when someone is reading the 24 h column.
+A defect that is currently harmless and structurally identical is still the
+defect. For the lock horizon the change **is** material at 5.2 points, though
+nothing public renders it.
+
+**The baseline horizon is unchanged.** Verified against the live card fight by
+fight: Vieira +7.0, Jackson +3.1, Rosas −2.6, Dumont −1.9, Bellato +1.8,
+Amaya −0.8, all matching the ground-truth table from before this change.
+
+**`market.js` no longer subtracts.** `move24h` reads `movement_pts_a_24h`
+straight from SQL. Subtracting a matched-cohort median from an all-books median
+would silently re-mix two cohorts inside the formatter, which is how this class
+of defect survives a fix to the data layer.
+
+**The lock horizon is kept, not removed.** The forecast is off every public
+surface (D-011), so "since lock" answers a question about CFL rather than about
+the product — it belongs to the research layer. D-011 is explicit that model
+infrastructure is not deleted to tidy up, so it stays and is measured correctly.
+
+**Attribution note.** As D-006 through D-014.

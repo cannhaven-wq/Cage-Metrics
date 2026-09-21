@@ -59,17 +59,52 @@ name is rejected by the CHECK constraint, a short `session_id` is rejected, and
 `v_funnel_daily` aggregates. The test row was deleted; the table is empty and
 waiting for real traffic.
 
+### T-046 — every horizon on one rule (added after the entry above)
+
+[D-015](DECISIONS.md). The matched-cohort intersection now lives in exactly one
+place, `v_fight_market_horizon_cohorts`, and three horizons aggregate it:
+`broad_baseline`, `h24`, `lock`. Adding a fourth means adding a row to one CTE.
+
+Two were still on the old footing and **one of them was mine**: the 24-hour
+lookback D-012 itself shipped had exactly the defect D-012 removed from the
+baseline. `v_fight_market_at_lock` was the other — worst disagreement **5.2
+points**, one fight resting on a single book at lock.
+
+**Did values move?** The 24 h horizon: no — worst disagreement 0.5 pts, under the
+display threshold, so nothing rendered changed. Small because a day is short
+enough that yesterday's books are still quoting; **not** small in the case that
+matters, a book pulling a market during fight week. The lock horizon: yes, 5.2
+points, though nothing public renders it. The baseline horizon is unchanged,
+verified fight by fight against the ground-truth table.
+
+`market.js` no longer subtracts one median from another to get the 24 h move —
+it reads `movement_pts_a_24h` from SQL, because subtracting a matched median from
+an all-books median re-mixes cohorts inside the formatter.
+
+### The two checkout blockers, and what was deliberately not done
+
+**T-054** (privacy must name Plausible) and **T-048** (no Terms page) are both
+**checkout blockers**. Draft wording, the facts a drafter needs, and the open
+questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md)
+— **outside production. No legal language was written into any live page, and no
+helpline, regulator or jurisdiction claim was invented.** `disclaimer.html`'s
+existing helpline and Tennessee reference are flagged there for verification
+rather than reused as though verified.
+
+Two things a lawyer must decide that we explicitly did not: whether "anonymous"
+or "pseudonymised" is correct for the funnel rows given a per-session id exists,
+and whether a retention period must be stated — no prune job exists, so a stated
+period needs one built to match.
+
 ### Next action
 
-**T-046** — reconcile `v_fight_market_at_lock` with D-012, so every
-market-history calculation uses the matched-cohort rule. It is read by no
-surface today, so it is a view change with no rendering consequence, and it must
-land before the movement charts are built on top of it. Then the charts, then
-auth/Pro entitlements, then Stripe.
+**Movement history charts**, once the PR carrying T-047 + T-046 is merged — the
+owner's instruction is not to start them before that. They now have a clean
+foundation: every horizon reads `v_fight_market_horizons`, so a chart that plots
+a series across horizons cannot mix cohorts unless it goes around the view.
 
-**Owner:** T-054 (privacy wording) is the one item that blocks checkout and
-cannot be done without you. T-049 (regulated vs offshore) still blocks affiliate
-links.
+**Owner:** T-054 and T-048 are yours and they gate checkout, not launch. T-049
+still gates affiliate links.
 
 ---
 

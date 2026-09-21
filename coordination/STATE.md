@@ -96,12 +96,22 @@ watchlist/alerts.** No scope beyond those seven. Two standing gates: **T-049**
 before any affiliate link, **T-048** before live checkout. Social automation
 stays behind payments.
 
+**T-046 is done** ([D-015](DECISIONS.md)): every market horizon — first broad
+capture, 24 hours, research forecast lock — reads one shared matched-cohort
+intersection, refused below three books. The 24 h lookback D-012 shipped had the
+same defect D-012 removed from the baseline; fixed, though no rendered figure
+moved (worst 0.5 pts). `v_fight_market_at_lock` was materially wrong (5.2 pts)
+and is rebuilt; `fight_week_views.sql` no longer defines it.
+
 **T-047 is done** ([D-014](DECISIONS.md)): fifteen of nineteen funnel events
 emit, into a `funnel_events` table CFL owns (`INSERT` only, no `SELECT` for
 anyone) plus the Plausible that was already installed, name only. Nothing that
 identifies a person is sent, and the emitter strips it rather than trusting the
-call sites. **T-054** is new and blocks checkout: `privacy.html` does not name
-Plausible, which has been running on every page all along.
+call sites. **T-054** and **T-048** are the two **checkout blockers**: `privacy.html` does
+not name Plausible, and no Terms page exists. Draft wording and the open legal
+questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md),
+deliberately outside production — no legal language was written into a live page
+and no jurisdiction claim was invented.
 
 
 ### Market movement — settled 2026-09-21

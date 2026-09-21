@@ -343,7 +343,10 @@ function renderMarket(row, a, b, event) {
       rA.movementStatus === 'no_broad_capture'
         ? 'under ' + M.MIN_MATCHED_BOOKS + ' books so far'
         : rA.movementStatus === 'ok' ? '' : 'books do not line up yet') +
-    moveCell('Last 24 hours', mv24, 'under 24 hours of history') +
+    moveCell('Last 24 hours', mv24,
+      rA.movementStatus24h === 'insufficient_matched_books'
+        ? 'books do not line up 24 h back'
+        : 'under 24 hours of history') +
     cell('Books apart', rA.spreadPts == null ? '—' : rA.spreadPts.toFixed(1) + ' pts',
          rA.bookCount ? rA.bookCount + (rA.bookCount === 1 ? ' book quoting' : ' books quoting') : 'no books',
          rA.spreadPts != null && rA.spreadPts >= M.SPREAD_WIDE_PTS ? 'up' : '') +
