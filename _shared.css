@@ -689,6 +689,11 @@ footer.cfl-footer {
   .page-hero h1 { font-size: 28px; }
   .page { padding: 20px 16px 0; }
   footer.cfl-footer { padding: 20px 16px; flex-direction: column; align-items: flex-start; }
+  /* The footer's children are flex items and were not allowed to shrink, so
+     the six-link row and the responsible-gambling paragraph both measured
+     wider than a 390px phone and pushed the whole page sideways. */
+  footer.cfl-footer > * { min-width: 0; max-width: 100%; }
+  .cfl-footer-links { flex-wrap: wrap; gap: 10px 16px; }
 }
 
 /* =============================================================================
@@ -1194,3 +1199,31 @@ footer.cfl-footer {
   .cfl-email-capture-form { flex-direction: column; }
   .cfl-email-capture-form input[type=email] { min-width: 0; width: 100%; }
 }
+
+/* =============================================================================
+   ARCHIVE NOTICE — the standard banner on every page that still documents the
+   forecasting model. The model left the public product in September 2026; the
+   pages that describe it stay up, because deleting a failed test is the one
+   thing a research product must not do. The banner is how a reader who lands
+   on one of them from search knows what they are looking at.
+   ============================================================================= */
+.cfl-archive-note {
+  max-width: 900px;
+  margin: 18px auto 0;
+  padding: 14px 18px;
+  background: rgba(255,181,71,.06);
+  border: 1px solid rgba(255,181,71,.22);
+  border-left: 3px solid var(--amber);
+  border-radius: 10px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text-2);
+}
+.cfl-archive-note strong { color: var(--text); }
+.cfl-archive-note .tag {
+  display: inline-block;
+  font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--amber); margin-right: 8px;
+}
+.cfl-archive-note a { color: var(--red); text-decoration: underline; }
+@media (max-width: 768px) { .cfl-archive-note { margin: 14px 16px 0; padding: 12px 14px; font-size: 13px; } }

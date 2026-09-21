@@ -1,6 +1,6 @@
 name: Social auto-poster
 
-# Posts the next UFC card's model picks to X and Reddit each week.
+# Posts the next UFC card's line movement to X and Reddit each week.
 # Runs Wednesday 17:00 UTC (≈ 10am PT / 1pm ET — peak engagement window
 # and two days before most cards). Idempotent: tracks the last-posted
 # event id in .funnel-state/last-posted-event.txt and skips if it matches.

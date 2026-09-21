@@ -12,6 +12,34 @@
 
 > Before writing any code, state the task in plain English: what changes, why it matters, and what the user sees differently. Reed approves the plain version first. No task starts from jargon.
 
+> **POSITIONING, amended 2026-09-21 ([D-011](coordination/DECISIONS.md)).**
+> Cannon Fight Lab is a **UFC research and market-intelligence tool**, not a
+> picks product. The forecasting engine was removed from every forward-facing
+> surface after testing failed to show its disagreement with the market was
+> worth acting on.
+>
+> **Nothing on a public page may show a CFL win probability, a pick, a
+> confidence tier, a predicted winner, or a difference between CFL's number and
+> the market's.** `tests/no-model-on-public-surfaces.test.js` enforces it and
+> names the exempt archive pages. The prohibition on edge percentages and
+> unsupported market claims in the first rule above is untouched and now
+> stronger.
+>
+> **The engine is not retired.** It runs on the same schedule, writes the same
+> immutable pre-fight record, and is graded in the open on the Proof Center. It
+> returns to the product only on prospective evidence, and the evidence is
+> published before the number is. Do not delete model infrastructure to "tidy
+> up" — see D-011 for what is explicitly not decided.
+>
+> **Third-party data is an input, never the product.** UFCStats and The Odds API
+> feed CFL's research; what CFL sells is the capture schedule, the provenance,
+> the vig-free consensus, the movement history, the matchup comparisons and the
+> factor testing. Architect so a raw source can be swapped.
+>
+> **Best price means the best price in the data.** `market.js` orders it by the
+> American number and by nothing else. If affiliate money ever enters this
+> product, it does not enter there.
+
 Wording reference: [`COPY_STYLE.md`](COPY_STYLE.md) governs every user-facing string.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -80,19 +108,22 @@ Not to be confused with the legacy `predictions` table (the retired rules-model 
 
 Every page is its own standalone HTML file at the repo root. Shared chrome (nav, footer) is rendered by JS into `<nav class="cfl-nav">` and `<footer class="cfl-footer">` placeholders.
 
-**Product surfaces**: `index.html`, `track-record.html`, `props.html`, `parlay.html`, `cardio.html`, `stats.html`, `event.html`, `fighter.html`, `fighters.html`, `h2h.html`, `mybook.html`.
-**Explainers**: `edges.html`, `methodology.html`, `predictor.html`, `about.html`.
+**Product surfaces**: `index.html` (**Card Lab**), `market.html` (**Market Lab**), `fight.html` (**Fight Lab**), `stats.html` (**Factor Lab**), `props.html`, `parlay.html`, `cardio.html`, `event.html`, `fighter.html`, `fighters.html`, `h2h.html`, `mybook.html`.
+**Archive** (documents the retired forecast; each carries `.cfl-archive-note`): `track-record.html`, `proof.html`, `predictor.html`, `edges.html`, `methodology.html`.
+**Explainers**: `about.html`.
 **Account / legal / misc**: `pricing.html`, `account.html`, `login.html`, `signup.html`, `reset.html`, `contact.html`, `disclaimer.html`, `privacy.html`, `unsubscribe.html`.
 **Internal**: `lab.html` — an unlinked backtest sandbox that says so at the top; its numbers include training data by construction. Don't cite it anywhere user-facing.
 **Redirect stubs** (kept so old links, shares and bookmarks don't 404; `noindex`, meta-refresh): `card-lab.html` → `/`, `picks.html` → `card-lab.html`. Both are ~23 lines and carry no nav. `picks.html` currently redirects through `card-lab.html` rather than straight to `/` — a two-hop chain worth collapsing.
 
-- **`index.html`** is the primary product surface. The hero is the current card ("*[Event]* — Model vs Market", D-010). The full card — sorted by card order / confidence / **disagreement** (the model's number against the sportsbooks-only vig-free number from `v_fight_market_vigfree`, shown in points and never labelled an edge), with expandable per-fight matchup context + red-flag detail — lives in the `#next` section, which is what the nav's "Card Lab" pill points at (`index.html#next`). The market cell is always shown when a line exists, with its book count and quote age; `tests/model-vs-market.test.js` keeps it that way. Card Lab used to be its own page; it was merged into the homepage so there is one card page rather than two, and `card-lab.html` is now only a redirect stub. **If you are looking for the card rendering, it is in `index.html`.**
-  - The signed-out blur teaser that used to gate detail beyond the top 2 rows is no longer in the code — during beta every account holder gets premium (`profiles.beta_premium`), and the homepage shows a "Free premium during beta" banner to logged-out visitors instead. Nothing on the card is gated in the frontend today.
+- **`index.html` — Card Lab** is the primary product surface. The hero is the current card ("*[Event]* — the whole market, one screen", D-011). The full card lives in the `#next` section, which is what the nav's "Card Lab" pill points at (`index.html#next`). Each fight shows four market cells — **Consensus** (vig-free median, `v_fight_market_movement`), **Fair price** (that probability as an American number, labelled not-bettable), **Since first capture**, **Best price** + the book posting it — then the neutral matchup notes from `fight-insights.js::buildMatchupNotes`. Sorts are card order / biggest move / books disagree. **There is no pick, no confidence tier and no CFL-vs-market difference on this page**, and `tests/no-model-on-public-surfaces.test.js` keeps it that way. Card Lab used to be its own page; it was merged into the homepage so there is one card page rather than two, and `card-lab.html` is now only a redirect stub. **If you are looking for the card rendering, it is in `index.html`.**
+  - Nothing on the card is gated in the frontend. During beta every account holder gets premium (`profiles.beta_premium`) and logged-out visitors see a "Free during beta" banner instead.
+- **`market.html` — Market Lab** is the whole card as a board: consensus, best price each side, movement since first capture and over 24 h, book spread, capture age, with a per-fight book breakdown that expands on demand and a "what changed in the last 24 hours" list. Takes `?event=<id>`; defaults to the live or next card.
+- **`fight.html` — Fight Lab** is one matchup, `?id=<fight_id>`: both corners' consensus and best price, the two movement horizons, the book spread, the per-sportsbook table, then the measured matchup differences and a full career-stat comparison. It rewrites its own `<title>` and share description from the fighters' names, because it is entered from search far more often than from the site.
 - **`props.html`** ("Prop Board") — projected significant strikes and takedowns per fighter for the next card, read from `v_prop_projections_current`. Note `prop_projections` is **full-table replaced** on every refresh, so it only ever holds the next card; nothing historical survives there (see the pre-fight record section — this is one of the reasons snapshots exist).
 - **`mybook.html`** ("My Book") — the only genuinely account-gated page (`cflAuth.requireAuth`). Reads and writes `user_bets` / `user_bankrolls`; schema in `bet_tracking_migration.sql`.
-- **`parlay.html`** (Parlay Builder) and **`cardio.html`** (Cardio Scores) are both in the nav. Parlay reads `model_predictions` + `fight_odds` + `odds_books`; cardio reads `v_fighter_consistency` and `v_fighter_cardio_curve`.
-- **`edges.html`**, **`methodology.html`**, **`predictor.html`** are the open-methodology explainers. They carry dated audit narratives — when a measurement changes, add a dated correction rather than silently rewriting the history (see `edges.html`'s "Updated August 2026" note).
-- **`track-record.html`** ("Proof Center") computes accuracy / calibration / ROI / fav-dog splits live from `model_predictions`, gating each model to its own `model_versions.test_start_date` out-of-sample window. **Never widen a model's window past its `test_start_date`** — that re-leaks training data (same rule as predictor.html's shared 2025+ window).
+- **`parlay.html`** (Parlay **Calculator**) and **`cardio.html`** (Cardio Scores) are both in the nav. Parlay pre-fills the best number from `v_fight_odds_latest_by_book` on each leg and shows the combined payout beside the combined chance; it shows no model number and sizes no stake. It used to query `fight_odds`/`odds_books` directly and returned zero rows for every visitor — **those two tables are `private_lockdown_admin_only` for `anon` AND `authenticated`, so the browser can only reach odds through a definer view.** Cardio reads `v_fighter_consistency` and `v_fighter_cardio_curve`.
+- **`edges.html`**, **`methodology.html`**, **`predictor.html`** are the open-methodology pages and are now **archive**: they document the retired forecast and each carries the `.cfl-archive-note` banner. They keep their dated audit narratives — when a measurement changes, add a dated correction rather than silently rewriting the history (see `edges.html`'s "Updated August 2026" note). **Do not delete a failed result from these pages.**
+- **`track-record.html`** ("Model Archive" in the nav) computes accuracy / calibration / ROI / fav-dog splits live from `model_predictions`, gating each model to its own `model_versions.test_start_date` out-of-sample window. **Never widen a model's window past its `test_start_date`** — that re-leaks training data (same rule as predictor.html's shared 2025+ window).
 
 ### Script load order (load-bearing)
 
@@ -134,7 +165,9 @@ This is a workaround for a Supabase auth-lock hang bug (see `supabase/auth-js#76
 ### Data layer (Supabase)
 
 - Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).
-- **Market views.** `v_fight_odds_consensus` averages *every* row in `fight_odds`, including the prediction-market rows and the synthetic consensus row, so its `bookmaker_count` is not a count of sportsbooks. `fight_week_views.sql` (applied 2026-09-15) adds `v_fight_market_vigfree` — real sportsbooks only, each book de-vigged on its own pair, median across books, with `book_count` and `last_updated` — which is what the homepage reads first, falling back to the consensus view and labelling the count "sources" when it does.
+- **Market views.** `v_fight_odds_consensus` averages *every* row in `fight_odds`, including the prediction-market rows and the synthetic consensus row, so its `bookmaker_count` is not a count of sportsbooks. `fight_week_views.sql` (applied 2026-09-15) adds `v_fight_market_vigfree`, `v_fight_market_at_lock`, `v_fight_odds_latest_by_book` and `v_odds_books_sportsbooks`. `market_lab_views.sql` (applied 2026-09-21) adds **`v_fight_market_movement`**, which is what Card Lab, Fight Lab, Market Lab, the Cannon Card Brief and the social poster all read: one row per fight on a current-window card with the vig-free consensus now, at our first capture and 24 hours ago, the best American price and book on each side, the spread across books, and the capture count.
+  - **`open_p_a` is OUR FIRST CAPTURE, not the opening line.** Every surface that shows it must show `books_at_open` and `first_seen_at` with it — on most cards the first capture is a single offshore book, and a reader who is not told that reads a change in the book mix as a line move. `market.js::openCaveat` exists so no page can print the number without the caveat.
+  - **`fight_odds` and `odds_books` are `private_lockdown_admin_only` for `anon` AND `authenticated`.** A browser query against either returns zero rows with HTTP 200 and no error. All market reads go through the definer views above. This cost `parlay.html` every price on every leg for months before it was caught.
 - **RLS policies on public-data tables (`events`, `fighters`, `fights`, `fight_rounds`, every `v_*` view) must grant `SELECT TO anon, authenticated`.** An anon-only policy causes signed-in users to see empty results with HTTP 200 and no error — extremely hard to debug. When adding a new public view or table, always grant to both roles.
 - The Supabase publishable key is committed in `_shared.js`. That's intentional — it's a public anon key, all access is enforced by RLS.
 
@@ -200,7 +233,11 @@ Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
 `edges.js` is the single source of truth for fight verdicts and edge factors. It's used by both this site (homepage `index.html`) and the cfl-snapshotter Node service. Any change here affects both. The `ctx` shape and edge-object shape are documented at the top of the file.
 
-`fight-insights.js` is the companion single source of truth for the human-readable "why" behind a pick — `buildEdgeBullets` (why the model likes it) and `buildRedFlags` (why it might be wrong). Only `index.html` loads it today (it used to be shared with card-lab.html). Edit it rather than inlining the copy into a page, so a second consumer can't drift from the first.
+`fight-insights.js` is the companion single source of truth for the human-readable matchup layer. **Public:** `buildMatchupNotes` + `buildMatchupCaveats` — neutral measured differences between two fighters with no pick attached, plus `MATCHUP_NOTE`. Card Lab, Fight Lab, `event.html` and `fighter.html` all read these. **Retained but never rendered publicly:** `buildEdgeBullets` + `buildRedFlags`, which phrase the same comparisons around a model pick. Edit this file rather than inlining the copy into a page, so a second consumer can't drift from the first.
+
+### `market.js` — every market number on every surface
+
+**All market formatting goes through `market.js`, and this is not a style preference.** The rules it holds are wording rules: a price is never shown without its book count and its age; "our first capture" is never called the opening line; best price is ordered by the American number and by nothing else. A page that formats its own market numbers is a page that can quietly drop one. `tests/no-model-on-public-surfaces.test.js` asserts that every market surface loads it.
 
 ### Cardio / consistency view (`v_fighter_consistency`)
 

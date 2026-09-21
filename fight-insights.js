@@ -1,8 +1,16 @@
 /* ==========================================================================
    Cannon Fight Lab — shared fight-insight helpers
-   Single source of truth for the human-readable "why" behind a pick:
-   edge bullets (why the model likes it) and red flags (why it might be
-   wrong). Used by index.html and event.html so the two never drift.
+   Single source of truth for the human-readable matchup layer.
+
+   PUBLIC (the research product): buildMatchupNotes + buildMatchupCaveats —
+   neutral, measured differences between two fighters, with no pick attached.
+   Card Lab, Fight Lab and the event page all read these, so they cannot drift.
+
+   PRIVATE (retained, not rendered on any public surface): buildEdgeBullets +
+   buildRedFlags, which phrase the same comparisons around a model pick. The
+   model left the public product in September 2026; this code stays because
+   the prospective-tracking side still uses that framing and deleting it would
+   cost more than keeping it.
 
    ctx shape (all optional):
      {
@@ -190,7 +198,149 @@
     'engine, which weighs far more than this and does not report which factor ' +
     'moved it.';
 
-  const api = { CARDIO_RANK, CONTEXT_NOTE, lastName, cardioFor, hasTape, buildEdgeBullets, buildRedFlags };
+
+  // ---------------------------------------------------------------------
+  // NEUTRAL MATCHUP NOTES — the research product's factor layer.
+  //
+  // buildEdgeBullets above answers "why does the model like this side", which
+  // is a question the public product no longer asks. These two answer the
+  // question it does ask:
+  //
+  //     "What are the measurable differences between these two fighters?"
+  //
+  // Same underlying comparisons, no pick to hang them on. Each note names the
+  // corner that holds the measured advantage and states the number behind it.
+  // A note is an observation, never a forecast: holding four of these does not
+  // make a fighter likely to win, and nothing here is ordered, scored or
+  // totalled to suggest that it does.
+  //
+  // Ordering is by how much the comparison is worth looking at, and that order
+  // is Factor Lab-honest: age leads because it is one of only two factors that
+  // survive controlling for the betting line, and reach carries its own note
+  // saying the opposite (stats.html has the measurements).
+  // ---------------------------------------------------------------------
+
+  const MATCHUP_NOTE = 'Measured differences between these two fighters — ' +
+    'the things a researcher would check by hand. A measurable advantage is ' +
+    'not a forecast, and these are not added up into one.';
+
+  function note(factor, holder, text) { return { factor, holder, text }; }
+
+  function buildMatchupNotes(a, b, ctx) {
+    ctx = ctx || {};
+    const out = [];
+    const baseRates = ctx.baseRates || {};
+    const tape = hasTape(a) && hasTape(b);
+
+    // --- Age. The one differential the Factor Lab still finds on fights the
+    // market priced as even, so it goes first and carries its base rate.
+    if (a.age != null && b.age != null && Math.abs(a.age - b.age) >= 3) {
+      const younger = a.age < b.age ? a : b;
+      const older   = a.age < b.age ? b : a;
+      let suffix = '';
+      const br = baseRates.younger;
+      if (br && br.younger_winrate != null) {
+        suffix = ' — across ' + Number(br.sample_size).toLocaleString() +
+                 ' fights on record the younger fighter has won ' +
+                 (br.younger_winrate * 100).toFixed(0) + '%';
+      }
+      out.push(note('age', younger.id,
+        lastName(younger.name) + ' is ' + (older.age - younger.age) +
+        ' years younger than ' + lastName(older.name) + suffix));
+    }
+
+    // --- Cardio tier. Describes how deep a fighter holds his pace, which is
+    // a statement about fight LENGTH and not about who wins it.
+    const ca = cardioFor(ctx.cardioMap, a.id, ctx.weightClass);
+    const cb = cardioFor(ctx.cardioMap, b.id, ctx.weightClass);
+    if (ca && cb && ca.tier_word && cb.tier_word) {
+      const ra = CARDIO_RANK[ca.tier_word] || 0, rb = CARDIO_RANK[cb.tier_word] || 0;
+      if (ra !== rb) {
+        const hi = ra > rb ? a : b, lo = ra > rb ? b : a;
+        const loWord = ra > rb ? cb.tier_word : ca.tier_word;
+        const thin = (ra > rb ? ca : cb).confidence === 'limited' ||
+                     (ra > rb ? cb : ca).confidence === 'limited';
+        out.push(note('cardio', hi.id,
+          lastName(hi.name) + ' holds output deeper into fights; ' +
+          lastName(lo.name) + ' ' + loWord + ' late' +
+          (thin ? ' (read off a small number of fights)' : '')));
+      }
+    }
+
+    // --- Grappling: takedown offence against the other corner's defence.
+    if (tape && a.td_avg != null && b.td_def != null && a.td_avg >= 2.0 && b.td_def < 65) {
+      out.push(note('grappling', a.id,
+        lastName(a.name) + ' averages ' + Number(a.td_avg).toFixed(1) +
+        ' takedowns a fight into a corner that stops ' + b.td_def + '% of them'));
+    }
+    if (tape && b.td_avg != null && a.td_def != null && b.td_avg >= 2.0 && a.td_def < 65) {
+      out.push(note('grappling', b.id,
+        lastName(b.name) + ' averages ' + Number(b.td_avg).toFixed(1) +
+        ' takedowns a fight into a corner that stops ' + a.td_def + '% of them'));
+    }
+
+    // --- Takedown defence gap.
+    if (tape && a.td_def != null && b.td_def != null && Math.abs(a.td_def - b.td_def) >= 8) {
+      const hi = a.td_def > b.td_def ? a : b, lo = a.td_def > b.td_def ? b : a;
+      out.push(note('td_def', hi.id,
+        'Takedown defence: ' + lastName(hi.name) + ' ' + hi.td_def + '%, ' +
+        lastName(lo.name) + ' ' + lo.td_def + '%'));
+    }
+
+    // --- Striking volume.
+    if (tape && a.slpm != null && b.slpm != null && Math.abs(a.slpm - b.slpm) >= 1) {
+      const hi = a.slpm > b.slpm ? a : b, lo = a.slpm > b.slpm ? b : a;
+      out.push(note('volume', hi.id,
+        'Strike volume: ' + lastName(hi.name) + ' lands ' + Number(hi.slpm).toFixed(1) +
+        ' a minute, ' + lastName(lo.name) + ' ' + Number(lo.slpm).toFixed(1)));
+    }
+
+    // --- Takedown accuracy, only where both corners actually shoot.
+    if (tape && a.td_acc != null && b.td_acc != null &&
+        (+a.td_avg || 0) > 0 && (+b.td_avg || 0) > 0 && Math.abs(a.td_acc - b.td_acc) >= 12) {
+      const hi = a.td_acc > b.td_acc ? a : b, lo = a.td_acc > b.td_acc ? b : a;
+      out.push(note('td_acc', hi.id,
+        'Takedown accuracy: ' + lastName(hi.name) + ' ' + hi.td_acc + '%, ' +
+        lastName(lo.name) + ' ' + lo.td_acc + '%'));
+    }
+
+    // --- Reach. Last, and it says out loud that the raw edge does not hold
+    // up once the betting line is controlled for. A research product that
+    // publishes the measurement has to publish that too.
+    if (a.reach_in != null && b.reach_in != null && Math.abs(a.reach_in - b.reach_in) >= 2) {
+      const hi = a.reach_in > b.reach_in ? a : b, lo = a.reach_in > b.reach_in ? b : a;
+      out.push(note('reach', hi.id,
+        lastName(hi.name) + ' is ' + (hi.reach_in - lo.reach_in) +
+        '" longer — a raw reach edge does not survive controlling for the ' +
+        'betting line, so read it as physical context'));
+    }
+
+    return out;
+  }
+
+  // What would make every note above less reliable. Missing tape, thin
+  // samples, and a market that has barely priced the fight. Shown with the
+  // notes, never separately, because a caveat a reader has to go looking for
+  // is a caveat that was not made.
+  function buildMatchupCaveats(a, b, ctx) {
+    ctx = ctx || {};
+    const out = [];
+    if (!hasTape(a)) out.push(lastName(a.name) + ' has no UFC fights on record — every stat comparison above is thinner than it looks.');
+    if (!hasTape(b)) out.push(lastName(b.name) + ' has no UFC fights on record — every stat comparison above is thinner than it looks.');
+    const ca = cardioFor(ctx.cardioMap, a.id, ctx.weightClass);
+    const cb = cardioFor(ctx.cardioMap, b.id, ctx.weightClass);
+    if ((ca && ca.confidence === 'limited') || (cb && cb.confidence === 'limited')) {
+      out.push('At least one cardio read here comes from a handful of fights that reached the third round. Treat it as a guess.');
+    }
+    if (ctx.bookCount != null && ctx.bookCount < 3) {
+      out.push('Only ' + ctx.bookCount + ' sportsbook' + (ctx.bookCount === 1 ? ' is' : 's are') +
+               ' quoting this fight so far, so the consensus price will move as more arrive.');
+    }
+    return out;
+  }
+
+  const api = { CARDIO_RANK, CONTEXT_NOTE, MATCHUP_NOTE, lastName, cardioFor, hasTape,
+                buildEdgeBullets, buildRedFlags, buildMatchupNotes, buildMatchupCaveats };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.cflInsights = api;
 })();

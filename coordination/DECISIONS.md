@@ -696,3 +696,80 @@ browser, because the agent environment cannot reach the site directly.
 **Attribution note.** As D-006 through D-009: "Reed Cannon" per `CLAUDE.md`;
 normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
 owner's.
+
+---
+
+## D-011 — The model comes off the public product; CFL becomes a UFC research and market-intelligence tool
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-037 |
+| level | L3 |
+| reversible | **no** — it publishes new public claims and retires old ones. A retraction is not a reversal. Revertible in git; writes no row to an append-only table; changes no frozen specification and starts no observation under one |
+
+**Decision.** Cannon Fight Lab stops presenting itself as a picks, betting-edge
+or prediction product. The forecasting engine is removed from every
+forward-facing surface. What replaces it is the market: sportsbook prices
+captured on a schedule with their provenance, the movement between captures,
+the disagreement between books, and the measurable differences between two
+fighters. The product structure becomes **Card Lab**, **Fight Lab**,
+**Market Lab** and **Factor Lab**.
+
+**What the owner said**, verbatim, in the instruction that opened this work:
+
+> "Our testing has shown that the current prediction model does not reliably
+> beat the market. Therefore: Do not present model predictions publicly. Do not
+> present 'edge,' 'value,' 'best bet,' 'pick,' 'lock,' or equivalent claims. Do
+> not imply that CFL knows who will win. Do not imply that model disagreement
+> with the market is actionable. Keep all model infrastructure running privately
+> in the background for future R&D and prospective testing. Do not delete the
+> model system unless technically necessary. The model may return to the product
+> later only if we accumulate enough prospective evidence to show that it
+> actually provides value."
+
+and, on positioning:
+
+> "Cannon Fight Lab becomes a UFC research and market-intelligence platform for
+> serious fight fans and analytically minded bettors. … We are not telling the
+> user what to bet. We are helping the user research a UFC card faster and more
+> intelligently."
+
+and, on the record:
+
+> "Keep Proof Center. … Preserve historical records. Do not erase failures. A key
+> brand principle is: We tested whether the model beat the market. It did not. We
+> changed the product instead of changing the test."
+
+**Why this is one decision and not several.** Removing the forecast without
+replacing it leaves a picks site with its picks deleted, which the owner named
+as the failure mode to avoid. The market layer, the four-lab structure and the
+copy are the same decision executed in three places.
+
+**What this supersedes.** [D-010](#d-010--the-homepage-is-the-card-model-vs-market-and-no-edge-is-claimed)
+held the narrower line that the engine's number could sit beside the sportsbook
+number as long as the difference was never called an edge. That line is gone:
+the engine's number is not shown at all. D-010's other holdings survive and are
+strengthened — the market cell is still always shown when a line exists, and it
+still carries its book count and its quote age.
+
+**What is explicitly NOT decided here.**
+
+- The engine is not retired. It runs, it writes its locked pre-fight record to
+  `pre_fight_snapshots` and `model_picks` on the same schedule, and it is graded
+  in public on the Proof Center. Nothing in the snapshot, settlement, CLV or
+  research pipeline was touched.
+- No CLV number is published. The Q-14 gate is untouched and still shut
+  (0 of 100 observations, 0 of 20 events). `mybook.html`'s "CLV vs the BFO
+  opener" column was **relabelled**, not computed differently — see the risks
+  section of the handoff.
+- No paid tier is created. `pricing.html` now describes a Pro tier that does not
+  exist and says so on the page.
+- No frozen specification, preregistration or migration guard was modified.
+
+**Level 3 basis.** Three items on the closed list, any one of which would be
+enough: item 4 (merging a major architectural change), item 7 (changing
+monetisation positioning) and item 8 (a change to how an existing public
+performance claim is described). T-037 reaches `done` under this entry and no
+other.

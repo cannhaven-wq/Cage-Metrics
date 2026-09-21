@@ -11,6 +11,81 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 — The model is off the product; CFL is a research tool
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+The repositioning, on the owner's instruction, recorded as
+[D-011](DECISIONS.md); T-036 and T-037 are done. Branch
+`claude/focused-maxwell-qw232x`.
+
+### What is now live
+
+| | |
+|---|---|
+| positioning | "Research the UFC market." The forecast is gone from every forward-facing surface; what the site sells is the market, the movement and the matchup |
+| Card Lab (`index.html`) | per fight: vig-free consensus, the fair price behind it, movement since our first capture, best price and the book posting it. Sorts are Card order / Biggest move / Books disagree. No pick, no confidence tier, no CFL-vs-market difference |
+| Fight Lab (`fight.html`, new) | one matchup: both corners' consensus and best price, movement over two horizons, book spread, freshness, a per-sportsbook table, and the measured differences between the two fighters. Rewrites its own `<title>` and share description from the fighters' names |
+| Market Lab (`market.html`, new) | the whole card as a board — consensus, best price each side, since-open, 24 h, book spread, capture age — with a per-fight book breakdown that expands on demand, and a "what changed in the last 24 hours" list above it |
+| Factor Lab | unchanged and promoted into the nav |
+| data layer | one additive view, `v_fight_market_movement` (`market_lab_views.sql`), **applied**. Same shape and grants as the existing market views; nothing replaced, nothing dropped |
+| shared module | `market.js` — every market number on every surface is formatted here, so "never without its book count and its age" and "our first capture is not the opening line" are enforced in one file |
+| matchup layer | `fight-insights.js` gains `buildMatchupNotes` / `buildMatchupCaveats`: the same comparisons with no pick to hang them on. `buildEdgeBullets` / `buildRedFlags` are retained and no longer rendered anywhere public |
+| email | **The Cannon Card Brief.** `build/send-digest.js` now reports the biggest line moves, the book spread and the freshness instead of a "Model pick / Confidence" table |
+| social | `build/social-post.js` posts line movement, not picks, and refuses any queued piece not stamped `positioning: "research"` |
+| SEO assets | 4,549 fighter stubs, 799 event stubs, 62 preview pages and 8 card pages rewritten in place, plus the generators behind them (`build/templates.js`, `build/prerender.js`, `build/preview-templates.js`, `build/event-preview-templates.js`) — these were the unattended publishers |
+| archive | `proof.html`, `track-record.html`, `predictor.html`, `edges.html` and `methodology.html` keep every number and gain a dated banner saying the model they document is no longer in the product |
+
+### Three defects found on the way, all pre-existing
+
+1. **`parlay.html` had been showing no prices at all.** It queried `fight_odds`
+   and `odds_books` directly; both carry `private_lockdown_admin_only` for
+   `anon` *and* `authenticated`, so every leg rendered "—" with HTTP 200 and no
+   error. It now reads `v_fight_odds_latest_by_book`.
+2. **`mybook.html` settled bets off `model_predictions`.** A fight the model
+   never scored could never settle a user's bet. It now reads `fights` directly.
+3. **Two mobile overflows and one shared-footer overflow**, the footer one on
+   every page of the site. All three fixed.
+
+### Verified
+
+All 7 Node suites and 168 Python tests (4,296 subtests) green, including the new
+`tests/no-model-on-public-surfaces.test.js` (60 assertions) which replaces
+`tests/model-vs-market.test.js`. Every page rendered in headless Chromium at
+1440 and 390 against real UFC Fight Night: Rosas Jr. vs. Barcelos rows: no page
+errors, no horizontal overflow anywhere. The new view was checked against the
+live database — 9 of 11 fights priced, 26 captures on the main event, one line
+6.3 points off where we first saw it.
+
+### Held to scope
+
+No model, threshold, schedule, snapshot, ledger or frozen specification was
+changed. The engine still runs and still writes its locked pre-fight record. The
+CLV publication gate is untouched and still shut. No paid tier was created.
+
+## Next action
+
+**Owner:** one call, **T-041**. `mybook.html` had a column headed "CLV"
+comparing a user's own price to the earliest price we captured. It now reads
+"vs first" / "Avg vs earliest price seen" — same arithmetic, different words.
+Q-14's wording is unconditional about a user-facing surface; the counter-argument
+is that this describes the user's bet, not a CFL claim. That is a judgement call
+and it is yours.
+
+**ChatGPT:** the claim worth attacking is `open_p_a`. It is the median across
+whichever sportsbooks happened to be in our *first capture* of a fight, which on
+most cards is one offshore book, and every surface that shows it also shows
+`books_at_open` and calls it "our first capture" rather than the opening line.
+The question is whether a reader who is told "1 book, Sep 18 01:55 UTC" still
+reads a six-point move as six points of market movement rather than partly as a
+change in which books we were reading. If not, the honest fix is to define the
+baseline as the first capture at which N books were quoting, and to publish
+nothing before that.
+
+---
+
 ## 2026-09-19 (b) — The homepage is the card, and it claims no edge
 
 **From:** Claude

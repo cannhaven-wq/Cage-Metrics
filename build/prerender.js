@@ -326,7 +326,7 @@ function regenerateRssFeed(upcomingEvents) {
   const items = (upcomingEvents || []).map(e => {
     const url = `${SITE}/event.html?id=${e.id}`;
     const pub = e.event_date ? new Date(e.event_date + 'T00:00:00Z').toUTCString() : now;
-    const desc = `Full model verdicts and edge factors for every fight on the ${escapeXml(e.name)} card${e.location ? ' — ' + escapeXml(e.location) : ''}.`;
+    const desc = `Sportsbook odds, line movement and matchup data for every fight on the ${escapeXml(e.name)} card${e.location ? ' — ' + escapeXml(e.location) : ''}.`;
     return [
       '  <item>',
       `    <title>${escapeXml(e.name)}</title>`,
@@ -345,7 +345,7 @@ function regenerateRssFeed(upcomingEvents) {
     `  <title>Cannon Fight Lab — Upcoming UFC Cards</title>`,
     `  <link>${SITE}/</link>`,
     `  <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml" />`,
-    `  <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>`,
+    `  <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>`,
     `  <language>en-us</language>`,
     `  <lastBuildDate>${now}</lastBuildDate>`,
     '',
@@ -377,7 +377,9 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
 
   const staticPages = [
     { loc: '/',                priority: '1.0', changefreq: 'daily' },
-    { loc: '/card-lab.html',   priority: '0.9', changefreq: 'daily' },
+    { loc: '/market.html',     priority: '0.9', changefreq: 'hourly' },
+    { loc: '/fight.html',      priority: '0.7', changefreq: 'daily' },
+    { loc: '/card-lab.html',   priority: '0.5', changefreq: 'monthly' },
     { loc: '/track-record.html', priority: '0.9', changefreq: 'weekly' },
     { loc: '/proof.html',      priority: '0.8', changefreq: 'weekly' },
     { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },

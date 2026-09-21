@@ -544,6 +544,11 @@ function buildQueue(batches) {
         tweet: tweetFor(p, event),
         image: im ? 'social/' + im.rel : null,
         cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
+        // Stamps the piece as research-era. build/social-post.js refuses to
+        // post a queue entry without it, so pieces generated before the
+        // September 2026 repositioning (which quoted model probabilities)
+        // can never be picked up by the cron.
+        positioning: 'research',
       });
     }
   }

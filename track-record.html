@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>UFC Model Track Record, Graded in Public — Cannon Fight Lab</title>
+<title>Model Archive — The Retired UFC Forecast, Graded in Public | Cannon Fight Lab</title>
 <meta name="description" content="Every main-engine fight call graded in public — simulated record labeled as simulated, live prospective record since July 2026, misses included. Accuracy, calibration, and profit at the prices on record.">
 <meta name="keywords" content="UFC prediction track record, verified UFC model accuracy, MMA betting model ROI, UFC model calibration">
 <meta name="author" content="Cannon Fight Lab">
@@ -34,7 +34,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -212,9 +212,19 @@
 
   <div class="page-head">
     <div class="eyebrow">Proof Center</div>
-    <h1>The main engine's fight calls — wins and losses.</h1>
+    <h1>The model archive — wins and losses.</h1>
     <p class="lede">This page is built live from the same database our picks are saved to — nothing here is typed in by hand. One engine, two jobs: <strong>Fight IQ</strong> calls a winner in every fight from fighter data alone, and <strong>Value</strong> flags the fights where the odds disagree with the model. Being right isn't enough, so we also show whether <strong>our percentages hold up</strong> — when we say 70%, does it hit about 7 times in 10? — and every miss.</p>
-    <div class="updated" id="lastUpdated">Loading latest data…</div>
+    <div class="updated" id="lastUpdated">Loading latest data…
+<div class="cfl-archive-note">
+  <span class="tag">Archive</span><strong>This page documents a model that is no longer part of the product.</strong>
+  Until September 2026 Cannon Fight Lab published a win-probability forecast for every fight. We tested whether
+  that forecast beat the price the market was offering, could not show that it did, and took it off the public
+  product rather than keep publishing it with a disclaimer. Nothing here was deleted — the engine still runs and
+  is still graded in the open, wins and losses at the same size, because a failed test is the one result a
+  research site must not quietly remove. The live product is now
+  <a href="index.html#next">Card Lab</a> and <a href="market.html">Market Lab</a>.
+</div>
+</div>
     <div class="pledge">
       <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
       <div class="tx"><strong>Two records, clearly labeled.</strong> The live record is the prospective feed: calls published as each card approached, recorded with a timestamp, their percentage and their price. How strongly any individual call's timing can be proved varies row by row, and for part of the record a sealed copy exists that nobody can edit — the <a href="proof.html" style="color:var(--probe)">Proof Center</a> grades every row and shows you which is which. Everything else is the replay: we re-ran the engine through history year by year, only ever letting it pick fights it had never seen, and graded it at our closing-price proxy. The replay's first year is excluded from everything published — the engine wasn't calibrated yet that early, and an uncalibrated number isn't one we'd have shown you. We never show a simulation as if it were live.</div>
@@ -389,7 +399,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl1"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('track');

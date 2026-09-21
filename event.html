@@ -7,8 +7,8 @@
 <!-- ===== Primary SEO =====
      Static defaults. Per-event values are overwritten at runtime by
      updateSEO() once the event loads from Supabase. -->
-<title>UFC Event Card — Predictions & Edge Factors | Cannon Fight Lab</title>
-<meta name="description" content="Full UFC event card with model verdicts and edge factors for every fight. See cardio, striking, grappling, and matchup edges before the cage closes.">
+<title>UFC Event Card — Odds, Line Movement and Matchup Data | Cannon Fight Lab</title>
+<meta name="description" content="The full UFC card with the market on every fight: vig-free sportsbook consensus, the best price on each side, how far the line has moved, and the measurable matchup differences between both corners.">
 <meta name="keywords" content="UFC event card, UFC fight predictions, UFC event analysis, MMA event picks, UFC fight breakdown">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
@@ -18,7 +18,7 @@
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="UFC Event Card — Cannon Fight Lab">
-<meta property="og:description" content="Full UFC event card with model verdicts and edge factors for every fight.">
+<meta property="og:description" content="The full UFC card with sportsbook consensus, best available price, line movement and matchup data for every fight.">
 <meta property="og:url" content="https://cannonfightlab.com/event.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -29,7 +29,7 @@
 <!-- ===== Twitter Card ===== -->
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="UFC Event Card — Cannon Fight Lab">
-<meta name="twitter:description" content="Full UFC event card with model verdicts and edge factors for every fight.">
+<meta name="twitter:description" content="The full UFC card with sportsbook consensus, best available price, line movement and matchup data for every fight.">
 <meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
 
 <!-- ===== Theme & favicon ===== -->
@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -657,10 +657,9 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl1"></script>
 <script src="_auth.js"></script>
-<script src="edges.js?v=cardio-retired"></script>
-<script src="distanceEdges.js"></script>
+<script src="market.js?v=1"></script>
 <script src="fight-insights.js?v=8"></script>
 <script>
 cfl.renderNav('home');
@@ -692,7 +691,7 @@ function injectJsonLd(id, data) {
 function updateEventSEO(event, fights, fighterMap) {
   const url = `https://cannonfightlab.com/event.html?id=${event.id}`;
   const dateStr = cfl.formatDate(event.event_date);
-  const verb = event.is_upcoming ? 'predictions and edge factors' : 'results and breakdown';
+  const verb = event.is_upcoming ? 'odds, line movement and matchup data' : 'results, closing prices and matchup data';
   const title = `${event.name} — UFC ${event.is_upcoming ? 'Predictions' : 'Results'} | Cannon Fight Lab`;
   const fightCount = (fights || []).length;
   const desc = `${event.name} on ${dateStr}${event.location ? ' in ' + event.location : ''}. Full card with model ${verb} for ${fightCount > 0 ? 'all ' + fightCount + ' fights' : 'every fight'}.`;
@@ -771,7 +770,6 @@ async function load() {
   let streakMap = {};
   let cardioMap = {};
   let finishRateMap = {};
-  let oddsMap = {};
 
   // All four lookups (fighters, cardio, finish-rate, odds) are independent of
   // each other — fanned out in parallel rather than awaited sequentially, which
@@ -781,7 +779,7 @@ async function load() {
   const fighterColumns = 'id, name, nickname, age, height_in, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
   const fightIds = (fights || []).map(f => f.id);
   const idList = fighterIds.join(',');
-  const [fightersR, cardioR, finishR, oddsR, engPicksR, engEdgesR, formR] = await Promise.all([
+  const [fightersR, cardioR, finishR, movementMap, baseRatesR, formR] = await Promise.all([
     fighterIds.length
       ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
       : Promise.resolve({ data: [] }),
@@ -791,23 +789,17 @@ async function load() {
     fighterIds.length
       ? sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)
       : Promise.resolve({ data: [] }),
-    sb.from('v_fight_odds_consensus').select('fight_id, american_odds_a, american_odds_b, implied_prob_a, implied_prob_b, bookmaker_count, fetched_at').eq('event_id', event.id),
-    // Engine picks + edges. cfl_engine is the canonical stack — the only one
-    // with a passed leak audit, PIT structural verification and calibration
-    // checks — so it is the only model this page renders. The legacy v1-v6
-    // pipeline still runs and still writes to model_predictions; its disclosed
-    // archive lives on track-record.html.
-    //
-    // The graded views join fights server-side, so `hit` / `won` are NULL
-    // while a fight is unresolved (render as pending, never as a loss). No
-    // honest-window clamp applies: every backtest row is out-of-sample by
-    // construction (walk-forward, uncalibrated fold 0 excluded at publish).
-    fightIds.length
-      ? sb.from('v_model_picks_graded').select('fight_id, p_cal, pick_fighter_id, tier, source, hit').in('fight_id', fightIds)
-      : Promise.resolve({ data: [] }),
-    fightIds.length
-      ? sb.from('v_model_edges_graded').select('fight_id, bet_fighter_id, edge, stake_frac, source, won').in('fight_id', fightIds)
-      : Promise.resolve({ data: [] }),
+    // The market, per fight: vig-free consensus, our first capture, the best
+    // price on each side and the spread across books. This page used to fetch
+    // v_model_picks_graded and v_model_edges_graded alongside it and render a
+    // model pick, a confidence tier, a distance probability and a difference
+    // against the market on every fight. The model came off the public product
+    // in September 2026 (it could not be shown to beat the price), so those
+    // two queries are gone and the bands below report the market and the
+    // matchup instead. The engine still runs; its record is on the Proof
+    // Center.
+    window.cflMarket ? window.cflMarket.loadCardMovement(event.id) : Promise.resolve({}),
+    sb.from('v_younger_fighter_winrate').select('*').single().then(r => r, () => ({ data: null })),
     // Recent form. One batched fetch of every settled fight belonging to any
     // fighter on this card, not one request per fighter — a full card is ~27
     // fighters and ~150 history rows. `method=not.is.null` drops future
@@ -835,9 +827,6 @@ async function load() {
 
   if (finishR.error) console.warn('Fighter finish-rate data not available:', finishR.error.message);
   (finishR.data || []).forEach(r => { finishRateMap[r.fighter_id] = r; });
-
-  if (oddsR.error) console.warn('Market odds not available:', oddsR.error.message);
-  (oddsR.data || []).forEach(r => { oddsMap[r.fight_id] = r; });
 
   // formMap[fighter_id] = up to five settled fights, oldest first.
   //
@@ -870,60 +859,12 @@ async function load() {
       .reverse();
   });
 
-  // ---------------------------------------------------------------------
-  // Engine picks + edges, keyed by fight.
-  //   engineByFight[fight_id] = { fighterId, pCal, tier, hit, edge, stakeFrac }
-  // A locked 'live' row always outranks a 'backtest' replay row for the same
-  // fight (same precedence rule the homepage uses). engineAcc is the graded
-  // record on this card — only fights with a known result count.
-  // ---------------------------------------------------------------------
-  const engineByFight = {};
-  const engineAcc = { n: 0, wins: 0 };
-  if (engPicksR.error) {
-    console.warn('Engine picks not available:', engPicksR.error.message);
-  } else {
-    const bestPick = {};
-    (engPicksR.data || []).forEach(p => {
-      const prev = bestPick[p.fight_id];
-      if (prev && prev.source === 'live' && p.source !== 'live') return;
-      bestPick[p.fight_id] = p;
-    });
-    Object.values(bestPick).forEach(p => {
-      engineByFight[p.fight_id] = {
-        fighterId: p.pick_fighter_id,
-        pCal: +p.p_cal,
-        tier: p.tier,
-        hit: p.hit,
-        edge: null,
-        stakeFrac: null,
-      };
-      if (p.hit === true)       { engineAcc.n += 1; engineAcc.wins += 1; }
-      else if (p.hit === false) { engineAcc.n += 1; }
-    });
-  }
-  if (engEdgesR.error) {
-    console.warn('Engine edges not available:', engEdgesR.error.message);
-  } else {
-    const bestEdge = {};
-    (engEdgesR.data || []).forEach(e => {
-      const prev = bestEdge[e.fight_id];
-      if (prev && prev.source === 'live' && e.source !== 'live') return;
-      bestEdge[e.fight_id] = e;
-    });
-    Object.values(bestEdge).forEach(e => {
-      const slot = engineByFight[e.fight_id];
-      // Only attach the edge when it backs the same fighter the pick names;
-      // otherwise the card would show a % for one man and a stake for the other.
-      if (!slot || slot.fighterId !== e.bet_fighter_id) return;
-      slot.edge = e.edge != null ? +e.edge : null;
-      slot.stakeFrac = e.stake_frac != null ? +e.stake_frac : null;
-    });
-  }
+  const baseRates = {};
+  if (baseRatesR && baseRatesR.data) baseRates.younger = baseRatesR.data;
 
   updateEventSEO(event, fights, fighterMap);
 
-  // Stash everything renderFight needs so the model selector can re-render
-  // verdicts in place when the visitor swaps modes.
+  // Everything renderFight needs.
   _renderState = {
     fights: fights || [],
     fighterMap,
@@ -931,9 +872,9 @@ async function load() {
     streakMap,
     cardioMap,
     finishRateMap,
-    oddsMap,
+    movementMap: movementMap || {},
+    baseRates,
     eventDate: event.event_date,
-    engineByFight,
     formMap,
   };
 
@@ -943,10 +884,9 @@ async function load() {
       <div class="meta">${cfl.formatDate(event.event_date)} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
     </div>
-    ${renderEngineAccuracyStrip(engineAcc)}
     <div class="page">
       <div id="fightsList">
-        ${_renderState.fights.map(f => renderFight(f, fighterMap, event.is_upcoming, streakMap, cardioMap, finishRateMap, oddsMap, event.event_date, engineByFight, null, formMap)).join('')}
+        ${_renderState.fights.map(f => renderFight(f, _renderState)).join('')}
       </div>
     </div>
   `;
@@ -967,86 +907,31 @@ async function load() {
 let _renderState = null;
 
 // =============================================================================
-// Method-of-victory inference
+// Method-of-victory inference and the model verdict bands used to live here.
 // =============================================================================
-// edges.js produces a single winner probability (aProb). It does NOT predict
-// finish method directly. We split the winner's probability across KO / SUB /
-// DEC using the picked fighter's career finish-rate distribution (from
-// v_fighter_finish_rate) as a base, then nudge by matchup-specific signals:
-//   - Opponent has fading/collapsing cardio  → boost KO  (gas tank fails late)
-//   - Opponent has weak td_def AND we have   → boost SUB (positional control
-//     real takedown ability                                opens up subs)
-// Returns { ko, sub, dec } that sum to 1. NOT multiplied by aProb — caller
-// can do that if it wants the full {pick wins by X} probability.
-function computeMOV(picked, opponent, finishRateMap, cardioMap, fightWeightClass) {
-  const fr = (finishRateMap || {})[picked.id] || {};
-  // Defaults reflect rough UFC base rates: ~30% KO, ~15% SUB, ~55% DEC.
-  let ko  = fr.ko_tko_rate  != null ? +fr.ko_tko_rate  : 0.30;
-  let sub = fr.sub_rate     != null ? +fr.sub_rate     : 0.15;
-  let dec = fr.decision_rate != null ? +fr.decision_rate : 0.55;
+// Removed September 2026 with the repositioning. What this page rendered under
+// every fight was: the engine's pick and calibrated percentage, a confidence
+// tier, a KO/SUB/DEC split derived from it, a distance probability, the
+// difference between the engine's number and the market's, and a collapsed
+// "Why this pick?" panel. All of it depended on a public model forecast, and
+// there no longer is one — we could not show the forecast beat the price, so
+// it came off the product rather than shipping with a disclaimer.
+//
+// What replaced it is two bands per fight: what the market says, and what the
+// matchup data says. Both are read through the same shared modules the rest of
+// the site uses (market.js, fight-insights.js) so this page and Card Lab can
+// never describe the same fight differently.
+//
+// computeMOV, renderMovPills, renderMovExplanation and renderEngineAccuracyStrip
+// went with it. The engine itself is untouched and still writes its locked
+// pre-fight record; its grading is on the Proof Center.
 
-  // Opponent's cardio: fades/collapses → boost KO probability.
-  if (window.cflEdges && cardioMap) {
-    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, cardioMap);
-    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
-      ko += 0.10;
-    }
-  }
-  // Opponent has weak takedown defense AND picked has real grappling output
-  // (td_avg ≥ 2 attempts per 15 min) → boost SUB. The td_avg gate prevents
-  // boosting SUB for a pure striker who happens to fight a sub-vulnerable
-  // grappler.
-  if (opponent.td_def != null && opponent.td_def < 60
-      && picked.td_avg != null && picked.td_avg >= 2.0) {
-    sub += 0.10;
-  }
-
-  const total = ko + sub + dec;
-  if (total <= 0) return { ko: 0.30, sub: 0.15, dec: 0.55 };
-  return { ko: ko / total, sub: sub / total, dec: dec / total };
-}
-
-function renderMovPills(mov, pickedFighter) {
-  const items = [
-    { key: 'ko',  label: 'KO',  pct: mov.ko  * 100 },
-    { key: 'sub', label: 'SUB', pct: mov.sub * 100 },
-    { key: 'dec', label: 'DEC', pct: mov.dec * 100 },
-  ];
-  const leader = items.reduce((max, it) => it.pct > max.pct ? it : max, items[0]);
-  return `<span class="mov-pills">` + items.map(it =>
-    `<span class="mov-pill ${it.key === leader.key ? 'lead' : ''}">
-       <span class="mov-kind">${it.label}</span>
-       <span>${it.pct.toFixed(0)}%</span>
-     </span>`
-  ).join('') + `</span>`;
-}
-
-// Past-event-only banner showing each public model's pick accuracy on this
-// card. Picks are sides where model_p > 0.5 (ties excluded). Renders nothing
-// for upcoming events or events without graded predictions. If every graded
-// pick was dropped by the honest-window gate (old card inside the models'
-// training data), we say so instead of showing hindsight numbers.
-function renderEngineAccuracyStrip(engineAcc) {
-  if (!engineAcc || !engineAcc.n) return '';
-  const pct = engineAcc.wins / engineAcc.n * 100;
-  const cls = pct >= 60 ? 'good' : (pct >= 50 ? 'ok' : 'bad');
-  return `
-    <div class="model-acc-strip">
-      <div class="acc-label">How the model did on this card</div>
-      <div class="acc-cells">
-        <div class="acc-cell">
-          <div class="acc-mv">${cfl.escapeHtml(cfl.ENGINE.accuracy.name)}</div>
-          <div class="acc-rec ${cls}">${engineAcc.wins}/${engineAcc.n}</div>
-          <div class="acc-pct ${cls}">${pct.toFixed(0)}%</div>
-        </div>
-      </div>
-    </div>`;
-}
-
-function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMap, oddsMap, eventDate, engineByFight, modelMode, formMap) {
+function renderFight(fight, st) {
+  const fmap = st.fighterMap;
   const a = fmap[fight.fighter_a_id];
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return '';
+  const isUpcoming = st.isUpcoming;
 
   const aWon = !isUpcoming && fight.winner_id === a.id;
   const bWon = !isUpcoming && fight.winner_id === b.id;
@@ -1068,9 +953,6 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
     ? `Round ${fight.end_round} · ${cfl.escapeHtml(fight.end_time || '—')}`
     : '';
 
-  const odds = (oddsMap || {})[fight.id] || null;
-  const verdict = renderVerdict(a, b, fight, isUpcoming, cardioMap || {}, finishRateMap || {}, odds, (engineByFight || {})[fight.id], fmap);
-
   return `
     <div class="${cardClass}">
       <div class="fight-card-header">
@@ -1086,117 +968,69 @@ function renderFight(fight, fmap, isUpcoming, streakMap, cardioMap, finishRateMa
         </div>
         ${renderFighterSide(b, 'right', bWon, aWon)}
       </div>
-      ${renderStats(a, b, (formMap || {})[a.id], (formMap || {})[b.id])}
+      ${renderStats(a, b, (st.formMap || {})[a.id], (st.formMap || {})[b.id])}
       ${finishLine ? `<div class="fight-result-detail">${finishLine}</div>` : ''}
-      ${verdict}
+      ${renderResearchBands(a, b, fight, st)}
     </div>
   `;
 }
 
-// The model-verdict band on each fight card: the engine's pick (the only
-// model this site publishes), the distance call, the market band, and the
-// collapsed "Why this pick?" reasons from fight-insights.js. One pick per
-// fight — the retired May 2026 rules model (edges.js) no longer renders
-// anywhere a visitor can see it.
-function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, marketOdds, eng, fmap) {
+// The two research bands under each fight: the market, then the matchup.
+// Neither states or implies a winner.
+function renderResearchBands(a, b, fight, st) {
+  const M = window.cflMarket;
+  const row = (st.movementMap || {})[fight.id] || null;
+  const fightDay = M ? M.isFightDay(st.eventDate) : false;
+  const rA = (M && row) ? M.readSide(row, 'a', { isFightDay: fightDay }) : null;
+  const rB = (M && row) ? M.readSide(row, 'b', { isFightDay: fightDay }) : null;
+  const esc = cfl.escapeHtml;
   let html = '';
-  let picked = null, opponent = null, pickIsA = false, conf = null;
 
-  if (eng && fmap[eng.fighterId] && (eng.fighterId === a.id || eng.fighterId === b.id)) {
-    picked = fmap[eng.fighterId];
-    pickIsA = picked.id === a.id;
-    opponent = pickIsA ? b : a;
-    conf = eng.pCal * 100;
-    const tierWord = conf >= 65 ? 'High confidence' : (conf >= 55 ? 'Medium confidence' : 'Lean');
-    // Method-of-victory pills only when the picked fighter has enough graded
-    // fights for the split to mean anything (three 100%/0% pills off one
-    // fight read as nonsense).
-    const fr = (finishRateMap || {})[picked.id];
-    const movHtml = (fr && +fr.total_fights >= 3)
-      ? renderMovPills(computeMOV(picked, opponent, finishRateMap, cardioMap, fight.weight_class), picked)
-      : '';
-    let checkHtml = '';
-    if (!isUpcoming && eng.hit === true)  checkHtml = '<span class="check correct">✓ Correct</span>';
-    if (!isUpcoming && eng.hit === false) checkHtml = '<span class="check wrong">✗ Missed</span>';
-    html += `<div class="fight-verdict"><span class="label">${isUpcoming ? 'Model pick' : 'Model picked'}</span>`
-      + `<span class="pick">${cfl.escapeHtml(picked.name)}<span class="pct">${Math.round(conf)}%</span><span class="tier-word">${tierWord}</span>${movHtml}</span>${checkHtml}</div>`;
+  // ---- market band
+  const label = st.isUpcoming ? 'Market' : 'Last price we captured';
+  if (rA && rB) {
+    const fav = rA.prob >= rB.prob ? rA : rB;
+    const favName = rA.prob >= rB.prob ? a.name : b.name;
+    const fresh = rA.fresh;
+    const mv = rA.moveSinceOpen;
+    const bits = [`${rA.bookCount} book${rA.bookCount === 1 ? '' : 's'}, vig removed`];
+    if (rA.spreadPts != null) bits.push(`${rA.spreadPts.toFixed(1)} pts apart`);
+    if (fresh) bits.push(fresh.stale ? 'stale — ' + fresh.when : fresh.when);
+    let moveTxt = '';
+    if (mv != null && Math.abs(mv) >= 0.5) {
+      moveTxt = `<span class="edge">${Math.abs(mv).toFixed(1)} pts toward ${esc(lastNameOf(mv > 0 ? a.name : b.name))} since our first capture</span>`;
+    }
+    html += `<div class="fight-verdict market">
+      <span class="label">${esc(label)}</span>
+      <span class="pick">${esc(favName)} <span class="market-odds">${esc(M.fmtAmerican(fav.bestAmerican))}</span> <span class="pct">${Math.round(fav.prob * 100)}%</span>
+        <span class="tier-word">${esc(bits.join(' · '))}</span></span>
+      ${moveTxt}
+    </div>`;
   } else {
-    html += `<div class="fight-verdict too-close"><span class="label">Model pick</span><span class="pick">${isUpcoming ? 'Not scored yet' : 'No pick on record'}</span></div>`;
+    html += `<div class="fight-verdict too-close"><span class="label">${esc(label)}</span>` +
+      `<span class="pick">no sportsbook price captured</span></div>`;
   }
 
-  // Distance verdict (distanceEdges.js)
-  if (window.cflDistanceEdges) {
-    const { distanceProb } = window.cflDistanceEdges.computeDistance(a, b, fight, { cardioMap, finishRateMap });
-    const distPct = (distanceProb * 100).toFixed(0);
-    const expectsDistance = distanceProb >= 0.50;
-    const labelText = isUpcoming ? 'Distance' : 'Distance call';
-    const callText = expectsDistance
-      ? `<strong>Goes the distance</strong> <span class="pct">${distPct}%</span>`
-      : `<strong>Ends early</strong> <span class="pct">${(100 - distPct)}%</span>`;
-
-    let checkHtml = '';
-    if (!isUpcoming && fight.method) {
-      // Treat any "Decision …" as went-the-distance. KO / TKO / Submission /
-      // DQ / Doctor Stop all count as early finishes. NC / Other → skip the ✓/✗
-      // tag because we can't honestly grade an inconclusive method.
-      const m = fight.method;
-      const wentDistance = m.startsWith('Decision');
-      const endedEarly   = m.includes('KO') || m.includes('TKO') || m === 'Submission' || m === 'DQ' || m === "Doctor's Stoppage";
-      if (wentDistance || endedEarly) {
-        const correct = (expectsDistance && wentDistance) || (!expectsDistance && endedEarly);
-        checkHtml = `<span class="check ${correct ? 'correct' : 'wrong'}">${correct ? '✓ Correct' : '✗ Missed'}</span>`;
-      }
-    }
-    html += `<div class="fight-verdict distance"><span class="label">${labelText}</span><span class="pick">${callText}</span>${checkHtml}</div>`;
-  }
-
-  // Market band, on the engine's number. Skipped when there is no pick or
-  // no consensus row. (The plan moves this behind the premium door.)
-  let marketPct = null;
-  if (marketOdds && picked) {
-    const marketProb   = pickIsA ? marketOdds.implied_prob_a : marketOdds.implied_prob_b;
-    const marketOddsAm = pickIsA ? marketOdds.american_odds_a : marketOdds.american_odds_b;
-    // The market's number is always shown when we have one. This used to blank
-    // it above a 15-point gap (the same guard the homepage carried), which hid
-    // real lines exactly where the model disagreed most. A wide gap is a fact
-    // about the model, not evidence against the odds. And the difference is
-    // shown as a disagreement in points — never as an "edge" or a value flag
-    // (CLAUDE.md line 1; D-010).
-    if (marketProb != null) marketPct = marketProb * 100;
-    if (marketPct != null) {
-      const gap = conf - marketPct;
-      const abs = Math.round(Math.abs(gap));
-      const oddsStr = marketOddsAm != null ? (marketOddsAm > 0 ? '+' + marketOddsAm : String(marketOddsAm)) : '—';
-      const labelText = isUpcoming ? 'Market' : 'Last market line';
-      const gapStr = Math.abs(gap) < 5 ? `${abs} pts · mostly agree`
-        : (gap > 0 ? `${abs} pts · CFL higher` : `${abs} pts · market higher`);
-      html += `<div class="fight-verdict market">
-        <span class="label">${labelText}</span>
-        <span class="pick">${cfl.escapeHtml(picked.name)} <span class="market-odds">${oddsStr}</span> <span class="pct">${Math.round(marketPct)}%</span></span>
-        <span class="edge">Difference ${gapStr}</span>
-      </div>`;
-    }
-  }
-
-  // "Why this pick?" — the same reasons writer the homepage uses, so the two
-  // pages can never disagree about why. Collapsed by default.
-  if (picked && window.cflInsights) {
-    const ctx = { cardioMap, weightClass: fight.weight_class };
-    const bullets = window.cflInsights.buildEdgeBullets(picked, opponent, ctx).slice(0, 3);
-    const flags = window.cflInsights.buildRedFlags(picked, opponent, ctx, marketPct, conf).slice(0, 2);
+  // ---- matchup band
+  const I = window.cflInsights;
+  if (I) {
+    const ctx = {
+      cardioMap: st.cardioMap, weightClass: fight.weight_class,
+      baseRates: st.baseRates, bookCount: rA ? rA.bookCount : null,
+    };
+    const notes = I.buildMatchupNotes(a, b, ctx).slice(0, 4);
+    const caveats = I.buildMatchupCaveats(a, b, ctx).slice(0, 2);
     const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
-    const movExplanation = renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fight.weight_class);
     html += `
       <details class="fight-why">
-        <summary>Why this pick?</summary>
+        <summary>What stands out in this matchup</summary>
         <div class="why-body">
-          ${bullets.length
-            ? `<div class="why-hd">What stands out in this matchup</div><ul class="why-list">${bullets.map(li).join('')}</ul>`
-            : '<div class="why-none">No single stat stands out — the model is weighing the whole picture.</div>'}
-          ${flags.length ? `<div class="why-hd against">Why it might be wrong</div><ul class="why-list against">${flags.map(li).join('')}</ul>` : ''}
-          ${(bullets.length || flags.length) && window.cflInsights
-            ? `<div class="insight-note">${cfl.escapeHtml(window.cflInsights.CONTEXT_NOTE)}</div>` : ''}
-          ${movExplanation}
+          ${notes.length
+            ? `<ul class="why-list">${notes.map(n => li(n.text)).join('')}</ul>`
+            : '<div class="why-none">Nothing separates these two by a meaningful margin on the statistics we track.</div>'}
+          ${caveats.length ? `<div class="why-hd against">Read these with care</div><ul class="why-list against">${caveats.map(li).join('')}</ul>` : ''}
+          <div class="insight-note">${cfl.escapeHtml(I.MATCHUP_NOTE)}</div>
+          <div class="why-mov"><a href="fight.html?id=${fight.id}">Open this fight in Fight Lab →</a></div>
         </div>
       </details>`;
   }
@@ -1204,28 +1038,7 @@ function renderVerdict(a, b, fight, isUpcoming, cardioMap, finishRateMap, market
   return html;
 }
 
-function renderMovExplanation(picked, opponent, finishRateMap, cardioMap, fightWeightClass) {
-  const reasons = [];
-  const fr = (finishRateMap || {})[picked.id];
-  if (fr && fr.ko_tko_rate != null && +fr.ko_tko_rate >= 0.40) {
-    reasons.push(`${picked.name} finishes ${(fr.ko_tko_rate * 100).toFixed(0)}% of wins by KO/TKO`);
-  }
-  if (fr && fr.sub_rate != null && +fr.sub_rate >= 0.30) {
-    reasons.push(`${picked.name} finishes ${(fr.sub_rate * 100).toFixed(0)}% of wins by submission`);
-  }
-  if (window.cflEdges && cardioMap) {
-    const oppCardio = window.cflEdges.cardioFor(opponent.id, fightWeightClass, cardioMap);
-    if (oppCardio && (oppCardio.tier_word === 'fades' || oppCardio.tier_word === 'collapses')) {
-      reasons.push(`${opponent.name}'s cardio (${oppCardio.tier_word}) opens up late KO`);
-    }
-  }
-  if (opponent.td_def != null && opponent.td_def < 60
-      && picked.td_avg != null && picked.td_avg >= 2.0) {
-    reasons.push(`${opponent.name} only ${opponent.td_def}% TD defense vs ${picked.name}'s grappling`);
-  }
-  if (!reasons.length) return '';
-  return `<div class="why-mov"><strong>Method signals:</strong> ${reasons.map(r => cfl.escapeHtml(r)).join(' · ')}</div>`;
-}
+function lastNameOf(n) { return window.cflInsights ? window.cflInsights.lastName(n) : n; }
 
 // The comparison module: tale of the tape, then recent form, in one centred
 // panel under the two names.

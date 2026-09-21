@@ -1,7 +1,14 @@
-// Weekly preview-email sender. Runs on Wednesday morning UTC via the
-// digest.yml workflow. Pulls the next upcoming UFC card from Supabase,
-// renders the same per-fight verdict + edge breakdown that draft-post.js
-// uses, and emails it to every active row in email_subscribers via Resend.
+// THE CANNON CARD BRIEF — one email before each UFC card. Runs on Wednesday
+// morning UTC via the digest.yml workflow. Pulls the next upcoming card from
+// Supabase, reports what the market has done to it — the biggest line moves,
+// where the sportsbooks disagree most, how much of the card is priced and how
+// fresh those prices are — and emails it to every active row in
+// email_subscribers via Resend.
+//
+// It used to send a "Model pick / Confidence" table. It does not any more:
+// CFL stopped publishing a forecast in September 2026 when it could not be
+// shown to beat the market price. The Brief's promise is "know what changed
+// before fight night", never "here are our picks".
 //
 // Funnel hand-off: the email body contains a "Create free account →" CTA
 // pointing at signup.html?src=digest so we can attribute account signups
@@ -47,13 +54,8 @@ function formatLongDate(isoDate) {
   return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
 }
 
-// Plain-English agreement label for the two public models (Value + Fight IQ).
-// Handles the one-model case too (a fight only one model has graded).
-function modelAgreementLabel(agree, total) {
-  if (total <= 1) return 'the engine';
-  if (agree === total) return total === 2 ? 'both models' : `all ${total} models`;
-  return `${agree} of ${total} models`;
-}
+// modelAgreementLabel() used to live here — the Brief no longer reports how
+// many models agreed on a pick, because it no longer reports a pick.
 
 async function findNextEvent() {
   const t = todayUTC();
@@ -68,7 +70,15 @@ async function findNextEvent() {
   return (data && data[0]) || null;
 }
 
-async function buildVerdictLines(event) {
+// One line per priced fight: where the market sits, how far it has moved
+// since our first capture and over the last 24 hours, and how far apart the
+// books are. Sorted by absolute movement, because "what changed" is the
+// point of the email.
+//
+// Reads v_fight_market_movement, which is a definer view — `fight_odds`
+// itself is admin-only, so a direct read here returns nothing under the anon
+// key and only works by accident under the service key.
+async function buildMarketLines(event) {
   const { data: fights } = await sb.from('fights')
     .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, is_main_event, is_title_fight, weight_class')
     .eq('event_id', event.id)
@@ -76,90 +86,95 @@ async function buildVerdictLines(event) {
     .order('id', { ascending: true });
   if (!fights || !fights.length) return [];
 
-  const fightIds   = fights.map(f => f.id);
-  const fighterIds = [...new Set(fights.flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(Boolean))];
-
-  const [predsR, cardioR] = await Promise.all([
-    // Engine picks (model_picks) — the one current model. A locked 'live' row
-    // outranks a 'backtest' replay row for the same fight. The retired
-    // v3/v6 model_predictions are archive-only and never publish here.
-    sb.from('model_picks')
-      .select('fight_id, pick_fighter_id, p_cal, source')
-      .in('fight_id', fightIds),
-    sb.from('v_fighter_consistency')
-      .select('fighter_id, weight_class, cardio_tier')
-      .in('fighter_id', fighterIds)
-  ]);
-
-  const engineByFight = {};
-  (predsR.data || []).forEach(p => {
-    const prev = engineByFight[p.fight_id];
-    if (prev && prev.source === 'live' && p.source !== 'live') return;
-    engineByFight[p.fight_id] = p;
-  });
-  const picksByFight = {};
-  Object.values(engineByFight).forEach(p => {
-    if (p.p_cal == null) return;
-    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {}).engine =
-      { fighter_id: p.pick_fighter_id, model_p: +p.p_cal };
-  });
-  const cardio = {};
-  (cardioR.data || []).forEach(r => {
-    if (r.weight_class === 'CAREER') cardio[r.fighter_id] = r.cardio_tier;
-  });
+  const { data: mkt, error } = await sb
+    .from('v_fight_market_movement').select('*').eq('event_id', event.id);
+  if (error) { console.warn('[brief] market view unavailable:', error.message); return []; }
+  const byFight = {};
+  (mkt || []).forEach(r => { byFight[r.fight_id] = r; });
 
   const lines = [];
   for (const f of fights) {
-    const picks = picksByFight[f.id] || {};
-    const versions = Object.keys(picks);
-    if (!versions.length) continue;
-    const tally = {};
-    versions.forEach(v => { tally[picks[v].fighter_id] = (tally[picks[v].fighter_id] || 0) + 1; });
-    const sorted = Object.entries(tally).sort((x, y) => y[1] - x[1]);
-    const winnerId = +sorted[0][0];
-    const aSide = winnerId === f.fighter_a_id;
-    const winnerName = aSide ? f.fighter_a_name : f.fighter_b_name;
-    const loserName  = aSide ? f.fighter_b_name : f.fighter_a_name;
-    const winningPs = versions
-      .filter(v => picks[v].fighter_id === winnerId)
-      .map(v => picks[v].model_p);
-    const avg = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
-    const note = (() => {
-      const lc = cardio[aSide ? f.fighter_b_id : f.fighter_a_id];
-      if (lc === 'fades' || lc === 'collapses' || lc === 'tapers') return `${loserName} ${lc} late`;
-      return '';
-    })();
+    const r = byFight[f.id];
+    if (!r || r.market_p_a == null) continue;
+    const pA = +r.market_p_a;
+    const open = r.open_p_a == null ? null : +r.open_p_a;
+    const h24  = r.market_p_a_24h == null ? null : +r.market_p_a_24h;
+    const move = open == null ? null : (pA - open) * 100;
+    const move24 = h24 == null ? null : (pA - h24) * 100;
+    const favIsA = pA >= 0.5;
     lines.push({
       aName: f.fighter_a_name,
       bName: f.fighter_b_name,
       flag: f.is_title_fight ? 'TITLE' : (f.is_main_event ? 'MAIN' : ''),
-      pickName: winnerName,
-      pct: Math.round(avg * 100),
-      agree: sorted[0][1],
-      total: versions.length,
-      agreeLabel: modelAgreementLabel(sorted[0][1], versions.length),
-      note
+      favName: favIsA ? f.fighter_a_name : f.fighter_b_name,
+      favPct: Math.round((favIsA ? pA : 1 - pA) * 100),
+      bestAmerican: favIsA ? r.best_american_a : r.best_american_b,
+      bestBook: favIsA ? r.best_book_a : r.best_book_b,
+      books: r.book_count == null ? null : +r.book_count,
+      booksAtOpen: r.books_at_open == null ? null : +r.books_at_open,
+      spread: r.book_spread_pts == null ? null : +r.book_spread_pts,
+      move, move24,
+      moveToward: move == null ? null : (move > 0 ? f.fighter_a_name : f.fighter_b_name),
+      move24Toward: move24 == null ? null : (move24 > 0 ? f.fighter_a_name : f.fighter_b_name),
+      lastUpdated: r.last_updated,
+      fightId: f.id,
     });
   }
+  lines.sort((x, y) => Math.abs(y.move || 0) - Math.abs(x.move || 0));
   return lines;
 }
 
+// Surname for tight copy. A generational suffix is not a name — "Raul Rosas
+// Jr." is Rosas, not Jr. Same rule as fight-insights.js::lastName; kept in
+// step by hand because build/ has no browser modules.
+const NAME_SUFFIX = /^(jr\.?|sr\.?|ii|iii|iv|v)$/i;
+function lastName(n) {
+  const parts = String(n || '').trim().split(/\s+/);
+  while (parts.length > 1 && NAME_SUFFIX.test(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1] || n;
+}
+
+function fmtAmerican(n) {
+  if (n == null || !isFinite(+n)) return '—';
+  n = Math.round(+n);
+  return (n > 0 ? '+' : '') + n;
+}
+
+function ageWords(ts) {
+  if (!ts) return 'unknown';
+  const mins = Math.max(0, Math.round((Date.now() - new Date(ts).getTime()) / 60000));
+  if (mins < 60) return mins + ' min ago';
+  const h = Math.round(mins / 60);
+  return h < 48 ? h + (h === 1 ? ' hour ago' : ' hours ago') : Math.round(h / 24) + ' days ago';
+}
+
 function renderHtml({ event, lines, unsubscribeToken }) {
-  const eventUrl = `${SITE}/event.html?id=${event.id}`;
-  const signupUrl = `${SITE}/signup.html?src=digest`;
   const unsubUrl = `${SITE}/unsubscribe.html?token=${encodeURIComponent(unsubscribeToken || '')}`;
+
+  const moveCell = (pts, toward) => {
+    if (pts == null) return '<span style="color:#777;">no history</span>';
+    if (Math.abs(pts) < 0.5) return '<span style="color:#777;">unchanged</span>';
+    const col = pts > 0 ? '#2fdccb' : '#ffb547';
+    return `<span style="color:${col};font-weight:600;">${Math.abs(pts).toFixed(1)} pts</span>` +
+           `<span style="color:#888;"> to ${escHtml(lastName(toward))}</span>`;
+  };
 
   const rows = lines.map(l => `
     <tr>
       <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#e8e8e8;">
         ${escHtml(l.aName)} <span style="color:#777;">vs</span> ${escHtml(l.bName)}
         ${l.flag ? ` <span style="color:#e63946;font-size:11px;font-weight:700;letter-spacing:1px;">[${l.flag}]</span>` : ''}
+        <div style="color:#888;font-size:12px;margin-top:2px;">
+          ${escHtml(l.favName)} ${l.favPct}% &middot; best ${escHtml(fmtAmerican(l.bestAmerican))}${l.bestBook ? ' at ' + escHtml(l.bestBook) : ''}
+          &middot; ${l.books || '?'} book${l.books === 1 ? '' : 's'}${l.spread != null ? ', ' + l.spread.toFixed(1) + ' pts apart' : ''}
+        </div>
       </td>
-      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#fff;font-weight:600;">${escHtml(l.pickName)}</td>
-      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#bbb;white-space:nowrap;">${l.pct}% <span style="color:#777;">(${l.agreeLabel})</span></td>
+      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">${moveCell(l.move, l.moveToward)}</td>
+      <td style="padding:10px 8px;border-bottom:1px solid #2a2a2a;white-space:nowrap;">${moveCell(l.move24, l.move24Toward)}</td>
     </tr>
-    ${l.note ? `<tr><td colspan="3" style="padding:0 8px 10px;color:#999;font-size:13px;font-style:italic;border-bottom:1px solid #2a2a2a;">↳ ${escHtml(l.note)}</td></tr>` : ''}
   `).join('');
+
+  const freshest = lines.length ? ageWords(lines.map(l => l.lastUpdated).sort().pop()) : 'unknown';
 
   return `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
@@ -173,41 +188,49 @@ function renderHtml({ event, lines, unsubscribeToken }) {
       </td></tr>
 
       <tr><td style="padding:0 20px 6px;">
-        <div style="color:#e63946;font-size:11px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">This week's card</div>
+        <div style="color:#e63946;font-size:11px;letter-spacing:1.5px;font-weight:700;text-transform:uppercase;">The Cannon Card Brief</div>
         <h1 style="margin:6px 0 4px;font-size:24px;color:#fff;line-height:1.25;">${escHtml(event.name)}</h1>
         <div style="color:#999;font-size:14px;">${escHtml(formatLongDate(event.event_date))}${event.location ? ' &middot; ' + escHtml(event.location) : ''}</div>
+        <div style="color:#777;font-size:13px;margin-top:10px;line-height:1.55;">
+          What the sportsbooks have done to this card. Sorted by how far each line has moved since we first captured it.
+          Last price captured ${escHtml(freshest)} — these are captures, not live quotes.
+        </div>
       </td></tr>
 
       <tr><td style="padding:20px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111;border:1px solid #222;border-radius:8px;">
           <tr>
-            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Fight</th>
-            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Model pick</th>
-            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Confidence</th>
+            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Fight &amp; market</th>
+            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Since open</th>
+            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">24 h</th>
           </tr>
-          ${rows || '<tr><td colspan="3" style="padding:14px;color:#999;">Verdicts publishing closer to fight night.</td></tr>'}
+          ${rows || '<tr><td colspan="3" style="padding:14px;color:#999;">No sportsbook prices captured on this card yet.</td></tr>'}
         </table>
+        <div style="color:#666;font-size:11.5px;line-height:1.5;margin-top:10px;">
+          "Since open" compares to <em>our first capture</em> of the fight, which is when CFL started watching — not when the
+          market opened. A line that moved is not a line that was wrong, and nothing in this email is a recommendation.
+        </div>
       </td></tr>
 
       <tr><td style="padding:8px 20px 28px;">
-        <a href="${eventUrl}" style="color:#e63946;text-decoration:none;font-weight:600;">View the full card with edges →</a>
+        <a href="${SITE}/market.html?event=${event.id}" style="color:#e63946;text-decoration:none;font-weight:600;">Open the full board in Market Lab →</a>
       </td></tr>
 
       <tr><td style="padding:0 20px;">
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:linear-gradient(135deg,#e63946,#c1121f);border-radius:8px;">
           <tr><td style="padding:22px 24px;">
-            <div style="color:#fff;font-weight:700;font-size:16px;margin-bottom:6px;">Track your picks on a free account</div>
-            <div style="color:#fff;opacity:0.9;font-size:13px;margin-bottom:14px;">Save fighters to your watchlist, see every model verdict, and unlock all edge factors. Free during beta.</div>
-            <a href="${signupUrl}" style="background:#fff;color:#c1121f;padding:10px 22px;border-radius:6px;font-weight:700;text-decoration:none;display:inline-block;font-size:14px;">Create free account →</a>
+            <div style="color:#fff;font-weight:700;font-size:16px;margin-bottom:6px;">Research the card in one screen</div>
+            <div style="color:#fff;opacity:0.9;font-size:13px;margin-bottom:14px;">Card Lab has every fight with the vig-free consensus, the best price and who is posting it, and the matchup facts worth checking. Free, no account needed.</div>
+            <a href="${SITE}/index.html#next" style="background:#fff;color:#c1121f;padding:10px 22px;border-radius:6px;font-weight:700;text-decoration:none;display:inline-block;font-size:14px;">Open Card Lab →</a>
           </td></tr>
         </table>
       </td></tr>
 
       <tr><td style="padding:28px 20px 8px;color:#666;font-size:12px;line-height:1.5;text-align:center;">
-        Cannon Fight Lab is an analytics publication, not a sportsbook. 21+ only. 1-800-GAMBLER.
+        Cannon Fight Lab is an analytics publication, not a sportsbook. We do not sell picks. 21+ only. 1-800-GAMBLER.
       </td></tr>
       <tr><td style="padding:0 20px 20px;color:#555;font-size:11px;text-align:center;">
-        You're subscribed to the Cannon Fight Lab weekly fight preview.
+        You're subscribed to the Cannon Card Brief.
         <a href="${unsubUrl}" style="color:#888;">Unsubscribe</a>
       </td></tr>
 
@@ -218,30 +241,38 @@ function renderHtml({ event, lines, unsubscribeToken }) {
 }
 
 function renderText({ event, lines, unsubscribeToken }) {
-  const eventUrl = `${SITE}/event.html?id=${event.id}`;
-  const signupUrl = `${SITE}/signup.html?src=digest`;
   const unsubUrl = `${SITE}/unsubscribe.html?token=${unsubscribeToken || ''}`;
+  const moveTxt = (pts, toward) => {
+    if (pts == null) return 'no history';
+    if (Math.abs(pts) < 0.5) return 'unchanged';
+    return `${Math.abs(pts).toFixed(1)} pts to ${lastName(toward)}`;
+  };
   const out = [];
-  out.push(`CANNON FIGHT LAB — ${event.name}`);
+  out.push(`THE CANNON CARD BRIEF — ${event.name}`);
   out.push(formatLongDate(event.event_date) + (event.location ? ' · ' + event.location : ''));
   out.push('');
-  out.push('Model picks (locked in before the bell):');
+  out.push('What the sportsbooks have done to this card, biggest move first.');
+  out.push('These are captured prices, not live quotes. No picks.');
   out.push('');
   for (const l of lines) {
     const flag = l.flag ? ` [${l.flag}]` : '';
     out.push(`  ${l.aName} vs ${l.bName}${flag}`);
-    out.push(`    → ${l.pickName} (${l.pct}%, ${l.agreeLabel})`);
-    if (l.note) out.push(`    ↳ ${l.note}`);
+    out.push(`    market: ${l.favName} ${l.favPct}% · best ${fmtAmerican(l.bestAmerican)}` +
+             `${l.bestBook ? ' at ' + l.bestBook : ''} · ${l.books || '?'} books` +
+             `${l.spread != null ? ', ' + l.spread.toFixed(1) + ' pts apart' : ''}`);
+    out.push(`    since our first capture: ${moveTxt(l.move, l.moveToward)} · last 24h: ${moveTxt(l.move24, l.move24Toward)}`);
     out.push('');
   }
-  out.push(`Full card with edges: ${eventUrl}`);
+  if (!lines.length) out.push('  No sportsbook prices captured on this card yet.\n');
+  out.push(`Full board: ${SITE}/market.html?event=${event.id}`);
+  out.push(`The card: ${SITE}/index.html#next`);
   out.push('');
-  out.push('Create a free account to track picks and unlock every edge:');
-  out.push(`  ${signupUrl}`);
+  out.push('"Since our first capture" is measured from when CFL started watching the fight,');
+  out.push('not from when the market opened. A line that moved is not a line that was wrong.');
   out.push('');
   out.push('---');
   out.push(`Unsubscribe: ${unsubUrl}`);
-  out.push('Cannon Fight Lab is an analytics publication, not a sportsbook. 21+ only.');
+  out.push('Cannon Fight Lab is an analytics publication, not a sportsbook. We do not sell picks. 21+ only.');
   return out.join('\n');
 }
 
@@ -304,7 +335,7 @@ async function markSent(emails) {
     if (!event) { console.log('[digest] no upcoming events — nothing to send.'); return; }
     console.log(`[digest] next event: ${event.name} (${event.event_date})`);
 
-    const lines = await buildVerdictLines(event);
+    const lines = await buildMarketLines(event);
     console.log(`[digest] ${lines.length} fights with verdicts.`);
     if (!lines.length) {
       console.log('[digest] no model picks yet for this card — skipping send.');
