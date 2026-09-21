@@ -10,7 +10,8 @@
     "send-digest": "node send-digest.js",
     "social-post": "node social-post.js",
     "social-engine": "node social-engine.js",
-    "posting-app": "node make-posting-app.js"
+    "posting-app": "node make-posting-app.js",
+    "send-alerts": "node send-alerts.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0"

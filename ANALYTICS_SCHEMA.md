@@ -1,8 +1,15 @@
 # Funnel analytics — the event schema
 
-Status: **instrumented 2026-09-21** (T-047). Fifteen of the nineteen events
-emit today; the other four are declared hooks with nothing to fire on yet, and
-the table below says which is which. Storage is
+Status: **instrumented 2026-09-21** (T-047), extended for watchlists and alerts
+(T-070). Twenty-one of the twenty-four events emit today; the other three are
+declared hooks with nothing to fire on yet, and the table below says which is
+which.
+
+**One of the twenty-four is emitted by the server, not the browser.**
+`alert_fired` is written by `build/send-alerts.js` with `session_id` set to the
+literal `srv:alerts`, because nothing a visitor does causes an alert to fire —
+a market does. It is obviously not a visitor session on sight, so it cannot be
+mistaken for one in a count. Storage is
 [`funnel_events_migration.sql`](funnel_events_migration.sql); the emitter is
 `cfl.track` in `_shared.js`; `tests/analytics-events.test.js` holds the three
 rules.
@@ -69,6 +76,11 @@ sprint that builds a checkout or a share button does not invent its own names.
 | `card_brief_signup_completed` | the insert succeeds | `source` |
 | `pricing_view` | `/pricing.html` renders | — |
 | `pro_cta_clicked` | any upgrade CTA | `source` |
+| `watchlist_added` | a fight is starred, from any surface | `from` (`card`/`fight`/`watchlist`) |
+| `watchlist_removed` | a fight is un-starred | `from` |
+| `alert_created` | an alert is saved | `kind` (`price_target`/`market_move`) |
+| `alert_fired` | **server-side.** `build/send-alerts.js` emailed somebody about this alert | `kind`, `seq` |
+| `alert_clicked` | an alert email's link was followed back to the site | `kind` |
 | `checkout_started` | **declared, not emitted** — no checkout exists | `plan` |
 | `checkout_completed` | **declared, not emitted** — no checkout exists | `plan` |
 | `return_visit` | a session begins with a prior session inside 7 days | `days_since`, `same_fight_week` |

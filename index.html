@@ -569,6 +569,8 @@
      and cannot drift between surfaces. -->
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
+<script src="alerts.js"></script>
+<script src="watchlist-ui.js"></script>
 <script>
 cfl.renderNav('home');
 cfl.renderFooter();
@@ -852,6 +854,13 @@ async function loadFights(event) {
   _marketMap = market || {};
 
   _cardState = { fights, fighterMap, eventId: event.id, event };
+
+  // Which fights this visitor has starred, before the first paint, so a starred
+  // fight never draws as un-starred. A signed-out visitor gets an empty set and
+  // hollow stars, which is correct: the control is offered to everybody and the
+  // account wall is explained on tap rather than by hiding the button.
+  if (window.cflWatchlist) { try { await cflWatchlist.loadStarred(); } catch (e) {} }
+
   renderCards();
   renderOddsStatus();
   renderHeroGlance(event);
@@ -1029,9 +1038,16 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   const sideA = fighterSideHtml(a, readA, 'a');
   const sideB = fighterSideHtml(b, readB, 'b');
 
+  // The star. Drawn for everybody — a signed-out visitor who taps it is told
+  // that a watchlist needs an account, which is a truer thing to show than a
+  // control that is simply missing. Nothing on this card is gated.
+  const starHtml = window.cflWatchlist
+    ? cflWatchlist.starButton(fight.id, { from: 'card' })
+    : '';
+
   const html = `
     <div class="fight${fight.is_main_event ? ' is-main' : ''}" data-fid="${fight.id}" id="fight-${fight.id}">
-      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}</div>
+      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}${starHtml}</div>
       <div class="matchup">${sideA}<div class="vs">VS</div>${sideB}</div>
       ${probsHtml}
       ${mktNote}
@@ -1306,6 +1322,10 @@ document.getElementById('betaBannerDismiss')?.addEventListener('click', () => {
 });
 if (window.cflAuth && window.cflAuth.ready) window.cflAuth.ready().then(updateBetaBanner);
 else updateBetaBanner();
+
+// One delegated listener for every star on the card, bound once. Re-rendering
+// the card does not need re-binding.
+if (window.cflWatchlist) cflWatchlist.bindStars(document);
 
 load().catch(err => {
   console.warn('[home] next-event load failed', err);

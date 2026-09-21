@@ -1426,3 +1426,138 @@ now; Pro adds history, depth and monitoring. `PRODUCT_BOUNDARY.md` already says
 that and every surface is still `enforced: false`.
 
 **Attribution note.** As D-006 through D-018.
+---
+
+## D-020 — Alerts fire on what happened, or stay quiet and say why
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-070, T-071, T-072 |
+| level | L1 |
+| reversible | yes — four new tables, three new views, two new modules, one page, one workflow. Emails only members who asked; sends nothing at all without `RESEND_API_KEY`. Gates nothing, charges nobody, publishes no claim |
+
+**Plain version.** You can star the fights you care about, and ask us to email
+you when a price you want turns up or when a market moves more than you can
+ignore. We email you when it actually happened. When the market is too thin to
+say anything honest, you hear nothing — and the page tells you that is why.
+
+### The requirement, and the six ways to get it wrong
+
+*An alert must never fire from a misleading or insufficient market comparison.*
+
+An email is a **stronger claim than a number on a page**. The member did not go
+looking for it, it arrives with their attention already granted, and it may send
+them to a sportsbook to act. So the alert path applies the display path's
+refusals and several more. The six failure modes it is built against:
+
+1. firing off a movement figure computed over fewer than three matched books
+2. firing off a price nobody is offering any more
+3. firing off a fight that is already over
+4. **re-arming across a cohort change** — the subtle one, below
+5. emailing the same crossing twice because two passes raced
+6. emailing forty times in a fight week
+
+**Nothing widens a cohort to produce an alert.** No fallback path, no
+best-effort comparison, no second-choice baseline. Every refusal is **named**,
+recorded, and shown to the member in plain English, because a silent refusal and
+a broken job look identical from outside.
+
+### The re-arm is the interesting part
+
+A movement alert fires once and must know when to speak again. The obvious
+re-arm subtracts the movement now from the movement when it last fired. **That
+is precisely the mixed-cohort error [D-012](DECISIONS.md) removed from the
+product**: the two readings can be medians over *different* sets of sportsbooks,
+and their difference is then a fact about bookmaker turnover rather than about
+the market. CFL measured that class of error at up to **12.7 points**, with
+three markets that had not moved reading as moving 3+.
+
+So an alert stores the **fingerprint** of the cohort it fired over — an md5 of
+the sorted matched book ids, **not the count**, because one book leaving as
+another joins holds the count still and moves the median. If the fingerprint or
+the baseline instant has changed, the alert **re-baselines and stays silent**.
+It costs one notification; the alternative costs the member's trust in every
+notification they ever get.
+
+### A price and a move are different claims
+
+The first version of the market view applied **one 45-minute staleness ceiling**
+to both, borrowed from the frozen CLV limit. That limit governs a scored
+settlement price, a different job — and against CFL's real capture cadence
+(5 minutes only in flow, hourly on card day, otherwise **once a day**) it means
+**no alert of any kind can ever fire**. Measured on the live table: **0 of 79
+fights alertable**. The feature would have shipped permanently silent, and a
+silent alert system is indistinguishable from a broken one.
+
+- **A price is an offer.** "This number is available at this book", actionable
+  at a sportsbook. **120 minutes**, comfortably inside the hourly fight-week
+  tier. Outside fight week the market is not moving anyway, so refusing is the
+  right answer rather than a missed one.
+- **A move is a historical fact.** "This market moved four points since our
+  first broad capture" is as true three hours later. **24 hours.**
+
+Every email prints the capture time and the book count beside the number, as the
+display path does. Freshness is **disclosed**, not implied; the ceilings are the
+point past which disclosure stops being enough.
+
+### Duplicate and quiet suppression
+
+**The dedupe key is a UNIQUE column and the insert is attempted BEFORE the email
+is sent.** Two concurrent passes both survive a `SELECT`-then-`INSERT` check;
+only a unique index decides which wins. Same lesson as `billing_events`
+(D-018). Ordering matters as much: send-then-record loses the record whenever
+the process dies between the two, and the next pass sends again. This way a
+crash costs a member **one** email they should have had; the other order costs
+an unbounded number they should not.
+
+The key is the alert plus its **occurrence number**, never the value that
+triggered it — keying on the value mints a fresh key every time the price ticks,
+which is a unique constraint permitting exactly the duplicates it was added to
+stop.
+
+Quiet is three layers plus batching: a per-member **cooldown**, a **daily cap**,
+and an optional UTC **quiet window** that is NULL by default. And the sender
+emails **once per member per run** containing everything that fired, never once
+per alert. **Quiet hours stay off until a time zone is collected** — CFL does
+not know one and will not guess, because a guessed window silences the alerts
+somebody asked for at exactly the hours they most wanted them.
+
+### A P0-class grant defect, found by checking rather than reading
+
+`REVOKE ALL ... FROM anon` left **`authenticated` holding TRUNCATE** on three of
+the four new tables, inherited from Supabase's default privileges — the same
+shape as the `funnel_events` finding (D-014). **TRUNCATE bypasses row level
+security entirely**, so any signed-in member could have emptied every other
+member's watchlist and alerts with RLS never consulted. Found by querying
+`role_table_grants` after applying; the migration's own text is not the result.
+
+**Two further faults, both in the trigger that pins the suppression memory, and
+both found by testing behaviour rather than reading code:**
+
+1. It keyed on `auth.role()`, the JWT claim. A migration or a psql session has
+   no JWT, so the trigger reverted **the sender's own writes** — alerts would
+   never have armed.
+2. The fix used `current_user` but was `SECURITY DEFINER`, and inside a definer
+   function `current_user` is the function's **owner**. The guard was always
+   true: the protection read as though it worked and **did nothing at all**.
+
+Now `SECURITY INVOKER`, verified as the `authenticated` role in a rolled-back
+transaction: the sender arms `7 / REAL_FP / 4.5` and a member's forge attempt
+leaves all three untouched while their own editable fields change.
+
+### Ready for Pro, gated by nothing
+
+Watchlists and alerts are intended to become CFL Pro features. **Nothing here is
+gated**, per [D-019](DECISIONS.md) — there is no paywall in front of a product
+nobody can buy. When the boundary lands it lands in **one place**,
+`public.alert_quota()`, which today returns the same allowance to everyone. The
+gate is the commented line inside it and nowhere else: not in a policy, not in
+the browser, not in the sender.
+
+**Not done, deliberately:** no SMS, no push, no new vendor. The `channel` column
+is `CHECK (channel IN ('email'))`, so adding one is a migration and a decision
+rather than a config change.
+
+**Attribution note.** As D-006 through D-019.

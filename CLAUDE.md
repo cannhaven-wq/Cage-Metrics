@@ -112,6 +112,7 @@ Every page is its own standalone HTML file at the repo root. Shared chrome (nav,
 **Archive** (documents the retired forecast; each carries `.cfl-archive-note`): `track-record.html`, `proof.html`, `predictor.html`, `edges.html`, `methodology.html`.
 **Explainers**: `about.html`.
 **Account / legal / misc**: `pricing.html`, `account.html`, `login.html`, `signup.html`, `reset.html`, `contact.html`, `disclaimer.html`, `privacy.html`, `unsubscribe.html`.
+**Account-gated**: `mybook.html` (My Book), `watchlist.html` (**My Watchlist** — starred fights, alert list and alert-email preferences; `cflAuth.requireAuth`). Both are `noindex`.
 **Internal**: `lab.html` — an unlinked backtest sandbox that says so at the top; its numbers include training data by construction. Don't cite it anywhere user-facing.
 **Redirect stubs** (kept so old links, shares and bookmarks don't 404; `noindex`, meta-refresh): `card-lab.html` → `/`, `picks.html` → `card-lab.html`. Both are ~23 lines and carry no nav. `picks.html` currently redirects through `card-lab.html` rather than straight to `/` — a two-hop chain worth collapsing.
 
@@ -278,6 +279,99 @@ rest of the site treats them as Pro. That bug was live on `account.html`.
 the UPDATE policy** alongside the five that were already there. See the
 `WITH CHECK` note in the Entitlements section: a policy protects exactly the
 columns it names.
+
+### Watchlists and alerts (`alerts_migration.sql`, `alerts.js`, 2026-09-21)
+
+**The rule the whole feature is built around: an alert must never fire from a
+market comparison CFL would refuse to print.** An email is a *stronger claim
+than a number on a page* — the member did not go looking for it, it arrives with
+their attention already granted, and it may send them to a sportsbook to act. So
+the alert path applies the display path's refusals and several more, **every
+refusal is named** (never silent), and **nothing widens a cohort to produce an
+alert**. No fallback, no best-effort comparison, no second-choice baseline.
+
+**Where each thing lives, and do not move them:**
+
+- **`v_fight_alert_market`** — the *only* market input the sender reads. The
+  refusals live in SQL beside the numbers they refuse, not in a Node script
+  where an edit could quietly relax one. Three refusal columns because a price
+  and a move are different claims: `alert_refusal` (universal), `price_refusal`,
+  `move_refusal`.
+- **`alerts.js`** — pure. No network, no database, no clock of its own (every
+  function takes `now`). Holds firing, re-arm and suppression. Shared by the
+  browser and `build/send-alerts.js`, same arrangement `edges.js` has with the
+  snapshotter.
+- **`watchlist-ui.js`** — the star, the alert form and every refusal's
+  plain-English copy. Edit this, not a page.
+- **`build/send-alerts.js`** — plumbing only: read, ask, record, send, record.
+
+**A PRICE AND A MOVE DO NOT SHARE A STALENESS RULE, and this is not a style
+choice.** A price is an **offer** ("this number is available at this book",
+actionable at a sportsbook) and gets **120 minutes**. A move is a **historical
+fact** ("this market moved four points since our first broad capture", as true
+three hours later) and gets **24 hours**. The first version used one 45-minute
+ceiling for both, borrowed from the frozen CLV limit — which governs a scored
+settlement price, a different job. Against the real capture cadence (5 min only
+in flow, hourly on card day, otherwise **once a day**) that made **0 of 79
+fights alertable**: the feature would have shipped permanently silent. If you
+change either ceiling, change it in `alerts.js` *and* the SQL — a test asserts
+they agree.
+
+**THE RE-ARM IS THE PART THAT IS EASY TO GET WRONG.** A movement alert fires
+once and must know when to speak again. The obvious re-arm subtracts the
+movement now from the movement when it last fired — **that is exactly the
+mixed-cohort error D-012 removed from the product**, because the two readings
+can be medians over different sets of sportsbooks (measured at up to 12.7
+points). So an alert stores the **fingerprint** of the cohort it fired over: an
+md5 of the sorted matched book ids, **not the count**, because one book leaving
+as another joins holds the count still and moves the median. If the fingerprint
+or the baseline instant changed, the alert **re-baselines and stays silent**.
+Never add a "close enough" path here.
+
+**Suppression is a UNIQUE constraint, not a check, and order matters.**
+`user_alert_deliveries.dedupe_key` is UNIQUE and **the row is inserted before
+the email is sent**. Send-then-record loses the record whenever the process dies
+between the two and the next pass sends again; this way a crash costs a member
+*one* email they should have had rather than an unbounded number they should
+not. A `23505` means another pass already told them — not an error. The key is
+the alert plus its **occurrence number**, never the triggering value: keying on
+the value mints a fresh key every tick, which is a unique constraint permitting
+exactly the duplicates it was added to stop.
+
+Quiet is three layers plus batching: per-member **cooldown**, **daily cap**, and
+an optional UTC **quiet window that is NULL by default**. The sender emails
+**once per member per run** with everything that fired, never once per alert.
+**Do not invent a time zone to enable quiet hours** — a guessed window silences
+the alerts somebody asked for at exactly the hours they most wanted them.
+
+**Security shape.** All four tables are owner-scoped via `auth.uid()`.
+`user_alert_deliveries` is **read-only to its owner** — erasing a delivery row
+defeats the dedupe key. The `armed_*` / `fire_count` / `last_fired_at` columns
+are the **suppression memory and belong to the sender**; a `BEFORE UPDATE`
+trigger restores them for every other role. That trigger **must stay
+`SECURITY INVOKER`**: inside a `SECURITY DEFINER` function `current_user` is the
+function's *owner*, so the guard is always true and the protection is inert
+while reading as though it works. It shipped that way for one revision.
+
+**`REVOKE ALL ... FROM anon, authenticated`, both roles, then grant.** Revoking
+from `anon` alone left `authenticated` holding **TRUNCATE**, inherited from
+Supabase defaults — and **TRUNCATE bypasses RLS entirely**, so any signed-in
+member could have emptied every other member's rows. Same lesson as
+`funnel_events`: **verify grants after applying; the migration's own text is not
+the result.**
+
+**Nothing is gated, deliberately** (D-019). The Free/Pro split has exactly one
+future home: **`public.alert_quota()`**, which today returns the same allowance
+to everyone. The gate is the commented line inside it and nowhere else — not a
+policy, not the browser, not the sender.
+
+**Email only.** `channel CHECK (channel IN ('email'))`. Adding SMS or push is a
+migration and a decision, not a config change. `.github/workflows/alerts.yml`
+asks for `*/15` and **must not assume it runs when it asked to** — GitHub
+throttles high-frequency crons hard (see `odds.yml` above). Every rule is
+written against elapsed time from a stored timestamp. Running often is harmless:
+the cooldown and the dedupe key mean extra passes send nothing. Dry-runs without
+`RESEND_API_KEY`.
 
 ### Data layer (Supabase)
 
