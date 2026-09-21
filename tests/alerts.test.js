@@ -510,6 +510,17 @@ t('the workflow measures elapsed time, never the wall clock modulo an interval',
   ok(/contents:\s*read/.test(WORKFLOW), 'the alert workflow is handed a writable token');
 });
 
+t('the alert schedule stays off until a controlled delivery test has passed', () => {
+  // Merging a workflow that carries a cron IS turning that cron on. Until one
+  // real alert has been delivered to one real address and verified, this must
+  // be manual-only, and switching it back on must be its own visible diff.
+  const triggers = WORKFLOW.slice(WORKFLOW.indexOf('\non:'), WORKFLOW.indexOf('permissions:'));
+  ok(!/^\s*schedule:/m.test(triggers),
+     'alerts.yml has an active schedule — it would email unattended from the moment it merges');
+  ok(/workflow_dispatch/.test(triggers), 'alerts.yml cannot be run at all');
+  ok(/default: 'true'/.test(WORKFLOW), 'a manual dispatch defaults to sending rather than to a dry run');
+});
+
 /* ======================================================================= copy */
 
 t('an alert email reports the market and sells nothing', () => {

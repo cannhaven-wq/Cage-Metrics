@@ -20,9 +20,27 @@ name: Send market alerts
 # Falls back to dry run when RESEND_API_KEY is absent, like the digest, so a
 # fork without secrets logs what it would have sent instead of failing.
 
+# ---------------------------------------------------------------------------
+# THE SCHEDULE IS DELIBERATELY OFF (T-073).
+#
+# Merging a workflow that carries a cron IS turning that cron on: GitHub starts
+# delivering it as soon as the file reaches the default branch, with nobody
+# watching the first run. The owner's condition for this feature is a
+# controlled end-to-end delivery test FIRST -- one dry run, one real alert to
+# one real address, a verified duplicate-rerun, then cleanup -- and only then an
+# unattended schedule.
+#
+# So this workflow is manual-only until that test passes. Re-enabling it is a
+# one-line change and its own reviewed commit, which is the point: switching on
+# something that can email people unattended should be a visible diff, not a
+# side effect of merging the feature that needed it.
+#
+# When it goes back:
+#     schedule:
+#       - cron: '*/15 * * * *'
+# ...and read the note above about GitHub throttling high-frequency crons.
+# ---------------------------------------------------------------------------
 on:
-  schedule:
-    - cron: '*/15 * * * *'
   workflow_dispatch:
     inputs:
       dry_run:
