@@ -56,7 +56,7 @@ one hop, and `fighter.html` no longer calls Raul Rosas Jr. "Jr.".
 
 ### Verified
 
-9 Node suites — **235 assertions** — and 168 Python tests with 4,311 subtests,
+11 Node suites — **245 assertions** — and 168 Python tests with 4,327 subtests,
 all green. Every page rendered in headless Chromium at 1440, 768 and 390 px
 with **zero horizontal overflow** on all of them. The Supabase CDN is blocked
 by this environment's egress policy, so the browser could not load live data;
@@ -64,6 +64,21 @@ the number path was verified instead by running the real
 `v_fight_market_movement` rows for UFC Fight Night: Rosas Jr. vs. Barcelos
 through `market.js` directly, including a fabricated one-book fight to confirm
 the refusal renders as a reason rather than a dash.
+
+### Two model surfaces that survived the repositioning
+
+[D-013](DECISIONS.md). `props.html` was in the no-model test's PRODUCT list and
+passed anyway — it sells model output but says *projection*, and the ban list
+was built from the fight forecast's vocabulary. It is archived now, out of the
+nav, `noindex`. And the Cannon Card Brief's **subject line** still read
+"<Event> — model picks before the card" while its body and its own footer said
+the opposite; `build/send-digest.js` is on a weekly cron. Both now have guards:
+`tests/card-brief.test.js` reads subject lines specifically, and the no-model
+test checks that an archived surface is `noindex`, banner-carrying and unlinked.
+
+`ANALYTICS_SCHEMA.md` and `PRODUCT_BOUNDARY.md` are the sprint's two written
+deliverables — nineteen funnel events with the nine questions they answer, and
+the Free/Pro line. Neither ships code; T-047 implements the first.
 
 ### Next action
 

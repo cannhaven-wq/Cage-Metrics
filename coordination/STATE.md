@@ -103,6 +103,20 @@ not moved were reported as moving 3+. A caveat beside a wrong number does not
 make it right.
 
 
+### The public product, as of 2026-09-21
+
+Nav: **Card Lab · Market Lab · Factor Lab · Proof Center** (+ More: Fighters,
+Cardio Scores, Parlay Builder, Model Archive) + Pricing. The forecast is off
+every forward-facing surface ([D-011](DECISIONS.md)); the Model Archive,
+`predictor.html` and `props.html` keep every number behind an archive banner,
+because a research site does not delete a failed test. `props.html` and the
+Brief's subject line were two that got through the first pass
+([D-013](DECISIONS.md)).
+
+Written, not yet built: [`PRODUCT_BOUNDARY.md`](../PRODUCT_BOUNDARY.md) (Free
+vs Pro) and [`ANALYTICS_SCHEMA.md`](../ANALYTICS_SCHEMA.md) (nineteen funnel
+events, T-047). No paid tier exists and no vendor has been added.
+
 ### Research
 
 | line | state | see |

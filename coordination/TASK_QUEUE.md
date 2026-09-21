@@ -38,8 +38,9 @@ it died is usually worth more than the task was.
 | T-039 | Rewrite `build/draft-post.js` for the research positioning — it still renders a "Model pick / Confidence" table. Manual-only (`workflow_dispatch`), so it publishes nothing unattended | L1 | Claude | queued |
 | T-040 | Widen `v_fight_odds_latest_by_book` past the 14-day window so Fight Lab's per-book table works on historical fights. **Half done under D-012** — `v_fight_market_movement` no longer carries the window, so the movement panel already survives; the per-book table still empties after a fortnight | L1 | Claude | queued |
 | T-046 | Reconcile `v_fight_market_at_lock` (`fight_week_views.sql`) with D-012 — it still compares a lock-time cohort against a current cohort, and is the last incomparable-cohort baseline left in the repo. Unread by any surface today | L1 | Claude | queued |
-| T-047 | Funnel analytics: one event schema, one emitter, documented, no second vendor. `_shared.js` already emits some funnel events — inventory those before adding any | L1 | Claude | queued |
+| T-047 | Instrument the funnel events specified in `ANALYTICS_SCHEMA.md` — one emitter in `_shared.js`, the `funnel_events` table, insert-only RLS, counts read through a definer view. The schema is written; nothing emits yet. Choosing a third-party vendor instead is **L3**, because it is a privacy disclosure | L1 | Claude | queued |
 | T-048 | A Terms of Service page. `privacy.html` and `disclaimer.html` exist and carry UFC non-affiliation, 21+, responsible-gambling and affiliate disclosure; there is no Terms. Needed before any paid account exists, and the wording needs a lawyer, not a model | L3 | Owner | proposed |
+| T-050 | Decide whether `parlay.html` and `mybook.html` stay reachable at all. Both are out of the primary journey and neither carries a model any more; `parlay.html` is a neutral calculator and `mybook.html` a private utility. Keeping or retiring them is a product call, not a defect | L3 | Owner | proposed |
 | T-049 | Sportsbook jurisdiction labelling — offshore and regulated books are visually identical in the Market Lab per-book table. Needs a neutral classification, and whether to make a jurisdiction claim at all is not ours | L3 | Owner | proposed |
 | T-041 | Decide whether `mybook.html`'s "vs earliest price seen" column should exist at all under Q-14, or whether any per-bet closing-line figure waits on the frozen CLV protocol | L3 | Owner | proposed |
 
@@ -64,6 +65,8 @@ it died is usually worth more than the task was.
 | T-043 | A defensible market-movement baseline: matched book cohort, three-book floor, no "opening line" anywhere | L2 | Claude | done |
 | T-044 | Sitemap hygiene — stop listing a noindex redirect stub and three empty query-string shells | L0 | Claude | done |
 | T-045 | `fighter.html`'s own `lastName` rendered "Raul Rosas Jr." as "Jr."; delegate to `fight-insights.js` | L0 | Claude | done |
+| T-051 | The Prop Board was still a live public model surface after the repositioning — archive it, drop it from the nav, `noindex` | L2 | Claude | done |
+| T-052 | The Cannon Card Brief's email subject still read "model picks before the card" | L2 | Claude | done |
 
 ---
 

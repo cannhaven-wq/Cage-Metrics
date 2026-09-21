@@ -336,9 +336,9 @@ async function markSent(emails) {
     console.log(`[digest] next event: ${event.name} (${event.event_date})`);
 
     const lines = await buildMarketLines(event);
-    console.log(`[digest] ${lines.length} fights with verdicts.`);
+    console.log(`[digest] ${lines.length} fights with market data.`);
     if (!lines.length) {
-      console.log('[digest] no model picks yet for this card — skipping send.');
+      console.log('[digest] no market data captured for this card yet — skipping send.');
       return;
     }
 
@@ -349,7 +349,11 @@ async function markSent(emails) {
       return;
     }
 
-    const subject = `${event.name} — model picks before the card`;
+    // The subject line is the most-read string this product ships, and it was
+    // the last one still saying "picks". The Brief reports what the market did;
+    // it has never reported a pick since the repositioning, and now it does not
+    // say it does either.
+    const subject = `${event.name} — what the market did this week`;
     let sent = 0;
     let failed = 0;
     const sentEmails = [];

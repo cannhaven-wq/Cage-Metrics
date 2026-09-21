@@ -53,12 +53,12 @@ const strip = src => src
 // from search that is about an upcoming card.
 const PRODUCT = ['index.html', 'market.html', 'fight.html', 'event.html',
                  'fighter.html', 'fighters.html', 'h2h.html', 'parlay.html',
-                 'props.html', 'cardio.html', 'stats.html', 'pricing.html',
+                 'cardio.html', 'stats.html', 'pricing.html',
                  'about.html', 'signup.html', 'account.html', 'mybook.html'];
 
 // Documented history. Exempt from the model ban, required to say so.
 const ARCHIVE = ['proof.html', 'track-record.html', 'predictor.html', 'edges.html',
-                 'methodology.html'];
+                 'methodology.html', 'props.html'];
 
 let passed = 0;
 const failures = [];

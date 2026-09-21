@@ -543,7 +543,6 @@
           <div class="cfl-nav-menu-panel">
             <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
             <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
-            <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>Prop Board</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>Model Archive</a>

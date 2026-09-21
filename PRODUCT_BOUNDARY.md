@@ -1,6 +1,7 @@
 # Free vs Pro — the product boundary
 
-Status: **proposal**, written 2026-09-21. Nothing here is built, priced or
+Status: **proposal**, written 2026-09-21, after the research repositioning
+([D-011](coordination/DECISIONS.md)). Nothing here is built, priced or
 charged for. Pricing and payments are **L3** ([`coordination/CRITICAL_GATES.md`](coordination/CRITICAL_GATES.md)
 item 7); this document exists so the next sprint starts from a written boundary
 instead of inventing one under deadline.
@@ -22,9 +23,11 @@ does not publish one, at any price.
 
 | surface | what a free reader gets |
 |---|---|
-| the current card | every fight, in card order |
+| Card Lab | the current card, every fight, in card order |
+| Market Lab | the board — every fight, every tracked sportsbook's current price |
+| Fight Lab | one matchup in full: market, per-book table, matchup comparison |
 | market consensus | the vig-free market probability, the book count, the age of the quote |
-| movement | the headline move since the first broad CFL capture, with its matched-book count and its method |
+| movement | the headline move since the first broad CFL capture, with its matched-book count and its method ([D-012](coordination/DECISIONS.md)) |
 | best observed price | the best American price CFL captured, the book that posted it, its age |
 | book disagreement | the current spread between books, in points, with its definition |
 | matchup comparison | the basic stat comparison between the two corners |
@@ -32,6 +35,7 @@ does not publish one, at any price.
 | event pages | all ~800 of them |
 | Factor Lab | every finding, every sample size, every verdict |
 | Proof Center + methodology | in full, including the failures |
+| the Model Archive | the retired forecast's whole record, wins and losses, free forever — it is evidence, not a feature |
 | Cannon Card Brief | signup and delivery |
 
 ## Pro
@@ -51,7 +55,8 @@ does not publish one, at any price.
 
 ## Explicitly NOT included, at any tier
 
-- Picks, plays, best bets, leans, locks, or a recommended side.
+- Picks, plays, best bets, leans, locks, or a recommended side — the model
+  came off the public product in September 2026 and does not return at a price.
 - A CFL win probability presented as something to bet into.
 - An edge percentage, an expected-value figure, or a staking suggestion.
 - Any claim that CFL beats the market or that a reader will profit.
@@ -69,6 +74,13 @@ does not publish one, at any price.
   (the full per-book tick history, i.e. the Pro asset) is **not** granted to
   `anon` or `authenticated`. The aggregate views above it are owner-rights
   views and keep reading it, so the free surfaces are unaffected.
+
+## Instrumentation
+
+Which of these boundaries anyone actually crosses is measured by the events in
+[`ANALYTICS_SCHEMA.md`](ANALYTICS_SCHEMA.md) — specified, not yet emitting.
+`pro_cta_clicked`, `checkout_started` and `checkout_completed` are declared
+there as future hooks precisely so this document and that one cannot drift.
 
 ## What is NOT decided here
 

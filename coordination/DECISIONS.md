@@ -864,3 +864,50 @@ aggregate views above it are owner-rights views, so no free surface is affected.
 
 **Attribution note.** As D-006 through D-011: "Reed Cannon" per `CLAUDE.md`;
 [T-009](TASK_QUEUE.md) stays the owner's.
+
+
+---
+
+## D-013 — Two model surfaces survived the repositioning, and one of them was an email subject
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-051, T-052 |
+| level | L2 |
+| reversible | the Prop Board change is (a banner, a `noindex`, a nav line — revertible in git, writes no row). The Brief is **not**: an email that goes out has gone out. It had not gone out under the new positioning, which is why this was worth catching first |
+
+**Decision.** `props.html` becomes archived research, out of the nav and
+`noindex`, on the same terms as the Model Archive: nothing deleted, everything
+labelled. The Cannon Card Brief's subject line stops advertising picks.
+
+**Why this exists as a separate entry.** D-011 removed the forecast from every
+forward-facing surface and shipped a test that enforces it. Two things got
+through, and the shape of both is worth recording:
+
+1. **`props.html` was in the test's PRODUCT list and passed anyway.** It sells
+   model output — "CFL's prop model projects significant strikes and takedowns
+   for every fight on the next UFC card", in the meta description, the keywords,
+   the OG description and the page lede — but it says *projection*, and the ban
+   list was built from the vocabulary of the fight forecast. A guard written
+   from one surface's words does not cover a second surface's synonyms. It is
+   now in the ARCHIVE list with the rest of the model's history, and three new
+   assertions check that an archived surface is `noindex`, carries its banner,
+   and is not in the nav.
+
+2. **The Brief's subject line read `"<Event> — model picks before the card"`.**
+   Its body had been rewritten, its own footer said "We do not sell picks", and
+   the string every subscriber reads without opening anything still sold picks.
+   `build/send-digest.js` is on a weekly cron. A page with the wrong words is a
+   page someone can read and fix; an email with the wrong words is already in an
+   inbox. `tests/card-brief.test.js` now reads the subject lines specifically,
+   on top of the body.
+
+**What was NOT done.** `parlay.html` and `mybook.html` are out of the primary
+journey and carry no model — `parlay.html` is a neutral calculator,
+`mybook.html` a private bet-tracking utility whose Kelly sizing and edge column
+D-011 already removed. Whether they stay reachable at all is a product call and
+is **T-050**, the owner's, not a defect to fix quietly.
+
+**Attribution note.** As D-006 through D-012.
