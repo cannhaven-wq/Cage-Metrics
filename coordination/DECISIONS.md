@@ -1228,3 +1228,141 @@ and Stripe wiring may all be built and tested meanwhile; only taking money is
 blocked, which is exactly what the owner asked for.
 
 **Attribution note.** As D-006 through D-016.
+
+---
+
+## D-018 — Stripe is built end to end and cannot take a penny
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-063, T-064, T-065 |
+| level | L1 |
+| reversible | yes — one migration adding three nullable columns and one audit table, two edge functions with no credentials, one pure module, two page edits. Charges nobody, gates nothing, publishes no claim |
+
+**On the level.** `CRITICAL_GATES.md` item 7 makes *changing monetisation,
+pricing or payments* **L3**, and item 6 makes *enabling paid infrastructure*
+L3. Neither happens here, and the distinction is the whole point of this entry:
+what was built is the **machinery**, which is revertible and testable; what is
+L3 is **turning it on**, which is not done and cannot be done by accident. No
+Stripe account is connected, no price is set, and no credential exists. The
+price range on `pricing.html` is the owner's existing copy and was not changed —
+setting an actual number is L3 and stays with the owner.
+
+**Plain version.** The whole subscription is wired up and tested — signing up,
+paying, renewing, cancelling, a card that fails, running out — and then the
+front door is bolted. Nothing on the site can take money, and it will not be
+able to until a lawyer has read two documents that do not exist yet.
+
+### What can take money, and why none of it can
+
+Three independent locks, because one is a note and two are a control:
+
+1. **`pricing.html`** ships the Subscribe button `disabled` **in the served
+   HTML**, not disabled by JavaScript afterwards. JS can fail to load; a button
+   that is live for 200 ms is a button that can be clicked.
+2. **`entitlements.js::CHECKOUT_BLOCKERS`** is what the page reads to decide
+   that. The page holds no opinion of its own, so removing a blocker moves the
+   page and hardcoding "enabled" in the page cannot happen quietly.
+3. **The deployed `stripe-checkout` function returns 503 `checkout_disabled`
+   with T-054 and T-048 named, before it authenticates the caller and before it
+   reads any configuration.** This is the one that matters: the browser is not a
+   security boundary, and a refusal that only exists in HTML is not a refusal.
+
+A fourth, by accident of having nothing: `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are all unset, and both functions
+**fail closed** rather than guessing. That is a happy coincidence today and is
+not counted as a lock, because it disappears the moment a key is added for
+testing.
+
+**The refusal is verified against the deployed functions, not asserted in a
+test.** `.github/workflows/verify-billing-refusal.yml` posts to both live
+endpoints and fails if either answers with anything but a refusal — including a
+forged webhook signature, which must never return 200. The agent environment's
+network policy blocks the Supabase host, so this check has to run in CI to run
+at all.
+
+### The lifecycle lives in a pure function
+
+`billing-lifecycle.js` maps a Stripe event to an entitlement and nothing else:
+no network, no database, no Stripe SDK. `tests/billing-lifecycle.test.js` drives
+the whole sequence offline — signup, activation, renewal, failed payment,
+cancellation, expiry, lapse, resubscription — because the part of a payment
+system that is hardest to test is the part that costs most when it is wrong.
+
+The four rules that are money-shaped, and were each written to stop a specific
+way of being unfair or being robbed:
+
+- **`past_due` keeps access until the period ends.** One failed card payment
+  must not cut a paying member off mid-period while Stripe is still retrying.
+- **`canceled` keeps access until the period ends, then stops.** They paid for
+  the period. They do not get the next one.
+- **`unpaid`, `incomplete`, `incomplete_expired`, `paused` end access now.**
+  Stripe has stopped trying.
+- **An unrecognised status ends access.** "Probably fine" is how a lapsed member
+  keeps a subscription forever.
+
+**`checkout.session.completed` never grants entitlement.** It only links the
+Stripe customer id to the account. Entitlement comes from subscription events
+alone, so a completed checkout whose subscription never activates cannot let
+anyone in. Invoices are recorded and change nothing.
+
+**Verified against the real database, rolled back**: signup → active → renewed →
+past_due → cancelling → expired → unpaid → resubscribed produced
+`free, pro, pro, pro, pro, free, free, pro`.
+
+### The webhook
+
+`verify_jwt: false`, necessarily — Stripe does not send a Supabase JWT — which
+means **the signature check is the authentication**, so it runs before anything
+else and the function refuses outright when the secret is missing.
+
+Status codes are flow control, not sentiment: a bad signature is **400**, a
+genuine write failure is **500** so Stripe retries, and anything understood but
+not appliable is **200** with the reason recorded in `billing_events`. A non-2xx
+makes Stripe retry with backoff for days, which is right for *"I am broken"* and
+wrong for *"I do not know this member yet"*.
+
+**Idempotency is a UNIQUE constraint on `stripe_event_id`, not a check.** Stripe
+delivers at least once; two concurrent deliveries of the same event both pass a
+`SELECT`-then-`INSERT` check. The insert happens **first**, and a `23505` returns
+200 `duplicate_ignored`.
+
+**The lifecycle rules are duplicated inside the edge function**, because an edge
+function cannot import from the repo root at deploy time. That duplication is a
+drift risk, so `tests/billing-lifecycle.test.js` asserts the two copies agree
+and fails when they do not.
+
+### What is deliberately not done
+
+**The Free/Pro boundary is not enforced.** Every row in
+`entitlements.js::SURFACES` still carries `enforced: false`. Nothing on the site
+is behind a paywall, and item 6 of the owner's locked order is the sprint that
+changes that.
+
+**No price is set.** `STRIPE_PRICE_ID` is read from the environment and is unset.
+The number is L3.
+
+**`privacy.html` and `disclaimer.html` were not touched.** Draft wording for
+T-054 and the open questions for T-048 are in
+[`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md),
+outside production, per the owner's instruction not to write legal language into
+a live page.
+
+### Two defects found while doing it
+
+**`pricing.html` was serving broken markup.** Line 164 read `<footer</div>` — a
+stray unclosed tag that browsers recover from by opening a bogus `<footer>`
+element wrapping the rest of the page, including the real one. Live on `main`.
+Fixed.
+
+**`account.html` called every beta member "Free".** It derived the tier from
+`profiles.tier` alone, and during beta `tier` is `'free'` for everyone while
+`beta_premium` is what makes them premium. So the account page contradicted the
+rest of the site for every account holder. It now reads `v_my_billing` and
+phrases the state through `billing-lifecycle.js::describe`, so the account page
+and the entitlement cannot disagree. It also stopped promising that "premium
+billing launches soon", which is a date nobody has.
+
+**Attribution note.** As D-006 through D-017.

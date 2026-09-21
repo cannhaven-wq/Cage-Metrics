@@ -199,6 +199,86 @@ what may be sent.
   checkout on requires deleting a named legal blocker — a deliberate act with a
   reviewer attached.
 
+### Billing (`billing_migration.sql`, `billing-lifecycle.js`, 2026-09-21)
+
+**The subscription is built end to end and cannot take a penny.** Nothing here
+is a placeholder: the lifecycle is driven by 39 tests and was verified against
+the real database. What is missing is a Stripe account, a price and three
+secrets — and **turning it on is L3, owner only** (T-066).
+
+**Three locks, in the order of what actually holds:**
+
+1. **`supabase/functions/stripe-checkout` returns 503 `checkout_disabled` with
+   the blockers named, before it authenticates the caller and before it reads
+   any config.** The browser is not a security boundary; this is the real one.
+2. **`pricing.html` ships the Subscribe button `disabled` in the served HTML**,
+   not disabled by JS afterwards. JS can fail to load.
+3. **The page reads that from `entitlements.js::CHECKOUT_BLOCKERS`** and holds no
+   opinion of its own. Do not hardcode an enabled button on a page.
+
+`STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` are unset and
+both functions **fail closed**. That is not a fourth lock — it vanishes the
+moment a key is added for testing.
+
+**Verified against the deployed functions, not just asserted.**
+`.github/workflows/verify-billing-refusal.yml` (manual, `contents: read`, no
+secret) posts to both live endpoints and fails on anything but a refusal,
+including a forged webhook signature returning 200. The agent environment's
+network policy blocks the Supabase host, so it runs in CI or not at all. **When
+checkout is deliberately turned on, that workflow's checkout assertions are part
+of the same pull request** — so turning payments on is a visible diff.
+
+**`billing-lifecycle.js` is the single source of truth for what a Stripe event
+means**, and it is a pure function: no network, no database, no Stripe SDK.
+Edit it, not the webhook.
+
+- **`past_due` keeps access to the end of the period.** One failed card payment
+  must not cut a paying member off while Stripe is still retrying.
+- **`canceled` keeps access to the end of the period, then stops.**
+- **`unpaid` / `incomplete` / `incomplete_expired` / `paused` end access now.**
+- **An unrecognised status ends access.** "Probably fine" is how a lapsed member
+  keeps a subscription forever.
+- **`checkout.session.completed` never grants entitlement** — it only links
+  `stripe_customer_id`. Entitlement comes from subscription events alone, so a
+  completed checkout whose subscription never activates lets nobody in.
+  Invoices are recorded and change nothing.
+
+**The webhook (`supabase/functions/stripe-webhook`).**
+
+- **`verify_jwt` MUST be false** — Stripe sends no Supabase JWT — which makes
+  **the signature check the authentication**. It runs before anything else, and
+  the function refuses outright when the secret is missing.
+- **Status codes are flow control, not sentiment.** Bad signature → **400**. A
+  genuine write failure → **500**, so Stripe retries. Understood but not
+  appliable → **200**, with the reason in `billing_events`. A non-2xx makes
+  Stripe retry with backoff for days: right for *"I am broken"*, wrong for *"I
+  do not know this member yet"*.
+- **Idempotency is a UNIQUE constraint on `stripe_event_id`, and the insert runs
+  first.** Stripe delivers at least once, and two concurrent deliveries of one
+  event both pass a `SELECT`-then-`INSERT` check. `23505` → 200
+  `duplicate_ignored`.
+- **The lifecycle rules are duplicated inside the function** because an edge
+  function cannot import from the repo root at deploy time.
+  `tests/billing-lifecycle.test.js` asserts the two copies agree — **change both
+  or the test fails, which is the point.**
+
+**`billing_events` is `service_role` only** — no grant to `anon` or
+`authenticated`, either direction. It is the audit trail.
+
+**`v_my_billing`** gives the browser its own billing state, one row, and
+deliberately omits every Stripe id. `account.html` reads it and phrases it
+through `billing-lifecycle.js::describe`, so the account page and the entitlement
+cannot disagree. **Do not derive the tier from `profiles.tier` alone** — during
+beta `tier` is `'free'` for every account holder and `beta_premium` is what makes
+them premium, so a page reading only `tier` tells members they are Free while the
+rest of the site treats them as Pro. That bug was live on `account.html`.
+
+**`profiles` grew three columns** (`subscription_status`,
+`stripe_subscription_id`, `cancel_at_period_end`) and **all three are pinned in
+the UPDATE policy** alongside the five that were already there. See the
+`WITH CHECK` note in the Entitlements section: a policy protects exactly the
+columns it names.
+
 ### Data layer (Supabase)
 
 - Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).
@@ -223,6 +303,9 @@ Recurring secrets live as environment variables on the Claude Code environment (
 | `X_API_KEY`, `X_API_SECRET`, `X_ACCESS_TOKEN`, `X_ACCESS_SECRET` | `build/social-post.js` | OAuth 1.0a creds for posting to X. Missing → that platform is skipped. |
 | `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`, `REDDIT_USERNAME`, `REDDIT_PASSWORD`, `REDDIT_SUBREDDIT` | `build/social-post.js` | Script-app creds for posting to Reddit. Missing → that platform is skipped. |
 | `ODDS_API_KEY` | `build/fetch-odds.js` (**active** workflow — see below) | The Odds API. |
+| `STRIPE_SECRET_KEY` | `supabase/functions/stripe-checkout` | **Unset, deliberately.** A Supabase *function* secret, not a GitHub one. Setting it is part of T-066 (L3, owner). Missing → the function returns 503 `not_configured`. |
+| `STRIPE_WEBHOOK_SECRET` | `supabase/functions/stripe-webhook` | **Unset, deliberately.** The signature check *is* the webhook's authentication, so missing → 503 `not_configured` and no event is processed at all. Never make this optional. |
+| `STRIPE_PRICE_ID` | `supabase/functions/stripe-checkout` | **Unset, deliberately.** The price itself is an L3 owner decision — see `CRITICAL_GATES.md` item 7. |
 
 #### `odds.yml` is active, and its cron is not its capture rate
 

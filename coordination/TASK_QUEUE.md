@@ -42,6 +42,7 @@ it died is usually worth more than the task was.
 | T-058 | Card-wide movement sparklines, if ever wanted. `v_fight_chart_series` is **single-fight only** — 22 ms for one literal `fight_id`, 4.6 s for twelve, and a subquery predicate does not push down at all. It needs a materialized view refreshed on capture, or a set-returning function called once per fight. Do not batch the current view | L1 | Claude | proposed |
 | T-061 | Apply the Free/Pro boundary — flip `enforced` per surface and add the matching Postgres gate. **After** Stripe, per the owner's sequence. A surface may only flip once `current_user_is_pro()` guards it server-side | L2 | Claude | queued |
 | T-062 | `email_subscribers` accepts an INSERT from anon with `WITH CHECK (true)` — normal for a signup form, but it means anyone can enqueue arbitrary addresses. Rate limiting or a confirmation step, if subscription spam ever appears. Not a vulnerability, a nuisance | L1 | Claude | proposed |
+| T-066 | **L3, owner only.** Turn checkout on: set a price, connect a Stripe account, set `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID`, remove the blockers from `entitlements.js` and enable the button — in one pull request where all of it shows in the diff. Blocked on T-048 and T-054 | L3 | Owner | blocked |
 | T-055 | Read the funnel once there is a week of traffic: `v_funnel_daily` answers the nine questions in `ANALYTICS_SCHEMA.md`. Do not tune the product on the first day's rows | L1 | Claude | queued |
 | T-049 | Sportsbook jurisdiction labelling — offshore and regulated books are visually identical in the Market Lab per-book table. Needs a neutral classification, and whether to make a jurisdiction claim at all is not ours | L3 | Owner | proposed |
 | T-041 | Decide whether `mybook.html`'s "vs earliest price seen" column should exist at all under Q-14, or whether any per-bet closing-line figure waits on the frozen CLV protocol | L3 | Owner | proposed |
@@ -77,6 +78,9 @@ it died is usually worth more than the task was.
 | T-059 | **P0, FIXED** — the `profiles` UPDATE policy did not pin `is_admin` or `beta_premium`, so any signed-in user could make themselves an admin and read every `email_subscribers` row and all of `fight_odds` | L0 | Claude | done |
 | T-060 | Auth + Pro entitlement architecture: `current_user_is_pro()`, `v_my_entitlement`, `entitlements.js`, the checkout gate. Gates nothing yet, by design | L1 | Claude | done |
 | T-057 | `v_fight_market_quotes` used a multiply-referenced CTE — an optimization fence that blocked predicate pushdown. One fight's series took 3.4 s; now 22 ms | L0 | Claude | done |
+| T-063 | Stripe subscription lifecycle end to end: `billing_migration.sql`, `billing-lifecycle.js`, the `stripe-checkout` and `stripe-webhook` edge functions, 39 offline tests, verified against the real DB. Charges nobody | L1 | Claude | done |
+| T-064 | `pricing.html` presents the plan with the Subscribe button disabled **in the served HTML** and the reason on the page, read from `entitlements.js` rather than hardcoded. Also fixed `<footer</div>`, broken markup live on `main` | L1 | Claude | done |
+| T-065 | `account.html` showed every beta member as "Free" (read `profiles.tier` alone, ignoring `beta_premium`) and promised billing "launches soon". Now reads `v_my_billing` and describes state through the shared state machine | L1 | Claude | done |
 
 ---
 
