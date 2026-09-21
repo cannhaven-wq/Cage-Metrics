@@ -4,7 +4,7 @@
 // Read-only. It opens https://cannonfightlab.com/ like a browser would, waits
 // for the card to render from the production database, and prints a report:
 // the title, the hero, the card header and odds-status line, every fight
-// row's model / market / difference cells, and a handful of yes/no checks
+// row's market cells, and a handful of yes/no checks
 // (no "Value alert", no "no consensus line", no "Edge" cell, no horizontal
 // overflow on a phone). Screenshots go to the directory named by OUT_DIR and
 // are uploaded as a workflow artifact.
@@ -51,18 +51,57 @@ async function shoot(browser, { name, viewport, mobile }) {
       fights: [...document.querySelectorAll('#fightsList .fight')].map(f => ({
         id: f.id,
         head: txt(f.querySelector('.fight-hd')),
-        pick: txt(f.querySelector('.pickbar')),
         cells: [...f.querySelectorAll('.probs .cell')].map(c => txt(c)),
+        marketNote: txt(f.querySelector('.mkt-note')),
       })),
       scripts: [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')),
-      checks: {
-        noValueAlert: !/Value alert/.test(document.body.textContent),
-        noConsensusExcuse: !/no consensus line/.test(document.body.textContent),
-        noEdgeCell: ![...document.querySelectorAll('.probs .cell .t')].some(t => t.textContent.trim() === 'Edge'),
-        noEdgePercent: ![...document.querySelectorAll('.probs .cell .n')].some(n => /^[+-]\d+%$/.test(n.textContent.trim())),
-        everyPickedFightHasMarketCell: [...document.querySelectorAll('#fightsList .fight .probs')].every(p => p.querySelectorAll('.cell').length === 3),
-        noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
-      },
+      checks: (() => {
+        // VISIBLE text only. document.body.textContent includes the contents of
+        // inline <script> tags, and index.html carries a JS comment that
+        // documents the no-opening-line rule. Reading raw textContent made the
+        // guard trip on its own rationale — a false failure on a clean page,
+        // and one that invites someone to "fix" it by deleting the comment.
+        const clone = document.body.cloneNode(true);
+        clone.querySelectorAll('script, style, noscript, template').forEach(n => n.remove());
+        const body = clone.textContent;
+        const rows = [...document.querySelectorAll('#fightsList .fight .probs')];
+        const cellTitles = [...document.querySelectorAll('.probs .cell .t')].map(t => t.textContent.trim());
+        const cellNums = [...document.querySelectorAll('.probs .cell .n')].map(n => n.textContent.trim());
+        return {
+          // --- nothing sells a bet ---------------------------------------
+          noValueAlert: !/Value alert/.test(body),
+          noConsensusExcuse: !/no consensus line/.test(body),
+          noEdgeCell: cellTitles.indexOf('Edge') === -1,
+          noEdgePercent: !cellNums.some(n => /^[+-]\d+%$/.test(n)),
+
+          // --- the forecast is off the product (D-011) -------------------
+          noModelColumn: cellTitles.indexOf('Model') === -1 && cellTitles.indexOf('CFL') === -1,
+          noPickBar: document.querySelectorAll('#fightsList .fight .pickbar').length === 0,
+
+          // --- movement says what it measured (D-012) --------------------
+          // The card shows four market cells: consensus, fair price, market
+          // move, best price. It was three before the repositioning, and this
+          // assertion said 3 — that is what it is pinning.
+          everyFightHasFourMarketCells:
+            rows.length > 0 && rows.every(p => p.querySelectorAll('.cell').length === 4),
+          // "Since open" was a column header until 2026-09-21. CFL has never
+          // observed a sportsbook opener and may not imply that it has.
+          noOpeningLineClaim:
+            !/since open\b/i.test(body) && !/opening line/i.test(body),
+          movementIsLabelledAsACapture:
+            cellTitles.indexOf('Market move') !== -1,
+          // A dash is allowed; a dash with no reason beside it is not.
+          everyMarketNoteExplainsItself:
+            [...document.querySelectorAll('#fightsList .fight')].every(f => {
+              const n = f.querySelector('.mkt-note');
+              const t = n ? n.textContent : '';
+              return !n || /sportsbook|book|capture|comparable|priced/i.test(t);
+            }),
+
+          // --- layout ---------------------------------------------------
+          noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+        };
+      })(),
     };
   });
   report.rendered = rendered;
@@ -72,10 +111,19 @@ async function shoot(browser, { name, viewport, mobile }) {
   await page.screenshot({ path: path.join(OUT, name + '-full.png'), fullPage: true });
   await page.screenshot({ path: path.join(OUT, name + '-top.png') });
   if (rendered) {
-    await page.click('#sortSeg button[data-sort="disagree"]').catch(() => {});
-    await page.waitForTimeout(300);
-    report.sortedByDisagreement = await page.evaluate(() => [...document.querySelectorAll('#fightsList .fight')].map(f => (f.querySelector('.matchup') ? f.querySelector('.matchup').textContent.replace(/\s+/g, ' ').trim() : f.id) + ' | ' + (f.querySelector('.probs .cell:nth-child(3)') ? f.querySelector('.probs .cell:nth-child(3)').textContent.replace(/\s+/g, ' ').trim() : '')));
-    await page.locator('#next').screenshot({ path: path.join(OUT, name + '-card-by-disagreement.png') }).catch(() => {});
+    // The sort was data-sort="disagree" before the repositioning; it is now
+    // "move" (biggest market move) and "spread" (books disagree).
+    for (const sort of ['move', 'spread']) {
+      await page.click('#sortSeg button[data-sort="' + sort + '"]').catch(() => {});
+      await page.waitForTimeout(300);
+      report['sortedBy_' + sort] = await page.evaluate(() =>
+        [...document.querySelectorAll('#fightsList .fight')].map(f => {
+          const m = f.querySelector('.matchup');
+          const cells = [...f.querySelectorAll('.probs .cell')].map(c => c.textContent.replace(/\s+/g, ' ').trim());
+          return (m ? m.textContent.replace(/\s+/g, ' ').trim() : f.id) + ' | ' + cells.join(' | ');
+        }));
+      await page.locator('#next').screenshot({ path: path.join(OUT, name + '-card-by-' + sort + '.png') }).catch(() => {});
+    }
   }
   await ctx.close();
   return report;
