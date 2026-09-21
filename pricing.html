@@ -60,6 +60,28 @@
   }
   .honesty-box strong { color: var(--text-2); }
   .honesty-box a { color: var(--text-2); text-decoration: underline; }
+
+  /* The disabled-checkout block. It is a statement, not a teaser: the button
+     beside it is genuinely inert and the reason is on the page. */
+  .checkout-state {
+    margin-top: 12px;
+    border: 1px solid var(--border-2);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-3);
+    text-align: left;
+  }
+  .checkout-state strong { color: var(--text-2); display: block; margin-bottom: 3px; }
+  #proCheckout[disabled] {
+    display: block;
+    width: 100%;
+    text-align: center;
+    opacity: 0.45;
+    cursor: not-allowed;
+    filter: grayscale(1);
+  }
 </style>
 </head>
 <body>
@@ -113,7 +135,12 @@
         <li><strong>"What changed since you last looked"</strong>, per account</li>
         <li><strong>Deeper prop and historical research</strong></li>
       </ul>
-      <a href="/signup.html" class="btn" id="premiumCta" style="display:block; text-align:center;">Create a free account</a>
+      <button class="btn" id="proCheckout" disabled aria-describedby="checkoutState">Subscribe</button>
+      <div class="checkout-state" id="checkoutState">
+        <strong>Checkout is switched off.</strong>
+        <span id="checkoutReason">Nothing here can take a payment yet.</span>
+      </div>
+      <a href="/signup.html" class="btn ghost" id="premiumCta" style="display:block; text-align:center; margin-top:12px;">Create a free account</a>
       <div style="font-size: 11px; color: var(--text-3); margin-top: 10px; text-align: center; line-height: 1.5;">
         We would rather show you a page that says "not built yet" than a paywall in front of something that is.
       </div>
@@ -161,17 +188,49 @@
 
 </div>
 
-<footer</div>
-
 <footer class="cfl-footer"></footer>
 
 <script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
+<script src="entitlements.js"></script>
 <script>
 cfl.renderNav('pricing');
 cfl.renderFooter();
 
 cfl.track('pricing_view');
+
+// ---------------------------------------------------------------------------
+// The Subscribe button's state is READ from entitlements.js, never written
+// here. If a blocker is ever removed, this page follows; if this page were to
+// hardcode "enabled" it could start asking for money while a blocker stands.
+// The button stays disabled AND fires no event: clicking something inert is
+// not a checkout start, and cfl.EVENTS.checkout_started has to stay truthful
+// for the day it means something.
+// ---------------------------------------------------------------------------
+(function () {
+  const btn = document.getElementById('proCheckout');
+  const reason = document.getElementById('checkoutReason');
+  const may = window.cflEntitlements && cflEntitlements.checkoutMayBeEnabled();
+
+  if (!may) {
+    btn.disabled = true;
+    btn.setAttribute('aria-disabled', 'true');
+    reason.textContent =
+      'There is no subscription to buy yet. Before CFL charges anybody, two ' +
+      'things have to be written and checked by a lawyer: what we do with ' +
+      'third-party analytics, and the terms of the subscription itself — ' +
+      'billing period, renewal, cancellation and refunds. Neither is ours to ' +
+      'write. Until both are done the button above does nothing, and the ' +
+      'server behind it refuses as well.';
+    return;
+  }
+
+  // Reached only once the blockers are genuinely gone. Turning checkout on is
+  // a deliberate change, so this branch stays a no-op until the pull request
+  // that clears the blockers also wires it up.
+  btn.disabled = true;
+  reason.textContent = 'Checkout has not been wired up yet.';
+})();
 
 // If user is already signed in, change the free CTA to "go to your account"
 cflAuth.ready().then(() => {

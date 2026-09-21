@@ -11,6 +11,128 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (f) — The subscription is built, and the front door is bolted
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+PR #43 merged (`97ec5b4`). Item 5 of the monetization sequence — Stripe and
+pricing — is done. [D-018](DECISIONS.md), T-063 / T-064 / T-065.
+
+**CFL cannot take a penny, and that is a control rather than a note.**
+
+### Read this first: what stops the money
+
+Three locks, in the order of what actually holds:
+
+1. **The deployed `stripe-checkout` function returns 503 `checkout_disabled`
+   with T-054 and T-048 named — before it authenticates the caller and before
+   it reads any configuration.** The browser is not a security boundary, so
+   this is the one that matters.
+2. **`pricing.html` ships the Subscribe button `disabled` in the served HTML**,
+   not disabled by JavaScript afterwards. JS can fail to load; a button that is
+   live for 200 ms is a button that can be clicked.
+3. **The page reads that state from `entitlements.js::CHECKOUT_BLOCKERS`** and
+   holds no opinion of its own, so removing a blocker moves the page and
+   hardcoding "enabled" cannot happen quietly.
+
+A fourth, by accident of having nothing: `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are unset and both functions fail
+closed. **Not counted as a lock** — it disappears the moment a key is added for
+testing.
+
+**Verified, not asserted.** `.github/workflows/verify-billing-refusal.yml`
+posts to both live endpoints and fails if either answers with anything but a
+refusal, including a forged webhook signature that must never return 200. It
+needs no secret (the project URL and publishable key are already committed) and
+runs with `contents: read`. The agent environment's network policy blocks the
+Supabase host, so this has to run in CI to run at all.
+
+### The lifecycle
+
+`billing-lifecycle.js` is a pure function — no network, no database, no Stripe
+SDK — and `tests/billing-lifecycle.test.js` drives **signup → checkout →
+activation → renewal → failed payment → cancellation → expiry → lapse →
+resubscription** offline, 39 assertions. Then the same sequence was run against
+the real database in a rolled-back transaction: `free, pro, pro, pro, pro, free,
+free, pro`.
+
+The four rules that are money-shaped:
+
+- **`past_due` keeps access to the end of the period.** One failed card payment
+  must not cut a paying member off while Stripe is still retrying.
+- **`canceled` keeps access to the end of the period, then stops.** They paid
+  for it. They do not get the next one.
+- **`unpaid` / `incomplete` / `incomplete_expired` / `paused` end access now.**
+- **An unrecognised status ends access.** "Probably fine" is how a lapsed
+  member keeps a subscription forever.
+
+**`checkout.session.completed` never grants entitlement** — it only links the
+Stripe customer id. Entitlement comes from subscription events alone.
+
+**Idempotency is a UNIQUE constraint on `stripe_event_id`, not a check**, and the
+insert happens first: Stripe delivers at least once, and two concurrent
+deliveries both pass a `SELECT`-then-`INSERT`. A `23505` returns 200
+`duplicate_ignored`. Status codes are flow control — 400 for a bad signature,
+500 for a real write failure so Stripe retries, 200 for understood-but-not-
+appliable with the reason recorded in `billing_events`.
+
+**The lifecycle rules are duplicated inside the webhook** because an edge
+function cannot import from the repo root at deploy time. A test asserts the two
+copies agree.
+
+### Two defects found on the way
+
+**`pricing.html` was serving broken markup.** `<footer</div>` — a stray unclosed
+tag, live on `main`, which browsers recover from by opening a bogus `<footer>`
+wrapping the rest of the page including the real one.
+
+**`account.html` called every beta member "Free".** It derived the tier from
+`profiles.tier` alone; during beta `tier` is `'free'` for everyone and
+`beta_premium` is what makes them premium, so the account page contradicted the
+rest of the site for **every account holder**. It now reads `v_my_billing` and
+phrases the state through the shared state machine, and it stopped promising that
+billing "launches soon", which is a date nobody has.
+
+### What was deliberately not done
+
+- **The Free/Pro boundary is not enforced.** Every `SURFACES` row still carries
+  `enforced: false`. Nothing is behind a paywall. That is item 6.
+- **No price is set.** `CRITICAL_GATES.md` item 7 makes pricing L3; the range on
+  `pricing.html` is the owner's existing copy, unchanged.
+- **`privacy.html` and `disclaimer.html` untouched.** Draft wording stays in
+  `legal-review/PROPOSED_WORDING.md`, outside production.
+- **T-058 (card-wide charts) not started**, per the owner.
+
+### One thing to watch
+
+The self-referential copy guard has now bitten **five times** in this repo: a
+ban list containing the banned phrase, a `//` comment explaining a ban, a
+shipped `COMMENT ON` string, `document.body.textContent` including inline
+`<script>` text, and this sprint a comment explaining that
+`cfl.EVENTS.checkout_started` is *not* emitted, which tripped the test asserting
+it is not emitted. Every copy assertion in this repo should read **stripped,
+visible text**. It is worth a written convention rather than a sixth discovery.
+
+## Next action
+
+**Owner:** decide whether to run item 6 — the Free/Pro boundary — next, or to
+hold it until T-048 and T-054 clear. Enforcing a paywall before there is any way
+to pay for it means a member can hit a wall with no door in it, which is a worse
+first impression than a free board. The build order the owner locked puts
+enforcement after Stripe, and Stripe is now done, so this is genuinely the next
+item; the question is only whether it lands before or after the legal work.
+
+**ChatGPT:** review `billing-lifecycle.js` against the Stripe status model
+specifically for statuses CFL has not enumerated, and review whether
+`past_due` keeping access to period end is the right call for CFL's price point.
+
+**Nobody:** removes an entry from `CHECKOUT_BLOCKERS` to make something pass.
+T-066 is the L3 that turns checkout on, and it is the owner's.
+
+---
+
 ## 2026-09-21 (e) — Entitlement moves into Postgres, and a P0 came with it
 
 **From:** Claude
@@ -150,102 +272,5 @@ gates behind this PR being merged. Do not start it before then.
 **Owner:** T-054 (privacy must name Plausible) and T-048 (Terms) still gate
 checkout, and checkout is two items away. Draft wording is in
 [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md).
-
----
-
-## 2026-09-21 (c) — The funnel counts, and the monetization sprint has started
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #39 and #40 are **merged and live**. Production was verified serving the
-merged commit (served-bytes MATCH on every file) and the card matched the
-ground-truth table fight for fight. The monetization sprint has begun, in the
-owner's locked order. **T-047 is done**; item 2 is T-046.
-
-### T-047 — funnel analytics, actually emitting
-
-[D-014](DECISIONS.md). Nineteen names, fifteen emitting, two sinks:
-`funnel_events` (ours — `INSERT` only, no `SELECT` for anyone, aggregates via
-`v_funnel_daily`) and the Plausible that was already installed. Names live in
-`cfl.EVENTS`, the DB CHECK constraint and `ANALYTICS_SCHEMA.md`, and
-`tests/analytics-events.test.js` (25 assertions) fails if they drift.
-
-### Three things worth carrying forward
-
-1. **Plausible was already on 25 of 30 root pages.** `ANALYTICS_SCHEMA.md`,
-   written earlier the same day, said no vendor existed. It was wrong and is
-   corrected. Plausible gets the event **name only** — custom properties are
-   paid, and that would be an L3 spend taken by accident.
-2. **`anon` held `UPDATE`/`DELETE` on the new table after applying**, inherited
-   from Supabase's default `public` grants. RLS denied them, so nothing was
-   exploitable, but one layer was doing the work of two. Revoked. **The
-   verification query is what found it — the migration's own prose claimed the
-   right outcome and the database disagreed.** Check grants after every apply.
-3. **`privacy.html` does not name Plausible.** A third-party processor on every
-   page, undisclosed. Gate 9, so it is **T-054** with draft wording in D-014
-   rather than a quiet edit. **This one needs the owner before checkout, not
-   after.**
-
-`CLAUDE.md` also still described `open_p_a` and `openCaveat` as live, which
-D-012 retired hours earlier. Corrected — that file is what a fresh session reads
-first, and a stale entry there is how a retired column comes back.
-
-### Verified
-
-11 Node suites, **270 assertions**; 168 Python tests, 4,339 subtests. All green.
-11 pages rendered at 1440, 768 and 390 px with zero horizontal overflow. The
-database was exercised directly: a well-formed event inserts, an unknown event
-name is rejected by the CHECK constraint, a short `session_id` is rejected, and
-`v_funnel_daily` aggregates. The test row was deleted; the table is empty and
-waiting for real traffic.
-
-### T-046 — every horizon on one rule (added after the entry above)
-
-[D-015](DECISIONS.md). The matched-cohort intersection now lives in exactly one
-place, `v_fight_market_horizon_cohorts`, and three horizons aggregate it:
-`broad_baseline`, `h24`, `lock`. Adding a fourth means adding a row to one CTE.
-
-Two were still on the old footing and **one of them was mine**: the 24-hour
-lookback D-012 itself shipped had exactly the defect D-012 removed from the
-baseline. `v_fight_market_at_lock` was the other — worst disagreement **5.2
-points**, one fight resting on a single book at lock.
-
-**Did values move?** The 24 h horizon: no — worst disagreement 0.5 pts, under the
-display threshold, so nothing rendered changed. Small because a day is short
-enough that yesterday's books are still quoting; **not** small in the case that
-matters, a book pulling a market during fight week. The lock horizon: yes, 5.2
-points, though nothing public renders it. The baseline horizon is unchanged,
-verified fight by fight against the ground-truth table.
-
-`market.js` no longer subtracts one median from another to get the 24 h move —
-it reads `movement_pts_a_24h` from SQL, because subtracting a matched median from
-an all-books median re-mixes cohorts inside the formatter.
-
-### The two checkout blockers, and what was deliberately not done
-
-**T-054** (privacy must name Plausible) and **T-048** (no Terms page) are both
-**checkout blockers**. Draft wording, the facts a drafter needs, and the open
-questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md)
-— **outside production. No legal language was written into any live page, and no
-helpline, regulator or jurisdiction claim was invented.** `disclaimer.html`'s
-existing helpline and Tennessee reference are flagged there for verification
-rather than reused as though verified.
-
-Two things a lawyer must decide that we explicitly did not: whether "anonymous"
-or "pseudonymised" is correct for the funnel rows given a per-session id exists,
-and whether a retention period must be stated — no prune job exists, so a stated
-period needs one built to match.
-
-### Next action
-
-**Movement history charts**, once the PR carrying T-047 + T-046 is merged — the
-owner's instruction is not to start them before that. They now have a clean
-foundation: every horizon reads `v_fight_market_horizons`, so a chart that plots
-a series across horizons cannot mix cohorts unless it goes around the view.
-
-**Owner:** T-054 and T-048 are yours and they gate checkout, not launch. T-049
-still gates affiliate links.
 
 ---

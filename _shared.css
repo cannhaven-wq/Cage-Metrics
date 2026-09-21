@@ -996,17 +996,23 @@ footer.cfl-footer {
   padding: 32px;
 }
 .pricing-tier.premium {
-  border-color: var(--red);
+  /* Deliberately not the accent colour: highlighting the column nobody can buy
+     reads as a push toward it. */
+  border-color: var(--border-2);
   position: relative;
 }
+/* Was 'RECOMMENDED'. CFL Pro is not for sale, so recommending it was a tout
+   badge on something nobody can buy - see COPY_STYLE.md. The label now says
+   what the column is. */
 .pricing-tier.premium::before {
-  content: 'RECOMMENDED';
+  content: 'NOT BUILT YET';
   position: absolute;
   top: -10px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--red);
-  color: #fff;
+  background: var(--bg-2);
+  border: 1px solid var(--border-2);
+  color: var(--text-3);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.15em;

@@ -103,14 +103,18 @@
       <div class="label">Current tier</div>
       <div class="value" id="userTier">—</div>
     </div>
+    <div class="account-row" id="statusRow" style="display:none">
+      <div class="label">Billing state</div>
+      <div class="value" id="billingStatus">—</div>
+    </div>
     <div class="account-row" id="expiryRow" style="display:none">
-      <div class="label">Premium until</div>
+      <div class="label" id="expiryLabel">Access until</div>
       <div class="value" id="userExpiry">—</div>
     </div>
-    <p style="color: var(--text-2); font-size: 13px; margin-top: 14px; line-height: 1.5">
-      Premium tier unlocks the full matchup and market detail, deeper cardio analysis, and historical
-      verdict tracking. Premium billing launches soon &mdash;
-      <a href="/pricing.html" style="color: var(--red); text-decoration: none">see what's included</a>.
+    <p id="billingBody" style="color: var(--text-2); font-size: 13px; margin-top: 14px; line-height: 1.6">—</p>
+    <p id="billingNoCharge" style="color: var(--text-3); font-size: 12px; margin-top: 10px; line-height: 1.6">
+      No card is on file and nothing has been charged. CFL cannot take a payment
+      today — <a href="/pricing.html" style="color: var(--text-2)">what a paid tier would be for</a>.
     </p>
   </div>
 
@@ -140,6 +144,7 @@
 
 <script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
+<script src="billing-lifecycle.js"></script>
 <script>
 cfl.renderNav('account');
 cfl.renderFooter();
@@ -150,6 +155,70 @@ function showMessage(html, type) {
   msgArea.innerHTML = `<div class="auth-${type}">${html}</div>`;
   // Auto-clear after 6s
   setTimeout(() => { if (msgArea.innerHTML.includes(html)) msgArea.innerHTML = ''; }, 6000);
+}
+
+// ---------------------------------------------------------------------------
+// Billing state. Read from v_my_billing, described by billing-lifecycle.js.
+//
+// Two things this deliberately does NOT do. It does not derive the tier from
+// profiles.tier alone: during beta every account holder is premium via
+// beta_premium, and a page that reads only `tier` tells a member they are Free
+// while the rest of the site treats them as Pro. And it does not compute what
+// a status means — that lives in one tested state machine shared with the
+// Stripe webhook, so the account page and the entitlement can never disagree.
+// If the view cannot be read we say the plain true thing rather than guess.
+// ---------------------------------------------------------------------------
+async function paintBilling() {
+  const tierEl    = document.getElementById('userTier');
+  const statusRow = document.getElementById('statusRow');
+  const expiryRow = document.getElementById('expiryRow');
+  const bodyEl    = document.getElementById('billingBody');
+  const noCharge  = document.getElementById('billingNoCharge');
+
+  let state = null;
+  try {
+    const { data, error } = await cflSupabase
+      .from('v_my_billing')
+      .select('entitlement, subscription_status, cancel_at_period_end, current_period_end, has_billing_account, is_beta')
+      .maybeSingle();
+    if (!error) state = data;
+  } catch (e) { /* fall through to the profile-only path below */ }
+
+  // Fallback: the entitlement rule as _auth.js already applies it.
+  const isPro = state
+    ? state.entitlement === 'pro'
+    : cflAuth.getTier() === 'premium';
+
+  tierEl.innerHTML = isPro
+    ? '<span class="cfl-tier-badge premium">Pro</span>'
+    : '<span class="cfl-tier-badge free">Free</span>';
+
+  if (!state) {
+    bodyEl.textContent = 'We could not read your billing state just now. '
+      + 'Your access is unchanged and nothing has been charged.';
+    return;
+  }
+
+  const said = cflBilling.describe(state);
+  statusRow.style.display = 'flex';
+  document.getElementById('billingStatus').textContent = said.head;
+  bodyEl.textContent = said.body;
+
+  if (state.current_period_end) {
+    expiryRow.style.display = 'flex';
+    document.getElementById('expiryLabel').textContent =
+      state.cancel_at_period_end ? 'Access ends' : 'Access until';
+    document.getElementById('userExpiry').textContent =
+      new Date(state.current_period_end).toLocaleDateString('en-US', {
+        year: 'numeric', month: 'long', day: 'numeric'
+      });
+  }
+
+  // Only claim "no card on file" when that is actually true.
+  if (state.has_billing_account) {
+    noCharge.textContent = 'Billing is handled by Stripe. '
+      + 'CFL never sees or stores your card details.';
+  }
 }
 
 async function paint() {
@@ -170,19 +239,7 @@ async function paint() {
       year: 'numeric', month: 'long', day: 'numeric'
     }) : '—';
 
-  const tier = profile?.tier || 'free';
-  const tierLabel = tier === 'premium'
-    ? '<span class="cfl-tier-badge premium">Premium</span>'
-    : '<span class="cfl-tier-badge free">Free</span>';
-  document.getElementById('userTier').innerHTML = tierLabel;
-
-  if (tier === 'premium' && profile?.tier_expires_at) {
-    document.getElementById('expiryRow').style.display = 'flex';
-    document.getElementById('userExpiry').textContent =
-      new Date(profile.tier_expires_at).toLocaleDateString('en-US', {
-        year: 'numeric', month: 'long', day: 'numeric'
-      });
-  }
+  await paintBilling();
 
   document.getElementById('loadingState').style.display = 'none';
   document.getElementById('accountContent').style.display = 'block';

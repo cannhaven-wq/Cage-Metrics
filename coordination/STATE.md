@@ -90,11 +90,32 @@ Git history is the audit trail. These files are the working surface.
 
 ### Monetization sprint — started 2026-09-21
 
-**Items 1–4 done.** Entitlement is decided in Postgres
+**Items 1–5 done.** Item 5, Stripe, is built end to end and **cannot take a
+penny** ([D-018](DECISIONS.md)). The whole lifecycle — signup, checkout,
+webhook, activation, renewal, cancellation, expiry, failed payment, lapse,
+resubscription — is driven by 39 offline tests and was verified against the real
+database in a rolled-back transaction. No Stripe account exists, no price is
+set, and all three `STRIPE_*` environment variables are unset, so both edge
+functions fail closed.
+
+**Three locks on the front door, in order of what actually holds:** the deployed
+`stripe-checkout` function returns **503 `checkout_disabled` with T-054 and
+T-048 named, before it authenticates the caller and before it reads any
+config**; `pricing.html` ships the Subscribe button `disabled` **in the served
+HTML**, not disabled by JS afterwards; and the page reads that state from
+`entitlements.js::CHECKOUT_BLOCKERS` rather than holding an opinion of its own.
+`.github/workflows/verify-billing-refusal.yml` posts to both live endpoints and
+fails if either answers with anything but a refusal — a forged webhook signature
+returning 200 is a failure. The agent environment's network policy blocks the
+Supabase host, so that check runs in CI or not at all.
+
+**Turning it on is [T-066](TASK_QUEUE.md) and is L3, owner only** — a price, a
+Stripe account, three secrets, the blockers removed and the button enabled, in
+one pull request where all of it shows in the diff.
+
+**Item 4 done.** Entitlement is decided in Postgres
 ([D-017](DECISIONS.md)): `current_user_is_pro()` is the only thing that may
-gate a Pro surface, and **nothing is gated yet** by design. **Checkout is
-blocked in code** — `entitlements.js::CHECKOUT_BLOCKERS` names T-054 and T-048
-and a test fails if a checkout entry point ships while they stand.
+gate a Pro surface, and **nothing is gated yet** by design.
 
 **A P0 was found and closed on the way**: the `profiles` UPDATE policy did not
 pin `is_admin`, so any signed-in user could make themselves an admin and read
@@ -103,8 +124,8 @@ sweep found no second instance.
 
 **Items 1–3 done.** T-047 analytics ([D-014](DECISIONS.md)), T-046
 matched-cohort everywhere ([D-015](DECISIONS.md)), movement charts
-([D-016](DECISIONS.md)). Next is auth + Pro entitlements, then Stripe, then
-Free-vs-Pro enforcement, then watchlist/alerts.
+([D-016](DECISIONS.md)). **Next is item 6, the Free-vs-Pro boundary**, then
+watchlist/alerts.
 
 **The chart rule:** one fixed cohort for the whole window, asserted in JS and
 not trusted from SQL; stepped, never interpolated; refused below three books;
@@ -161,9 +182,22 @@ because a research site does not delete a failed test. `props.html` and the
 Brief's subject line were two that got through the first pass
 ([D-013](DECISIONS.md)).
 
-Written, not yet built: [`PRODUCT_BOUNDARY.md`](../PRODUCT_BOUNDARY.md) (Free
-vs Pro) and [`ANALYTICS_SCHEMA.md`](../ANALYTICS_SCHEMA.md) (nineteen funnel
-events, T-047). No paid tier exists and no vendor has been added.
+Written, not yet enforced: [`PRODUCT_BOUNDARY.md`](../PRODUCT_BOUNDARY.md) (Free
+vs Pro) — every row in `entitlements.js::SURFACES` still carries
+`enforced: false`, so **nothing on the site is behind a paywall**.
+[`ANALYTICS_SCHEMA.md`](../ANALYTICS_SCHEMA.md) holds the nineteen funnel events
+(T-047). **No paid tier is on sale, no price is set and no Stripe account is
+connected**; the subscription machinery exists and is bolted shut
+([D-018](DECISIONS.md)). No analytics vendor has been added beyond the Plausible
+that was already installed.
+
+Two member-facing billing surfaces changed with it, and both had a defect worth
+naming. `pricing.html` was serving `<footer</div>` — broken markup live on
+`main` — and `account.html` showed **every beta account holder as "Free"**,
+because it read `profiles.tier` alone and during beta `tier` is `'free'` for
+everyone while `beta_premium` is what makes them premium. It now reads
+`v_my_billing` and phrases the state through `billing-lifecycle.js::describe`,
+so the account page and the entitlement cannot disagree.
 
 ### Research
 
