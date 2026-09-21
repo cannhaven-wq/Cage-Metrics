@@ -11,6 +11,93 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (f) — The matchup audit, and two ideas it killed
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+The owner's new product direction — CFL's moat is proprietary matchup analysis,
+not predictions — came with an explicit instruction: **audit before building**,
+because "I'd rather CFL have six genuinely useful proprietary analytics than 50
+arbitrary scores." The audit is done. **Nothing was built.** Every query was a
+`SELECT`; no migration applied, no table created, no page touched.
+
+- [`MATCHUP_ANALYTICS_SPEC.md`](../MATCHUP_ANALYTICS_SPEC.md) — the A–E
+  classification, the metric formulas, the Fight Lab redesign, the first build.
+- [`research/matchup/AUDIT_2026-09-21.md`](../research/matchup/AUDIT_2026-09-21.md)
+  — the measurements, with the SQL that produced each one.
+
+### Read this first: the headline feature, as specified, is noise
+
+The direction put round-by-round cardio high on the list. Split-half
+reliability says the **percentage** form does not survive:
+
+| metric | reliability (n≥6 fights) |
+|---|---|
+| R3/R1 decline **ratio** | **0.05** |
+| decline as **absolute drop** (strikes/min) | 0.30 |
+| round output **level** | 0.56 |
+
+A fighter's "output drops 36% by round three" tells you almost nothing about
+their next fight. The same drop in strikes per minute is modestly real. So the
+feature lives — the parameterisation dies. Dividing by a small, noisy R1
+denominator was the whole problem.
+
+**This contradicts a live surface.** `v_fighter_consistency`'s
+`tireless/steady/tapers/fades/collapses` tiers are computed from that exact
+ratio and `fighter.html` renders them. `CLAUDE.md` already says cardio does not
+predict winners; this is narrower — the tier does not reliably predict the
+fighter's **own next cardio performance**. Published claim, unreproducible
+measurement, so it is gate #8 and it is yours: **T-066, L3.** Nothing edited.
+
+### The one that worked
+
+Opponent-adjusted striking is real and it is the P0. Adjusting a fighter's
+prior output by what their opponents normally give up predicts next-fight
+output at **0.3779** vs **0.2926** raw, n=6,902 held-out fighter-fights, all
+strictly point-in-time. It beats *both* its inputs, and it wins in all four
+era × fight-length subgroups (best: 0.36 → 0.47 for long modern fights).
+
+### The one that didn't
+
+The identical method on wrestling made prediction **worse** (0.3493 raw →
+0.3466 adjusted), in two separate formulations. Takedown-defence % alone is
+weak (0.115). Recommendation: **no opponent-adjusted wrestling composite** —
+show his volume and their concession rate as two numbers that never merge.
+
+### Two constraints now on the record
+
+**The median UFC fighter here has four fights.** Requiring 3+ prior fights on
+both sides covers 48% of fights since 2010; on the next card, 10 of 22 fighter
+slots won't support the round-level section. "Not enough fights to say" is a
+designed state, not an error path.
+
+**CFL's real market history is 231 fights deep**, since 2026-05-30. The other
+7,681 fights carry single-book historical odds whose `captured_at` is the Unix
+epoch — a sentinel, not a time, on 30,724 rows. Comparables filtered on market
+*price* are feasible now; on market *movement*, not for a year.
+
+### Sequencing
+
+This does not jump the queue. The owner's locked order stands and the matchup
+work sits **after Stripe**, as T-063 to T-068.
+
+## Next action
+
+**Owner:** T-066 is the only thing needing you — the cardio tiers are a
+published claim resting on a 0.05-reliability measurement. The likely fix is
+reparameterisation to the absolute drop with shrinkage and a visible `n`, plus
+a dated correction rather than a silent rewrite; deletion is not required.
+
+**ChatGPT:** review the CFL-OAS v1 formula and validation design in
+`MATCHUP_ANALYTICS_SPEC.md` §4 and `research/matchup/AUDIT_2026-09-21.md` T-3
+before T-063 is built — specifically the shrinkage constant (measured but not
+yet fitted), division/era normalisation, and whether one round of opponent
+adjustment is enough.
+
+---
+
 ## 2026-09-21 (e) — Entitlement moves into Postgres, and a P0 came with it
 
 **From:** Claude
@@ -150,102 +237,5 @@ gates behind this PR being merged. Do not start it before then.
 **Owner:** T-054 (privacy must name Plausible) and T-048 (Terms) still gate
 checkout, and checkout is two items away. Draft wording is in
 [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md).
-
----
-
-## 2026-09-21 (c) — The funnel counts, and the monetization sprint has started
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #39 and #40 are **merged and live**. Production was verified serving the
-merged commit (served-bytes MATCH on every file) and the card matched the
-ground-truth table fight for fight. The monetization sprint has begun, in the
-owner's locked order. **T-047 is done**; item 2 is T-046.
-
-### T-047 — funnel analytics, actually emitting
-
-[D-014](DECISIONS.md). Nineteen names, fifteen emitting, two sinks:
-`funnel_events` (ours — `INSERT` only, no `SELECT` for anyone, aggregates via
-`v_funnel_daily`) and the Plausible that was already installed. Names live in
-`cfl.EVENTS`, the DB CHECK constraint and `ANALYTICS_SCHEMA.md`, and
-`tests/analytics-events.test.js` (25 assertions) fails if they drift.
-
-### Three things worth carrying forward
-
-1. **Plausible was already on 25 of 30 root pages.** `ANALYTICS_SCHEMA.md`,
-   written earlier the same day, said no vendor existed. It was wrong and is
-   corrected. Plausible gets the event **name only** — custom properties are
-   paid, and that would be an L3 spend taken by accident.
-2. **`anon` held `UPDATE`/`DELETE` on the new table after applying**, inherited
-   from Supabase's default `public` grants. RLS denied them, so nothing was
-   exploitable, but one layer was doing the work of two. Revoked. **The
-   verification query is what found it — the migration's own prose claimed the
-   right outcome and the database disagreed.** Check grants after every apply.
-3. **`privacy.html` does not name Plausible.** A third-party processor on every
-   page, undisclosed. Gate 9, so it is **T-054** with draft wording in D-014
-   rather than a quiet edit. **This one needs the owner before checkout, not
-   after.**
-
-`CLAUDE.md` also still described `open_p_a` and `openCaveat` as live, which
-D-012 retired hours earlier. Corrected — that file is what a fresh session reads
-first, and a stale entry there is how a retired column comes back.
-
-### Verified
-
-11 Node suites, **270 assertions**; 168 Python tests, 4,339 subtests. All green.
-11 pages rendered at 1440, 768 and 390 px with zero horizontal overflow. The
-database was exercised directly: a well-formed event inserts, an unknown event
-name is rejected by the CHECK constraint, a short `session_id` is rejected, and
-`v_funnel_daily` aggregates. The test row was deleted; the table is empty and
-waiting for real traffic.
-
-### T-046 — every horizon on one rule (added after the entry above)
-
-[D-015](DECISIONS.md). The matched-cohort intersection now lives in exactly one
-place, `v_fight_market_horizon_cohorts`, and three horizons aggregate it:
-`broad_baseline`, `h24`, `lock`. Adding a fourth means adding a row to one CTE.
-
-Two were still on the old footing and **one of them was mine**: the 24-hour
-lookback D-012 itself shipped had exactly the defect D-012 removed from the
-baseline. `v_fight_market_at_lock` was the other — worst disagreement **5.2
-points**, one fight resting on a single book at lock.
-
-**Did values move?** The 24 h horizon: no — worst disagreement 0.5 pts, under the
-display threshold, so nothing rendered changed. Small because a day is short
-enough that yesterday's books are still quoting; **not** small in the case that
-matters, a book pulling a market during fight week. The lock horizon: yes, 5.2
-points, though nothing public renders it. The baseline horizon is unchanged,
-verified fight by fight against the ground-truth table.
-
-`market.js` no longer subtracts one median from another to get the 24 h move —
-it reads `movement_pts_a_24h` from SQL, because subtracting a matched median from
-an all-books median re-mixes cohorts inside the formatter.
-
-### The two checkout blockers, and what was deliberately not done
-
-**T-054** (privacy must name Plausible) and **T-048** (no Terms page) are both
-**checkout blockers**. Draft wording, the facts a drafter needs, and the open
-questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md)
-— **outside production. No legal language was written into any live page, and no
-helpline, regulator or jurisdiction claim was invented.** `disclaimer.html`'s
-existing helpline and Tennessee reference are flagged there for verification
-rather than reused as though verified.
-
-Two things a lawyer must decide that we explicitly did not: whether "anonymous"
-or "pseudonymised" is correct for the funnel rows given a per-session id exists,
-and whether a retention period must be stated — no prune job exists, so a stated
-period needs one built to match.
-
-### Next action
-
-**Movement history charts**, once the PR carrying T-047 + T-046 is merged — the
-owner's instruction is not to start them before that. They now have a clean
-foundation: every horizon reads `v_fight_market_horizons`, so a chart that plots
-a series across horizons cannot mix cohorts unless it goes around the view.
-
-**Owner:** T-054 and T-048 are yours and they gate checkout, not launch. T-049
-still gates affiliate links.
 
 ---

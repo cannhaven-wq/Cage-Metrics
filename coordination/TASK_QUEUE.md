@@ -45,6 +45,12 @@ it died is usually worth more than the task was.
 | T-055 | Read the funnel once there is a week of traffic: `v_funnel_daily` answers the nine questions in `ANALYTICS_SCHEMA.md`. Do not tune the product on the first day's rows | L1 | Claude | queued |
 | T-049 | Sportsbook jurisdiction labelling — offshore and regulated books are visually identical in the Market Lab per-book table. Needs a neutral classification, and whether to make a jurisdiction claim at all is not ours | L3 | Owner | proposed |
 | T-041 | Decide whether `mybook.html`'s "vs earliest price seen" column should exist at all under Q-14, or whether any per-bet closing-line figure waits on the frozen CLV protocol | L3 | Owner | proposed |
+| T-063 | **Matchup P0.** Build `v_fighter_striking_pit` (point-in-time striking) and CFL-OAS v1, fit the shrinkage constant, publish the validation to `research/matchup/` before any number reaches a page. Spec: [`MATCHUP_ANALYTICS_SPEC.md`](../MATCHUP_ANALYTICS_SPEC.md) §4, §9. **After Stripe**, per the owner's sequence | L1 | Claude | proposed |
+| T-064 | Opponent Quality Faced (CFL-OQF v1) — the "against whom?" disclosure that falls out of the OAS view. Ships as a statement plus the opponent list, never as a rating | L1 | Claude | proposed |
+| T-065 | Reparameterise late-round decline from the R3/R1 **ratio** (split-half reliability 0.05) to the absolute drop in strikes per minute (0.30), fit shrinkage, require 4+ eligible fights and a visible `n` | L1 | Claude | proposed |
+| T-066 | **The cardio tiers rest on a measurement that does not reproduce.** `v_fighter_consistency`'s `tireless/steady/tapers/fades/collapses` are built on the R3+/R1 ratio, reliability **0.05**, and `fighter.html` renders them. Retiring or reparameterising a published claim is gate #8. Evidence: [`research/matchup/AUDIT_2026-09-21.md`](../research/matchup/AUDIT_2026-09-21.md) T-5/T-6. Nothing edited | L3 | Owner | proposed |
+| T-067 | Fight Lab progressive-disclosure redesign — "What stands out" capped at five generated statements, every section collapsed by default, thin data as a designed state. Copy stays in `fight-insights.js` | L2 | Claude | proposed |
+| T-068 | Historical comparable matchups on the 7,681-fight historical odds set, with the matching definition **frozen and dated before any outcome is examined**. Movement-based comparables are not feasible — 231 fights captured | L2 | Claude | proposed |
 
 ## Closed
 

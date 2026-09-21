@@ -88,6 +88,40 @@ Git history is the audit trail. These files are the working surface.
 
 ## Where the project is
 
+### Matchup analytics — audit delivered 2026-09-21, nothing built
+
+The owner asked for an analytics gap audit **before** any matchup features were
+written, to avoid "30 impressive-looking metrics that are statistically weak".
+It is done and it is read-only: [`MATCHUP_ANALYTICS_SPEC.md`](../MATCHUP_ANALYTICS_SPEC.md)
+with the evidence in [`research/matchup/AUDIT_2026-09-21.md`](../research/matchup/AUDIT_2026-09-21.md).
+**No migration was applied, no table created, no page changed.** Queued as
+T-063 to T-068, **after Stripe** — the locked order below is unchanged.
+
+Three measurements decided the build order, two of them negative:
+
+- **Opponent-adjusted striking works.** Predicting a fighter's next-fight output
+  improves from 0.2926 to **0.3779** correlation across 6,902 held-out
+  fighter-fights, in every era and fight-length subgroup. It beats both its own
+  inputs. This is the P0 (T-063).
+- **Opponent-adjusted wrestling does not.** The same method made prediction
+  slightly *worse* (0.3493 → 0.3466) in two formulations. Rejected as a
+  composite; the two numbers ship side by side instead.
+- **Decline as a percentage is noise.** Split-half reliability of the R3/R1
+  ratio is **0.05**. As an absolute drop in strikes per minute it is 0.30, and
+  round output *level* is 0.56. The metric survives; the percentage does not.
+
+**That last one reaches a live surface.** `v_fighter_consistency`'s cardio tiers
+are built on the R3+/R1 ratio and `fighter.html` renders them, so two fighters
+on different tiers are at n=4 mostly separated by noise. Changing a published
+claim is gate #8 — **T-066, L3, owner's call.** Nothing has been edited.
+
+Two constraints now on the record: the **median UFC fighter here has four
+fights** (so shrinkage and a visible `n` are mandatory, and "not enough fights
+to say" is a designed state, not an error), and **CFL's real market capture is
+231 fights deep since 2026-05-30** — the other 7,681 fights carry single-book
+historical odds with a 1970 sentinel timestamp that must never be rendered or
+differenced.
+
 ### Monetization sprint — started 2026-09-21
 
 **Items 1–4 done.** Entitlement is decided in Postgres
