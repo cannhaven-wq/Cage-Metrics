@@ -11,6 +11,87 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (i) — The alert delivery test, and the email CFL has never sent
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-09-21
+
+PR #46 merged (`163f7e3`). The controlled delivery test ran against the real
+database on `main`. **Nine of ten checks pass. The tenth cannot pass yet, and
+the reason is bigger than this feature.**
+
+### The blocker: the mailer has never been configured
+
+**`RESEND_API_KEY` is not set on this repository.** The alert sender therefore
+falls back to dry run and no email can leave. `RESEND_FROM` is unset too.
+
+Checking `digest.yml` shows the same — `RESEND_API_KEY:` and `RESEND_FROM:`
+both empty in its run environment. **No email has ever been sent from this
+repo, the Cannon Card Brief included.** The Brief also reports
+`0 active subscribers`, so it had nothing to send in any case, but the mailer
+itself was never wired up and nothing ever said so out loud: `send-digest.js`
+falls back to dry run silently by design.
+
+The alert sender now prints which kind of dry run it is (`no RESEND_API_KEY —
+the mailer is not configured` vs `ALERTS_DRY_RUN was set`) and whether
+`RESEND_FROM` was set or defaulted. Presence only; no secret value is printed.
+"Nothing was sent" had two very different causes and read identically.
+
+### What did pass, against live data
+
+| check | result |
+|---|---|
+| Dispatch connects to the real DB | **pass** — service key works |
+| Candidate selection and refusals | **pass** — fired on a real 7.0-pt move over 3 matched books |
+| Delivery row recorded | **pass** — `alert:5:seq:1`, payload snapshot matches the market exactly |
+| Alert armed | **pass** — `fire_count=1`, `armed_value=7.002`, `fp=cd70918d88…` |
+| `alert_fired` funnel event | **pass** — `srv:alerts`, `kind=market_move`, `seq=1` |
+| Duplicate re-run does not resend | **pass** — `1 already_fired`, still 1 delivery / 1 event |
+| **Re-arm across a cohort change** | **pass** — see below |
+| Preference links resolve | **pass** — all three land on real pages; opt-out at `#prefs` |
+| Cleanup | **pass** — alert and watchlist row gone, delivery row kept with `alert_id` NULL |
+| **Exactly one email arrives** | **BLOCKED — no mailer** |
+
+**The re-arm check is the one worth reading.** `armed_value` was forced to 0
+against a live 7.0-point move — which clears the 3-point threshold twice over —
+and only the cohort fingerprint was made not to match. The run reported
+`0 fired · 1 re-baselined`, reason `cohort_changed_rebaselined`, and silently
+restored the real fingerprint and value. The refusal that matters most is the
+one that held under a condition designed to make it fire.
+
+### A gap the test found
+
+The alert email's primary call to action is *"Open this fight in Fight Lab"*,
+and only `watchlist.html` handled `?src=alert`. **The click most likely to
+happen was the one not counted**, so `alert_clicked` would have read as though
+nobody engaged with alerts people were in fact opening. Fixed; the link now
+carries `&kind` so the event can tell the two alert types apart. Still no
+identifier of any kind in the URL.
+
+### Still not settled, and not mine
+
+**There is no one-click unsubscribe in the alert email.** It links to the
+preferences panel, where `Alert emails: Off` is a working opt-out. For mail a
+member explicitly configured, that is defensible as transactional — but whether
+it needs a true one-click unsubscribe is a legal question, and it belongs with
+T-048 rather than with me inventing a requirement.
+
+## Next action
+
+**Owner:** add `RESEND_API_KEY` and `RESEND_FROM` as repository secrets, with a
+Resend-verified sender domain. Then say so and the exact sequence above re-runs
+with `dry_run: false` for you to confirm receipt. **Until that passes the
+schedule stays off (T-073) and the feature is not production-ready.**
+
+Note the clock: the test fight sat at ~530 minutes against a 1440-minute
+movement ceiling, so it stops being a valid candidate roughly 15 hours after
+this entry. After that the re-test needs a fresh capture or a different fight.
+
+**Nobody:** turns the cron back on before that test passes.
+
+---
+
 ## 2026-09-21 (h) — Watchlists and alerts, and an alert that would rather say nothing
 
 **From:** Claude
@@ -187,127 +268,5 @@ payment gates now.
 
 **Nobody:** removes a blocker to make something pass, or sets a price to unblock
 themselves.
-
----
-
-## 2026-09-21 (f) — The subscription is built, and the front door is bolted
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #43 merged (`97ec5b4`). Item 5 of the monetization sequence — Stripe and
-pricing — is done. [D-018](DECISIONS.md), T-063 / T-064 / T-065.
-
-**CFL cannot take a penny, and that is a control rather than a note.**
-
-### Read this first: what stops the money
-
-Three locks, in the order of what actually holds:
-
-1. **The deployed `stripe-checkout` function returns 503 `checkout_disabled`
-   with T-054 and T-048 named — before it authenticates the caller and before
-   it reads any configuration.** The browser is not a security boundary, so
-   this is the one that matters.
-2. **`pricing.html` ships the Subscribe button `disabled` in the served HTML**,
-   not disabled by JavaScript afterwards. JS can fail to load; a button that is
-   live for 200 ms is a button that can be clicked.
-3. **The page reads that state from `entitlements.js::CHECKOUT_BLOCKERS`** and
-   holds no opinion of its own, so removing a blocker moves the page and
-   hardcoding "enabled" cannot happen quietly.
-
-A fourth, by accident of having nothing: `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are unset and both functions fail
-closed. **Not counted as a lock** — it disappears the moment a key is added for
-testing.
-
-**Verified, not asserted.** `.github/workflows/verify-billing-refusal.yml`
-posts to both live endpoints and fails if either answers with anything but a
-refusal, including a forged webhook signature that must never return 200. It
-needs no secret (the project URL and publishable key are already committed) and
-runs with `contents: read`. The agent environment's network policy blocks the
-Supabase host, so this has to run in CI to run at all.
-
-### The lifecycle
-
-`billing-lifecycle.js` is a pure function — no network, no database, no Stripe
-SDK — and `tests/billing-lifecycle.test.js` drives **signup → checkout →
-activation → renewal → failed payment → cancellation → expiry → lapse →
-resubscription** offline, 39 assertions. Then the same sequence was run against
-the real database in a rolled-back transaction: `free, pro, pro, pro, pro, free,
-free, pro`.
-
-The four rules that are money-shaped:
-
-- **`past_due` keeps access to the end of the period.** One failed card payment
-  must not cut a paying member off while Stripe is still retrying.
-- **`canceled` keeps access to the end of the period, then stops.** They paid
-  for it. They do not get the next one.
-- **`unpaid` / `incomplete` / `incomplete_expired` / `paused` end access now.**
-- **An unrecognised status ends access.** "Probably fine" is how a lapsed
-  member keeps a subscription forever.
-
-**`checkout.session.completed` never grants entitlement** — it only links the
-Stripe customer id. Entitlement comes from subscription events alone.
-
-**Idempotency is a UNIQUE constraint on `stripe_event_id`, not a check**, and the
-insert happens first: Stripe delivers at least once, and two concurrent
-deliveries both pass a `SELECT`-then-`INSERT`. A `23505` returns 200
-`duplicate_ignored`. Status codes are flow control — 400 for a bad signature,
-500 for a real write failure so Stripe retries, 200 for understood-but-not-
-appliable with the reason recorded in `billing_events`.
-
-**The lifecycle rules are duplicated inside the webhook** because an edge
-function cannot import from the repo root at deploy time. A test asserts the two
-copies agree.
-
-### Two defects found on the way
-
-**`pricing.html` was serving broken markup.** `<footer</div>` — a stray unclosed
-tag, live on `main`, which browsers recover from by opening a bogus `<footer>`
-wrapping the rest of the page including the real one.
-
-**`account.html` called every beta member "Free".** It derived the tier from
-`profiles.tier` alone; during beta `tier` is `'free'` for everyone and
-`beta_premium` is what makes them premium, so the account page contradicted the
-rest of the site for **every account holder**. It now reads `v_my_billing` and
-phrases the state through the shared state machine, and it stopped promising that
-billing "launches soon", which is a date nobody has.
-
-### What was deliberately not done
-
-- **The Free/Pro boundary is not enforced.** Every `SURFACES` row still carries
-  `enforced: false`. Nothing is behind a paywall. That is item 6.
-- **No price is set.** `CRITICAL_GATES.md` item 7 makes pricing L3; the range on
-  `pricing.html` is the owner's existing copy, unchanged.
-- **`privacy.html` and `disclaimer.html` untouched.** Draft wording stays in
-  `legal-review/PROPOSED_WORDING.md`, outside production.
-- **T-058 (card-wide charts) not started**, per the owner.
-
-### One thing to watch
-
-The self-referential copy guard has now bitten **five times** in this repo: a
-ban list containing the banned phrase, a `//` comment explaining a ban, a
-shipped `COMMENT ON` string, `document.body.textContent` including inline
-`<script>` text, and this sprint a comment explaining that
-`cfl.EVENTS.checkout_started` is *not* emitted, which tripped the test asserting
-it is not emitted. Every copy assertion in this repo should read **stripped,
-visible text**. It is worth a written convention rather than a sixth discovery.
-
-## Next action
-
-**Owner:** decide whether to run item 6 — the Free/Pro boundary — next, or to
-hold it until T-048 and T-054 clear. Enforcing a paywall before there is any way
-to pay for it means a member can hit a wall with no door in it, which is a worse
-first impression than a free board. The build order the owner locked puts
-enforcement after Stripe, and Stripe is now done, so this is genuinely the next
-item; the question is only whether it lands before or after the legal work.
-
-**ChatGPT:** review `billing-lifecycle.js` against the Stripe status model
-specifically for statuses CFL has not enumerated, and review whether
-`past_due` keeping access to period end is the right call for CFL's price point.
-
-**Nobody:** removes an entry from `CHECKOUT_BLOCKERS` to make something pass.
-T-066 is the L3 that turns checkout on, and it is the owner's.
 
 ---
