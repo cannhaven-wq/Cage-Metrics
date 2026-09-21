@@ -30,6 +30,8 @@ const path = require('path');
 const P = require('../proof-gates.js');
 
 const INDEX = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+const PROOF = fs.readFileSync(path.join(__dirname, '..', 'proof.html'), 'utf8');
+const TRACK = fs.readFileSync(path.join(__dirname, '..', 'track-record.html'), 'utf8');
 
 let passed = 0;
 const failures = [];
@@ -215,41 +217,65 @@ t('an empty set produces no rate rather than zero', () => {
 });
 
 // ----------------------------------------------------------------- static
-// The guarantee above is only worth anything if the page routes through it.
+// The guarantee above is only worth anything where a record is published.
+//
+// UPDATED 2026-09-21 (the research repositioning). The homepage used to carry
+// the engine's replay headline — "61.5% straight-up across 3,235 never-seen
+// fights · Locks hit 74.5% (simulated)" — and the four static checks here
+// pinned it to the rulebook so it could not silently pool the live and replay
+// records. The homepage no longer publishes that record, or any model record,
+// at all. A page with no engine accuracy on it cannot pool two of them, which
+// is strictly stronger than what these lines used to enforce, so the checks
+// move: index.html is now asserted to publish nothing, and the routing checks
+// follow the record to the pages that still carry one.
+//
+// The functional half above is untouched. The rulebook is what actually holds.
 
-t('index.html loads the record rulebook', () => {
-  ok(/<script src="proof-gates\.js"><\/script>/.test(INDEX),
-    'index.html does not load proof-gates.js');
+t('the homepage publishes no engine record at all', () => {
+  ok(!/headlineFromPicks/.test(INDEX),
+    'index.html is computing an engine headline again — the homepage does not publish a model record');
+  ok(!/HERO_RECORD_SOURCE/.test(INDEX),
+    'the hero record source constant is back in index.html');
+  ok(!/v_model_picks_graded|fetchEnginePicks/.test(INDEX),
+    'index.html is reading the graded picks feed again');
 });
 
-t('index.html loads the rulebook before the inline script that uses it', () => {
-  const rulebook = INDEX.indexOf('src="proof-gates.js"');
-  const usage = INDEX.indexOf('headlineFromPicks');
+t('the homepage quotes no model accuracy figure', () => {
+  // Strip comments and <style> first: a comment explaining why a number is
+  // forbidden must not itself trip the check for that number.
+  const visible = INDEX
+    .replace(/<style>[\s\S]*?<\/style>/g, ' ')
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/\/\*[\s\S]*?\*\//g, ' ')
+    .replace(/^\s*\/\/.*$/gm, ' ');
+  ok(!/\b6[0-9]\.[0-9]%\s*(straight-up|of its picks)/.test(visible),
+    'a hardcoded engine accuracy is back on the homepage');
+  ok(!/Locks?\s+hit\b/i.test(visible),
+    'the Lock-tier accuracy is back on the homepage');
+});
+
+t('the Proof Center still routes its record through the rulebook', () => {
+  ok(/<script src="proof-gates\.js"><\/script>/.test(PROOF),
+    'proof.html does not load proof-gates.js');
+  const rulebook = PROOF.indexOf('src="proof-gates.js"');
+  const usage = PROOF.search(/P\.(straightRecord|headlineFromPicks|assertOneRecord|flatStakeLedger)/);
   ok(rulebook > -1 && usage > -1, 'both present');
   ok(rulebook < usage, 'proof-gates.js must load before it is called');
 });
 
-t('the hero query filters by source', () => {
-  ok(/\.eq\('source',\s*HERO_RECORD_SOURCE\)/.test(INDEX),
-    'loadHeroProof no longer constrains `source` — this is the original defect');
-  ok(/const HERO_RECORD_SOURCE = 'backtest'/.test(INDEX),
-    'the hero record source is not pinned to a single value');
+t('every published record summary names which record it is', () => {
+  // straightRecord / flatStakeLedger must always be told which record they are
+  // summarising; an un-named call is how two records get pooled.
+  const calls = PROOF.match(/P\.(straightRecord|flatStakeLedger)\([^)]*\)/g) || [];
+  ok(calls.length > 0, 'proof.html no longer summarises a record at all');
+  calls.forEach(c => { ok(/expectRecord/.test(c), 'un-named record summary — ' + c); });
 });
 
-t('the headline is computed by the rulebook, not by the page', () => {
-  ok(/headlineFromPicks\(rows,\s*P\.RECORD\.REPLAY\)/.test(INDEX),
-    'the page must ask proof-gates for the headline, so the assertion runs');
-});
-
-t('the page no longer computes an accuracy from an unfiltered fetch', () => {
-  // The precise old line. If it comes back, so does the bug.
-  ok(!/fetchEnginePicks\(q => q\.not\('hit', 'is', null\)\)/.test(INDEX),
-    'the unfiltered graded-picks fetch is back in index.html');
-});
-
-t('the simulated label still sits on the number', () => {
-  // The figure is the replay record. The label must keep saying so.
-  ok(INDEX.includes("' (simulated)'"), 'the hero proof line lost its "(simulated)" label');
+t('the model archive keeps the two records apart by source', () => {
+  // track-record.html does not use the rulebook module; it splits by the
+  // `source` column directly. Either route is fine, but it must split.
+  ok(/r\.source === 'backtest'/.test(TRACK) && /r\.source === 'live'/.test(TRACK),
+    'track-record.html no longer separates the replay and live records');
 });
 
 // ----------------------------------------------------------------- report
@@ -258,4 +284,4 @@ if (failures.length) {
   failures.forEach((f) => console.log(`  ✗ ${f}\n`));
   process.exit(1);
 }
-console.log(`\n  ${passed} passed — the homepage headline cannot pool two records.\n`);
+console.log(`\n  ${passed} passed — no record is published without naming which record it is.\n`);

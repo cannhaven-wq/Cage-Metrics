@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>How the UFC Verdict is Built — Edge Factors Methodology | Cannon Fight Lab</title>
+<title>How the Retired Verdict Was Built — Factor Methodology (Archive) | Cannon Fight Lab</title>
 <meta name="description" content="The open methodology behind every Cannon Fight Lab UFC verdict. Three named edge factors, calibrated against 8,000+ historical fights, combined with a transparent Bayesian update. No black box.">
 <meta name="keywords" content="UFC edge factors, MMA prediction methodology, UFC fight model, UFC verdict calibration, MMA Bayesian model, UFC edge factor explained">
 <meta name="author" content="Cannon Fight Lab">
@@ -66,7 +66,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -135,7 +135,11 @@
   }
   .section p strong { color: #fff; font-weight: 600; }
 
-  /* Factor table — every edge in edges.js with its trigger + range. */
+  /* Factor table — every edge in edges.js with its trigger + range.
+     The table has four columns of prose and does not fit a phone; it scrolls
+     inside its own wrapper rather than pushing the whole page sideways. */
+  .factors-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 18px 0; }
+  .factors-table-wrap .factors-table { margin: 0; min-width: 440px; }
   .factors-table {
     width: 100%;
     border-collapse: collapse;
@@ -350,8 +354,18 @@
 
 <div class="edges-hero">
   <div class="eyebrow">Methodology</div>
-  <h1>How the verdict is built</h1>
-  <p class="lede">Every Cannon Fight Lab verdict is the sum of small probability shifts — each one a measurable, named factor with a published track record. No black box, no proprietary secret sauce. Every number on this page is recomputable from the public data and the open-source <code>edges.js</code> module that runs in your browser.</p>
+  <h1>How the verdict was built</h1>
+  <p class="lede">This is the archived methodology for the retired rules model. Each verdict was the sum of small probability shifts — each one a measurable, named factor with a published track record. No black box, no proprietary secret sauce. Every number on this page is recomputable from the public data and the open-source <code>edges.js</code> module that runs in your browser.</p>
+
+<div class="cfl-archive-note">
+  <span class="tag">Archive</span><strong>This page documents a model that is no longer part of the product.</strong>
+  Until September 2026 Cannon Fight Lab published a win-probability forecast for every fight. We tested whether
+  that forecast beat the price the market was offering, could not show that it did, and took it off the public
+  product rather than keep publishing it with a disclaimer. Nothing here was deleted — the engine still runs and
+  is still graded in the open, wins and losses at the same size, because a failed test is the one result a
+  research site must not quietly remove. The live product is now
+  <a href="index.html#next">Card Lab</a> and <a href="market.html">Market Lab</a>.
+</div>
 </div>
 
 <div class="page">
@@ -411,6 +425,7 @@
     <div class="section-eyebrow"><span class="dot"></span>The toolkit</div>
     <h2>The factors we measure</h2>
     <p>Every factor below is implemented in the public <code>edges.js</code> file. Active factors drive the current verdict. Retired factors are kept documented for transparency — they were dropped May 17, 2026 after the subset audit showed they were diluting the verdict more than informing it.</p>
+    <div class="factors-table-wrap">
     <table class="factors-table">
       <thead>
         <tr><th>Factor</th><th>Triggers when</th><th>Range</th><th>Status</th></tr>
@@ -478,6 +493,7 @@
         </tr>
       </tbody>
     </table>
+    </div>
   </div>
 
   <!-- ============== Combination math ============== -->
@@ -573,7 +589,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl2"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('');

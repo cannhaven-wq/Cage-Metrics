@@ -4,8 +4,13 @@
 // secrets for a platform aren't set, that platform is skipped silently.
 //
 // The post body is generated here directly rather than scraping draft-post.js
-// stdout. Same source data (model_predictions + cardio) so the messaging
-// stays consistent with the email digest and the on-site previews.
+// stdout. Same source data as the Cannon Card Brief (v_fight_market_movement),
+// so the email and the social post never describe the same card differently.
+//
+// It used to post the engine's pick and confidence for the top five fights.
+// CFL stopped publishing a forecast in September 2026 — the post now reports
+// what the market has done to the card, which is the thing we can stand
+// behind and the thing that is actually worth a share.
 //
 // Idempotency: we don't double-post on the same event. The script writes a
 // marker file at .funnel-state/last-posted-event.txt with the event id,
@@ -52,88 +57,99 @@ async function buildPost(event) {
     .order('id', { ascending: true });
   if (!fights || !fights.length) return null;
 
-  const fightIds = fights.map(f => f.id);
-  // Engine picks (model_picks) — the one current model. A locked 'live' row
-  // outranks a 'backtest' replay row for the same fight.
-  const { data: preds } = await sb.from('model_picks')
-    .select('fight_id, pick_fighter_id, p_cal, source')
-    .in('fight_id', fightIds);
+  // The market, per fight. v_fight_market_movement is a definer view —
+  // `fight_odds` itself is admin-only, so this is the only way to read it
+  // under the publishable key.
+  const { data: mkt, error } = await sb
+    .from('v_fight_market_movement').select('*').eq('event_id', event.id);
+  if (error) { console.warn('[social] market view unavailable:', error.message); return null; }
+  const byFight = {};
+  (mkt || []).forEach(r => { byFight[r.fight_id] = r; });
 
-  const engineByFight = {};
-  (preds || []).forEach(p => {
-    const prev = engineByFight[p.fight_id];
-    if (prev && prev.source === 'live' && p.source !== 'live') return;
-    engineByFight[p.fight_id] = p;
-  });
-  const picksByFight = {};
-  Object.values(engineByFight).forEach(p => {
-    if (p.p_cal == null) return;
-    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || {}).engine =
-      { fighter_id: p.pick_fighter_id, model_p: +p.p_cal };
-  });
-
-  // Pull up to 5 highest-confidence fights (with main/title prioritized).
   const lines = [];
   for (const f of fights) {
-    const picks = picksByFight[f.id] || {};
-    const versions = Object.keys(picks);
-    if (!versions.length) continue;
-    const tally = {};
-    versions.forEach(v => { tally[picks[v].fighter_id] = (tally[picks[v].fighter_id] || 0) + 1; });
-    const sorted = Object.entries(tally).sort((x, y) => y[1] - x[1]);
-    const winnerId = +sorted[0][0];
-    const winnerName = winnerId === f.fighter_a_id ? f.fighter_a_name : f.fighter_b_name;
-    const winningPs = versions
-      .filter(v => picks[v].fighter_id === winnerId)
-      .map(v => picks[v].model_p);
-    const avg = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
+    const r = byFight[f.id];
+    if (!r || r.market_p_a == null || r.open_p_a == null) continue;
+    const pA = +r.market_p_a, open = +r.open_p_a;
+    const move = (pA - open) * 100;
+    if (!isFinite(move)) continue;
+    const favIsA = pA >= 0.5;
     lines.push({
       aName: f.fighter_a_name,
       bName: f.fighter_b_name,
       flag: f.is_title_fight ? 'TITLE' : (f.is_main_event ? 'MAIN' : ''),
-      pickName: winnerName,
-      pct: Math.round(avg * 100),
-      isMain: f.is_main_event || f.is_title_fight
+      move,
+      towardName: move > 0 ? f.fighter_a_name : f.fighter_b_name,
+      favName: favIsA ? f.fighter_a_name : f.fighter_b_name,
+      favPct: Math.round((favIsA ? pA : 1 - pA) * 100),
+      bestAmerican: favIsA ? r.best_american_a : r.best_american_b,
+      bestBook: favIsA ? r.best_book_a : r.best_book_b,
+      books: r.book_count == null ? null : +r.book_count,
+      spread: r.book_spread_pts == null ? null : +r.book_spread_pts,
+      isMain: f.is_main_event || f.is_title_fight,
     });
   }
   if (!lines.length) return null;
 
-  // Sort: main/title first (preserve given order within), then by confidence.
-  lines.sort((a, b) => (b.isMain - a.isMain) || (b.pct - a.pct));
-  const headlineLines = lines.slice(0, 5);
+  // Biggest movers first — that is the story of a fight week. A card where
+  // nothing moved is reported as a card where nothing moved, not padded out.
+  lines.sort((a, b) => Math.abs(b.move) - Math.abs(a.move));
+  const headlineLines = lines.filter(l => Math.abs(l.move) >= 1).slice(0, 4);
+  const quiet = headlineLines.length === 0;
 
-  const eventUrl = `${SITE}/event.html?id=${event.id}`;
+  const marketUrl = `${SITE}/market.html?event=${event.id}`;
   const date = formatLongDate(event.event_date);
+  const surname = n => {
+    const parts = String(n || '').trim().split(/\s+/);
+    while (parts.length > 1 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(parts[parts.length - 1])) parts.pop();
+    return parts[parts.length - 1] || n;
+  };
+  const am = n => (n == null || !isFinite(+n)) ? '—' : ((+n > 0 ? '+' : '') + Math.round(+n));
 
-  // Twitter: must fit 280 chars. Format conservatively.
+  // Twitter: must fit 280 chars.
   const tweet = (() => {
-    const header = `🥊 ${event.name} — model picks, locked in.\n${date}\n\n`;
-    const cta = `\nFull card + edges + free account:\n${eventUrl}`;
+    const header = quiet
+      ? `\ud83d\udcc9 ${event.name} — the market has barely moved.\n${date}\n\n`
+      : `\ud83d\udcc8 ${event.name} — what the books have moved.\n${date}\n\n`;
+    const cta = `\nEvery book, side by side:\n${marketUrl}`;
     let body = '';
-    for (const l of headlineLines) {
-      const tag = l.flag ? ` [${l.flag}]` : '';
-      const line = `${l.aName} vs ${l.bName}${tag}\n→ ${l.pickName} ${l.pct}%\n`;
-      if ((header + body + line + cta).length > 275) break;
-      body += line;
+    if (quiet) {
+      const l = lines[0];
+      body = `${surname(l.aName)} vs ${surname(l.bName)} is the widest split at ` +
+             `${l.spread == null ? '—' : l.spread.toFixed(1)} pts across ${l.books} books.\n`;
+    } else {
+      for (const l of headlineLines) {
+        const line = `${surname(l.aName)} vs ${surname(l.bName)}\n` +
+          `\u2192 ${Math.abs(l.move).toFixed(1)} pts toward ${surname(l.towardName)}\n`;
+        if ((header + body + line + cta).length > 275) break;
+        body += line;
+      }
     }
     return (header + body + cta).slice(0, 280);
   })();
 
   // Reddit: title + selftext markdown.
-  const redditTitle = `[Model picks] ${event.name} — ${date}`;
+  const redditTitle = `[Odds movement] ${event.name} — ${date}`;
   const redditBody = (() => {
     const parts = [];
-    parts.push(`Posting verdicts before the card so receipts are timestamped.\n`);
-    parts.push(`| Fight | Pick | Conf |`);
-    parts.push(`|---|---|---|`);
-    for (const l of headlineLines) {
+    parts.push(`Line movement on the card since we first captured each fight. No picks — this is just what the books have done.\n`);
+    parts.push(`| Fight | Market now | Best price | Moved since first capture | Books apart |`);
+    parts.push(`|---|---|---|---|---|`);
+    for (const l of lines.slice(0, 8)) {
       const tag = l.flag ? ` **[${l.flag}]**` : '';
-      parts.push(`| ${l.aName} vs ${l.bName}${tag} | ${l.pickName} | ${l.pct}% |`);
+      const mv = Math.abs(l.move) < 0.5
+        ? 'unchanged'
+        : `${Math.abs(l.move).toFixed(1)} pts to ${surname(l.towardName)}`;
+      parts.push(`| ${l.aName} vs ${l.bName}${tag} | ${surname(l.favName)} ${l.favPct}% | ` +
+                 `${am(l.bestAmerican)}${l.bestBook ? ' (' + l.bestBook + ')' : ''} | ${mv} | ` +
+                 `${l.spread == null ? '—' : l.spread.toFixed(1)} pts |`);
     }
     parts.push('');
-    parts.push(`Full card with the edge factors that drove each verdict: ${eventUrl}`);
+    parts.push(`Consensus is the median across sportsbooks with each book's cut removed. "Since first capture" measures from when we started watching the fight, not from the true market open — most cards we see one book before we see six.`);
     parts.push('');
-    parts.push(`*Free tool. Free account unlocks every edge + weekly preview email: ${SITE}/signup.html?src=reddit*`);
+    parts.push(`Full board, every book: ${marketUrl}`);
+    parts.push('');
+    parts.push(`*Free tool, no picks, no Discord. Matchup research on every fight: ${SITE}/index.html#next*`);
     return parts.join('\n');
   })();
 
@@ -320,7 +336,18 @@ async function postToReddit(title, selftext) {
 
       // Only cards that haven't happened yet; oldest card first, so we drip a
       // card's pieces across the days leading up to it.
-      const pool = queue.filter(e => !e.eventDate || e.eventDate >= today);
+      // Pieces generated before the September 2026 repositioning read
+      // "our model reads MCGREGOR 69% over HOLLOWAY" and similar. Those are
+      // forecasts, and CFL does not publish one any more, so a queue entry
+      // that does not declare itself research-era is never posted — not even
+      // under FORCE_POST. build/social-engine.js stamps new pieces with
+      // positioning:"research"; regenerating the queue is what unblocks it.
+      const researchEra = e => e.positioning === 'research';
+      const stale = queue.filter(e => !researchEra(e)).length;
+      if (stale) {
+        console.log(`[social] skipping ${stale} queued piece(s) generated before the research repositioning — regenerate with \`npm run social-engine\`.`);
+      }
+      const pool = queue.filter(e => researchEra(e) && (!e.eventDate || e.eventDate >= today));
       let pick = pool.find(e => !posted.includes(keyOf(e)));
       if (!pick && FORCE) pick = pool[0] || queue[0];
       if (!pick) {

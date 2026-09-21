@@ -43,7 +43,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -281,9 +281,10 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl2"></script>
 <script src="_auth.js"></script>
-<script src="fight-insights.js?v=8"></script>
+<script src="market.js?v=2"></script>
+<script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('fighters');
 cfl.renderFooter();
@@ -766,7 +767,11 @@ async function loadHistory() {
 // 10 lightweights" means the lightweights they actually share a roster with.
 // Opponent quality comes from fighter_ratings (the engine's own Elo).
 // ---------------------------------------------------------------------------
-const lastName = n => { const p = String(n || '').trim().split(/\s+/); return p[p.length - 1] || n; };
+// Delegates to fight-insights.js, which knows a generational suffix is not a
+// surname. Its own copy of this used to render the next card's main event as
+// "2.6 pts toward Jr." — Raul Rosas Jr.'s surname is Rosas.
+const lastName = n => (window.cflInsights ? window.cflInsights.lastName(n)
+  : (String(n || '').trim().split(/\s+/).pop() || n));
 const divPlural = d => { const x = String(d || 'fighter').toLowerCase(); return x.endsWith('weight') ? x + 's' : x + ' fighters'; };
 const divSingular = d => String(d || 'fighter').toLowerCase();
 const tenths = p => Math.max(1, Math.min(9, Math.round(p * 10)));
@@ -938,37 +943,50 @@ async function loadNextFight(f, fights) {
   const oppId = isA ? up.fighter_b_id : up.fighter_a_id;
   const oppName = isA ? up.fighter_b_name : up.fighter_a_name;
 
-  const [pickR, oppR, propR] = await Promise.all([
-    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, tier, source').eq('fight_id', up.id),
+  // This block used to lead with the engine's pick and calibrated percentage
+  // ("Model pick: X 64% High confidence") plus a "why it might be wrong"
+  // panel. The model came off the public product in September 2026, so the
+  // next-fight card now opens with the market on that fight and the measured
+  // differences between the two corners.
+  const [mktRow, oppR, propR] = await Promise.all([
+    window.cflMarket ? window.cflMarket.loadFightMovement(up.id) : Promise.resolve(null),
     oppId ? sb.from('fighters').select('id, name, age, height_in, reach_in, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def').eq('id', oppId).maybeSingle() : Promise.resolve({ data: null }),
     sb.from('v_prop_projections_current').select('*').eq('fight_id', up.id).eq('fighter_id', f.id).maybeSingle(),
   ]);
-  let pick = null;
-  (pickR.data || []).forEach(p => { if (!pick || (p.source === 'live' && pick.source !== 'live')) pick = p; });
   const opp = oppR.data;
   const prop = propR.data;
 
+  // --- the market on this fight, from this fighter's side
   let pickHtml;
-  if (pick && (pick.pick_fighter_id === f.id || pick.pick_fighter_id === oppId)) {
-    const pickedMe = pick.pick_fighter_id === f.id;
-    const conf = Number(pick.p_cal) * 100;
-    const word = conf >= 65 ? 'High confidence' : (conf >= 55 ? 'Medium confidence' : 'Lean');
-    const pickedName = pickedMe ? f.name : (oppName || 'the opponent');
-    let why = '';
-    if (window.cflInsights && opp) {
-      const ctx = { weightClass: up.weight_class };
-      const picked = pickedMe ? f : opp, other = pickedMe ? opp : f;
-      const bullets = window.cflInsights.buildEdgeBullets(picked, other, ctx).slice(0, 3);
-      const flags = window.cflInsights.buildRedFlags(picked, other, ctx, null, conf).slice(0, 2);
-      const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
-      why = (bullets.length ? `<div class="nx-hd">What stands out for ${cfl.escapeHtml(lastName(pickedName))}</div><ul class="nx-list">${bullets.map(li).join('')}</ul>` : '')
-          + (flags.length ? `<div class="nx-hd against">Why it might be wrong</div><ul class="nx-list against">${flags.map(li).join('')}</ul>` : '')
-          + ((bullets.length || flags.length)
-              ? `<div class="insight-note">${cfl.escapeHtml(window.cflInsights.CONTEXT_NOTE)}</div>` : '');
-    }
-    pickHtml = `<div class="nx-pick">Model pick: <strong>${cfl.escapeHtml(pickedName)}</strong> <span class="nx-pct">${Math.round(conf)}%</span> <span class="nx-word">${word}</span></div>${why}`;
+  const M = window.cflMarket;
+  const meIsA = up.fighter_a_id === f.id;
+  const meRead = (M && mktRow) ? M.readSide(mktRow, meIsA ? 'a' : 'b', { isFightDay: false }) : null;
+  if (meRead) {
+    const bits = [`${meRead.bookCount} book${meRead.bookCount === 1 ? '' : 's'}, vig removed`];
+    if (meRead.fresh) bits.push(meRead.fresh.stale ? 'stale — ' + meRead.fresh.when : meRead.fresh.when);
+    const mv = meRead.moveSinceBaseline;
+    const mvTxt = (mv == null || Math.abs(mv) < 0.5)
+      ? 'unchanged since our first broad capture'
+      : `${Math.abs(mv).toFixed(1)} pts ${mv > 0 ? 'toward' : 'away from'} ${cfl.escapeHtml(lastName(f.name))} since our first broad capture`;
+    pickHtml = `<div class="nx-pick">Market: <strong>${Math.round(meRead.prob * 100)}%</strong> ` +
+      `<span class="nx-pct">${cfl.escapeHtml(M.fmtAmerican(meRead.bestAmerican))}</span> ` +
+      `<span class="nx-word">best at ${cfl.escapeHtml(meRead.bestBook || 'a tracked book')}</span></div>` +
+      `<div class="fin-note">${cfl.escapeHtml(bits.join(' · '))} · ${mvTxt}</div>`;
   } else {
-    pickHtml = `<div class="nx-pick muted">Not scored yet — the engine's pick lands closer to fight night.</div>`;
+    pickHtml = `<div class="nx-pick muted">No sportsbook price captured on this fight yet.</div>`;
+  }
+
+  // --- what is measurably different between the two corners
+  if (window.cflInsights && opp) {
+    const ctx = { weightClass: up.weight_class, bookCount: meRead ? meRead.bookCount : null };
+    const notes = window.cflInsights.buildMatchupNotes(f, opp, ctx).slice(0, 3);
+    const caveats = window.cflInsights.buildMatchupCaveats(f, opp, ctx).slice(0, 1);
+    const li = t => `<li>${cfl.escapeHtml(t)}</li>`;
+    pickHtml +=
+      (notes.length ? `<div class="nx-hd">What stands out in this matchup</div><ul class="nx-list">${notes.map(n => li(n.text)).join('')}</ul>` : '')
+      + (caveats.length ? `<div class="nx-hd against">Read these with care</div><ul class="nx-list against">${caveats.map(li).join('')}</ul>` : '')
+      + (notes.length ? `<div class="insight-note">${cfl.escapeHtml(window.cflInsights.MATCHUP_NOTE)}</div>` : '')
+      + `<div class="fin-note"><a href="fight.html?id=${up.id}">Open this fight in Fight Lab →</a></div>`;
   }
 
   let propHtml = '';

@@ -3,7 +3,20 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-19
+Last updated: 2026-09-21
+
+**Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
+Lab is a **UFC research and market-intelligence tool**, not a picks product. The
+forecasting engine was removed from every forward-facing surface on the owner's
+instruction, after testing failed to show its disagreement with the market was
+worth acting on. The engine still runs, still writes its locked pre-fight record
+before every bell, and is still graded in public on the Proof Center — it is
+simply not shown on the card. The forward-facing product is **Card Lab**,
+**Fight Lab**, **Market Lab** and **Factor Lab**, and the email is the **Cannon
+Card Brief**. `tests/no-model-on-public-surfaces.test.js` holds the line.
+
+Nothing in the research, snapshot, settlement or CLV pipeline changed with it.
+Everything below this paragraph is about those, and is unaffected.
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -64,7 +77,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 |---|---|
 | [`STATE.md`](STATE.md) | this file — current position, refreshed at every handoff |
 | [`TASK_QUEUE.md`](TASK_QUEUE.md) | what is queued, who owns it, what level it is |
-| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-004**, retiring `backfill_odds.py` |
+| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-011**, taking the model off the public product |
 | [`HANDOFF.md`](HANDOFF.md) | the live baton — newest entry at the top |
 | [`CRITICAL_GATES.md`](CRITICAL_GATES.md) | the L0–L3 ladder and the closed L3 list |
 | [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) | the read-only product audit — where the five workstreams actually stand |
@@ -74,6 +87,35 @@ Git history is the audit trail. These files are the working surface.
 ---
 
 ## Where the project is
+
+### Market movement — settled 2026-09-21
+
+Movement is measured over the **matched book cohort** — the sportsbooks quoting
+at both ends — and refused below three of them. The baseline is the **first
+broad CFL capture**, and it is never called an opening line.
+[D-012](DECISIONS.md), `market_movement_views.sql`, `market.js`.
+
+This supersedes the `open_p_a` baseline that shipped with the repositioning
+hours earlier. That one disclosed its book count honestly and was still wrong:
+22 of 79 fights had **one** sportsbook at CFL's earliest capture, the figure
+overstated real movement by up to **12.7 points**, and three markets that had
+not moved were reported as moving 3+. A caveat beside a wrong number does not
+make it right.
+
+
+### The public product, as of 2026-09-21
+
+Nav: **Card Lab · Market Lab · Factor Lab · Proof Center** (+ More: Fighters,
+Cardio Scores, Parlay Builder, Model Archive) + Pricing. The forecast is off
+every forward-facing surface ([D-011](DECISIONS.md)); the Model Archive,
+`predictor.html` and `props.html` keep every number behind an archive banner,
+because a research site does not delete a failed test. `props.html` and the
+Brief's subject line were two that got through the first pass
+([D-013](DECISIONS.md)).
+
+Written, not yet built: [`PRODUCT_BOUNDARY.md`](../PRODUCT_BOUNDARY.md) (Free
+vs Pro) and [`ANALYTICS_SCHEMA.md`](../ANALYTICS_SCHEMA.md) (nineteen funnel
+events, T-047). No paid tier exists and no vendor has been added.
 
 ### Research
 

@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <!-- ===== Primary SEO ===== -->
-<title>About Cannon Fight Lab — How the UFC Prediction Model Works</title>
-<meta name="description" content="Cannon Fight Lab is a UFC fight prediction platform. See how the engine is built, which stats actually predict fights, and our graded track record across 3,200+ never-seen fights.">
-<meta name="keywords" content="Cannon Fight Lab, UFC prediction model, MMA model methodology, UFC edge factors, UFC fight model accuracy">
+<title>About Cannon Fight Lab — A UFC Research and Market-Intelligence Tool</title>
+<meta name="description" content="Cannon Fight Lab is a UFC research and market-intelligence tool: sportsbook prices captured on a schedule with their provenance, line movement, matchup analytics, and public testing of which fight stats actually hold up once the betting line is controlled for.">
+<meta name="keywords" content="Cannon Fight Lab, UFC odds research, UFC line movement, MMA analytics methodology, UFC matchup data">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/about.html">
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Cannon Fight Lab">
 <meta property="og:title" content="About — Cannon Fight Lab">
-<meta property="og:description" content="How the Cannon Fight Lab UFC prediction model works — calibration, edge factors, and a transparent track record.">
+<meta property="og:description" content="What Cannon Fight Lab is, what it measures, and what it refuses to claim — including the model test it did not pass.">
 <meta property="og:url" content="https://cannonfightlab.com/about.html">
 <meta property="og:image" content="https://cannonfightlab.com/og-image.png">
 <meta property="og:image:width" content="1200">
@@ -42,7 +42,7 @@
   "@type": "AboutPage",
   "name": "About Cannon Fight Lab",
   "url": "https://cannonfightlab.com/about.html",
-  "description": "How the Cannon Fight Lab UFC prediction model works — calibration, edge factors, and a transparent track record.",
+  "description": "What Cannon Fight Lab is, what it measures, and what it refuses to claim — including the model test it did not pass.",
   "isPartOf": {
     "@type": "WebSite",
     "name": "Cannon Fight Lab",
@@ -57,7 +57,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -123,14 +123,14 @@
 
 <div class="page-hero">
   <div class="eyebrow">About</div>
-  <h1>Built for bettors, not touts</h1>
-  <p>The story behind Cannon Fight Lab and why it exists.</p>
+  <h1>Built for researchers, not touts</h1>
+  <p>What Cannon Fight Lab is, what it measures, and what it refuses to claim.</p>
 </div>
 
 <div class="page">
   <div class="prose">
     <p class="lead">
-      Cannon Fight Lab is a UFC analytics platform built for one purpose: giving MMA bettors the hard data to make their own informed picks.
+      Cannon Fight Lab is a UFC research and market-intelligence tool. It exists to let you work a fight card faster and more honestly than you could with a dozen browser tabs open — and to say plainly which of the things people believe about fights are actually supported.
     </p>
 
     <p>
@@ -138,7 +138,7 @@
     </p>
 
     <p>
-      This site does one thing: it consolidates that data layer into a single, fast, searchable place. Then it adds an analytics layer on top — derived insights you can use to evaluate any matchup, build any parlay, and form your own conviction.
+      This site consolidates that data layer into one fast, searchable place, and adds two things on top. The first is the <strong>market</strong>: sportsbook prices captured on a schedule and written to an append-only record, so we can show you what a line was, what it is, and what moved in between — with the book count, the source and the timestamp attached to every number. The second is <strong>derived analysis</strong>: matchup comparisons, cardio and style ratings, and public testing of which factors survive once you control for what the betting market already knew.
     </p>
 
     <h2>What's in the database</h2>
@@ -150,29 +150,44 @@
     </div>
 
     <p>
-      All data is updated nightly from public UFC sources, so the counts above grow weekly as new cards land. The platform doesn't sell picks. It doesn't run a Discord. It doesn't tell you who to bet on. It gives you the numbers and gets out of your way.
+      Fight statistics are updated nightly from UFCStats; sportsbook prices come from The Odds API on a capture schedule that tightens as a card approaches. Both are <em>inputs</em> to CFL's research, not the product — we are not in the business of charging anyone for access to somebody else's feed. The platform doesn't sell picks. It doesn't run a Discord. It doesn't tell you who to bet on.
     </p>
 
-    <h2>The three products</h2>
+    <h2>The four labs</h2>
 
     <p>
-      CFL is three things. <strong>The Factor Lab</strong> (free) tests which fight stats actually predict winners and which just repeat the betting line — so far only one factor survives that test — age. A fighter's UFC record tops the raw column and still can't clear the bar in evenly-priced fights. <strong>Fight IQ</strong> is the tape-only face of our audited engine: it calls every fight from fighter history, fight stats, and physical attributes without ever seeing a betting line, and lands 61.6% on 3,288 fights it never trained on — within seven points of just picking the Vegas favorite (about 68%), without ever looking at Vegas. Its highest-confidence Locks hit 74.7%. <strong>Value</strong> is the same engine's money face: it flags a bet only when the engine's number disagrees with the vig-free market price by 4+ points. The simulated walk-forward record lives in the <a href="track-record.html" style="color:var(--red); text-decoration: underline;">Proof Center</a>; the live record started July 2026 and is still tiny — every result, misses included, goes on the board.
+      <strong>Card Lab</strong> is the fight-week screen: every bout on the next card with the vig-free sportsbook consensus, the best price and which book is posting it, and how far the line has travelled since we started watching.
+      <strong>Market Lab</strong> is the same card broken out book by book, with movement over the last 24 hours and since the first time we saw the fight priced by three or more books, and where the sportsbooks currently disagree.
+      <strong>Fight Lab</strong> is one matchup in full: the market, the per-book table, and the measurable differences between the two corners.
+      <strong>The Factor Lab</strong> is the research floor — it tests the stats everyone cites twice, once raw and once on only the fights the market priced as a coin flip, and reports which ones survive. Most do not, and it says so.
+    </p>
+
+    <h2>The model we took down</h2>
+
+    <p>
+      Until September 2026 the front of this site was a forecast: a calibrated win probability for every fight, a confidence tier, and a flag when our number disagreed with the market price by enough. We tested whether that disagreement was worth acting on. We could not show that it was — our own benchmark has the engine landing within a few points of the closing line without ever seeing one, which is a respectable model and is not an advantage anyone can bet.
+    </p>
+
+    <p>
+      So the forecast came off the public product. Nothing was deleted and nothing was quietly re-labelled: the engine still runs, still writes an immutable record of what it would have said before every bell, and is still graded in the open on the <a href="proof.html" style="color:var(--red); text-decoration: underline;">Proof Center</a> with losses at the same size as wins. If prospective evidence ever shows it beats the price, the evidence goes up before the number comes back. We changed the product rather than change the test, and we would rather be known for that than for the version of this page that quoted a win rate.
     </p>
 
     <h2>The core tools</h2>
 
     <ul>
-      <li><strong>Next event card</strong> — the upcoming UFC card with every matchup's key stats side-by-side at a glance.</li>
+      <li><strong>Card Lab</strong> — the upcoming UFC card with the market and the key matchup facts on every bout at a glance.</li>
+      <li><strong>Market Lab</strong> — every sportsbook we track, side by side, with line movement and book disagreement.</li>
+      <li><strong>Fight Lab</strong> — one matchup in full, market and matchup data together.</li>
       <li><strong>Fighter database</strong> — search any UFC fighter, see their full UFC record, career averages, and complete fight history.</li>
-      <li><strong>Head-to-head compare</strong> — pick any two fighters, see every stat lined up, with the statistical edge highlighted on each row.</li>
-      <li><strong>Stat finder</strong> — derived analytics across the full database. Younger fighter win rates, stance matchups, reach advantages, finish patterns by division.</li>
-      <li><strong>Parlay builder</strong> — pull fighters from upcoming cards, enter your sportsbook odds, see combined payout and implied probability.</li>
+      <li><strong>Head-to-head compare</strong> — pick any two fighters and see every stat lined up.</li>
+      <li><strong>Factor Lab</strong> — derived analytics across the full database, each factor measured against the betting market as well as raw.</li>
+      <li><strong>Parlay calculator</strong> — pull fighters from upcoming cards, see the best number we track on each leg, and the combined chance beside the payout.</li>
     </ul>
 
     <h2>Who built this</h2>
 
     <p>
-      Cannon Fight Lab is built and maintained by Reed Cannon, and operated by Cannon Fight Lab LLC, a Tennessee limited liability company. It's an independent project — no investors, no parent company, no editorial agenda beyond "show the data clearly and let bettors decide."
+      Cannon Fight Lab is built and maintained by Reed Cannon, and operated by Cannon Fight Lab LLC, a Tennessee limited liability company. It's an independent project — no investors, no parent company, no editorial agenda beyond "show the data clearly and let people decide." We take no sportsbook money, and no book pays to sit higher in a price comparison here; "best price" means the best price in the data, always.
     </p>
 
     <p>
@@ -182,7 +197,7 @@
     <h2>What this site is not</h2>
 
     <p>
-      This is not a sportsbook. We don't take bets. We don't issue picks. We don't guarantee outcomes. The stats, edges, and projections shown here describe historical patterns — they don't predict any individual fight. A 56% historical edge still means 44% of the time the pattern doesn't hold.
+      This is not a sportsbook. We don't take bets. We don't issue picks, and we no longer publish a forecast of who wins. The statistics and projections shown here describe historical patterns — they don't predict any individual fight. A pattern that holds 56% of the time fails 44% of the time. Prices on this site are the last ones we captured, not live quotes; check the sportsbook before you act on any of them.
     </p>
 
     <p>
@@ -193,7 +208,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl2"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('');

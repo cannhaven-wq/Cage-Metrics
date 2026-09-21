@@ -49,9 +49,9 @@ function fighterStub(f) {
   // queries ("<name> record / height") because the title/description led with
   // "Stats". The visible <title>, <meta description>, and <h1> are what drive
   // query matching — the Person/Athlete JSON-LD below stays for entity recognition.
-  const title = `${f.name} — UFC Betting Analysis, Matchup Edges & Cardio | Cannon Fight Lab`;
-  const description = `${f.name} UFC betting breakdown: matchup edges, cardio score, striking & grappling read, and model prediction context. ${careerWLD} career${division}.`;
-  const ogTitle = `${f.name} — UFC Betting Analysis & Matchup Edges`;
+  const title = `${f.name} — UFC Stats, Odds & Matchup Data | Cannon Fight Lab`;
+  const description = `${f.name} UFC research page: career and UFC statistics, cardio and style reads, recent form, and the sportsbook market on their next fight. ${careerWLD} career${division}.`;
+  const ogTitle = `${f.name} — UFC Stats, Odds & Matchup Data`;
 
   const athleteJsonLd = {
     '@context': 'https://schema.org',
@@ -125,7 +125,7 @@ function fighterStub(f) {
 <body>
 <h1>${escapeHtml(f.name)}</h1>
 ${f.nickname ? `<div class="nick">"${escapeHtml(f.nickname)}"</div>` : ''}
-<div class="tag">UFC Betting Analysis &amp; Matchup Edges</div>
+<div class="tag">UFC Stats, Odds &amp; Matchup Data</div>
 <div class="record">${careerWLD} career${division ? ' ' + escapeHtml(division.slice(2)) : ''}${ufcCount > 0 ? ' &middot; ' + ufcWLD + ' UFC' : ''}</div>
 <p><a href="${canonicalUrl}">View full stats, cardio score, and head-to-head matchups &rarr;</a></p>
 <p class="loading">Redirecting&hellip;</p>
@@ -143,9 +143,9 @@ function eventStub(e, fighters) {
 
   const dateStr = formatDate(e.event_date);
   const status = e.is_upcoming ? 'Predictions' : 'Results';
-  const verb = e.is_upcoming ? 'predictions and edge factors' : 'results and breakdown';
+  const verb = e.is_upcoming ? 'sportsbook odds, line movement and matchup data' : 'results, closing prices and matchup data';
   const title = `${e.name} — UFC ${status} | Cannon Fight Lab`;
-  const description = `${e.name}${dateStr ? ' on ' + dateStr : ''}${e.location ? ' in ' + e.location : ''}. Full card with model ${verb} for every fight.`;
+  const description = `${e.name}${dateStr ? ' on ' + dateStr : ''}${e.location ? ' in ' + e.location : ''}. Full card with ${verb} for every fight.`;
   const ogTitle = `${e.name} — Cannon Fight Lab`;
 
   const sportsEventJsonLd = {
@@ -236,7 +236,7 @@ function eventStub(e, fighters) {
 <body>
 <h1>${escapeHtml(e.name)}</h1>
 <div class="meta">${escapeHtml(dateStr)}${e.location ? ' &middot; ' + escapeHtml(e.location) : ''}</div>
-<p><a href="${canonicalUrl}">View full card with model verdicts and edge factors &rarr;</a></p>
+<p><a href="${canonicalUrl}">View the full card with sportsbook odds and matchup data &rarr;</a></p>
 <p class="loading">Redirecting&hellip;</p>
 <script>setTimeout(function(){location.replace(${JSON.stringify(canonicalUrl)});},120);</script>
 </body>

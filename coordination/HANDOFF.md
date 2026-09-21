@@ -11,6 +11,163 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (b) — The repositioning is on one branch, and its movement number is now defensible
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+The owner's direction, given today: **the model goes private, historical proof
+stays.** The repositioning on `claude/focused-maxwell-qw232x` is the desired
+product state, not `main`. This branch is that work plus today's trust sprint
+on top of it, in one history.
+
+### The branch reconciliation
+
+`claude/focused-maxwell-qw232x` was verified before anything was built on it:
+one commit (`24819e0`) on top of `main` at `2244b41`, no rebase needed, and it
+does contain what was reported — Card Lab, Market Lab, Fight Lab, the Cannon
+Card Brief, the archive banners, and `tests/no-model-on-public-surfaces.test.js`.
+Nothing it built was rebuilt. It is merged here, not reimplemented.
+
+Two id collisions were resolved in its favour, because it was written first:
+its **D-011** and **T-037** stand; today's decision became **D-012** and its
+task **T-043**.
+
+### What today's sprint changed on top of it
+
+`market_lab_views.sql` defined `v_fight_market_movement` with `open_p_a` from
+`min(captured_at)`. It was scrupulous about disclosing that — "our first
+capture", never "the opening line", always beside `books_at_open` — and it was
+still wrong. On the live table, 22 of 79 fights had **one** sportsbook at that
+instant; against a matched cohort the figure overstated movement by up to
+**12.7 points** and reported **three markets as moving 3+ points when they had
+not moved at all**.
+
+[D-012](DECISIONS.md) replaces it: the baseline is the **first broad CFL
+capture** (three distinct books priced), movement is medianed over the books
+quoting at **both** ends, and below three such books there is no number — the
+surface says which refusal it is instead. Market Lab's `<th>Since open</th>` is
+gone. Every dash now carries its reason.
+
+Also: the 14-day window is off the movement view (half of T-040), the sitemap
+no longer lists a noindex stub or three query-string shells, `picks.html` is
+one hop, and `fighter.html` no longer calls Raul Rosas Jr. "Jr.".
+
+### Verified
+
+11 Node suites — **245 assertions** — and 168 Python tests with 4,327 subtests,
+all green. Every page rendered in headless Chromium at 1440, 768 and 390 px
+with **zero horizontal overflow** on all of them. The Supabase CDN is blocked
+by this environment's egress policy, so the browser could not load live data;
+the number path was verified instead by running the real
+`v_fight_market_movement` rows for UFC Fight Night: Rosas Jr. vs. Barcelos
+through `market.js` directly, including a fabricated one-book fight to confirm
+the refusal renders as a reason rather than a dash.
+
+### Two model surfaces that survived the repositioning
+
+[D-013](DECISIONS.md). `props.html` was in the no-model test's PRODUCT list and
+passed anyway — it sells model output but says *projection*, and the ban list
+was built from the fight forecast's vocabulary. It is archived now, out of the
+nav, `noindex`. And the Cannon Card Brief's **subject line** still read
+"<Event> — model picks before the card" while its body and its own footer said
+the opposite; `build/send-digest.js` is on a weekly cron. Both now have guards:
+`tests/card-brief.test.js` reads subject lines specifically, and the no-model
+test checks that an archived surface is `noindex`, banner-carrying and unlinked.
+
+`ANALYTICS_SCHEMA.md` and `PRODUCT_BOUNDARY.md` are the sprint's two written
+deliverables — nineteen funnel events with the nine questions they answer, and
+the Free/Pro line. Neither ships code; T-047 implements the first.
+
+### Next action
+
+**ChatGPT reviews [D-012](DECISIONS.md)**, specifically the three-book floor —
+it is the one judgement in the change, and moving it is one constant in three
+places. Then the sprint's unfinished phases, in this order: **T-047** (funnel
+analytics — inventory what `_shared.js` already emits before adding a vendor),
+**T-046** (`v_fight_market_at_lock`, the last incomparable-cohort baseline in
+the repo), **T-038/T-039** (the social queue and `draft-post.js`, both still
+pre-repositioning). **T-048** (Terms of Service) and **T-049** (sportsbook
+jurisdiction labelling) are the owner's and need a lawyer, not a model.
+
+---
+
+## 2026-09-21 — The model is off the product; CFL is a research tool
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+The repositioning, on the owner's instruction, recorded as
+[D-011](DECISIONS.md); T-036 and T-037 are done. Branch
+`claude/focused-maxwell-qw232x`.
+
+### What is now live
+
+| | |
+|---|---|
+| positioning | "Research the UFC market." The forecast is gone from every forward-facing surface; what the site sells is the market, the movement and the matchup |
+| Card Lab (`index.html`) | per fight: vig-free consensus, the fair price behind it, movement since our first capture, best price and the book posting it. Sorts are Card order / Biggest move / Books disagree. No pick, no confidence tier, no CFL-vs-market difference |
+| Fight Lab (`fight.html`, new) | one matchup: both corners' consensus and best price, movement over two horizons, book spread, freshness, a per-sportsbook table, and the measured differences between the two fighters. Rewrites its own `<title>` and share description from the fighters' names |
+| Market Lab (`market.html`, new) | the whole card as a board — consensus, best price each side, since-open, 24 h, book spread, capture age — with a per-fight book breakdown that expands on demand, and a "what changed in the last 24 hours" list above it |
+| Factor Lab | unchanged and promoted into the nav |
+| data layer | one additive view, `v_fight_market_movement` (`market_lab_views.sql`), **applied**. Same shape and grants as the existing market views; nothing replaced, nothing dropped |
+| shared module | `market.js` — every market number on every surface is formatted here, so "never without its book count and its age" and "our first capture is not the opening line" are enforced in one file |
+| matchup layer | `fight-insights.js` gains `buildMatchupNotes` / `buildMatchupCaveats`: the same comparisons with no pick to hang them on. `buildEdgeBullets` / `buildRedFlags` are retained and no longer rendered anywhere public |
+| email | **The Cannon Card Brief.** `build/send-digest.js` now reports the biggest line moves, the book spread and the freshness instead of a "Model pick / Confidence" table |
+| social | `build/social-post.js` posts line movement, not picks, and refuses any queued piece not stamped `positioning: "research"` |
+| SEO assets | 4,549 fighter stubs, 799 event stubs, 62 preview pages and 8 card pages rewritten in place, plus the generators behind them (`build/templates.js`, `build/prerender.js`, `build/preview-templates.js`, `build/event-preview-templates.js`) — these were the unattended publishers |
+| archive | `proof.html`, `track-record.html`, `predictor.html`, `edges.html` and `methodology.html` keep every number and gain a dated banner saying the model they document is no longer in the product |
+
+### Three defects found on the way, all pre-existing
+
+1. **`parlay.html` had been showing no prices at all.** It queried `fight_odds`
+   and `odds_books` directly; both carry `private_lockdown_admin_only` for
+   `anon` *and* `authenticated`, so every leg rendered "—" with HTTP 200 and no
+   error. It now reads `v_fight_odds_latest_by_book`.
+2. **`mybook.html` settled bets off `model_predictions`.** A fight the model
+   never scored could never settle a user's bet. It now reads `fights` directly.
+3. **Two mobile overflows and one shared-footer overflow**, the footer one on
+   every page of the site. All three fixed.
+
+### Verified
+
+All 7 Node suites and 168 Python tests (4,296 subtests) green, including the new
+`tests/no-model-on-public-surfaces.test.js` (60 assertions) which replaces
+`tests/model-vs-market.test.js`. Every page rendered in headless Chromium at
+1440 and 390 against real UFC Fight Night: Rosas Jr. vs. Barcelos rows: no page
+errors, no horizontal overflow anywhere. The new view was checked against the
+live database — 9 of 11 fights priced, 26 captures on the main event, one line
+6.3 points off where we first saw it.
+
+### Held to scope
+
+No model, threshold, schedule, snapshot, ledger or frozen specification was
+changed. The engine still runs and still writes its locked pre-fight record. The
+CLV publication gate is untouched and still shut. No paid tier was created.
+
+## Next action
+
+**Owner:** one call, **T-041**. `mybook.html` had a column headed "CLV"
+comparing a user's own price to the earliest price we captured. It now reads
+"vs first" / "Avg vs earliest price seen" — same arithmetic, different words.
+Q-14's wording is unconditional about a user-facing surface; the counter-argument
+is that this describes the user's bet, not a CFL claim. That is a judgement call
+and it is yours.
+
+**ChatGPT:** the claim worth attacking is `open_p_a`. It is the median across
+whichever sportsbooks happened to be in our *first capture* of a fight, which on
+most cards is one offshore book, and every surface that shows it also shows
+`books_at_open` and calls it "our first capture" rather than the opening line.
+The question is whether a reader who is told "1 book, Sep 18 01:55 UTC" still
+reads a six-point move as six points of market movement rather than partly as a
+change in which books we were reading. If not, the honest fix is to define the
+baseline as the first capture at which N books were quoting, and to publish
+nothing before that.
+
+---
+
 ## 2026-09-19 (b) — The homepage is the card, and it claims no edge
 
 **From:** Claude
@@ -77,142 +234,3 @@ reason to bet, the third cell should lose the number, as the 2026-09-18 draft
 proposed, and only the label should stay.
 
 ---
-
-## 2026-09-19 — UFC 331: the first card captured under the CLV capture path
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-19
-
-Launch-day activation for UFC 331 (event 4433, first bout 21:00 UTC). Recorded
-as [D-009](DECISIONS.md), which is the approval — see the correction below.
-
-### The finding, and it is the whole entry
-
-**On a card day, the odds job had captured nothing.** Every cadence tier in
-`build/fetch-odds.js` gated on where the wall clock sat —
-`min % cadence < WAKE_INTERVAL_MIN`. That is a cadence only if the `*/5` cron
-fires every five minutes; GitHub throttles it to a handful of deliveries a day
-at arbitrary minutes. The four real wakes on the 19th were **:43, :30, :35,
-:35** — not one inside minutes 0–4, so the gate never opened. The only UFC 331
-moneyline rows on file that morning came from the Polymarket writer, which
-CLV-001 excludes by kind, and the freshest *sportsbook* line was **28 hours**
-old against a frozen 45-minute staleness limit.
-
-The gate now measures **elapsed time since our own last capture**, scoped to
-rows carrying `feed_version` so the other two writers cannot suppress our
-cadence, and falls back to the phase test whenever that is unreadable — so a
-missing ledger degrades to the old behaviour, never to "capture every wake".
-Seven tests, two mutation-checked, one replaying the four real wakes. Same
-throttled wakes against tonight's card: **10 captures, against 1**.
-
-### What is now live
-
-| | |
-|---|---|
-| `fight_odds` capture columns | **applied** — all 110,980 existing rows NULL, nothing backfilled |
-| `fights.is_active` / `bout_order` | **applied** — `_shared.js` had been reading both for months |
-| first CLV-eligible capture | 15:49 UTC, 142 rows, 6 books, **118 with the full §4 set** |
-| UFC 331 card | 12 active, 1 retired, evidence preserved |
-
-No CLV figure computed, none published, publication gate untouched at 0/100 and
-0/20.
-
-### The premise that was wrong
-
-The instruction said *"the approved migrations"*. **None of the five had an
-approval on record** — `DECISIONS.md` ended at D-008, and D-004 says the
-immutability migration is still the owner's to apply. D-009 is therefore not a
-citation of an earlier approval, it *is* the approval, and it is scoped to the
-two additive files rather than to all five.
-
-### Held back, against the instruction, and why
-
-Three migrations and two activations. The reasons are engineering, not process:
-
-1. **Immutability** — adds triggers to `fight_odds` while another repository
-   writes to it, during a live card. Its own filing says apply it between cards.
-2. **Event flow** — creates `odds_api_usage` **empty**, which reads as *"0 spent,
-   500 remaining"*. That is false, and the governor would take its finest rung on
-   it. Overspending the free allowance is paid usage, L3 under gate #6. **T-029.**
-3. **`clv001_columns`** — stores a result nothing can compute yet. Its header
-   says apply last.
-4. **The Event Flow schedule** — `REAL_PAGE_CHECK.json` does not exist and
-   `--execute` refuses without it. UFCStats returns **403** to this environment,
-   so it cannot be produced from here. **T-030.**
-5. **CLV write mode** — changes nothing tonight. The gate is a sample floor and
-   it is at 0.
-
-## Next action
-
-**Owner:** two calls, neither urgent tonight.
-
-1. **T-031** — the immutability migration, once the card is over. It is the last
-   structural piece and D-004 already assigns it to you.
-2. Whether holding items 1–5 above was the right read. If you want the Event
-   Flow schedule on, **T-030** needs somebody on a residential connection to
-   fetch one UFCStats page; it is not a decision, it is an IP block.
-
-**ChatGPT:** the claim worth attacking is the cadence fix. It changes when
-credits are spent, and the argument that it cannot spend faster than the ladder
-already permits rests on `dueSinceLastCapture` returning `null` — not `false` —
-on every unreadable path. If there is a path where an unreadable last capture
-reads as "due", the credit ceiling has a hole in it and the test asserting
-elapsed ≤ phase + 1 is measuring the wrong thing.
-
----
-
-## 2026-09-18 (f) — Factor Lab correction published; T-027 closed
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-18
-
-**T-027 is done.** PR #34 merged at `f40fd27c` under [D-008](DECISIONS.md), the
-L3 that permits it — verified by removing the entry and watching
-`test_a_done_L3_task_has_a_recorded_decision` go red.
-
-### What is now live
-
-`market_even_cohort` 869 → **1,220**, `fights_scored` held at 8,739, seven
-verdicts moved. The artifact is byte-verified: sha256 `ba3c9077…`, reconstructed
-from the validation run's own checksummed log because the artifact download
-redirects to blob storage the build network refuses.
-
-The Factor Lab's summary now reads **"Age, UFC-only record"**. That name is a
-page-side override, so `factor-rates.json` stays byte-identical to what the run
-produced and a future regeneration cannot silently revert the wording.
-
-Also corrected: three freshness claims the publish gate had quietly falsified
-(`stats.html`, `edges.html`, `CLAUDE.md` all said the Lab rebuilt on a timer),
-and a pre-existing error that printed 8,739 into a sentence describing the
-1,220-fight market-even cohort.
-
-### The episode in one line
-
-A reader defect in a build script had been publishing itself every six hours.
-The fix required separating measurement from publication first, then correcting
-the numbers, then correcting the words — in that order, because merging the fix
-on its own would have published its effects unreviewed.
-
-### What this deliberately did NOT settle
-
-`edges.js`'s **record** and **takedown-defence** heuristics are still shipped and
-still unsupported. FE-001 put record at ~50.2% market-even and takedown defence
-on the line. `ufc_record` clearing the bar is a different measurement and is not
-evidence for either. Nothing about them changed, and nothing should be inferred
-from the Factor Lab's green light.
-
-## Next action
-
-**Owner:** the measurement-integrity line is closed. The open product question is
-what to do with the two unsupported shipped heuristics — retire them the way
-cardio was retired in August, restate their published ranges honestly, or leave
-them with a caveat. That is a copy-and-product decision, not a measurement one;
-the evidence for it already exists in FE-001.
-
-**ChatGPT:** worth a skeptical read of whether the `stats.html` caveat plus the
-"UFC-only record" label are together enough that a casual reader cannot come away
-believing the pick engine's record factor was validated. That was the failure
-mode this whole publication was shaped around, and it is a judgement about
-wording rather than data.

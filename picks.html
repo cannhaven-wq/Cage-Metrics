@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Picks moved to Card Lab | Cannon Fight Lab</title>
-<!-- The standalone Picks page was retired; Card Lab is the current-card pick
-     surface. Keep this stub so old links, shares, and bookmarks land somewhere
-     useful instead of 404ing. noindex so crawlers drop the old URL. -->
+<title>Picks moved to the homepage | Cannon Fight Lab</title>
+<!-- The standalone Picks page was retired, and so was card-lab.html after it.
+     This used to hop picks.html -> card-lab.html -> / , which costs a crawler a
+     redirect and a reader a second flash of nothing. It now goes straight to
+     the homepage, where the card lives (T-004). Keep the stub so old links,
+     shares and bookmarks land somewhere useful instead of 404ing; noindex so
+     crawlers drop the old URL. -->
 <meta name="robots" content="noindex, follow">
-<link rel="canonical" href="https://cannonfightlab.com/card-lab.html">
-<meta http-equiv="refresh" content="0; url=card-lab.html">
+<link rel="canonical" href="https://cannonfightlab.com/">
+<meta http-equiv="refresh" content="0; url=/">
 <style>
   html,body{height:100%}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#08090b;color:#e6e9ee;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
@@ -17,7 +20,7 @@
 </style>
 </head>
 <body>
-<p>The Picks page is now <a href="card-lab.html">Card Lab</a>. Taking you there…</p>
-<script>setTimeout(function(){location.replace("card-lab.html");},120);</script>
+<p>The card is now on the <a href="/">homepage</a>. Taking you there…</p>
+<script>setTimeout(function(){location.replace("/");},120);</script>
 </body>
 </html>

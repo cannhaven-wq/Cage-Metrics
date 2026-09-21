@@ -83,7 +83,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -165,6 +165,10 @@
     letter-spacing: 0.5px;
   }
 
+  /* Division tables have five numeric columns and do not fit a phone; they
+     scroll inside their own wrapper rather than pushing the page sideways. */
+  .div-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .div-table-wrap > table.div-table { min-width: 420px; }
   table.div-table {
     width: 100%;
     border-collapse: collapse;
@@ -437,7 +441,7 @@
   </div>
 
   <h2 class="section-h">Finish rate by division</h2>
-  <table class="div-table" id="divTable">
+  <div class="div-table-wrap"><table class="div-table" id="divTable">
     <thead>
       <tr>
         <th>Division</th>
@@ -450,7 +454,7 @@
     <tbody>
       <tr><td colspan="5" style="text-align:center; padding: 30px; color: var(--text-3);">Loading…</td></tr>
     </tbody>
-  </table>
+  </table></div>
 
   <div class="disclaimer">
     <strong style="color:var(--text)">A note on these numbers:</strong> Edges shown are aggregate patterns across the full UFC history. They describe tendencies — they don't predict any individual fight. A 56% pattern still means 44% of fights go the other way. Always weigh stats alongside form, matchup style, and circumstance. Stats for entertainment purposes only. 1-800-GAMBLER.
@@ -459,11 +463,11 @@
 
 <div class="cfl-email-capture" data-source="stats-bottom"
      data-headline="Get these stats applied to every upcoming card."
-     data-sub="One email per week — model verdicts and the strongest edges for every fight, before the bell."></div>
+     data-sub="One email before each UFC card: the biggest line moves, where the sportsbooks disagree, and what changed during fight week. No picks."></div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl2"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('stats');

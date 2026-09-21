@@ -529,28 +529,28 @@
       </a>
       <div class="cfl-nav-links" id="cflNavLinks">
         <a class="cfl-nav-cta-link ${active === 'home' || active === 'cardlab' ? 'active' : ''}" href="index.html#next">Card Lab</a>
-        <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>
-          <span class="full">Track Record</span><span class="short">Record</span>
+        <a href="market.html" ${active === 'market' ? 'class="active"' : ''}>
+          <span class="full">Market Lab</span><span class="short">Market</span>
+        </a>
+        <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>
+          <span class="full">Factor Lab</span><span class="short">Factors</span>
         </a>
         <a href="proof.html" ${active === 'proof' ? 'class="active"' : ''}>
           <span class="full">Proof Center</span><span class="short">Proof</span>
         </a>
-        <a href="props.html" ${active === 'props' ? 'class="active"' : ''}>
-          <span class="full">Prop Board</span><span class="short">Props</span>
-        </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','stats','fighters','h2h'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">Tools</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','props','fighters','h2h','track','fight'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">More</button>
           <div class="cfl-nav-menu-panel">
             <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
             <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
-            <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
-            <a href="stats.html" ${active === 'stats' ? 'class="active"' : ''}>Factor Lab</a>
+            <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
+            <a href="track-record.html" ${active === 'track' ? 'class="active"' : ''}>Model Archive</a>
           </div>
         </div>
         <a href="pricing.html" ${active === 'pricing' ? 'class="active"' : ''}>Pricing</a>
       </div>
-      <span class="cfl-nav-status" title="Model live"><span class="live-dot"></span>MODEL&nbsp;·&nbsp;LIVE</span>
+      <span class="cfl-nav-status" title="Sportsbook prices captured on a schedule"><span class="live-dot"></span>MARKET&nbsp;·&nbsp;LIVE</span>
       <div class="cfl-nav-slot" id="cflNavSlot"></div>
       <button class="cfl-nav-burger" id="cflNavBurger" aria-label="Menu" aria-expanded="false">
         <span></span><span></span><span></span>
@@ -660,8 +660,11 @@
       el.setAttribute('data-cfl-rendered', '1');
       if (signedIn) { el.style.display = 'none'; return; }
       const source = el.getAttribute('data-source') || 'inline';
-      const headline = el.getAttribute('data-headline') || 'Free during beta — every edge factor unlocked.';
-      const sub = el.getAttribute('data-sub') || 'Create a free account to track your picks, see every model verdict, and get the weekly preview email.';
+      // T-036 / the September 2026 repositioning: this used to promise "every
+      // edge factor unlocked" and "every model verdict", both of which describe
+      // a product CFL no longer ships. The offer is the research surface.
+      const headline = el.getAttribute('data-headline') || 'Free during beta — every market panel unlocked.';
+      const sub = el.getAttribute('data-sub') || 'Create a free account for full sportsbook comparison, line movement and matchup detail on every card — and the Cannon Card Brief before fight night.';
       el.innerHTML = `
         <div class="cfl-funnel-cta-inner">
           <div class="cfl-funnel-cta-copy">
@@ -689,13 +692,19 @@
   //   <div class="cfl-email-capture" data-source="home-footer"></div>
   // …then call cfl.renderEmailCaptures(). Submitting writes to the
   // email_subscribers table; the digest workflow picks it up from there.
+  //
+  // The product this signs people up for is THE CANNON CARD BRIEF.
   cfl.renderEmailCaptures = function () {
     const els = document.querySelectorAll('.cfl-email-capture:not([data-cfl-rendered])');
     els.forEach(el => {
       el.setAttribute('data-cfl-rendered', '1');
       const source = el.getAttribute('data-source') || 'inline';
-      const headline = el.getAttribute('data-headline') || 'Weekly fight preview, free.';
-      const sub = el.getAttribute('data-sub') || 'Get every upcoming UFC card with the model’s verdict in your inbox.';
+      // THE CANNON CARD BRIEF. One email before each card: what moved, where
+      // the books disagree, what changed during fight week. Deliberately not
+      // "get our picks" — there are none, and the list is worth more to a
+      // researcher than to someone waiting to be told what to back.
+      const headline = el.getAttribute('data-headline') || 'The Cannon Card Brief.';
+      const sub = el.getAttribute('data-sub') || 'One email before each UFC card: the biggest line moves, where the sportsbooks disagree, and what changed during fight week. No picks.';
       el.innerHTML = `
         <div class="cfl-email-capture-inner">
           <div class="cfl-email-capture-copy">
@@ -704,7 +713,7 @@
           </div>
           <form class="cfl-email-capture-form" novalidate>
             <input type="email" required placeholder="you@example.com" autocomplete="email" aria-label="Email address">
-            <button type="submit">Subscribe</button>
+            <button type="submit">Get the Brief</button>
           </form>
           <div class="cfl-email-capture-msg" aria-live="polite"></div>
         </div>
@@ -734,7 +743,7 @@
           return;
         }
         msg.classList.add('ok');
-        msg.textContent = 'Subscribed. Check your inbox before the next card.';
+        msg.textContent = 'Subscribed. The next Cannon Card Brief lands before the next card.';
         form.reset();
       });
     });

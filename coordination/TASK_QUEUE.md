@@ -21,7 +21,6 @@ it died is usually worth more than the task was.
 |---|---|---|---|---|
 | T-002 | Individual votes on the nine held amendment clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k) | L3 | Owner | blocked |
 | T-003 | Review the CLV measurement protocol draft before freeze | L1 | ChatGPT | in-progress |
-| T-004 | Collapse the `picks.html` → `card-lab.html` → `/` redirect to a single hop | L1 | Claude | queued |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
@@ -35,7 +34,15 @@ it died is usually worth more than the task was.
 | T-033 | Bring the rest of `fight-week-v2` onto `main` — Event Hub pages, fight pages, Market Board, Fight Week Brief, pre/post-card digest, `hub_visits` prune, funnel events, sitemap ordering — rebased on the current tree and reconciled with D-007 | L2 | Claude | queued |
 | T-034 | Reconcile `revenue/trust-funnel-v1` with D-007: retire or re-route its claims manifest through `proof-gates.js`; keep the "forecast" wording, the single signup component and the funnel events | L2 | Claude | queued |
 | T-035 | `claude/email-capture-modal-gbkqri` — an email prompt after two minutes on every page. Never approved; the owner's call | L3 | Owner | proposed |
-| T-036 | The shared funnel CTA in `_shared.js` still says "every edge factor unlocked"; reword to match D-010 ("full matchup detail") and bump `_shared.js?v=` on all 26 consumers in one pass | L1 | Claude | queued |
+| T-038 | Regenerate `social/queue.json` through `npm run social-engine` — every queued piece predates the repositioning and quotes a model probability, so `social-post.js` now refuses all 21 of them | L1 | Claude | queued |
+| T-039 | Rewrite `build/draft-post.js` for the research positioning — it still renders a "Model pick / Confidence" table. Manual-only (`workflow_dispatch`), so it publishes nothing unattended | L1 | Claude | queued |
+| T-040 | Widen `v_fight_odds_latest_by_book` past the 14-day window so Fight Lab's per-book table works on historical fights. **Half done under D-012** — `v_fight_market_movement` no longer carries the window, so the movement panel already survives; the per-book table still empties after a fortnight | L1 | Claude | queued |
+| T-046 | Reconcile `v_fight_market_at_lock` (`fight_week_views.sql`) with D-012 — it still compares a lock-time cohort against a current cohort, and is the last incomparable-cohort baseline left in the repo. Unread by any surface today | L1 | Claude | queued |
+| T-047 | Instrument the funnel events specified in `ANALYTICS_SCHEMA.md` — one emitter in `_shared.js`, the `funnel_events` table, insert-only RLS, counts read through a definer view. The schema is written; nothing emits yet. Choosing a third-party vendor instead is **L3**, because it is a privacy disclosure | L1 | Claude | queued |
+| T-048 | A Terms of Service page. `privacy.html` and `disclaimer.html` exist and carry UFC non-affiliation, 21+, responsible-gambling and affiliate disclosure; there is no Terms. Needed before any paid account exists, and the wording needs a lawyer, not a model | L3 | Owner | proposed |
+| T-050 | Decide whether `parlay.html` and `mybook.html` stay reachable at all. Both are out of the primary journey and neither carries a model any more; `parlay.html` is a neutral calculator and `mybook.html` a private utility. Keeping or retiring them is a product call, not a defect | L3 | Owner | proposed |
+| T-049 | Sportsbook jurisdiction labelling — offshore and regulated books are visually identical in the Market Lab per-book table. Needs a neutral classification, and whether to make a jurisdiction claim at all is not ours | L3 | Owner | proposed |
+| T-041 | Decide whether `mybook.html`'s "vs earliest price seen" column should exist at all under Q-14, or whether any per-bet closing-line figure waits on the frozen CLV protocol | L3 | Owner | proposed |
 
 ## Closed
 
@@ -52,10 +59,48 @@ it died is usually worth more than the task was.
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
 | T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js`, and publish the corrected cohort | L3 | Owner | done |
 | T-028 | UFC 331 launch activation — apply the additive capture migrations, reconcile the card | L3 | Owner | done |
+| T-036 | Reword the shared funnel CTA away from "every edge factor unlocked" and bump `_shared.js?v=` across every consumer | L1 | Claude | done |
+| T-037 | The research repositioning: remove the forecast from every forward-facing surface, build Card Lab / Fight Lab / Market Lab, reframe the email as the Cannon Card Brief | L3 | Owner | done |
+| T-004 | Collapse the `picks.html` → `card-lab.html` → `/` redirect to a single hop | L1 | Claude | done |
+| T-043 | A defensible market-movement baseline: matched book cohort, three-book floor, no "opening line" anywhere | L2 | Claude | done |
+| T-044 | Sitemap hygiene — stop listing a noindex redirect stub and three empty query-string shells | L0 | Claude | done |
+| T-045 | `fighter.html`'s own `lastName` rendered "Raul Rosas Jr." as "Jr."; delegate to `fight-insights.js` | L0 | Claude | done |
+| T-051 | The Prop Board was still a live public model surface after the repositioning — archive it, drop it from the nav, `noindex` | L2 | Claude | done |
+| T-052 | The Cannon Card Brief's email subject still read "model picks before the card" | L2 | Claude | done |
 
 ---
 
 ## Notes on the open rows
+
+**T-037 is done and is recorded as [D-011](DECISIONS.md).** It is the largest
+single product change in this repo's history and it is L3 on two counts: it
+retires existing public claims and it is a major architectural change to the
+forward-facing product. The owner's instruction is quoted verbatim in D-011
+rather than summarised, because an L3 approval that is paraphrased is not an
+approval.
+
+**T-038 is small but it is the one unattended publisher still carrying the old
+positioning.** `social-post.yml` fires Mon/Wed/Fri. It now refuses any queued
+piece that is not stamped `positioning: "research"`, so nothing ships — but the
+queue is dead until it is regenerated, and the fallback path (`buildPost`, which
+posts line movement) is what runs in the meantime. That fallback is correct, so
+this is a restoration of capability, not a leak.
+
+**T-040 is what stops Fight Lab being a durable SEO surface.** The per-book and
+movement views are both scoped to `event_date >= CURRENT_DATE - 14`, which is
+right for the capture cost and wrong for a page meant to rank on
+"[fighter] vs [fighter] odds" long after the card. A fight outside the window
+renders its matchup panel and an honest "no sportsbook price captured" market
+panel — correct, but thin.
+
+**T-041 is a genuine question, not a formality.** `mybook.html` used to show a
+column headed "CLV" comparing the user's own price to the earliest price we had
+captured. Under this change the header reads "vs first" and the summary tile
+reads "Avg vs earliest price seen"; the arithmetic is unchanged. The argument
+for keeping it is that it describes the user's own bet, not a CFL performance
+claim, so Q-14's publication gate is not engaged. The argument against is that
+Q-14's wording is unconditional about a user-facing surface. Claude does not get
+to pick.
 
 **T-009** is attribution, which is the one thing an append-only log exists to
 get right. The records name the owner two ways: `protocol.json` resolves Q-14 by
