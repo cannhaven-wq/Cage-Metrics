@@ -274,6 +274,59 @@ t('the SQL file is real and applied alongside the module', () => {
   ok(exists('market-movement.js'), 'market-movement.js missing');
 });
 
+/* ---------------------------------- 9. the surfaces obey the same rule */
+const SURFACES = ['index.html', 'market.html', 'fight.html', 'event.html', 'fighter.html'];
+const MARKET_JS = read('market.js');
+
+t('market.js is the only place a surface reads the movement view', () => {
+  SURFACES.forEach(f => {
+    const src = read(f);
+    ok(!/from\(['"]v_fight_market_movement['"]\)/.test(src),
+       f + ' queries the movement view directly instead of through market.js');
+  });
+  ok(/from\('v_fight_market_movement'\)/.test(MARKET_JS),
+     'market.js does not read the movement view');
+});
+
+t('no surface reads the retired single-instant open columns', () => {
+  SURFACES.concat(['market.js']).forEach(f => {
+    const src = read(f);
+    ['open_p_a', 'open_p_b', 'books_at_open'].forEach(c =>
+      ok(src.indexOf(c) === -1, f + ' still reads ' + c));
+    ['moveSinceOpen', 'openProb', 'booksAtOpen', 'openCaveat'].forEach(c =>
+      ok(src.indexOf(c) === -1, f + ' still uses the retired field ' + c));
+  });
+});
+
+t('market.js refuses movement below the matched-book floor', () => {
+  ok(/MIN_MATCHED_BOOKS\s*=\s*3/.test(MARKET_JS), 'market.js does not pin the floor at 3');
+  ok(/matched\s*>=\s*M\.MIN_MATCHED_BOOKS/.test(MARKET_JS),
+     'market.js does not gate on the matched book count');
+  ok(/usable \? num\(isA \? row\.baseline_p_a/.test(MARKET_JS),
+     'market.js reads the baseline without checking it is usable');
+});
+
+t('side B moves the opposite way to side A', () => {
+  ok(/isA \? movePtsA : -movePtsA/.test(MARKET_JS),
+     'market.js does not flip the sign of the move for the other corner');
+});
+
+t('the superseded SQL file defines nothing', () => {
+  const legacy = read('market_lab_views.sql');
+  ok(!/CREATE\s+OR\s+REPLACE\s+VIEW/i.test(legacy),
+     'market_lab_views.sql still defines a view — two files, one view, is how they drift');
+  ok(/SUPERSEDED/.test(legacy), 'market_lab_views.sql does not say it is superseded');
+});
+
+t('every surface explains a dash instead of printing a bare one', () => {
+  ok(/not enough comparable books/i.test(read('fight.html')),
+     'fight.html prints a bare dash for a missing move');
+  ok(/under 3 books|not comparable/i.test(read('market.html')),
+     'market.html prints a bare dash for a missing move');
+  ok(/not enough comparable books|not yet priced by/i.test(read('index.html')),
+     'index.html prints a bare dash for a missing move');
+});
+
 // ------------------------------------------------------------------ report
 if (failures.length) {
   console.log(`\n  ${passed} passed, ${failures.length} FAILED\n`);

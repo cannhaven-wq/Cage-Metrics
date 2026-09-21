@@ -1,0 +1,34 @@
+-- =============================================================================
+-- market_lab_views.sql — SUPERSEDED 2026-09-21. Do not apply this file.
+-- =============================================================================
+-- This file defined `v_fight_market_movement` with `open_p_a`, `open_p_b` and
+-- `books_at_open`, where "open" meant `min(captured_at)` — CFL's single
+-- earliest capture of a fight. It was careful about it: the header required
+-- every surface to print `books_at_open` and `first_seen_at` beside the number
+-- and to call it "our first capture", never "the opening line".
+--
+-- That disclosure was not enough, and the numbers say so. Measured against the
+-- live `fight_odds` table on 2026-09-21:
+--
+--     79 fights had real sportsbook quotes
+--     22 of them (28%) had exactly ONE sportsbook at that first instant
+--     7 fights differed from a matched-cohort measurement by 3+ points
+--     3 fights had NOT MOVED (<1 pt) and would have been reported as 3+
+--     worst single overstatement: 12.7 points
+--
+-- A caveat printed beside a wrong number does not make it a right number. The
+-- replacement measures movement only across the sportsbooks quoting at BOTH
+-- ends, refuses it below three such books, and takes its baseline from the
+-- first instant three distinct books had the fight priced.
+--
+-- The definition now lives in **`market_movement_views.sql`**, which replaces
+-- `v_fight_market_movement` in place and keeps every defensible column this
+-- file had: current consensus, book count, freshness, the 24-hour lookback,
+-- best price and the book posting it, book spread, capture count. It also
+-- drops this file's `event_date >= CURRENT_DATE - 14` window, so a fight page
+-- older than a fortnight keeps its market history instead of going blank.
+--
+-- Recorded as D-012. The original text of this file is in git history at
+-- 24819e0 — it is not reproduced here, because two files defining one view is
+-- how the two drift apart.
+-- =============================================================================

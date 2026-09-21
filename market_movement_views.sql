@@ -6,15 +6,19 @@
 --
 -- THE PROBLEM THIS EXISTS TO SOLVE
 --
--- Two things carried it. `v_fight_market_at_lock` (fight_week_views.sql) is the
--- one in the repo. The other was found in the live database on 2026-09-21 and
--- was not in the repo at all: a `v_fight_market_movement` applied from the
--- unmerged fight-week-v2 branch (T-033), exposing `open_p_a`, `open_p_b` and
--- `books_at_open` — where "open" meant `min(captured_at)`, CFL's single
--- earliest capture instant. CFL has never observed a sportsbook opener. That
--- view is replaced by this file; nothing read it (no repo code, no dependent
--- view, no rendered surface), and the replacement keeps every defensible column
--- it had.
+-- Two things carried it. `v_fight_market_at_lock` (fight_week_views.sql)
+-- compares a lock-time cohort against a current one and is still to be
+-- reconciled (T-046). The other was `v_fight_market_movement`, defined by
+-- `market_lab_views.sql` on the repositioning branch and applied to the live
+-- database the same day, exposing `open_p_a`, `open_p_b` and `books_at_open` —
+-- where "open" meant `min(captured_at)`, CFL's single earliest capture
+-- instant. That file was careful about it and required every surface to print
+-- the book count beside the number and to call it "our first capture", never
+-- "the opening line". The disclosure was honest and the number was still
+-- wrong: on 22 of 79 fights that instant held ONE sportsbook, and the figure
+-- it produced overstated real movement by as much as 12.7 points. This file
+-- replaces that view in place and keeps every defensible column it had;
+-- `market_lab_views.sql` is now a pointer here.
 --
 -- `v_fight_market_at_lock` (fight_week_views.sql) compares a vig-free median
 -- taken over whatever sportsbooks CFL had captured by the lock instant against

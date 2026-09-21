@@ -85,14 +85,11 @@ function eventPreview({ event, rows, previewSlugFor }) {
   const mainPick = main ? main.pick : null;
 
   // ---- meta ----
-  const title = `${event.name} Predictions & Full-Card Picks | Cannon Fight Lab`;
-  const summarySentence = mainPick
-    ? `The model picks ${mainPick.winnerName} in the main event (${mainPick.pct}% confidence). `
-    : '';
+  const title = `${event.name} Odds, Line Movement & Full-Card Research | Cannon Fight Lab`;
   const description = (
-    `${event.name} predictions${dateLabel ? ' — ' + dateLabel : ''}` +
-    `${event.location ? ', ' + event.location : ''}. ${summarySentence}` +
-    `Model verdicts, confidence, and edge factors for all ${bouts} fights on the card.`
+    `${event.name}${dateLabel ? ' — ' + dateLabel : ''}` +
+    `${event.location ? ', ' + event.location : ''}. Sportsbook odds, line movement and ` +
+    `matchup data for all ${bouts} fights on the card. No picks.`
   ).trim();
 
   // ---- JSON-LD ----
@@ -123,25 +120,24 @@ function eventPreview({ event, rows, previewSlugFor }) {
   };
   Object.keys(sportsEventJsonLd).forEach(k => sportsEventJsonLd[k] === undefined && delete sportsEventJsonLd[k]);
 
-  const faqEntities = [];
-  if (mainPick) {
-    faqEntities.push({
-      '@type': 'Question',
-      'name': `Who does Cannon Fight Lab's model pick to win the ${event.name} main event?`,
-      'acceptedAnswer': {
-        '@type': 'Answer',
-        'text': `The model picks ${mainPick.winnerName} at ${mainPick.pct}% confidence (${modelAgreementLabel(mainPick.agree, mainPick.total)}). CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
-      }
-    });
-  }
-  faqEntities.push({
+  // The FAQ block used to answer "who does the model pick to win the main
+  // event". CFL no longer publishes a forecast, so the questions it answers
+  // now are the ones the page can actually answer.
+  const faqEntities = [{
     '@type': 'Question',
     'name': `How many fights are on the ${event.name} card?`,
     'acceptedAnswer': {
       '@type': 'Answer',
-      'text': `${bouts} fights are currently scheduled${withVerdict ? `, with model verdicts published on ${withVerdict} of them` : ''}. See the full card with every pick above.`
+      'text': `${bouts} fights are currently scheduled. The full card is above, each fight linking to its odds and matchup research.`
     }
-  });
+  }, {
+    '@type': 'Question',
+    'name': `Does Cannon Fight Lab publish picks for ${event.name}?`,
+    'acceptedAnswer': {
+      '@type': 'Answer',
+      'text': `No. CFL is a research tool: it shows the vig-free sportsbook consensus, the best price on offer and which book is posting it, how far each line has moved since we started capturing it, and the measurable differences between the two fighters. It does not tell you who will win.`
+    }
+  }];
   const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
@@ -169,8 +165,8 @@ function eventPreview({ event, rows, previewSlugFor }) {
     const weight = r.fight.weight_class || '';
     const previewUrl = `${SITE}/preview/${previewSlugFor(r)}.html`;
     const verdictCell = r.pick
-      ? `<strong>${escapeHtml(r.pick.winnerName)}</strong><span class="cfl-card-conf">${r.pick.pct}% · ${r.pick.agree}/${r.pick.total}</span>`
-      : `<span class="cfl-card-pending">Verdict pending</span>`;
+      ? `<a class="cfl-card-research" href="${SITE}/fight.html?id=${r.fight.id}">Odds &amp; research →</a>`
+      : `<a class="cfl-card-research" href="${SITE}/fight.html?id=${r.fight.id}">Odds &amp; research →</a>`;
     return `
       <tr>
         <td class="cfl-card-bout">
@@ -242,6 +238,8 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   .cfl-card-verdict { text-align:right; white-space:nowrap; }
   .cfl-card-verdict strong { color:#fff; font-size:15px; display:block; }
   .cfl-card-conf { color:#e63946; font-size:12px; }
+  .cfl-card-research { color:#e63946; font-size:13px; text-decoration:none; white-space:nowrap; }
+  .cfl-card-research:hover { text-decoration:underline; }
   .cfl-card-pending { color:#777; font-size:13px; font-style:italic; }
   .cfl-card-deeper { background:#111; border:1px solid #222; border-radius:6px; padding:18px 20px; }
   .cfl-card-deeper h3 { font-size:14px; color:#999; text-transform:uppercase; letter-spacing:1px; margin:0 0 10px; }
@@ -255,30 +253,29 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
 
 <div class="cfl-card-wrap">
 
-  <div class="cfl-card-eyebrow">UFC Card Predictions</div>
+  <div class="cfl-card-eyebrow">UFC Card Research</div>
 
-  <h1>${escapeHtml(event.name)} Predictions</h1>
+  <h1>${escapeHtml(event.name)} — Odds &amp; Full-Card Research</h1>
 
   <div class="cfl-card-meta">
     ${dateLabel ? escapeHtml(dateLabel) : ''}${event.location ? ' &middot; ' + escapeHtml(event.location) : ''}${bouts ? ' &middot; ' + bouts + ' fights' : ''}
   </div>
 
   <div class="cfl-card-summary">
-    <span class="cfl-card-summary-label">Model read on this card</span>
-    ${mainPick
-      ? `Main event: <strong>${escapeHtml(mainPick.winnerName)}</strong> · ${mainPick.pct}% confidence · ${modelAgreementLabel(mainPick.agree, mainPick.total)}. Verdicts published on ${withVerdict} of ${bouts} fights.`
-      : `Model verdicts publish closer to fight night. Full ${bouts}-fight card below.`}
+    <span class="cfl-card-summary-label">What this page is</span>
+    The ${bouts}-fight card, each bout linking to its live sportsbook odds, line movement
+    and matchup data. Cannon Fight Lab does not publish a pick on any of them.
   </div>
 
   <div class="cfl-card-cta">
     <div class="cfl-card-cta-text">
-      <strong>Get every pick on this card free</strong>
-      <span>Free during beta — every edge factor, save your picks, weekly preview email.</span>
+      <strong>The whole market on this card, one screen</strong>
+      <span>Vig-free consensus, the best price and who is posting it, and what has moved since we started watching. Free, no account needed.</span>
     </div>
-    <a class="btn" href="${signupUrl}">Create free account →</a>
+    <a class="btn" href="${SITE}/market.html?event=${event.id}">Open Market Lab →</a>
   </div>
 
-  <h2 class="cfl-card-h2">Full card &amp; model picks</h2>
+  <h2 class="cfl-card-h2">Full card</h2>
   <table class="cfl-card-table">
     <tbody>${rowHtml}
     </tbody>
@@ -287,9 +284,9 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   <div class="cfl-card-deeper">
     <h3>Go deeper</h3>
     <a href="${eventUrl}">Live card &amp; odds: ${escapeHtml(event.name)} →</a>
-    <a href="${SITE}/card-lab.html">Card Lab — fights ranked by edge &amp; value →</a>
-    <a href="${SITE}/track-record.html">Model track record: accuracy &amp; ROI →</a>
-    <a href="${SITE}/edges.html">How model verdicts are built →</a>
+    <a href="${SITE}/market.html?event=${event.id}">Market Lab — every sportsbook, side by side →</a>
+    <a href="${SITE}/index.html#next">Card Lab — the next card, one screen →</a>
+    <a href="${SITE}/stats.html">Factor Lab — which fight stats actually hold up →</a>
   </div>
 
   <p class="cfl-card-foot">

@@ -5,6 +5,19 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-09-21
 
+**Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
+Lab is a **UFC research and market-intelligence tool**, not a picks product. The
+forecasting engine was removed from every forward-facing surface on the owner's
+instruction, after testing failed to show its disagreement with the market was
+worth acting on. The engine still runs, still writes its locked pre-fight record
+before every bell, and is still graded in public on the Proof Center — it is
+simply not shown on the card. The forward-facing product is **Card Lab**,
+**Fight Lab**, **Market Lab** and **Factor Lab**, and the email is the **Cannon
+Card Brief**. `tests/no-model-on-public-surfaces.test.js` holds the line.
+
+Nothing in the research, snapshot, settlement or CLV pipeline changed with it.
+Everything below this paragraph is about those, and is unaffected.
+
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
 owner, 2026-09-16**). **CLV write mode is held shut while any amendment is
@@ -64,7 +77,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 |---|---|
 | [`STATE.md`](STATE.md) | this file — current position, refreshed at every handoff |
 | [`TASK_QUEUE.md`](TASK_QUEUE.md) | what is queued, who owns it, what level it is |
-| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-004**, retiring `backfill_odds.py` |
+| [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-011**, taking the model off the public product |
 | [`HANDOFF.md`](HANDOFF.md) | the live baton — newest entry at the top |
 | [`CRITICAL_GATES.md`](CRITICAL_GATES.md) | the L0–L3 ladder and the closed L3 list |
 | [`AUDIT_2026-09-18.md`](AUDIT_2026-09-18.md) | the read-only product audit — where the five workstreams actually stand |
@@ -75,32 +88,20 @@ Git history is the audit trail. These files are the working surface.
 
 ## Where the project is
 
-### The open question, and it is the owner's — T-039
-
-A production-readiness sprint was briefed on 2026-09-21 on the premise that the
-public model had been removed and that a **Market Lab**, a **Fight Lab** and a
-**Cannon Card Brief** exist. Checked against `main` that day, none of it holds:
-those three surfaces have zero occurrences in the tree outside the brand name,
-and `track-record.html` (ROI, profit/loss, an edge-banded bet table) is in the
-primary nav beside `predictor.html`, `parlay.html`, `props.html` and
-`mybook.html`. [D-010](DECISIONS.md), approved 2026-09-19, deliberately kept
-"Model vs Market" on the homepage.
-
-Nothing was removed on the strength of that premise. **[T-039](TASK_QUEUE.md)
-is the live baton**: model-and-market with the Proof Center carrying the record,
-or research-and-market-intelligence with the model private. T-033, T-040 and
-T-041 all wait on the answer.
-
 ### Market movement — settled 2026-09-21
 
-Movement is measured over the **matched book cohort** and refused below three
-such books; the baseline is the **first broad CFL capture** and is never called
-an opening line. [D-011](DECISIONS.md), `market_movement_views.sql`,
-`market-movement.js`. The live `v_fight_market_movement` that called
-`min(captured_at)` an "open" — present in no repo file, inherited from the
-unmerged `fight-week-v2` — is gone. On the real table it overstated moves by up
-to 12.7 points and reported three markets as moving 3+ points when they had not
-moved at all. No surface renders any of this yet.
+Movement is measured over the **matched book cohort** — the sportsbooks quoting
+at both ends — and refused below three of them. The baseline is the **first
+broad CFL capture**, and it is never called an opening line.
+[D-012](DECISIONS.md), `market_movement_views.sql`, `market.js`.
+
+This supersedes the `open_p_a` baseline that shipped with the repositioning
+hours earlier. That one disclosed its book count honestly and was still wrong:
+22 of 79 fights had **one** sportsbook at CFL's earliest capture, the figure
+overstated real movement by up to **12.7 points**, and three markets that had
+not moved were reported as moving 3+. A caveat beside a wrong number does not
+make it right.
+
 
 ### Research
 

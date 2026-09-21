@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ===== Primary SEO =====
+     Title and description are rewritten once the fight loads (see setMeta)
+     so a shared link reads "Rosas Jr. vs Barcelos — Odds, Line Movement and
+     Matchup Data". The static copy below is what a crawler that does not run
+     JavaScript sees, and the /f/ and /e/ prerendered stubs cover the rest. -->
+<title>UFC Fight Research — Odds, Line Movement and Matchup Data | Cannon Fight Lab</title>
+<meta name="description" content="One UFC matchup, fully researched: vig-free sportsbook consensus, every book's current price, the best number on each side, how far the line has moved across the books quoting at both ends, and the measurable differences between the two fighters.">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="index, follow, max-image-preview:large">
+
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="UFC Fight Research — Odds, Line Movement and Matchup Data">
+<meta property="og:description" content="Vig-free consensus, sportsbook-by-sportsbook prices, best available number, line movement and matchup data for one UFC fight.">
+<meta property="og:image" content="https://cannonfightlab.com/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="UFC Fight Research — Odds, Line Movement and Matchup Data">
+<meta name="twitter:description" content="Vig-free consensus, sportsbook-by-sportsbook prices, best available number, line movement and matchup data for one UFC fight.">
+<meta name="twitter:image" content="https://cannonfightlab.com/og-image.png">
+
+<meta name="theme-color" content="#060708">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rl1">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+
+<style>
+/* =====================================================================
+   FIGHT LAB — one matchup, two questions: what does the market say, and
+   what does the matchup data say. Scoped under #fl.
+   ===================================================================== */
+#fl { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 clamp(16px, 3vw, 32px) 40px; }
+
+#fl .crumb { font-size: 12px; color: var(--text-3); padding: 18px 0 0; }
+#fl .crumb a { color: var(--text-2); }
+#fl .crumb a:hover { color: #fff; }
+
+#fl .fl-head { padding: 14px 0 22px; border-bottom: 1px solid var(--line); }
+#fl .fl-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--red); }
+#fl h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4vw, 46px); line-height: 1.05; color: #fff; margin: 8px 0 6px; }
+#fl .fl-sub { font-size: 13px; color: var(--text-3); }
+
+#fl h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; }
+#fl .sec { padding: 30px 0 0; }
+#fl .sec-sub { font-size: 13px; color: var(--text-3); margin-top: 4px; max-width: 720px; line-height: 1.5; }
+
+/* Corner cards */
+#fl .corners { display: grid; grid-template-columns: 1fr auto 1fr; gap: 14px; align-items: stretch; margin-top: 16px; }
+#fl .corner { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 18px; text-align: center; display: flex; flex-direction: column; gap: 8px; }
+#fl .corner .nm { font-family: var(--font-display); font-size: 21px; font-weight: 700; color: #fff; line-height: 1.15; }
+#fl .corner .nm a { color: inherit; } #fl .corner .nm a:hover { color: var(--red); }
+#fl .corner .rec { font-size: 12px; color: var(--text-3); }
+#fl .corner .big { font-family: var(--font-display); font-size: 40px; font-weight: 800; color: var(--text); line-height: 1; font-variant-numeric: tabular-nums; }
+#fl .corner .biglbl { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#fl .corner .pxrow { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 4px; }
+#fl .corner .pxbox { background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; padding: 6px 10px; min-width: 92px; }
+#fl .corner .pxbox .v { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: #fff; font-variant-numeric: tabular-nums; }
+#fl .corner .pxbox .k { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#fl .vsmid { align-self: center; font-family: var(--font-display); font-weight: 800; color: var(--text-3); font-size: 15px; letter-spacing: .1em; }
+
+/* Metric strip */
+#fl .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 14px; }
+#fl .mcell { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+#fl .mcell .k { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#fl .mcell .v { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; line-height: 1.15; font-variant-numeric: tabular-nums; margin-top: 2px; }
+#fl .mcell .v.up { color: var(--probe); } #fl .mcell .v.down { color: var(--amber); } #fl .mcell .v.flat { color: var(--text-3); }
+#fl .mcell .s { font-size: 11px; color: var(--text-3); line-height: 1.35; margin-top: 3px; }
+#fl .mcell.stale .s { color: var(--amber); }
+
+/* Book table */
+#fl .btable { width: 100%; border-collapse: collapse; margin-top: 14px; font-variant-numeric: tabular-nums; }
+#fl .btable th { text-align: right; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+#fl .btable th:first-child, #fl .btable td:first-child { text-align: left; }
+#fl .btable td { text-align: right; font-size: 13px; color: var(--text-2); padding: 9px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+#fl .btable td.px { font-family: var(--font-mono); font-weight: 600; color: var(--text); }
+#fl .btable td.px.best { color: var(--probe); }
+#fl .btable td.bk { color: #fff; font-weight: 600; }
+#fl .btable tr:last-child td { border-bottom: none; }
+#fl .bestflag { font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--probe); font-weight: 700; margin-left: 6px; }
+
+/* Notes */
+#fl .notes { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+#fl .notes li { display: flex; gap: 9px; font-size: 13.5px; color: var(--text-2); line-height: 1.5; align-items: flex-start;
+  background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 11px 13px; }
+#fl .notes li::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); flex-shrink: 0; margin-top: 7px; }
+#fl .caveats { list-style: none; margin: 12px 0 0; padding: 11px 13px; background: rgba(255,181,71,.06); border: 1px solid rgba(255,181,71,.18); border-radius: 10px; display: flex; flex-direction: column; gap: 7px; }
+#fl .caveats .hd { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--amber); font-weight: 700; }
+#fl .caveats li { font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
+#fl .foot-note { font-size: 11.5px; color: var(--text-3); line-height: 1.5; margin-top: 12px; max-width: 760px; }
+
+/* Stat comparison rows */
+#fl .cmp { margin-top: 14px; display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+#fl .cmp-row { display: grid; grid-template-columns: 1fr 150px 1fr; align-items: center; gap: 10px; background: var(--bg-1); padding: 10px 14px; }
+#fl .cmp-row .l { text-align: right; } #fl .cmp-row .r { text-align: left; }
+#fl .cmp-row .val { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+#fl .cmp-row .val.lead { color: #fff; }
+#fl .cmp-row .lbl { text-align: center; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+
+#fl .empty { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 22px; color: var(--text-3); font-size: 13.5px; line-height: 1.55; margin-top: 14px; }
+#fl .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
+#fl .cta-row a { display: inline-flex; align-items: center; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 16px; font: 600 13px var(--font-display); color: var(--text); }
+#fl .cta-row a:hover { background: var(--bg-3); }
+
+@media (max-width: 760px) {
+  #fl .corners { grid-template-columns: 1fr; }
+  #fl .vsmid { padding: 2px 0; }
+  #fl .strip { grid-template-columns: repeat(2, 1fr); }
+  #fl .cmp-row { grid-template-columns: 1fr 96px 1fr; padding: 10px; }
+  #fl .cmp-row .val { font-size: 15px; }
+  #fl .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+}
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+<div class="lab-bg" aria-hidden="true"><div class="grid"></div><div class="scan"></div></div>
+
+<main id="fl">
+  <div class="crumb" id="flCrumb"><a href="index.html#next">Card Lab</a></div>
+  <header class="fl-head">
+    <div class="fl-eyebrow" id="flEyebrow">Fight Lab</div>
+    <h1 id="flTitle">Loading matchup…</h1>
+    <div class="fl-sub" id="flSub"></div>
+  </header>
+
+  <section class="sec" id="secMarket">
+    <h2>What does the market say?</h2>
+    <div class="sec-sub">The median sportsbook price with each book's cut removed, what it was when three or more books first had the fight priced, and the best number on offer right now. Prices are last captured, not live.</div>
+    <div id="flMarket"><div class="empty">Loading the market…</div></div>
+  </section>
+
+  <section class="sec" id="secBooks">
+    <h2>Sportsbook by sportsbook</h2>
+    <div class="sec-sub">The latest quote we hold from every sportsbook we track on this fight. Sorted by the best price on the first corner. Ordering is by the American number and nothing else — no book pays to sit at the top of this table.</div>
+    <div id="flBooks"></div>
+  </section>
+
+  <section class="sec" id="secMatchup">
+    <h2>What does the matchup data say?</h2>
+    <div class="sec-sub">Measured differences between these two fighters. Observations, not a forecast — CFL does not publish a pick on this fight.</div>
+    <div id="flNotes"></div>
+  </section>
+
+  <section class="sec" id="secStats">
+    <h2>The numbers behind it</h2>
+    <div class="sec-sub">Career UFC statistics for both corners, from UFCStats. Where a fighter has no UFC record the row reads zero, which is missing data rather than a measurement.</div>
+    <div id="flStats"></div>
+  </section>
+
+  <div class="cta-row" id="flCtas"></div>
+</main>
+
+<div class="cfl-email-capture" data-source="fight-lab"></div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rl1"></script>
+<script src="_auth.js"></script>
+<script src="market.js?v=2"></script>
+<script src="fight-insights.js?v=9"></script>
+<script>
+cfl.renderNav('fight');
+cfl.renderFooter();
+
+const M = window.cflMarket;
+const esc = cfl.escapeHtml;
+
+function qparam(k) { return new URLSearchParams(location.search).get(k); }
+
+// ---------------------------------------------------------------------------
+// Load one fight: the booking, both fighters, the market row, the per-book
+// quotes, cardio tiers and the historical base rates behind the age note.
+// Every one of these is allowed to fail on its own — a missing market panel
+// is a missing panel, not a broken page.
+// ---------------------------------------------------------------------------
+async function load() {
+  const sb = window.cflSupabase;
+  const fightId = qparam('id');
+  if (!fightId) { fail('No fight specified.', 'Open a fight from <a href="index.html#next">Card Lab</a>.'); return; }
+
+  const { data: fights, error } = await sb.from('fights').select('*').eq('id', fightId).limit(1);
+  if (error || !fights || !fights[0]) { fail('Fight not found.', 'It may have been rebooked. <a href="index.html#next">Back to Card Lab</a>.'); return; }
+  const fight = fights[0];
+
+  const [evR, ftR, mvt, books] = await Promise.all([
+    sb.from('events').select('id, name, event_date, location').eq('id', fight.event_id).limit(1),
+    sb.from('fighters')
+      .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
+      .in('id', [fight.fighter_a_id, fight.fighter_b_id].filter(x => x != null)),
+    M.loadFightMovement(fight.id),
+    M.loadByBook('fight_id', fight.id),
+  ]);
+
+  const event = (evR.data && evR.data[0]) || null;
+  const fmap = {};
+  (ftR.data || []).forEach(f => { fmap[f.id] = f; });
+  const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name || 'Corner A' };
+  const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name || 'Corner B' };
+
+  const [cardioMap, baseRates] = await Promise.all([loadCardio([a.id, b.id]), loadBaseRates()]);
+
+  renderHead(fight, event, a, b);
+  renderMarket(mvt, a, b, event);
+  renderBooks(books, a, b);
+  renderMatchup(a, b, fight, cardioMap, baseRates, mvt);
+  renderStats(a, b);
+  renderCtas(fight, event, a, b);
+  setMeta(a, b, event, mvt);
+}
+
+function fail(title, sub) {
+  document.getElementById('flTitle').textContent = title;
+  document.getElementById('flSub').innerHTML = sub;
+  ['secMarket', 'secBooks', 'secMatchup', 'secStats'].forEach(id => {
+    const n = document.getElementById(id); if (n) n.hidden = true;
+  });
+}
+
+async function loadCardio(ids) {
+  const sb = window.cflSupabase;
+  const out = {};
+  try {
+    const { data, error } = await sb.from('v_fighter_consistency')
+      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier').in('fighter_id', ids);
+    if (error) return out;
+    (data || []).forEach(r => {
+      const slot = out[r.fighter_id] || (out[r.fighter_id] = { byWc: {}, career: null });
+      const entry = { score: r.consistency_score, tier_word: r.cardio_tier, confidence: r.confidence_tier };
+      if (r.weight_class === 'CAREER') slot.career = entry; else slot.byWc[r.weight_class] = entry;
+    });
+  } catch (e) { /* a missing cardio note is a missing note */ }
+  return out;
+}
+
+async function loadBaseRates() {
+  const sb = window.cflSupabase;
+  const out = {};
+  try {
+    const r = await sb.from('v_younger_fighter_winrate').select('*').single();
+    if (!r.error && r.data) out.younger = r.data;
+  } catch (e) {}
+  return out;
+}
+
+function renderHead(fight, event, a, b) {
+  const crumb = document.getElementById('flCrumb');
+  crumb.innerHTML = '<a href="index.html#next">Card Lab</a>' +
+    (event ? ' · <a href="' + cfl.eventUrl(event.id) + '">' + esc(event.name) + '</a>' : '');
+  let pos = fight.weight_class || 'Bout';
+  if (fight.is_main_event) pos = 'Main event · ' + pos;
+  else if (fight.is_title_fight) pos = 'Title fight · ' + pos;
+  document.getElementById('flEyebrow').textContent = pos;
+  document.getElementById('flTitle').textContent = a.name + ' vs ' + b.name;
+  document.getElementById('flSub').textContent = event
+    ? cfl.formatDate(event.event_date) + ' · ' + (event.location || 'Location TBD')
+    : '';
+}
+
+// ---- the market panel ------------------------------------------------------
+function renderMarket(row, a, b, event) {
+  const el = document.getElementById('flMarket');
+  const fightDay = event ? M.isFightDay(event.event_date) : false;
+  const rA = row ? M.readSide(row, 'a', { isFightDay: fightDay }) : null;
+  const rB = row ? M.readSide(row, 'b', { isFightDay: fightDay }) : null;
+
+  if (!rA || !rB) {
+    el.innerHTML = '<div class="empty"><strong>No sportsbook price captured for this fight yet.</strong><br>' +
+      'We capture moneyline prices on a schedule that tightens as a card approaches, so a newly booked fight ' +
+      'usually appears within a few days. Nothing is estimated in the meantime.</div>';
+    document.getElementById('secBooks').hidden = true;
+    return;
+  }
+
+  const corner = (f, r) => `
+    <div class="corner">
+      <div class="nm"><a href="${cfl.fighterUrl(f.id)}">${esc(f.name)}</a></div>
+      <div class="rec">${esc(recOf(f))}</div>
+      <div class="biglbl">Market consensus</div>
+      <div class="big">${Math.round(r.prob * 100)}%</div>
+      <div class="pxrow">
+        <div class="pxbox"><div class="v">${esc(M.fmtAmerican(r.bestAmerican))}</div><div class="k">Best price</div></div>
+        <div class="pxbox"><div class="v">${esc(M.fmtAmerican(r.fairAmerican))}</div><div class="k">Fair (no vig)</div></div>
+      </div>
+      <div class="rec">${r.bestBook ? 'Best at ' + esc(r.bestBook) : 'no per-book quote'}</div>
+    </div>`;
+
+  const fresh = rA.fresh;
+  const mv = rA.moveSinceBaseline;
+  const mv24 = rA.move24h;
+
+  const moveCell = (label, pts, sub) => {
+    // A dash always carries its reason. "—" on its own is the empty state we
+    // are trying not to ship.
+    if (pts == null) return cell(label, '—', sub || 'not enough comparable books', 'flat');
+    const flat = Math.abs(pts) < 0.5;
+    const toward = pts > 0 ? a : b;
+    return cell(label, flat ? '0.0' : Math.abs(pts).toFixed(1),
+      flat ? 'unchanged' : 'toward ' + lastName(toward.name),
+      flat ? 'flat' : (pts > 0 ? 'up' : 'down'));
+  };
+
+  function cell(k, v, s, cls, stale) {
+    return `<div class="mcell${stale ? ' stale' : ''}"><div class="k">${esc(k)}</div>` +
+           `<div class="v ${cls || ''}">${esc(v)}</div><div class="s">${esc(s)}</div></div>`;
+  }
+
+  const strip =
+    '<div class="strip">' +
+    moveCell('Market move', mv,
+      rA.movementStatus === 'no_broad_capture'
+        ? 'under ' + M.MIN_MATCHED_BOOKS + ' books so far'
+        : rA.movementStatus === 'ok' ? '' : 'books do not line up yet') +
+    moveCell('Last 24 hours', mv24, 'under 24 hours of history') +
+    cell('Books apart', rA.spreadPts == null ? '—' : rA.spreadPts.toFixed(1) + ' pts',
+         rA.bookCount ? rA.bookCount + (rA.bookCount === 1 ? ' book quoting' : ' books quoting') : 'no books',
+         rA.spreadPts != null && rA.spreadPts >= M.SPREAD_WIDE_PTS ? 'up' : '') +
+    cell('Last capture', fresh ? fresh.when : '—',
+         fresh && fresh.stale ? 'stale — check the book' : M.fmtStampUtc(rA.lastUpdated),
+         '', !!(fresh && fresh.stale)) +
+    '</div>';
+
+  // The working behind the move, always — including when there is no move to
+  // show, because "why is that a dash" is the first thing a sceptic asks.
+  const baselineNote = rA.baselineProb != null
+    ? `<div class="foot-note">${esc(M.baselineCaveat(rA))} ` +
+      `At that broad capture the consensus across those books was ${Math.round(rA.baselineProb * 100)}% ${esc(lastName(a.name))} / ` +
+      `${Math.round((1 - rA.baselineProb) * 100)}% ${esc(lastName(b.name))}. ` +
+      `${rA.captureCount || 0} capture${rA.captureCount === 1 ? '' : 's'} recorded in total.</div>`
+    : `<div class="foot-note">${esc(M.baselineCaveat(rA))}</div>`;
+
+  el.innerHTML =
+    '<div class="corners">' + corner(a, rA) + '<div class="vsmid">VS</div>' + corner(b, rB) + '</div>' +
+    strip + baselineNote +
+    '<div class="foot-note">"Fair (no vig)" is the consensus probability expressed as an American price with the ' +
+    'sportsbook\'s margin removed. It is a reference number for comparing prices, and no book will take that bet. ' +
+    '"Best price" is a real posted number from the book named.</div>';
+}
+
+// ---- the per-book table ----------------------------------------------------
+function renderBooks(rows, a, b) {
+  const el = document.getElementById('flBooks');
+  if (!rows || !rows.length) {
+    document.getElementById('secBooks').hidden = true;
+    return;
+  }
+  const bestA = Math.max.apply(null, rows.map(r => +r.american_odds_a));
+  const bestB = Math.max.apply(null, rows.map(r => +r.american_odds_b));
+  const body = rows.map(r => {
+    const aBest = +r.american_odds_a === bestA;
+    const bBest = +r.american_odds_b === bestB;
+    const ts = M.freshness(r.captured_at, false);
+    return '<tr>' +
+      '<td class="bk">' + esc(r.book_name || 'Book') + '</td>' +
+      '<td class="px' + (aBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + (aBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
+      '<td class="px' + (bBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + (bBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
+      '<td>' + (r.fair_prob_a != null ? (r.fair_prob_a * 100).toFixed(1) + '%' : '—') + '</td>' +
+      '<td>' + esc(ts ? ts.when : '—') + '</td>' +
+      '</tr>';
+  }).join('');
+
+  el.innerHTML =
+    '<div class="tablewrap"><table class="btable">' +
+    '<thead><tr><th>Sportsbook</th><th>' + esc(lastName(a.name)) + '</th><th>' + esc(lastName(b.name)) +
+    '</th><th>' + esc(lastName(a.name)) + ' no-vig</th><th>Captured</th></tr></thead>' +
+    '<tbody>' + body + '</tbody></table></div>' +
+    '<div class="foot-note">Each book is de-vigged against its own two-sided quote, so the no-vig column compares ' +
+    'books on the same basis. A book missing from this table has not been captured on this fight, which is not the ' +
+    'same as having no line. Prices move; check the book before acting on any of them.</div>';
+}
+
+// ---- matchup notes ---------------------------------------------------------
+function renderMatchup(a, b, fight, cardioMap, baseRates, mvt) {
+  const el = document.getElementById('flNotes');
+  const I = window.cflInsights;
+  if (!I) { el.innerHTML = ''; return; }
+  const ctx = {
+    cardioMap, baseRates, weightClass: fight.weight_class,
+    bookCount: mvt && mvt.book_count != null ? +mvt.book_count : null,
+  };
+  const notes = I.buildMatchupNotes(a, b, ctx);
+  const caveats = I.buildMatchupCaveats(a, b, ctx);
+
+  const notesHtml = notes.length
+    ? '<ul class="notes">' + notes.map(n => '<li>' + esc(n.text) + '</li>').join('') + '</ul>'
+    : '<div class="empty">Nothing separates these two by a meaningful margin on the statistics we track. ' +
+      'On a research surface that is a finding, not a gap — it means the measurable case for either corner is thin.</div>';
+
+  const caveatsHtml = caveats.length
+    ? '<ul class="caveats"><li class="hd">Read these with care</li>' +
+      caveats.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'
+    : '';
+
+  el.innerHTML = notesHtml + caveatsHtml +
+    '<div class="foot-note">' + esc(I.MATCHUP_NOTE) +
+    ' The <a href="stats.html">Factor Lab</a> tests which of these differences still predict winners once the ' +
+    'betting line is controlled for. Most of them do not.</div>';
+}
+
+// ---- career stat comparison ------------------------------------------------
+function renderStats(a, b) {
+  const el = document.getElementById('flStats');
+  const rows = [
+    ['Age',                 a.age,       b.age,       v => v == null ? '—' : v, 'low'],
+    ['Reach',               a.reach_in,  b.reach_in,  v => v == null ? '—' : cfl.formatReach(v), 'high'],
+    ['Height',              a.height_in, b.height_in, v => v == null ? '—' : cfl.formatHeight(v), 'high'],
+    ['Strikes landed / min', a.slpm,     b.slpm,      v => v == null ? '—' : Number(v).toFixed(2), 'high'],
+    ['Strikes absorbed / min', a.sapm,   b.sapm,      v => v == null ? '—' : Number(v).toFixed(2), 'low'],
+    ['Takedowns / fight',   a.td_avg,    b.td_avg,    v => v == null ? '—' : Number(v).toFixed(2), 'high'],
+    ['Takedown accuracy',   a.td_acc,    b.td_acc,    v => v == null ? '—' : v + '%', 'high'],
+    ['Takedown defence',    a.td_def,    b.td_def,    v => v == null ? '—' : v + '%', 'high'],
+    ['UFC record',          ufcRec(a),   ufcRec(b),   v => v, null],
+  ];
+  el.innerHTML = '<div class="cmp">' + rows.map(([label, va, vb, fmt, better]) => {
+    let leadA = false, leadB = false;
+    if (better && va != null && vb != null && +va !== +vb) {
+      const aWins = better === 'high' ? +va > +vb : +va < +vb;
+      leadA = aWins; leadB = !aWins;
+    }
+    return '<div class="cmp-row">' +
+      '<div class="l"><span class="val' + (leadA ? ' lead' : '') + '">' + esc(String(fmt(va))) + '</span></div>' +
+      '<div class="lbl">' + esc(label) + '</div>' +
+      '<div class="r"><span class="val' + (leadB ? ' lead' : '') + '">' + esc(String(fmt(vb))) + '</span></div>' +
+      '</div>';
+  }).join('') + '</div>' +
+  '<div class="foot-note">Highlighting marks the higher (or, for age and strikes absorbed, the lower) number. ' +
+  'It marks a measurement, not an advantage: the Factor Lab has tested most of these against the betting market ' +
+  'and only some survive.</div>';
+}
+
+function ufcRec(f) {
+  const w = f.ufc_wins, l = f.ufc_losses, d = f.ufc_draws;
+  if (w == null && l == null) return '—';
+  const total = (+w || 0) + (+l || 0) + (+d || 0);
+  if (total === 0) return 'UFC debut';
+  return (+w || 0) + '-' + (+l || 0) + ((+d || 0) ? '-' + d : '');
+}
+
+function recOf(f) {
+  const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
+  return (w + l + d) > 0 ? `${w}-${l}-${d}` : '0-0-0';
+}
+
+function lastName(n) { return window.cflInsights ? window.cflInsights.lastName(n) : n; }
+
+function renderCtas(fight, event, a, b) {
+  const el = document.getElementById('flCtas');
+  el.innerHTML =
+    '<a href="index.html#fight-' + fight.id + '">← Back to Card Lab</a>' +
+    (event ? '<a href="' + cfl.eventUrl(event.id) + '">Full card</a>' : '') +
+    '<a href="market.html' + (event ? '?event=' + event.id : '') + '">Market Lab — every book on this card</a>' +
+    '<a href="' + cfl.fighterUrl(a.id) + '">' + esc(a.name) + '</a>' +
+    '<a href="' + cfl.fighterUrl(b.id) + '">' + esc(b.name) + '</a>';
+}
+
+// Rewrite the document title and the share description once the fight is
+// known. These pages are entered from search and from social far more often
+// than from the site, so the head has to name the fighters.
+function setMeta(a, b, event, mvt) {
+  const pair = a.name + ' vs ' + b.name;
+  document.title = pair + ' — Odds, Line Movement and Matchup Data | Cannon Fight Lab';
+  const desc = pair + (event ? ' at ' + event.name : '') +
+    ': vig-free sportsbook consensus, every book’s price, the best number on each side, ' +
+    'market movement across the books quoting at both ends, and the measurable differences between the two fighters.';
+  const set = (sel, attr, val) => { const n = document.querySelector(sel); if (n) n.setAttribute(attr, val); };
+  set('meta[name="description"]', 'content', desc);
+  set('meta[property="og:title"]', 'content', pair + ' — UFC Odds, Line Movement and Matchup Data');
+  set('meta[property="og:description"]', 'content', desc);
+  set('meta[name="twitter:title"]', 'content', pair + ' — UFC Odds, Line Movement and Matchup Data');
+  set('meta[name="twitter:description"]', 'content', desc);
+  let link = document.querySelector('link[rel="canonical"]');
+  if (!link) { link = document.createElement('link'); link.rel = 'canonical'; document.head.appendChild(link); }
+  link.href = 'https://cannonfightlab.com/fight.html?id=' + (qparam('id') || '');
+}
+
+load().catch(err => {
+  console.warn('[fight-lab] load failed', err);
+  fail('Couldn’t load this fight.', 'Try refreshing, or go back to <a href="index.html#next">Card Lab</a>.');
+});
+
+if (cfl.renderEmailCaptures) cfl.renderEmailCaptures();
+</script>
+</body>
+</html>

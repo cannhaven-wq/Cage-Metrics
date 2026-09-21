@@ -326,7 +326,7 @@ function regenerateRssFeed(upcomingEvents) {
   const items = (upcomingEvents || []).map(e => {
     const url = `${SITE}/event.html?id=${e.id}`;
     const pub = e.event_date ? new Date(e.event_date + 'T00:00:00Z').toUTCString() : now;
-    const desc = `Full model verdicts and edge factors for every fight on the ${escapeXml(e.name)} card${e.location ? ' — ' + escapeXml(e.location) : ''}.`;
+    const desc = `Sportsbook odds, line movement and matchup data for every fight on the ${escapeXml(e.name)} card${e.location ? ' — ' + escapeXml(e.location) : ''}.`;
     return [
       '  <item>',
       `    <title>${escapeXml(e.name)}</title>`,
@@ -345,7 +345,7 @@ function regenerateRssFeed(upcomingEvents) {
     `  <title>Cannon Fight Lab — Upcoming UFC Cards</title>`,
     `  <link>${SITE}/</link>`,
     `  <atom:link href="${SITE}/feed.xml" rel="self" type="application/rss+xml" />`,
-    `  <description>Model verdicts and edge factors for every upcoming UFC event, posted before fight night.</description>`,
+    `  <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>`,
     `  <language>en-us</language>`,
     `  <lastBuildDate>${now}</lastBuildDate>`,
     '',
@@ -380,25 +380,26 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
   //  1. A page that carries <meta name="robots" content="noindex"> must NOT be
   //     here. /card-lab.html was: it is a noindex meta-refresh stub to "/", and
   //     listing it asked Google to crawl a URL we had just told Google to drop.
-  //     Same for /picks.html, /lab.html and every account page — none listed.
+  //     Same for /picks.html, /lab.html, /predictor.html and every account
+  //     page — none listed.
   //  2. A page that renders nothing without a query string must NOT be here.
-  //     /fighter.html and /event.html were: bare, with no ?id=, they are empty
-  //     shells. The populated versions are the /f/ and /e/ stubs, which are in
-  //     this sitemap in their thousands and canonicalise back to the dynamic
-  //     page. Listing the bare shell added two thin URLs and no coverage.
+  //     /fighter.html, /event.html and /fight.html are empty shells until they
+  //     are given an ?id=. The populated versions are the /f/, /e/ and
+  //     /preview/ stubs, which are in this sitemap in their thousands. Listing
+  //     the bare shell adds a thin URL and no coverage.
   //  3. Anything added here needs a unique title, a unique H1 and content that
   //     stands up without JavaScript.
   //
   // tests/sitemap-hygiene.test.js enforces 1 and 2 against the shipped files.
   const staticPages = [
     { loc: '/',                priority: '1.0', changefreq: 'daily' },
-    { loc: '/track-record.html', priority: '0.9', changefreq: 'weekly' },
-    { loc: '/proof.html',      priority: '0.8', changefreq: 'weekly' },
-    { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },
+    { loc: '/market.html',     priority: '0.9', changefreq: 'hourly' },
     { loc: '/stats.html',      priority: '0.9', changefreq: 'weekly' },
     { loc: '/fighters.html',   priority: '0.9', changefreq: 'daily' },
+    { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },
+    { loc: '/proof.html',      priority: '0.8', changefreq: 'weekly' },
+    { loc: '/track-record.html', priority: '0.8', changefreq: 'weekly' },
     { loc: '/h2h.html',        priority: '0.8', changefreq: 'weekly' },
-    { loc: '/parlay.html',     priority: '0.7', changefreq: 'weekly' },
     { loc: '/methodology.html', priority: '0.7', changefreq: 'monthly' },
     { loc: '/edges.html',      priority: '0.7', changefreq: 'monthly' },
     { loc: '/pricing.html',    priority: '0.5', changefreq: 'monthly' },

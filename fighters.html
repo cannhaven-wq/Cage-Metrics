@@ -57,7 +57,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <!-- ===== Scripts ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
@@ -90,6 +90,15 @@
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 10px;
+  }
+
+  /* A grid item defaults to min-width:auto, so a long name or a long
+     division string stretched the column past the viewport on a phone
+     (measured 21px of horizontal page scroll at 390px). The card is allowed
+     to shrink, and the two text lines inside it truncate instead. */
+  .fighter-grid > .fighter-card { min-width: 0; }
+  .fighter-card .fighter-meta {
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
 
   @media (max-width: 768px) {
@@ -141,11 +150,11 @@
 
 <div class="cfl-funnel-cta" data-source="fighters-bottom"
      data-headline="Track every fighter you scout."
-     data-sub="Free during beta — save fighters to your watchlist, see every edge factor, and get the weekly preview email."></div>
+     data-sub="Free during beta — save fighters to your watchlist, see the full matchup and market detail on every card, and get the Cannon Card Brief."></div>
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl1"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('fighters');

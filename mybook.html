@@ -15,7 +15,7 @@
 <link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
 <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
 <link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="_shared.css?v=nav2">
+<link rel="stylesheet" href="_shared.css?v=rl1">
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
 <script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
@@ -249,12 +249,12 @@
 
   <!-- This week's picks -->
   <div class="sec">
-    <h2>Log this week's picks</h2>
+    <h2>Log a bet on this week's card</h2>
     <p class="desc">
-      Picks both of our models agree on (edge ≥ 10% at the BFO opener)
-      from the next upcoming card. Pick your book, enter the price you got,
-      and we'll size the bet at <strong>half-Kelly off your price</strong>
-      capped at <strong>5% of bankroll</strong>.
+      Every fight on the next card, with the best price we currently track
+      pre-filled. Pick your book, enter the price you actually got, and set
+      your own stake. CFL does not suggest a side and does not size the bet
+      for you — this is your book, not our tip sheet.
     </p>
     <div id="weekPicks"></div>
   </div>
@@ -269,14 +269,14 @@
   <!-- Settled bets -->
   <div class="sec">
     <h2>Settled bets</h2>
-    <p class="desc">Your real history with running bankroll, CLV vs the BFO opener, and ROI on dollars at risk.</p>
+    <p class="desc">Your real history with running bankroll, how your price compared to the earliest price we captured, and ROI on dollars at risk.</p>
     <div class="tbl-wrap" id="settledTblWrap"></div>
   </div>
 
   <!-- Performance -->
   <div class="sec">
     <h2>Performance</h2>
-    <p class="desc">Live numbers from your actual bets. For context: our value flags' simulated record is a high win rate that lands roughly break-even at flat stakes (bets sized to the edge do better) — your book is your own record.</p>
+    <p class="desc">Live numbers from your actual bets, and nothing else. CFL publishes no betting record of its own on this page and makes no claim about what your results should look like.</p>
     <div class="perf-grid" id="perfGrid"></div>
   </div>
 
@@ -284,8 +284,9 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rd17"></script>
+<script src="_shared.js?v=rl1"></script>
 <script src="_auth.js?v=mybook1"></script>
+<script src="market.js?v=2"></script>
 <script>
 (async function () {
   cfl.renderNav('mybook');
@@ -309,13 +310,11 @@
   function impliedProb(a) {
     return a >= 0 ? 100 / (a + 100) : Math.abs(a) / (Math.abs(a) + 100);
   }
-  function kellyStake(modelP, american, bankroll, frac, maxFrac) {
-    if (!american || !modelP) return 0;
-    const b = american >= 0 ? american / 100 : 100 / Math.abs(american);
-    const f = (b * modelP - (1 - modelP)) / b;
-    if (f <= 0) return 0;
-    return Math.min(bankroll * f * frac, bankroll * maxFrac);
-  }
+  // kellyStake() used to sit here. Kelly needs a probability you believe more
+  // than the price, and CFL no longer publishes one — sizing a stake off a
+  // number we will not stand behind is worse than not sizing it at all. The
+  // bankroll settings (kelly_fraction, max_bet_fraction) stay in the schema
+  // and on the settings row; nothing reads them to suggest a stake.
   function pnlForBet(stake, american, won) {
     if (won == null) return null;
     const payout = american >= 0 ? stake * (american / 100) : stake * (100 / Math.abs(american));
@@ -428,83 +427,67 @@
     return { pickName, oppName, eventName: meta?.eventName || '', eventDate: meta?.eventDate || '' };
   }
 
-  // For this week's picks: get the soonest upcoming event, consensus picks on it
+  // Every fight on the soonest upcoming card, with the best price we currently
+  // track on each side.
+  //
+  // This used to read `model_predictions` and list only the fights where two
+  // models flagged a bet with an opener edge of 10% or more, then size the
+  // stake at half-Kelly off the model's probability. That is a betting
+  // recommendation with a position size attached, and it is exactly what CFL
+  // stopped publishing in September 2026. What the logger offers now is the
+  // whole card and the best number we have seen, so you can record a bet you
+  // decided on yourself.
   async function loadWeekPicks() {
-    // Pull predictions for upcoming fights (outcome_known=false)
     const today = new Date().toISOString().slice(0, 10);
-    const { data: preds, error: pErr } = await sb.from('model_predictions')
-      .select('model_version,fight_id,fighter_id,side,event_date,model_p,opener_american_odds,opener_implied_p,edge,would_bet,outcome_known')
-      .in('model_version', cfl.PUBLIC_MODELS)
-      .eq('outcome_known', false).gte('event_date', today).order('event_date');
-    if (pErr) throw pErr;
-    if (!preds || preds.length === 0) { weekPicksData = []; return; }
+    const { data: evs } = await sb.from('events')
+      .select('id,name,event_date').eq('is_upcoming', true).gte('event_date', today)
+      .order('event_date', { ascending: true }).limit(1);
+    const ev = evs && evs[0];
+    if (!ev) { weekPicksData = []; return; }
 
-    // Soonest event date
-    const nextDate = preds.reduce((m, r) => !m || r.event_date < m ? r.event_date : m, null);
-    const eventPreds = preds.filter(r => r.event_date === nextDate);
+    const { data: fightsRaw } = await sb.from('fights')
+      .select('id,event_id,fighter_a_id,fighter_b_id,fighter_a_name,fighter_b_name,weight_class,is_main_event,is_title_fight,is_active')
+      .eq('event_id', ev.id);
+    const fights = cfl.orderCard(fightsRaw || [], ev.name);
+    if (!fights.length) { weekPicksData = []; return; }
 
-    // Consensus per (fight, fighter): 2+ would_bet voters and edge >= 0.10
-    const grouped = new Map();
-    for (const r of eventPreds) {
-      const k = r.fight_id + ':' + r.fighter_id;
-      if (!grouped.has(k)) grouped.set(k, []);
-      grouped.get(k).push(r);
-    }
-    const picks = [];
-    const seenFight = new Set();
-    for (const [k, rows] of grouped) {
-      const voters = rows.filter(r => r.would_bet);
-      if (voters.length < 2) continue;
-      const avgEdge = voters.reduce((s, r) => s + (+r.edge || 0), 0) / voters.length;
-      if (avgEdge < 0.10) continue;
-      const fid = rows[0].fight_id;
-      if (seenFight.has(fid)) continue;
-      seenFight.add(fid);
-      // Prefer the Value model's (v6) probability; fall back to Fight IQ (v3),
-      // then to the mean across voters.
-      const preferred = rows.find(r => r.model_version === 'v6') || rows.find(r => r.model_version === 'v3');
-      const modelP = preferred ? +preferred.model_p : voters.reduce((s, r) => s + +r.model_p, 0) / voters.length;
-      picks.push({
-        fight_id: rows[0].fight_id,
-        fighter_id: rows[0].fighter_id,
-        side: rows[0].side,
-        event_date: rows[0].event_date,
-        model_p: modelP,
-        opener: rows[0].opener_american_odds,
-        edge: avgEdge,
-        voters: voters.map(v => v.model_version).sort(),
+    // Best posted price per side, from the definer view. `fight_odds` itself
+    // is admin-only for anon AND authenticated, so a direct read of it here
+    // would silently return nothing.
+    const byBook = window.cflMarket ? await window.cflMarket.loadByBook('event_id', ev.id) : [];
+    const bestBySide = new Map();
+    byBook.forEach(r => {
+      const put = (fid, side, am, book) => {
+        if (am == null) return;
+        const k = fid + ':' + side;
+        const prev = bestBySide.get(k);
+        if (!prev || +am > prev.american) bestBySide.set(k, { american: +am, book: r.book_name || null });
+      };
+      put(r.fight_id, 'A', r.american_odds_a, r.book_name);
+      put(r.fight_id, 'B', r.american_odds_b, r.book_name);
+    });
+
+    const out = [];
+    fights.forEach(f => {
+      [['A', f.fighter_a_id, f.fighter_a_name, f.fighter_b_name],
+       ['B', f.fighter_b_id, f.fighter_b_name, f.fighter_a_name]].forEach(([side, fid, name, oppName]) => {
+        if (!fid) return;
+        const best = bestBySide.get(f.id + ':' + side) || null;
+        out.push({
+          fight_id: f.id,
+          fighter_id: fid,
+          side,
+          event_date: ev.event_date,
+          eventName: ev.name,
+          pickName: name || ('Fighter #' + fid),
+          oppName: oppName || 'Opponent',
+          best: best ? best.american : null,
+          bestBook: best ? best.book : null,
+          opener: best ? best.american : null,   // what we pre-fill and store as the reference price
+        });
       });
-    }
-    if (picks.length === 0) { weekPicksData = []; return; }
-
-    // Look up fight + fighter info for display
-    const fightIds = [...new Set(picks.map(p => p.fight_id))];
-    const fighterIds = [...new Set(picks.flatMap(p => [p.fighter_id]))];
-    const { data: fights } = await sb.from('fights')
-      .select('id,event_id,fighter_a_id,fighter_b_id,bout_order')
-      .in('id', fightIds);
-    const allFighterIds = new Set();
-    (fights || []).forEach(f => { allFighterIds.add(f.fighter_a_id); allFighterIds.add(f.fighter_b_id); });
-    fighterIds.forEach(id => allFighterIds.add(id));
-    const { data: fighters } = await sb.from('fighters')
-      .select('id,name').in('id', [...allFighterIds]);
-    const fightMap = new Map((fights || []).map(f => [f.id, f]));
-    const fighterMap = new Map((fighters || []).map(f => [f.id, f]));
-    const eventId = (fights || []).map(f => f.event_id)[0];
-    let eventName = '';
-    if (eventId) {
-      const { data: ev } = await sb.from('events').select('id,name,event_date').eq('id', eventId).single();
-      if (ev) eventName = ev.name;
-    }
-
-    for (const p of picks) {
-      const f = fightMap.get(p.fight_id);
-      p.pickName = fighterMap.get(p.fighter_id)?.name || 'Pick';
-      const oppId = f ? (p.side === 'A' ? f.fighter_b_id : f.fighter_a_id) : null;
-      p.oppName = oppId ? (fighterMap.get(oppId)?.name || 'Opp') : 'Opp';
-      p.eventName = eventName;
-    }
-    weekPicksData = picks;
+    });
+    weekPicksData = out;
   }
 
   // ---- 3. Auto-grade open bets --------------------------------------------
@@ -512,21 +495,20 @@
     const open = userBets.filter(b => b.status === 'open');
     if (open.length === 0) return;
     const fightIds = [...new Set(open.map(b => b.fight_id))];
-    const { data: preds, error } = await sb.from('model_predictions')
-      .select('fight_id,fighter_id,outcome_known,won')
-      .in('model_version', cfl.PUBLIC_MODELS)
-      .eq('outcome_known', true).in('fight_id', fightIds);
+    // Results come from `fights` directly. This used to infer the winner from
+    // whichever model_predictions row carried won=true, which meant a settled
+    // fight the model never scored could never settle a user's bet — and tied
+    // the bet ledger to a forecasting table it has no business depending on.
+    const { data: settledFights, error } = await sb.from('fights')
+      .select('id,winner_id,method').in('id', fightIds).not('method', 'is', null);
     if (error) { console.error(error); return; }
-    if (!preds || preds.length === 0) return;
-    // Build winner lookup: any prediction row for a fight with outcome_known=true
-    // and won=true gives us the winning fighter_id.
+    if (!settledFights || settledFights.length === 0) return;
     const winnerByFight = new Map();
-    for (const r of preds) {
-      if (r.won === true) winnerByFight.set(r.fight_id, r.fighter_id);
+    const gradedFights = new Set();
+    for (const r of settledFights) {
+      gradedFights.add(r.id);
+      if (r.winner_id != null) winnerByFight.set(r.id, r.winner_id);
     }
-    // Some graded fights only have the losing row reported as won=false on both sides
-    // (e.g. a draw). Capture the set of graded fights anyway:
-    const gradedFights = new Set(preds.map(r => r.fight_id));
     let settled = 0;
     for (const b of open) {
       if (!gradedFights.has(b.fight_id)) continue;
@@ -556,8 +538,10 @@
 
   // ---- 4. Place a bet ------------------------------------------------------
   async function placeBet(pick, book, priceAmerican, stakeUsd) {
-    const implied = impliedProb(priceAmerican);
-    const edge = pick.model_p - implied;
+    // `model_p` and `edge_at_placement` stay in the schema (the column is
+    // append-safe and old rows still carry real values) but are written NULL
+    // from here on: there is no published model probability to compute an edge
+    // against, and writing a made-up one would corrupt the user's own history.
     const row = {
       user_id: user.id,
       fight_id: pick.fight_id,
@@ -567,8 +551,8 @@
       placed_price_american: priceAmerican,
       opener_price_american: pick.opener,
       stake_usd: stakeUsd,
-      model_p: pick.model_p,
-      edge_at_placement: edge,
+      model_p: null,
+      edge_at_placement: null,
       status: 'open',
     };
     const { error } = await sb.from('user_bets').insert(row);
@@ -597,20 +581,19 @@
   function renderWeekPicks() {
     const wrap = $('weekPicks');
     if (weekPicksData.length === 0) {
-      wrap.innerHTML = `<div class="logger empty">No consensus picks on the next upcoming card. Check back after the next round of model runs.</div>`;
+      wrap.innerHTML = `<div class="logger empty">No upcoming card loaded yet. Check back once the next card is announced.</div>`;
       return;
     }
-    const cur = +bankroll.current_amount;
-    const kFrac = +bankroll.kelly_fraction;
-    const maxFrac = +bankroll.max_bet_fraction;
     const alreadyBetFights = new Set(userBets.filter(b => b.status === 'open').map(b => b.fight_id + ':' + b.fighter_id));
 
     wrap.innerHTML = weekPicksData.map((p, i) => {
       const already = alreadyBetFights.has(p.fight_id + ':' + p.fighter_id);
-      const openerKellyAt = kellyStake(p.model_p, p.opener, cur, kFrac, maxFrac);
       const headerBadge = already
         ? `<span class="meta"><span class="badge" style="background:rgba(99,102,241,0.14);color:#a5b4fc">Already logged</span></span>`
         : '';
+      const bestTxt = p.best == null
+        ? 'no price captured yet'
+        : `best ${americanFmt(p.best)}${p.bestBook ? ' at ' + cfl.escapeHtml(p.bestBook) : ''}`;
       return `
       <div class="logger" data-i="${i}">
         <div class="top">
@@ -621,9 +604,8 @@
           </div>
           <div class="meta">
             ${cfl.escapeHtml(p.eventName || p.event_date)} ·
-            <span class="badge">${p.voters.length === 2 ? 'both models agree' : `${p.voters.length} of 2 models`}</span>
-            opener <span class="open-price">${americanFmt(p.opener)}</span> ·
-            opener-edge ${(p.edge * 100).toFixed(1)}% · model says ${(p.model_p * 100).toFixed(1)}%
+            <span class="open-price">${bestTxt}</span> ·
+            <a href="fight.html?id=${p.fight_id}">research this fight →</a>
           </div>
           ${headerBadge}
         </div>
@@ -643,11 +625,11 @@
           </div>
           <div class="field">
             <label>Your price</label>
-            <input type="number" class="price-in" placeholder="${p.opener > 0 ? '+' + p.opener : p.opener}" step="1">
+            <input type="number" class="price-in" placeholder="${p.best != null ? (p.best > 0 ? '+' + p.best : p.best) : ''}" step="1">
           </div>
           <div class="field field-edge">
-            <label>Your edge</label>
-            <div class="computed zero edge-out">—<span class="verdict" style="display:none;"></span></div>
+            <label>vs best seen</label>
+            <div class="computed zero edge-out">—</div>
           </div>
           <div class="field field-stake">
             <label>Stake ($)</label>
@@ -663,7 +645,7 @@
       </div>`;
     }).join('');
 
-    // Wire each logger
+    // Wire each logger    // Wire each logger
     document.querySelectorAll('.logger[data-i]').forEach(el => {
       const i = +el.dataset.i;
       const pick = weekPicksData[i];
@@ -674,44 +656,31 @@
       const bookSel = el.querySelector('.book-sel');
       const placeBtn = el.querySelector('.place-btn');
 
-      // Match the model's would_bet threshold (5%). Edges below this are
-      // "marginal" — Kelly may still suggest a tiny stake but the model
-      // wouldn't take it.
-      const BET_THRESHOLD = 0.05;
-
+      // No model edge and no Kelly sizing. What is shown is how the price the
+      // user actually got compares to the best price CFL has seen on that
+      // side — a fact about their bet, not a verdict on it. The stake is
+      // theirs to enter.
       function recompute() {
         const v = parseInt(priceIn.value, 10);
-        if (isNaN(v) || v === 0) {
-          edgeOut.innerHTML = '—<span class="verdict" style="display:none;"></span>';
+        if (isNaN(v) || v === 0 || pick.best == null) {
+          edgeOut.textContent = '—';
           edgeOut.className = 'computed zero edge-out';
           kellyHint.innerHTML = '&nbsp;';
-          if (!stakeIn.dataset.dirty) stakeIn.value = '';
           return;
         }
-        const imp = impliedProb(v);
-        const edge = pick.model_p - imp;
-        const stake = kellyStake(pick.model_p, v, +bankroll.current_amount, +bankroll.kelly_fraction, +bankroll.max_bet_fraction);
-        const edgePct = edge * 100;
-
-        let verdictText, verdictClass, edgeClass;
-        if (edge >= BET_THRESHOLD) {
-          verdictText = '✓ Bet'; verdictClass = 'bet'; edgeClass = '';
-        } else if (edge > 0) {
-          verdictText = 'Marginal'; verdictClass = 'marginal'; edgeClass = 'marginal';
+        const yours = impliedProb(v);
+        const best  = impliedProb(pick.best);
+        const diff  = (best - yours) * 100;   // positive = you beat our best price
+        if (Math.abs(diff) < 0.05) {
+          edgeOut.textContent = 'same';
+          edgeOut.className = 'computed zero edge-out';
         } else {
-          verdictText = '✗ Skip'; verdictClass = 'skip'; edgeClass = 'neg';
+          edgeOut.textContent = `${diff > 0 ? '+' : ''}${diff.toFixed(1)} pts`;
+          edgeOut.className = 'computed edge-out ' + (diff > 0 ? '' : 'neg');
         }
-        edgeOut.innerHTML = `${edgePct >= 0 ? '+' : ''}${edgePct.toFixed(1)}%` +
-          `<span class="verdict ${verdictClass}">${verdictText}</span>`;
-        edgeOut.className = 'computed edge-out ' + edgeClass;
-
-        if (stake > 0) {
-          kellyHint.textContent = `Kelly suggests $${Math.round(stake).toLocaleString()}`;
-          if (!stakeIn.dataset.dirty) stakeIn.value = Math.round(stake);
-        } else {
-          kellyHint.textContent = 'Kelly says skip (no edge)';
-          if (!stakeIn.dataset.dirty) stakeIn.value = '';
-        }
+        kellyHint.textContent = diff > 0
+          ? 'better than the best price we have captured'
+          : (diff < 0 ? `our best captured was ${americanFmt(pick.best)}` : ' ');
       }
       priceIn.addEventListener('input', recompute);
       stakeIn.addEventListener('input', () => { stakeIn.dataset.dirty = '1'; });
@@ -852,7 +821,7 @@
             <th>Settled</th><th>Pick</th><th>Book</th>
             <th class="num">Price</th><th class="num">Stake</th>
             <th>Status</th><th class="num">PnL</th>
-            <th class="num">CLV</th><th class="num">Running</th>
+            <th class="num">vs first</th><th class="num">Running</th>
           </tr>
         </thead>
         <tbody>${rows.reverse().join('')}</tbody>
@@ -886,7 +855,7 @@
         <div class="sub">our simulated value flags: roughly break-even at flat stakes</div>
       </div>
       <div class="perf-card">
-        <div class="lbl">Avg CLV vs opener</div>
+        <div class="lbl">Avg vs earliest price seen</div>
         <div class="val ${avgClv > 0 ? 'pos' : avgClv < 0 ? 'neg' : ''}">${avgClv == null ? '—' : (avgClv >= 0 ? '+' : '') + avgClv.toFixed(1) + '%'}</div>
         <div class="sub">positive = you beat the opener</div>
       </div>

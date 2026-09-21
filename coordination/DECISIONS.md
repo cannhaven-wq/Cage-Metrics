@@ -699,73 +699,168 @@ owner's.
 
 ---
 
-## D-011 — Market movement is measured against a matched book cohort, or not at all
+## D-011 — The model comes off the public product; CFL becomes a UFC research and market-intelligence tool
 
 | field | value |
 |---|---|
 | date | 2026-09-21 |
-| decided by | Reed Cannon |
+| decided by | Reed Cannon (owner) |
 | task | T-037 |
+| level | L3 |
+| reversible | **no** — it publishes new public claims and retires old ones. A retraction is not a reversal. Revertible in git; writes no row to an append-only table; changes no frozen specification and starts no observation under one |
+
+**Decision.** Cannon Fight Lab stops presenting itself as a picks, betting-edge
+or prediction product. The forecasting engine is removed from every
+forward-facing surface. What replaces it is the market: sportsbook prices
+captured on a schedule with their provenance, the movement between captures,
+the disagreement between books, and the measurable differences between two
+fighters. The product structure becomes **Card Lab**, **Fight Lab**,
+**Market Lab** and **Factor Lab**.
+
+**What the owner said**, verbatim, in the instruction that opened this work:
+
+> "Our testing has shown that the current prediction model does not reliably
+> beat the market. Therefore: Do not present model predictions publicly. Do not
+> present 'edge,' 'value,' 'best bet,' 'pick,' 'lock,' or equivalent claims. Do
+> not imply that CFL knows who will win. Do not imply that model disagreement
+> with the market is actionable. Keep all model infrastructure running privately
+> in the background for future R&D and prospective testing. Do not delete the
+> model system unless technically necessary. The model may return to the product
+> later only if we accumulate enough prospective evidence to show that it
+> actually provides value."
+
+and, on positioning:
+
+> "Cannon Fight Lab becomes a UFC research and market-intelligence platform for
+> serious fight fans and analytically minded bettors. … We are not telling the
+> user what to bet. We are helping the user research a UFC card faster and more
+> intelligently."
+
+and, on the record:
+
+> "Keep Proof Center. … Preserve historical records. Do not erase failures. A key
+> brand principle is: We tested whether the model beat the market. It did not. We
+> changed the product instead of changing the test."
+
+**Why this is one decision and not several.** Removing the forecast without
+replacing it leaves a picks site with its picks deleted, which the owner named
+as the failure mode to avoid. The market layer, the four-lab structure and the
+copy are the same decision executed in three places.
+
+**What this supersedes.** [D-010](#d-010--the-homepage-is-the-card-model-vs-market-and-no-edge-is-claimed)
+held the narrower line that the engine's number could sit beside the sportsbook
+number as long as the difference was never called an edge. That line is gone:
+the engine's number is not shown at all. D-010's other holdings survive and are
+strengthened — the market cell is still always shown when a line exists, and it
+still carries its book count and its quote age.
+
+**What is explicitly NOT decided here.**
+
+- The engine is not retired. It runs, it writes its locked pre-fight record to
+  `pre_fight_snapshots` and `model_picks` on the same schedule, and it is graded
+  in public on the Proof Center. Nothing in the snapshot, settlement, CLV or
+  research pipeline was touched.
+- No CLV number is published. The Q-14 gate is untouched and still shut
+  (0 of 100 observations, 0 of 20 events). `mybook.html`'s "CLV vs the BFO
+  opener" column was **relabelled**, not computed differently — see the risks
+  section of the handoff.
+- No paid tier is created. `pricing.html` now describes a Pro tier that does not
+  exist and says so on the page.
+- No frozen specification, preregistration or migration guard was modified.
+
+**Level 3 basis.** Three items on the closed list, any one of which would be
+enough: item 4 (merging a major architectural change), item 7 (changing
+monetisation positioning) and item 8 (a change to how an existing public
+performance claim is described). T-037 reaches `done` under this entry and no
+other.
+
+---
+
+## D-012 — Market movement is measured against a matched book cohort, or not at all
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-043 |
 | level | L2 |
-| reversible | yes — four read-only views recreated by `market_movement_views.sql`, one JS module, two test files; writes no row, changes no append-only table, publishes no number to a live surface (no page reads these views yet) |
+| reversible | yes — read-only views recreated by `market_movement_views.sql`, one JS module, test files. Writes no row, changes no append-only table, changes no frozen specification. It **removes** a public number rather than adding one, and the surfaces it feeds shipped in the same release, so nothing published under the old method was ever read by a user |
 
-**Decision.** Any figure CFL ever prints as "the market moved" is computed over
-the sportsbooks present at **both** ends of the comparison, and is refused
-outright when fewer than **three** such books exist. The baseline is the
-**first broad CFL capture** — the instant CFL first held two-sided prices from
-three distinct real sportsbooks — and it is never called an opening line.
+**Decision.** Any figure CFL prints as "the market moved" is computed over the
+sportsbooks quoting at **both** ends of the comparison, and is refused outright
+when fewer than **three** such books exist. The baseline is the **first broad
+CFL capture** — the instant CFL first held two-sided prices from three distinct
+real sportsbooks — and it is never called an opening line, an open, or an
+opener.
 
-**What was wrong, with numbers.** Two things carried the defect. One was in the
-repo: `v_fight_market_at_lock` (`fight_week_views.sql`) compares a median over
-the books captured by lock time against a median over the books captured now.
-The other was **found in the live database and was in no repo file at all** — a
-`v_fight_market_movement`, applied from the unmerged `fight-week-v2` branch,
-exposing `open_p_a`, `open_p_b` and `books_at_open`, where "open" meant
-`min(captured_at)`: CFL's single earliest capture instant.
-
-Measured against the live `fight_odds` table on 2026-09-21:
+**What it supersedes.** [D-011](#d-011--the-model-comes-off-the-public-product-cfl-becomes-a-ufc-research-and-market-intelligence-tool)
+shipped `market_lab_views.sql`, whose `v_fight_market_movement` took `open_p_a`
+from `min(captured_at)` — CFL's single earliest capture. That file was careful
+about it: its header required every surface to print `books_at_open` and
+`first_seen_at` beside the number and to call it "our first capture", never
+"the opening line", and the surfaces did. The disclosure was honest. **The
+number was still wrong**, and the disagreement is not small. Measured against
+the live `fight_odds` table the same day:
 
 | | |
 |---|---|
 | fights with real sportsbook quotes | 79 |
 | whose earliest capture held exactly **one** sportsbook | **22 (28%)** |
 | that eventually reach three or more books | 77 |
-| where the retired method differs from the matched cohort by ≥1 pt | 14 |
+| where the two methods differ by ≥1 pt | 14 |
 | …by ≥3 pt | 7 |
 | **phantom moves** — a market that moved <1 pt reported as ≥3 pt | **3** |
 | worst single overstatement | **12.7 points** |
 
-Two worked examples, both real rows:
+Two real rows:
 
-- **Marcus McGhee vs Jakub Wiklacz.** Retired method: 75.5% → 80.9%, "+5.4 pts".
-  Matched 3-book cohort: 79.2% → 79.2%. **The market did not move at all.**
-  Every point of that 5.4 was the arrival of two more sportsbooks.
-- **Rodolfo Vieira vs Robert Bryczek**, on the upcoming card. Retired method:
-  50.0% → 56.3%, "+6.3 pts". Matched cohort: 50.0% → 57.0%, **+7.0 pts**. Here
-  the move is real, and the honest number is slightly *larger* than the
-  flattering one. The method is not a haircut; it is a measurement.
+- **Marcus McGhee vs Jakub Wiklacz.** Old: 75.5% → 80.9%, "+5.4 pts". Matched
+  3-book cohort: 79.2% → 79.2%. **The market did not move at all.** Every point
+  was the arrival of two more sportsbooks.
+- **Rodolfo Vieira vs Robert Bryczek**, on the next card. Old: 50.0% → 56.3%,
+  "+6.3 pts". Matched cohort: 50.0% → 57.0%, **+7.0 pts**. A real move, and the
+  honest number is the *larger* one. This is a measurement, not a haircut.
 
-**Why this level.** L2, not L3. It publishes nothing — no surface reads these
-views — and it removes a claim rather than making one. The one judgement in it,
-the three-book floor, is recorded rather than inferred: three is the smallest
-cohort for which a median is not simply one book's opinion, and at that floor
-77 of 79 fights still produce a number, so the threshold buys honesty without
-buying silence. If ChatGPT's review prefers a different floor, one constant
-moves in three places, all named in the file header.
+A caveat printed beside a wrong number does not make it a right number, and a
+reader who is told "one book at first capture" still cannot recover the true
+move from what we showed them. So the number is now computed correctly or
+declined, and a decline says which decline it is.
 
-**Delivered.** `market_movement_views.sql` (applied; four views),
-`market-movement.js` (the only place a movement number is turned into words),
-`tests/market-movement.test.js` (25 assertions). The retired
-`v_fight_market_movement` was dropped and recreated: it had no dependent view,
-no repo consumer and no rendered surface, verified before the drop, and every
-defensible column it carried — current consensus, book count, freshness, the
-24-hour lookback, best price and book, book spread, capture count — is kept.
-Its 14-day event window is **not** kept, so a fight page older than a fortnight
-no longer loses its market history.
+**Why L2, under an L3 parent.** D-011's repositioning was the owner's call and
+is unchanged by this. This narrows how one number inside it is computed, in the
+direction of claiming less, and the owner instructed it directly on 2026-09-21
+("Fix the defensibility of movement methodology", first priority after the
+branches were aligned). The one judgement in it — the three-book floor — is
+recorded rather than inferred: three is the smallest cohort whose median is not
+one book's opinion, and at that floor 77 of 79 fights still produce a number,
+so it buys honesty without buying silence. Moving it is one constant in three
+places, all named in `market_movement_views.sql`.
+
+**Delivered.**
+
+| | |
+|---|---|
+| `market_movement_views.sql` | applied. `v_fight_market_quotes`, `v_fight_market_broad_baseline`, `v_fight_market_movement` (replaced in place), `v_fight_market_movement_books` |
+| `market_lab_views.sql` | now a pointer to the above. Two files defining one view is how the two drift |
+| `market.js` | `readSide` reads the matched-cohort columns; `openCaveat` → `baselineCaveat`, which also explains a *missing* number; `MIN_MATCHED_BOOKS = 3`; side B's move is the negation of side A's |
+| surfaces | `index.html`, `market.html`, `fight.html`, `event.html`, `fighter.html` — "Since first capture" → "Market move", Market Lab's `<th>Since open</th>` retired, every dash now carries its reason. `market.js?v=2` on all seven consumers |
+| `market-movement.js` | the Node-and-browser formatter with the same rules, used by the tests |
+| tests | `tests/market-movement.test.js` (31), plus three assertions added to `tests/no-model-on-public-surfaces.test.js` |
+
+**Two things found on the way.**
+
+1. The 14-day window (`event_date >= CURRENT_DATE - 14`) is gone from
+   `v_fight_market_movement`, so a fight page older than a fortnight keeps its
+   market history instead of rendering an empty panel. That closes half of
+   T-040; `v_fight_odds_latest_by_book` still carries the window (T-040 stays
+   open for it).
+2. `fighter.html` kept its own naive `lastName`, so the next card's main event
+   rendered as "2.6 pts toward **Jr.**" — Raul Rosas Jr.'s surname is Rosas. It
+   now delegates to `fight-insights.js` like every other surface.
 
 **Held back.** `v_fight_market_quotes` — the full per-book tick history — is
-granted to no public role. It is the Pro asset (`PRODUCT_BOUNDARY.md`), and the
-aggregate views above it are owner-rights views, so nothing free is affected.
+granted to no public role. It is the Pro asset (`PRODUCT_BOUNDARY.md`); the
+aggregate views above it are owner-rights views, so no free surface is affected.
 
-**Attribution note.** As D-006 through D-010: "Reed Cannon" per `CLAUDE.md`;
+**Attribution note.** As D-006 through D-011: "Reed Cannon" per `CLAUDE.md`;
 [T-009](TASK_QUEUE.md) stays the owner's.

@@ -83,10 +83,18 @@ function matchupPreview({
     const agree = sortedSides[0][1];
     const total = validPicks.length;
     const agreeLabel = modelAgreementLabel(agree, total);
-    verdictLine = `<strong>${escapeHtml(winner.name)}</strong> · ${pct}% confidence · ${agreeLabel}`;
-    descVerdict = `Model verdict: ${winner.name} (${pct}%, ${agreeLabel}). `;
+    // The model's pick is computed above and deliberately NOT rendered.
+    // CFL stopped publishing a forecast in September 2026 when it could not
+    // be shown to beat the market price; these preview pages were one of the
+    // surfaces that carried it. The pick calculation is left in place because
+    // the snapshot pipeline shares this module's shape, but nothing downstream
+    // of here prints it.
+    void pct; void agreeLabel; void winner;
+    verdictLine = '';
+    descVerdict = '';
   } else {
-    verdictLine = `Verdict pending — model picks publish closer to fight night.`;
+    verdictLine = '';
+    descVerdict = '';
   }
 
   // ---- per-fighter edge notes ----
@@ -114,11 +122,12 @@ function matchupPreview({
   const bFinish = finishLine(finishB);
 
   // ---- meta ----
-  const title = `${fighterA.name} vs ${fighterB.name} — Prediction, Cardio & Edges | Cannon Fight Lab`;
+  const title = `${fighterA.name} vs ${fighterB.name} — Odds, Stats & Matchup Data | Cannon Fight Lab`;
   const description = (
     `${fighterA.name} vs ${fighterB.name}${flag ? ' (' + flag.trim() + ')' : ''} at ` +
     `${eventName}${dateLabel ? ' on ' + dateLabel : ''}. ${descVerdict}` +
-    `Cardio scores, finish rates, and the strongest edge factors for both fighters.`
+    `Sportsbook odds and line movement, cardio scores, finish rates and the measurable ` +
+    `differences between both fighters. No picks.`
   ).trim();
 
   const sportsEventJsonLd = {
@@ -277,16 +286,18 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   </div>
 
   <div class="cfl-prev-verdict">
-    <span class="cfl-prev-verdict-label">Model verdict</span>
-    ${verdictLine}
+    <span class="cfl-prev-verdict-label">What CFL shows on this fight</span>
+    The vig-free sportsbook consensus, the best price on each side and which book is posting
+    it, how far the line has moved since we started capturing it, and the measurable
+    differences between the two fighters. Not a pick.
   </div>
 
   <div class="cfl-prev-cta">
     <div class="cfl-prev-cta-text">
-      <strong>Track this pick on your free account</strong>
-      <span>Free during beta — see every edge factor, save your picks, get the weekly preview email.</span>
+      <strong>Open this fight in Fight Lab</strong>
+      <span>Live odds from every sportsbook we track, line movement, and the full matchup breakdown. Free, no account needed.</span>
     </div>
-    <a class="btn" href="${signupUrl}">Create free account →</a>
+    <a class="btn" href="${SITE}/fight.html?id=${fight.id}">Odds &amp; research →</a>
   </div>
 
   <div class="cfl-prev-grid">
@@ -297,9 +308,10 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
   <div class="cfl-prev-deeper">
     <h3>Go deeper</h3>
     <a href="${h2hUrl}">Head-to-head: ${escapeHtml(fighterA.name)} vs ${escapeHtml(fighterB.name)} →</a>
-    <a href="${eventUrl}">Full card &amp; verdicts: ${escapeHtml(eventName)} →</a>
+    <a href="${SITE}/fight.html?id=${fight.id}">Fight Lab: odds, movement &amp; matchup data →</a>
+    <a href="${eventUrl}">Full card: ${escapeHtml(eventName)} →</a>
     <a href="${SITE}/cardio.html">How the cardio score works →</a>
-    <a href="${SITE}/edges.html">How model verdicts are built →</a>
+    <a href="${SITE}/stats.html">Factor Lab — which fight stats actually hold up →</a>
   </div>
 
   <p class="cfl-prev-foot">
