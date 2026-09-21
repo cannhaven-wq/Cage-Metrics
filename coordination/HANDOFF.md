@@ -11,6 +11,78 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (e) — Entitlement moves into Postgres, and a P0 came with it
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+PR #42 merged (`ce2c55c`). Item 4 of the monetization sequence — auth + Pro
+entitlements — is done. [D-017](DECISIONS.md), T-059 / T-060.
+
+### Read this first: a live privilege escalation, now closed
+
+The `profiles` UPDATE policy pinned `tier`, `tier_expires_at` and
+`stripe_customer_id`. It did **not** pin `is_admin` or `beta_premium`.
+`current_user_is_admin()` reads `is_admin`, and that function *is* the SELECT
+policy on `fight_odds` and `odds_books`; `email_subscribers` checks it
+directly. **Any signed-in user could make themselves an admin and read every
+subscriber's email address.**
+
+`_auth.js` strips those fields client-side and said "RLS will reject anyway".
+It did not — and the publishable key is public by design, so the REST endpoint
+never needed our JavaScript.
+
+Fixed and **verified as the `authenticated` role in a rolled-back
+transaction**: both escalations now fail 42501, ordinary profile edits still
+work. A sweep of every other UPDATE/INSERT policy found **no second instance**.
+Treated as L0 and executed rather than queued; the reasoning is in D-017.
+
+Worth knowing: the first version of that verification was **confounded** —
+`beta_premium` is `true` for everyone during beta, so setting it to `true` is a
+no-op, not an escalation, and it read as a false failure until the test flipped
+the value instead. The empirical check was right to be run and wrong on the
+first pass.
+
+### The entitlement layer
+
+`current_user_entitlement()` (`free | pro`) and `current_user_is_pro()` —
+`SECURITY DEFINER`, pinned `search_path`, safe in RLS. `v_my_entitlement` gives
+the browser its own standing and no one else's. Verified across six cases
+including **paid-but-expired → free**.
+
+That last one is a second bug fixed: `tier_expires_at` was honoured nowhere, so
+a lapsed subscription would have kept access indefinitely. Free today, because
+nobody has paid; expensive on the first renewal failure.
+
+### Nothing is gated, and checkout is blocked in code
+
+Every surface is `enforced: false`. Applying the boundary is step 5, after
+Stripe. When a gate lands it goes in a view or policy calling
+`current_user_is_pro()`, never an `if (cflAuth.isPro())` around a fetch.
+
+`entitlements.js::CHECKOUT_BLOCKERS` names **T-054** and **T-048**;
+`checkoutMayBeEnabled()` is false while either stands and a test fails if a
+checkout entry point ships. Auth, pricing and Stripe wiring can all be built
+meanwhile — only taking money is blocked, which is what the owner asked for.
+**Turning checkout on now means deleting a named legal blocker**, deliberately.
+
+### Verified
+
+13 Node suites, **315 assertions**; 168 Python tests, 4,369 subtests. All green.
+
+### Next action
+
+**Stripe + pricing** (item 5 in the owner's ordering of the remaining work),
+built against `current_user_is_pro()` and behind the checkout gate. Then apply
+the Free/Pro boundary (**T-061**), then watchlists and alerts.
+
+**Owner:** T-054 and T-048 are now the literal blocker on revenue, not a note —
+the code will not let checkout ship until they are resolved. Draft wording and
+the open legal questions: [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md).
+
+---
+
 ## 2026-09-21 (d) — The chart draws one cohort, or it draws nothing
 
 **From:** Claude
@@ -175,87 +247,5 @@ a series across horizons cannot mix cohorts unless it goes around the view.
 
 **Owner:** T-054 and T-048 are yours and they gate checkout, not launch. T-049
 still gates affiliate links.
-
----
-
-## 2026-09-21 (b) — The repositioning is on one branch, and its movement number is now defensible
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-The owner's direction, given today: **the model goes private, historical proof
-stays.** The repositioning on `claude/focused-maxwell-qw232x` is the desired
-product state, not `main`. This branch is that work plus today's trust sprint
-on top of it, in one history.
-
-### The branch reconciliation
-
-`claude/focused-maxwell-qw232x` was verified before anything was built on it:
-one commit (`24819e0`) on top of `main` at `2244b41`, no rebase needed, and it
-does contain what was reported — Card Lab, Market Lab, Fight Lab, the Cannon
-Card Brief, the archive banners, and `tests/no-model-on-public-surfaces.test.js`.
-Nothing it built was rebuilt. It is merged here, not reimplemented.
-
-Two id collisions were resolved in its favour, because it was written first:
-its **D-011** and **T-037** stand; today's decision became **D-012** and its
-task **T-043**.
-
-### What today's sprint changed on top of it
-
-`market_lab_views.sql` defined `v_fight_market_movement` with `open_p_a` from
-`min(captured_at)`. It was scrupulous about disclosing that — "our first
-capture", never "the opening line", always beside `books_at_open` — and it was
-still wrong. On the live table, 22 of 79 fights had **one** sportsbook at that
-instant; against a matched cohort the figure overstated movement by up to
-**12.7 points** and reported **three markets as moving 3+ points when they had
-not moved at all**.
-
-[D-012](DECISIONS.md) replaces it: the baseline is the **first broad CFL
-capture** (three distinct books priced), movement is medianed over the books
-quoting at **both** ends, and below three such books there is no number — the
-surface says which refusal it is instead. Market Lab's `<th>Since open</th>` is
-gone. Every dash now carries its reason.
-
-Also: the 14-day window is off the movement view (half of T-040), the sitemap
-no longer lists a noindex stub or three query-string shells, `picks.html` is
-one hop, and `fighter.html` no longer calls Raul Rosas Jr. "Jr.".
-
-### Verified
-
-11 Node suites — **245 assertions** — and 168 Python tests with 4,327 subtests,
-all green. Every page rendered in headless Chromium at 1440, 768 and 390 px
-with **zero horizontal overflow** on all of them. The Supabase CDN is blocked
-by this environment's egress policy, so the browser could not load live data;
-the number path was verified instead by running the real
-`v_fight_market_movement` rows for UFC Fight Night: Rosas Jr. vs. Barcelos
-through `market.js` directly, including a fabricated one-book fight to confirm
-the refusal renders as a reason rather than a dash.
-
-### Two model surfaces that survived the repositioning
-
-[D-013](DECISIONS.md). `props.html` was in the no-model test's PRODUCT list and
-passed anyway — it sells model output but says *projection*, and the ban list
-was built from the fight forecast's vocabulary. It is archived now, out of the
-nav, `noindex`. And the Cannon Card Brief's **subject line** still read
-"<Event> — model picks before the card" while its body and its own footer said
-the opposite; `build/send-digest.js` is on a weekly cron. Both now have guards:
-`tests/card-brief.test.js` reads subject lines specifically, and the no-model
-test checks that an archived surface is `noindex`, banner-carrying and unlinked.
-
-`ANALYTICS_SCHEMA.md` and `PRODUCT_BOUNDARY.md` are the sprint's two written
-deliverables — nineteen funnel events with the nine questions they answer, and
-the Free/Pro line. Neither ships code; T-047 implements the first.
-
-### Next action
-
-**ChatGPT reviews [D-012](DECISIONS.md)**, specifically the three-book floor —
-it is the one judgement in the change, and moving it is one constant in three
-places. Then the sprint's unfinished phases, in this order: **T-047** (funnel
-analytics — inventory what `_shared.js` already emits before adding a vendor),
-**T-046** (`v_fight_market_at_lock`, the last incomparable-cohort baseline in
-the repo), **T-038/T-039** (the social queue and `draft-post.js`, both still
-pre-repositioning). **T-048** (Terms of Service) and **T-049** (sportsbook
-jurisdiction labelling) are the owner's and need a lawyer, not a model.
 
 ---

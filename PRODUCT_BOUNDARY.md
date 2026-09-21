@@ -63,6 +63,22 @@ does not publish one, at any price.
 - Affiliate placement dressed as a recommendation. Best-price ordering is the
   American number and nothing else, on every tier, forever.
 
+## How it is enforced (2026-09-21)
+
+`public.current_user_is_pro()` in Postgres, and nothing else. `entitlements.js`
+mirrors this document as `SURFACES` so the two cannot drift, and
+`tests/entitlements.test.js` checks they agree — but that file is
+**presentation only**: it decides what to draw, never what may be sent.
+
+Every surface is currently `enforced: false`. The machinery exists; nothing is
+gated. Applying the boundary is a later step, and when a row flips the
+server-side gate must already exist.
+
+**Checkout is blocked in code.** `CHECKOUT_BLOCKERS` names T-054 and T-048;
+`checkoutMayBeEnabled()` is false while either stands. Auth, pricing pages and
+Stripe wiring may all be built and tested meanwhile — only taking real money is
+blocked.
+
 ## What the architecture already supports
 
 - `profiles.tier` and `profiles.beta_premium` exist; `cflAuth.getTier()` /

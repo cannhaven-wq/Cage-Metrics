@@ -1139,3 +1139,92 @@ window is gone: **51 fights older than 14 days now have their detail back**,
 the oldest event covered being 2026-05-30.
 
 **Attribution note.** As D-006 through D-015.
+
+
+---
+
+## D-017 — Entitlement is decided in Postgres, and a P0 found on the way
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-059, T-060 |
+| level | L1 |
+| reversible | yes — two functions, one self-scoped view, one tightened policy, one JS module. Writes no row, gates nothing, publishes no claim |
+
+**On the level.** The entitlement layer is L1. The P0 fix inside it was treated
+as **L0 and executed immediately**: `CRITICAL_GATES.md` item 5 names RLS
+changes, and this is one, but an open privilege escalation exposing every
+subscriber's email is not something to queue for approval. Tightening a policy
+to close a live hole is revertible, testable, writes no row and publishes no
+claim; leaving it open for a gate is the larger risk. Recorded here rather than
+asked.
+
+**Plain version.** The database learns, for itself, whether the person asking
+is a paying member. Nothing is paywalled by this and no page changes.
+
+**The P0, first, because it was live.** The `profiles` UPDATE policy pinned
+`tier`, `tier_expires_at` and `stripe_customer_id` in its `WITH CHECK`. It did
+**not** pin `is_admin` or `beta_premium`. `current_user_is_admin()` reads
+`is_admin`, and that function *is* the SELECT policy on `fight_odds` and
+`odds_books`, while `email_subscribers` checks it directly. So any signed-in
+user could run
+
+    update profiles set is_admin = true where id = auth.uid()
+
+and then read **every subscriber's email address** and the whole odds table.
+
+`_auth.js::updateProfile` strips those fields, and its comment read *"RLS will
+reject anyway"*. RLS did not. The publishable key is public **by design**, so
+the REST endpoint was reachable without loading any of our JavaScript —
+stripping a field in the client was never a control, only a convenience.
+
+Fixed by pinning both columns the same way the other three already were.
+**Verified as the `authenticated` role against a real profile in a rolled-back
+transaction**: changing `is_admin` and changing `beta_premium` each fail 42501,
+and an ordinary same-value write still succeeds, so profile editing is
+unaffected. The first version of that test was confounded — `beta_premium` is
+`true` for everyone during beta, so setting it to `true` is a no-op rather than
+an escalation, and it read as a false failure until the test was changed to
+flip the value. **A sweep of every other `UPDATE`/`INSERT` policy found no
+second instance**: `user_bets` and `user_bankrolls` scope to `auth.uid()` and
+carry no security-bearing columns.
+
+**The lesson worth keeping.** A `WITH CHECK` protects exactly the columns it
+names. Every column added to `profiles` after this is unprotected until someone
+adds it to the list. `tests/entitlements.test.js` therefore asserts on the
+*omission* — it fails when a security-bearing column is missing from the policy,
+rather than checking that the ones already there still work.
+
+**A second bug, cheaper but the same shape.** `tier_expires_at` was honoured
+nowhere. `getTier()` returned `'premium'` from `tier` alone, so a lapsed
+subscription would have kept full access indefinitely. It costs nothing today
+because nobody has paid; it would have cost money on the first renewal failure,
+which is the sprint after next. Both layers honour it now.
+
+**The entitlement layer.** `current_user_entitlement()` returns `free | pro`
+and `current_user_is_pro()` is its boolean form — `SECURITY DEFINER`, pinned
+`search_path`, safe in RLS. `v_my_entitlement` gives the browser its **own**
+standing and no one else's. Verified across six cases: anon → free, beta grant
+→ pro, beta off and free tier → free, paid with no expiry → pro, paid with a
+future expiry → pro, **paid and expired → free**.
+
+**Nothing is gated, and that is the decision.** Applying the boundary is step 5
+of the owner's sequence, after Stripe. This builds the machinery and changes no
+access: every view readable before is readable now on the same terms. When a
+gate lands it goes in a view or policy calling `current_user_is_pro()`, never in
+an `if (cflAuth.isPro())` around a fetch — the browser decides what to draw, the
+database decides what to send.
+
+**Checkout is blocked in code rather than in a document.**
+`entitlements.js::CHECKOUT_BLOCKERS` names T-054 and T-048;
+`checkoutMayBeEnabled()` is false while either stands, and a test fails if a
+checkout entry point ships anyway. Writing it in a document did not feel like
+enough, because the sprint that builds Stripe is the one most likely to forget.
+Turning checkout on now requires deleting a named legal blocker — a deliberate
+act with a reviewer attached, not a default that slips through. Auth, pricing
+and Stripe wiring may all be built and tested meanwhile; only taking money is
+blocked, which is exactly what the owner asked for.
+
+**Attribution note.** As D-006 through D-016.

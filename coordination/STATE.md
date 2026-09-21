@@ -90,6 +90,17 @@ Git history is the audit trail. These files are the working surface.
 
 ### Monetization sprint — started 2026-09-21
 
+**Items 1–4 done.** Entitlement is decided in Postgres
+([D-017](DECISIONS.md)): `current_user_is_pro()` is the only thing that may
+gate a Pro surface, and **nothing is gated yet** by design. **Checkout is
+blocked in code** — `entitlements.js::CHECKOUT_BLOCKERS` names T-054 and T-048
+and a test fails if a checkout entry point ships while they stand.
+
+**A P0 was found and closed on the way**: the `profiles` UPDATE policy did not
+pin `is_admin`, so any signed-in user could make themselves an admin and read
+every `email_subscribers` row. Verified fixed as the `authenticated` role; a
+sweep found no second instance.
+
 **Items 1–3 done.** T-047 analytics ([D-014](DECISIONS.md)), T-046
 matched-cohort everywhere ([D-015](DECISIONS.md)), movement charts
 ([D-016](DECISIONS.md)). Next is auth + Pro entitlements, then Stripe, then
