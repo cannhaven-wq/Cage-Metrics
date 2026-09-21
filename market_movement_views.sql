@@ -62,6 +62,16 @@
 --   6. If the matched cohort is smaller than MIN_BOOKS, movement is NULL and
 --      `movement_status` says why. Nothing falls back to a wider cohort.
 --
+-- AMENDED 2026-09-21 by T-046: the 24-hour lookback in view 3 below had the same
+-- unmatched-cohort shape this file was written to remove — `market_p_a_24h`
+-- medianed every book with a quote 24 h old against every book quoting now. It
+-- now reads `v_fight_market_horizons` (market_horizon_views.sql), which holds
+-- the ONE matched-cohort intersection for every horizon. Measured before the
+-- fix: 8 of 77 fights had a different cohort at the two ends, worst
+-- disagreement 0.5 pts — under the display threshold, so no rendered figure
+-- changed, and the defect was structural rather than visible. The broad
+-- baseline in this file was always matched; only the 24 h horizon was not.
+--
 -- MIN_BOOKS is 3, repeated literally in each view below (Postgres views take no
 -- parameters). It is mirrored in market-movement.js as MIN_MATCHED_BOOKS and
 -- pinned by tests/market-movement.test.js — change all three together.
@@ -188,14 +198,7 @@ current_cohort AS (
   FROM public.v_fight_market_quotes q
   ORDER BY q.fight_id, q.book_id, q.quoted_at DESC
 ),
--- each book's latest quote at least 24h old, for the short lookback
-cohort_24h AS (
-  SELECT DISTINCT ON (q.fight_id, q.book_id)
-    q.fight_id, q.book_id, q.fair_a
-  FROM public.v_fight_market_quotes q
-  WHERE q.quoted_at <= now() - INTERVAL '24 hours'
-  ORDER BY q.fight_id, q.book_id, q.quoted_at DESC
-),
+
 -- THE MATCHED COHORT: books quoting at BOTH ends. A book that has since pulled
 -- the market leaves both sides of the comparison, never just one.
 matched AS (
@@ -233,11 +236,16 @@ cur AS (
   JOIN public.v_odds_books_sportsbooks sb ON sb.id = c.book_id
   GROUP BY c.fight_id
 ),
+-- The 24-hour horizon, from the shared matched-cohort rule (T-046). NOT a
+-- median over "every book with an old quote" — that was the defect.
 back24 AS (
   SELECT fight_id,
-    (percentile_cont(0.5) WITHIN GROUP (ORDER BY fair_a))::numeric AS market_p_a_24h,
-    COUNT(*)::integer                                               AS book_count_24h
-  FROM cohort_24h GROUP BY fight_id
+    then_p_a           AS market_p_a_24h,
+    matched_book_count AS book_count_24h,
+    movement_pts_a     AS movement_pts_a_24h,
+    movement_status    AS movement_status_24h
+  FROM public.v_fight_market_horizons
+  WHERE horizon = 'h24'
 ),
 base_counts AS (
   SELECT fight_id, COUNT(*)::integer AS baseline_book_count
@@ -279,7 +287,9 @@ SELECT
   -- CFL's own earliest sighting. Honestly named: NOT an opening line.
   s.first_seen_at,
   s.capture_count,
-  -- 24h lookback (all books with a quote that old; a lookback, not the baseline)
+  -- 24h lookback, matched cohort (T-046). market_p_a_24h is the median across
+  -- the books quoting BOTH 24 h ago and now — not across whichever books
+  -- happened to have an old quote.
   b24.market_p_a_24h,
   (1 - b24.market_p_a_24h)::numeric                          AS market_p_b_24h,
   COALESCE(b24.book_count_24h, 0)                            AS book_count_24h,
@@ -288,7 +298,11 @@ SELECT
   cur.best_american_a, cur.best_book_a,
   cur.best_american_b, cur.best_book_b,
   cur.worst_american_a, cur.worst_american_b,
-  cur.book_spread_pts
+  cur.book_spread_pts,
+  -- appended by T-046: the 24 h move computed in SQL over the matched cohort,
+  -- so a surface subtracts nothing and cannot mix two cohorts by accident.
+  b24.movement_pts_a_24h,
+  COALESCE(b24.movement_status_24h, 'insufficient_matched_books') AS movement_status_24h
 FROM seen s
 JOIN public.fights fi    ON fi.id      = s.fight_id
 JOIN cur                 ON cur.fight_id = s.fight_id

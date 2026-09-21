@@ -327,6 +327,89 @@ t('every surface explains a dash instead of printing a bare one', () => {
      'index.html prints a bare dash for a missing move');
 });
 
+/* -------------------- 10. EVERY horizon obeys the same rule (T-046) -------- */
+const HORIZON_SQL = read('market_horizon_views.sql');
+
+t('one intersection serves every horizon', () => {
+  // The whole point of T-046: three horizons, one place where the cohort is
+  // intersected. A second copy is how the two drift.
+  const body = HORIZON_SQL.replace(/\s+/g, ' ');
+  ok(/CREATE OR REPLACE VIEW public\.v_fight_market_horizon_cohorts/.test(body),
+     'no shared cohort view');
+  const joins = (body.match(/JOIN now_cohort n ON n\.fight_id = t\.fight_id AND n\.book_id = t\.book_id/g) || []).length;
+  eq(joins, 1, 'the matched-cohort intersection is written more than once');
+  ['broad_baseline', 'h24', 'lock'].forEach(h =>
+    ok(body.indexOf("'" + h + "'") !== -1, 'horizon ' + h + ' is not defined'));
+});
+
+t('every horizon is gated on the same three-book floor', () => {
+  const body = HORIZON_SQL.replace(/\s+/g, ' ');
+  // one gate, applied to all horizons, not one per horizon
+  ok(/matched_book_count >= 3/.test(body), 'no three-book gate');
+  ok(/3 AS min_books/.test(body), 'the floor is not published beside the number');
+  // and no horizon may bypass it
+  ok(!/horizon = 'h24'[^;]*matched_book_count >= 1/.test(body), 'h24 has its own weaker floor');
+});
+
+t('the 24h lookback no longer medians over an unmatched cohort', () => {
+  const mm = read('market_movement_views.sql').replace(/\s+/g, ' ');
+  // the retired shape: a cohort_24h CTE built straight off the quote history
+  ok(!/cohort_24h AS \( SELECT DISTINCT ON/.test(mm),
+     'market_movement_views.sql still builds its own 24h cohort');
+  ok(/FROM public\.v_fight_market_horizons WHERE horizon = 'h24'/.test(mm),
+     'the 24h lookback does not read the shared horizon view');
+});
+
+t('market.js reads the 24h move rather than subtracting two medians', () => {
+  const js = MARKET_JS.replace(/\s+/g, ' ');
+  ok(!/move24h: \(h24 == null \|\| now == null\) \? null : \(now - h24\) \* 100/.test(js),
+     'market.js still computes the 24h move by subtraction');
+  ok(/num\(row\.movement_pts_a_24h\)/.test(js),
+     'market.js does not read movement_pts_a_24h');
+  ok(/movementStatus24h/.test(js), 'market.js does not carry the 24h status');
+  ok(/isA \? pts : -pts/.test(MARKET_JS),
+     'the 24h move is not flipped for the other corner');
+});
+
+t('a 24h horizon below the floor renders a reason, not a dash', () => {
+  ['market.html', 'fight.html'].forEach(f => {
+    const src = read(f);
+    ok(/movementStatus24h/.test(src),
+       f + ' ignores the 24h refusal status, so a dash there has no reason');
+  });
+  ok(/not enough sportsbooks are quoting both 24 hours ago and now/i.test(read('market.html')),
+     'market.html cannot distinguish "quiet market" from "cannot measure"');
+});
+
+t('the at-lock view is rebuilt on the shared rule and publishes its cohort', () => {
+  const body = HORIZON_SQL.replace(/\s+/g, ' ');
+  ok(/CREATE OR REPLACE VIEW public\.v_fight_market_at_lock AS SELECT h\.fight_id/.test(body),
+     'v_fight_market_at_lock is not built from the horizon view');
+  ok(/matched_book_count AS matched_book_count_at_lock/.test(body),
+     'the at-lock cohort size is not published beside the number');
+  ok(/movement_status AS movement_status_at_lock/.test(body),
+     'the at-lock refusal status is not published');
+  ok(/horizon = 'lock'/.test(body), 'it does not select the lock horizon');
+});
+
+t('fight_week_views.sql no longer owns the at-lock definition', () => {
+  // Two files defining one view is how the two drift — the same lesson as
+  // market_lab_views.sql. fight_week_views.sql must defer.
+  const fw = read('fight_week_views.sql');
+  const defines = /CREATE OR REPLACE VIEW public\.v_fight_market_at_lock/.test(fw);
+  ok(!defines || /SUPERSEDED|superseded/.test(fw),
+     'fight_week_views.sql still defines v_fight_market_at_lock without deferring to market_horizon_views.sql');
+});
+
+t('no horizon is named after a market event CFL cannot see', () => {
+  const body = stripComments(HORIZON_SQL).toLowerCase();
+  ['opening line', 'opening price', 'opened at', 'since open', "'open'"].forEach(p =>
+    ok(body.indexOf(p) === -1, 'market_horizon_views.sql uses "' + p + '"'));
+  // "lock" is a CFL event and is allowed; it must say so.
+  ok(/research forecast was locked|instant a research forecast/i.test(HORIZON_SQL),
+     'the lock horizon is not identified as a CFL event rather than a market one');
+});
+
 // ------------------------------------------------------------------ report
 if (failures.length) {
   console.log(`\n  ${passed} passed, ${failures.length} FAILED\n`);

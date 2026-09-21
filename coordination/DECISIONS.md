@@ -911,3 +911,151 @@ D-011 already removed. Whether they stay reachable at all is a product call and
 is **T-050**, the owner's, not a defect to fix quietly.
 
 **Attribution note.** As D-006 through D-012.
+
+
+---
+
+## D-014 — The funnel counts, and counts nothing personal
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-047 |
+| level | L1 |
+| reversible | yes for the code (one emitter, revertible in git). The table is additive and prunable — `funnel_events` is deliberately **not** append-only in the `pre_fight_snapshots` sense, because these are counts, not evidence, and a retention prune must stay possible. It publishes no claim and changes no public copy |
+
+**Plain version first, as CLAUDE.md requires.** The site starts counting,
+anonymously, which pages people open and which things they click. A visitor sees
+nothing new, no cookie is set, and no new third party is added. It matters
+because CFL is about to build a paid tier and today cannot answer "did anyone
+reach Card Lab" or "did anyone open a fight".
+
+**Decision.** Nineteen event names, fifteen emitting. Two sinks: a
+`funnel_events` table CFL owns, and the Plausible install that was already
+there. The names live in three places — `cfl.EVENTS`, the database's CHECK
+constraint, and `ANALYTICS_SCHEMA.md` — and a test fails if they drift.
+
+**Three findings, and two of them were corrections to my own work.**
+
+1. **Plausible was already installed on 25 of 30 root pages.**
+   `ANALYTICS_SCHEMA.md`, written earlier the same day, implied no vendor
+   existed. It was wrong. So the question was never "vendor or no vendor" but
+   "add a second one", and the answer is no: Plausible receives the event **name
+   only**, because custom properties are a paid feature and spending money is
+   L3 — a props argument would have taken that decision by accident.
+
+2. **`anon` held `UPDATE` and `DELETE` on the new table after applying.** Not
+   from anything in the migration: a new table in `public` inherits broad grants
+   from Supabase's default privileges. RLS denied both, so nothing was
+   exploitable — but that is one layer doing the work of two, and it becomes
+   zero the day someone adds a permissive `FOR ALL` policy. Revoked explicitly.
+   **The check is what found it**; the migration's own prose claimed the right
+   outcome and the database disagreed. Verify grants after applying, always.
+
+3. **`privacy.html` does not name Plausible.** A third-party processor has been
+   running on every page and the privacy policy does not disclose it. That is a
+   compliance gap, not a preference. Privacy wording is gate 9, so it is
+   **T-054** with draft text below rather than a quiet edit:
+
+   > *Analytics.* We use Plausible Analytics to count page views and basic
+   > interactions. Plausible is a third-party service that processes this data
+   > on our behalf. It does not use cookies, does not collect personal
+   > information, and does not track visitors across other websites. We also
+   > record anonymous counts of which pages and features are used in our own
+   > database; those records contain no email address, name, account identifier
+   > or IP address.
+
+   The second sentence is a factual description of what the code does and can be
+   checked against `funnel_events_migration.sql`. Whether the wording is
+   *sufficient* is the part that needs a lawyer.
+
+**What is never collected, by construction.** `cfl.track` strips any prop key
+matching email / name / user id / token / IP / phone / stake / amount / wager /
+bankroll rather than trusting nineteen call sites to remember, caps string props
+at 120 characters, and sends a per-session random `session_id` from
+`sessionStorage` that is never joined to an account. The table enforces the same
+shape: a bounded `props`, a bounded `session_id`, and a closed event list.
+`card_brief_signup_completed` records **that** a signup happened and its source,
+never the address — `tests/analytics-events.test.js` asserts an address cannot
+reach the props under four different key spellings.
+
+**Four events are declared and not emitted**, and this is deliberate rather than
+unfinished: `best_price_clicked` (the best-price cell is not clickable, and
+becomes so only behind T-049), `fight_shared` (no share control exists anywhere),
+`checkout_started` and `checkout_completed` (no checkout exists). They are in
+the list so the sprint that builds a checkout does not invent its own names.
+
+**Also corrected here:** `CLAUDE.md` still documented `open_p_a`,
+`books_at_open` and `market.js::openCaveat` as live, which D-012 retired hours
+earlier. That is the file every future session reads first, so a stale entry
+there is how a retired column gets reintroduced. It now describes the
+matched-cohort rule and says explicitly that `open_p_a` must not return.
+
+**Attribution note.** As D-006 through D-013.
+
+
+---
+
+## D-015 — Every market horizon on one matched-cohort rule
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon (owner) |
+| task | T-046 |
+| level | L1 |
+| reversible | yes — read-only views recreated by `market_horizon_views.sql`, one JS read path, tests. Writes no row, changes no append-only table, publishes no new claim |
+
+**Plain version.** "The line moved" now means the same thing everywhere on the
+site — comparing to last week, to yesterday, or to the moment a research
+forecast was written down. In every case only the sportsbooks quoting at **both**
+ends are compared, and below three of them we say we cannot tell.
+
+**Decision.** The matched-cohort intersection lives in exactly one place,
+`v_fight_market_horizon_cohorts`, and all three horizons aggregate it. Adding a
+fourth horizon means adding a row to one CTE — there is no second copy of the
+cohort logic to keep in step.
+
+**Two things were still on the old footing, and one of them was mine.**
+
+1. **`v_fight_market_at_lock`** compared a lock-time cohort against a current
+   one. Of 14 fights with a lock: 4 had a different cohort at the two ends,
+   **1 rested on a single book at lock**, and the worst disagreement against a
+   matched cohort was **5.2 points**. `fight_week_views.sql` no longer defines
+   it — two files defining one view is how the two drift, the same lesson
+   `market_lab_views.sql` learned the same day.
+
+2. **The 24-hour lookback inside `v_fight_market_movement` — which D-012 itself
+   shipped — had exactly the defect D-012 was written to remove.**
+   `market_p_a_24h` medianed every book with a quote at least 24 h old against
+   every book quoting now. I fixed the baseline horizon and left the short one.
+   Of 77 fights, 8 had a different cohort at the two ends and 2 fall below the
+   three-book floor.
+
+**Did any value materially change?** For the 24 h horizon, **no**: the worst
+disagreement was **0.5 points**, under the 0.5 pt display threshold, so no
+rendered figure moved. That is worth stating precisely rather than claiming a
+fix that mattered more than it did — and it is worth writing down *why* it was
+small. A day is short enough that a book quoting yesterday is almost always
+quoting today. It is **not** small in the case that matters most: a book pulling
+a market during fight week is exactly when someone is reading the 24 h column.
+A defect that is currently harmless and structurally identical is still the
+defect. For the lock horizon the change **is** material at 5.2 points, though
+nothing public renders it.
+
+**The baseline horizon is unchanged.** Verified against the live card fight by
+fight: Vieira +7.0, Jackson +3.1, Rosas −2.6, Dumont −1.9, Bellato +1.8,
+Amaya −0.8, all matching the ground-truth table from before this change.
+
+**`market.js` no longer subtracts.** `move24h` reads `movement_pts_a_24h`
+straight from SQL. Subtracting a matched-cohort median from an all-books median
+would silently re-mix two cohorts inside the formatter, which is how this class
+of defect survives a fix to the data layer.
+
+**The lock horizon is kept, not removed.** The forecast is off every public
+surface (D-011), so "since lock" answers a question about CFL rather than about
+the product — it belongs to the research layer. D-011 is explicit that model
+infrastructure is not deleted to tidy up, so it stays and is measured correctly.
+
+**Attribution note.** As D-006 through D-014.

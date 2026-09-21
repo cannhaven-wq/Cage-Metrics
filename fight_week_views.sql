@@ -151,42 +151,26 @@ GROUP BY p.fight_id, f.event_id;
 GRANT SELECT ON public.v_fight_market_vigfree TO anon, authenticated;
 
 -- ---------------------------------------------------------------------------
--- Vig-free market number as it stood when the forecast was locked: the latest
--- quote per real sportsbook captured at or before locked_at.
+-- v_fight_market_at_lock — SUPERSEDED 2026-09-21 (T-046). Defined in
+-- market_horizon_views.sql; this file no longer creates it.
 -- ---------------------------------------------------------------------------
-CREATE OR REPLACE VIEW public.v_fight_market_at_lock AS
-WITH lf AS (
-  SELECT fight_id, locked_at FROM public.v_fight_locked_forecast
-),
-latest AS (
-  SELECT DISTINCT ON (o.fight_id, o.book_id, o.side)
-    o.fight_id, o.book_id, o.side, o.implied_prob, o.captured_at
-  FROM public.fight_odds o
-  JOIN lf ON lf.fight_id = o.fight_id
-  JOIN public.v_odds_books_sportsbooks b ON b.id = o.book_id
-  WHERE o.captured_at > TIMESTAMPTZ '2010-01-01'
-    AND o.captured_at <= lf.locked_at
-    AND o.implied_prob IS NOT NULL AND o.implied_prob > 0
-  ORDER BY o.fight_id, o.book_id, o.side, o.captured_at DESC
-),
-pairs AS (
-  SELECT a.fight_id, a.book_id,
-         a.implied_prob / (a.implied_prob + b.implied_prob) AS fair_a,
-         GREATEST(a.captured_at, b.captured_at)              AS captured_at
-  FROM latest a
-  JOIN latest b ON b.fight_id = a.fight_id AND b.book_id = a.book_id AND b.side = 'B'
-  WHERE a.side = 'A'
-)
-SELECT
-  p.fight_id,
-  (percentile_cont(0.5) WITHIN GROUP (ORDER BY p.fair_a))::numeric        AS market_p_a_at_lock,
-  (1 - percentile_cont(0.5) WITHIN GROUP (ORDER BY p.fair_a))::numeric    AS market_p_b_at_lock,
-  COUNT(*)::integer                                                       AS book_count_at_lock,
-  MAX(p.captured_at)                                                      AS quoted_at
-FROM pairs p
-GROUP BY p.fight_id;
-
-GRANT SELECT ON public.v_fight_market_at_lock TO anon, authenticated;
+-- The definition that stood here compared a median over the books captured by
+-- the forecast-lock instant against a median over the books quoting now. Those
+-- are different cohorts. Measured on the live table: of 14 fights with a lock,
+-- 4 had a different cohort at the two ends, 1 rested on a SINGLE book at lock,
+-- and the worst disagreement against a matched cohort was 5.2 points.
+--
+-- It is now built from `v_fight_market_horizons`, which holds the one
+-- matched-cohort intersection every movement figure on the site is built from,
+-- and it publishes `matched_book_count_at_lock` and `movement_status_at_lock`
+-- so a reader can see the cohort behind the number.
+--
+-- Two files defining one view is how the two drift — the same lesson
+-- market_lab_views.sql learned on the same day. The original text is in git
+-- history and is not reproduced here.
+--
+-- Note it is research-layer only: the forecast is off every public surface
+-- (D-011), so "since lock" answers a question about CFL, not about the product.
 
 -- ---------------------------------------------------------------------------
 -- Latest quote per real sportsbook, current card window only (events dated

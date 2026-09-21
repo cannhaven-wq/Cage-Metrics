@@ -11,6 +11,103 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 (c) — The funnel counts, and the monetization sprint has started
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+PR #39 and #40 are **merged and live**. Production was verified serving the
+merged commit (served-bytes MATCH on every file) and the card matched the
+ground-truth table fight for fight. The monetization sprint has begun, in the
+owner's locked order. **T-047 is done**; item 2 is T-046.
+
+### T-047 — funnel analytics, actually emitting
+
+[D-014](DECISIONS.md). Nineteen names, fifteen emitting, two sinks:
+`funnel_events` (ours — `INSERT` only, no `SELECT` for anyone, aggregates via
+`v_funnel_daily`) and the Plausible that was already installed. Names live in
+`cfl.EVENTS`, the DB CHECK constraint and `ANALYTICS_SCHEMA.md`, and
+`tests/analytics-events.test.js` (25 assertions) fails if they drift.
+
+### Three things worth carrying forward
+
+1. **Plausible was already on 25 of 30 root pages.** `ANALYTICS_SCHEMA.md`,
+   written earlier the same day, said no vendor existed. It was wrong and is
+   corrected. Plausible gets the event **name only** — custom properties are
+   paid, and that would be an L3 spend taken by accident.
+2. **`anon` held `UPDATE`/`DELETE` on the new table after applying**, inherited
+   from Supabase's default `public` grants. RLS denied them, so nothing was
+   exploitable, but one layer was doing the work of two. Revoked. **The
+   verification query is what found it — the migration's own prose claimed the
+   right outcome and the database disagreed.** Check grants after every apply.
+3. **`privacy.html` does not name Plausible.** A third-party processor on every
+   page, undisclosed. Gate 9, so it is **T-054** with draft wording in D-014
+   rather than a quiet edit. **This one needs the owner before checkout, not
+   after.**
+
+`CLAUDE.md` also still described `open_p_a` and `openCaveat` as live, which
+D-012 retired hours earlier. Corrected — that file is what a fresh session reads
+first, and a stale entry there is how a retired column comes back.
+
+### Verified
+
+11 Node suites, **270 assertions**; 168 Python tests, 4,339 subtests. All green.
+11 pages rendered at 1440, 768 and 390 px with zero horizontal overflow. The
+database was exercised directly: a well-formed event inserts, an unknown event
+name is rejected by the CHECK constraint, a short `session_id` is rejected, and
+`v_funnel_daily` aggregates. The test row was deleted; the table is empty and
+waiting for real traffic.
+
+### T-046 — every horizon on one rule (added after the entry above)
+
+[D-015](DECISIONS.md). The matched-cohort intersection now lives in exactly one
+place, `v_fight_market_horizon_cohorts`, and three horizons aggregate it:
+`broad_baseline`, `h24`, `lock`. Adding a fourth means adding a row to one CTE.
+
+Two were still on the old footing and **one of them was mine**: the 24-hour
+lookback D-012 itself shipped had exactly the defect D-012 removed from the
+baseline. `v_fight_market_at_lock` was the other — worst disagreement **5.2
+points**, one fight resting on a single book at lock.
+
+**Did values move?** The 24 h horizon: no — worst disagreement 0.5 pts, under the
+display threshold, so nothing rendered changed. Small because a day is short
+enough that yesterday's books are still quoting; **not** small in the case that
+matters, a book pulling a market during fight week. The lock horizon: yes, 5.2
+points, though nothing public renders it. The baseline horizon is unchanged,
+verified fight by fight against the ground-truth table.
+
+`market.js` no longer subtracts one median from another to get the 24 h move —
+it reads `movement_pts_a_24h` from SQL, because subtracting a matched median from
+an all-books median re-mixes cohorts inside the formatter.
+
+### The two checkout blockers, and what was deliberately not done
+
+**T-054** (privacy must name Plausible) and **T-048** (no Terms page) are both
+**checkout blockers**. Draft wording, the facts a drafter needs, and the open
+questions are in [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md)
+— **outside production. No legal language was written into any live page, and no
+helpline, regulator or jurisdiction claim was invented.** `disclaimer.html`'s
+existing helpline and Tennessee reference are flagged there for verification
+rather than reused as though verified.
+
+Two things a lawyer must decide that we explicitly did not: whether "anonymous"
+or "pseudonymised" is correct for the funnel rows given a per-session id exists,
+and whether a retention period must be stated — no prune job exists, so a stated
+period needs one built to match.
+
+### Next action
+
+**Movement history charts**, once the PR carrying T-047 + T-046 is merged — the
+owner's instruction is not to start them before that. They now have a clean
+foundation: every horizon reads `v_fight_market_horizons`, so a chart that plots
+a series across horizons cannot mix cohorts unless it goes around the view.
+
+**Owner:** T-054 and T-048 are yours and they gate checkout, not launch. T-049
+still gates affiliate links.
+
+---
+
 ## 2026-09-21 (b) — The repositioning is on one branch, and its movement number is now defensible
 
 **From:** Claude
@@ -165,72 +262,5 @@ reads a six-point move as six points of market movement rather than partly as a
 change in which books we were reading. If not, the honest fix is to define the
 baseline as the first capture at which N books were quoting, and to publish
 nothing before that.
-
----
-
-## 2026-09-19 (b) — The homepage is the card, and it claims no edge
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-19
-
-Frontend release on UFC 331 night, on the owner's instruction to make the
-approved website changes live during the card. [PR #38](https://github.com/cannhaven-wq/Cage-Metrics/pull/38),
-recorded as [D-010](DECISIONS.md); T-020 and T-021 are done.
-
-### What is now live
-
-| | |
-|---|---|
-| hero | the current card — "*UFC 331: Van vs. Pantoja 2* — Model vs Market" — with a rail of counts (fights, forecasts locked since Sep 7, sportsbook lines with book range and quote age, big disagreements) and the three widest gaps |
-| market cell | always shown; sportsbooks-only vig-free median (`v_fight_market_vigfree`), "6 books, vig removed · N min ago", **stale** past 3 h on a fight day / 36 h otherwise, "no sportsbook line captured yet" when there is none |
-| third cell | "Difference · N pts · CFL higher / market higher / mostly agree"; from 10 points a neutral "Far from the market" badge and "a flag on the model, not the price" |
-| removed | `+N% model over market`, `✦ Value alert`, the Value sort, the parlay strip, "Top edge · next card", and `event.html`'s "Edge +Npp" / "⚡ Value" |
-| claims | "graded at real closing prices" and the hardcoded 61% / 75% out of every meta/OG/Twitter string; "find where the betting line is wrong" out of the hero; `519-139`, `+10.0%`, `12-5`, `down $61`, "as of Aug 18" out of the prose; the how-to steps no longer name retired drivers |
-| records | replay headline unchanged, via `proof-gates.js`, "(simulated)" on the phone strip too; the live record described and linked, not numbered (D-007) |
-| shared copy | `fight-insights.js?v=8`: "books lean the other way" now fires only when the books favour the opponent (it used to fire only when they were *more* sure of our pick); a new flag for the model ten or more points above the market; "Jr." is no longer a surname |
-
-### The reconciliation, in one paragraph
-
-`main` at `194e1e9` was live and no PR was open. The week's unmerged work was
-three branches: the owner's `fight-week-v2` and `revenue/trust-funnel-v1`
-(both 2026-09-15, both >120 commits behind `main`) and an unapproved email
-modal. D-010 carried the approved *direction* and the approved *wording* from
-`fight-week-v2` — event-first hero, "model vs market", the sportsbooks-only
-market view it added to the database on the 15th, its 5/10-point bands — into
-the current `index.html` rather than merging 128 files during a live card. The
-rest is T-033 to T-035, each with its reason. No Codex changes were found on
-any branch or in the working tree.
-
-### Verified
-
-Every Node suite and all 624 Python tests green, including the new
-`tests/model-vs-market.test.js` (14 assertions). Rendered in headless Chromium
-against the real UFC 331 rows: 12 active fights, the retired Moicano–Ortega
-booking dropped, every market cell present, Tuivasa's 34-point gap first under
-Disagreement, no overflow at 390 px, no console errors. The agent environment
-cannot reach cannonfightlab.com or Supabase directly, so the served bytes and
-the rendered live page are checked by the new `Verify live site` workflow.
-
-### Held to scope
-
-No model, threshold, schedule, snapshot, ledger or schema change. `build/` is
-untouched. The `odds.yml` capture and the immutability plan (T-031) are exactly
-where the previous entry left them.
-
-## Next action
-
-**Owner:** two calls. (1) **T-035** — the email modal, yes or no. (2) The
-order of **T-033** and **T-034**: the Event Hub / Market Board work is the
-larger product step and the claims manifest is the thing it must not
-reintroduce.
-
-**ChatGPT:** the claim worth attacking is that "N pts · CFL higher" is a
-disagreement and not an edge percentage under `CLAUDE.md` line 1. The defence
-is that it is the arithmetic between two numbers already on screen, neutral in
-colour and sign, never called an edge, and carrying a flag against the model
-from ten points up. If a reader would still take "34 pts · CFL higher" as a
-reason to bet, the third cell should lose the number, as the 2026-09-18 draft
-proposed, and only the label should stay.
 
 ---

@@ -165,11 +165,13 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl2"></script>
+<script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
 <script>
 cfl.renderNav('pricing');
 cfl.renderFooter();
+
+cfl.track('pricing_view');
 
 // If user is already signed in, change the free CTA to "go to your account"
 cflAuth.ready().then(() => {

@@ -169,13 +169,31 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl2"></script>
+<script src="_shared.js?v=rl3"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('fight');
 cfl.renderFooter();
+
+// Funnel: Fight Lab is entered from search far more often than from the site,
+// so `from` records which. It fires once per render, never per data load.
+cfl.track('fight_opened', {
+  fight_id: parseInt(cfl.getQueryParam('id'), 10) || 0,
+  from: (function () {
+    try {
+      const h = document.referrer ? new URL(document.referrer).hostname : '';
+      if (!h) return 'direct';
+      if (h !== location.hostname) return 'offsite';
+      const p = new URL(document.referrer).pathname;
+      if (p === '/' || /index\.html$/.test(p)) return 'card';
+      if (/market\.html$/.test(p)) return 'market';
+      if (/event\.html$/.test(p)) return 'event';
+      return 'site';
+    } catch (e) { return 'direct'; }
+  })()
+});
 
 const M = window.cflMarket;
 const esc = cfl.escapeHtml;
@@ -325,7 +343,10 @@ function renderMarket(row, a, b, event) {
       rA.movementStatus === 'no_broad_capture'
         ? 'under ' + M.MIN_MATCHED_BOOKS + ' books so far'
         : rA.movementStatus === 'ok' ? '' : 'books do not line up yet') +
-    moveCell('Last 24 hours', mv24, 'under 24 hours of history') +
+    moveCell('Last 24 hours', mv24,
+      rA.movementStatus24h === 'insufficient_matched_books'
+        ? 'books do not line up 24 h back'
+        : 'under 24 hours of history') +
     cell('Books apart', rA.spreadPts == null ? '—' : rA.spreadPts.toFixed(1) + ' pts',
          rA.bookCount ? rA.bookCount + (rA.bookCount === 1 ? ' book quoting' : ' books quoting') : 'no books',
          rA.spreadPts != null && rA.spreadPts >= M.SPREAD_WIDE_PTS ? 'up' : '') +

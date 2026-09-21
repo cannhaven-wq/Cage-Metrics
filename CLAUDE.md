@@ -115,7 +115,7 @@ Every page is its own standalone HTML file at the repo root. Shared chrome (nav,
 **Internal**: `lab.html` — an unlinked backtest sandbox that says so at the top; its numbers include training data by construction. Don't cite it anywhere user-facing.
 **Redirect stubs** (kept so old links, shares and bookmarks don't 404; `noindex`, meta-refresh): `card-lab.html` → `/`, `picks.html` → `card-lab.html`. Both are ~23 lines and carry no nav. `picks.html` currently redirects through `card-lab.html` rather than straight to `/` — a two-hop chain worth collapsing.
 
-- **`index.html` — Card Lab** is the primary product surface. The hero is the current card ("*[Event]* — the whole market, one screen", D-011). The full card lives in the `#next` section, which is what the nav's "Card Lab" pill points at (`index.html#next`). Each fight shows four market cells — **Consensus** (vig-free median, `v_fight_market_movement`), **Fair price** (that probability as an American number, labelled not-bettable), **Since first capture**, **Best price** + the book posting it — then the neutral matchup notes from `fight-insights.js::buildMatchupNotes`. Sorts are card order / biggest move / books disagree. **There is no pick, no confidence tier and no CFL-vs-market difference on this page**, and `tests/no-model-on-public-surfaces.test.js` keeps it that way. Card Lab used to be its own page; it was merged into the homepage so there is one card page rather than two, and `card-lab.html` is now only a redirect stub. **If you are looking for the card rendering, it is in `index.html`.**
+- **`index.html` — Card Lab** is the primary product surface. The hero is the current card ("*[Event]* — the whole market, one screen", D-011). The full card lives in the `#next` section, which is what the nav's "Card Lab" pill points at (`index.html#next`). Each fight shows four market cells — **Consensus** (vig-free median, `v_fight_market_movement`), **Fair price** (that probability as an American number, labelled not-bettable), **Market move** (matched-cohort, D-012), **Best price** + the book posting it — then the neutral matchup notes from `fight-insights.js::buildMatchupNotes`. Sorts are card order / biggest move / books disagree. **There is no pick, no confidence tier and no CFL-vs-market difference on this page**, and `tests/no-model-on-public-surfaces.test.js` keeps it that way. Card Lab used to be its own page; it was merged into the homepage so there is one card page rather than two, and `card-lab.html` is now only a redirect stub. **If you are looking for the card rendering, it is in `index.html`.**
   - Nothing on the card is gated in the frontend. During beta every account holder gets premium (`profiles.beta_premium`) and logged-out visitors see a "Free during beta" banner instead.
 - **`market.html` — Market Lab** is the whole card as a board: consensus, best price each side, movement since first capture and over 24 h, book spread, capture age, with a per-fight book breakdown that expands on demand and a "what changed in the last 24 hours" list. Takes `?event=<id>`; defaults to the live or next card.
 - **`fight.html` — Fight Lab** is one matchup, `?id=<fight_id>`: both corners' consensus and best price, the two movement horizons, the book spread, the per-sportsbook table, then the measured matchup differences and a full career-stat comparison. It rewrites its own `<title>` and share description from the fighters' names, because it is entered from search far more often than from the site.
@@ -165,8 +165,10 @@ This is a workaround for a Supabase auth-lock hang bug (see `supabase/auth-js#76
 ### Data layer (Supabase)
 
 - Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).
-- **Market views.** `v_fight_odds_consensus` averages *every* row in `fight_odds`, including the prediction-market rows and the synthetic consensus row, so its `bookmaker_count` is not a count of sportsbooks. `fight_week_views.sql` (applied 2026-09-15) adds `v_fight_market_vigfree`, `v_fight_market_at_lock`, `v_fight_odds_latest_by_book` and `v_odds_books_sportsbooks`. `market_lab_views.sql` (applied 2026-09-21) adds **`v_fight_market_movement`**, which is what Card Lab, Fight Lab, Market Lab, the Cannon Card Brief and the social poster all read: one row per fight on a current-window card with the vig-free consensus now, at our first capture and 24 hours ago, the best American price and book on each side, the spread across books, and the capture count.
-  - **`open_p_a` is OUR FIRST CAPTURE, not the opening line.** Every surface that shows it must show `books_at_open` and `first_seen_at` with it — on most cards the first capture is a single offshore book, and a reader who is not told that reads a change in the book mix as a line move. `market.js::openCaveat` exists so no page can print the number without the caveat.
+- **Market views.** `v_fight_odds_consensus` averages *every* row in `fight_odds`, including the prediction-market rows and the synthetic consensus row, so its `bookmaker_count` is not a count of sportsbooks. `fight_week_views.sql` (applied 2026-09-15) adds `v_fight_market_vigfree`, `v_fight_market_at_lock`, `v_fight_odds_latest_by_book` and `v_odds_books_sportsbooks`. **`market_movement_views.sql` (applied 2026-09-21, [D-012](coordination/DECISIONS.md))** defines **`v_fight_market_movement`**, which is what Card Lab, Fight Lab, Market Lab, the Cannon Card Brief and the social poster all read. `market_lab_views.sql` defined it first and is now only a pointer to that file — **two files defining one view is how the two drift.**
+  - **Movement is measured over the MATCHED BOOK COHORT and refused below three of them.** The baseline is the **first broad CFL capture** — the instant CFL first held two-sided prices from three distinct real sportsbooks — and movement is the median across only the books quoting at *both* ends. Below three such books `movement_pts_a` is NULL and `movement_status` says which refusal it is; nothing widens the cohort to produce a number.
+  - **There is no `open_p_a`, and there must not be again.** The retired column took `min(captured_at)` — CFL's single earliest capture. It was disclosed honestly ("our first capture", never "the opening line", always beside `books_at_open`) and it was still wrong: 22 of 79 fights had **one** sportsbook at that instant, the figure overstated real movement by up to **12.7 points**, and three markets that had not moved were reported as moving 3+. A caveat beside a wrong number does not make it right.
+  - **CFL has never observed a sportsbook opener.** No surface, column, label or comment may say "opening line", "open", "opened at" or "since open". `market.js::baselineCaveat` prints the working — including *why* there is no number when there isn't one — so no page can show the figure bare.
   - **`fight_odds` and `odds_books` are `private_lockdown_admin_only` for `anon` AND `authenticated`.** A browser query against either returns zero rows with HTTP 200 and no error. All market reads go through the definer views above. This cost `parlay.html` every price on every leg for months before it was caught.
 - **RLS policies on public-data tables (`events`, `fighters`, `fights`, `fight_rounds`, every `v_*` view) must grant `SELECT TO anon, authenticated`.** An anon-only policy causes signed-in users to see empty results with HTTP 200 and no error — extremely hard to debug. When adding a new public view or table, always grant to both roles.
 - The Supabase publishable key is committed in `_shared.js`. That's intentional — it's a public anon key, all access is enforced by RLS.
@@ -229,6 +231,35 @@ treats as tight, giving the 30-minute rung. That still clears the frozen
 
 Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
+### Funnel analytics (`cfl.track`)
+
+**One emitter, two sinks, nineteen event names, and the names live in three
+places that must agree** — `cfl.EVENTS` in `_shared.js`, the
+`funnel_events_known_event` CHECK constraint in `funnel_events_migration.sql`,
+and the table in [`ANALYTICS_SCHEMA.md`](ANALYTICS_SCHEMA.md). A typo becomes a
+rejected insert rather than a funnel step that silently reads zero forever, and
+`tests/analytics-events.test.js` fails if the three drift.
+
+- **`funnel_events`** is ours: `INSERT` for `anon`/`authenticated`, **no
+  `SELECT` for either**, everything else revoked. Counts come from
+  `v_funnel_daily`. A new table in `public` inherits broad grants from Supabase
+  defaults — `anon` held `UPDATE`/`DELETE` on first apply — so **verify grants
+  after applying a migration; the migration's own text is not the result.**
+- **Plausible was already installed** on 25 of 30 root pages before any of this.
+  It receives the **event name only**: custom properties are a paid feature, and
+  spending money is L3. Do not add a second vendor.
+- **Nothing that identifies a person is ever sent.** `cfl.track` strips prop
+  keys matching email / name / user id / token / IP / phone / stake / amount /
+  wager / bankroll rather than trusting each call site. `session_id` is random,
+  per-session, in `sessionStorage`, never joined to an account.
+- **It never throws and never blocks a render.** Analytics is the least
+  important thing on any page. Four events (`best_price_clicked`,
+  `fight_shared`, `checkout_started`, `checkout_completed`) are **declared and
+  not emitted** because nothing exists to fire them yet — that is deliberate, so
+  a later sprint does not invent new names.
+- **`privacy.html` does not yet name Plausible.** Queued as **T-054**; the
+  wording is an owner-and-lawyer call, not ours.
+
 ### Verdict / edge logic
 
 `edges.js` is the single source of truth for fight verdicts and edge factors. It's used by both this site (homepage `index.html`) and the cfl-snapshotter Node service. Any change here affects both. The `ctx` shape and edge-object shape are documented at the top of the file.
@@ -237,7 +268,7 @@ Per-channel funnel docs: `TRAFFIC_FUNNEL.md`.
 
 ### `market.js` — every market number on every surface
 
-**All market formatting goes through `market.js`, and this is not a style preference.** The rules it holds are wording rules: a price is never shown without its book count and its age; "our first capture" is never called the opening line; best price is ordered by the American number and by nothing else. A page that formats its own market numbers is a page that can quietly drop one. `tests/no-model-on-public-surfaces.test.js` asserts that every market surface loads it.
+**All market formatting goes through `market.js`, and this is not a style preference.** The rules it holds are wording rules: a price is never shown without its book count and its age; the movement baseline is the first *broad* capture and is never called an opener; a dash always carries its reason; best price is ordered by the American number and by nothing else. A page that formats its own market numbers is a page that can quietly drop one. `tests/no-model-on-public-surfaces.test.js` asserts that every market surface loads it, and `tests/market-movement.test.js` asserts the cohort rules.
 
 ### Cardio / consistency view (`v_fighter_consistency`)
 
