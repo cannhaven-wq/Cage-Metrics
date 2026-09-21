@@ -162,6 +162,43 @@ This is a workaround for a Supabase auth-lock hang bug (see `supabase/auth-js#76
 - During beta, `profiles.beta_premium = true` for every account holder. `getTier()` returns `'premium'` when either `tier='premium'` OR `beta_premium=true`. `getPaidTier()` returns the underlying paid tier only. See `beta_premium_migration.sql`.
 - The frontend tier check is **presentation only** — real enforcement is in Postgres RLS. Don't gate sensitive data on `auth.isPremium()` alone.
 
+### Entitlements (`entitlements_migration.sql`, 2026-09-21)
+
+**`public.current_user_is_pro()` is the only thing that may gate a Pro
+surface.** It is `SECURITY DEFINER` with a pinned `search_path`, safe in RLS
+policies and definer views. `current_user_entitlement()` returns `free | pro`
+and is the single source of truth. `v_my_entitlement` lets the browser read its
+**own** standing, one row, for rendering only. `entitlements.js` holds the
+Free/Pro boundary and is **presentation only** — it decides what to draw, never
+what may be sent.
+
+- **Both layers honour `tier_expires_at`.** Neither did before: a lapsed
+  subscription read as premium indefinitely, because `getTier()` looked at
+  `tier` alone. That costs nothing until the first renewal failure.
+- **P0 fixed the same day.** The `profiles` UPDATE policy pinned `tier`,
+  `tier_expires_at` and `stripe_customer_id` — and **not `is_admin` or
+  `beta_premium`**. `current_user_is_admin()` reads `is_admin`, and that
+  function *is* the SELECT policy on `fight_odds`/`odds_books` while
+  `email_subscribers` checks it directly. Any signed-in user could
+  `update profiles set is_admin = true where id = auth.uid()` and read every
+  subscriber's address. `_auth.js` stripped those fields client-side and its
+  comment said "RLS will reject anyway"; **it did not**, and the publishable key
+  is public by design, so the REST endpoint never needed our JavaScript.
+- **A `WITH CHECK` protects exactly the columns it names.** Every column added
+  to `profiles` is unprotected until someone adds it to that list.
+  `tests/entitlements.test.js` fails when a security-bearing column is missing
+  from the policy — so prefer pinning by exception and check the test when you
+  add a column.
+- **Nothing is gated yet, deliberately.** Applying the Free/Pro boundary is a
+  later step. When a gate lands it belongs in a view or policy calling
+  `current_user_is_pro()`, never in an `if (cflAuth.isPro())` around a fetch.
+- **Checkout is blocked in code, not in a note.**
+  `entitlements.js::CHECKOUT_BLOCKERS` lists T-054 (privacy must name Plausible)
+  and T-048 (no Terms page); `checkoutMayBeEnabled()` returns false while either
+  stands, and a test fails if a checkout entry point ships anyway. Turning
+  checkout on requires deleting a named legal blocker — a deliberate act with a
+  reviewer attached.
+
 ### Data layer (Supabase)
 
 - Tables: `events`, `fighters`, `fights`, `fight_rounds`, `profiles`, `premium_waitlist`, `email_subscribers` (and analytics views prefixed `v_*`).

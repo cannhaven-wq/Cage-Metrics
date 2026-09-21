@@ -40,6 +40,8 @@ it died is usually worth more than the task was.
 | T-050 | Decide whether `parlay.html` and `mybook.html` stay reachable at all. Both are out of the primary journey and neither carries a model any more; `parlay.html` is a neutral calculator and `mybook.html` a private utility. Keeping or retiring them is a product call, not a defect | L3 | Owner | proposed |
 | T-054 | **CHECKOUT BLOCKER.** `privacy.html` does not name **Plausible**, a third-party processor loading on 25 of 30 root pages since before the repositioning. Draft clause and the four questions a lawyer must answer: [`legal-review/PROPOSED_WORDING.md`](../legal-review/PROPOSED_WORDING.md). Nothing drafted into production | L3 | Owner | proposed |
 | T-058 | Card-wide movement sparklines, if ever wanted. `v_fight_chart_series` is **single-fight only** — 22 ms for one literal `fight_id`, 4.6 s for twelve, and a subquery predicate does not push down at all. It needs a materialized view refreshed on capture, or a set-returning function called once per fight. Do not batch the current view | L1 | Claude | proposed |
+| T-061 | Apply the Free/Pro boundary — flip `enforced` per surface and add the matching Postgres gate. **After** Stripe, per the owner's sequence. A surface may only flip once `current_user_is_pro()` guards it server-side | L2 | Claude | queued |
+| T-062 | `email_subscribers` accepts an INSERT from anon with `WITH CHECK (true)` — normal for a signup form, but it means anyone can enqueue arbitrary addresses. Rate limiting or a confirmation step, if subscription spam ever appears. Not a vulnerability, a nuisance | L1 | Claude | proposed |
 | T-055 | Read the funnel once there is a week of traffic: `v_funnel_daily` answers the nine questions in `ANALYTICS_SCHEMA.md`. Do not tune the product on the first day's rows | L1 | Claude | queued |
 | T-049 | Sportsbook jurisdiction labelling — offshore and regulated books are visually identical in the Market Lab per-book table. Needs a neutral classification, and whether to make a jurisdiction claim at all is not ours | L3 | Owner | proposed |
 | T-041 | Decide whether `mybook.html`'s "vs earliest price seen" column should exist at all under Q-14, or whether any per-bet closing-line figure waits on the frozen CLV protocol | L3 | Owner | proposed |
@@ -72,6 +74,8 @@ it died is usually worth more than the task was.
 | T-046 | Every market horizon on one matched-cohort rule — `v_fight_market_at_lock` rebuilt, the 24 h lookback fixed, one shared intersection | L1 | Claude | done |
 | T-040 | Widen `v_fight_odds_latest_by_book` past the 14-day window | L1 | Claude | done |
 | T-056 | Movement history charts on Fight Lab, fixed cohort, refusal below three books | L1 | Claude | done |
+| T-059 | **P0, FIXED** — the `profiles` UPDATE policy did not pin `is_admin` or `beta_premium`, so any signed-in user could make themselves an admin and read every `email_subscribers` row and all of `fight_odds` | L0 | Claude | done |
+| T-060 | Auth + Pro entitlement architecture: `current_user_is_pro()`, `v_my_entitlement`, `entitlements.js`, the checkout gate. Gates nothing yet, by design | L1 | Claude | done |
 | T-057 | `v_fight_market_quotes` used a multiply-referenced CTE — an optimization fence that blocked predicate pushdown. One fight's series took 3.4 s; now 22 ms | L0 | Claude | done |
 
 ---

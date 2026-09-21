@@ -122,13 +122,67 @@
   auth.getTier = function () {
     if (!_currentProfile) return 'free';
     if (_currentProfile.beta_premium) return 'premium';
-    return _currentProfile.tier || 'free';
+    // tier_expires_at is honoured here as of 2026-09-21. It was not before:
+    // a lapsed subscription kept full access indefinitely because this read
+    // `tier` alone. That cost nothing while nobody had paid, and would have
+    // cost money on the first renewal failure. The authoritative version of
+    // this rule is current_user_entitlement() in Postgres; this is the copy
+    // the UI renders from, and the two must agree.
+    if (auth.paidTierIsCurrent()) return 'premium';
+    return 'free';
   };
   auth.getPaidTier = function () {
     if (!_currentProfile) return 'free';
     return _currentProfile.tier || 'free';
   };
+  // Is the stored paid tier actually in force right now?
+  auth.paidTierIsCurrent = function () {
+    if (!_currentProfile) return false;
+    const t = _currentProfile.tier;
+    if (t !== 'premium' && t !== 'pro') return false;
+    const exp = _currentProfile.tier_expires_at;
+    if (!exp) return true;                 // no expiry recorded = open-ended
+    const ts = Date.parse(exp);
+    return !isFinite(ts) ? false : ts > Date.now();
+  };
   auth.isPremium = function () { return auth.getTier() === 'premium'; };
+
+  // ---- entitlement -------------------------------------------------------
+  // 'free' | 'pro'. PRESENTATION ONLY, and this is not a disclaimer — it is
+  // the whole design. The database answers the same question for itself with
+  // current_user_is_pro(), and a Pro surface is gated THERE. This decides what
+  // to draw; it never decides what may be sent. Anything gated only by this
+  // function is not gated: the publishable key is public and the REST endpoint
+  // is reachable without loading any of our JavaScript.
+  auth.getEntitlement = function () {
+    return auth.getTier() === 'premium' ? 'pro' : 'free';
+  };
+  auth.isPro = function () { return auth.getEntitlement() === 'pro'; };
+  // True when the Pro-shaped access comes from the beta grant rather than from
+  // a payment. The UI must say "free during beta" rather than implying a
+  // purchase, and this is how it tells the difference.
+  auth.isProViaBeta = function () {
+    return auth.isPro() && !!(_currentProfile && _currentProfile.beta_premium);
+  };
+
+  // Ask the database what IT thinks, rather than inferring from the cached
+  // profile. Used where the answer matters more than the render speed, and as
+  // the check that the two layers agree.
+  auth.fetchEntitlement = async function () {
+    try {
+      const { data, error } = await sb.from('v_my_entitlement').select('*').maybeSingle();
+      if (error || !data) return { entitlement: auth.getEntitlement(), source: 'local' };
+      return {
+        entitlement: data.entitlement,
+        isBeta: !!data.is_beta,
+        paidTier: data.paid_tier,
+        paidTierExpired: !!data.paid_tier_expired,
+        source: 'server'
+      };
+    } catch (e) {
+      return { entitlement: auth.getEntitlement(), source: 'local' };
+    }
+  };
   auth.isBetaPremium = function () {
     return !!(_currentProfile && _currentProfile.beta_premium);
   };
