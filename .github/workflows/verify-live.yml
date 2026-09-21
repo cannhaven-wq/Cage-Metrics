@@ -69,6 +69,10 @@ jobs:
           }
           compare /index.html index.html "index.html"
           compare / index.html "/ (root)"
+          compare "/market.html" market.html "market.html (Market Lab)"
+          compare "/fight.html" fight.html "fight.html (Fight Lab)"
+          compare "/market.js" market.js "market.js"
+          compare "/market-movement.js" market-movement.js "market-movement.js"
           compare "/fight-insights.js" fight-insights.js "fight-insights.js (plain path)"
           compare "/_shared.js" _shared.js "_shared.js"
           compare "/proof-gates.js" proof-gates.js "proof-gates.js"
@@ -76,7 +80,9 @@ jobs:
           compare "/fighter.html" fighter.html "fighter.html"
           echo "::group::cache-bust query strings the served homepage asks for"
           grep -oE 'src="[^"]+\?v=[^"]+"' /tmp/fresh.bin || true
-          curl -sS -o /dev/null -w '  fight-insights.js?v=8 -> HTTP %{http_code}, %{size_download} bytes\n' "$BASE_URL/fight-insights.js?v=8"
+          for q in "/fight-insights.js?v=9" "/market.js?v=2" "/_shared.js?v=rl2"; do
+            curl -sS -o /dev/null -w "  $q -> HTTP %{http_code}, %{size_download} bytes\n" "$BASE_URL$q"
+          done
           echo "::endgroup::"
           if [ "$status" -ne 0 ]; then
             echo "The origin is not serving this checkout for at least one file (see MISMATCH above)."
