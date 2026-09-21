@@ -56,7 +56,14 @@ async function shoot(browser, { name, viewport, mobile }) {
       })),
       scripts: [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')),
       checks: (() => {
-        const body = document.body.textContent;
+        // VISIBLE text only. document.body.textContent includes the contents of
+        // inline <script> tags, and index.html carries a JS comment that
+        // documents the no-opening-line rule. Reading raw textContent made the
+        // guard trip on its own rationale — a false failure on a clean page,
+        // and one that invites someone to "fix" it by deleting the comment.
+        const clone = document.body.cloneNode(true);
+        clone.querySelectorAll('script, style, noscript, template').forEach(n => n.remove());
+        const body = clone.textContent;
         const rows = [...document.querySelectorAll('#fightsList .fight .probs')];
         const cellTitles = [...document.querySelectorAll('.probs .cell .t')].map(t => t.textContent.trim());
         const cellNums = [...document.querySelectorAll('.probs .cell .n')].map(n => n.textContent.trim());
