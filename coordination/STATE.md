@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-19
+Last updated: 2026-09-21
 
 **Live baton:** CLV-001 is **FROZEN at v1.0.10** (frozen 2026-09-16T10:30:00Z;
 Amendments 1–7 ratified same day; **Amendment 7 approved by Michael Cannon,
@@ -74,6 +74,33 @@ Git history is the audit trail. These files are the working surface.
 ---
 
 ## Where the project is
+
+### The open question, and it is the owner's — T-039
+
+A production-readiness sprint was briefed on 2026-09-21 on the premise that the
+public model had been removed and that a **Market Lab**, a **Fight Lab** and a
+**Cannon Card Brief** exist. Checked against `main` that day, none of it holds:
+those three surfaces have zero occurrences in the tree outside the brand name,
+and `track-record.html` (ROI, profit/loss, an edge-banded bet table) is in the
+primary nav beside `predictor.html`, `parlay.html`, `props.html` and
+`mybook.html`. [D-010](DECISIONS.md), approved 2026-09-19, deliberately kept
+"Model vs Market" on the homepage.
+
+Nothing was removed on the strength of that premise. **[T-039](TASK_QUEUE.md)
+is the live baton**: model-and-market with the Proof Center carrying the record,
+or research-and-market-intelligence with the model private. T-033, T-040 and
+T-041 all wait on the answer.
+
+### Market movement — settled 2026-09-21
+
+Movement is measured over the **matched book cohort** and refused below three
+such books; the baseline is the **first broad CFL capture** and is never called
+an opening line. [D-011](DECISIONS.md), `market_movement_views.sql`,
+`market-movement.js`. The live `v_fight_market_movement` that called
+`min(captured_at)` an "open" — present in no repo file, inherited from the
+unmerged `fight-week-v2` — is gone. On the real table it overstated moves by up
+to 12.7 points and reported three markets as moving 3+ points when they had not
+moved at all. No surface renders any of this yet.
 
 ### Research
 

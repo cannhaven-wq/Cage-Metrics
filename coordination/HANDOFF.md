@@ -11,6 +11,66 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-09-21 — Movement compares like with like, or says it cannot
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-09-21
+
+A production-readiness sprint was requested. **Its premise did not match the
+repo, and that is the most important thing in this entry** — read "Where the
+brief and the repo disagree" below before acting on anything from it.
+
+### Shipped
+
+Recorded as [D-011](DECISIONS.md); T-004, T-037 and T-042 are done.
+
+| | |
+|---|---|
+| `market_movement_views.sql` | applied. Four read-only views. `v_fight_market_quotes` (de-vigged per-book quote history), `v_fight_market_broad_baseline` (the first broad CFL capture), `v_fight_market_movement` (movement over the matched cohort, with provenance), `v_fight_market_movement_books` (the show-your-working rows) |
+| dropped | the live `v_fight_market_movement` from the unmerged `fight-week-v2` branch — `open_p_a`, `open_p_b`, `books_at_open`, where "open" was `min(captured_at)`. It was in **no repo file**. No dependent view, no repo consumer, no rendered surface; checked before the drop. Every defensible column it had is kept; its 14-day event window is not |
+| `market-movement.js` | the only place a movement number becomes words. Plain → number → detail, and an honest refusal below three matched books |
+| tests | `tests/market-movement.test.js` (25), `tests/sitemap-hygiene.test.js` (11) |
+| SEO | `card-lab.html` (noindex meta-refresh stub) and the bare `fighter.html` / `event.html` shells removed from `sitemap.xml` and from `build/prerender.js`; `methodology.html` and `privacy.html` added; `picks.html` now redirects straight to `/` instead of through `card-lab.html` |
+| access | `v_fight_market_quotes` granted to no public role — full tick history is the Pro asset |
+| docs | `PRODUCT_BOUNDARY.md` — Free vs Pro, a proposal, nothing priced |
+
+The numbers behind it, measured live: 22 of 79 fights had exactly one
+sportsbook at CFL's earliest capture; the retired method overstated a move by
+up to 12.7 points and reported three phantom moves on markets that had not
+moved. Worked examples are in D-011.
+
+### Where the brief and the repo disagree
+
+The sprint brief asserted, as settled fact, that public model surfaces had been
+removed and that a Market Lab, a Fight Lab and a Cannon Card Brief exist. On
+`main`, on 2026-09-21:
+
+- **Market Lab, Fight Lab, Cannon Card Brief**: do not exist. Zero occurrences
+  outside the brand name "Cannon Fight Lab". They are [T-033](TASK_QUEUE.md),
+  queued, on an unmerged branch.
+- **The public model is not gone.** `track-record.html` is in the primary nav
+  and publishes ROI, profit/loss and an edge-banded bet table;
+  `predictor.html`, `parlay.html`, `props.html` and `mybook.html` all ship.
+  D-010, approved two days earlier, deliberately kept "Model vs Market" on the
+  homepage.
+
+So the brief's instruction "do not regress that work" and its acceptance
+criterion "the public model remains gone" cannot both be honoured and be true.
+Nothing was removed on the strength of a premise the repo contradicts.
+**[T-039](TASK_QUEUE.md) is the owner's call** and it is the live baton.
+
+### Next action
+
+**Owner decides T-039**: does CFL stay a model-and-market product with the
+Proof Center carrying the record (the D-010 position, two days old), or does it
+reposition to research-and-market-intelligence with the model private? Every
+other queued item downstream — T-040's analytics event names, T-041's "opening
+line" relabelling, T-033's Market Lab and Fight Lab, the Cannon Card Brief —
+depends on that answer, and none of them should start before it.
+
+---
+
 ## 2026-09-19 (b) — The homepage is the card, and it claims no edge
 
 **From:** Claude
@@ -161,58 +221,3 @@ reads as "due", the credit ceiling has a hole in it and the test asserting
 elapsed ≤ phase + 1 is measuring the wrong thing.
 
 ---
-
-## 2026-09-18 (f) — Factor Lab correction published; T-027 closed
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-18
-
-**T-027 is done.** PR #34 merged at `f40fd27c` under [D-008](DECISIONS.md), the
-L3 that permits it — verified by removing the entry and watching
-`test_a_done_L3_task_has_a_recorded_decision` go red.
-
-### What is now live
-
-`market_even_cohort` 869 → **1,220**, `fights_scored` held at 8,739, seven
-verdicts moved. The artifact is byte-verified: sha256 `ba3c9077…`, reconstructed
-from the validation run's own checksummed log because the artifact download
-redirects to blob storage the build network refuses.
-
-The Factor Lab's summary now reads **"Age, UFC-only record"**. That name is a
-page-side override, so `factor-rates.json` stays byte-identical to what the run
-produced and a future regeneration cannot silently revert the wording.
-
-Also corrected: three freshness claims the publish gate had quietly falsified
-(`stats.html`, `edges.html`, `CLAUDE.md` all said the Lab rebuilt on a timer),
-and a pre-existing error that printed 8,739 into a sentence describing the
-1,220-fight market-even cohort.
-
-### The episode in one line
-
-A reader defect in a build script had been publishing itself every six hours.
-The fix required separating measurement from publication first, then correcting
-the numbers, then correcting the words — in that order, because merging the fix
-on its own would have published its effects unreviewed.
-
-### What this deliberately did NOT settle
-
-`edges.js`'s **record** and **takedown-defence** heuristics are still shipped and
-still unsupported. FE-001 put record at ~50.2% market-even and takedown defence
-on the line. `ufc_record` clearing the bar is a different measurement and is not
-evidence for either. Nothing about them changed, and nothing should be inferred
-from the Factor Lab's green light.
-
-## Next action
-
-**Owner:** the measurement-integrity line is closed. The open product question is
-what to do with the two unsupported shipped heuristics — retire them the way
-cardio was retired in August, restate their published ranges honestly, or leave
-them with a caveat. That is a copy-and-product decision, not a measurement one;
-the evidence for it already exists in FE-001.
-
-**ChatGPT:** worth a skeptical read of whether the `stats.html` caveat plus the
-"UFC-only record" label are together enough that a casual reader cannot come away
-believing the pick engine's record factor was validated. That was the failure
-mode this whole publication was shaped around, and it is a judgement about
-wording rather than data.

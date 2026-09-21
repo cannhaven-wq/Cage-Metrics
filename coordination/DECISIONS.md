@@ -696,3 +696,76 @@ browser, because the agent environment cannot reach the site directly.
 **Attribution note.** As D-006 through D-009: "Reed Cannon" per `CLAUDE.md`;
 normalising against "Michael Cannon" is [T-009](TASK_QUEUE.md) and stays the
 owner's.
+
+---
+
+## D-011 — Market movement is measured against a matched book cohort, or not at all
+
+| field | value |
+|---|---|
+| date | 2026-09-21 |
+| decided by | Reed Cannon |
+| task | T-037 |
+| level | L2 |
+| reversible | yes — four read-only views recreated by `market_movement_views.sql`, one JS module, two test files; writes no row, changes no append-only table, publishes no number to a live surface (no page reads these views yet) |
+
+**Decision.** Any figure CFL ever prints as "the market moved" is computed over
+the sportsbooks present at **both** ends of the comparison, and is refused
+outright when fewer than **three** such books exist. The baseline is the
+**first broad CFL capture** — the instant CFL first held two-sided prices from
+three distinct real sportsbooks — and it is never called an opening line.
+
+**What was wrong, with numbers.** Two things carried the defect. One was in the
+repo: `v_fight_market_at_lock` (`fight_week_views.sql`) compares a median over
+the books captured by lock time against a median over the books captured now.
+The other was **found in the live database and was in no repo file at all** — a
+`v_fight_market_movement`, applied from the unmerged `fight-week-v2` branch,
+exposing `open_p_a`, `open_p_b` and `books_at_open`, where "open" meant
+`min(captured_at)`: CFL's single earliest capture instant.
+
+Measured against the live `fight_odds` table on 2026-09-21:
+
+| | |
+|---|---|
+| fights with real sportsbook quotes | 79 |
+| whose earliest capture held exactly **one** sportsbook | **22 (28%)** |
+| that eventually reach three or more books | 77 |
+| where the retired method differs from the matched cohort by ≥1 pt | 14 |
+| …by ≥3 pt | 7 |
+| **phantom moves** — a market that moved <1 pt reported as ≥3 pt | **3** |
+| worst single overstatement | **12.7 points** |
+
+Two worked examples, both real rows:
+
+- **Marcus McGhee vs Jakub Wiklacz.** Retired method: 75.5% → 80.9%, "+5.4 pts".
+  Matched 3-book cohort: 79.2% → 79.2%. **The market did not move at all.**
+  Every point of that 5.4 was the arrival of two more sportsbooks.
+- **Rodolfo Vieira vs Robert Bryczek**, on the upcoming card. Retired method:
+  50.0% → 56.3%, "+6.3 pts". Matched cohort: 50.0% → 57.0%, **+7.0 pts**. Here
+  the move is real, and the honest number is slightly *larger* than the
+  flattering one. The method is not a haircut; it is a measurement.
+
+**Why this level.** L2, not L3. It publishes nothing — no surface reads these
+views — and it removes a claim rather than making one. The one judgement in it,
+the three-book floor, is recorded rather than inferred: three is the smallest
+cohort for which a median is not simply one book's opinion, and at that floor
+77 of 79 fights still produce a number, so the threshold buys honesty without
+buying silence. If ChatGPT's review prefers a different floor, one constant
+moves in three places, all named in the file header.
+
+**Delivered.** `market_movement_views.sql` (applied; four views),
+`market-movement.js` (the only place a movement number is turned into words),
+`tests/market-movement.test.js` (25 assertions). The retired
+`v_fight_market_movement` was dropped and recreated: it had no dependent view,
+no repo consumer and no rendered surface, verified before the drop, and every
+defensible column it carried — current consensus, book count, freshness, the
+24-hour lookback, best price and book, book spread, capture count — is kept.
+Its 14-day event window is **not** kept, so a fight page older than a fortnight
+no longer loses its market history.
+
+**Held back.** `v_fight_market_quotes` — the full per-book tick history — is
+granted to no public role. It is the Pro asset (`PRODUCT_BOUNDARY.md`), and the
+aggregate views above it are owner-rights views, so nothing free is affected.
+
+**Attribution note.** As D-006 through D-010: "Reed Cannon" per `CLAUDE.md`;
+[T-009](TASK_QUEUE.md) stays the owner's.

@@ -375,9 +375,23 @@ function escapeXml(s) {
 function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
   const today = new Date().toISOString().slice(0, 10);
 
+  // Three rules hold this list together, and each one was broken once:
+  //
+  //  1. A page that carries <meta name="robots" content="noindex"> must NOT be
+  //     here. /card-lab.html was: it is a noindex meta-refresh stub to "/", and
+  //     listing it asked Google to crawl a URL we had just told Google to drop.
+  //     Same for /picks.html, /lab.html and every account page — none listed.
+  //  2. A page that renders nothing without a query string must NOT be here.
+  //     /fighter.html and /event.html were: bare, with no ?id=, they are empty
+  //     shells. The populated versions are the /f/ and /e/ stubs, which are in
+  //     this sitemap in their thousands and canonicalise back to the dynamic
+  //     page. Listing the bare shell added two thin URLs and no coverage.
+  //  3. Anything added here needs a unique title, a unique H1 and content that
+  //     stands up without JavaScript.
+  //
+  // tests/sitemap-hygiene.test.js enforces 1 and 2 against the shipped files.
   const staticPages = [
     { loc: '/',                priority: '1.0', changefreq: 'daily' },
-    { loc: '/card-lab.html',   priority: '0.9', changefreq: 'daily' },
     { loc: '/track-record.html', priority: '0.9', changefreq: 'weekly' },
     { loc: '/proof.html',      priority: '0.8', changefreq: 'weekly' },
     { loc: '/cardio.html',     priority: '0.9', changefreq: 'weekly' },
@@ -385,13 +399,13 @@ function regenerateSitemap(fighterUrls, eventUrls, previewUrls, cardUrls) {
     { loc: '/fighters.html',   priority: '0.9', changefreq: 'daily' },
     { loc: '/h2h.html',        priority: '0.8', changefreq: 'weekly' },
     { loc: '/parlay.html',     priority: '0.7', changefreq: 'weekly' },
-    { loc: '/fighter.html',    priority: '0.6', changefreq: 'daily' },
-    { loc: '/event.html',      priority: '0.6', changefreq: 'daily' },
+    { loc: '/methodology.html', priority: '0.7', changefreq: 'monthly' },
     { loc: '/edges.html',      priority: '0.7', changefreq: 'monthly' },
     { loc: '/pricing.html',    priority: '0.5', changefreq: 'monthly' },
     { loc: '/about.html',      priority: '0.5', changefreq: 'monthly' },
     { loc: '/contact.html',    priority: '0.4', changefreq: 'monthly' },
-    { loc: '/disclaimer.html', priority: '0.3', changefreq: 'yearly' }
+    { loc: '/disclaimer.html', priority: '0.3', changefreq: 'yearly' },
+    { loc: '/privacy.html',    priority: '0.3', changefreq: 'yearly' }
   ];
 
   const lines = [

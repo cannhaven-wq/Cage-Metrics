@@ -21,7 +21,6 @@ it died is usually worth more than the task was.
 |---|---|---|---|---|
 | T-002 | Individual votes on the nine held amendment clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k) | L3 | Owner | blocked |
 | T-003 | Review the CLV measurement protocol draft before freeze | L1 | ChatGPT | in-progress |
-| T-004 | Collapse the `picks.html` → `card-lab.html` → `/` redirect to a single hop | L1 | Claude | queued |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
 | T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
@@ -36,6 +35,10 @@ it died is usually worth more than the task was.
 | T-034 | Reconcile `revenue/trust-funnel-v1` with D-007: retire or re-route its claims manifest through `proof-gates.js`; keep the "forecast" wording, the single signup component and the funnel events | L2 | Claude | queued |
 | T-035 | `claude/email-capture-modal-gbkqri` — an email prompt after two minutes on every page. Never approved; the owner's call | L3 | Owner | proposed |
 | T-036 | The shared funnel CTA in `_shared.js` still says "every edge factor unlocked"; reword to match D-010 ("full matchup detail") and bump `_shared.js?v=` on all 26 consumers in one pass | L1 | Claude | queued |
+| T-038 | Reconcile `v_fight_market_at_lock` (`fight_week_views.sql`) with D-011 — it still compares a lock-time cohort against a current cohort, and is the last incomparable-cohort baseline left in the repo | L1 | Claude | queued |
+| T-039 | Decide the product's public shape: the sprint brief of 2026-09-21 assumed Market Lab, Fight Lab and the Cannon Card Brief exist and that the public model is gone. None of that is true of `main`. Removing `track-record.html` / `predictor.html` / `parlay.html` / `props.html` / `mybook.html` from the public product is a repositioning, not a copy fix | L3 | Owner | proposed |
+| T-040 | Funnel analytics schema — one event list, one emitter, documented, no second vendor. Blocked on T-039: the event names depend on which surfaces exist | L1 | Claude | blocked |
+| T-041 | "Opening line" on `track-record.html` and `predictor.html` describes `model_picks.odds` at pick time, which is CFL's captured price, not a sportsbook opener. Relabel per D-011's terminology rule. L3 because it changes how an existing public performance number is described | L3 | Owner | proposed |
 
 ## Closed
 
@@ -52,6 +55,9 @@ it died is usually worth more than the task was.
 | T-026 | Stop the homepage headline pooling the live and replay records | L3 | Owner | done |
 | T-027 | Settle the unordered `.range()` paging in `build/factor-rates.js`, and publish the corrected cohort | L3 | Owner | done |
 | T-028 | UFC 331 launch activation — apply the additive capture migrations, reconcile the card | L3 | Owner | done |
+| T-004 | Collapse the `picks.html` → `card-lab.html` → `/` redirect to a single hop | L1 | Claude | done |
+| T-037 | A defensible market-movement baseline: matched book cohort, three-book floor, no "opening line" | L2 | Claude | done |
+| T-042 | Sitemap hygiene — stop listing a noindex redirect stub and two empty query-string shells | L0 | Claude | done |
 
 ---
 
