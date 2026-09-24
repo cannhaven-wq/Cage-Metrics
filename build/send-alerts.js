@@ -340,7 +340,7 @@ function renderEmail(name, claimed) {
         ${esc(c.said.body)}
       </div>
       <div style="margin-top:10px">
-        <a href="${SITE}/fight.html?id=${encodeURIComponent(c.item.alert.fight_id)}&src=alert"
+        <a href="${SITE}/fight.html?id=${encodeURIComponent(c.item.alert.fight_id)}&src=alert&kind=${encodeURIComponent(c.item.alert.kind)}"
            style="font:600 13px/1 -apple-system,Segoe UI,Roboto,sans-serif;color:#ef4444;text-decoration:none">
           Open this fight in Fight Lab →</a>
       </div>

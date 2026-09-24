@@ -88,6 +88,7 @@ it died is usually worth more than the task was.
 | T-071 | Price-target and market-movement alerts: `user_alerts` / `user_alert_prefs` / `user_alert_deliveries`, `v_fight_alert_market`, `alerts.js`, `build/send-alerts.js`, `alerts.yml`. **An alert cannot fire from a comparison CFL would refuse to print**; the matched-cohort rule is preserved and a re-arm across a cohort change re-baselines silently | L1 | Claude | done |
 | T-072 | **P0-class, FIXED** — `REVOKE ALL FROM anon` left `authenticated` holding **TRUNCATE** on three new tables via Supabase default privileges. TRUNCATE bypasses RLS, so any signed-in member could have emptied every other member's watchlist and alerts. Plus two faults in the pin trigger that made it inert. All three found by checking behaviour, not by reading | L0 | Claude | done |
 | T-073 | Re-enable the `alerts.yml` schedule (`*/15`). **Blocked on the controlled delivery test**: one dry run, one real alert to one real address, a verified duplicate-rerun, cleanup. Merging a workflow that carries a cron is turning that cron on, so it ships manual-only and comes back as its own reviewed commit | L1 | Claude | blocked |
+| T-074 | **Owner.** Set `RESEND_API_KEY` and `RESEND_FROM` as repository secrets (Resend-verified sender domain). **No email has ever been sent from this repo** — the digest workflow shows the same empty values, so the Cannon Card Brief has never sent either. Blocks the alert delivery test, and therefore T-073 | L1 | Owner | blocked |
 
 ---
 

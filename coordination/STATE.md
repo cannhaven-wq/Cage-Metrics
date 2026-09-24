@@ -182,6 +182,22 @@ and no jurisdiction claim was invented.
 
 ### Recurring use — watchlists and alerts, 2026-09-21
 
+**The delivery test ran and is nine-tenths green.** Candidate selection, the
+delivery row, the armed state, the funnel event, duplicate suppression, the
+cohort-change re-arm, the preference links and cleanup all pass against live
+data. **One check cannot pass: no email can be sent.**
+
+**`RESEND_API_KEY` is not set on this repository, and never was.** `digest.yml`
+shows the same empty value, so **no email has ever been sent from this repo —
+the Cannon Card Brief included** (it also has 0 subscribers, so it had nothing
+to send either way). Both senders fall back to dry run silently by design; the
+alert sender now says which kind of dry run it is, because "nothing was sent"
+had two very different causes and read identically.
+
+**Until a real send is confirmed, the alert schedule stays OFF (T-073) and the
+feature is not production-ready.** `alerts.yml` is `workflow_dispatch`-only.
+The owner adds the two secrets; the sequence then re-runs with `dry_run: false`.
+
 Members can star fights and ask to be emailed when a price reaches their number
 or a market moves past their threshold. [D-020](DECISIONS.md), T-070 / T-071.
 
