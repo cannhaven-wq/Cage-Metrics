@@ -32,5 +32,6 @@
   "4433::coinflip-lead",
   "4433::whatif-finisher",
   "4433::poll-main",
-  "4550::sensor-main"
+  "4550::sensor-main",
+  "4550::coinflip-lead"
 ]
