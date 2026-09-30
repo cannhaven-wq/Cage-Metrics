@@ -34,5 +34,6 @@
   "4433::poll-main",
   "4550::sensor-main",
   "4550::coinflip-lead",
-  "4551::sensor-main"
+  "4551::sensor-main",
+  "4551::coinflip-lead"
 ]
