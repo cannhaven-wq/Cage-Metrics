@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 29 Sep 2026 21:41:14 GMT</lastBuildDate>
+  <lastBuildDate>Wed, 30 Sep 2026 03:10:39 GMT</lastBuildDate>
 
   <item>
     <title>UFC 332: Silva vs. Wang</title>
@@ -56,6 +56,20 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=4926</guid>
     <pubDate>Sat, 14 Nov 2026 00:00:00 GMT</pubDate>
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 334: Gane vs. Hokit card — New York City, New York, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night</title>
+    <link>https://cannonfightlab.com/event.html?id=5013</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=5013</guid>
+    <pubDate>Sat, 21 Nov 2026 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night card — Doha, Qatar.</description>
+  </item>
+  <item>
+    <title>UFC 335</title>
+    <link>https://cannonfightlab.com/event.html?id=5014</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=5014</guid>
+    <pubDate>Sat, 12 Dec 2026 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 335 card — Las Vegas, Nevada, USA.</description>
   </item>
 
 </channel>
