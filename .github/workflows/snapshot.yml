@@ -34,6 +34,11 @@ on:
         description: 'Snapshot one specific event id (blank = auto-target the next card)'
         required: false
         type: string
+      dry_run:
+        description: 'Report what WOULD be frozen and write nothing'
+        required: false
+        default: true
+        type: boolean
   schedule:
     # Night before — covers cards dated tomorrow.
     - cron: '0 23 * * *'
@@ -75,8 +80,22 @@ jobs:
       # broken pip mirror can never be the reason a card goes unrecorded.
       - name: Freeze the pre-fight record
         run: |
+          # A MANUAL RUN DEFAULTS TO A DRY RUN. THE SCHEDULE NEVER DOES.
+          #
+          # pre_fight_snapshots is append-only and the EARLIEST row wins, so a
+          # snapshot taken two days early does not merely record an early
+          # price -- it permanently prevents the night-before pass from
+          # recording the real one. That makes "just run it manually to check
+          # it works" a destructive act, which is why verifying the 2026-09-26
+          # failure needed this switch before it could be done at all.
+          EXECUTE="--execute"
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] \
+             && [ "${{ inputs.dry_run }}" != "false" ]; then
+            EXECUTE=""
+            echo "::notice::DRY RUN - reporting only. Re-dispatch with dry_run=false to freeze."
+          fi
           if [ -n "${{ inputs.event_id }}" ]; then
-            python cfl_engine/snapshot_predictions.py --event-id "${{ inputs.event_id }}" --execute
+            python cfl_engine/snapshot_predictions.py --event-id "${{ inputs.event_id }}" $EXECUTE
           else
-            python cfl_engine/snapshot_predictions.py --within-days 1 --execute
+            python cfl_engine/snapshot_predictions.py --within-days 1 $EXECUTE
           fi
