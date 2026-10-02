@@ -364,11 +364,31 @@ OPTIONAL_COLUMNS = ("edge_model_edge_id", "edge_published_at")
 
 
 def _drop_unknown_columns(base_url, key, rows, log=print):
-    """Remove OPTIONAL_COLUMNS the table does not have, probing once each."""
+    """Remove OPTIONAL_COLUMNS the table does not have, probing once each.
+
+    THE EXCEPT CLAUSE NAMES SystemExit ON PURPOSE. DO NOT NARROW IT.
+
+    This guard exists so a proposed-but-unapplied migration can never take the
+    snapshot cron down. It did not work, and it failed in exactly the case it
+    was written for. `fetch_all` -> `_request` signals every HTTP error by
+    raising SystemExit, and SystemExit inherits from BaseException, NOT from
+    Exception -- so `except Exception` never caught the probe's 400 and the
+    process died mid-card, after building every row and before writing any.
+
+    What that cost: UFC Fight Night: Rosas Jr. vs. Barcelos (2026-09-26) went
+    off with 0 of 13 fights on record. pre_fight_snapshots is append-only and
+    refuses to snapshot a settled card, so those 13 are gone permanently. The
+    guard read as though it worked and did nothing -- the same shape as the
+    alerts pin trigger that was SECURITY DEFINER (D-020).
+
+    It also hid itself: with no card in the window the script exits before this
+    probe, so every non-card day reported success and the workflow looked
+    healthy between fight weeks.
+    """
     for column in OPTIONAL_COLUMNS:
         try:
             fetch_all(base_url, key, SNAP_TABLE, f"select={column}&limit=1")
-        except Exception:                       # noqa: BLE001 - unknown is absent
+        except (Exception, SystemExit):         # noqa: BLE001 - unknown is absent
             log(f"  note: {SNAP_TABLE}.{column} is not present — omitting it. "
                 f"CLV-001 then falls back to matching an edge by "
                 f"(side, bet_fighter_id, odds_at_publish), refuses to score any "
@@ -467,6 +487,17 @@ def main(argv=None):
         if args.execute:
             total += publish(base_url, key, rows, label)
         else:
+            # Run the write path's PREFLIGHT even on a dry run, because a dry
+            # run that skips it cannot tell you the write would succeed — and
+            # that is the only question a dry run is asked before a card.
+            #
+            # On 2026-09-26 the crash was in exactly this preflight, inside
+            # publish(), and a dry run would have reported a clean 12 fights to
+            # freeze right up until the moment the real run died. Both calls
+            # below are read-only: _pair_edge_identity touches the in-memory
+            # rows, _drop_unknown_columns issues a SELECT. Nothing is inserted.
+            _pair_edge_identity(rows)
+            _drop_unknown_columns(base_url, key, rows)
             print(f"  DRY RUN — nothing written. Re-run with --execute to freeze.")
         print()
 
