@@ -910,6 +910,32 @@ function squash(normalized) {
   return normalized.replace(/ /g, '');
 }
 
+// Fourth-tier key: the SURNAME pair, for the one drift the first three tiers
+// cannot reach — a different FIRST name for the same fighter.
+//
+// Measured on the 2026-10-02 capture, all three existing tiers missed these,
+// and all three missed them for the same reason:
+//
+//   ours "Mick Parkin"            feed "Michael Parkin"
+//   ours "Alexander Hernandez"    feed "Alex Hernandez"
+//   ours "Alexander Volkanovski"  feed "Alex Volkanovski"
+//
+// strict, firstLast and squash all key on the full given name, so a diminutive
+// defeats every one of them. That cost UFC 332 two priced fights and UFC 333
+// its MAIN EVENT. A prefix rule would catch Alex/Alexander and still miss
+// Mick/Michael ("Mic" then k vs h), so the surname is the only key that works.
+//
+// WHY THIS IS SAFE, AND WHY IT IS GATED SO HARD: fight_odds is APPEND-ONLY. A
+// wrong match writes a real sportsbook price onto the wrong fight, permanently,
+// and that price then feeds the consensus, the movement cohort and CLV. So an
+// ambiguous surname pair is not resolved, it is DISCARDED — see buildFightIndex.
+// Failing to match costs a visible "No line yet"; matching wrongly costs a
+// number nobody can ever remove.
+function lastName(normalized) {
+  const t = normalized.split(' ').filter(Boolean);
+  return t.length ? t[t.length - 1] : normalized;
+}
+
 function pairKey(a, b) {
   return [a, b].sort().join('||');
 }
@@ -921,6 +947,8 @@ function buildFightIndex(fights) {
   const strict = {};
   const loose = {};
   const squashed = {};
+  const surnames = {};
+  const surnameHits = {};
   for (const f of fights) {
     if (!f.fighter_a_name || !f.fighter_b_name) continue;
     const a = normalizeName(f.fighter_a_name);
@@ -930,16 +958,37 @@ function buildFightIndex(fights) {
     if (!(lk in loose)) loose[lk] = f; // first writer wins; ambiguous keys stay put
     const sk = pairKey(squash(a), squash(b));
     if (!(sk in squashed)) squashed[sk] = f;
+
+    // Surname tier. NOT first-writer-wins: count every hit so an ambiguous key
+    // can be removed below rather than silently resolved to whichever fight
+    // happened to be read first.
+    const la = lastName(a), lb = lastName(b);
+    if (la.length >= 3 && lb.length >= 3 && la !== lb) {
+      const nk = pairKey(la, lb);
+      surnameHits[nk] = (surnameHits[nk] || 0) + 1;
+      surnames[nk] = f;
+    }
   }
-  return { strict, loose, squashed };
+  // Any surname pair claimed by more than one fight is DELETED, not resolved.
+  // The fourth tier exists to recover a missed price; it must never be the
+  // reason a price lands on the wrong fight, because fight_odds cannot be
+  // edited afterwards.
+  for (const k of Object.keys(surnameHits)) {
+    if (surnameHits[k] > 1) delete surnames[k];
+  }
+  return { strict, loose, squashed, surnames };
 }
 
 function lookupFight(index, homeName, awayName) {
   const a = normalizeName(homeName);
   const b = normalizeName(awayName);
+  const la = lastName(a), lb = lastName(b);
+  const surnameKey = (la.length >= 3 && lb.length >= 3 && la !== lb)
+    ? pairKey(la, lb) : null;
   return index.strict[pairKey(a, b)]
     || index.loose[pairKey(firstLast(a), firstLast(b))]
     || index.squashed[pairKey(squash(a), squash(b))]
+    || (surnameKey && index.surnames ? index.surnames[surnameKey] : null)
     || null;
 }
 
@@ -1589,5 +1638,5 @@ module.exports = {
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
   resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
-  normalizeName, firstLast, squash, americanToImplied, buildFightIndex, lookupFight,
+  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight,
 };
