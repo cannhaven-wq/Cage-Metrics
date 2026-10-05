@@ -138,11 +138,17 @@ ever written — the column has never been populated by anything.
 
 ## Next action
 
-**Nobody, until Thursday.** The watchdog is live and verified; its first real
-test is the 10 October card, whose pre-fight record is due at 23:00 UTC on
-Thursday 9 October. If `snapshot.yml` fails that night, a `dead-man` issue
-appears and the workflow goes red — that is the whole feature, and it needs no
-help.
+**Nobody, until Friday night.** The watchdog is live and verified; its first
+real test is the 10 October card — a Saturday — whose pre-fight record is due at
+23:00 UTC on **Friday 9 October** (this said Thursday in the first revision; the
+date was right and the weekday was wrong). If `snapshot.yml` fails that night, a
+`dead-man` issue appears and the workflow goes red — that is the whole feature,
+and it needs no help.
+
+Both writers land that same evening, which is the arrangement the deadlines were
+cut around: `cfl-snapshotter`'s Railway cron is `0 18 * * 5` — Friday 18:00 UTC —
+and the model-picks deadline sits three hours after it at 21:00, with the
+pre-fight-record deadline at the date boundary three hours later again.
 
 **Owner:** nothing is required for this to work. If you want the email channel as
 well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
