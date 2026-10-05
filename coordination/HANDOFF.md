@@ -3,47 +3,37 @@
 The live baton. Newest entry at the top; keep the last three, drop the rest —
 git history holds the others.
 
-Every entry carries **From**, **To**, **Date**, and a `### Verified after merge, which the entry above could not promise
-
-Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
-has now been run against the real database twice.
-
-**A review caught a defect that would have broken it on every run.**
-`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
-explicit permissions block sets every scope it does *not* name to `none`, so the
-token had `contents: none` and the job would have died 403 on its first step.
-Nothing caught it here: `workflow_dispatch` needs the workflow on the default
-branch, so the file had never executed, and the green CI on the pull request was
-`tests.yml`, a different workflow with its own correct scope. The one path that
-would have exposed it was shut by the same thing that stopped the live test.
-Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
-fails on any that pins permissions, runs a checkout and names no `contents` —
-verified against the broken file, so it is not decorative. `dead-man.yml` was
-the only offender of twenty-one.
-
-**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
-October card's deadlines has passed.
-
-**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
-`open_issues=false` so a card whose record is not yet due could not raise a
-false alarm):
-
-```
-BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
-        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
-   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
-  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
-```
-
-Real counts off the live database, the breach path firing, the job red. A run
-that merely says "no breach" proves nothing about whether it read anything,
-which is why the second run was worth the red tick in the Actions list.
-
-## Next action` that
+Every entry carries **From**, **To**, **Date**, and a `## Next action` that
 names something specific enough to start on without asking a question back.
 "Continue the work" is not a next action.
 
 Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
+
+---
+
+## 2026-10-05 (b) — T-009 closed: one owner, two names
+
+**From:** Claude
+**To:** ChatGPT
+**Date:** 2026-10-05
+
+The owner confirmed that "Reed Cannon" and "Michael Cannon" are the same person,
+Michael Reed Cannon, and that both names are valid. That is recorded as
+[D-021](DECISIONS.md), with the owner's words quoted. T-009 moves to Closed. No
+earlier decision, protocol file or hash was edited. The append-only rule is why
+the fix is a new entry and not a rename.
+
+Also repaired: this file's header had the previous entry's "Verified after
+merge" section pasted into the middle of its first sentence (commit `b6a1e8a`).
+That section is back inside the 2026-10-05 entry, just above its Next action.
+No text changed.
+
+## Next action
+
+**Unchanged from the entry below: nobody, until Friday night.** The first real
+test of the dead man's handle is the 10 October card, with its pre-fight
+snapshot at 23:00 UTC Friday 9 October. Attribution in `DECISIONS.md` needs no
+further work. Either name is correct from here on.
 
 ---
 
@@ -135,6 +125,42 @@ Friday-only, so a card on any other weekday is never reached at all (the dead ma
 reports it dark, correctly, and there is nothing to fix it with); and
 `predictions.closing_odds_american` is NULL in all 72 rows of all six batches
 ever written — the column has never been populated by anything.
+
+### Verified after merge, which the entry above could not promise
+
+Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
+has now been run against the real database twice.
+
+**A review caught a defect that would have broken it on every run.**
+`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
+explicit permissions block sets every scope it does *not* name to `none`, so the
+token had `contents: none` and the job would have died 403 on its first step.
+Nothing caught it here: `workflow_dispatch` needs the workflow on the default
+branch, so the file had never executed, and the green CI on the pull request was
+`tests.yml`, a different workflow with its own correct scope. The one path that
+would have exposed it was shut by the same thing that stopped the live test.
+Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
+fails on any that pins permissions, runs a checkout and names no `contents` —
+verified against the broken file, so it is not decorative. `dead-man.yml` was
+the only offender of twenty-one.
+
+**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
+October card's deadlines has passed.
+
+**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
+`open_issues=false` so a card whose record is not yet due could not raise a
+false alarm):
+
+```
+BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
+        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
+   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
+  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
+```
+
+Real counts off the live database, the breach path firing, the job red. A run
+that merely says "no breach" proves nothing about whether it read anything,
+which is why the second run was worth the red tick in the Actions list.
 
 ## Next action
 
@@ -277,85 +303,3 @@ ceilings against what the odds cadence actually delivers in a fight week.
 
 **Nobody:** relaxes a refusal to make an alert fire, or turns the quota into a
 Pro gate before step 7.
-
----
-
-## 2026-09-21 (g) — No paywall before there is a way to pay
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #44 merged (`68a6a5a`). The Stripe backbone is on `main` and
-`verify-billing-refusal.yml` is now dispatchable from its permanent home.
-
-**The owner resequenced the remaining work** ([D-019](DECISIONS.md)).
-Free-vs-Pro enforcement used to sit immediately after Stripe; it now sits
-behind the gates that make paying possible.
-
-| # | step | whose | state |
-|---|---|---|---|
-| 1 | Stripe backbone (#44) | Claude | **done** |
-| 2 | **T-054** privacy names the analytics processor | Owner + lawyer | blocked on legal |
-| 3 | **T-048** Terms of Service exists | Owner + lawyer | blocked on legal |
-| 4 | **T-067** set the price | Owner (L3) | not set |
-| 5 | **T-068** Stripe account, product, secrets | Owner | no account connected |
-| 6 | **T-069** checkout in Stripe test mode | Claude | blocked on 4–5 |
-| 7 | **T-061** apply the Free/Pro boundary | Claude | moved here |
-| 8 | **T-066** turn checkout live | Owner (L3) | blocked on 2–7 |
-| 9 | watchlists / movement alerts | Claude | **unblocked** |
-
-**It is not only about courtesy to the member.** A paywall in front of a
-product with no checkout is a dead end — the member meets a wall and the door
-behind it does not exist. It also destroys the one measurement the funnel
-instrumentation was built to take: `paywall_hit` means something when a
-purchase is possible and nothing when it is not, and a month of unbuyable
-paywall hits is a baseline nobody can read afterwards.
-
-**Nothing about the blockers changed.** T-054 and T-048 are still checkout
-blockers, `entitlements.js::CHECKOUT_BLOCKERS` is untouched, and
-`stripe-checkout` still returns 503 before it authenticates anyone. Moving
-step 7 later makes 7 and 8 independent, which they always should have been.
-
-### The drafter's brief was out of date, and now is not
-
-`legal-review/PROPOSED_WORDING.md` told a drafter that subscription terms were
-"none of this is decided". That was true when it was written and false the
-moment #44 merged: billing period, renewal, cancellation, failed payment and
-expiry are now shipped, tested behaviour. The file carries a new **"How billing
-actually behaves"** section so the Terms can describe the system rather than
-guess at it — cancellation taking effect at period end, a failed payment not
-cutting access off immediately, access ending automatically on expiry, an
-unrecognised state ending access rather than continuing it.
-
-Two things flagged so a drafter cannot over-promise: **no trial is
-implemented**, and **nothing in the system issues a refund**. If the Terms
-promise one, it is a manual process today.
-
-Still outside production. `privacy.html` and `disclaimer.html` remain untouched.
-
-### On the price
-
-The owner's stated default is ~$9.99–$11.99 monthly, $79–$99 annually, with a
-founding rate for the first cohort. **Recorded as a preference, not set**
-(T-067). No number is configured and `STRIPE_PRICE_ID` is unset. Three things
-it implies are also undecided and are now flagged for the drafter: whether both
-periods are sold, whether the founding rate is for life or for a term, and what
-happens to it on lapse and resubscription — which interacts with the undecided
-question of what the beta grant obliges.
-
-## Next action
-
-**Owner:** steps 2–5 are yours and nothing downstream moves without them. The
-cheapest one to clear first is **T-054** — it is a single disclosure clause and
-the draft is already written; T-048 is the larger piece.
-
-**Claude:** step 9 (watchlists / movement alerts) is the only unblocked build
-work in the sequence. Do not start T-061 — it is deliberately behind the
-payment gates now.
-
-**Nobody:** removes a blocker to make something pass, or sets a price to unblock
-themselves.
-
----
-

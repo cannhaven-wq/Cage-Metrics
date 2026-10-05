@@ -4,7 +4,7 @@ What is queued, who owns it, and what level it sits at. One row per task.
 
 **Levels** are defined in [`CRITICAL_GATES.md`](CRITICAL_GATES.md): `L0`
 execute, `L1` AI-to-AI, `L2` proceed and notify, `L3` owner only.
-**Owners**: `Claude` (build), `ChatGPT` (spec / review), `Owner` (Michael Cannon).
+**Owners**: `Claude` (build), `ChatGPT` (spec / review), `Owner` (Michael Reed Cannon — "Reed Cannon" and "Michael Cannon" are the same person, [D-021](DECISIONS.md)).
 **Status**: `proposed`, `queued`, `in-progress`, `blocked`, `done`, `dropped`.
 
 An `L3` task cannot be marked `done` until [`DECISIONS.md`](DECISIONS.md)
@@ -23,7 +23,6 @@ it died is usually worth more than the task was.
 | T-003 | Review the CLV measurement protocol draft before freeze | L1 | ChatGPT | in-progress |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
 | T-007 | Resolve the five L3 questions in the CLV protocol, then freeze it | L3 | Owner | blocked |
-| T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon" | L3 | Owner | blocked |
 | T-011 | Pin the CI Python dependency set — `cfl_engine/requirements.txt` is `>=` ranges, so the suite can redden on an upstream release | L1 | Claude | queued |
 | T-024 | Remeasure the exact `edges.js` record / td_def bands, and age, under market control — **owned by FE-001** | L1 | Claude | in-progress |
 | T-025 | Dated correction to the `edges.html` factor table, once T-024 lands — **FE-001 supplies the evidence** | L3 | Owner | blocked |
@@ -139,6 +138,10 @@ Whether that is one person recorded two ways or a genuine mis-attribution is
 nothing has been normalised and every entry still reads exactly as it was
 written. L3 and blocked on the owner. The fix is a new `DECISIONS.md` entry
 stating which name is correct, never an edit to the existing ones.
+
+**Closed 2026-10-05 by [D-021](DECISIONS.md).** It was one person recorded two
+ways: the owner is Michael Reed Cannon, and both names are valid. Nothing above
+was edited; the decision entry is what reconciles them.
 
 **T-002** is the live bottleneck on DUR-001's specification. The clauses are not
 approved en bloc and are split by risk in the register. Six of them change data
@@ -423,6 +426,7 @@ next product question and it is not a consequence of this one.
 
 Deliberately excluded from the 2026-09-18 consolidation, which was merging
 finished work rather than opening new lines.
+| T-009 | Confirm how the owner is named in the governance records — "Reed Cannon" or "Michael Cannon". **Both: one person, Michael Reed Cannon** ([D-021](DECISIONS.md)) | L3 | Owner | done |
 
 ---
 

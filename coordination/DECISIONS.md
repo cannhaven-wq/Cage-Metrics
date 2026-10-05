@@ -1561,3 +1561,37 @@ is `CHECK (channel IN ('email'))`, so adding one is a migration and a decision
 rather than a config change.
 
 **Attribution note.** As D-006 through D-019.
+
+---
+
+## D-021 — One owner, two names: Michael Reed Cannon
+
+| field | value |
+|---|---|
+| date | 2026-10-05 |
+| decided by | Michael Reed Cannon (owner) |
+| task | T-009 |
+| level | L3 |
+| reversible | yes — documentation only. Rewrites no earlier entry, writes no row, publishes nothing |
+
+**Plain version.** The records call the owner "Reed Cannon" in some places and
+"Michael Cannon" in others. Same person. Both names are right.
+
+**What the owner said** (relayed into the session on 2026-10-05):
+
+> Same person, both names valid. … Owner is Michael Reed Cannon; 'Reed Cannon'
+> and 'Michael Cannon' are the same person.
+
+**Decision.** The owner is **Michael Reed Cannon**. Every approval, ratification
+or decision recorded under **"Reed Cannon"** or **"Michael Cannon"** is that one
+person's. That includes D-004's "Michael Cannon (owner)", Q-14's ratifier in
+`protocol.json` ("Reed Cannon"), Amendment 7's approver, and each "Attribution
+note" in D-006 through D-020 that pointed at T-009.
+
+**What this does not do.** It edits nothing. Every earlier entry, the frozen
+protocol and its hashes keep the name they were written with. This log is
+append-only, and a protocol frozen under a name stays frozen under that name.
+This entry is what makes those names agree.
+
+**Going forward.** Either name is fine. "Reed Cannon" stays the default in
+`CLAUDE.md` and the coordination files, so nothing needs a sweep.
