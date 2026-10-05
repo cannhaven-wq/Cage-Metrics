@@ -75,7 +75,7 @@ Finishing a piece of work means updating `STATE.md` and `HANDOFF.md` in the same
 - **cage-metrics-scrapper** — Python fighter scraper, runs on Railway.
 - **cage-metrics-odds-scrapper** — Python odds scraper, runs on Railway (`odds_scraper.py`). **The main writer to `fight_odds`**, plus the Polymarket capture under `polymarket/` and the v1–v6 model training that reads it. Added to this list 2026-09-16: it had been missing, and it is the repo that writes most to `fight_odds` — see [`research/clv/FIGHT_ODDS_WRITER_INVENTORY.md`](research/clv/FIGHT_ODDS_WRITER_INVENTORY.md). Its `backfill_odds.py` is **retired**; `fight_odds` is append-only and that script deleted rows.
 - **cage-metrics-event-scrapper** — Python event scraper, in-progress on Railway.
-- **cfl-snapshotter** — Node predictions snapshotter. Shares verdict logic with the frontend via `edges.js` (loaded with `<script>` in browser, `require('./edges')` in Node).
+- **cfl-snapshotter** — Node predictions snapshotter, a Railway **cron** service on `0 18 * * 5`. Shares verdict logic with the frontend via `edges.js` (loaded with `<script>` in browser, `require('./edges')` in Node). **It must exit explicitly**: a Railway cron run that does not finish causes every later run to be skipped, and `supabase-js` keeps sockets and an auth-refresh timer alive, so the process hangs unless `persistSession`/`autoRefreshToken` are off and `process.exit` is called. `test/exit-contract.test.js` in that repo asserts it. It needs **Node 22+** (`@supabase/supabase-js` builds a RealtimeClient inside `createClient()` and that wants a native WebSocket), and the dependency is pinned to `~2.117.2` — a floating `^` minor is how it broke with no repo change. The Friday-only cron never reaches a card on another weekday (**T-077**).
 
 ## Build / run / deploy
 
@@ -96,11 +96,18 @@ The site itself is plain static HTML/CSS/JS — no bundler, no test suite. There
 - Re-runs are always safe: fights already on record are skipped, never overwritten. Earliest snapshot wins; the second daily pass only adds late-booked fights.
 - It refuses to snapshot a settled card, so a snapshot can never be backfilled after a result is known.
 
+**A dead man's handle watches both writers.** `build/check-pre-fight-coverage.js`, scheduled by [`.github/workflows/dead-man.yml`](.github/workflows/dead-man.yml) three times a day, asks whether `pre_fight_snapshots` AND `predictions` actually hold a row per fight for every card inside ten days. A card past a writer's deadline with an empty record **opens a labelled GitHub issue and reddens the build**. Both writers had failed in silence before this existed: `predictions` ran zero times for two months, and `pre_fight_snapshots` lost **UFC Fight Night: Rosas Jr. vs. Barcelos (2026-09-26), 13 fights, 0 rows, permanently**, because the guard caught `Exception` and needed `SystemExit`. Four rules worth knowing before editing it:
+
+- **Deadlines are absolute instants derived from the card date**, never "did the cron fire". GitHub does not deliver schedules when they ask.
+- **`partial` is not an alarm.** 14 of 15 is a healthy card — a bout with no usable history produces no verdict. Under **half** the card is a different shape (a run that died part-way) and does breach. An alarm that fires on every card gets filtered to a folder.
+- **"I could not look" is a failure.** Missing key, failed query, zero visible cards, a read at PostgREST's 1000-row page cap — all exit non-zero. This is the opposite of `build/send-alerts.js`, deliberately: the two things a dead man's handle must tell apart are "nothing is wrong" and "I never looked".
+- **It cannot catch its own silence.** If GitHub throttles or disables the schedule, nothing shouts. It reports its own run gaps so a run that lands names the hole; a real fix needs an observer outside GitHub (**T-076**). Do not let a comment claim otherwise.
+
 Why it can't just be the tables we already have: `model_picks` is insert-only but carries no price and no props; `prop_projections` is **full-table replaced** on every refresh, so it holds only the next card; `v_fight_odds_consensus` is overwritten as the line moves. The snapshot is the only place all three are frozen together ahead of the bell.
 
 Grade it through `v_pre_fight_graded`, which joins snapshots to results — it can only ever contain picks that were on record before the fight.
 
-Not to be confused with the legacy `predictions` table (the retired rules-model snapshotter, `cfl-snapshotter` on Railway, cron dead since 2026-05-29).
+Not to be confused with the legacy `predictions` table, written by `cfl-snapshotter` on Railway. **Corrected 2026-10-05:** this line used to call it retired with its "cron dead since 2026-05-29". It was never retired — the cron had simply **never been set**, so the service built cleanly and ran zero times. It is live again on `0 18 * * 5` and writing.
 
 ## Architecture
 

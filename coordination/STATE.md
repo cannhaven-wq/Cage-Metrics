@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-09-21
+Last updated: 2026-10-05
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -753,6 +753,64 @@ from one line inside `track-record.html`. The per-fight bullets are headed
 context, not the model's reasoning — they come from `fight-insights.js`, an
 independent heuristic, and nothing in that file feeds the engine that produces
 the percentage.
+
+### The pre-fight record now has a dead man's handle — 2026-10-05
+
+**Two writers put CFL's view on record before every bell. Both had failed in
+silence, and both times a person found it weeks later.**
+
+| writer | what happened | cost |
+|---|---|---|
+| `predictions` (cfl-snapshotter, Railway) | The cron schedule had **never been set**. The service deployed, built cleanly, and ran zero times. Last write 2026-08-03; five batches in five months. | every card from August on |
+| `pre_fight_snapshots` (`snapshot.yml`) | The guard round the per-fight loop caught `Exception`; the thing it had to catch was `SystemExit`, which inherits `BaseException`. | **UFC Fight Night: Rosas Jr. vs. Barcelos, 2026-09-26 — 13 fights, 0 rows, permanently.** The table rejects UPDATE and DELETE for every role, so there is no repair after the bell. |
+
+A green build and an empty table look identical from outside. That is now a
+build failure and a GitHub issue.
+
+**`cfl-snapshotter` runs again, and the fix was not the one the symptom
+suggested.** The reported symptom was "it won't run — the container exits
+instantly with no output". That was never a crash: a Railway cron service only
+executes on its schedule, the schedule was Friday, and the redeploy was Monday.
+The real defects were latent and three deep — the script never called
+`process.exit` on success, and under Railway's cron contract a run that does not
+exit causes **every later run to be skipped**, so the first Friday would have
+hung and nothing would ever have run again; `engines.node` said `>=20` while a
+floating `^2.39.0` on `@supabase/supabase-js` had quietly started requiring a
+native WebSocket (Node 22); and the whole thing was undiagnosable because it
+printed nothing before its first query. All three are fixed, the dependency is
+pinned to `~2.117.2` so a minor release cannot break an unattended cron again,
+and `test/exit-contract.test.js` spawns the real script against a client that
+holds the event loop open and fails if it has to be killed. Verified live:
+**12 predictions written for UFC Fight Night: Allen vs. Duncan**, node v22.23.2,
+clean exit, cron restored to `0 18 * * 5`.
+
+**The dead man.** `build/check-pre-fight-coverage.js` plus
+`.github/workflows/dead-man.yml`, three positions a day straddling both
+deadlines. Each writer's deadline is an **absolute instant derived from the card
+date** — the pre-fight record at the date boundary, the model picks three hours
+earlier — so it does not matter which minute GitHub delivers a run on. The
+verdict ladder is `dark` (0 rows, breach) / `thin` (under half the card, breach,
+because that shape is a run that died part-way) / `partial` (noted, **not** a
+breach: 14 of 15 is what a healthy card looks like, and an alarm that fires on
+every card gets filtered to a folder) / `covered` / `pending`.
+
+**It speaks on two channels that already work.** `RESEND_API_KEY` is unset
+(T-074), and a watchdog whose only channel is an unset secret has the defect it
+was built to catch. So a breach opens a labelled GitHub issue — one per writer
+per card, keyed by a hidden marker, never one per run, and **closed
+automatically when the record appears** — and reddens the build. It also treats
+**"I could not look" as a failure**: no key, a failed query, zero visible cards,
+or a read at PostgREST's 1000-row page cap all exit non-zero, because "nothing is
+wrong" and "I never looked" are the two things it exists to tell apart.
+
+**What it cannot see is its own silence**, and that is said in the file rather
+than papered over: if GitHub throttles the schedule or disables it after 60 days
+of repository inactivity, nothing shouts. It reports the gap between its own
+recent runs so a run that *does* land names the hole; a real fix needs an
+observer outside GitHub (**T-076**). 35 offline tests, including the September 26
+card as a fixture.
+
+---
 
 ### CI — the tripwires are now pulled automatically
 

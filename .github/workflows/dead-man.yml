@@ -1,0 +1,249 @@
+name: Dead man — is the pre-fight record there?
+
+# THE RULE THIS DEFENDS: no fight goes off without our prediction already on
+# record. Two jobs write that record ahead of every card. Both have failed in
+# silence, and both times a person found it weeks later:
+#
+#   predictions           last written 2026-08-03. The Railway cron schedule had
+#                         never been set, so the service built cleanly and ran
+#                         zero times. Five batches in five months.
+#
+#   pre_fight_snapshots   UFC Fight Night: Rosas Jr. vs. Barcelos, 2026-09-26:
+#                         13 fights, 0 rows. The guard caught `Exception` where
+#                         it needed `SystemExit`. The table rejects UPDATE and
+#                         DELETE for every role, so that card's pre-fight record
+#                         is gone for good. There is no repair after the bell —
+#                         which is the entire reason the alarm must come before
+#                         it.
+#
+# A green build and an empty table look the same from outside. This closes that.
+#
+# ---------------------------------------------------------------------------
+# WHY A GITHUB ISSUE RATHER THAN AN EMAIL
+# ---------------------------------------------------------------------------
+# RESEND_API_KEY is unset (T-074). A watchdog whose only channel is an unset
+# secret is a watchdog that cannot speak — the same defect it was built to
+# catch. So it uses two channels that already work and need no new secret:
+#
+#   1. It opens a GitHub issue, labelled `dead-man`, which notifies the repo
+#      owner through their normal watch settings and leaves an audit trail.
+#   2. It fails the job, which is the second notification and makes the red
+#      tick visible in the Actions list.
+#
+# One open issue per writer per card, keyed by a hidden marker in the body —
+# never one per run. Three runs a day on a dark card add a comment to the one
+# issue. When the record appears, the issue closes itself, so the open-issue
+# list is live state rather than a pile of history.
+#
+# Email becomes an option the day T-074 lands; the issue is the floor, not a
+# placeholder for it.
+#
+# ---------------------------------------------------------------------------
+# THE SCHEDULE IS THREE POSITIONS, NOT A HEARTBEAT
+# ---------------------------------------------------------------------------
+# The verdict is deadline-driven: build/check-pre-fight-coverage.js compares an
+# instant derived from the card date against the record, so it does not matter
+# which minute a run is delivered on. GitHub throttles schedules hard — odds.yml
+# asks for every 5 minutes and was delivered four times in a day. These three
+# positions straddle the two deadlines with enough redundancy that a dropped
+# wake is not a missed window:
+#
+#   21:15 UTC   past the model-picks deadline (Fri 21:00) for a card tomorrow
+#   00:10 UTC   past the pre-fight-record deadline (the date boundary)
+#   12:00 UTC   backstop, after the 10:30 day-of snapshot run, ahead of US bells
+#
+# Hourly would be worse, not better: a card that genuinely cannot be covered
+# would then comment 24 times a day, and an alarm that goes off constantly is an
+# alarm that gets filtered to a folder.
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS CANNOT SEE
+# ---------------------------------------------------------------------------
+# Its own silence. If GitHub stops delivering this workflow — throttling, or the
+# 60-day inactivity disable — nothing shouts, for the same reason nothing shouted
+# before. The self-check step below prints the gap between its own recent runs,
+# so a run that DOES land reports the hole; genuinely closing it needs an
+# observer outside GitHub. Named as an owner item rather than pretended away.
+#
+# ---------------------------------------------------------------------------
+# PERMISSIONS
+# ---------------------------------------------------------------------------
+# An explicit `permissions:` block sets every scope it does NOT name to `none`,
+# so `contents: read` is not optional decoration here — without it
+# `actions/checkout@v4` gets no repository read and the job dies 403 on its
+# first step. It shipped missing in the first revision of this file, and
+# nothing caught it, because `workflow_dispatch` needs the workflow on the
+# default branch and so the workflow had never run.
+#
+#   contents: read   the checkout, and nothing more
+#   issues:   write  so it can speak
+#   actions:  read   the cadence self-check reads this workflow's own run history
+#
+# `contents` is **read**, never write: this check commits nothing, ever.
+
+on:
+  schedule:
+    # Past the model-picks deadline for a card dated tomorrow.
+    - cron: '15 21 * * *'
+    # Past the pre-fight-record deadline for a card dated today.
+    - cron: '10 0 * * *'
+    # Backstop: after the day-of snapshot run, before the earliest US bell.
+    - cron: '0 12 * * *'
+  workflow_dispatch:
+    inputs:
+      lookahead_days:
+        description: 'How far ahead to look'
+        required: false
+        default: '10'
+      now:
+        description: 'Pretend it is this ISO instant (testing only; blank = now)'
+        required: false
+        default: ''
+      open_issues:
+        description: 'Open/close GitHub issues for breaches'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+# Two runs at once would both search the open issues and both create one.
+concurrency:
+  group: dead-man
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Pre-fight record coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      breached: ${{ steps.check.outputs.breached }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      # No `npm install`. The script uses global fetch and nothing else, on
+      # purpose: every dependency is one more way for the watchdog itself to
+      # fail to start, and a watchdog that fails to start is indistinguishable
+      # from a healthy card.
+      - name: Check coverage
+        id: check
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          COVERAGE_LOOKAHEAD_DAYS: ${{ github.event.inputs.lookahead_days || '10' }}
+          COVERAGE_NOW: ${{ github.event.inputs.now || '' }}
+          COVERAGE_JSON_OUT: coverage.json
+        shell: bash
+        run: |
+          set -o pipefail
+          if node build/check-pre-fight-coverage.js; then
+            echo "breached=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "breached=true" >> "$GITHUB_OUTPUT"
+          fi
+          # The report is written whether or not anything breached, so the
+          # issue step can also CLOSE issues for cards that recovered.
+          test -f coverage.json || { echo "no coverage.json — the check did not get far enough to report"; exit 1; }
+
+      - name: Open, update and close issues
+        if: ${{ always() && hashFiles('coverage.json') != '' && github.event.inputs.open_issues != 'false' }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = JSON.parse(fs.readFileSync('coverage.json', 'utf8'));
+            const { owner, repo } = context.repo;
+            const LABEL = 'dead-man';
+            const FOOT = '\n\n---\n_Generated by [Claude Code](https://claude.ai/code)_\n';
+
+            // Make sure the label exists; a missing label makes creation fail.
+            try { await github.rest.issues.getLabel({ owner, repo, name: LABEL }); }
+            catch { await github.rest.issues.createLabel({ owner, repo, name: LABEL,
+              color: 'b60205',
+              description: 'The pre-fight record is missing for a card that is close.' }); }
+
+            const open = await github.paginate(github.rest.issues.listForRepo,
+              { owner, repo, state: 'open', labels: LABEL, per_page: 100 });
+            const byMarker = new Map();
+            for (const i of open) {
+              const m = (i.body || '').match(/<!-- cfl-deadman:[^>]+-->/);
+              if (m) byMarker.set(m[0].trim(), i);
+            }
+
+            const run = `${context.serverUrl}/${owner}/${repo}/actions/runs/${context.runId}`;
+            const breached = new Set();
+
+            for (const b of report.breaches) {
+              breached.add(b.marker);
+              const existing = byMarker.get(b.marker);
+              const detail = [
+                b.message,
+                '',
+                `| | |`,
+                `|---|---|`,
+                `| card | ${b.event_name} (id ${b.event_id}) |`,
+                `| date | ${b.event_date} |`,
+                `| table | \`${b.writer}\` |`,
+                `| rows | ${b.rows} of ${b.fights} fights |`,
+                `| deadline | ${b.deadline} |`,
+                `| written by | ${b.writtenBy} |`,
+                '',
+                `Checked at \`${report.now}\` — [run log](${run}).`,
+              ].join('\n');
+
+              if (existing) {
+                await github.rest.issues.createComment({ owner, repo,
+                  issue_number: existing.number,
+                  body: `Still ${b.status} as of \`${report.now}\`. [run log](${run})${FOOT}` });
+                core.warning(`${b.marker} still ${b.status} — commented on #${existing.number}`);
+              } else {
+                const created = await github.rest.issues.create({ owner, repo,
+                  labels: [LABEL],
+                  title: `Pre-fight record ${b.status}: ${b.label} missing for ${b.event_name} (${b.event_date})`,
+                  body: `${b.marker}\n\n${detail}${FOOT}` });
+                core.error(`${b.marker} ${b.status} — opened #${created.data.number}`);
+              }
+            }
+
+            // Anything open that is no longer breaching has recovered. Close it,
+            // so the open-issue list is live state and not a pile of history.
+            for (const [marker, issue] of byMarker) {
+              if (breached.has(marker)) continue;
+              const still = report.checks.find(c => `<!-- cfl-deadman:${c.writer}:${c.event_id} -->` === marker);
+              const why = still
+                ? `now \`${still.status}\` — ${still.rows} of ${still.fights} fights`
+                : 'the card is past, so there is nothing left to write';
+              await github.rest.issues.createComment({ owner, repo, issue_number: issue.number,
+                body: `Closing: ${why}, as of \`${report.now}\`. [run log](${run})${FOOT}` });
+              await github.rest.issues.update({ owner, repo, issue_number: issue.number,
+                state: 'closed', state_reason: 'completed' });
+              core.notice(`${marker} recovered — closed #${issue.number}`);
+            }
+
+            if (!report.breaches.length) core.notice('No breach: every card past its deadline has a record.');
+
+      # Prints the gap between this workflow's own recent runs. It cannot catch
+      # its own silence — only a run that lands can report a hole — but a hole
+      # that is reported once is a hole somebody can act on. Never fatal: the
+      # red tick has to keep meaning one thing.
+      - name: How often has this watchdog actually run?
+        if: ${{ always() }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node .github/scripts/watchdog-cadence.js
+
+      - name: Fail if the record is missing
+        if: ${{ always() && steps.check.outputs.breached == 'true' }}
+        run: |
+          echo "The pre-fight record is missing or incomplete for a card that is close."
+          echo "See the step summary above, and the issue this run opened."
+          exit 1
