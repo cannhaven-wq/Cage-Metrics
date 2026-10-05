@@ -138,11 +138,34 @@ ever written — the column has never been populated by anything.
 
 ## Next action
 
-**Nobody, until Thursday.** The watchdog is live and verified; its first real
-test is the 10 October card, whose pre-fight record is due at 23:00 UTC on
-Thursday 9 October. If `snapshot.yml` fails that night, a `dead-man` issue
-appears and the workflow goes red — that is the whole feature, and it needs no
-help.
+**Nobody, until Friday night.** The watchdog is live and verified; its first
+real test is the 10 October card — a Saturday — whose scheduled pre-fight
+snapshot runs at **23:00 UTC Friday 9 October**, with the watchdog deadline at
+**00:00 UTC Saturday 10 October**. If `snapshot.yml` fails that night, a
+`dead-man` issue appears and the workflow goes red — that is the whole feature,
+and it needs no help.
+
+**A writer's run time and its deadline are different instants, and keeping them
+apart is the point.** The deadline is not when the job is supposed to run; it is
+when the record has to exist, and the gap between the two is the grace a late or
+slow run gets before anything shouts. Four instants, in order:
+
+| UTC | what | which kind |
+|---|---|---|
+| Fri 18:00 | `cfl-snapshotter` fires on Railway (`0 18 * * 5`) | writer runs |
+| Fri 21:00 | model-picks deadline | watchdog checks |
+| Fri 23:00 | `snapshot.yml` writes the pre-fight record | writer runs |
+| Sat 00:00 | pre-fight-record deadline, at the date boundary | watchdog checks |
+
+The two graces are **not** equal, and neither number is arbitrary. Model picks
+get three hours, because a Railway cron can be late and the run itself takes
+seconds. The pre-fight record gets one — its 23:00 run finishes around 23:10, so
+the boundary leaves fifty minutes — and it is cut that tight on purpose, because
+what the boundary buys is the rest of Saturday: `snapshot.yml` has a second pass
+at 10:30 UTC, and the watchdog's third daily position at 12:00 UTC checks after
+it. So a 00:00 breach is a card that can still be saved by hand, and the 12:00
+check is the last word before US bells. That ordering is the difference between
+an alarm somebody can act on and a postmortem.
 
 **Owner:** nothing is required for this to work. If you want the email channel as
 well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
