@@ -167,6 +167,15 @@ it. So a 00:00 breach is a card that can still be saved by hand, and the 12:00
 check is the last word before US bells. That ordering is the difference between
 an alarm somebody can act on and a postmortem.
 
+**Settled since this entry was written: T-077 is deferred, not refused**
+([D-021](DECISIONS.md), owner, 2026-10-05). The Friday-only cron stays; the
+watchdog was narrowed to match it in the same pass, so a card on another weekday
+reports `out_of_schedule` rather than raising an alarm nobody could act on. The
+pre-fight record's scope is untouched and a midweek card still breaches on it.
+Measured cost of the gap: 3 cards in 128 since 2024-01-01. **Next build priority
+is the member-facing work** — odds comparison, movement charts, alert delivery —
+not more snapshotter coverage.
+
 **Owner:** nothing is required for this to work. If you want the email channel as
 well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
 pair also unblocks the weekly digest and member alerts, and **T-073** (the
