@@ -245,5 +245,7 @@ jobs:
         if: ${{ always() && steps.check.outputs.breached == 'true' }}
         run: |
           echo "The pre-fight record is missing or incomplete for a card that is close."
-          echo "See the step summary above, and the issue this run opened."
+          echo "Which card and which writer are named in the step summary above."
+          echo "Unless issue-opening was turned off for this run, there is also a"
+          echo "\`dead-man\` issue for it, and the step before this one names its number."
           exit 1
