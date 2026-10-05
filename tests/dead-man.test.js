@@ -230,6 +230,75 @@ ok('every writer names who writes it, so the alert is actionable',
   C.WRITERS.every(w => w.writer && w.writer.length > 10));
 
 // ---------------------------------------------------------------------------
+group('the workflow can actually check out the repo');
+
+{
+  // An explicit `permissions:` block sets every scope it does NOT name to
+  // `none`. So a workflow that pins permissions and then runs
+  // actions/checkout MUST name `contents`, or the job dies 403 on its first
+  // step before any of the logic above gets a chance to run.
+  //
+  // dead-man.yml shipped missing it, and nothing caught it: workflow_dispatch
+  // needs the workflow present on the default branch, so the file had never
+  // been executed. A reviewer found it by reading. This is that reading,
+  // written down.
+  const fs = require('fs');
+  const path = require('path');
+  const DIR = path.join(__dirname, '..', '.github', 'workflows');
+
+  // Top-level `permissions:` mapping only — enough for this check, and it
+  // deliberately does not try to be a YAML parser.
+  function topLevelPermissions(src) {
+    const lines = src.split('\n');
+    const i = lines.findIndex(l => /^permissions:\s*$/.test(l));
+    if (i === -1) {
+      // Either absent (repository default applies — not this defect) or the
+      // inline `permissions: read-all` form, which names everything.
+      return /^permissions:\s*\S/m.test(src) ? 'inline' : null;
+    }
+    const scopes = {};
+    for (let j = i + 1; j < lines.length; j++) {
+      const m = lines[j].match(/^\s+([a-z-]+):\s*(\S+)\s*$/);
+      if (!m) {
+        if (/^\S/.test(lines[j]) && lines[j].trim() !== '') break;
+        continue;
+      }
+      scopes[m[1]] = m[2];
+    }
+    return scopes;
+  }
+
+  const files = fs.readdirSync(DIR).filter(f => f.endsWith('.yml'));
+  ok('there are workflow files to check', files.length > 0);
+
+  const offenders = [];
+  for (const f of files) {
+    const src = fs.readFileSync(path.join(DIR, f), 'utf8');
+    if (!src.includes('actions/checkout')) continue;
+    const perms = topLevelPermissions(src);
+    if (perms === null || perms === 'inline') continue;   // default or read-all
+    // A job-level permissions block can supply it instead; if any job names
+    // contents, that is this file's answer and the top level is not the gate.
+    if (!('contents' in perms) && !/^\s+contents:\s/m.test(src)) offenders.push(f);
+  }
+  ok('no workflow pins permissions, runs checkout, and forgets `contents`',
+    offenders.length === 0,
+    offenders.length ? `missing contents scope: ${offenders.join(', ')}` : '');
+
+  const dm = fs.readFileSync(path.join(DIR, 'dead-man.yml'), 'utf8');
+  const perms = topLevelPermissions(dm);
+  ok('dead-man.yml grants contents: read', perms.contents === 'read', JSON.stringify(perms));
+  ok('dead-man.yml never grants contents: write — it commits nothing, ever',
+    perms.contents !== 'write');
+  ok('dead-man.yml grants issues: write, so it can speak',
+    perms.issues === 'write', JSON.stringify(perms));
+  ok('dead-man.yml grants actions: read, for the cadence self-check',
+    perms.actions === 'read', JSON.stringify(perms));
+  ok('dead-man.yml really does run a checkout, so the scope is load-bearing',
+    dm.includes('actions/checkout'));
+}
+
+// ---------------------------------------------------------------------------
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail) {
   console.log('The watchdog is the one thing whose bugs look like silence. Fix this.');

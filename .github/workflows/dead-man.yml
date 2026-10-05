@@ -68,8 +68,18 @@ name: Dead man — is the pre-fight record there?
 # ---------------------------------------------------------------------------
 # PERMISSIONS
 # ---------------------------------------------------------------------------
-# `issues: write` so it can speak, `actions: read` for the self-check. NOT
-# `contents: write` — this check commits nothing, ever.
+# An explicit `permissions:` block sets every scope it does NOT name to `none`,
+# so `contents: read` is not optional decoration here — without it
+# `actions/checkout@v4` gets no repository read and the job dies 403 on its
+# first step. It shipped missing in the first revision of this file, and
+# nothing caught it, because `workflow_dispatch` needs the workflow on the
+# default branch and so the workflow had never run.
+#
+#   contents: read   the checkout, and nothing more
+#   issues:   write  so it can speak
+#   actions:  read   the cadence self-check reads this workflow's own run history
+#
+# `contents` is **read**, never write: this check commits nothing, ever.
 
 on:
   schedule:
@@ -96,6 +106,7 @@ on:
         type: boolean
 
 permissions:
+  contents: read
   issues: write
   actions: read
 
