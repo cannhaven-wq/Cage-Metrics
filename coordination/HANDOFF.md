@@ -11,6 +11,110 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-05 — The pre-fight record gets a dead man's handle, and the snapshotter runs again
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-05
+
+Two jobs put CFL's view on record before every bell. **Both had been failing in
+silence, and both times it was a person who noticed, weeks later.** That is the
+thing this entry is about — not either bug.
+
+### The snapshotter: the symptom was not the fault
+
+Reported: "it won't run — cron set, build succeeds, the container exits
+instantly, the only runtime log is `Stopping Container`."
+
+That was never a crash. A Railway **cron** service executes its start command on
+the schedule and not otherwise; the schedule was Friday and the redeploy was
+Monday, so an instant exit with no output was the correct behaviour of a service
+with nothing to do. Reasoning from the symptom would have led to hunting a crash
+that did not exist.
+
+Three real defects, all latent, none visible from the log:
+
+1. **No explicit exit on success.** `supabase-js` keeps keep-alive sockets and an
+   auth-refresh timer alive, so the process would have hung after writing. Under
+   Railway's cron contract a run that does not finish causes **every later run to
+   be skipped** — so the first Friday would have hung and nothing would ever have
+   run again. Fixed with `persistSession:false`, `autoRefreshToken:false`, a
+   five-minute watchdog and an explicit exit. `test/exit-contract.test.js`
+   spawns the real script against a stub client that holds the event loop open
+   and fails if it has to be SIGKILLed — old code: killed at 8016 ms; new: exit
+   0 in 49 ms.
+2. **`engines.node` said `>=20`.** `@supabase/supabase-js` was pinned at
+   `^2.39.0` — a floating minor — and a release had started requiring a native
+   `WebSocket`, which Node has from 22. Nothing in the repo changed between a
+   working run and a crashing one. Now `>=22` plus a `.node-version` file, and
+   the dependency pinned to `~2.117.2`: an unattended weekly cron should not
+   resolve a floating minor at build time.
+3. **It printed nothing before its first query**, which is what made an empty log
+   ambiguous in the first place. It now announces itself, its Node version and
+   its pid before any `require` that can throw, and names the specific missing
+   environment variable rather than both.
+
+Verified live: **12 predictions written for UFC Fight Night: Allen vs. Duncan**
+(event 4713), node v22.23.2, clean exit. Cron restored to `0 18 * * 5`.
+Merged as cannhaven-wq/cfl-snapshotter#1 and #2.
+
+### The dead man
+
+`build/check-pre-fight-coverage.js` + `.github/workflows/dead-man.yml`. It asks,
+three times a day, whether each writer's record exists for every card inside ten
+days, and shouts when it does not.
+
+- **Deadlines are absolute instants derived from the card date**, not "did the
+  cron fire" — the pre-fight record at the date boundary, the model picks three
+  hours before it. Same discipline as the odds cadence gate: GitHub does not
+  deliver schedules when they ask, and a run landing at 03:47 reaches the same
+  verdict as one landing at 00:10.
+- **`partial` is deliberately not an alarm.** Healthy cards come in at 13 or 14
+  against 15 — a bout with no usable history produces no verdict. If that
+  shouted, every card would shout, and an alarm that fires constantly is an
+  alarm that gets filtered to a folder. Under **half** the card is a different
+  shape — a run that died part-way — and does breach.
+- **Two channels, no new secret.** `RESEND_API_KEY` is unset (T-074), and a
+  watchdog whose only channel is an unset secret has exactly the defect it
+  exists to catch. A breach opens a labelled GitHub issue — one per writer per
+  card, hidden marker, never one per run, **closed automatically when the record
+  appears** — and reddens the build.
+- **"I could not look" fails.** No key, a failed query, zero visible cards, or a
+  read sitting at PostgREST's 1000-row page cap all exit non-zero. This is the
+  opposite of `build/send-alerts.js`, which exits 0 on a missing key and is right
+  to — a not-configured runner is not a broken market. For a dead man's handle
+  the two cases it must distinguish are "nothing is wrong" and "I never looked".
+- 35 offline tests, with the September 26 card as a fixture.
+
+### Said plainly rather than papered over
+
+**It cannot catch its own silence.** If GitHub throttles the schedule or disables
+it after 60 days of repository inactivity, nothing shouts, for the same reason
+nothing shouted before. It prints the gap between its own recent scheduled runs,
+so a run that *does* land names the hole, and warns above 30 hours. A real fix
+needs an observer outside GitHub — **T-076**, queued, not claimed as done.
+
+Two further gaps found on the way and queued as **T-077**: the Railway cron is
+Friday-only, so a card on any other weekday is never reached at all (the dead man
+reports it dark, correctly, and there is nothing to fix it with); and
+`predictions.closing_odds_american` is NULL in all 72 rows of all six batches
+ever written — the column has never been populated by anything.
+
+## Next action
+
+**Owner:** nothing is required for this to work. If you want the email channel as
+well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
+pair also unblocks the weekly digest and member alerts, and **T-073** (the
+controlled alert-delivery test) is waiting on it.
+
+**ChatGPT:** review `build/check-pre-fight-coverage.js` against one question — is
+the `partial` / `thin` boundary at half the card the right place for it? It is
+the only judgement in the file that trades a missed alarm against a false one,
+and it was set from six observed cards (13–14 rows against 13–16 fights), which
+is a small sample to cut a threshold on.
+
+---
+
 ## 2026-09-21 (h) — Watchlists and alerts, and an alert that would rather say nothing
 
 **From:** Claude
@@ -190,124 +294,3 @@ themselves.
 
 ---
 
-## 2026-09-21 (f) — The subscription is built, and the front door is bolted
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #43 merged (`97ec5b4`). Item 5 of the monetization sequence — Stripe and
-pricing — is done. [D-018](DECISIONS.md), T-063 / T-064 / T-065.
-
-**CFL cannot take a penny, and that is a control rather than a note.**
-
-### Read this first: what stops the money
-
-Three locks, in the order of what actually holds:
-
-1. **The deployed `stripe-checkout` function returns 503 `checkout_disabled`
-   with T-054 and T-048 named — before it authenticates the caller and before
-   it reads any configuration.** The browser is not a security boundary, so
-   this is the one that matters.
-2. **`pricing.html` ships the Subscribe button `disabled` in the served HTML**,
-   not disabled by JavaScript afterwards. JS can fail to load; a button that is
-   live for 200 ms is a button that can be clicked.
-3. **The page reads that state from `entitlements.js::CHECKOUT_BLOCKERS`** and
-   holds no opinion of its own, so removing a blocker moves the page and
-   hardcoding "enabled" cannot happen quietly.
-
-A fourth, by accident of having nothing: `STRIPE_SECRET_KEY`,
-`STRIPE_WEBHOOK_SECRET` and `STRIPE_PRICE_ID` are unset and both functions fail
-closed. **Not counted as a lock** — it disappears the moment a key is added for
-testing.
-
-**Verified, not asserted.** `.github/workflows/verify-billing-refusal.yml`
-posts to both live endpoints and fails if either answers with anything but a
-refusal, including a forged webhook signature that must never return 200. It
-needs no secret (the project URL and publishable key are already committed) and
-runs with `contents: read`. The agent environment's network policy blocks the
-Supabase host, so this has to run in CI to run at all.
-
-### The lifecycle
-
-`billing-lifecycle.js` is a pure function — no network, no database, no Stripe
-SDK — and `tests/billing-lifecycle.test.js` drives **signup → checkout →
-activation → renewal → failed payment → cancellation → expiry → lapse →
-resubscription** offline, 39 assertions. Then the same sequence was run against
-the real database in a rolled-back transaction: `free, pro, pro, pro, pro, free,
-free, pro`.
-
-The four rules that are money-shaped:
-
-- **`past_due` keeps access to the end of the period.** One failed card payment
-  must not cut a paying member off while Stripe is still retrying.
-- **`canceled` keeps access to the end of the period, then stops.** They paid
-  for it. They do not get the next one.
-- **`unpaid` / `incomplete` / `incomplete_expired` / `paused` end access now.**
-- **An unrecognised status ends access.** "Probably fine" is how a lapsed
-  member keeps a subscription forever.
-
-**`checkout.session.completed` never grants entitlement** — it only links the
-Stripe customer id. Entitlement comes from subscription events alone.
-
-**Idempotency is a UNIQUE constraint on `stripe_event_id`, not a check**, and the
-insert happens first: Stripe delivers at least once, and two concurrent
-deliveries both pass a `SELECT`-then-`INSERT`. A `23505` returns 200
-`duplicate_ignored`. Status codes are flow control — 400 for a bad signature,
-500 for a real write failure so Stripe retries, 200 for understood-but-not-
-appliable with the reason recorded in `billing_events`.
-
-**The lifecycle rules are duplicated inside the webhook** because an edge
-function cannot import from the repo root at deploy time. A test asserts the two
-copies agree.
-
-### Two defects found on the way
-
-**`pricing.html` was serving broken markup.** `<footer</div>` — a stray unclosed
-tag, live on `main`, which browsers recover from by opening a bogus `<footer>`
-wrapping the rest of the page including the real one.
-
-**`account.html` called every beta member "Free".** It derived the tier from
-`profiles.tier` alone; during beta `tier` is `'free'` for everyone and
-`beta_premium` is what makes them premium, so the account page contradicted the
-rest of the site for **every account holder**. It now reads `v_my_billing` and
-phrases the state through the shared state machine, and it stopped promising that
-billing "launches soon", which is a date nobody has.
-
-### What was deliberately not done
-
-- **The Free/Pro boundary is not enforced.** Every `SURFACES` row still carries
-  `enforced: false`. Nothing is behind a paywall. That is item 6.
-- **No price is set.** `CRITICAL_GATES.md` item 7 makes pricing L3; the range on
-  `pricing.html` is the owner's existing copy, unchanged.
-- **`privacy.html` and `disclaimer.html` untouched.** Draft wording stays in
-  `legal-review/PROPOSED_WORDING.md`, outside production.
-- **T-058 (card-wide charts) not started**, per the owner.
-
-### One thing to watch
-
-The self-referential copy guard has now bitten **five times** in this repo: a
-ban list containing the banned phrase, a `//` comment explaining a ban, a
-shipped `COMMENT ON` string, `document.body.textContent` including inline
-`<script>` text, and this sprint a comment explaining that
-`cfl.EVENTS.checkout_started` is *not* emitted, which tripped the test asserting
-it is not emitted. Every copy assertion in this repo should read **stripped,
-visible text**. It is worth a written convention rather than a sixth discovery.
-
-## Next action
-
-**Owner:** decide whether to run item 6 — the Free/Pro boundary — next, or to
-hold it until T-048 and T-054 clear. Enforcing a paywall before there is any way
-to pay for it means a member can hit a wall with no door in it, which is a worse
-first impression than a free board. The build order the owner locked puts
-enforcement after Stripe, and Stripe is now done, so this is genuinely the next
-item; the question is only whether it lands before or after the legal work.
-
-**ChatGPT:** review `billing-lifecycle.js` against the Stripe status model
-specifically for statuses CFL has not enumerated, and review whether
-`past_due` keeping access to period end is the right call for CFL's price point.
-
-**Nobody:** removes an entry from `CHECKOUT_BLOCKERS` to make something pass.
-T-066 is the L3 that turns checkout on, and it is the owner's.
-
----
