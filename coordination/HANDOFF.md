@@ -3,7 +3,43 @@
 The live baton. Newest entry at the top; keep the last three, drop the rest —
 git history holds the others.
 
-Every entry carries **From**, **To**, **Date**, and a `## Next action` that
+Every entry carries **From**, **To**, **Date**, and a `### Verified after merge, which the entry above could not promise
+
+Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
+has now been run against the real database twice.
+
+**A review caught a defect that would have broken it on every run.**
+`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
+explicit permissions block sets every scope it does *not* name to `none`, so the
+token had `contents: none` and the job would have died 403 on its first step.
+Nothing caught it here: `workflow_dispatch` needs the workflow on the default
+branch, so the file had never executed, and the green CI on the pull request was
+`tests.yml`, a different workflow with its own correct scope. The one path that
+would have exposed it was shut by the same thing that stopped the live test.
+Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
+fails on any that pins permissions, runs a checkout and names no `contents` —
+verified against the broken file, so it is not decorative. `dead-man.yml` was
+the only offender of twenty-one.
+
+**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
+October card's deadlines has passed.
+
+**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
+`open_issues=false` so a card whose record is not yet due could not raise a
+false alarm):
+
+```
+BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
+        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
+   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
+  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
+```
+
+Real counts off the live database, the breach path firing, the job red. A run
+that merely says "no breach" proves nothing about whether it read anything,
+which is why the second run was worth the red tick in the Actions list.
+
+## Next action` that
 names something specific enough to start on without asking a question back.
 "Continue the work" is not a next action.
 
@@ -101,6 +137,12 @@ reports it dark, correctly, and there is nothing to fix it with); and
 ever written — the column has never been populated by anything.
 
 ## Next action
+
+**Nobody, until Thursday.** The watchdog is live and verified; its first real
+test is the 10 October card, whose pre-fight record is due at 23:00 UTC on
+Thursday 9 October. If `snapshot.yml` fails that night, a `dead-man` issue
+appears and the workflow goes red — that is the whole feature, and it needs no
+help.
 
 **Owner:** nothing is required for this to work. If you want the email channel as
 well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
