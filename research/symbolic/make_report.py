@@ -173,12 +173,16 @@ def main():
       "reproduction of it.")
     w(f"- On our 2026 cohort ({lk['n']} fights; v1 reported 226 under an eligibility rule we do not have) that structure "
       f"scores {lk['accuracy']*100:.1f}% accuracy and log loss {f(lk['logloss'])}. v1 reported 61.5%.")
-    w("- **Things a v1 implementation could have got wrong, and how large each is here:**")
+    w("- **v1 leakage status: UNVERIFIED.** v1 reportedly rebuilt its statistics from prior fights. Its code was "
+      "not inspected, so this report makes no claim either way about whether it leaked.")
+    w("- **Generic risks for any implementation of this kind, measured on our data (these are not findings about v1):**")
     lc = M["leak_illustration_v1_structure_2026"]["career_table"]
-    w(f"  - *Career averages as inputs.* Using the `fighters` table's career `sapm` and current age instead of "
-      f"point-in-time values moves the same structure on 2026 to {lc['accuracy']*100:.1f}% / log loss {f(lc['logloss'])}. "
-      f"The career table contains the fight being predicted. That leaky figure happens to equal v1's reported 61.5% — "
-      f"suggestive that v1 may have used career-table inputs, but not proof: the cohorts differ ({lc['n']} vs 226 fights). "
+    w(f"  - *Career averages as inputs.* If the `fighters` table's career `sapm` and current age were used instead of "
+      f"point-in-time values, the same structure on our 2026 cohort would score {lc['accuracy']*100:.1f}% / log loss "
+      f"{f(lc['logloss'])}, because the career table contains the fight being predicted. "
+      f"*Correction (2026-10-07): an earlier draft said this figure matching v1's rounded 61.5% was 'suggestive' of "
+      f"leakage in v1. It is not. A rounded accuracy matched on a different cohort ({lc['n']} vs 226 fights), with "
+      f"different eligibility, is not evidence about how v1 was built.* "
       f"On the larger audit cohort, career strikes-landed "
       f"'predicts' {AU['career_average_leak']['slpm_fighters_table_career']*100:.1f}% of winners vs "
       f"{AU['career_average_leak']['slpm_point_in_time']*100:.1f}% for the honest version.")

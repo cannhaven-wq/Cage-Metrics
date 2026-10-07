@@ -1,0 +1,78 @@
+{
+  "experiment_id": "SYM-003",
+  "frozen_at": "2026-10-07",
+  "status_of_results": "exploratory: every fight scored here has already been examined by CFL and by SYM-002",
+  "note": "Frozen before any SYM-003 feature was built or scored. No feature may be added, removed or redefined after this file is committed; a change is a new experiment id.",
+  "inherits_from_SYM-002": [
+    "features.parquet (23 point-in-time per-fighter inputs, seeded corner randomisation)",
+    "eligibility: both fighters >= 2 prior bouts with stats, DOB known, decided; evaluation rows also need an archived market price",
+    "outer test years 2021-2026, training rows from 2008-01-01, inner validation = last two calendar years of each training window, split by event date",
+    "baseline = SYM-002 'LR_linear': L2 logistic, no intercept, on the 23 standardised per-fighter differences, lambda chosen on inner validation from 1/C, C in {0.01,0.03,0.1,0.3,1,3}",
+    "fold-local preprocessing (z-score + clip +-4 per fighter, reach-from-height imputation), learned on the relevant training rows only"
+  ],
+  "groups": {
+    "W_wrestling_matchup": {
+      "W1_expected_takedowns": "td15_A * tdag15_B / L_td15  -  td15_B * tdag15_A / L_td15",
+      "W2_expected_control": "ctrl_share_A * ctrl_against_B / L_ctrl  -  ctrl_share_B * ctrl_against_A / L_ctrl",
+      "W3_takedown_success": "td_acc_A * (1 - td_def_B)  -  td_acc_B * (1 - td_def_A)"
+    },
+    "S_striking_matchup": {
+      "S1_expected_landed": "slpm_A * sapm_B / L_slpm  -  slpm_B * sapm_A / L_slpm",
+      "S2_expected_accuracy": "str_acc_A * (1 - str_def_B) / L_acc  -  str_acc_B * (1 - str_def_A) / L_acc",
+      "S3_expected_knockdowns": "kd15_A * kdag15_B / L_kd15  -  kd15_B * kdag15_A / L_kd15"
+    },
+    "O_opponent_adjusted": {
+      "per_prior_bout_residuals": {
+        "r_str_off":  "landed_per_min(bout) - sapm_opp_pre(bout)",
+        "r_str_def":  "slpm_opp_pre(bout) - absorbed_per_min(bout)",
+        "r_td_off":   "td15(bout) - tdag15_opp_pre(bout)",
+        "r_td_def":   "td15_opp_pre(bout) - td_against15(bout)",
+        "r_ctrl_off": "ctrl_share(bout) - ctrl_against_opp_pre(bout)",
+        "r_ctrl_def": "ctrl_share_opp_pre(bout) - ctrl_against(bout)"
+      },
+      "aggregation": "O_x = sum_b w_b r_b / (sum_b w_b + 15), w_b = minutes_b * 0.5 ** (days_before_fight_b / 730)",
+      "features": "O1..O6 = O_x(A) - O_x(B) for the six residuals"
+    }
+  },
+  "definitions": {
+    "existing (SYM-002) per-fighter inputs": "td15 = td_per15, ctrl_share, ctrl_against, td_acc, td_def, slpm, sapm, str_acc, str_def, kd15 = kd_per15; all career-cumulative over strictly prior bouts, shrunk with 25 pseudo-minutes (rates) / 50 or 10 pseudo-attempts (accuracies) toward the league value to date",
+    "new per-fighter inputs": "tdag15 = takedowns conceded per 15 min, kdag15 = knockdowns conceded per 15 min; same 25-pseudo-minute shrinkage toward the league rate to date",
+    "L_*": "league value over all bouts strictly before the fight date (the shrinkage prior). It is the same for both corners, so it only sets units",
+    "opp_pre(bout)": "the opponent's own point-in-time rate going INTO that historical bout, i.e. computed from the opponent's bouts strictly before that bout's date. Never the opponent's later career",
+    "per-bout actuals": "from that bout's own totals: landed_per_min = sig landed / minutes, absorbed_per_min = opponent sig landed / minutes, td15 = 15 * td landed / minutes, td_against15 = 15 * opponent td landed / minutes, ctrl_share = own ctrl seconds / fight seconds, ctrl_against = opponent ctrl seconds / fight seconds"
+  },
+  "time_weighting": {
+    "W, S": "none beyond SYM-002's cumulative shrunk rates, deliberately: this isolates the value of the matchup COMBINATION from any recency change",
+    "O": "minutes-weighted, exponential half-life 730 days measured from the fight being predicted"
+  },
+  "minimum_history": {
+    "fighter": "inherited cohort rule: >= 2 prior bouts with stats, so every new feature is defined for every eligible row",
+    "opponent_in_O": "no minimum: an opponent with no prior stat bouts has league-prior pre-bout rates by construction (shrinkage), so that bout's residual is measured against the league average",
+    "bouts_used_in_O": "only prior bouts with complete per-bout stats and fight time > 0"
+  },
+  "missing_data": "after construction any NaN in a new feature is set to 0 (no matchup edge) and counted; expected count is 0 on eligible rows",
+  "preprocessing_new_features": "each new feature divided by its standard deviation on the training rows of the relevant split (no centring, which would break antisymmetry), then clipped to +-5",
+  "symmetry": "every new feature is f(A,B) - f(B,A); with no intercept, P(B,A) = 1 - P(A,B) exactly; checked on every test row",
+  "models": {
+    "baseline": "23 differences",
+    "baseline+W": "23 + W1..W3",
+    "baseline+S": "23 + S1..S3",
+    "baseline+O": "23 + O1..O6",
+    "baseline+all": "23 + W + S + O (35 columns)"
+  },
+  "lambda_selection": "per model, per fold, on inner validation log loss, from the same grid as the baseline",
+  "pre_fit_diagnostic": "R^2 of each new feature regressed on the 23 baseline differences over 2008-2020 training rows. Outcome-free. R^2 >= 0.9 is reported as 'largely already represented'",
+  "evaluation": {
+    "primary_metric": "log loss",
+    "secondary": ["Brier", "accuracy", "calibration intercept and slope", "ECE"],
+    "uncertainty": "event-level bootstrap, 2000 resamples, seed 7, of each model minus baseline",
+    "headline_window": "pooled 2021-2025; 2026 reported separately",
+    "improvement_rule": "same as SYM-002: the 95% event-bootstrap interval of the pooled 2021-2025 log-loss difference vs baseline lies entirely below zero AND the model beats baseline in at least 4 of 5 folds",
+    "market": "archived consensus on the identical cohort, labelled 'timestamps unverified'"
+  },
+  "decision_rules": {
+    "further_symbolic_search": "only if at least one group meets the improvement rule",
+    "freeze_for_future_fights": "fit every model once on all eligible rows through 2026-10-03 (inner validation 2025-2026) and hash them. Pre-designated primary prospective comparison: the group that met the rule vs baseline; if none met it, baseline+all vs baseline as a challenger test",
+    "forbidden": ["adding or editing features after seeing results", "ROI", "CLV", "profitability claims", "choosing by accuracy"]
+  }
+}
