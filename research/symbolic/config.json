@@ -1,0 +1,87 @@
+{
+  "experiment_id": "SYM-002",
+  "frozen_at": "2026-10-07",
+  "note": "Frozen before any feature matrix was built or any model was fitted. Do not edit; a changed setting is a new experiment id.",
+  "data": {
+    "train_rows_from": "2008-01-01",
+    "history_from": "all fights in the table (1994+), so veterans are not treated as debutants",
+    "corner_randomisation_seed": 20261007,
+    "eligible_row": [
+      "result is a win for one corner (draws, no contests, overturned, could-not-continue, 'Other' excluded from rows; they still update history and Elo where the engine rule says so)",
+      "both fighters have >= 2 prior UFC bouts in the table with fight-time stats",
+      "both fighters have a known date of birth",
+      "evaluation rows additionally require an archived market probability, so every model is scored on the identical cohort"
+    ]
+  },
+  "features_per_fighter": [
+    "age_yrs", "reach_in", "height_in", "southpaw",
+    "elo", "opp_elo_mean", "log_n_fights", "log_days_since_last", "fights_24m",
+    "slpm", "sapm", "str_acc", "str_def",
+    "td_per15", "td_acc", "td_def", "ctrl_share", "ctrl_against",
+    "kd_per15", "sub_per15", "win_rate", "finish_rate", "last3_win_rate"
+  ],
+  "shrinkage": {
+    "rate_pseudo_minutes": 25,
+    "accuracy_pseudo_attempts": {"str": 50, "td": 10},
+    "proportion_pseudo_fights": 2,
+    "prior": "expanding league mean over fights strictly before the event date"
+  },
+  "elo": {"K": 32, "start": 1500, "batch_by_event_date": true, "draw_score": 0.5, "nc": "no update"},
+  "preprocessing": {
+    "scaling": "per-fighter z-score using the mean and std of the TRAINING rows only (both corners pooled)",
+    "clip_z": 4.0,
+    "missing": "reach missing -> predicted from height via a training-only linear fit; height missing -> training median; any remaining NaN -> z = 0 (training mean)",
+    "term_scaling": "each symbolic term divided by its training-row std (stored with the model)"
+  },
+  "symbolic_grammar": {
+    "term_form": "T(A,B) = h(a, b) - h(b, a), so every term is exactly antisymmetric under a corner swap",
+    "model_form_A": "P(A wins) = sigmoid( sum_k w_k * T_k(A,B) ), no intercept",
+    "model_form_B": "P(A wins) = sigmoid( logit(p_market_A) + sum_k w_k * T_k(A,B) ), no intercept, market coefficient fixed at 1",
+    "leaves": "a_i (own z-feature), b_i (opponent z-feature), constants {0.5, 1, 2}",
+    "binary_ops": ["add", "sub", "mul", "pdiv(x,y)=x/(1+|y|)"],
+    "unary_ops": ["tanh", "sq(x)=x^2", "abs", "slog(x)=sign(x)*log(1+|x|)"],
+    "node_clip": 20.0,
+    "nan_inf_to": 0.0,
+    "weight_fit": "L2-penalised logistic likelihood, Newton solver, lambda = 1.0 on standardised terms (equivalent to sklearn C = 1)"
+  },
+  "search": {
+    "engine": "custom bounded genetic programming over sets of antisymmetric terms (research/symbolic/symreg.py)",
+    "configs": {
+      "shallow": {"max_depth": 2, "max_terms": 4},
+      "medium":  {"max_depth": 3, "max_terms": 6},
+      "deep":    {"max_depth": 4, "max_terms": 8}
+    },
+    "seeds": [101, 202, 303, 404, 505],
+    "population": 120,
+    "generations": 25,
+    "tournament": 5,
+    "elitism": 6,
+    "hall_of_fame": 20,
+    "budget_per_run": "population x (generations + 1) = 3120 fitted models",
+    "complexity_penalty_per_node": 0.0002,
+    "fitness": "inner-validation log loss + 0.0002 x total node count"
+  },
+  "validation": {
+    "outer_test_years": [2021, 2022, 2023, 2024, 2025, 2026],
+    "outer_train": "eligible rows with event_date in [2008-01-01, Jan 1 of test year)",
+    "inner_validation": "events in the last two calendar years of the outer training window; inner-train is everything earlier",
+    "grouping": "split by event date, so no event is ever divided between train and test",
+    "selection_rule_A_B": "single individual with the lowest penalised inner-validation score across all 15 runs (3 configs x 5 seeds); its structure is then refitted on the full outer-training window and scored once on the test year",
+    "experiment_C": "L2 logistic on all 23 linear differences plus the distinct terms from the top-5 hall-of-fame models of Experiment A in that fold; C chosen from {0.01,0.03,0.1,0.3,1,3} by inner-validation log loss",
+    "baseline_LR": "same as C without discovered terms, same C grid, same selection",
+    "baseline_v1_refit": "the reported v1 structure sigmoid(w1 z(d_age) + w2 z(d_elo) + w3 z(d_sapm)) refitted per fold on our point-in-time features, no intercept",
+    "baseline_v1_reported": "the reported v1 coefficients applied to our standardised differences; approximate only, because v1's preprocessing is unavailable",
+    "baseline_market": "archived consensus probability (timestamps are placeholders: unverified)",
+    "baseline_elo": "sigmoid(ln10/400 x elo difference), no fitting"
+  },
+  "evaluation": {
+    "primary_metric": "log loss",
+    "secondary": ["Brier", "accuracy", "calibration intercept and slope", "10-bin reliability table"],
+    "uncertainty": "event-level bootstrap, 2000 resamples, seed 7, of the log-loss difference vs each baseline",
+    "headline_window": "pooled 2021-2025 outer folds; 2026 reported separately as historical research because CFL has already examined it",
+    "improvement_rule": "a model 'improves' on a baseline only if the 95% event-bootstrap interval of the pooled 2021-2025 log-loss difference excludes zero in its favour AND it wins in at least 4 of the 5 folds",
+    "verified_market": "timing-verified prices exist for 34 decided fights only; reported descriptively, never pooled with archived odds",
+    "forbidden": ["ROI", "CLV", "profitability claims", "choosing a model by accuracy"]
+  },
+  "final_model": "the same A/B/C procedure run once on every eligible row through 2026-10-03, inner validation = 2025-2026; frozen by SHA-256 for prospective scoring on events after 2026-10-07"
+}
