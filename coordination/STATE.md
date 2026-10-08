@@ -812,6 +812,27 @@ card as a fixture.
 
 ---
 
+**Scope narrowed by owner decision, 2026-10-05 ([D-021](DECISIONS.md)).** Fixing
+`cfl-snapshotter` surfaced that its cron is `0 18 * * 5` — Friday only — so a card
+on any other weekday is never reached. Measured: **125 of 128 cards since
+2024-01-01 were Saturdays (97.7%)**; the other three were one Sunday, one Tuesday
+and one Friday. The owner chose to accept the gap rather than widen the cron,
+because `predictions` has **no public consumer** — nothing on any page reads it,
+and `closing_odds_american` is NULL in all 72 rows of all six batches ever
+written. **T-077 stays open at `proposed`: deferred, not refused.**
+
+That choice *required* the watchdog change that shipped with it. Left alone the
+check would have reported every midweek card `dark` — breach, issue, red build —
+forever, with nothing anybody could do. An alarm nobody can act on is one people
+learn to skip, and that cost would have landed on the Saturday cards. So each
+writer now declares `reachableWeekdays` and there is a fifth status,
+`out_of_schedule`. **Narrowed, not silenced:** the check is still computed, still
+printed with its own tag, still in the JSON, and gets its own heading in the step
+summary, because the argument for not alarming is that the gap stays visible.
+`pre_fight_snapshots` declares **no** scope — `snapshot.yml` is daily and is the
+writer the hard rule is about — and a test asserts that narrowing one writer did
+not quiet the other.
+
 ### CI — the tripwires are now pulled automatically
 
 **`.github/workflows/tests.yml` runs the whole suite on every push and pull

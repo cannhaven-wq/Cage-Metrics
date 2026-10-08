@@ -48,12 +48,34 @@
 // alarm that goes off on every card is an alarm that gets filtered to a folder.
 // So the ladder is:
 //
-//   dark      0 rows past the deadline                  -> BREACH, shout
-//   thin      below HALF the fights                     -> BREACH, shout
-//             (that is a run that died part-way, not a gap in the data)
-//   partial   between half and all                      -> noted, no alarm
-//   covered   a row for every fight                     -> quiet
-//   pending   deadline has not passed yet               -> quiet
+//   dark              0 rows past the deadline          -> BREACH, shout
+//   thin              below HALF the fights             -> BREACH, shout
+//                     (a run that died part-way, not a gap in the data)
+//   partial           between half and all              -> noted, no alarm
+//   covered           a row for every fight             -> quiet
+//   pending           deadline has not passed yet       -> quiet
+//   out_of_schedule   this writer's cron cannot reach   -> named, no alarm
+//                     a card on this weekday at all     (see D-021)
+//
+// -----------------------------------------------------------------------------
+// OUT OF SCOPE IS NOT THE SAME AS FINE
+// -----------------------------------------------------------------------------
+// `predictions` is written by a Friday-only cron, so a card on another weekday
+// is never reached. D-021 accepted that gap rather than fixing it, because
+// nothing public reads that table — and accepting it MADE this status
+// mandatory. Without it every midweek card would read `dark` forever, with
+// nothing anybody could do, and an alarm nobody can act on is one people learn
+// to skip. That cost would land on the Saturday cards, which are 97.7% of the
+// schedule and the whole reason this file exists.
+//
+// So it is narrowed, never silenced: an out-of-scope check is still computed,
+// still printed with its own tag, still in the JSON, and gets its own heading
+// in the step summary rather than one row in a table. The argument for not
+// alarming is that the gap stays visible, so the visibility is the deal.
+//
+// `pre_fight_snapshots` declares NO weekday scope, because snapshot.yml is
+// daily and is the writer the hard rule is about. Narrowing one writer must
+// never quiet the other; tests/dead-man.test.js asserts it.
 //
 // -----------------------------------------------------------------------------
 // DEADLINES ARE ABSOLUTE INSTANTS, NOT "DID THE CRON FIRE"
@@ -105,10 +127,23 @@ const WRITERS = [
     writer: 'cfl-snapshotter (Railway cron, Fridays 18:00 UTC)',
     // Fri 18:00 UTC + 3h grace = Fri 21:00 = 3h before Saturday 00:00 UTC.
     deadlineHoursBeforeDate: 3,
-    // A card not on a Saturday is never reached by a Friday-only cron. That is
-    // a real gap and this says so rather than hiding it, but it is a different
-    // sentence from "the cron is broken".
-    note: 'A card that is not on a Saturday is outside this cron entirely.',
+    // SCOPE, and this is the point of the field. The cron is `0 18 * * 5` —
+    // Friday only — so no wake can ever reach a card on another weekday, and a
+    // card the writer cannot reach is not a writer that failed. Without this
+    // the check would report every midweek card `dark`, forever, with nothing
+    // anybody could do about it: an alarm nobody can act on is an alarm people
+    // learn to skip, which costs the Saturday cards too.
+    //
+    // Deliberately narrow rather than clever. It does not model "was this card
+    // the next upcoming event at the last Friday wake", which is the exact
+    // mechanism; one known consequence is a Friday card immediately followed by
+    // a Saturday card, where the Friday wake targets the nearer one. That pair
+    // has never occurred in the data and modelling it would trade a real risk
+    // of suppressing a Saturday alarm for a hypothetical one.
+    //
+    // 6 = Saturday, as getUTCDay() counts.
+    reachableWeekdays: [6],
+    note: 'A card on any other weekday is outside this cron entirely — see D-021.',
   },
   {
     key: 'pre_fight_snapshots',
@@ -119,6 +154,10 @@ const WRITERS = [
     // date boundary itself, which both gives it 50 minutes of slack and leaves
     // the whole of D for a person to fix it before a US bell.
     deadlineHoursBeforeDate: 0,
+    // No scope: snapshot.yml is a daily schedule and reaches every card. This
+    // is the writer the hard rule in CLAUDE.md is actually about, and it is
+    // why narrowing the one above costs the pre-fight record nothing.
+    reachableWeekdays: null,
     note: 'Append-only by trigger. A card that goes off dark cannot be filled in afterwards.',
   },
 ];
@@ -126,6 +165,8 @@ const WRITERS = [
 // Below this share of the card, rows present means a run that died part-way
 // rather than fights with no usable data.
 const THIN_RATIO = 0.5;
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // ---------------------------------------------------------------------------
 // Pure core. No network, no clock of its own — `now` is always passed in, the
@@ -165,8 +206,16 @@ function assess(events, now, writers = WRITERS) {
       const due = Date.parse(deadline) <= nowMs;
       const thin = Math.max(1, Math.floor(ev.fights * THIN_RATIO));
 
+      // Reachability is asked FIRST, because a writer that cannot run for this
+      // card has no deadline worth checking. Named and printed, never silent:
+      // the gap stays visible in the log and the summary, it just does not
+      // pull the alarm.
+      const weekday = new Date(Date.parse(`${ev.event_date}T00:00:00Z`)).getUTCDay();
+      const reachable = !w.reachableWeekdays || w.reachableWeekdays.includes(weekday);
+
       let status;
-      if (!due) status = 'pending';
+      if (!reachable) status = 'out_of_schedule';
+      else if (!due) status = 'pending';
       else if (have === 0) status = 'dark';
       else if (have < thin) status = 'thin';
       else if (have < ev.fights) status = 'partial';
@@ -183,6 +232,7 @@ function assess(events, now, writers = WRITERS) {
         fights: ev.fights,
         rows: have,
         deadline,
+        weekday: DAY_NAMES[weekday],
         status,
         breach: status === 'dark' || status === 'thin',
       });
@@ -207,6 +257,11 @@ function describe(c) {
            + `${c.rows} rows for ${c.fights} fights, under half the card, `
            + `deadline ${d}. That shape means a run that stopped part-way. `
            + `Written by ${c.writtenBy}.`;
+    case 'out_of_schedule':
+      return `${c.label}: ${c.event_name} (${c.event_date}) is a ${c.weekday}, and `
+           + `${c.writtenBy} cannot reach it on any wake. Known and accepted gap `
+           + `(D-021), not a failure — nothing is wrong and there is nothing to fix. `
+           + `${c.rows} rows.`;
     case 'partial':
       return `${c.label}: ${c.rows}/${c.fights} for ${c.event_name} `
            + `(${c.event_date}) — short of the full card, within normal range `
@@ -334,7 +389,10 @@ async function main() {
   const breaches = checks.filter(c => c.breach);
 
   for (const c of checks) {
-    const tag = c.breach ? 'BREACH ' : c.status === 'pending' ? '  ...  ' : '   ok  ';
+    const tag = c.breach ? 'BREACH '
+      : c.status === 'pending' ? '  ...  '
+      : c.status === 'out_of_schedule' ? '  n/a  '
+      : '   ok  ';
     console.log(`${tag} ${describe(c)}`);
   }
 
@@ -353,12 +411,22 @@ async function main() {
       lines.push(`### ${breaches.length} breach${breaches.length === 1 ? '' : 'es'}`, '');
       for (const c of breaches) lines.push(`- **${c.status.toUpperCase()}** — ${describe(c)}`);
     } else {
-      lines.push('### No breach', '', 'Every card past its deadline has a record.');
+      lines.push('### No breach', '', 'Every card a writer can reach, and that is past its '
+               + 'deadline, has a record.');
     }
-    lines.push('', '| card | date | writer | rows | fights | deadline | status |',
-                   '|---|---|---|---|---|---|---|');
+    // Out-of-scope cards get their own heading rather than one row in a table.
+    // The whole justification for not alarming on them is that the gap stays
+    // VISIBLE; a status buried in a twelve-row table is not visible.
+    const oos = checks.filter(c => c.status === 'out_of_schedule');
+    if (oos.length) {
+      lines.push('', `### ${oos.length} check${oos.length === 1 ? '' : 's'} out of scope`, '',
+        'Not a failure, and not silence either — a writer that cannot run for a card.', '');
+      for (const c of oos) lines.push(`- ${describe(c)}`);
+    }
+    lines.push('', '| card | date | day | writer | rows | fights | deadline | status |',
+                   '|---|---|---|---|---|---|---|---|');
     for (const c of checks) {
-      lines.push(`| ${c.event_name} | ${c.event_date} | ${c.writer} | ${c.rows} | `
+      lines.push(`| ${c.event_name} | ${c.event_date} | ${c.weekday} | ${c.writer} | ${c.rows} | `
                + `${c.fights} | ${c.deadline} | ${c.status} |`);
     }
     fs.appendFileSync(summary, lines.join('\n') + '\n');
