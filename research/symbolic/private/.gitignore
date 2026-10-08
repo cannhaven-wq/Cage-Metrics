@@ -1,0 +1,3 @@
+# Everything in private/ stays off GitHub: raw exports, trained models, logs, report.
+*
+!.gitignore
