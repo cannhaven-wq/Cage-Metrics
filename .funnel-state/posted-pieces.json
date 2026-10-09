@@ -38,5 +38,6 @@
   "4551::coinflip-lead",
   "4551::cardio-flagged",
   "4713::sensor-main",
-  "4713::coinflip-lead"
+  "4713::coinflip-lead",
+  "4713::whatif-finisher"
 ]
