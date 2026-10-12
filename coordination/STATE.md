@@ -109,16 +109,25 @@ model has been built or trained under it yet. Computer vision is deferred.
   path do. The bad live record is the engine's normal shortfall to the market
   on a run of hard cards: the market itself scored 0.645, against its usual
   0.600.
-- **One real defect: live forecasts cannot be re-derived exactly.** Re-running
-  them moves fights 4.5 points on average and flips 1 in 10. That is **T-083**,
-  and it must be fixed before any prospective lock is trusted.
+- **That defect is fixed (T-083, engine_v3).** Re-running the live forecasts
+  used to move a fight 4.5 points on average and flip 1 in 10. Dependencies are
+  now pinned exactly, weight class has a fixed scale, and every publish saves a
+  hashed bundle that re-derives every number. Two dry runs on the real data
+  gave identical forecasts for all 22 fights and an identical model file.
+  Bundles are kept only 90 days (T-087).
 - **PRED-002, opponent-adjusted ratings against price plus engine, is drafted**
   ([preregistration](../research/experiments/PRED-002/PREREGISTRATION.md)).
-  The pass mark is fixed before anything is trained. Next: review, freeze,
-  then one run on pre-2025 data (T-081).
+  The pass mark is fixed before anything is trained, and it is labelled a
+  filter, not proof of commercial value. Next: an independent auditor reviews
+  the 0.002 / 0.006 thresholds (**T-085**), then the preregistration is frozen
+  and run once on pre-2025 data (T-081).
 - **The forecast lock table is drafted and NOT applied**
-  (`proposed_2026-10-12_win_forecast_locks.sql`). Applying it waits on the
-  owner (**T-084**, L3).
+  (`proposed_2026-10-12_win_forecast_locks.sql`). On review, the database now
+  recomputes the market benchmark itself and refuses any lock whose stored
+  price does not match. Applying it waits on the owner and on an independent
+  check of that calculation (**T-084**, L3).
+- **Found on the way:** UFC 333's main event has never had a sportsbook price
+  for Volkanovski (**T-086**).
 - **Fight simulation and video are on hold.**
 
 ### Monetization sprint — started 2026-09-21

@@ -121,6 +121,8 @@ symmetry exactly; the test is still run.
 
 ### Stage 1 — development years (a filter, not evidence)
 
+- **Runs only after:** the auditor's threshold review is committed (T-085)
+  and this document is frozen with its sha256 in `research/registry.json`.
 - **Data:** fights dated before 2025-01-01 only, read through
   `pred_protocol.dev_only()`, from a DEV export whose sha256 is recorded.
   Experiment code contains no database access (PRED-001 §2 rule 2).
@@ -144,13 +146,22 @@ slots, through `pred_protocol.evaluate()`.
 
 Only if Stage 2 does not REJECT. Both frozen artifacts (B and C) lock a
 forecast for every eligible fight into `win_forecast_locks` before the start,
-against the same-timestamp sportsbook consensus. **Needs the lock table, which
-is not yet applied (T-084, L3).**
+against the same-timestamp sportsbook consensus the database itself computes
+(`win_forecast_benchmark`). **Needs the lock table, which is not yet applied
+(T-084, L3), and reproducible forecasts (T-083): every lock must cite a saved,
+hashed artifact that re-derives its number exactly.**
 
 ## 6. What counts as a meaningful improvement — fixed before training
 
 Log loss, natural log, probabilities clipped to [1e-4, 1−1e-4], intervals by
 resampling whole events (10,000 resamples, seed 20261012), as PRED-001 §5–6.
+
+**These thresholds are a filter, not a measure of commercial value.** Passing
+Stage 1 means "worth a prospective test" and nothing more. Every Stage 1
+number is reported beside the prospective target (0.010), so a pass is never
+read as "worth money". Before Stage 1 runs, an independent auditor reviews
+these numbers ([brief](AUDITOR_BRIEF_THRESHOLDS.md), T-085). Any change goes in
+as a pre-freeze amendment citing that review.
 
 ### Stage 1 passes only if ALL of these hold
 

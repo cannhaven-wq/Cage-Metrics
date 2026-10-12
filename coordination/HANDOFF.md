@@ -47,6 +47,62 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — Review fixes: forecasts re-derivable (T-083), benchmark recomputed by the database (T-084)
+
+**From:** Claude
+**To:** Independent auditor (T-085) → Owner (T-084)
+**Date:** 2026-10-12
+
+The owner's reviewer asked for two corrections before trusting the next
+results, plus an independent look at PRED-002's thresholds.
+
+**T-083 — done, as engine_v3.**
+
+- `cfl_engine/requirements.txt` is pinned exactly, to what the production
+  runner resolves (xgboost 3.2.0, pandas 3.0.6, numpy 2.4.6, scikit-learn
+  1.9.1, scipy 1.17.1). This also closes T-011.
+- Weight class is a fixed scale (`engine.wc_code_of`) instead of
+  `pd.factorize` order. That order depended on an unstable sort: Heavyweight
+  and Lightweight first appear on the same night.
+- Every publish writes a hashed bundle before anything is inserted: model,
+  calibrator, blend, serving features, predictions and input exports.
+  `engine-serve.yml` uploads it. `python cfl_engine/publish_bundle.py DIR`
+  re-derives every number and fails on any difference.
+- **Proof on real data:** two dry runs of the live script, 22 fights,
+  identical forecasts, identical model sha, both bundles 0.0 from their
+  published numbers (run 38302858119).
+- `engine_v3` because a feature's encoding changed (the rule in `version.py`).
+  The published backtest rows stay `engine_v2`.
+
+**T-084 — revised, still not applied.** `win_forecast_benchmark()` defines the
+same-timestamp benchmark once, in SQL: each real sportsbook's latest non-live
+price on both corners from the 36 hours before the lock, proportional de-vig,
+median across books. The insert guard recomputes it at the database's own lock
+instant and refuses any difference in quotes, book count, latest-quote time or
+probability (1e-9). Tests cover a wrong number, a swapped older quote, a
+dropped book, an extra stale or in-play or consensus or prediction-market
+quote, and no eligible book. Read-only against production quotes, the
+calculation gives 0.726 on Blanchfield vs. Jasudavicius (7 books) and refuses
+UFC 333's main event (T-086).
+
+**T-085 — queued for an independent auditor.** The
+[brief](../research/experiments/PRED-002/AUDITOR_BRIEF_THRESHOLDS.md) gives the
+development-years sample (4,174 priced fights, 372 cards) and six questions.
+The most important are whether S1.1's point-estimate floor is right for a
+filter, and whether S1.3 (≥ 0.006 over price) is the gate that actually binds.
+This session wrote PRED-002 and may not judge it.
+
+## Next action
+
+**An auditor session that wrote none of PRED-002** answers the brief in
+`research/experiments/PRED-002/AUDITOR_REVIEW_THRESHOLDS.md` (T-085). Then
+**Claude (T-081)** applies any pre-freeze amendment, freezes, and runs Stage 1
+once. **Owner (T-084):** the lock table waits on an independent check of
+`win_forecast_benchmark` and on your approval. **Claude (T-086)** can take the
+Volkanovski capture bug independently.
+
+---
+
 ## 2026-10-12 — T-082 answered, one experiment drafted, lock table ready for the owner
 
 **From:** Claude
