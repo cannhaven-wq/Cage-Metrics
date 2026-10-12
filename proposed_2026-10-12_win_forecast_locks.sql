@@ -26,13 +26,13 @@
 --        * the lock is strictly before the fight's best known start
 --          (v_fight_start_best), and a fight with no known start is refused;
 --        * the corners named in the lock are the fight's corners right now;
---        * every market quote the benchmark cites exists, belongs to this
---          fight and one of its two corners, comes from a real sportsbook
---          (v_odds_books_sportsbooks: no consensus row, no prediction market),
---          is not in-play, and was captured before the lock and no more than
---          36 hours before it; both corners must be quoted. A benchmark
---          without quotes is refused. The preregistration may set a tighter
---          freshness limit; 36 hours is the floor the database holds.
+--        * the market benchmark is RECOMPUTED by the database at the lock
+--          instant (win_forecast_benchmark) and must match what was stored:
+--          the same quotes, book count, latest-quote time and probability
+--          (to 1e-9). The benchmark is every real sportsbook's latest
+--          non-live price on both corners from the 36 hours before the lock,
+--          proportionally de-vigged, median across books. The caller cannot
+--          pick the books, pick an older quote, or do its own arithmetic.
 --   3. v_win_forecast_graded — the read side: model and market log loss per
 --      settled fight. A lock whose corners no longer match the fight that
 --      happened (a replaced opponent) is VOID, never scored.
@@ -165,7 +165,7 @@ comment on table public.win_forecast_locks is
 comment on column public.win_forecast_locks.actual_lock_at is
   'Database clock at insert (clock_timestamp()). The guard overwrites any client-supplied value, so a lock cannot be backdated.';
 comment on column public.win_forecast_locks.market_quote_ids is
-  'fight_odds.id of every quote behind p_market_a. The guard proves each one exists, belongs to this fight and corner pair, and predates the lock.';
+  'fight_odds.id of every quote behind p_market_a, sorted. The guard recomputes the benchmark from fight_odds at the lock instant and requires these to be exactly its quotes.';
 
 
 -- ----------------------------------------------------------------------------
@@ -211,6 +211,71 @@ create trigger win_forecast_locks_block_truncate
 
 
 -- ----------------------------------------------------------------------------
+-- The benchmark, defined once, in the database. PRED-001 §4: the market
+-- probability AT THE SAME TIMESTAMP as the forecast, proportional de-vig.
+--
+-- Eligible quote: on this fight and one of its two corners; from a real
+-- sportsbook (v_odds_books_sportsbooks — no consensus row, no prediction
+-- market); not in-play; captured strictly before `at` and no more than 36
+-- hours before it; a valid American price (|odds| >= 100).
+-- Per book: its LATEST eligible quote on each corner. A book counts only if it
+-- quotes both corners. Its vig-free P(A) = imp(A) / (imp(A) + imp(B)), with
+-- implied probability from the American price. The benchmark is the MEDIAN of
+-- the per-book values (the mean of the middle two when the count is even).
+--
+-- The lock script calls this to fill the lock row; the insert guard calls it
+-- again at the database's own lock instant and refuses any disagreement. So the
+-- stored benchmark is never the caller's arithmetic. If a new quote lands
+-- between the two calls, the insert is refused and the script retries.
+-- ----------------------------------------------------------------------------
+create or replace function public.win_forecast_benchmark(
+  p_fight_id bigint, p_fighter_a_id bigint, p_fighter_b_id bigint, p_at timestamptz)
+returns table (quote_ids bigint[], book_count integer,
+               latest_quote_at timestamptz, p_market_a numeric)
+language sql
+stable
+set search_path = public, pg_temp
+as $$
+  with eligible as (
+    select o.id, o.book_id, o.fighter_id, o.captured_at,
+           case when o.american_odds > 0 then 100.0 / (o.american_odds + 100.0)
+                else (-o.american_odds)::numeric / ((-o.american_odds) + 100.0) end as imp
+      from public.fight_odds o
+     where o.fight_id = p_fight_id
+       and o.fighter_id in (p_fighter_a_id, p_fighter_b_id)
+       and o.captured_at <  p_at
+       and o.captured_at >= p_at - interval '36 hours'
+       and not coalesce(o.is_live, false)
+       and o.american_odds is not null
+       and abs(o.american_odds) >= 100
+       and exists (select 1 from public.v_odds_books_sportsbooks b where b.id = o.book_id)
+  ),
+  latest as (
+    select distinct on (book_id, fighter_id) *
+      from eligible
+     order by book_id, fighter_id, captured_at desc, id desc
+  ),
+  per_book as (
+    select a.book_id,
+           a.imp / (a.imp + b.imp) as p_a,
+           a.id as id_a, b.id as id_b,
+           greatest(a.captured_at, b.captured_at) as latest_at
+      from latest a
+      join latest b on b.book_id = a.book_id and b.fighter_id = p_fighter_b_id
+     where a.fighter_id = p_fighter_a_id
+  )
+  select (select array_agg(x order by x)
+            from (select id_a as x from per_book union all select id_b from per_book) q),
+         count(*)::integer,
+         max(latest_at),
+         (percentile_cont(0.5) within group (order by p_a::double precision))::numeric
+    from per_book;
+$$;
+
+comment on function public.win_forecast_benchmark(bigint, bigint, bigint, timestamptz) is
+  'PRED-001 same-timestamp benchmark: median across sportsbooks of each book''s latest pre-`at` proportional vig-free P(A), quotes no older than 36h, no in-play, no consensus or prediction-market rows. The lock guard recomputes it and refuses any disagreement.';
+
+-- ----------------------------------------------------------------------------
 -- The insert guard. SECURITY INVOKER (the default) on purpose: it reads only
 -- tables the inserting role can already read, and a definer function would
 -- hide which role did the insert (alerts_migration lesson).
@@ -224,9 +289,7 @@ declare
   v_frozen    timestamptz;
   v_fight     record;
   v_start     record;
-  v_quotes    integer;
-  v_bad       integer;
-  v_latest    timestamptz;
+  v_bench     record;
 begin
   -- 1. the lock instant is the database's, not the caller's
   new.actual_lock_at := clock_timestamp();
@@ -281,36 +344,33 @@ begin
   new.start_at_at_lock    := v_start.start_at;
   new.start_basis_at_lock := v_start.start_basis;
 
-  -- 6. the benchmark names real, pre-lock quotes on this fight's two corners,
-  --    and the stored latest-quote instant is the true latest
-  select count(*),
-         count(*) filter (where o.fight_id <> new.fight_id
-                             or o.fighter_id not in (new.fighter_a_id, new.fighter_b_id)
-                             or o.captured_at >= new.actual_lock_at
-                             or o.captured_at <  new.actual_lock_at - interval '36 hours'
-                             or coalesce(o.is_live, false)
-                             or not exists (select 1 from public.v_odds_books_sportsbooks b
-                                             where b.id = o.book_id)),
-         max(o.captured_at)
-    into v_quotes, v_bad, v_latest
-    from public.fight_odds o
-   where o.id = any (new.market_quote_ids);
-  if v_quotes <> cardinality(new.market_quote_ids) then
-    raise exception 'lock rejected: % of % cited market quotes do not exist',
-      cardinality(new.market_quote_ids) - v_quotes, cardinality(new.market_quote_ids);
+  -- 6. the benchmark is RECOMPUTED here from fight_odds, at the lock instant,
+  --    and must equal what the caller stored: the same quotes, the same book
+  --    count, the same latest-quote instant and the same probability. The
+  --    caller chooses nothing about the benchmark; it can only agree with it.
+  select b.quote_ids, b.book_count, b.latest_quote_at, b.p_market_a
+    into v_bench
+    from public.win_forecast_benchmark(new.fight_id, new.fighter_a_id,
+                                       new.fighter_b_id, new.actual_lock_at) b;
+  if coalesce(v_bench.book_count, 0) = 0 then
+    raise exception 'lock rejected: no sportsbook priced both corners of fight % in the 36 hours before the lock', new.fight_id;
   end if;
-  if v_bad > 0 then
-    raise exception 'lock rejected: % cited quotes are for another fight or fighter, captured at/after the lock or more than 36 hours before it, in-play, or not from a sportsbook', v_bad;
+  if (select array_agg(x order by x) from unnest(new.market_quote_ids) x)
+       is distinct from v_bench.quote_ids then
+    raise exception 'lock rejected: market_quote_ids % are not the benchmark quotes % (each eligible book''s latest pre-lock price on each corner)',
+      new.market_quote_ids, v_bench.quote_ids;
   end if;
-  if v_latest is distinct from new.market_latest_quote_at then
-    raise exception 'lock rejected: market_latest_quote_at % is not the latest cited quote (%)',
-      new.market_latest_quote_at, v_latest;
+  if new.market_book_count is distinct from v_bench.book_count then
+    raise exception 'lock rejected: market_book_count % is not the % books the benchmark uses',
+      new.market_book_count, v_bench.book_count;
   end if;
-  if not exists (select 1 from public.fight_odds o
-                  where o.id = any (new.market_quote_ids) and o.fighter_id = new.fighter_a_id)
-     or not exists (select 1 from public.fight_odds o
-                  where o.id = any (new.market_quote_ids) and o.fighter_id = new.fighter_b_id) then
-    raise exception 'lock rejected: the benchmark must cite quotes on both corners';
+  if new.market_latest_quote_at is distinct from v_bench.latest_quote_at then
+    raise exception 'lock rejected: market_latest_quote_at % is not the latest benchmark quote (%)',
+      new.market_latest_quote_at, v_bench.latest_quote_at;
+  end if;
+  if abs(new.p_market_a - v_bench.p_market_a) > 1e-9 then
+    raise exception 'lock rejected: p_market_a % does not match the probability recomputed from the cited quotes (%)',
+      new.p_market_a, v_bench.p_market_a;
   end if;
 
   return new;
@@ -380,3 +440,5 @@ grant select         on public.v_win_forecast_graded    to service_role;
 
 revoke all on function public.win_forecast_no_rewrite()   from public, anon, authenticated;
 revoke all on function public.win_forecast_locks_guard()  from public, anon, authenticated;
+revoke all on function public.win_forecast_benchmark(bigint, bigint, bigint, timestamptz) from public, anon, authenticated;
+grant execute on function public.win_forecast_benchmark(bigint, bigint, bigint, timestamptz) to service_role;

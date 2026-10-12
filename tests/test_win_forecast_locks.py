@@ -88,11 +88,17 @@ REGISTER = (f"insert into public.win_forecast_experiments (experiment_id, artifa
             f"'same_timestamp_consensus');")
 
 
+def _bench(field: str, fight="100", a="11", b="12") -> str:
+    return f"(select {field} from public.win_forecast_benchmark({fight}, {a}, {b}, clock_timestamp()))"
+
+
 def lock_sql(**over) -> str:
     v = dict(experiment_id="'PRED-002'", artifact_sha256=f"'{ART}'", fight_id="100",
              event_id="1", fighter_a_id="11", fighter_b_id="12", p_a="0.62",
-             p_market_a="0.58", market_quote_ids="array[1,2,3,4]::bigint[]",
-             market_book_count="2", market_latest_quote_at="(select max(captured_at) from public.fight_odds where id in (1,2,3,4))",
+             # the benchmark fields come from the database's own function, as the
+             # lock script will take them; each test overrides one to break it
+             p_market_a=_bench("p_market_a"), market_quote_ids=_bench("quote_ids"),
+             market_book_count=_bench("book_count"), market_latest_quote_at=_bench("latest_quote_at"),
              features="'{}'::jsonb", feature_sha256=f"'{FEAT}'",
              training_cutoff="now() - interval '2 days'", generated_at="now() - interval '5 minutes'")
     v.update(over)
@@ -177,38 +183,72 @@ class TestWinForecastLocks(PostgresCase):
         self.rejected(lock_sql(event_id="2"), "belongs to event")
 
     # ------------------------------------------------------------- benchmark provenance
-    def test_benchmark_quotes_must_be_real_fresh_sportsbook_pre_lock_quotes(self):
+    def test_the_benchmark_is_each_books_latest_eligible_price_median_of_books(self):
+        # book 1 (DraftKings): -150 / +130, book 2 (FanDuel): -145 / +125, both
+        # inside 36 h. Excluded: another fight (5), a consensus row (6), a
+        # prediction market (7), a 3-day-old price (8), in-play (9), the future (10).
+        row = self.ok("select quote_ids, book_count, round(p_market_a, 6) "
+                      "from public.win_forecast_benchmark(100, 11, 12, now())")
+        pa1 = (150 / 250) / (150 / 250 + 100 / 230)
+        pa2 = (145 / 245) / (145 / 245 + 100 / 225)
+        self.assertEqual(row, f"{{1,2,3,4}}|2|{round((pa1 + pa2) / 2, 6)}")
+
+    def test_a_stored_probability_not_computed_from_the_quotes_is_refused(self):
+        self.rejected(lock_sql(p_market_a="0.58"), "does not match the probability recomputed")
+        # off by more than rounding error, in the caller's favour or not
+        self.rejected(lock_sql(p_market_a=_bench("p_market_a") + " + 0.00001"), "does not match")
+
+    def test_the_caller_cannot_choose_the_quotes(self):
         cases = {
-            "array[1,2,999]::bigint[]": "do not exist",
-            "array[1,2,5]::bigint[]": "cited quotes",      # another fight
-            "array[2,6]::bigint[]": "cited quotes",        # consensus row
-            "array[2,7]::bigint[]": "cited quotes",        # prediction market
-            "array[2,8]::bigint[]": "cited quotes",        # 3 days old
-            "array[2,9]::bigint[]": "cited quotes",        # in-play
-            "array[2,10]::bigint[]": "cited quotes",       # captured after the lock
-            "array[1,3]::bigint[]": "both corners",        # one corner only
+            "array[1,2,3,4,999]::bigint[]": "not the benchmark quotes",   # an id that does not exist
+            "array[1,2,3,4,5]::bigint[]": "not the benchmark quotes",     # another fight
+            "array[1,2,3,4,6]::bigint[]": "not the benchmark quotes",     # consensus row
+            "array[1,2,3,4,7]::bigint[]": "not the benchmark quotes",     # prediction market
+            "array[2,3,4,8]::bigint[]": "not the benchmark quotes",       # a 3-day-old price swapped in
+            "array[2,3,4,9]::bigint[]": "not the benchmark quotes",       # in-play
+            "array[2,3,4,10]::bigint[]": "not the benchmark quotes",      # captured after the lock
+            "array[1,2]::bigint[]": "not the benchmark quotes",           # a book dropped
         }
         for ids, needle in cases.items():
             with self.subTest(ids=ids):
-                self.rejected(lock_sql(market_quote_ids=ids,
-                                       market_latest_quote_at=f"(select max(captured_at) from public.fight_odds where id = any({ids}))"),
-                              needle)
+                self.rejected(lock_sql(market_quote_ids=ids), needle)
 
-    def test_the_latest_quote_instant_must_be_true(self):
+    def test_an_older_quote_cannot_stand_in_for_the_latest(self):
+        # DraftKings moves: a newer price on corner A now exists. Citing the
+        # older, more favourable one is cherry-picking and is refused.
+        self.ok("insert into public.fight_odds values "
+                "(13, 100, 11, 1, -200, 0.67, now() - interval '10 minutes', false)")
+        self.rejected(lock_sql(market_quote_ids="array[1,2,3,4]::bigint[]"), "not the benchmark quotes")
+        self.ok(lock_sql())
+        self.assertEqual(self.ok("select market_quote_ids from public.win_forecast_locks"), "{2,3,4,13}")
+
+    def test_book_count_and_latest_instant_must_be_true(self):
+        self.rejected(lock_sql(market_book_count="1"), "market_book_count")
         self.rejected(lock_sql(market_latest_quote_at="now() - interval '2 hours'"), "not the latest")
+
+    def test_no_eligible_book_means_no_lock(self):
+        self.ok("update public.fight_odds set captured_at = now() - interval '2 days' where fight_id = 100")
+        self.rejected(lock_sql(p_market_a="0.5", market_quote_ids="array[1,2]::bigint[]",
+                               market_book_count="1", market_latest_quote_at="now()"),
+                      "no sportsbook priced both corners")
 
     def test_probabilities_must_be_strictly_inside_zero_one(self):
         self.rejected(lock_sql(p_a="1"), "win_forecast_locks_p_chk")
-        self.rejected(lock_sql(p_market_a="0"), "win_forecast_locks_p_chk")
+        # a market probability outside (0, 1) never reaches the CHECK: the guard's
+        # recomputation refuses it first, which is the stricter of the two
+        self.rejected(lock_sql(p_market_a="0"), "does not match")
 
     # ------------------------------------------------------------- grading
     def test_grading_scores_settled_fights_and_voids_a_changed_opponent(self):
         self.ok(lock_sql())
-        # fight 100 is won by corner A; the model said 0.62, the market 0.58
+        # fight 100 is won by corner A; the model said 0.62, the market ~0.5755
         self.ok("update public.fights set winner_id = 11, method = 'Decision' where id = 100")
         row = self.ok("select grade_status, y_a, round(ll_model, 4), round(ll_market, 4) "
                       "from public.v_win_forecast_graded where fight_id = 100")
-        self.assertEqual(row, "scored|1|0.4780|0.5447")
+        import math
+        pa1 = (150 / 250) / (150 / 250 + 100 / 230)
+        pa2 = (145 / 245) / (145 / 245 + 100 / 225)
+        self.assertEqual(row, f"scored|1|0.4780|{-math.log((pa1 + pa2) / 2):.4f}")
         # the opponent is replaced after the lock: the forecast is void, not scored
         self.ok("update public.fights set fighter_b_id = 99 where id = 100")
         row = self.ok("select grade_status, ll_model is null from public.v_win_forecast_graded where fight_id = 100")
