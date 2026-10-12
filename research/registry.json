@@ -1,370 +1,455 @@
 {
-  "_schema": "CFL research registry. Machine-readable mirror of CFL_RESEARCH_STATE.md. null means not known or not applicable - never a placeholder for a value someone should have filled in with a guess.",
-  "generated": "2026-09-16",
-  "experiments": [
+ "_schema": "CFL research registry. Machine-readable mirror of CFL_RESEARCH_STATE.md. null means not known or not applicable - never a placeholder for a value someone should have filled in with a guess.",
+ "generated": "2026-09-16",
+ "experiments": [
+  {
+   "experiment_id": "DUR-001",
+   "status": "collecting",
+   "hypothesis": "Conditional on the vig-free closing totals market, PROP-0001 carries additional information about whether a 3-round UFC fight goes over a posted round total. H0: gamma = 0 and G_LL = 0. H1: G_LL > 0 out of sample.",
+   "economic_rationale": "Round totals are a thinner market than the moneyline, quoted by fewer books and moved less often. If a duration model holds information the totals price has not absorbed, that is where it would show.",
+   "population": "UFC fights scheduled for 3 rounds, not flagged main event or title fight at lock time, settling with a finish or decision. Five-round fights excluded permanently.",
+   "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
+   "challenger_model": "PROP-0001@v1",
+   "market_benchmark": "median of per-book vig-free p_over across eligible books at the identical threshold, last non-live quote strictly before v_fight_start_best.start_at (v_prop_odds_closing_consensus)",
+   "prediction_time_rule": "A lock must exist in prop_model_locks written before the fight's best-known start, enforced by an insert trigger. training_cutoff must precede actual_lock_at. The lock's actual_lock_at must not be after the latest closing quote.",
+   "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
+   "minimum_useful_effect": 0.003,
+   "observation_unit": "one (fight, threshold) row",
+   "cluster_unit": "UFC event",
+   "eligibility_rules": [
+    "UFC event, scheduled 3 rounds, not main event or title fight at lock time, actual scheduled rounds 3 once the result is in",
+    "a PROP-0001@v1 lock exists, written before the fight's best-known start",
+    "fight settles with a finish or decision; no-contests, overturned results and 'could not continue' are void",
+    "not a dead or duplicate booking",
+    "sportsbook threshold exactly equals a locked threshold (0.5, 1.5, 2.5); no interpolation or nearest-line mapping",
+    "at least one non-synthetic, non-live quote captured strictly before the fight's start",
+    "start basis is bell_at or provider_commence; event_date_fallback rows are diagnostics only",
+    "the lock's actual_lock_at is not after the latest closing quote"
+   ],
+   "preregistration_path": "cfl_engine/dur001/PREREGISTRATION.md",
+   "preregistration_sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
+   "model_artifact_sha256": null,
+   "data_artifact_sha256": "9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6",
+   "freeze_timestamp": "2026-09-15T00:00:00Z",
+   "formal_analysis_points": [
+    "no performance number is computed for a card until every eligible fight on it has settled",
+    "the first card (UFC 331) produces a descriptive table only; no decision is taken from one card",
+    "decision rules are evaluated only on the full accumulated sample"
+   ],
+   "kill_rule": null,
+   "allowed_sensitivities": [
+    "de-vig sensitivity: proportional, reported beside the primary power de-vig (amendment 1.1)",
+    "de-vig sensitivity: Shin (1993), reported beside the primary (amendment 1.1)",
+    "moved-provider-start split on the historical flag, zero credit cost (amendment 1.2)",
+    "secondary opener test (walk-forward OLS predicting logit(P_close) from logit(P_open) with and without logit(P_CFL)); not a decision input",
+    "raw comparison LL_market - LL_CFL, informational only",
+    "Brier, calibration intercept and slope of the challenger"
+   ],
+   "forbidden_changes": [
+    "retraining, re-featuring, re-calibrating or re-mapping PROP-0001 while the sample accumulates",
+    "selecting sportsbooks",
+    "selecting thresholds after results are visible",
+    "interpolating, extrapolating or nearest-line mapping a threshold",
+    "deriving 3.5 or 4.5 probabilities for five-round fights",
+    "writing any historical backfill into prop_model_locks",
+    "optimising ROI thresholds; CLV and ROI are reported as null",
+    "introducing any de-vig method beyond power (primary), proportional and Shin (sensitivities) - amendment 1.1",
+    "promoting a de-vig sensitivity to primary after any result is visible - amendment 1.1",
+    "excluding a fight from the historical cohort on a capture property; moved starts are flagged and retained - amendment 1.2",
+    "retaining the rejected self-consistent-walkback timing rule as a sensitivity - amendment 1.2"
+   ],
+   "results_artifact": null,
+   "verdict": null,
+   "verdict_timestamp": null,
+   "frozen_files": [
     {
-      "experiment_id": "DUR-001",
-      "status": "collecting",
-      "hypothesis": "Conditional on the vig-free closing totals market, PROP-0001 carries additional information about whether a 3-round UFC fight goes over a posted round total. H0: gamma = 0 and G_LL = 0. H1: G_LL > 0 out of sample.",
-      "economic_rationale": "Round totals are a thinner market than the moneyline, quoted by fewer books and moved less often. If a duration model holds information the totals price has not absorbed, that is where it would show.",
-      "population": "UFC fights scheduled for 3 rounds, not flagged main event or title fight at lock time, settling with a finish or decision. Five-round fights excluded permanently.",
-      "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
-      "challenger_model": "PROP-0001@v1",
-      "market_benchmark": "median of per-book vig-free p_over across eligible books at the identical threshold, last non-live quote strictly before v_fight_start_best.start_at (v_prop_odds_closing_consensus)",
-      "prediction_time_rule": "A lock must exist in prop_model_locks written before the fight's best-known start, enforced by an insert trigger. training_cutoff must precede actual_lock_at. The lock's actual_lock_at must not be after the latest closing quote.",
-      "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
-      "minimum_useful_effect": 0.003,
-      "observation_unit": "one (fight, threshold) row",
-      "cluster_unit": "UFC event",
-      "eligibility_rules": [
-        "UFC event, scheduled 3 rounds, not main event or title fight at lock time, actual scheduled rounds 3 once the result is in",
-        "a PROP-0001@v1 lock exists, written before the fight's best-known start",
-        "fight settles with a finish or decision; no-contests, overturned results and 'could not continue' are void",
-        "not a dead or duplicate booking",
-        "sportsbook threshold exactly equals a locked threshold (0.5, 1.5, 2.5); no interpolation or nearest-line mapping",
-        "at least one non-synthetic, non-live quote captured strictly before the fight's start",
-        "start basis is bell_at or provider_commence; event_date_fallback rows are diagnostics only",
-        "the lock's actual_lock_at is not after the latest closing quote"
-      ],
-      "preregistration_path": "cfl_engine/dur001/PREREGISTRATION.md",
-      "preregistration_sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
-      "model_artifact_sha256": null,
-      "data_artifact_sha256": "9baabbca8bc3b4bb426cb56ee355d60fddf74385fac4823901f6cfe61669cbe6",
-      "freeze_timestamp": "2026-09-15T00:00:00Z",
-      "formal_analysis_points": [
-        "no performance number is computed for a card until every eligible fight on it has settled",
-        "the first card (UFC 331) produces a descriptive table only; no decision is taken from one card",
-        "decision rules are evaluated only on the full accumulated sample"
-      ],
-      "kill_rule": null,
-      "allowed_sensitivities": [
-        "de-vig sensitivity: proportional, reported beside the primary power de-vig (amendment 1.1)",
-        "de-vig sensitivity: Shin (1993), reported beside the primary (amendment 1.1)",
-        "moved-provider-start split on the historical flag, zero credit cost (amendment 1.2)",
-        "secondary opener test (walk-forward OLS predicting logit(P_close) from logit(P_open) with and without logit(P_CFL)); not a decision input",
-        "raw comparison LL_market - LL_CFL, informational only",
-        "Brier, calibration intercept and slope of the challenger"
-      ],
-      "forbidden_changes": [
-        "retraining, re-featuring, re-calibrating or re-mapping PROP-0001 while the sample accumulates",
-        "selecting sportsbooks",
-        "selecting thresholds after results are visible",
-        "interpolating, extrapolating or nearest-line mapping a threshold",
-        "deriving 3.5 or 4.5 probabilities for five-round fights",
-        "writing any historical backfill into prop_model_locks",
-        "optimising ROI thresholds; CLV and ROI are reported as null",
-        "introducing any de-vig method beyond power (primary), proportional and Shin (sensitivities) - amendment 1.1",
-        "promoting a de-vig sensitivity to primary after any result is visible - amendment 1.1",
-        "excluding a fight from the historical cohort on a capture property; moved starts are flagged and retained - amendment 1.2",
-        "retaining the rejected self-consistent-walkback timing rule as a sensitivity - amendment 1.2"
-      ],
-      "results_artifact": null,
-      "verdict": null,
-      "verdict_timestamp": null,
-      "frozen_files": [
-        {
-          "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
-          "frozen_at_commit": "1bc3fdd",
-          "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
-          "amended": true
-        },
-        {
-          "path": "cfl_engine/dur001/dur001_analysis.py",
-          "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
-          "frozen_at_commit": "788386e"
-        },
-        {
-          "path": "dur001_migration.sql",
-          "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/dur001/lock_prop0001.py",
-          "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/features/build_features.py",
-          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/models/duration.py",
-          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
-          "frozen_at_commit": "90571ff"
-        },
-        {
-          "path": "cfl_engine/harness/walkforward_report.json",
-          "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
-          "frozen_at_commit": "90571ff"
-        }
-      ],
-      "preregistration_amendments": [
-        {
-          "number": 1,
-          "date": "2026-09-16",
-          "approved_by": "Reed Cannon",
-          "title": "De-vig method (item h) and historical timing rule (item i)",
-          "amends_sections": [
-            "6",
-            "13"
-          ],
-          "sha256_before": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
-          "sha256_after": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
-          "motivated_by_observed_results": false
-        },
-        {
-          "number": 2,
-          "date": "2026-09-16",
-          "approved_by": "Reed Cannon",
-          "title": "De-vig bisection direction (mathematical correction)",
-          "amends_sections": [
-            "Amendment 1.1"
-          ],
-          "sha256_before": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
-          "sha256_after": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
-          "motivated_by_observed_results": false,
-          "severity": "documentation only - no output changes, now or retrospectively",
-          "note": "Amendment 1.1 said the sum is strictly DECREASING in k. For the formula it specifies, q^(1/k), the sum is strictly INCREASING. The two conventions are exact reparametrisations so fair probabilities are bit-identical; nothing is recomputed and no prior result is reinterpreted. Found while implementing, not by looking at a figure."
-        }
-      ],
-      "held_amendment_clauses": {
-        "status": "HELD - not approved en bloc; each requires an individual vote on its actual clause text",
-        "in_force": [
-          "h (power de-vig)",
-          "i (Candidate 1 timing rule)"
-        ],
-        "held": [
-          "a",
-          "b",
-          "c",
-          "d",
-          "e",
-          "f",
-          "g",
-          "j",
-          "k"
-        ],
-        "note": "The calibration blocker is closed, which does not make the remaining clauses automatically sound. Any clause changing data eligibility, scoring, model behaviour or claim interpretation gets an individual vote; pure governance/monitoring clauses are lower risk."
-      },
-      "first_collection": {
-        "status": "collected",
-        "first_lock_at": "2026-09-15T01:50:37.299956+00:00",
-        "rows_written": 48,
-        "model_version": "PROP-0001@v1",
-        "code_version": "322a5b09e739-dirty",
-        "provenance": "code_version is -dirty and the lock script was untracked at the time; see research/provenance/PROVENANCE_REPORT.md. Prediction provenance verified, source-code provenance incomplete."
-      }
+     "path": "cfl_engine/dur001/PREREGISTRATION.md",
+     "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
+     "frozen_at_commit": "1bc3fdd",
+     "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+     "amended": true
     },
     {
-      "experiment_id": "PROP-0001",
-      "status": "frozen",
-      "hypothesis": null,
-      "economic_rationale": null,
-      "population": "UFC fights scheduled for 3 rounds, 2010 onward, clean finish or decision",
-      "market": null,
-      "challenger_model": "PROP-0001@v1",
-      "market_benchmark": null,
-      "prediction_time_rule": "Training data is every completed 3-round UFC fight with event_date strictly before training_cutoff. Fighter histories use only rounds and fights strictly before that cutoff.",
-      "primary_endpoint": null,
-      "minimum_useful_effect": null,
-      "observation_unit": "one (fight, round reached) person-period row",
-      "cluster_unit": "fight",
-      "eligibility_rules": [
-        "scheduled_rounds == 3",
-        "event_date year >= build_features.MIN_YEAR",
-        "outcome classifies as finish or decision (no-contest and unparseable excluded)",
-        "both corners present"
-      ],
-      "preregistration_path": null,
-      "preregistration_sha256": null,
-      "model_artifact_sha256": null,
-      "data_artifact_sha256": null,
-      "freeze_timestamp": "2026-09-15T00:00:00Z",
-      "formal_analysis_points": [
-        "block walk-forward gate from 2018-01-01 in 6-month blocks, reported in cfl_engine/harness/walkforward_report.json"
-      ],
-      "kill_rule": null,
-      "allowed_sensitivities": null,
-      "forbidden_changes": [
-        "any change to features, model form, calibration recipe or threshold mapping without a new model_version and its own preregistration",
-        "editing any file listed in frozen_files in place"
-      ],
-      "results_artifact": "cfl_engine/harness/walkforward_report.json",
-      "verdict": null,
-      "verdict_timestamp": null,
-      "frozen_files": [
-        {
-          "path": "cfl_engine/dur001/PREREGISTRATION.md",
-          "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
-          "frozen_at_commit": "1bc3fdd",
-          "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
-          "amended": true
-        },
-        {
-          "path": "cfl_engine/dur001/dur001_analysis.py",
-          "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
-          "frozen_at_commit": "788386e"
-        },
-        {
-          "path": "dur001_migration.sql",
-          "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/dur001/lock_prop0001.py",
-          "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/features/build_features.py",
-          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
-          "frozen_at_commit": "6be7198"
-        },
-        {
-          "path": "cfl_engine/models/duration.py",
-          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
-          "frozen_at_commit": "90571ff"
-        },
-        {
-          "path": "cfl_engine/harness/walkforward_report.json",
-          "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
-          "frozen_at_commit": "90571ff"
-        }
-      ],
-      "preregistration_amendments": null,
-      "results_artifact_measures": "the RAW hazard model, isotonic step bypassed - NOT the complete PROP-0001 locking pipeline. Established 2026-09-16, see research/provenance/CALIBRATION_FINDING.md and cfl_engine/harness/README.md.",
-      "historical_validation_scope": "Historical walk-forward testing supports the underlying raw hazard model. The calibration layer used in live PROP-0001 forecasts was not validated by that historical artifact."
+     "path": "cfl_engine/dur001/dur001_analysis.py",
+     "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
+     "frozen_at_commit": "788386e"
     },
     {
-      "experiment_id": "DUR-002",
-      "status": "collecting",
-      "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
-      "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
-      "population": "identical to DUR-001",
-      "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
-      "challenger_model": "PROP-0001@v2",
-      "market_benchmark": "inherited from DUR-001 section 6 as amended by Amendment 1.1: power de-vig primary, proportional and Shin as frozen sensitivities",
-      "prediction_time_rule": "identical to DUR-001: lock written before the fight's best-known start, enforced by insert trigger; training_cutoff precedes actual_lock_at",
-      "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
-      "minimum_useful_effect": 0.003,
-      "observation_unit": "one (fight, threshold) row",
-      "cluster_unit": "UFC event",
-      "eligibility_rules": [
-        "inherited unchanged from DUR-001 sections 4 and 5, as amended by Amendment 1"
-      ],
-      "preregistration_path": "cfl_engine/dur002/PREREGISTRATION.md",
-      "preregistration_sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
-      "preregistration_amendments": null,
-      "model_artifact_sha256": null,
-      "data_artifact_sha256": null,
-      "freeze_timestamp": "2026-09-16T01:03:45Z",
-      "formal_analysis_points": [
-        "no number is computed until the preregistration is frozen and eligible fights have settled"
-      ],
-      "kill_rule": "checkpoint at the earlier of 2027-09-16 or 500 valid prospective observations; then HOLD-PASSIVE if not PROMOTE",
-      "allowed_sensitivities": [
-        "de-vig sensitivities inherited from DUR-001 Amendment 1.1: proportional and Shin"
-      ],
-      "forbidden_changes": [
-        "reintroducing isotonic or any other post-hoc calibration to PROP-0001@v2",
-        "citing any historical performance figure for v2 as evidence for or against it",
-        "modifying PROP-0001@v1, its locks, or DUR-001's preregistration",
-        "writing a v2 backfill into prop_model_locks",
-        "comparing v1 and v2 head-to-head without a separate preregistration",
-        "any amendment motivated by an observed result"
-      ],
-      "results_artifact": null,
-      "verdict": null,
-      "verdict_timestamp": null,
-      "frozen_files": [
-        {
-          "path": "cfl_engine/dur002/PREREGISTRATION.md",
-          "sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
-          "frozen_at_commit": "133724676bc55e9429aa3dae5b833358cd557315"
-        },
-        {
-          "path": "cfl_engine/models/duration.py",
-          "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
-          "frozen_at_commit": "90571ff1b6de74079e87946c1e7f6e705f85cf5c"
-        },
-        {
-          "path": "cfl_engine/features/build_features.py",
-          "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
-          "frozen_at_commit": "6be7198ebe4d56b27366268318b757e99e3074c5"
-        },
-        {
-          "path": "cfl_engine/dur002/lock_prop0002.py",
-          "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
-          "frozen_at_commit": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073"
-        }
-      ],
-      "approved_by": "Reed Cannon",
-      "main_commit_at_freeze": "133724676bc55e9429aa3dae5b833358cd557315",
-      "naming": "DUR-002 is the EXPERIMENT; PROP-0001@v2 is the MODEL VERSION it tests. They are not interchangeable and must not be used as synonyms.",
-      "freeze_establishes": [
-        "PROP-0001@v2 uses the raw hazard-derived probability; no isotonic or other post-hoc calibration is fitted, attached or consulted",
-        "the historical raw-vs-calibrated comparison was already observed and cannot be used as evidence for DUR-002",
-        "no parameter, eligibility rule, feature definition, timing rule, scoring rule or threshold may change after freeze without a formally versioned dated amendment",
-        "prospective observations after the freeze are authoritative even where they contradict the historical artifact",
-        "DUR-002 stays separate from PROP-0001@v1 forever: no retroactive regrading, no replacement of v1 probabilities, no migration of v1 rows"
-      ],
-      "lock_script": {
-        "path": "cfl_engine/dur002/lock_prop0002.py",
-        "exists": true,
-        "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
-        "written": "2026-09-16",
-        "frozen": true,
-        "role": "Operational implementation of the already-frozen DUR-002 specification. Contains no modelling decisions. A thin wrapper: PITWorld, fit_prop0001, serve_fight, build_lock_rows, the loaders and the threshold mapping are all imported from the frozen lock_prop0001.py, which is neither modified nor copied. The only behavioural difference is model.iso_ = None, so every prediction is the raw hazard.",
-        "conformance_tests": "cfl_engine/dur002/test_lock_prop0002.py",
-        "guards": [
-          "MODEL_VERSION hard-coded to PROP-0001@v2; assert_v2_only aborts the run on any row carrying another version, checked twice including immediately before the insert",
-          "never updates, replaces or regrades a v1 row; no UPDATE or DELETE is ever attempted",
-          "refuses to write from a dirty working tree (git status --porcelain, so untracked files count) unless --allow-dirty, which records the tree-state hash on every row",
-          "every row records lock_prop0002.py's own sha256 in notes, so the implementation behind any v2 forecast is identifiable from the row alone"
-        ],
-        "note": "FROZEN as of first collection. A substantive change now requires an amendment to the DUR-002 preregistration or a new model version. Section 0.3 of the frozen preregistration says this script does not exist; that is true of the state AT FREEZE and is deliberately not updated.",
-        "frozen_at_first_collection": "2026-09-16T01:29:00.054095+00:00"
-      },
-      "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration.",
-      "first_collection": {
-        "status": "collected",
-        "first_lock_at": "2026-09-16T01:29:00.054095+00:00",
-        "rows_written": 48,
-        "fights": 12,
-        "workflow_run_id": 35044179800,
-        "workflow_run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/35044179800",
-        "commit_sha": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073",
-        "code_version_on_rows": "97ed4aa544f6",
-        "lock_script_sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
-        "dirty": false,
-        "verification": {
-          "predicted_probability_reproduced_from_stored_hazards": "48/48 at 1e-5",
-          "max_abs_error": 8.76752760281541e-07,
-          "feature_keys_per_row": 49,
-          "rows_recording_raw_hazard_in_notes": 48,
-          "rows_recording_lock_script_sha256_in_notes": 48,
-          "rows_carrying_a_dirty_diff_marker": 0,
-          "distinct_code_versions": 1
-        },
-        "note": "Complete provenance chain, which is what v1 lacks: code_version on every row is the clean merge commit (no -dirty), and every row carries the lock script's own sha256 prefix 92d28d8638c15016, matching the file on main."
-      }
+     "path": "dur001_migration.sql",
+     "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/dur001/lock_prop0001.py",
+     "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/features/build_features.py",
+     "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/models/duration.py",
+     "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+     "frozen_at_commit": "90571ff"
+    },
+    {
+     "path": "cfl_engine/harness/walkforward_report.json",
+     "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
+     "frozen_at_commit": "90571ff"
     }
-  ],
-  "experiment_lifecycle": {
-    "states": [
-      "draft",
-      "frozen",
-      "armed",
-      "collecting"
-    ],
-    "definitions": {
-      "draft": "preregistration written but not signed; nothing frozen; no observation may be created",
-      "frozen": "preregistration signed and binding; no operational implementation yet",
-      "armed": "specification frozen AND implementation written, tested and wired, but ZERO observations recorded",
-      "collecting": "at least one observation exists; the transition is the successful first insert, not a decision"
+   ],
+   "preregistration_amendments": [
+    {
+     "number": 1,
+     "date": "2026-09-16",
+     "approved_by": "Reed Cannon",
+     "title": "De-vig method (item h) and historical timing rule (item i)",
+     "amends_sections": [
+      "6",
+      "13"
+     ],
+     "sha256_before": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+     "sha256_after": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+     "motivated_by_observed_results": false
     },
-    "note": "armed exists because 'collecting' with zero rows overstates the state. The armed -> collecting transition is objective: it is the first row landing, not a judgement call."
+    {
+     "number": 2,
+     "date": "2026-09-16",
+     "approved_by": "Reed Cannon",
+     "title": "De-vig bisection direction (mathematical correction)",
+     "amends_sections": [
+      "Amendment 1.1"
+     ],
+     "sha256_before": "7bb30ffc4be103ae7d89db492e826aaa2d7f22c80385a66147c9662cc8103fe0",
+     "sha256_after": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
+     "motivated_by_observed_results": false,
+     "severity": "documentation only - no output changes, now or retrospectively",
+     "note": "Amendment 1.1 said the sum is strictly DECREASING in k. For the formula it specifies, q^(1/k), the sum is strictly INCREASING. The two conventions are exact reparametrisations so fair probabilities are bit-identical; nothing is recomputed and no prior result is reinterpreted. Found while implementing, not by looking at a figure."
+    }
+   ],
+   "held_amendment_clauses": {
+    "status": "HELD - not approved en bloc; each requires an individual vote on its actual clause text",
+    "in_force": [
+     "h (power de-vig)",
+     "i (Candidate 1 timing rule)"
+    ],
+    "held": [
+     "a",
+     "b",
+     "c",
+     "d",
+     "e",
+     "f",
+     "g",
+     "j",
+     "k"
+    ],
+    "note": "The calibration blocker is closed, which does not make the remaining clauses automatically sound. Any clause changing data eligibility, scoring, model behaviour or claim interpretation gets an individual vote; pure governance/monitoring clauses are lower risk."
+   },
+   "first_collection": {
+    "status": "collected",
+    "first_lock_at": "2026-09-15T01:50:37.299956+00:00",
+    "rows_written": 48,
+    "model_version": "PROP-0001@v1",
+    "code_version": "322a5b09e739-dirty",
+    "provenance": "code_version is -dirty and the lock script was untracked at the time; see research/provenance/PROVENANCE_REPORT.md. Prediction provenance verified, source-code provenance incomplete."
+   }
+  },
+  {
+   "experiment_id": "PROP-0001",
+   "status": "frozen",
+   "hypothesis": null,
+   "economic_rationale": null,
+   "population": "UFC fights scheduled for 3 rounds, 2010 onward, clean finish or decision",
+   "market": null,
+   "challenger_model": "PROP-0001@v1",
+   "market_benchmark": null,
+   "prediction_time_rule": "Training data is every completed 3-round UFC fight with event_date strictly before training_cutoff. Fighter histories use only rounds and fights strictly before that cutoff.",
+   "primary_endpoint": null,
+   "minimum_useful_effect": null,
+   "observation_unit": "one (fight, round reached) person-period row",
+   "cluster_unit": "fight",
+   "eligibility_rules": [
+    "scheduled_rounds == 3",
+    "event_date year >= build_features.MIN_YEAR",
+    "outcome classifies as finish or decision (no-contest and unparseable excluded)",
+    "both corners present"
+   ],
+   "preregistration_path": null,
+   "preregistration_sha256": null,
+   "model_artifact_sha256": null,
+   "data_artifact_sha256": null,
+   "freeze_timestamp": "2026-09-15T00:00:00Z",
+   "formal_analysis_points": [
+    "block walk-forward gate from 2018-01-01 in 6-month blocks, reported in cfl_engine/harness/walkforward_report.json"
+   ],
+   "kill_rule": null,
+   "allowed_sensitivities": null,
+   "forbidden_changes": [
+    "any change to features, model form, calibration recipe or threshold mapping without a new model_version and its own preregistration",
+    "editing any file listed in frozen_files in place"
+   ],
+   "results_artifact": "cfl_engine/harness/walkforward_report.json",
+   "verdict": null,
+   "verdict_timestamp": null,
+   "frozen_files": [
+    {
+     "path": "cfl_engine/dur001/PREREGISTRATION.md",
+     "sha256": "492d35e12a071f7c10791b7271e659d07219f1d2cc80062cc5f3e2c572286de4",
+     "frozen_at_commit": "1bc3fdd",
+     "sha256_at_freeze": "69fecf1c84893d736d998fba5ee93583c64806f8eb439a51f42f24f04aee8d94",
+     "amended": true
+    },
+    {
+     "path": "cfl_engine/dur001/dur001_analysis.py",
+     "sha256": "b45ae7065f6af58cff69549e03f92668ce710f66d7bcb1037c9a6389f0c4071c",
+     "frozen_at_commit": "788386e"
+    },
+    {
+     "path": "dur001_migration.sql",
+     "sha256": "c9218d43bc877b09867754128fd14e8d5a93ac5e1d9ef2ed35f2a66c6eabcafe",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/dur001/lock_prop0001.py",
+     "sha256": "2c052b234bbbe177255121d3bdd3c2252009828e7a6e42e08a1373555756dd2d",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/features/build_features.py",
+     "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+     "frozen_at_commit": "6be7198"
+    },
+    {
+     "path": "cfl_engine/models/duration.py",
+     "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+     "frozen_at_commit": "90571ff"
+    },
+    {
+     "path": "cfl_engine/harness/walkforward_report.json",
+     "sha256": "d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c",
+     "frozen_at_commit": "90571ff"
+    }
+   ],
+   "preregistration_amendments": null,
+   "results_artifact_measures": "the RAW hazard model, isotonic step bypassed - NOT the complete PROP-0001 locking pipeline. Established 2026-09-16, see research/provenance/CALIBRATION_FINDING.md and cfl_engine/harness/README.md.",
+   "historical_validation_scope": "Historical walk-forward testing supports the underlying raw hazard model. The calibration layer used in live PROP-0001 forecasts was not validated by that historical artifact."
+  },
+  {
+   "experiment_id": "DUR-002",
+   "status": "collecting",
+   "hypothesis": "Conditional on the vig-free totals market, the UNCALIBRATED PROP-0001 hazard (PROP-0001@v2) carries additional information about whether a 3-round UFC fight goes over a posted round total.",
+   "economic_rationale": "Same thin-market rationale as DUR-001. DUR-002 exists because the specification the historical gate artifact actually evaluated (raw hazard, no post-hoc calibration) has never been run prospectively, while the specification running prospectively has never been evaluated historically.",
+   "population": "identical to DUR-001",
+   "market": "sportsbook round totals (total_rounds), thresholds 0.5 / 1.5 / 2.5",
+   "challenger_model": "PROP-0001@v2",
+   "market_benchmark": "inherited from DUR-001 section 6 as amended by Amendment 1.1: power de-vig primary, proportional and Shin as frozen sensitivities",
+   "prediction_time_rule": "identical to DUR-001: lock written before the fight's best-known start, enforced by insert trigger; training_cutoff precedes actual_lock_at",
+   "primary_endpoint": "G_LL = LL_baseline - LL_challenger, pooled out-of-sample log loss, walk-forward by event",
+   "minimum_useful_effect": 0.003,
+   "observation_unit": "one (fight, threshold) row",
+   "cluster_unit": "UFC event",
+   "eligibility_rules": [
+    "inherited unchanged from DUR-001 sections 4 and 5, as amended by Amendment 1"
+   ],
+   "preregistration_path": "cfl_engine/dur002/PREREGISTRATION.md",
+   "preregistration_sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
+   "preregistration_amendments": null,
+   "model_artifact_sha256": null,
+   "data_artifact_sha256": null,
+   "freeze_timestamp": "2026-09-16T01:03:45Z",
+   "formal_analysis_points": [
+    "no number is computed until the preregistration is frozen and eligible fights have settled"
+   ],
+   "kill_rule": "checkpoint at the earlier of 2027-09-16 or 500 valid prospective observations; then HOLD-PASSIVE if not PROMOTE",
+   "allowed_sensitivities": [
+    "de-vig sensitivities inherited from DUR-001 Amendment 1.1: proportional and Shin"
+   ],
+   "forbidden_changes": [
+    "reintroducing isotonic or any other post-hoc calibration to PROP-0001@v2",
+    "citing any historical performance figure for v2 as evidence for or against it",
+    "modifying PROP-0001@v1, its locks, or DUR-001's preregistration",
+    "writing a v2 backfill into prop_model_locks",
+    "comparing v1 and v2 head-to-head without a separate preregistration",
+    "any amendment motivated by an observed result"
+   ],
+   "results_artifact": null,
+   "verdict": null,
+   "verdict_timestamp": null,
+   "frozen_files": [
+    {
+     "path": "cfl_engine/dur002/PREREGISTRATION.md",
+     "sha256": "18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a",
+     "frozen_at_commit": "133724676bc55e9429aa3dae5b833358cd557315"
+    },
+    {
+     "path": "cfl_engine/models/duration.py",
+     "sha256": "b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b",
+     "frozen_at_commit": "90571ff1b6de74079e87946c1e7f6e705f85cf5c"
+    },
+    {
+     "path": "cfl_engine/features/build_features.py",
+     "sha256": "60f2c1c12131afa92a862ef09ab7ae496d05312b2b94096350115231ca79032f",
+     "frozen_at_commit": "6be7198ebe4d56b27366268318b757e99e3074c5"
+    },
+    {
+     "path": "cfl_engine/dur002/lock_prop0002.py",
+     "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+     "frozen_at_commit": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073"
+    }
+   ],
+   "approved_by": "Reed Cannon",
+   "main_commit_at_freeze": "133724676bc55e9429aa3dae5b833358cd557315",
+   "naming": "DUR-002 is the EXPERIMENT; PROP-0001@v2 is the MODEL VERSION it tests. They are not interchangeable and must not be used as synonyms.",
+   "freeze_establishes": [
+    "PROP-0001@v2 uses the raw hazard-derived probability; no isotonic or other post-hoc calibration is fitted, attached or consulted",
+    "the historical raw-vs-calibrated comparison was already observed and cannot be used as evidence for DUR-002",
+    "no parameter, eligibility rule, feature definition, timing rule, scoring rule or threshold may change after freeze without a formally versioned dated amendment",
+    "prospective observations after the freeze are authoritative even where they contradict the historical artifact",
+    "DUR-002 stays separate from PROP-0001@v1 forever: no retroactive regrading, no replacement of v1 probabilities, no migration of v1 rows"
+   ],
+   "lock_script": {
+    "path": "cfl_engine/dur002/lock_prop0002.py",
+    "exists": true,
+    "sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+    "written": "2026-09-16",
+    "frozen": true,
+    "role": "Operational implementation of the already-frozen DUR-002 specification. Contains no modelling decisions. A thin wrapper: PITWorld, fit_prop0001, serve_fight, build_lock_rows, the loaders and the threshold mapping are all imported from the frozen lock_prop0001.py, which is neither modified nor copied. The only behavioural difference is model.iso_ = None, so every prediction is the raw hazard.",
+    "conformance_tests": "cfl_engine/dur002/test_lock_prop0002.py",
+    "guards": [
+     "MODEL_VERSION hard-coded to PROP-0001@v2; assert_v2_only aborts the run on any row carrying another version, checked twice including immediately before the insert",
+     "never updates, replaces or regrades a v1 row; no UPDATE or DELETE is ever attempted",
+     "refuses to write from a dirty working tree (git status --porcelain, so untracked files count) unless --allow-dirty, which records the tree-state hash on every row",
+     "every row records lock_prop0002.py's own sha256 in notes, so the implementation behind any v2 forecast is identifiable from the row alone"
+    ],
+    "note": "FROZEN as of first collection. A substantive change now requires an amendment to the DUR-002 preregistration or a new model version. Section 0.3 of the frozen preregistration says this script does not exist; that is true of the state AT FREEZE and is deliberately not updated.",
+    "frozen_at_first_collection": "2026-09-16T01:29:00.054095+00:00"
+   },
+   "disclosure": "The raw-vs-calibrated historical comparison was seen before drafting and favoured the uncalibrated variant. It is not the basis for the specification and may not be cited as evidence for it. See section 2 of the preregistration.",
+   "first_collection": {
+    "status": "collected",
+    "first_lock_at": "2026-09-16T01:29:00.054095+00:00",
+    "rows_written": 48,
+    "fights": 12,
+    "workflow_run_id": 35044179800,
+    "workflow_run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/35044179800",
+    "commit_sha": "97ed4aa544f6b5de87dfdd09366f6a73e2a43073",
+    "code_version_on_rows": "97ed4aa544f6",
+    "lock_script_sha256": "92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79",
+    "dirty": false,
+    "verification": {
+     "predicted_probability_reproduced_from_stored_hazards": "48/48 at 1e-5",
+     "max_abs_error": 8.76752760281541e-07,
+     "feature_keys_per_row": 49,
+     "rows_recording_raw_hazard_in_notes": 48,
+     "rows_recording_lock_script_sha256_in_notes": 48,
+     "rows_carrying_a_dirty_diff_marker": 0,
+     "distinct_code_versions": 1
+    },
+    "note": "Complete provenance chain, which is what v1 lacks: code_version on every row is the clean merge commit (no -dirty), and every row carries the lock script's own sha256 prefix 92d28d8638c15016, matching the file on main."
+   }
+  },
+  {
+   "experiment_id": "PRED-002",
+   "status": "frozen",
+   "protocol": "PRED-001",
+   "hypothesis": "Opponent-adjusted offence/defence ratings of five fight-output categories (distance, clinch and ground strikes, takedowns, control) add log-loss information to a blend of the vig-free market price and the incumbent engine.",
+   "economic_rationale": "No CFL model has read the position splits or adjusted output for opponent quality; the only other route to new information (video, simulation) is expensive. A cheap test that can say no.",
+   "population": "priced, decided UFC fights 2016-2024 in which both fighters had at least one earlier UFC fight with round splits (Stage 1)",
+   "market": "UFC moneyline (win probability)",
+   "challenger_model": "C: logistic blend of logit(market), logit(engine) and five rating differentials, no intercept",
+   "market_benchmark": "Stage 1: BestFightOdds closing consensus, median implied probability per fighter, proportional de-vig; power and Shin reported. Comparator B: market plus the incumbent engine retrained on development data only",
+   "prediction_time_rule": "ratings and engine use only fights on event dates strictly before the fight; blends fit on years 2013..Y-1 only",
+   "primary_endpoint": "Delta_B = mean(LL_B - LL_C) per fight, 2016-2024, event-resampled 95% interval",
+   "minimum_useful_effect": 0.002,
+   "observation_unit": "one fight",
+   "cluster_unit": "UFC event",
+   "eligibility_rules": [
+    "PRED-001 eligible set",
+    "both fighters have an earlier UFC fight with round splits",
+    "A1: coverage >= 75% overall and >= 70% each year, else INVALID before scoring"
+   ],
+   "preregistration_path": "research/experiments/PRED-002/PREREGISTRATION.md",
+   "preregistration_sha256": "e0e2229d25a9009b811344ba4a04552b9a2a2d06a7e6af6a93db763d589ec6a6",
+   "preregistration_amendments": null,
+   "pre_freeze_amendments": [
+    "A1 coverage floor",
+    "A2 exclusions by year",
+    "A3 pins",
+    "A4 report framing",
+    "A5 implementation choices"
+   ],
+   "independent_review": "research/experiments/PRED-002/AUDITOR_REVIEW_THRESHOLDS.md (ChatGPT, 2026-10-12: RETAIN S1.1-S1.6)",
+   "model_artifact_sha256": null,
+   "data_artifact_sha256": null,
+   "freeze_timestamp": "2026-10-12T20:50:35Z",
+   "formal_analysis_points": [
+    "Stage 1: exactly one run on 2016-2024 after this freeze",
+    "Stage 2: one H1 look by an independent auditor, only if Stage 1 passes",
+    "Stage 3: prospective, n_required from Stage 1's SD, only if Stage 2 does not REJECT and T-084 is applied"
+   ],
+   "kill_rule": "any failed Stage 1 condition ends the experiment (STOP_STAGE1); prospective kill date 18 months after the first lock",
+   "allowed_sensitivities": [
+    "power and Shin de-vig, reported only"
+   ],
+   "forbidden_changes": [
+    "any threshold, category, eta grid, fold, regularisation or eligibility change after the freeze",
+    "a second Stage 1 run with different settings",
+    "rescue by subgroup",
+    "any amendment motivated by observed results"
+   ],
+   "results_artifact": null,
+   "stage1_verdict": null,
+   "verdict": null,
+   "verdict_timestamp": null,
+   "pinned_at_commit": {
+    "commit": "dbdd37859fc16843fae723deb23d32718cda15e4",
+    "files": {
+     "cfl_engine/engine.py": "3c8251689983063974a09ea519193e23647c8fd88fabb89fc1a068da182af92a",
+     "cfl_engine/train.py": "4615d5efc77e9c622ffcf7b02d20e0c6aa7f5a6cfcc11ea6652fc1747ee0fd06",
+     "research/protocol/pred_protocol.py": "ff3dd9ba2436aa1ca568121cf2aed8e09c06554c6f96523db3425cf9418ac1d8",
+     "research/protocol/protocol.json": "e5f6927e0f5797f073c4eca09484dff136198bec8f7607085318bd07f7ac8c57",
+     "cfl_engine/requirements.txt": "b8af3d34d851e4707e18a6e0db13333a6e2bcbe669bd45988ae81d4d85678622"
+    }
+   },
+   "frozen_files": [
+    {
+     "path": "research/experiments/PRED-002/PREREGISTRATION.md",
+     "sha256": "e0e2229d25a9009b811344ba4a04552b9a2a2d06a7e6af6a93db763d589ec6a6",
+     "sha256_at_freeze": "e0e2229d25a9009b811344ba4a04552b9a2a2d06a7e6af6a93db763d589ec6a6",
+     "frozen_at_commit": "dbdd37859fc16843fae723deb23d32718cda15e4"
+    },
+    {
+     "path": "research/experiments/PRED-002/stage1.py",
+     "sha256": "2307e77669514e291b00b04117fdff1c5281fb0d9d2e61879191db584de3a535",
+     "sha256_at_freeze": "2307e77669514e291b00b04117fdff1c5281fb0d9d2e61879191db584de3a535",
+     "frozen_at_commit": "dbdd37859fc16843fae723deb23d32718cda15e4"
+    },
+    {
+     "path": "research/pred002_data/export_dev.py",
+     "sha256": "1df5e823390b6003809a83ff371888cf95df9912049be048242abec6bc33c81d",
+     "sha256_at_freeze": "1df5e823390b6003809a83ff371888cf95df9912049be048242abec6bc33c81d",
+     "frozen_at_commit": "dbdd37859fc16843fae723deb23d32718cda15e4"
+    }
+   ],
+   "approved_by": "Reed Cannon (D-023); thresholds retained by independent review"
   }
+ ],
+ "experiment_lifecycle": {
+  "states": [
+   "draft",
+   "frozen",
+   "armed",
+   "collecting"
+  ],
+  "definitions": {
+   "draft": "preregistration written but not signed; nothing frozen; no observation may be created",
+   "frozen": "preregistration signed and binding; no operational implementation yet",
+   "armed": "specification frozen AND implementation written, tested and wired, but ZERO observations recorded",
+   "collecting": "at least one observation exists; the transition is the successful first insert, not a decision"
+  },
+  "note": "armed exists because 'collecting' with zero rows overstates the state. The armed -> collecting transition is objective: it is the first row landing, not a judgement call."
+ }
 }

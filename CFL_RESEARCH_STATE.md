@@ -49,6 +49,7 @@ Last updated: 2026-09-16.
 | **DUR-001** | after the vig-free totals market is known, does PROP-0001@v1 still add information about whether a fight goes over a round total? | collecting | none yet |
 | **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **collecting** since 2026-09-16 | none |
 | **PRED-001** | the rules any win-probability model is judged by against the betting market: sealed holdout from 2025-01-01, log loss, pre-set accept/reject. A protocol, not an experiment — see [`research/protocol/`](research/protocol/PREDICTION_RESEARCH_PROTOCOL.md) | frozen 2026-10-12 | n/a |
+| **PRED-002** | do opponent-adjusted striking and grappling ratings add anything to the price plus our engine? Stage 1 runs once on 2016–2024 — [`research/experiments/PRED-002/`](research/experiments/PRED-002/PREREGISTRATION.md) | **frozen** 2026-10-12, Stage 1 not yet run | none |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---
@@ -359,6 +360,9 @@ fixable.
 | `cfl_engine/models/duration.py` | `b0aea1d004a952630ca6bed461a89454d803c09fe15d008b9432d47842eb4d0b` | `90571ff` |
 | `cfl_engine/harness/walkforward_report.json` | `d162850465a7ca5dd9c2eed22aed3ee600cd40d62009e6401855f35e6d6a368c` | `90571ff` |
 | `cfl_engine/dur002/PREREGISTRATION.md` | `18c24b29d007f41beb726bfff62c4fef5f30de4c34cac609c789b35c18984e9a` | `1337246` |
+| `research/experiments/PRED-002/PREREGISTRATION.md` | `e0e2229d25a9009b811344ba4a04552b9a2a2d06a7e6af6a93db763d589ec6a6` | `dbdd378` |
+| `research/experiments/PRED-002/stage1.py` | `2307e77669514e291b00b04117fdff1c5281fb0d9d2e61879191db584de3a535` | `dbdd378` |
+| `research/pred002_data/export_dev.py` | `1df5e823390b6003809a83ff371888cf95df9912049be048242abec6bc33c81d` | `dbdd378` |
 | `cfl_engine/dur002/lock_prop0002.py` | `92d28d8638c15016e25e7818ccc9fa6a411ae265bdfc9e0b3786bc32a1cd8e79` | `97ed4aa` |
 
 All eight were verified on 2026-09-16 to be byte-identical to their freeze
