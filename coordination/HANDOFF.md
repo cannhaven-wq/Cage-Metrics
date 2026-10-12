@@ -11,6 +11,55 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 (b) — Stabilization sprint, PR 2: operational repairs and a monitor
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+Stacked on PR 1. What it changes in this repo:
+
+- **`public_read_odds.sql` now refuses to run.** It granted anon read on the raw
+  odds table; live policy is admin-only, so it was never (or no longer) applied,
+  and one `psql -f` would have published every quote. `tests/sql-hazards.test.js`
+  fails if any root SQL file grants that again.
+- **`export.yml` schedule off.** It failed every day on a missing
+  `SUPABASE_URL` secret. Adding the secret would have committed the raw odds and
+  fighter tables to this public repository daily — a licensing and exposure
+  decision, so it waits for one.
+- **New monitor, `pipeline-health.yml`** (twice daily): critical workflows
+  failing, stale or disabled by GitHub; odds older than 30 h; a finished card
+  with most results missing; an empty two-week calendar. One labelled issue per
+  problem, closed when it clears. Data checks verified against today's live
+  facts (all healthy).
+- **Odds matcher alias.** Saturday's Cerminara vs Stiller had no price: the feed
+  still says "Katlyn Chookagian". One reviewed alias, two tests.
+- **CI now runs `build/test-fetch-odds.js`** (73 capture-path tests that never
+  ran in CI).
+
+Investigations written up, nothing applied:
+`research/clv/MIGRATION_SEQUENCE_2026-10-12.md` (order and rollback for the five
+unapplied migrations; the ledger seed is used=33, remaining=467 from today's log)
+and `research/integrity/INTEGRITY_RECHECK_2026-10-12.md` (four checks grew; the
+new corner swaps come from the odds repo's Polymarket step; four dead
+double-bookings sit on the next two cards).
+
+Outside this repo: `cage-metrics-scrapper` PR #1 fixes the fighter scraper's
+build (same `mise.toml` fix as the event scraper). Corrections to the audit: the
+second Railway odds-scraper service is the model trainer, not a duplicate; and
+neither Railway odds service has a schedule, so their failed builds stop nothing
+— Polymarket and the v1–v6 retrain run from the odds repo's GitHub Action.
+
+## Next action
+
+Owner, in this order: (1) approve or decline the four-row `is_active = false`
+retirement in `INTEGRITY_RECHECK_2026-10-12.md` before Friday 23:00 UTC, when
+the 10-17 card's snapshot is taken; (2) merge PR 1 then PR 2; (3) decide whether
+to merge `cage-metrics-scrapper` #1, knowing the merge runs a full scrape once;
+(4) set `RESEND_API_KEY` / `RESEND_FROM` if the Brief and alerts are to deliver.
+
+---
+
 ## 2026-10-12 — Stabilization sprint, PR 1: the retired forecast comes off every public channel
 
 **From:** Claude

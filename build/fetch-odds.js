@@ -979,9 +979,24 @@ function buildFightIndex(fights) {
   return { strict, loose, squashed, surnames };
 }
 
+// Known cases where the feed and our record use a different NAME, not just a
+// different spelling — a surname change, most often on marriage. No automatic
+// tier can recover these (the surname tier keys on the surname), and guessing
+// would risk a permanent price on the wrong fight, so each one is listed by
+// hand after checking the bout is the same: same card, same date, same
+// opponent. Keys and values are normalizeName() output: feed name -> our name.
+// Added 2026-10-12: UFC FN Buckley vs. Malott (10-17) had no price on
+// Cerminara vs Stiller because the feed still says "Katlyn Chookagian".
+function feedAlias(normalized) {
+  const FEED_NAME_ALIASES = {
+    'katlyn chookagian': 'katlyn cerminara',
+  };
+  return FEED_NAME_ALIASES[normalized] || normalized;
+}
+
 function lookupFight(index, homeName, awayName) {
-  const a = normalizeName(homeName);
-  const b = normalizeName(awayName);
+  const a = feedAlias(normalizeName(homeName));
+  const b = feedAlias(normalizeName(awayName));
   const la = lastName(a), lb = lastName(b);
   const surnameKey = (la.length >= 3 && lb.length >= 3 && la !== lb)
     ? pairKey(la, lb) : null;
@@ -1638,5 +1653,5 @@ module.exports = {
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
   resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
-  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight,
+  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight, feedAlias,
 };

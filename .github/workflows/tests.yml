@@ -159,3 +159,14 @@ jobs:
           done
           exit $status
         shell: bash
+
+      # build/test-fetch-odds.js covers the odds capture path (row builders,
+      # cadence tiers, credit governor) and walks whole months offline. It sat
+      # outside CI because fetch-odds.js imports the Supabase client, which the
+      # loop above does not install. Installed from build/'s own lockfile so the
+      # version is the one the capture job runs. No network, no secret.
+      - name: Odds capture tests
+        working-directory: build
+        run: |
+          npm ci --no-audit --no-fund
+          node test-fetch-odds.js
