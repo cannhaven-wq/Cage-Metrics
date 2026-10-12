@@ -12,7 +12,7 @@ Cannon Fight Lab started in April 2026 as a UFC stats site for bettors, became a
 - **A clean odds time series since 2026-09-19**: 11,794 provenance-tagged quotes from 10 US sportsbooks, captured several times a day around cards. Small, but the one asset that improves with time.
 - **An auditable pre-fight record** (106 append-only snapshots across 9 cards) with a working watchdog.
 - **Strong engineering discipline**: 629 Python tests and 17 Node test files pass locally and on every push; policy-as-tests keep the model off the public pages; billing, alerts and entitlement logic are pure, tested modules.
-- **Traffic is growing**: from ~10 sessions a day in late September to 350–465 a day in the last week, driven by ~5,400 prerendered fighter and event pages.
+- **Traffic is growing, but it is not human.** Session counts rose from ~10 a day in late September to 350–465 a day, yet 3,000 of the last 3,033 sessions carry no referrer, 7 viewed a second page, 4 lasted over a minute, and the hourly spread is flat around the clock. This is crawlers fetching the ~5,400 prerendered stubs. Human visits are on the order of 1–6 a day (corrected 2026-10-12; detail in `05_` §5).
 
 ## What does not work (VERIFIED)
 
@@ -25,11 +25,11 @@ Cannon Fight Lab started in April 2026 as a UFC stats site for bettors, became a
 
 ## Commercial readiness
 
-**Not ready, and no short path.** The checkout code is finished and could be switched on in one pull request once a Stripe account, a price and two legal pages exist — but there is nothing to sell: everything the specified Pro tier would withhold is either already free (alerts, watchlists, charts, book table) or not built (history, "since last visit"). The audience that exists wants a free stats reference; the audience the product was built for has not been observed. Detailed options are in `08_COMMERCIAL_READINESS.md`; the evidence supports stopping development, cleaning up the contradictions, keeping the free site and the odds capture running at near-zero cost, and running a cheap demand test before any further build.
+**Not ready, and no short path.** The checkout code is finished and could be switched on in one pull request once a Stripe account, a price and two legal pages exist — but there is nothing to sell: everything the specified Pro tier would withhold is either already free (alerts, watchlists, charts, book table) or not built (history, "since last visit"). The apparent audience is crawlers; a human audience of any kind has barely been observed. Detailed options are in `08_COMMERCIAL_READINESS.md`; the evidence supports stopping development, cleaning up the contradictions, keeping the free site and the odds capture running at near-zero cost, and running a cheap demand test before any further build.
 
 ## Top five blockers
 
-1. **No demand signal and no customer definition** — 0 paying users, 0 active accounts, 0 subscribers, ~150 product-surface sessions in three weeks against ~3,000 search landings on reference pages.
+1. **No demand signal and no customer definition** — 0 paying users, 0 active accounts, 0 subscribers, and the apparent traffic is crawler activity; human visits are a handful a day.
 2. **Nothing to sell** — no price, no Stripe account, no Pro feature withheld; two legal pages (privacy naming Plausible, Terms) block checkout by the code's own design.
 3. **Positioning is not true of the whole system** — the social poster, one product page and the preview stubs still publish the retired model.
 4. **Operational fragility** — five repositories, three schedulers, two dead Railway services, one failing cron, no external observer, core schema not in git.
