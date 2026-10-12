@@ -1608,3 +1608,60 @@ SD of 0.066 (2020–26) agrees with PRED-001's dev-only 0.063.
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session. The number D-022 is used because a D-021 already
 exists on an unmerged branch.
+
+## D-023 — One controlled experiment: fix the live path first, then opponent-adjusted ratings against price plus engine
+
+| field | value |
+|---|---|
+| date | 2026-10-12 |
+| decided by | Reed Cannon (owner) |
+| task | T-080 |
+| level | L3 |
+| reversible | yes, until Stage 1 of PRED-002 runs. After it runs, its result is recorded whatever it says; a run cannot be untaken |
+
+**The owner's instruction, quoted:** *"I would authorize one narrowly defined
+research experiment, not three competing modeling projects."* Priority 1:
+*"Investigate T-082 … Before investing in another model, we need to establish
+whether the existing system actually produces the predictions its research
+claims it should."* Priority 2: *"Approve T-080 … beginning with pre-2025
+development data."* Priority 3: *"prepare the append-only forecast table, verify
+its security and data provenance, and obtain your approval before applying the
+production migration."* And the constraint: *"Claude must define what would
+constitute a meaningful improvement before training, and compare against a
+simple market-plus-existing-model baseline."* Also: *"CFL has earned one more
+carefully controlled experiment. It has not yet earned an open-ended research
+budget."*
+
+**Plain version.** First check whether the live engine is doing what its tests
+said it would. Then run one experiment — ratings that credit a fighter more for
+doing damage against good opponents — judged against the betting price plus our
+current engine, with the pass mark written down before anything is trained.
+Simulation and video work stay on hold.
+
+**What is decided**
+
+- **T-082 runs first** and is Priority 1.
+- **T-080 is answered: hypothesis A** (opponent-adjusted ratings from the
+  position and target splits). Hypothesis B (the age gap) is **not** authorised
+  alongside it: the owner authorised one experiment.
+- **The comparator is market plus the existing engine**, retrained on
+  development data only so the sealed window stays sealed.
+- **The bar is fixed before training**, in
+  `research/experiments/PRED-002/PREREGISTRATION.md` §6.
+- **The prospective sizing rule is approved as proposed in T-080:** the
+  prospective test looks only for a gain worth money (0.010 log loss).
+- **The forecast lock table is prepared, not applied.** Applying it is T-084,
+  L3 item 5, and waits for a separate written approval.
+- **On hold:** fight simulation and computer vision.
+
+**What is not decided**
+
+- Whether to apply the lock table (T-084).
+- Whether to spend an H1 slot or a prospective slot. Those follow from Stage 1
+  and are the owner's.
+- Any public use of any result. D-011 stands.
+- Nothing here says CFL is any closer to profitability. The owner declined to
+  put a timeline on it, and this record does not either.
+
+**Attribution note.** Recorded by Claude from the owner's message in this
+session. D-023 because D-021 and D-022 exist on unmerged branches.
