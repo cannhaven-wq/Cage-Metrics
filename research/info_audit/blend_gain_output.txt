@@ -1,0 +1,17 @@
+fights 3071  events 276  2020-01-25..2026-07-18
+gain_blend   mean +0.0035  sd 0.0661  event-clustered 95% CI [+0.0012, +0.0057]
+gain_engine  mean -0.0539  sd 0.2737  event-clustered 95% CI [-0.0630, -0.0449]
+accuracy  market 0.6796  blend 0.6848
+        mean  count
+yr                 
+2020 -0.0004    403
+2021  0.0043    468
+2022  0.0024    482
+2023  0.0035    472
+2024  0.0065    497
+2025  0.0046    489
+2026  0.0019    260
+fights needed to detect a 0.003 gain (80% power, iid, sd of the blend): 3,802
+fights needed to detect a 0.005 gain (80% power, iid, sd of the blend): 1,369
+fights needed to detect a 0.010 gain (80% power, iid, sd of the blend): 342
+fights needed to detect a 0.020 gain (80% power, iid, sd of the blend): 86

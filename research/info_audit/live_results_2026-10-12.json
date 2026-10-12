@@ -1,0 +1,76 @@
+{
+  "run_at": "2026-10-12",
+  "source": "queries.sql, read-only, Supabase project uftancejftcryfvbggll",
+  "Q1_historical_close": {
+    "n": 7537,
+    "first": "2007-07-07",
+    "last": "2026-07-11",
+    "fav_acc": 0.6672,
+    "ll_close": 0.6068
+  },
+  "Q2_prospective_picks": {
+    "n": 102,
+    "pick_right": 53,
+    "n_mkt": 98,
+    "mkt_right": 65,
+    "n_disagree": 26,
+    "disagree_engine_right": 6,
+    "first": "2026-08-15",
+    "last": "2026-10-10",
+    "events": 8
+  },
+  "Q3_prospective_logloss": {
+    "n": 98,
+    "ll_engine": 0.7168,
+    "ll_market": 0.645,
+    "ll_coin": 0.6931,
+    "eng_minus_mkt": 0.0717,
+    "se_mkt": 0.0336,
+    "eng_minus_coin": 0.0236,
+    "se_coin": 0.0401
+  },
+  "Q4_model_picks_live": [
+    {
+      "model_version": "engine_v1",
+      "n": 71,
+      "settled": 54,
+      "right": 34
+    },
+    {
+      "model_version": "engine_v2",
+      "n": 123,
+      "settled": 101,
+      "right": 57
+    }
+  ],
+  "Q5_round_split_coverage": {
+    "rows": 20982,
+    "head": 20982,
+    "distance": 20982,
+    "clinch": 20982,
+    "ground": 20982,
+    "reversals": 20982,
+    "fights": 8920
+  },
+  "Q6_odds_depth": [
+    {
+      "placeholder_ts": true,
+      "rows": 30724,
+      "fights": 7681
+    },
+    {
+      "placeholder_ts": false,
+      "rows": 95986,
+      "fights": 272,
+      "first": "2026-05-22",
+      "last": "2026-10-12"
+    }
+  ],
+  "Q7_decided_fights_per_year": {
+    "2021": 497,
+    "2022": 506,
+    "2023": 504,
+    "2024": 513,
+    "2025": 515
+  }
+}
