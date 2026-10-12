@@ -72,7 +72,9 @@ advance takes about 1,650 fights. The sealed window is not virgin either: the
 Factor Lab and the v4–v6 results already cover it, and the protocol says so.
 
 **Coordination.** The prediction-benchmarks session owns the inventory of past
-results, and this protocol cites it rather than recomputing it. The
+results (INFO-AUDIT-001, `research/info_audit/` on
+`claude/optimistic-ptolemy-8g2smd` @ `cc7f810`); this protocol cites it rather
+than recomputing it. The seal is recorded as [D-022](DECISIONS.md). The
 research-workstreams session was told not to write a second Step 2. Both were
 asked to fit nothing on 2025+ fights from now on.
 

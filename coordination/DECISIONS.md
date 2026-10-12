@@ -1561,3 +1561,50 @@ is `CHECK (channel IN ('email'))`, so adding one is a migration and a decision
 rather than a config change.
 
 **Attribution note.** As D-006 through D-019.
+
+## D-022 — Win-probability research is judged by PRED-001, and 2025 onward is sealed
+
+| field | value |
+|---|---|
+| date | 2026-10-12 |
+| decided by | Reed Cannon (owner) |
+| task | none; direct owner instruction |
+| level | L3 (item 1, freezing a specification) |
+| reversible | the protocol is reversible by a dated amendment. The seal is not, in one respect: a sealed look that has been taken cannot be untaken. Every look is therefore recorded in `research/protocol/holdout_ledger.json` |
+
+**The owner's instruction, quoted:** *"Proceed with Step 2: establish the
+Independent Auditor and preregister CFL's prediction research protocol.
+Objective: Determine whether a new model can demonstrate predictive information
+beyond what sportsbooks already know."* It also said: *"I want scientific
+evidence, not another optimistic development timeline."*
+
+**Plain version.** Any new model that tries to call fights is judged against
+the betting market, by rules written before it was built. Fights from
+1 January 2025 on are locked away from model building. A model gets one check
+on 2025 to mid-2026, and a claim needs forecasts written down before the fights.
+
+**What is decided**
+
+- PRED-001 ([`research/protocol/`](../research/protocol/PREDICTION_RESEARCH_PROTOCOL.md))
+  is frozen at commit `bc945687`.
+- The development boundary is 2025-01-01.
+- The sealed H1 window is 2025-01-01 → 2026-07-11: 713 priced fights. It
+  allows ten looks in total, each at α = 0.005.
+- The incumbent engine's walk-forward folds already span the sealed window.
+  The engine therefore cannot be first-opened on it.
+
+**What is not decided**
+
+- Which hypothesis is tested first. That is T-080, proposed by the
+  prediction-benchmarks session.
+- The prospective lock table, which is a production migration (L3 item 5).
+- Any verdict.
+
+**Prior state** is inventoried in INFO-AUDIT-001
+(`research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md` on
+`claude/optimistic-ptolemy-8g2smd`, commit `cc7f810`). Its independent blend
+SD of 0.066 (2020–26) agrees with PRED-001's dev-only 0.063.
+
+**Attribution note.** Recorded by Claude from the owner's message in the
+project-audit session. The number D-022 is used because a D-021 already
+exists on an unmerged branch.
