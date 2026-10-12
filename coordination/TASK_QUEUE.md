@@ -53,11 +53,15 @@ it died is usually worth more than the task was.
 | T-074 | **Owner.** Set `RESEND_API_KEY` and `RESEND_FROM`. Three built things cannot speak without them: the weekly digest, member alerts, and the pre-fight dead man's email channel (which ships on a GitHub issue instead, so this unblocks a better channel rather than a missing one) | L3 | Owner | proposed |
 | T-076 | An observer OUTSIDE GitHub for the dead man's own liveness. `dead-man.yml` cannot catch its own silence: if GitHub throttles the schedule or disables it after 60 days of repository inactivity, nothing shouts, which is the exact failure class it was built for. It reports its own run gaps on every run that lands, and that is a mitigation, not a fix | L1 | Claude | proposed |
 | T-077 | Two coverage gaps in `cfl-snapshotter`, both found while fixing it. (a) The Railway cron is `0 18 * * 5` — Friday only — so a card on any other weekday is never reached at all; the dead man reports it dark, correctly, and there is nothing to fix it with. (b) `predictions.closing_odds_american` is NULL in all 72 rows across all six batches ever written: the column exists, nothing has ever populated it, and anything reading it for price context reads nothing | L1 | Claude | proposed |
+| T-080 | **Owner.** Pick the one winner-prediction hypothesis to preregister, from [`INFO-AUDIT-001`](../research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md) §6. Recommended: **A**, opponent-adjusted ratings from the position / target splits we hold and have never used. **B**, the age gap, is optional alongside it. Also approve the sizing rule: the prospective test looks only for a gain worth money (0.010 log loss), because the gain we already have (0.0035) would take ~3,800 fights, about 7–8 years, to confirm | L3 | Owner | proposed |
+| T-081 | Draft and freeze the preregistration for the hypothesis T-080 picks: Stage 1 historical gate with thresholds fixed before the first run, Stage 2 prospective against the market price at the lock instant, power recomputed from Stage 1's spread, a kill date. Blocked on T-080 | L1 | Claude | blocked |
+| T-082 | Pipeline check, not tuning: on 98 locked pre-fight rows (2026-08-15 → 10-10) the engine scored 0.717 log loss, against ~0.654 in its own backtest and 0.645 for the market. Confirm the live path computes what the backtest computed (feature freshness, corner orientation, calibration map). Same class of finding as the PROP-0001 isotonic step | L1 | Claude | queued |
 
 ## Closed
 
 | id | task | level | owner | status |
 |---|---|---|---|---|
+| T-079 | Predictive information audit: what winner information CFL holds, what it has tested, whether the limit is the model or the information, and which one experiment is worth running — [`INFO-AUDIT-001`](../research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md). Read-only | L0 | Claude | done |
 | T-001 | Automate DUR-002's `armed → collecting` transition, guard-gated, with provenance recorded | L1 | Claude | dropped |
 | T-005 | Build the `coordination/` layer and wire it into `CLAUDE.md` | L1 | Claude | done |
 | T-008 | Draft the CLV measurement protocol | L1 | Claude | done |

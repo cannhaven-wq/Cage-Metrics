@@ -47,6 +47,62 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — Predictive information audit: the limit is the information, not the model
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+The brief asked: before building another model, is CFL's limit the models or
+the information they get, and which single experiment is worth running? The full
+answer is [`research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md`](../research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md).
+Every figure in it traces to `queries.sql` / `live_results_2026-10-12.json`
+(read-only, live database) or to `blend_gain.py` (the engine's own
+walk-forward file). **Nothing public changes.** No engine, snapshot, DUR or CLV
+file is touched.
+
+### What it found
+
+- **The bar:** the closing favourite won 66.7% of 7,537 fights (2007–2026);
+  68.0% on the engine's 3,071 test fights.
+- **Five model families converge at 61–64%.** The engine's backtest is 61.4%;
+  there is no documented "62%".
+- **What the model adds beyond the price:** +0.0035 log loss, event-clustered
+  95% interval +0.0012 to +0.0057, positive in six of seven years. Real, and
+  far too small to bet on.
+- **Live is worse than the backtest.** 98 locked fights, engine 0.717 log loss,
+  market 0.645, coin 0.693. Small sample, but it is the PROP-0001 isotonic
+  pattern again until shown otherwise → **T-082**.
+- **Held and never used:** strikes by position and by target, plus reversals,
+  on 8,920 fights; no model adjusts for opponent quality.
+- **The time cost sets the design.** Confirming a 0.003 gain takes ~3,800
+  fights (7–8 years). A 0.010 gain, the smallest worth money, takes ~340+.
+
+### Said plainly
+
+The recommended experiment has a **low-to-moderate** chance of success, not a
+high one. The sportsbooks read the same UFCStats numbers we do. The audit does
+not verify the two outside studies in the brief, and neither should be quoted
+on a CFL surface.
+
+## Next action
+
+**Owner (T-080):** pick the hypothesis. The recommendation is **A**:
+opponent-adjusted ratings built from the position and target splits we already
+hold. Optionally add **B**, the age gap, as a separate preregistration. Also
+approve the sizing rule: only test for a gain worth money (0.010 log loss).
+Then **Claude (T-081)** drafts the preregistration with the Stage 1 thresholds
+fixed before anything runs.
+
+Independent of that, **Claude (T-082)** checks whether the live engine path
+computes what its backtest computed. It needs no decision.
+
+**ChatGPT:** review §3 (the model-vs-information argument) and §5 (the power
+arithmetic) of the audit. Those are the two parts a wrong call would hurt
+most.
+
+---
+
 ## 2026-10-05 — The pre-fight record gets a dead man's handle, and the snapshotter runs again
 
 **From:** Claude
@@ -279,83 +335,3 @@ ceilings against what the odds cadence actually delivers in a fight week.
 Pro gate before step 7.
 
 ---
-
-## 2026-09-21 (g) — No paywall before there is a way to pay
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #44 merged (`68a6a5a`). The Stripe backbone is on `main` and
-`verify-billing-refusal.yml` is now dispatchable from its permanent home.
-
-**The owner resequenced the remaining work** ([D-019](DECISIONS.md)).
-Free-vs-Pro enforcement used to sit immediately after Stripe; it now sits
-behind the gates that make paying possible.
-
-| # | step | whose | state |
-|---|---|---|---|
-| 1 | Stripe backbone (#44) | Claude | **done** |
-| 2 | **T-054** privacy names the analytics processor | Owner + lawyer | blocked on legal |
-| 3 | **T-048** Terms of Service exists | Owner + lawyer | blocked on legal |
-| 4 | **T-067** set the price | Owner (L3) | not set |
-| 5 | **T-068** Stripe account, product, secrets | Owner | no account connected |
-| 6 | **T-069** checkout in Stripe test mode | Claude | blocked on 4–5 |
-| 7 | **T-061** apply the Free/Pro boundary | Claude | moved here |
-| 8 | **T-066** turn checkout live | Owner (L3) | blocked on 2–7 |
-| 9 | watchlists / movement alerts | Claude | **unblocked** |
-
-**It is not only about courtesy to the member.** A paywall in front of a
-product with no checkout is a dead end — the member meets a wall and the door
-behind it does not exist. It also destroys the one measurement the funnel
-instrumentation was built to take: `paywall_hit` means something when a
-purchase is possible and nothing when it is not, and a month of unbuyable
-paywall hits is a baseline nobody can read afterwards.
-
-**Nothing about the blockers changed.** T-054 and T-048 are still checkout
-blockers, `entitlements.js::CHECKOUT_BLOCKERS` is untouched, and
-`stripe-checkout` still returns 503 before it authenticates anyone. Moving
-step 7 later makes 7 and 8 independent, which they always should have been.
-
-### The drafter's brief was out of date, and now is not
-
-`legal-review/PROPOSED_WORDING.md` told a drafter that subscription terms were
-"none of this is decided". That was true when it was written and false the
-moment #44 merged: billing period, renewal, cancellation, failed payment and
-expiry are now shipped, tested behaviour. The file carries a new **"How billing
-actually behaves"** section so the Terms can describe the system rather than
-guess at it — cancellation taking effect at period end, a failed payment not
-cutting access off immediately, access ending automatically on expiry, an
-unrecognised state ending access rather than continuing it.
-
-Two things flagged so a drafter cannot over-promise: **no trial is
-implemented**, and **nothing in the system issues a refund**. If the Terms
-promise one, it is a manual process today.
-
-Still outside production. `privacy.html` and `disclaimer.html` remain untouched.
-
-### On the price
-
-The owner's stated default is ~$9.99–$11.99 monthly, $79–$99 annually, with a
-founding rate for the first cohort. **Recorded as a preference, not set**
-(T-067). No number is configured and `STRIPE_PRICE_ID` is unset. Three things
-it implies are also undecided and are now flagged for the drafter: whether both
-periods are sold, whether the founding rate is for life or for a term, and what
-happens to it on lapse and resubscription — which interacts with the undecided
-question of what the beta grant obliges.
-
-## Next action
-
-**Owner:** steps 2–5 are yours and nothing downstream moves without them. The
-cheapest one to clear first is **T-054** — it is a single disclosure clause and
-the draft is already written; T-048 is the larger piece.
-
-**Claude:** step 9 (watchlists / movement alerts) is the only unblocked build
-work in the sequence. Do not start T-061 — it is deliberately behind the
-payment gates now.
-
-**Nobody:** removes a blocker to make something pass, or sets a price to unblock
-themselves.
-
----
-

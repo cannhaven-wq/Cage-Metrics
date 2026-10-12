@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-05
+Last updated: 2026-10-12
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -271,6 +271,19 @@ so the account page and the entitlement cannot disagree.
 
 **The duration model is read-only.** Development on it is finished; both
 experiments run untouched until their evaluation points.
+
+**Winner prediction — audited 2026-10-12 ([INFO-AUDIT-001](../research/info_audit/PREDICTIVE_INFORMATION_AUDIT_2026-10-12.md)).**
+The limit is the information, not the model. Five model families land at
+61–64%, against 66.7% for the closing favourite across 7,537 fights. Blended
+with the price, the engine adds +0.0035 log loss historically (event-clustered
+interval +0.0012 to +0.0057), roughly half a point of accuracy. Live, on 98
+locked fights, it is no better than a coin (0.717 vs the market's 0.645), which
+is queued as a pipeline check (**T-082**). Never used by any model: the
+position and target splits we hold for 8,920 fights, and any
+opponent adjustment. Confirming a gain the size of the one we already have
+would take ~3,800 fights (7–8 years), so the next test is sized for a gain
+worth money (0.010, ~340+ fights). **Next: the owner picks the hypothesis
+(T-080); recommended is opponent-adjusted ratings.** Nothing public changes.
 
 ### CLV — the active line
 
