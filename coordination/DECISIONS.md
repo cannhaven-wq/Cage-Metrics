@@ -1569,7 +1569,7 @@ rather than a config change.
 | date | 2026-10-12 |
 | decided by | Reed Cannon (owner) |
 | task | none; direct owner instruction |
-| level | L3 (item 1, freezing a specification) |
+| level | L3 |
 | reversible | the protocol is reversible by a dated amendment. The seal is not, in one respect: a sealed look that has been taken cannot be untaken. Every look is therefore recorded in `research/protocol/holdout_ledger.json` |
 
 **The owner's instruction, quoted:** *"Proceed with Step 2: establish the
