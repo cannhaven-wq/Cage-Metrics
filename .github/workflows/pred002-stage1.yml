@@ -1,0 +1,42 @@
+name: PRED-002 — Stage 1 (the one run)
+
+# Runs PRED-002 Stage 1 ONCE, on development data only, at a commit after the
+# freeze. Removed after it has run; a second run is forbidden by the
+# preregistration. Read-only: contents: read, GET requests only.
+
+on:
+  push:
+    branches: [claude/peaceful-goldberg-yhcgmw]
+    paths: ['.github/workflows/pred002-stage1.yml']
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pred002-stage1
+  cancel-in-progress: false
+
+jobs:
+  stage1:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q -r cfl_engine/requirements.txt
+      - name: Confirm the frozen files are the frozen bytes
+        run: python -m unittest tests.test_research_state -q
+      - name: Development export (dates before 2025-01-01 only)
+        run: python research/pred002_data/export_dev.py --outdir pred002_dev
+      - name: Stage 1
+        run: |
+          echo "commit $GITHUB_SHA"
+          python research/experiments/PRED-002/stage1.py --indir pred002_dev --outdir pred002_out
+      - name: Full result JSON
+        if: always()
+        run: cat pred002_out/stage1_result.json || true
