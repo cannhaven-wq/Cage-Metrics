@@ -13,6 +13,15 @@ Every number below traces to an artifact in this folder:
 [`blend_gain_output.txt`](blend_gain_output.txt) (the engine's own walk-forward
 file), and the existing reports cited inline.
 
+**Pre-seal.** A parallel protocol workstream (branch `claude/nice-bell-ussmhp`,
+`research/protocol/`) proposes sealing fights on or after **2025-01-01** as the
+historical holdout. Every figure here that touches 2025–2026 fights is a
+**descriptive re-scoring of output that already existed** (the engine's
+walk-forward file, the locked snapshots, published reports). Nothing in this
+audit was fit, tuned or blended anew on those fights. If that seal is adopted,
+§7's Stage 1 runs on pre-2025 folds only and the sealed years are opened once,
+under the protocol's rules.
+
 ---
 
 ## The plain-English version
@@ -235,7 +244,7 @@ locked before the bell for about a year. If not, we stop and say so.
 
 **Stage 1 — historical gate.** A filter, not evidence.
 
-- Ratings are fit walk-forward, point-in-time, on the engine's existing folds.
+- Ratings are fit walk-forward, point-in-time, on the engine's existing folds — **pre-2025 only if the protocol's holdout seal is adopted**, with 2025+ opened once as the confirmatory historical check.
 - The challenger is the market plus the ratings. There are two comparators:
   the market alone, and the market plus the current engine. The second
   question is whether this beats what we already have.
