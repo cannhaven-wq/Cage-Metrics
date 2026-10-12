@@ -289,11 +289,15 @@ def fit_calibrator_and_blend(log=print):
         iso = IsotonicRegression(y_min=EPS, y_max=1 - EPS, out_of_bounds="clip")
         iso.fit(p_raw, y)
         calibrate = lambda p: iso.predict(np.asarray(p, dtype=float))
+        calibrate.fitted = {"kind": "isotonic", "x": iso.X_thresholds_.tolist(),
+                            "y": iso.y_thresholds_.tolist(), "n_rows": int(len(oos))}
         log(f"  calibrator: isotonic on {len(oos)} pooled OOS rows")
     else:
         platt = LogisticRegression(C=1e6, max_iter=1000)
         platt.fit(_logit(p_raw).reshape(-1, 1), y)
         calibrate = lambda p: platt.predict_proba(_logit(np.asarray(p, dtype=float)).reshape(-1, 1))[:, 1]
+        calibrate.fitted = {"kind": "platt", "coef": platt.coef_.tolist(),
+                            "intercept": platt.intercept_.tolist(), "n_rows": int(len(oos))}
         log(f"  calibrator: Platt on {len(oos)} pooled OOS rows")
 
     p_cal_oos = np.clip(calibrate(p_raw), EPS, 1 - EPS)
@@ -308,12 +312,16 @@ def fit_calibrator_and_blend(log=print):
                              _logit(np.asarray(q_mkt, dtype=float))])
         return lr.predict_proba(z)[:, 1]
 
+    blend.fitted = {"kind": "logistic", "coef": lr.coef_.tolist(),
+                    "intercept": lr.intercept_.tolist(), "n_rows": int(has_q.sum())}
     return calibrate, blend
 
 
 # --------------------------------------------------------------------- main
 def build_predictions(base_url: str, key: str, within_days: int = DEFAULT_WITHIN_DAYS,
-                      log=print):
+                      log=print, bundle: dict | None = None):
+    """Returns (picks, edges). If `bundle` is a dict it is filled with everything
+    needed to re-derive every published number exactly (publish_bundle.py)."""
     log("[1/5] pulling upcoming fights + current consensus ...")
     up = pull_upcoming(base_url, key, within_days, log=log)
     if up.empty:
@@ -416,6 +424,18 @@ def build_predictions(base_url: str, key: str, within_days: int = DEFAULT_WITHIN
     log("[5/5] assembling picks + edges ...")
     picks = _make_picks(meta)
     edges = _make_edges(meta)
+    if bundle is not None:
+        bundle.update({
+            "model": model, "diff_cols": diff_cols, "feature_cols": list(X_up.columns),
+            "X_up": X_up, "fighters_used": fighters_all,
+            "calibrator": calibrate.fitted, "blend": blend.fitted,
+            "predictions": pd.DataFrame({
+                "fight_id": feat_up["fight_id"].to_numpy(),
+                "fighter_a_id": feat_up["fighter_a_id"].to_numpy(),
+                "fighter_b_id": feat_up["fighter_b_id"].to_numpy(),
+                "p_raw_a": p_raw_a, "p_cal_a": p_cal_a, "p_blend_a": p_blend_a,
+                "q_a": q_a}),
+        })
     return picks, edges
 
 
@@ -511,6 +531,8 @@ def main():
     ap.add_argument("--execute", action="store_true",
                     help="insert into Supabase (default: dry-run preview only)")
     ap.add_argument("--dry-run", action="store_true", help="explicit no-op (default)")
+    ap.add_argument("--bundle-dir", default=os.path.join(PREVIEW_DIR, "publish_bundle"),
+                    help="where the reproducibility bundle is written (T-083)")
     ap.add_argument("--within-days", type=int, default=DEFAULT_WITHIN_DAYS,
                     help=f"only publish events within N days (default {DEFAULT_WITHIN_DAYS}); "
                          "keeps live picks locked on current history")
@@ -522,8 +544,16 @@ def main():
         sys.exit("SUPABASE_URL not set in env.")
     key = _env_key()
 
-    picks, edges = build_predictions(base_url, key, within_days=args.within_days)
+    bundle: dict = {}
+    picks, edges = build_predictions(base_url, key, within_days=args.within_days,
+                                     bundle=bundle)
     os.makedirs(PREVIEW_DIR, exist_ok=True)
+    if bundle:
+        # Saved BEFORE anything is inserted: a publish whose inputs were not
+        # kept is a publish nobody can re-derive (T-083).
+        import publish_bundle
+        manifest = publish_bundle.write(bundle, args.bundle_dir)
+        print(f"\npublish bundle -> {manifest['dir']}  manifest sha256 {manifest['manifest_sha256']}")
 
     if picks.empty:
         print("\nNo upcoming picks produced.")

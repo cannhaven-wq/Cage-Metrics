@@ -261,9 +261,50 @@ def build_features(fights: pd.DataFrame, stats: pd.DataFrame, fighters: pd.DataF
         rows.append(row)
     feat_df = pd.DataFrame(rows)
     out = pd.concat([fights.reset_index(drop=True), feat_df], axis=1)
-    out["wc_code"] = pd.factorize(out["weight_class"].astype(str))[0].astype(float)
+    out["wc_code"] = out["weight_class"].map(wc_code_of).astype(float)
     out["n_rounds_sched"] = pd.to_numeric(out["n_rounds_sched"], errors="coerce").fillna(3.0)
     return out
+
+
+# ----------------------------------------------------------------------------- weight class
+# Weight class reaches the model as a number. Until engine_v3 that number was
+# pd.factorize order -- "first label seen in a date-sorted frame" -- which is
+# not stable: Heavyweight and Lightweight first appear on the same night, so
+# their codes depended on an unstable sort, and a label first seen on an
+# upcoming card (a Road to UFC or TUF bracket) got a code the model had never
+# trained on, and a different code in different builds (T-082 found 9 of 102
+# live fights affected). Now: a fixed scale ordered by weight, so a tree split
+# means "lighter than"; brackets map to their division; early UFC tournaments
+# and superfights are Open Weight. A label this cannot place is NaN, never a
+# guess.
+WC_SCALE = {
+    "strawweight": 0.0, "flyweight": 1.0, "bantamweight": 2.0, "featherweight": 3.0,
+    "lightweight": 4.0, "welterweight": 5.0, "middleweight": 6.0,
+    "light heavyweight": 7.0, "heavyweight": 8.0,
+}
+WC_CATCH, WC_OPEN = 9.0, 10.0
+# checked in this order: "light heavyweight" must win over "heavyweight", and
+# "super heavyweight" is heavyweight
+_WC_KEYS = ["light heavyweight", "super heavyweight", "heavyweight", "strawweight",
+            "flyweight", "bantamweight", "featherweight", "lightweight",
+            "welterweight", "middleweight"]
+
+
+def wc_code_of(label) -> float:
+    """Stable numeric code for a weight-class label (see WC_SCALE)."""
+    if label is None or (isinstance(label, float) and np.isnan(label)):
+        return np.nan
+    s = " ".join(str(label).lower().replace("-", " ").split())
+    if not s or s == "nan":
+        return np.nan
+    if "catch" in s:
+        return WC_CATCH
+    for key in _WC_KEYS:
+        if key in s:
+            return WC_SCALE["heavyweight"] if key == "super heavyweight" else WC_SCALE[key]
+    if "open weight" in s or "openweight" in s or "superfight" in s or "tournament" in s:
+        return WC_OPEN
+    return np.nan
 
 
 # ----------------------------------------------------------------------------- corners + matchup

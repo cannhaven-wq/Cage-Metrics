@@ -62,6 +62,21 @@ jobs:
       - name: Publish live picks + edges
         run: PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --execute
 
+      # T-083: every publish keeps the exact model, calibrator, inputs and a
+      # hashed manifest, so each locked number can be re-derived with
+      #   python cfl_engine/publish_bundle.py <bundle dir>
+      # 90 days is the most Actions keeps an artifact; durable storage is a
+      # separate decision. `if: always()` because a bundle written before a
+      # failed insert is exactly the one worth keeping.
+      - name: Keep the publish bundle
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: publish-bundle-${{ github.run_id }}
+          path: out_real/publish_bundle/
+          retention-days: 90
+          if-no-files-found: warn
+
       # Fighter ratings (the engine's Elo + strength of schedule) feed "The
       # read" on every fighter page. Derived from the export above; full-table
       # replace, so a card that settled yesterday shows up here today.

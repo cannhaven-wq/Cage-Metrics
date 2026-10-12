@@ -1,0 +1,50 @@
+name: T-083 — reproducibility dry run
+
+# One-off proof for T-083, removed once it has run. Read-only: predict_upcoming
+# runs WITHOUT --execute (dry run, nothing inserted), and the token cannot push.
+# It runs the live publish path twice on the same export and requires:
+#   - each run's bundle re-derives every number exactly (publish_bundle.verify)
+#   - the two runs' predictions are identical, bit for bit
+
+on:
+  push:
+    branches: [claude/peaceful-goldberg-yhcgmw]
+    paths: ['.github/workflows/t083-dryrun.yml']
+
+permissions:
+  contents: read
+
+jobs:
+  dryrun:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      SUPABASE_URL: https://uftancejftcryfvbggll.supabase.co
+      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install -q -r cfl_engine/requirements.txt && pip list | grep -iE "^(xgboost|pandas|numpy|scikit-learn|scipy) "
+      - run: PYTHONPATH=cfl_engine python cfl_engine/export_data.py
+      - name: Dry run 1
+        run: PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --bundle-dir out_t083/run1 | tail -5
+      - name: Dry run 2
+        run: PYTHONPATH=cfl_engine python cfl_engine/predict_upcoming.py --bundle-dir out_t083/run2 | tail -5
+      - name: Verify both bundles and compare
+        run: |
+          for d in out_t083/run1/* out_t083/run2/*; do PYTHONPATH=cfl_engine python cfl_engine/publish_bundle.py "$d"; done
+          python - <<'PY'
+          import glob, json, pandas as pd
+          a, b = [pd.read_csv(glob.glob(f"out_t083/{r}/*/predictions.csv")[0], float_precision="round_trip")
+                  for r in ("run1", "run2")]
+          same = a.equals(b)
+          ma = json.load(open(glob.glob("out_t083/run1/*/manifest.json")[0]))
+          mb = json.load(open(glob.glob("out_t083/run2/*/manifest.json")[0]))
+          print(json.dumps({"fights": len(a), "predictions_identical": same,
+                            "model_sha_identical": ma["files"]["model.ubj"] == mb["files"]["model.ubj"],
+                            "engine_version": ma["engine_version"], "engine_build": ma["engine_build"],
+                            "versions": ma["versions"]}, indent=1))
+          raise SystemExit(0 if same else 1)
+          PY

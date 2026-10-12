@@ -1,8 +1,19 @@
-pandas>=2.2
-numpy>=1.26
-scikit-learn>=1.4
-scipy>=1.11
-statsmodels>=0.14
-pyarrow>=15.0
-xgboost>=2.0
-tabulate>=0.9
+# Exact pins (T-083, closes T-011). Every forecast the engine writes must be
+# re-derivable, and a floating `>=` let each morning's run train on whatever
+# version pip resolved that day: T-082 found locked live numbers that could not
+# be reproduced (mean shift 0.045, 1 in 10 flipped side). These are the
+# versions pip resolved for the production runner (CPython 3.11, linux x86_64)
+# on 2026-10-12. Changing any line changes the engine: bump ENGINE_BUILD in
+# cfl_engine/version.py in the same commit. tests/test_engine_reproducible.py
+# fails on an unpinned line.
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
+scipy==1.17.1
+statsmodels==0.15.0
+pyarrow==26.0.0
+xgboost==3.2.0
+tabulate==0.10.0
+# numerically relevant transitives (threading and model persistence)
+joblib==1.6.0
+threadpoolctl==3.7.0
