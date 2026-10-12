@@ -544,11 +544,14 @@ function buildQueue(batches) {
         tweet: tweetFor(p, event),
         image: im ? 'social/' + im.rel : null,
         cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
-        // Stamps the piece as research-era. build/social-post.js refuses to
-        // post a queue entry without it, so pieces generated before the
-        // September 2026 repositioning (which quoted model probabilities)
-        // can never be picked up by the cron.
-        positioning: 'research',
+        // NOT stamped 'research' (2026-10-12). This stamp is what
+        // build/social-post.js checks before posting, and the templates in
+        // tweetFor() still quote model probabilities ("our model reads A 62%
+        // over B"), so stamping them 'research' sent the retired forecast to X
+        // three times a week. Pieces stay 'model-era' until the templates are
+        // rewritten as market-only copy; the poster also refuses any piece
+        // whose words read as a forecast (build/social-copy-guard.js).
+        positioning: 'model-era',
       });
     }
   }

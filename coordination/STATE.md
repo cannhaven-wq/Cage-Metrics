@@ -3,7 +3,19 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-05
+Last updated: 2026-10-12
+
+**Stabilization sprint, 2026-10-12.** The owner moved the project from feature
+development to commercial stabilization after the current-state audit
+(`audits/cfl-current-state/`, branch `claude/nice-bell-ussmhp`). No new features
+and no new prediction models until there is evidence of human demand. Order:
+(1) remove the retired forecast from every public channel — the X poster had been
+publishing it three times a week; (2) repair the silent operational failures —
+fighter scraper dead since May, odds-scraper deploys failing since July, daily
+export red, alerts and Brief undeliverable; (3) measure human traffic — the
+in-house funnel counts JavaScript-executing crawlers as sessions, so the
+350–465 daily "sessions" are mostly not people; (4) a demand test before any
+Pro build. Stripe stays off.
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
