@@ -11,8 +11,9 @@ this document exists to meet:
    not a coin. §4.
 3. **It starts on pre-2025 development data.** §5.
 
-T-082 (does the live engine compute what its backtest computed?) runs first.
-Nothing in this experiment reads the live engine or its locked picks: the
+T-082 (does the live engine compute what its backtest computed?) ran first
+and found no pipeline defect ([report](../../t082/T082_REPORT_2026-10-12.md)).
+Nothing in this experiment reads the live engine or its locked picks either: the
 "existing model" here is the engine's code retrained on development data only,
 so a fault in the live serving path cannot leak into either side of the
 comparison.

@@ -99,6 +99,28 @@ prospective test**, and the dev-measured arithmetic says a 0.005 log-loss gain
 over the market takes about 1,650 fights, roughly 3.4 years, to confirm. No
 model has been built or trained under it yet. Computer vision is deferred.
 
+**One experiment is authorised, and the live engine has been checked first
+([D-023](DECISIONS.md), 2026-10-12).**
+
+- **T-082 is done: the live engine computes what its backtest computed**
+  ([report](../research/t082/T082_REPORT_2026-10-12.md)). Features matched
+  with 0 mismatches on 102 live fights and 647 development fights. The live
+  and backtest training paths differ by less than two random seeds of the same
+  path do. The bad live record is the engine's normal shortfall to the market
+  on a run of hard cards: the market itself scored 0.645, against its usual
+  0.600.
+- **One real defect: live forecasts cannot be re-derived exactly.** Re-running
+  them moves fights 4.5 points on average and flips 1 in 10. That is **T-083**,
+  and it must be fixed before any prospective lock is trusted.
+- **PRED-002, opponent-adjusted ratings against price plus engine, is drafted**
+  ([preregistration](../research/experiments/PRED-002/PREREGISTRATION.md)).
+  The pass mark is fixed before anything is trained. Next: review, freeze,
+  then one run on pre-2025 data (T-081).
+- **The forecast lock table is drafted and NOT applied**
+  (`proposed_2026-10-12_win_forecast_locks.sql`). Applying it waits on the
+  owner (**T-084**, L3).
+- **Fight simulation and video are on hold.**
+
 ### Monetization sprint — started 2026-09-21
 
 **Items 1–5 done.** Item 5, Stripe, is built end to end and **cannot take a
@@ -289,12 +311,13 @@ The limit is the information, not the model. Five model families land at
 with the price, the engine adds +0.0035 log loss historically (event-clustered
 interval +0.0012 to +0.0057), roughly half a point of accuracy. Live, on 98
 locked fights, it is no better than a coin (0.717 vs the market's 0.645), which
-is queued as a pipeline check (**T-082**). Never used by any model: the
+and T-082 found that to be a hard run of cards, not a pipeline fault. Never used by any model: the
 position and target splits we hold for 8,920 fights, and any
 opponent adjustment. Confirming a gain the size of the one we already have
 would take ~3,800 fights (7–8 years), so the next test is sized for a gain
-worth money (0.010, ~340+ fights). **Next: the owner picks the hypothesis
-(T-080); recommended is opponent-adjusted ratings.** Nothing public changes.
+worth money (0.010, ~340+ fights). **The owner picked opponent-adjusted
+ratings (T-080, D-023); its preregistration is drafted (T-081).** Nothing
+public changes.
 
 ### CLV — the active line
 

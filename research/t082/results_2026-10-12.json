@@ -1,0 +1,30 @@
+{
+ "_what": "Output of research/t082/diagnose_live_path.py, GitHub Actions run 38298613704 (workflow t082-diagnose.yml, commit da593d13), 2026-10-12T19:35-19:42Z, copied from the job log. Plus the two DEV block-resampling figures computed from out_real/oos_predictions.csv (rows dated before 2025-01-01 only).",
+ "run": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/38298613704",
+ "export": {"fights": 8942, "results": {"a": 5620, "b": 3165, "nc": 94, "draw": 63}},
+ "C_path_equivalence_dev": {
+  "window": ["2022-09-17", "2024-01-19"], "fights": 647, "train_fights_before_window": 6804,
+  "serving_vs_backtest_feature_mismatching_cells": 0,
+  "backtest_seed42": {"pick_a_share": 0.4405, "mean_conf": 0.5987, "share_conf_ge_0_70": 0.017, "market_fav_a_share": 0.6079, "disagree_share": 0.29, "disagree_engine_b_market_a": 139, "disagree_engine_a_market_b": 37, "log_loss_cal": 0.6647, "log_loss_raw": 0.6606, "a_win_share": 0.5781},
+  "backtest_seed7": {"pick_a_share": 0.4389, "mean_conf": 0.6025, "share_conf_ge_0_70": 0.0402, "disagree_engine_b_market_a": 142, "disagree_engine_a_market_b": 38, "log_loss_cal": 0.6589, "log_loss_raw": 0.658},
+  "live_path": {"pick_a_share": 0.4451, "mean_conf": 0.6002, "share_conf_ge_0_70": 0.0263, "disagree_engine_b_market_a": 140, "disagree_engine_a_market_b": 42, "log_loss_cal": 0.6602, "log_loss_raw": 0.6548},
+  "live_vs_backtest_mean_abs_diff_p": 0.0192,
+  "seed7_vs_seed42_mean_abs_diff_p": 0.0272,
+  "market_log_loss": 0.6
+ },
+ "A_feature_parity_live": {
+  "fights_compared": 102, "fights_not_yet_in_history": 31,
+  "total_mismatching_cells": 0, "wc_code_mismatches": 9, "n_rounds_sched_mismatches": 0
+ },
+ "B_reproduction_live": {
+  "n": 133, "abs_diff_max": 0.385098, "abs_diff_mean": 0.045498,
+  "share_within_0_001": 0.3759, "share_same_side": 0.9023, "corr": 0.8908,
+  "locked": {"pick_a_share": 0.4135, "mean_conf": 0.6375, "share_conf_ge_0_70": 0.2556, "n_with_market": 80, "market_fav_a_share": 0.65, "disagree_engine_b_market_a": 18, "disagree_engine_a_market_b": 4},
+  "reproduced": {"pick_a_share": 0.406, "mean_conf": 0.6356, "share_conf_ge_0_70": 0.2406, "disagree_engine_b_market_a": 15, "disagree_engine_a_market_b": 2}
+ },
+ "D_dev_block_resampling": {
+  "method": "20,000 draws of 8 whole cards from the engine's calibrated walk-forward rows dated before 2025-01-01 (out_real/oos_predictions.csv), seed 20261012",
+  "engine_log_loss": {"rows": 2442, "cards": 210, "mean": 0.6588, "p95": 0.6939, "p99": 0.7082, "P_ge_0_7168": 0.0032, "P_ge_0_7306": 0.0003},
+  "engine_minus_market": {"rows": 2322, "mean": 0.0556, "p95": 0.0976, "p99": 0.1150, "P_ge_0_0717": 0.270, "P_ge_0_0947": 0.064}
+ }
+}

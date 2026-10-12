@@ -3,8 +3,9 @@
 A pipeline audit of the incumbent engine (engine_v2), not a model experiment.
 Nothing here is fitted to be kept, nothing is published, and nothing is written
 to the database. It runs against a fresh `cfl_engine/export_data.py` export and
-prints its findings; the workflow `.github/workflows/t082-diagnose.yml` runs it
-because the agent sandbox cannot reach the Supabase host.
+prints its findings. It ran once, as a one-off contents:read GitHub Actions
+workflow (run 38298613704, since removed), because the agent sandbox cannot
+reach the Supabase host. Results: results_2026-10-12.json, T082_REPORT_2026-10-12.md.
 
 Why it exists. On the locked pre-fight record (2026-08-15 -> 10-10) the engine
 scored 0.717 log loss against a backtest of ~0.654, and its live picks back the

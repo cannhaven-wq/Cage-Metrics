@@ -47,6 +47,79 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — T-082 answered, one experiment drafted, lock table ready for the owner
+
+**From:** Claude
+**To:** ChatGPT (review) → Owner (T-084)
+**Date:** 2026-10-12
+
+The owner authorised one controlled experiment and set the order:
+investigate the live engine first, then opponent-adjusted ratings with the
+pass mark fixed before training, and prepare (not apply) the forecast lock
+table. Recorded as [D-023](DECISIONS.md). This branch also merges the PRED-001
+protocol branch and the INFO-AUDIT-001 branch, so it carries all three.
+
+### T-082 — done
+
+**The live engine computes what its backtest computed**
+([report](../research/t082/T082_REPORT_2026-10-12.md)). It was replayed
+read-only on the real data. Serving features matched the backtest's on 102
+live and 647 development fights, with 0 mismatched cells. Trained the live way
+and the backtest way on the same fights, the two paths differ less than two
+random seeds of one path. Two leads looked alarming and were not:
+
+- the engine backs the A corner far less often than the market;
+- live probabilities are more confident than in the backtest.
+
+Both have the same cause, and both appear in the backtest code on 2022–24. The
+engine underrates the fighter the market favours, and these cards were more
+lopsided. The live gap to the market occurs in 27% of random 8-card blocks of
+the engine's own development-years output.
+
+**One real defect:** the locked live numbers cannot be re-derived exactly. The
+mean shift is 0.045 and 1 in 10 flips side. Floating dependencies and history
+corrected after publish are the likely causes, but neither was isolated. This
+is **T-083**.
+
+### PRED-002 — drafted, not frozen
+
+[`PREREGISTRATION.md`](../research/experiments/PRED-002/PREREGISTRATION.md).
+Five opponent-adjusted rate ratings: distance, clinch and ground strikes,
+takedowns, control. They are added to a logistic blend of market plus engine
+(the engine retrained on development data only). Stage 1 passes only if all
+of these hold:
+
+- the gain over price plus engine is at least 0.002, with its interval above
+  zero;
+- the gain over price alone is at least 0.006, with its interval above zero;
+- the gain over price plus engine is positive in 6 of 9 development years;
+- calibration and leak tripwires are clean.
+
+The prospective stage is sized for 0.010, which is 412 fights at the floor
+spread, with an 18-month kill date. The one tuning knob is chosen on
+stat-prediction error, never on who won.
+
+### Lock table — NOT applied
+
+[`proposed_2026-10-12_win_forecast_locks.sql`](../proposed_2026-10-12_win_forecast_locks.sql).
+It is built on the `prop_model_locks` pattern and is stricter. The lock time
+comes from the database clock, not the caller. An unknown start time is
+refused. The market benchmark must cite real, pre-lock, non-live sportsbook
+quotes on both corners. A replaced opponent voids the forecast. 21 tests run
+it on a throwaway Postgres and try to break each guard and grant
+(`tests/test_win_forecast_locks.py`). Applying it is **T-084, L3**.
+
+## Next action
+
+**ChatGPT:** review PRED-002 §3 (the rating model) and §6 (the thresholds).
+Those are the two parts a wrong call there would cost the most. Then **Claude
+(T-081)** freezes it, adds the registry entry, builds the development-years
+export and runs Stage 1 once. **Owner (T-084):** approve or decline applying
+the lock table. Nothing prospective can start without it, and nothing in
+Stage 1 needs it.
+
+---
+
 ## 2026-10-12 — PRED-001: the bar a prediction model must clear, written before anyone tries
 
 **From:** Claude (project-audit session)
