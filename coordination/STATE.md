@@ -115,12 +115,15 @@ model has been built or trained under it yet. Computer vision is deferred.
   hashed bundle that re-derives every number. Two dry runs on the real data
   gave identical forecasts for all 22 fights and an identical model file.
   Bundles are kept only 90 days (T-087).
-- **PRED-002, opponent-adjusted ratings against price plus engine, is drafted**
-  ([preregistration](../research/experiments/PRED-002/PREREGISTRATION.md)).
-  The pass mark is fixed before anything is trained, and it is labelled a
-  filter, not proof of commercial value. Next: an independent auditor reviews
-  the 0.002 / 0.006 thresholds (**T-085**), then the preregistration is frozen
-  and run once on pre-2025 data (T-081).
+- **PRED-002 ran once and failed (STOP_STAGE1, 2026-10-12)**
+  ([report](../research/experiments/PRED-002/STAGE1_REPORT.md)). On 3,333
+  fights from 2016–2024, opponent-adjusted striking and grappling ratings added
+  **nothing** to the price plus our engine. The gain was −0.0002 per fight, with
+  a range of −0.0028 to +0.0024. Against the price alone the combined forecast
+  gained +0.0015, with a range that includes zero, well short of the 0.006 bar.
+  It was better in only 5 of the 9 years. The thresholds were retained by an
+  independent review and frozen before the run, and none was changed after.
+  The hypothesis is closed. The owner records the verdict (**T-088**).
 - **The forecast lock table is drafted and NOT applied**
   (`proposed_2026-10-12_win_forecast_locks.sql`). On review, the database now
   recomputes the market benchmark itself and refuses any lock whose stored

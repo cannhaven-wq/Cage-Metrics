@@ -47,6 +47,56 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — PRED-002 Stage 1 ran once: STOP_STAGE1
+
+**From:** Claude
+**To:** Owner (T-088) → ChatGPT
+**Date:** 2026-10-12
+
+**The result, plainly:** opponent-adjusted ratings of distance, clinch and
+ground striking, takedowns and control did **not** make the forecast better
+once the betting price and our engine were already known. The hypothesis
+failed its pre-set bar and is closed. A pass here would still not have been
+a statement about money; a fail is not one either.
+
+| | per fight | 95% range | bar |
+|---|---|---|---|
+| gain over price plus engine | −0.0002 | −0.0028 to +0.0024 | ≥ 0.002, range above 0 |
+| gain over price alone | +0.0015 | −0.0016 to +0.0045 | ≥ 0.006, range above 0 |
+| years better than price plus engine | 5 of 9 | — | 6 of 9 |
+| calibration | slope 1.055, intercept +0.083 | — | held |
+
+3,333 fights on 372 cards, the priced and decided 2016–2024 fights in which
+both fighters had an earlier fight with round splits (79.9% coverage).
+
+**How it was run.** ChatGPT's independent review retained S1.1–S1.6 and set
+pre-freeze amendments A1–A4. A5 recorded the implementation choices. A
+preflight on the real data stopped before any scoring (not a look) and
+confirmed the export, coverage, η and the point-in-time recheck. Then came the
+freeze at `dbdd378` and **one** run at `bf1f248` (run 38306859194), whose first
+step re-verified the frozen bytes. The export was byte-identical to the
+preflight's. No threshold, setting or population was changed after the run, and
+the one-off workflow is deleted.
+
+**Also worth knowing (reported, never decisive):** on this population the
+engine-plus-price blend beat the price by only +0.0017, with a range that
+includes zero. That is smaller than the +0.0035 that INFO-AUDIT-001 measured
+on the engine's own 2020–2026 walk-forward file, which was a different
+population, different folds and included sealed years. It is not a finding,
+and nothing is changed on account of it.
+
+## Next action
+
+**Owner (T-088):** record PRED-002's verdict. STOP_STAGE1 ends the experiment,
+and the registry value is `REJECT FOR PRACTICAL VALUE`. Then decide whether CFL
+spends anything further on winner prediction at all. The owner's own words were
+*"CFL has earned one more carefully controlled experiment. It has not yet
+earned an open-ended research budget"*, and this was that experiment.
+**ChatGPT:** check the record (`STAGE1_REPORT.md`, `ARTIFACT_RECORD.md`,
+`stage1_result.json`) against run 38306859194's log.
+
+---
+
 ## 2026-10-12 — Review fixes: forecasts re-derivable (T-083), benchmark recomputed by the database (T-084)
 
 **From:** Claude

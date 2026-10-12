@@ -400,8 +400,8 @@
     "rescue by subgroup",
     "any amendment motivated by observed results"
    ],
-   "results_artifact": null,
-   "stage1_verdict": null,
+   "results_artifact": "research/experiments/PRED-002/stage1_result.json",
+   "stage1_verdict": "STOP_STAGE1",
    "verdict": null,
    "verdict_timestamp": null,
    "pinned_at_commit": {
@@ -434,7 +434,25 @@
      "frozen_at_commit": "dbdd37859fc16843fae723deb23d32718cda15e4"
     }
    ],
-   "approved_by": "Reed Cannon (D-023); thresholds retained by independent review"
+   "approved_by": "Reed Cannon (D-023); thresholds retained by independent review",
+   "stage1_run": {
+    "run": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/38306859194",
+    "commit": "bf1f2483147451b3b9d56a8c1334e8b0bbe89224",
+    "finished_at": "2026-10-12T20:54:07Z",
+    "delta_B": -0.00016916678449603278,
+    "delta_B_ci95": [
+     -0.0027660115637060906,
+     0.0024373806275385813
+    ],
+    "delta_M": 0.0015299522538479216,
+    "delta_M_ci95": [
+     -0.0015826594980877652,
+     0.004540713509700499
+    ],
+    "n_scored": 3333,
+    "cards": 372
+   },
+   "experiment_verdict_note": "Stage 1 returned STOP_STAGE1, which under the preregistration ends PRED-002. Recording the experiment's registry verdict is the owner's step (PRED-001 §1); the mapping the preregistration implies is REJECT FOR PRACTICAL VALUE. Left null until the owner records it."
   }
  ],
  "experiment_lifecycle": {

@@ -1,0 +1,258 @@
+{
+ "_what": "PRED-002 Stage 1 result, copied from the job log of GitHub Actions run 38306859194 (workflow pred002-stage1.yml, commit bf1f2483147451b3b9d56a8c1334e8b0bbe89224, 2026-10-12T20:51:45Z-20:54:07Z). The full JSON, including the per-year blend coefficients and the 10-bin reliability table, is in that log; the numbers below are verbatim from it.",
+ "experiment": "PRED-002",
+ "stage": 1,
+ "run": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/38306859194",
+ "commit": "bf1f2483147451b3b9d56a8c1334e8b0bbe89224",
+ "code_sha256": {
+  "stage1.py": "2307e77669514e291b00b04117fdff1c5281fb0d9d2e61879191db584de3a535"
+ },
+ "export_manifest_sha256": "35af166de6a20979e7fe4db2fb10ea531c7e5206f1986ee387a760a0fd364eb0",
+ "export_sha256": {
+  "fights.csv": "cdb37e148d5408a3a2dcc5e1afaf8e499fc72eaa472ae34aaee68b9ec2bdea63",
+  "rounds.csv": "79b482a7547bf1289dbb920fe50a407e1d2eb54150e294890fe15c843df7f4dd",
+  "fight_stats.csv": "c9de8b494af8d27ba49d8098de02b35d0f4c4a798fe5828cd027d44ee13b1bc4",
+  "fighters.csv": "9796b9b6501e5657372380dd5d13a6477a700b16d39f2d5dda7a62ce75b3b221"
+ },
+ "fights_loaded": 7974,
+ "last_event_date": "2024-12-14",
+ "ratings": {
+  "eta": 0.1,
+  "eta_mse": {
+   "0.05": 2.0258448887260947,
+   "0.1": 1.9625394827623606,
+   "0.2": 2.005652673376477
+  }
+ },
+ "exclusions_by_year": [
+  {
+   "year": 2016,
+   "priced_decided": 469,
+   "excluded_a_no_prior_splits": 19,
+   "excluded_b_no_prior_splits": 89,
+   "excluded_both_no_prior_splits": 12,
+   "excluded_no_engine_forecast": 0,
+   "scored": 373,
+   "coverage": 0.7953
+  },
+  {
+   "year": 2017,
+   "priced_decided": 430,
+   "excluded_a_no_prior_splits": 35,
+   "excluded_b_no_prior_splits": 78,
+   "excluded_both_no_prior_splits": 15,
+   "excluded_no_engine_forecast": 0,
+   "scored": 332,
+   "coverage": 0.7721
+  },
+  {
+   "year": 2018,
+   "priced_decided": 449,
+   "excluded_a_no_prior_splits": 34,
+   "excluded_b_no_prior_splits": 80,
+   "excluded_both_no_prior_splits": 18,
+   "excluded_no_engine_forecast": 0,
+   "scored": 353,
+   "coverage": 0.7862
+  },
+  {
+   "year": 2019,
+   "priced_decided": 482,
+   "excluded_a_no_prior_splits": 45,
+   "excluded_b_no_prior_splits": 79,
+   "excluded_both_no_prior_splits": 14,
+   "excluded_no_engine_forecast": 0,
+   "scored": 372,
+   "coverage": 0.7718
+  },
+  {
+   "year": 2020,
+   "priced_decided": 425,
+   "excluded_a_no_prior_splits": 28,
+   "excluded_b_no_prior_splits": 87,
+   "excluded_both_no_prior_splits": 17,
+   "excluded_no_engine_forecast": 0,
+   "scored": 327,
+   "coverage": 0.7694
+  },
+  {
+   "year": 2021,
+   "priced_decided": 468,
+   "excluded_a_no_prior_splits": 21,
+   "excluded_b_no_prior_splits": 59,
+   "excluded_both_no_prior_splits": 7,
+   "excluded_no_engine_forecast": 0,
+   "scored": 395,
+   "coverage": 0.844
+  },
+  {
+   "year": 2022,
+   "priced_decided": 482,
+   "excluded_a_no_prior_splits": 31,
+   "excluded_b_no_prior_splits": 62,
+   "excluded_both_no_prior_splits": 10,
+   "excluded_no_engine_forecast": 0,
+   "scored": 399,
+   "coverage": 0.8278
+  },
+  {
+   "year": 2023,
+   "priced_decided": 472,
+   "excluded_a_no_prior_splits": 40,
+   "excluded_b_no_prior_splits": 78,
+   "excluded_both_no_prior_splits": 9,
+   "excluded_no_engine_forecast": 0,
+   "scored": 363,
+   "coverage": 0.7691
+  },
+  {
+   "year": 2024,
+   "priced_decided": 497,
+   "excluded_a_no_prior_splits": 35,
+   "excluded_b_no_prior_splits": 58,
+   "excluded_both_no_prior_splits": 15,
+   "excluded_no_engine_forecast": 0,
+   "scored": 419,
+   "coverage": 0.8431
+  }
+ ],
+ "coverage_overall": 0.7985,
+ "pit_recheck": {
+  "fights": 200,
+  "mismatches": 0
+ },
+ "preflight_failures": [],
+ "results": {
+  "n_scored": 3333,
+  "cards": 372,
+  "log_loss": {
+   "market": 0.619781708514564,
+   "B": 0.6180825894762201,
+   "C": 0.6182517562607159
+  },
+  "delta_B": -0.00016916678449603278,
+  "delta_B_ci95": [
+   -0.0027660115637060906,
+   0.0024373806275385813
+  ],
+  "delta_M": 0.0015299522538479216,
+  "delta_M_ci95": [
+   -0.0015826594980877652,
+   0.004540713509700499
+  ],
+  "B_minus_market": 0.0016991190383439541,
+  "B_minus_market_ci95": [
+   -0.0007147942765754753,
+   0.003911600617002995
+  ],
+  "sd_delta_M": 0.09294289375588298,
+  "sd_delta_B": 0.07972433646711423,
+  "per_year": {
+   "2016": {
+    "n": 373,
+    "delta_B": -0.0069575614054069685,
+    "delta_M": -0.00953215910240266
+   },
+   "2017": {
+    "n": 332,
+    "delta_B": 0.00154412049283232,
+    "delta_M": 0.005772923046299133
+   },
+   "2018": {
+    "n": 353,
+    "delta_B": 0.003394959338707681,
+    "delta_M": 0.004372403812144982
+   },
+   "2019": {
+    "n": 372,
+    "delta_B": -0.002254112666431948,
+    "delta_M": -0.0007990344221184657
+   },
+   "2020": {
+    "n": 327,
+    "delta_B": 0.002311299876016461,
+    "delta_M": 0.004944856695589549
+   },
+   "2021": {
+    "n": 395,
+    "delta_B": -0.0006581033709220744,
+    "delta_M": 0.0014995961289837553
+   },
+   "2022": {
+    "n": 399,
+    "delta_B": 0.002701104657061073,
+    "delta_M": 0.0032543668981955126
+   },
+   "2023": {
+    "n": 363,
+    "delta_B": -0.003745210180869234,
+    "delta_M": -0.0004526218516538807
+   },
+   "2024": {
+    "n": 419,
+    "delta_B": 0.0022547138013486036,
+    "delta_M": 0.00512768196803073
+   }
+  },
+  "accuracy": {
+   "M": 0.6501650165016502,
+   "B": 0.6600660066006601,
+   "C": 0.6579657965796579
+  },
+  "brier": {
+   "M": 0.21545042295451974,
+   "B": 0.21469792039357666,
+   "C": 0.2149329547440581
+  },
+  "calibration_C": {
+   "intercept": 0.0826576141726941,
+   "slope": 1.0548779078631685
+  },
+  "symmetry_max_violation_C": 2.220446049250313e-16,
+  "delta_M_devig_power": -9.738836256037385e-05,
+  "delta_M_devig_shin": 0.00031791894386338994,
+  "simulated_flat_betting": {
+   "bets": 1331,
+   "roi": -0.0022711829554914135,
+   "roi_ci95": [
+    -0.06188278385377131,
+    0.05827643357955183
+   ],
+   "caveat": "BestFightOdds consensus is not a price anyone could bet."
+  }
+ },
+ "conditions": [
+  {
+   "id": "S1.1",
+   "passed": false,
+   "detail": "gain over price plus engine -0.0002 (needs >= 0.002)"
+  },
+  {
+   "id": "S1.2",
+   "passed": false,
+   "detail": "its 95% range -0.0028 to +0.0024 (needs to sit above 0)"
+  },
+  {
+   "id": "S1.3",
+   "passed": false,
+   "detail": "gain over price alone +0.0015, range -0.0016 to +0.0045 (needs >= 0.006 and above 0)"
+  },
+  {
+   "id": "S1.4",
+   "passed": false,
+   "detail": "positive over price plus engine in 5 of 9 years (needs 6)"
+  },
+  {
+   "id": "S1.5",
+   "passed": true,
+   "detail": "calibration slope 1.055, intercept +0.083"
+  }
+ ],
+ "verdict": "STOP_STAGE1",
+ "verdict_reasons": [
+  "S1.1: gain over price plus engine -0.0002 (needs >= 0.002)",
+  "S1.2: its 95% range -0.0028 to +0.0024 (needs to sit above 0)",
+  "S1.3: gain over price alone +0.0015, range -0.0016 to +0.0045 (needs >= 0.006 and above 0)",
+  "S1.4: positive over price plus engine in 5 of 9 years (needs 6)"
+ ]
+}
