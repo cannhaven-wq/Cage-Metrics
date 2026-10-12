@@ -268,18 +268,100 @@ fight's own result or stats, no other model's stored output.
 
 ## 11. Artifact record
 
-The one section that may be filled in after the freeze, because it records
-what was produced, not what was decided: the DEV export sha256, the code
-commit, η, the B and C artifact sha256s, and Stage 1's measured SD. Filling it
-is not an amendment. Changing any other section is.
-
-- DEV export sha256: none yet
-- code commit: none yet
-- η: none yet
-- B artifact sha256: none yet
-- C artifact sha256: none yet
-- Stage 1 measured SD of Δ_M: none yet
+This file is hash-frozen, so what Stage 1 produces is recorded **outside** it,
+in [`ARTIFACT_RECORD.md`](ARTIFACT_RECORD.md) and in `research/registry.json`:
+the development export's sha256, the commit the run used, η, the B and C
+coefficients, and Stage 1's measured SD of Δ_M. Recording those is not an
+amendment. Changing any section of this file is.
 
 ## Amendments
 
-None.
+### Pre-freeze amendments, 2026-10-12 — written before any run, motivated by review, not by results
+
+The independent review in [`AUDITOR_REVIEW_THRESHOLDS.md`](AUDITOR_REVIEW_THRESHOLDS.md)
+retained S1.1–S1.6 unchanged. It set two conditions (A1, A2) and two further
+requirements (A3, A4) before freezing. A5 records implementation choices the
+text above left open. **None of them was motivated by an observed result: no
+Stage 1 number existed when they were written.**
+
+**A1 — coverage floor, fixed from development data without reading a result.**
+Stage 1 is INVALID, and scores nothing, unless the scored population is
+**at least 75%** of the priced, decided fights of 2016–2024 overall, **and at
+least 70%** in every one of the nine years. These floors were set from a count
+of which fights the §7 rule keeps. Who won was never read: of 4,174 priced,
+decided fights, 3,333 qualify (79.9%), with every year between 75.7% and 84.8%.
+That count was taken on 2026-10-12, read-only, from fights dated before
+2025-01-01 only. The floors sit about 5 points under the measured values, so a
+broken export fails loudly while the true population passes. This sits on top
+of PRED-001's own rule (≥95% of the eligible fights forecast).
+
+**A2 — exclusions disclosed by year.** Every Stage 1 report carries, per
+year: priced decided fights; exclusions because corner A, corner B or both had
+no earlier fight with round splits; any fight without an engine forecast; the
+number scored; and coverage. It closes with this sentence on the population the
+finding applies to: priced, decided UFC fights from 2016 to 2024 in which both
+fighters had at least one earlier UFC fight with round splits, and nothing
+about debuts.
+
+**A3 — everything the result depends on is pinned.** The run uses one commit,
+recorded in the report and in `ARTIFACT_RECORD.md`. Pinned at that commit:
+
+- the experiment, `research/experiments/PRED-002/stage1.py`;
+- the development export, `research/pred002_data/export_dev.py`;
+- the incumbent engine code it retrains, `cfl_engine/engine.py` and
+  `cfl_engine/train.py`;
+- the benchmark and metric code, `research/protocol/pred_protocol.py` (de-vig,
+  log loss, the card-resampled bootstrap, the calibration fit) and
+  `research/protocol/protocol.json`;
+- every library version, `cfl_engine/requirements.txt` (exact pins, T-083).
+
+The registry freezes this file, `stage1.py` and `export_dev.py` by sha256. The
+engine and protocol files are pinned by the run's commit, whose hashes the
+artifact record lists. The engine stays editable for live work, so the record
+says exactly which bytes Stage 1 used.
+
+**A4 — every Stage 1 report separates three things.** Before any number, the
+report states:
+
+1. this is a historical research result that decides only whether a
+   prospective test is earned;
+2. the prospective test, sized for 0.010 against the price at the moment of
+   the forecast, is the only stage that can support a claim;
+3. it is not a statement about money: BestFightOdds consensus is not a price
+   anyone could bet.
+
+The prospective 0.010 sits in the results table beside Δ_B and Δ_M.
+`tests/test_pred002_stage1.py` fails if any verdict's report omits these.
+
+**A5 — implementation choices left open above, fixed now.**
+
+- ε = 0.05 is applied in each category's own unit: strikes per minute,
+  takedowns per 15 minutes, control as a share of fight time. A fight with no
+  usable duration updates no rating. η is a single value for all five
+  categories, chosen by mean squared error pooled across them. Only updates
+  where both fighters already had a rating are counted, and a tie goes to the
+  smaller η.
+- **Engine:** annual folds from 2010. The 2010–2012 forecasts only seed the
+  calibration and are never scored. Each fold tunes with `train.tune` on the
+  first 55% of its training rows and early-stops on the last 10%, the
+  engine's own procedure. Calibration is rolling, fitted on earlier years
+  only: isotonic from 1,500 prior rows, Platt below that. It is fitted on both
+  corner orientations and applied as ½(g(p) + 1 − g(1 − p)), so the engine's
+  probability stays corner-symmetric.
+- **Blends:** logistic regression with no intercept, fitted on both corner
+  orientations, regularisation C = 100 (the engine's own blend setting), with
+  no feature standardisation. No intercept, because an intercept is a corner
+  term.
+- **Market:** for each fighter, the median implied probability across
+  BestFightOdds closing rows, then proportional de-vig. Simulated betting uses
+  those medians as American prices; when both sides show value, the side with
+  the larger edge is bet.
+- **Cards** are clustered by `event_id`.
+- **What counts as the one look.** A run that ends before any forecast is
+  scored against a result is **not** a look: a preflight INVALID, an export
+  failure, or a crash before scoring. Its log is kept. A run that has begun
+  scoring **is** the look, whatever happens next, and is reported as such.
+- **Preflight, before any scoring:** the A1 floors, at least 20 cards, a
+  point-in-time recheck (the ratings for 200 randomly drawn scored fights,
+  rebuilt from rounds dated strictly before each fight, must match exactly),
+  and antisymmetry of every model input.
