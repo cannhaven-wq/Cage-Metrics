@@ -11,6 +11,35 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 (c) — Stabilization sprint, PR 3: count people, not page loads
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+The funnel counted every JavaScript-executing crawler as a session. Measured
+by behaviour, human-signal sessions were 28, 20 and 10 in the three full weeks
+since tracking began, while raw sessions grew sixteen-fold
+(`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
+
+- `engaged_session`: once per session on a real scroll, click, tap or keypress.
+- `landing_view` gains `webdriver` and `ua_bot` booleans.
+- `v_traffic_daily`: the daily baseline (engaged sessions, by source and by
+  what they reached). Query validated read-only against production.
+- `_shared.js` cache-bust normalised to `?v=rl5` on every page (was rl3 on 29,
+  rl4 on one).
+- `tests/engagement.test.js` (7) pins the rule; the three-place event list
+  (JS, CHECK constraint, ANALYTICS_SCHEMA.md) is updated together.
+
+## Next action
+
+Owner: apply the updated `funnel_events_migration.sql` **before** merging this
+PR (otherwise the new event is rejected until it is applied), then merge. Export
+Plausible's visitors, sources and pages for 2026-09-21 → today so the baseline
+can be reconciled against a bot-filtered count.
+
+---
+
 ## 2026-10-12 (b) — Stabilization sprint, PR 2: operational repairs and a monitor
 
 **From:** Claude

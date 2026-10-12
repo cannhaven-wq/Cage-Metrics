@@ -20,6 +20,8 @@ PR 1 (credibility) and PR 2 (operations, monitor) are open; the stale-booking
 retirement and the CLV migration sequence wait for owner approval
 (`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`,
 `research/clv/MIGRATION_SEQUENCE_2026-10-12.md`).
+Human traffic is measured, not inferred, once PR 3 lands: about one to four
+people a day today, falling (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
