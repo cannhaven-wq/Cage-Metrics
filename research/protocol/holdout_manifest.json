@@ -1,0 +1,39 @@
+{
+  "_what": "Fingerprint of the sealed data at freeze. Lets anyone check later that the holdout scored is the holdout sealed, and that nobody edited a historical result in between. Computed by the auditor role with one SQL statement (below); the per-fight outcomes were hashed inside the database and never printed.",
+  "computed_at": "2026-10-12",
+  "database": "Supabase project uftancejftcryfvbggll",
+  "eligibility": "fights with both fighters set, winner_id equal to one of them (draws and no-contests excluded), is_active IS DISTINCT FROM false (dead bookings excluded), event_date < 2026-10-12. 'priced' additionally requires a BestFightOdds closing-consensus quote (odds_books.name ILIKE 'BFO%', is_closer) on BOTH fighters.",
+  "hash_recipe": {
+    "ids": "sha256(string_agg(fight_id::text, ',' ORDER BY fight_id)) over priced eligible fights",
+    "outcomes": "sha256(string_agg(fight_id || ':' || (winner_id = fighter_a_id)::int, ',' ORDER BY fight_id)) over the same rows"
+  },
+  "partitions": {
+    "DEV": {
+      "event_dates": ["1994-03-11", "2024-12-14"],
+      "decided": 7830,
+      "decided_priced": 6824,
+      "events_priced": 623,
+      "priced_ids_sha256": "25b2e735595274bd3089b9968ed79fb9899215247cbed7bd6f8b8b7148fcbff7",
+      "priced_outcomes_sha256": "f1b1141dd03578b3aee895b2c4d7276da0b6aa2a01e49a2c4e4e8bb41b728e5d"
+    },
+    "H1": {
+      "event_dates": ["2025-01-11", "2026-07-11"],
+      "decided": 789,
+      "decided_priced": 713,
+      "events_priced": 63,
+      "priced_ids_sha256": "55642caafc579929bebab8a7aaabb28515ffeca0ac9a1cc359f7acf99c84ac9b",
+      "priced_outcomes_sha256": "013bed8c7941a26adea7af989d6d04d2382da1370da4fbac2c8c3336207e5320"
+    },
+    "RESERVE": {
+      "event_dates": ["2026-07-18", "2026-10-10"],
+      "decided": 169,
+      "decided_priced": 0,
+      "note": "no BFO closing consensus exists after 2026-07-11; sealed and unscored"
+    }
+  },
+  "known_contamination": [
+    "H1 is not virgin. The v4, v5 and v6 models and the engine's last walk-forward folds were scored on 2025-2026 fights, and the results (the market won) are published. Anyone who has read them knows how a typical model does there.",
+    "The Factor Lab (factor-rates.json) computes its market-controlled verdicts over ALL years including H1. Any experiment whose features were chosen because a Factor Lab verdict looked good (age, UFC record) has selected on H1. Such an experiment must declare it, and its H1 result is recorded as non-confirmatory: it may go to a prospective test but cannot count as historical evidence.",
+    "The engine (engine_v1/v2) was trained with data through 2026-07, so it is not eligible for an H1 evaluation at all."
+  ]
+}

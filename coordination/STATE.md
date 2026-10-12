@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-05
+Last updated: 2026-10-12
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -87,6 +87,17 @@ Git history is the audit trail. These files are the working surface.
 ---
 
 ## Where the project is
+
+### Prediction research is governed by PRED-001 — frozen 2026-10-12
+
+Any new attempt to forecast winners follows
+[`research/protocol/PREDICTION_RESEARCH_PROTOCOL.md`](../research/protocol/PREDICTION_RESEARCH_PROTOCOL.md).
+Fights from **2025-01-01 on are sealed**: no fitting, tuning or feature choice
+on them. The sealed 2025-01-01 to 2026-07-11 window (713 priced fights) gets
+one independent look per model and ten looks in total. **Any claim needs a
+prospective test**, and the dev-measured arithmetic says a 0.005 log-loss gain
+over the market takes about 1,650 fights, roughly 3.4 years, to confirm. No
+model has been built or trained under it yet. Computer vision is deferred.
 
 ### Monetization sprint — started 2026-09-21
 

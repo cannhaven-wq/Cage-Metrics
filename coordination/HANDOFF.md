@@ -47,6 +47,45 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — PRED-001: the bar a prediction model must clear, written before anyone tries
+
+**From:** Claude (project-audit session)
+**To:** Owner → research sessions (prediction benchmarks; research workstreams)
+**Date:** 2026-10-12
+
+The owner asked for an Independent Auditor and a preregistered research
+protocol before any new model work. It is frozen in `research/protocol/`:
+the protocol, its thresholds (`protocol.json`), the executable decision rules
+(`pred_protocol.py`), a fingerprint of the sealed data (`holdout_manifest.json`),
+an empty append-only ledger of looks at sealed data, and a preregistration
+template. `tests/test_prediction_protocol.py` (33 tests) fails if the text or
+the code drifts from its frozen hash, if a ledger budget is exceeded, or if
+experiment code queries the database directly. The decision rules are checked
+against synthetic worlds where the truth is known: real information passes; a
+copy of the market, a noisy market and an overconfident model are rejected or
+failed; a leak is flagged; and **a real gain of ~0.004 on 3,600 fights is not
+confirmed**, because that is honestly too small to see.
+
+**Said plainly.** The sealed history can only detect a gain of about 0.008. The
+best gain ever measured here is 0.0034. Confirming a gain of 0.005 forecast in
+advance takes about 1,650 fights. The sealed window is not virgin either: the
+Factor Lab and the v4–v6 results already cover it, and the protocol says so.
+
+**Coordination.** The prediction-benchmarks session owns the inventory of past
+results, and this protocol cites it rather than recomputing it. The
+research-workstreams session was told not to write a second Step 2. Both were
+asked to fit nothing on 2025+ fights from now on.
+
+## Next action
+
+Prospective testing needs an append-only lock table for win-probability
+forecasts, built on the `prop_model_locks` pattern. Creating it is a production
+migration (L3 item 5); draft the SQL for the owner's approval. Until it exists,
+no PRED-001 experiment can get past an H1 look. The research agents start by
+copying `EXPERIMENT_TEMPLATE.md` and working on DEV only.
+
+---
+
 ## 2026-10-05 — The pre-fight record gets a dead man's handle, and the snapshotter runs again
 
 **From:** Claude

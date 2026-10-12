@@ -1,0 +1,6 @@
+{
+  "_what": "Append-only record of every look at sealed data. One entry per evaluation, written by the auditor in the same commit as the result, BEFORE anyone discusses the result. Entries are never edited or removed; tests/test_prediction_protocol.py checks the shape and the budgets, and git history is the tamper evidence.",
+  "h1_budget": 10,
+  "prospective_budget": 5,
+  "entries": []
+}
