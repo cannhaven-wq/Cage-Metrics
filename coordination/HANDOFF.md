@@ -47,6 +47,45 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 — Can the EA UFC games train a computer-vision model? Not the way it sounds
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+Research only. No code, no game data, no purchase, nothing in production.
+Report: [`research/cv/GAME_SYNTHETIC_DATA_FEASIBILITY.md`](../research/cv/GAME_SYNTHETIC_DATA_FEASIBILITY.md).
+
+**Plain verdict:** the game's move files are locked on consoles (UFC 3–6 are
+all PS/Xbox only), no modding tool supports any UFC title, and EA's terms
+forbid digging into them. **Asset extraction is ruled out.** Recording ordinary
+gameplay with a scripted move list is technically easy, but EA's content policy
+covers personal and fan use, not a paid product training a model. So it needs
+EA's permission and a game purchase, both owner calls (**T-079**).
+
+**The finding that matters more:** CFL has no computer-vision code at all yet,
+and the real bottleneck is labelled *real* footage, not synthetic volume. The
+cheapest test of the whole idea needs no game: open boxing motion capture →
+skeletons → classifier, tested on the public BoxingVI punch clips, asking
+whether synthetic pre-training saves real labels (**T-080**).
+
+## Next action
+
+**Owner:** nothing is needed now. **T-079** (whether to ask EA for permission
+and buy the game) only becomes a real question if T-080 passes.
+
+**Claude, if the owner wants to go on:** T-080 Step 0 (about half a day, CPU
+only). Run one 2D pose estimator over the public MMA Fighter Pose dataset and
+score PCK@0.2 per joint against its hand labels. If wrists and ankles fail on
+real UFC frames, stop and report: no data source rescues a skeleton model.
+
+**ChatGPT:** review the pass threshold in report §5 *before* any run. As
+written: synthetic-pretrained beats real-only at 25 real clips per class, with
+a fight-clustered bootstrap interval clearing zero. That is the single
+judgement call in the report.
+
+---
+
 ## 2026-10-05 — The pre-fight record gets a dead man's handle, and the snapshotter runs again
 
 **From:** Claude
@@ -279,83 +318,3 @@ ceilings against what the odds cadence actually delivers in a fight week.
 Pro gate before step 7.
 
 ---
-
-## 2026-09-21 (g) — No paywall before there is a way to pay
-
-**From:** Claude
-**To:** Owner → ChatGPT
-**Date:** 2026-09-21
-
-PR #44 merged (`68a6a5a`). The Stripe backbone is on `main` and
-`verify-billing-refusal.yml` is now dispatchable from its permanent home.
-
-**The owner resequenced the remaining work** ([D-019](DECISIONS.md)).
-Free-vs-Pro enforcement used to sit immediately after Stripe; it now sits
-behind the gates that make paying possible.
-
-| # | step | whose | state |
-|---|---|---|---|
-| 1 | Stripe backbone (#44) | Claude | **done** |
-| 2 | **T-054** privacy names the analytics processor | Owner + lawyer | blocked on legal |
-| 3 | **T-048** Terms of Service exists | Owner + lawyer | blocked on legal |
-| 4 | **T-067** set the price | Owner (L3) | not set |
-| 5 | **T-068** Stripe account, product, secrets | Owner | no account connected |
-| 6 | **T-069** checkout in Stripe test mode | Claude | blocked on 4–5 |
-| 7 | **T-061** apply the Free/Pro boundary | Claude | moved here |
-| 8 | **T-066** turn checkout live | Owner (L3) | blocked on 2–7 |
-| 9 | watchlists / movement alerts | Claude | **unblocked** |
-
-**It is not only about courtesy to the member.** A paywall in front of a
-product with no checkout is a dead end — the member meets a wall and the door
-behind it does not exist. It also destroys the one measurement the funnel
-instrumentation was built to take: `paywall_hit` means something when a
-purchase is possible and nothing when it is not, and a month of unbuyable
-paywall hits is a baseline nobody can read afterwards.
-
-**Nothing about the blockers changed.** T-054 and T-048 are still checkout
-blockers, `entitlements.js::CHECKOUT_BLOCKERS` is untouched, and
-`stripe-checkout` still returns 503 before it authenticates anyone. Moving
-step 7 later makes 7 and 8 independent, which they always should have been.
-
-### The drafter's brief was out of date, and now is not
-
-`legal-review/PROPOSED_WORDING.md` told a drafter that subscription terms were
-"none of this is decided". That was true when it was written and false the
-moment #44 merged: billing period, renewal, cancellation, failed payment and
-expiry are now shipped, tested behaviour. The file carries a new **"How billing
-actually behaves"** section so the Terms can describe the system rather than
-guess at it — cancellation taking effect at period end, a failed payment not
-cutting access off immediately, access ending automatically on expiry, an
-unrecognised state ending access rather than continuing it.
-
-Two things flagged so a drafter cannot over-promise: **no trial is
-implemented**, and **nothing in the system issues a refund**. If the Terms
-promise one, it is a manual process today.
-
-Still outside production. `privacy.html` and `disclaimer.html` remain untouched.
-
-### On the price
-
-The owner's stated default is ~$9.99–$11.99 monthly, $79–$99 annually, with a
-founding rate for the first cohort. **Recorded as a preference, not set**
-(T-067). No number is configured and `STRIPE_PRICE_ID` is unset. Three things
-it implies are also undecided and are now flagged for the drafter: whether both
-periods are sold, whether the founding rate is for life or for a term, and what
-happens to it on lapse and resubscription — which interacts with the undecided
-question of what the beta grant obliges.
-
-## Next action
-
-**Owner:** steps 2–5 are yours and nothing downstream moves without them. The
-cheapest one to clear first is **T-054** — it is a single disclosure clause and
-the draft is already written; T-048 is the larger piece.
-
-**Claude:** step 9 (watchlists / movement alerts) is the only unblocked build
-work in the sequence. Do not start T-061 — it is deliberately behind the
-payment gates now.
-
-**Nobody:** removes a blocker to make something pass, or sets a price to unblock
-themselves.
-
----
-

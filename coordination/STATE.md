@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-05
+Last updated: 2026-10-12
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -87,6 +87,14 @@ Git history is the audit trail. These files are the working surface.
 ---
 
 ## Where the project is
+
+### Computer vision — feasibility only, 2026-10-12
+
+There is **no computer-vision code in CFL yet.** A research report
+([`research/cv/GAME_SYNTHETIC_DATA_FEASIBILITY.md`](../research/cv/GAME_SYNTHETIC_DATA_FEASIBILITY.md))
+rules out extracting moves from EA UFC game files (console-only and against EA's
+terms). It gates gameplay recordings on EA's permission (**T-079**, L3), and
+names a no-game proof of concept as the next step (**T-080**). Nothing is running.
 
 ### Monetization sprint — started 2026-09-21
 
