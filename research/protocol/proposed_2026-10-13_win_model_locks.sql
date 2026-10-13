@@ -20,8 +20,8 @@
 -- Insert-time rules (the guard). A lock is REJECTED when:
 --   a. the fight already has a result on file;
 --   b. the server clock is at or after the EARLIEST best-known start of any
---      bout on the card (v_fight_start_best: bell_at > provider commence >
---      event_date 18:00 UTC). Card-level, because a provider's commence time
+--      bout on the card (v_fight_start_best: bell_at > provider commence; a
+--      bout with only the event-date fallback counts from 00:00 UTC). Card-level, because a provider's commence time
 --      is usually the card's, and early prelims or Asia/Australia cards would
 --      otherwise leave a bout lockable after its own bell;
 --   b2. the booking has been retired (is_active = false);
@@ -100,7 +100,8 @@ create table if not exists public.win_model_locks (
   constraint win_model_locks_sha      check (artifact_sha256 ~ '^[0-9a-f]{64}$'),
   constraint win_model_locks_commit   check (code_commit ~ '^[0-9a-f]{7,40}$'),
   constraint win_model_locks_exp      check (experiment_id ~ '^PRED-[0-9]{3}$'),
-  constraint win_model_locks_quotes   check (jsonb_typeof(market_quotes) = 'array')
+  constraint win_model_locks_quotes   check (jsonb_typeof(market_quotes) = 'array'
+                                             and jsonb_array_length(market_quotes) = market_book_count)
 );
 
 -- One forecast per fight per experiment. A re-run is refused by the index, so
@@ -173,7 +174,12 @@ begin
 
   select event_date into new.event_date from public.events where id = f.event_id;
 
-  select min(start_at) into v_start from public.v_fight_start_best where event_id = f.event_id;
+  -- A bout with only the event-date fallback counts from 00:00 UTC on that
+  -- date, not 18:00: a card in Asia or Australia can start well before 18:00
+  -- UTC, and a deadline must never be later than the real bell.
+  select min(case when start_basis = 'event_date_fallback'
+                  then (event_date::timestamp at time zone 'UTC') else start_at end)
+    into v_start from public.v_fight_start_best where event_id = f.event_id;
   if v_start is null then
     raise exception 'lock rejected: no start time can be established for the card of fight %', new.fight_id;
   end if;

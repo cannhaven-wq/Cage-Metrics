@@ -126,11 +126,23 @@ jobs:
           python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
 
       # PRED-001: the ledger, the freeze history and registered experiments
-      # may only grow relative to main. The tests compare against origin/main,
-      # which a shallow checkout lacks - and a missing main FAILS them in CI
-      # rather than skipping, so this step must not be allowed to fail quietly.
-      - name: Fetch main for the PRED-001 anti-rewrite checks
-        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+      # may only grow relative to the base. On a pull request the base is
+      # main; on a push to main, main IS this commit, so the base is the
+      # commit before the push. A missing base FAILS the tests in CI rather
+      # than skipping, so this step must not fail quietly either.
+      - name: Fetch the base for the PRED-001 anti-rewrite checks
+        env:
+          BEFORE: ${{ github.event.before }}
+          EVENT: ${{ github.event_name }}
+          REF: ${{ github.ref }}
+        run: |
+          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+          if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
+            git fetch --no-tags --depth=1 origin "$BEFORE"
+            echo "PRED_BASE_REF=$BEFORE" >> "$GITHUB_ENV"
+          else
+            echo "PRED_BASE_REF=origin/main" >> "$GITHUB_ENV"
+          fi
 
       # From the repo root, so all 17 test modules are collected.
       - name: Run tests

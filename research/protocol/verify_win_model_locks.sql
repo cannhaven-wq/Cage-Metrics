@@ -14,7 +14,8 @@
 -- times out (60 s) with no statement left running and nothing persisted -
 -- shorter requests of the same SQL finish in 0.3 s. So it was run as two
 -- rolled-back halves, each re-creating the full table, guard and triggers:
--- A = checks 1-5 and 10 (5 of 5), B = 6-9, 11, 12 (6 of 6). Through psql the
+-- A = checks 1-5 and 10 (5 of 5), B = 6-9, 11, 12 (6 of 6). Re-run after the
+-- round-3 changes (fallback deadline, quotes = book count): see HANDOFF. Through psql the
 -- whole file runs as one statement.
 -- =============================================================================
 do $verify$
@@ -72,7 +73,8 @@ create table if not exists public.win_model_locks (
   constraint win_model_locks_sha      check (artifact_sha256 ~ '^[0-9a-f]{64}$'),
   constraint win_model_locks_commit   check (code_commit ~ '^[0-9a-f]{7,40}$'),
   constraint win_model_locks_exp      check (experiment_id ~ '^PRED-[0-9]{3}$'),
-  constraint win_model_locks_quotes   check (jsonb_typeof(market_quotes) = 'array')
+  constraint win_model_locks_quotes   check (jsonb_typeof(market_quotes) = 'array'
+                                             and jsonb_array_length(market_quotes) = market_book_count)
 );
 
 -- One forecast per fight per experiment. A re-run is refused by the index, so
@@ -145,7 +147,12 @@ begin
 
   select event_date into new.event_date from public.events where id = f.event_id;
 
-  select min(start_at) into v_start from public.v_fight_start_best where event_id = f.event_id;
+  -- A bout with only the event-date fallback counts from 00:00 UTC on that
+  -- date, not 18:00: a card in Asia or Australia can start well before 18:00
+  -- UTC, and a deadline must never be later than the real bell.
+  select min(case when start_basis = 'event_date_fallback'
+                  then (event_date::timestamp at time zone 'UTC') else start_at end)
+    into v_start from public.v_fight_start_best where event_id = f.event_id;
   if v_start is null then
     raise exception 'lock rejected: no start time can be established for the card of fight %', new.fight_id;
   end if;
@@ -224,7 +231,7 @@ comment on view public.v_win_model_locks_graded is
      generated_at, actual_lock_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
   values (up.id, up.event_id, date '1999-01-01', up.fighter_a_id, up.fighter_b_id, 0.55,
      'PRED-999', 'verify', 'v0', sha, 'abc1234', date '2024-12-31',
-     now() - interval '1 minute', timestamptz '2000-01-01', 0.52, 3, '[]'::jsonb, now() - interval '5 minutes')
+     now() - interval '1 minute', timestamptz '2000-01-01', 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes')
   returning id, actual_lock_at into lid, t;
   if t >= now() and t <= clock_timestamp()
      and (select event_date from public.win_model_locks where id = lid) = up.event_date
@@ -232,7 +239,7 @@ comment on view public.v_win_model_locks_graded is
 
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v0', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v0', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     r := r || ' 2:FAIL(duplicate accepted)';
   exception when unique_violation then ok := ok + 1; r := r || ' 2:ok'; end;
   n := n + 1; begin
@@ -255,42 +262,42 @@ comment on view public.v_win_model_locks_graded is
     else r := r || ' 5:FAIL(wrong error: ' || sqlerrm || ')'; end if; end;
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (done.id, done.event_id, done.event_date, done.fighter_a_id, done.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v1', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (done.id, done.event_id, done.event_date, done.fighter_a_id, done.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v1', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     r := r || ' 6:FAIL(settled fight accepted)';
   exception when others then
     if sqlerrm like 'lock rejected%' or sqlerrm like 'win_model_locks is append-only%' then ok := ok + 1; r := r || ' 6:ok';
     else r := r || ' 6:FAIL(wrong error: ' || sqlerrm || ')'; end if; end;
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_b_id, up.fighter_a_id, 0.6, 'PRED-998', 'verify', 'v2', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (up.id, up.event_id, up.event_date, up.fighter_b_id, up.fighter_a_id, 0.6, 'PRED-998', 'verify', 'v2', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     r := r || ' 7:FAIL(swapped corners accepted)';
   exception when others then
     if sqlerrm like 'lock rejected%' or sqlerrm like 'win_model_locks is append-only%' then ok := ok + 1; r := r || ' 7:ok';
     else r := r || ' 7:FAIL(wrong error: ' || sqlerrm || ')'; end if; end;
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-997', 'verify', 'v3', sha, 'abc1234', up.event_date + 1, now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-997', 'verify', 'v3', sha, 'abc1234', up.event_date + 1, now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     r := r || ' 8:FAIL(training cutoff after the event accepted)';
   exception when others then
     if sqlerrm like 'lock rejected%' or sqlerrm like 'win_model_locks is append-only%' then ok := ok + 1; r := r || ' 8:ok';
     else r := r || ' 8:FAIL(wrong error: ' || sqlerrm || ')'; end if; end;
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-996', 'verify', 'v4', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[]'::jsonb, now() + interval '1 hour');
+    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-996', 'verify', 'v4', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[{},{},{}]'::jsonb, now() + interval '1 hour');
     r := r || ' 9:FAIL(future market snapshot accepted)';
   exception when others then
     if sqlerrm like 'lock rejected%' or sqlerrm like 'win_model_locks is append-only%' then ok := ok + 1; r := r || ' 9:ok';
     else r := r || ' 9:FAIL(wrong error: ' || sqlerrm || ')'; end if; end;
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v5', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-999', 'verify', 'v5', sha, 'abc1234', date '2024-12-31', now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     r := r || ' 10:FAIL(second variant for the same fight and experiment accepted)';
   exception when unique_violation then ok := ok + 1; r := r || ' 10:ok'; end;
 
   -- 11. the training cutoff may equal the event date (the night-before run)
   n := n + 1; begin
     insert into public.win_model_locks (fight_id, event_id, event_date, fighter_a_id, fighter_b_id, p_a, experiment_id, model_name, model_version, artifact_sha256, code_commit, training_cutoff, generated_at, market_p_a_vigfree, market_book_count, market_quotes, market_captured_at)
-    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-995', 'verify', 'v6', sha, 'abc1234', up.event_date, now(), 0.52, 3, '[]'::jsonb, now() - interval '5 minutes');
+    values (up.id, up.event_id, up.event_date, up.fighter_a_id, up.fighter_b_id, 0.6, 'PRED-995', 'verify', 'v6', sha, 'abc1234', up.event_date, now(), 0.52, 3, '[{},{},{}]'::jsonb, now() - interval '5 minutes');
     ok := ok + 1; r := r || ' 11:ok';
   exception when others then r := r || ' 11:FAIL(valid night-before lock rejected: ' || sqlerrm || ')'; end;
 

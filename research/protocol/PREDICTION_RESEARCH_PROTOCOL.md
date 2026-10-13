@@ -355,7 +355,10 @@ green. Changes:
    its SQL, the H1 id list and the test file. The test pins the v1.0 entry and
    requires one dated `### Amendment` here per later entry.
 2. **H1 inputs are facts checked against fingerprints, not numbers the caller
-   supplies** (B2, round 2). An H1 row carries the fight id, the card, the
+   supplies** (B2, rounds 2–3). Every fact must be a plain integer, and the
+   same integers that are hashed are the ones scored — round 3 showed that
+   hashing `int(x)` while scoring `x` let `1000.1`/`1000.2` split a card and a
+   ±0.99 nudge on a price move the result. An H1 row carries the fight id, the card, the
    outcome, the two BFO closing American prices and the model probability;
    `evaluate` checks ids, outcomes, prices and card assignment against the
    manifest and de-vigs the prices itself. Round 1 checked only the ids, and
@@ -369,16 +372,27 @@ green. Changes:
    tripwire is refused. A test fails if a merged experiment's entry changes.
 4. **Looks go through `run_look`, hash-chained, and only main counts** (B4).
    Budgets, one look per experiment, and an auditor who is a Claude session
-   that is not an author are enforced before computing. A crash is recorded as
+   that is not an author are enforced before computing. Authors are read from
+   the `Claude-Session` trailers of every commit that touched the experiment
+   folder, as well as from the frozen block. On a push to `main` the
+   anti-rewrite checks compare against the commit before the push, not main
+   with itself. A crash is recorded as
    INVALID. Tests fail if a ledger entry, a FREEZE.json entry or a registered
    experiment present on `main` changes; CI fetches main and **fails, rather
    than skips,** when it cannot.
-4a. **Prospective inputs are derived from the lock rows** (round 2). The
-   eligible set is the graded locks with unchanged corners, ordered by
-   `actual_lock_at`; a confirmatory look takes the first n_required, the model
-   probability is the locked `p_a`, and the market is the one frozen on the
-   lock. **Selective locking is INVALID:** on every scored card, locks must
-   cover at least 95% of the bouts that had a two-sided market.
+4a. **Prospective inputs are derived from the lock rows** (rounds 2–3). The
+   unit is the **card**: cards are taken whole, in start order, from the
+   experiment's first locked card, until the graded locks with unchanged
+   corners reach n_required — so a confirmatory look scores at least
+   n_required fights and never cuts a card in half. The model probability is
+   the locked `p_a`; the market is the one frozen on the lock. **Every priced
+   card in that run must be covered:** locks on at least 95% of the bouts that
+   had a two-sided sportsbook price before the card started, counting every
+   lock whatever the result, so a draw never fails an honest card and a card
+   left out — skipped, or rolled back after the fights — fails the look. The
+   population comes from the committed recipe
+   [`card_population.sql`](card_population.sql) and its hash is recorded with
+   the look. Timestamps are parsed, never compared as text.
 5. **Interim prospective looks are a separate, logged stage** (B5).
 6. **Sample size covers both halves of the PASS rule** (S1). Minimum target
    raised from 0.003 to 0.004; the §6 table is recomputed.
@@ -397,7 +411,11 @@ green. Changes:
 
 13. **The lock table** (round 2): the lock time is `clock_timestamp()` — the
     wall clock at the insert, not the transaction's start, which a writer
-    could open before the bell; the deadline is the card's earliest start;
+    could open before the bell; the deadline is the card's earliest start,
+    and a bout with only the event-date fallback counts from 00:00 UTC — in
+    practice, locks are due by midnight UTC on fight day, the same schedule
+    the pre-fight snapshot already keeps; the quotes list must match the book
+    count;
     one forecast per fight per experiment; the market snapshot is required;
     `event_date` comes from `events`; valid night-before locks are no longer
     refused.

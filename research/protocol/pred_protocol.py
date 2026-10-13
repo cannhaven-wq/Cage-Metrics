@@ -466,82 +466,124 @@ def _sha(parts: Iterable[str]) -> str:
     return hashlib.sha256(",".join(parts).encode()).hexdigest()
 
 
+def _is_int(v) -> bool:
+    return type(v) is int  # bool, float, str and numpy types are refused, not coerced
+
+
 def _h1_inputs(rows: list[dict]):
     """H1 rows carry raw facts, not derived numbers: fight id, event id, the
     outcome, the two BFO closing American prices, the model probability. Every
-    fact is checked against the manifest's fingerprints, and the market
-    probability is de-vigged here, so no caller-side arithmetic survives."""
-    probs = []
-    try:
-        rs = sorted(rows, key=lambda r: int(r["fight_id"]))
-        ids = [int(r["fight_id"]) for r in rs]
-        if any(int(r["fight_id"]) != r["fight_id"] for r in rs):
-            raise ValueError
-    except (KeyError, TypeError, ValueError):
-        return None, ["H1 rows need integer fight_id, event_id, y, american_a, american_b, p_model"]
+    fact must be a plain int and is checked against the manifest's
+    fingerprints; the SAME parsed ints are what is then scored and clustered,
+    and the market probability is de-vigged here. Round 3 of the review showed
+    why both halves matter: hashing int(x) while scoring x let 1000.1 / 1000.2
+    split a card and +/-0.99 on a price move the result."""
+    keys = ("fight_id", "event_id", "y", "american_a", "american_b")
+    for r in rows:
+        if not isinstance(r, dict) or any(not _is_int(r.get(k)) for k in keys) or "p_model" not in r:
+            return None, ["H1 rows need plain-int fight_id, event_id, y, american_a, american_b, and a p_model"]
+    rs = sorted(rows, key=lambda r: r["fight_id"])
     h1 = MANIFEST["partitions"]["H1"]
     checks = {
-        "fight set": (_sha(str(i) for i in ids), h1["priced_ids_sha256"]),
-        "benchmark prices": (_sha(f"{r['fight_id']}:{int(r['american_a'])}:{int(r['american_b'])}" for r in rs),
+        "fight set": (_sha(str(r["fight_id"]) for r in rs), h1["priced_ids_sha256"]),
+        "benchmark prices": (_sha(f"{r['fight_id']}:{r['american_a']}:{r['american_b']}" for r in rs),
                              h1["priced_prices_sha256"]),
-        "outcomes": (_sha(f"{r['fight_id']}:{int(r['y'])}" for r in rs), h1["priced_outcomes_sha256"]),
-        "card assignment": (_sha(f"{r['fight_id']}:{int(r['event_id'])}" for r in rs), h1["priced_events_sha256"]),
+        "outcomes": (_sha(f"{r['fight_id']}:{r['y']}" for r in rs), h1["priced_outcomes_sha256"]),
+        "card assignment": (_sha(f"{r['fight_id']}:{r['event_id']}" for r in rs), h1["priced_events_sha256"]),
     }
-    for name, (got, want) in checks.items():
-        if got != want:
-            probs.append(f"the H1 {name} does not match holdout_manifest.json")
+    probs = [f"the H1 {name} does not match holdout_manifest.json" for name, (got, want) in checks.items() if got != want]
     if probs:
         return None, probs
-    y = [int(r["y"]) for r in rs]
+    y = [r["y"] for r in rs]
     pk = [devig_proportional(r["american_a"], r["american_b"]) for r in rs]
     pm = [r["p_model"] for r in rs]
     cl = [str(r["event_id"]) for r in rs]
     return (y, pm, pk, cl, checks["fight set"][0]), []
 
 
+def _ts(v) -> _dt.datetime:
+    """A timestamp, parsed. Comparing them as text reorders 'T' against ' ' and
+    'Z' against '+00'. A naive timestamp is refused rather than assumed UTC."""
+    t = _dt.datetime.fromisoformat(str(v).replace("Z", "+00:00"))
+    if t.tzinfo is None:
+        raise ValueError("timestamp without a time zone")
+    return t
+
+
 def _prospective_inputs(rows: list[dict], reg: dict, stage: str, card_population: dict | None):
-    """Prospective rows are rows of v_win_model_locks_graded, as read. The
-    eligible set and its order are derived here, not chosen by the caller:
-    graded, corners unchanged, a market price on the lock; ordered by
-    actual_lock_at then lock_id. A confirmatory look takes the first
-    n_required; the model probability is the locked p_a, nothing else."""
+    """Prospective rows are the experiment's rows of v_win_model_locks_graded.
+    The scored set is derived here, never chosen by the caller:
+
+    * Cards, not fights, are the unit. Cards are taken whole, in start order,
+      from the experiment's first locked card. A confirmatory look takes cards
+      until the eligible locks (graded, corners unchanged) reach n_required -
+      so n is at least n_required and no card is ever cut in half.
+    * Every priced card in that run must be covered: at least min_coverage of
+      its priced bouts carry a lock. Coverage counts ALL locks, including bouts
+      that later went to a draw or no contest, so an honest card is never
+      failed by its result. A card with no locks at all - dropped, or rolled
+      back after the fights - fails it. That is what stops cherry-picking
+      cards, in the code or in the database.
+
+    card_population maps event_id -> {"start": ISO timestamp, "priced": [fight
+    ids with a two-sided market before the start]}, produced by the committed
+    recipe research/protocol/card_population.sql; its hash is recorded with the
+    look so a third party can re-derive it.
+    """
     n_req = int(reg["n_required"])
-    for r in rows:
-        if r.get("experiment_id") != reg["experiment_id"] or r.get("artifact_sha256") != reg["model_artifact_sha256"]:
-            return None, ["a lock row belongs to another experiment or another artifact"]
-    try:
-        elig = [r for r in rows if r.get("y_a") in (0, 1) and r.get("corners_unchanged") is True
-                and r.get("market_p_a_vigfree") is not None]
-        elig.sort(key=lambda r: (str(r["actual_lock_at"]), int(r["lock_id"])))
-    except (KeyError, TypeError, ValueError):
-        return None, ["lock rows need lock_id, actual_lock_at, fight_id, event_id, p_a, market_p_a_vigfree, y_a, corners_unchanged"]
-    if stage == "PROSPECTIVE":
-        if len(elig) < n_req:
-            return None, [f"only {len(elig)} eligible locks; the confirmatory look needs {n_req}"]
-        elig = elig[:n_req]
-    elif len(elig) >= n_req:
-        return None, ["at or past n_required the look is confirmatory, not interim"]
-    if len({int(r["fight_id"]) for r in elig}) != len(elig):
-        return None, ["a fight is locked twice under one experiment"]
-    # Selective locking - forecasting only the fights one likes - is the
-    # prospective form of cherry-picking. On every card in the scored set, at
-    # least min_coverage of the bouts that had a two-sided market at lock time
-    # must carry a lock. The population is re-derivable from fight_odds.
     if not card_population:
-        return None, ["card_population (event_id -> bouts with a two-sided market) is required"]
-    locked = {}
-    for r in elig:
-        locked.setdefault(str(r["event_id"]), set()).add(int(r["fight_id"]))
-    for ev_id, fights in locked.items():
-        pop = {int(x) for x in card_population.get(ev_id, card_population.get(int(ev_id), []))}
-        if not pop or len(fights & pop) / len(pop) < T["min_coverage"]:
-            return None, [f"card {ev_id}: locks cover {len(fights & pop)} of {len(pop)} priced bouts; "
-                          f"selective locking is not allowed"]
-    y = [int(r["y_a"]) for r in elig]
-    pm = [float(r["p_a"]) for r in elig]
-    pk = [float(r["market_p_a_vigfree"]) for r in elig]
-    cl = [str(r["event_id"]) for r in elig]
-    return (y, pm, pk, cl, _sha(str(int(r["lock_id"])) for r in elig)), []
+        return None, ["card_population is required (research/protocol/card_population.sql)"]
+    try:
+        cards = sorted(((str(k), _ts(v["start"]), {int(x) for x in v["priced"]}) for k, v in card_population.items()),
+                       key=lambda c: (c[1], c[0]))
+        for r in rows:
+            if r.get("experiment_id") != reg["experiment_id"] or r.get("artifact_sha256") != reg["model_artifact_sha256"]:
+                return None, ["a lock row belongs to another experiment or another artifact"]
+            _ts(r["actual_lock_at"]); int(r["lock_id"]); int(r["fight_id"])
+    except (KeyError, TypeError, ValueError, AttributeError) as e:
+        return None, [f"malformed lock rows or card_population: {e}"]
+    if len({int(r["fight_id"]) for r in rows}) != len(rows):
+        return None, ["a fight is locked twice under one experiment"]
+    if not rows:
+        return None, ["no locks"]
+
+    by_card = {}
+    for r in rows:
+        by_card.setdefault(str(r["event_id"]), []).append(r)
+    unknown = set(by_card) - {c[0] for c in cards}
+    if unknown:
+        return None, [f"locks on cards missing from card_population: {sorted(unknown)[:5]}"]
+    locked_idx = [i for i, c in enumerate(cards) if c[0] in by_card]
+    first, last = locked_idx[0], locked_idx[-1]
+
+    eligible_of = lambda rs: [r for r in rs if r.get("y_a") in (0, 1) and r.get("corners_unchanged") is True
+                              and r.get("market_p_a_vigfree") is not None]
+    scored, total = [], 0
+    for ev_id, _start, priced in cards[first:last + 1]:
+        if stage == "PROSPECTIVE" and total >= n_req:
+            break
+        locked = {int(r["fight_id"]) for r in by_card.get(ev_id, [])}
+        if not priced or len(locked & priced) / len(priced) < T["min_coverage"]:
+            return None, [f"card {ev_id}: locks cover {len(locked & priced)} of {len(priced)} priced bouts; "
+                          f"every priced card in the run must be covered - skipping cards is not allowed"]
+        elig = eligible_of(by_card.get(ev_id, []))
+        scored.extend(elig)
+        total += len(elig)
+    if stage == "PROSPECTIVE" and total < n_req:
+        return None, [f"only {total} eligible locks on whole cards; the confirmatory look needs {n_req}"]
+    if stage == "PROSPECTIVE_INTERIM" and total >= n_req:
+        return None, ["at or past n_required the look is confirmatory, not interim"]
+    try:
+        y = [int(r["y_a"]) for r in scored]
+        pm = [float(r["p_a"]) for r in scored]
+        pk = [float(r["market_p_a_vigfree"]) for r in scored]
+    except (KeyError, TypeError, ValueError) as e:
+        return None, [f"malformed lock rows: {e}"]
+    cl = [str(r["event_id"]) for r in scored]
+    pop_sha = hashlib.sha256(json.dumps({k: {"start": str(v["start"]), "priced": sorted(int(x) for x in v["priced"])}
+                                         for k, v in card_population.items()}, sort_keys=True).encode()).hexdigest()
+    fid = _sha([_sha(str(int(r["lock_id"])) for r in sorted(scored, key=lambda r: int(r["lock_id"]))), pop_sha])
+    return (y, pm, pk, cl, fid), []
 
 
 def evaluate(rows: list[dict], *, stage: str, experiment_id: str, artifact_sha256: str,
@@ -652,13 +694,17 @@ def run_look(*, experiment_id: str, stage: str, rows: list[dict], artifact_sha25
         if any(e["stage"] == "PROSPECTIVE" and e["experiment_id"] == experiment_id for e in ents):
             raise ProtocolViolation("this experiment has already had its confirmatory look")
 
-    authors_git = []
+    # Authorship from the repository itself, not from what the author declared:
+    # every commit that touched the experiment's folder carries a
+    # Claude-Session trailer, and the auditor's session must not be among them.
+    git_sessions = []
     if _authors_from_git:
-        # A failure to read authorship is a refusal, never an empty list.
-        authors_git = sorted(set(_git("log", "--format=%ae", "--", reg["preregistration_path"]).split()))
-        if not authors_git:
-            raise ProtocolViolation("no git history for the preregistration; commit it before any look")
-    author_sessions = sorted(set(reg["author_sessions"]))
+        exp_dir = str(pathlib.Path(reg["preregistration_path"]).parent)
+        log = _git("log", "--format=%(trailers:key=Claude-Session,valueonly)%n%ae", "--", exp_dir)
+        if not log.strip():
+            raise ProtocolViolation("no git history for the experiment folder; commit it before any look")
+        git_sessions = sorted(set(re.findall(r"session_[A-Za-z0-9]+", log)))
+    author_sessions = sorted(set(reg["author_sessions"]) | set(git_sessions))
     if auditor in author_sessions:
         raise ProtocolViolation("the auditor is one of the model's authors")
 
@@ -681,11 +727,12 @@ def run_look(*, experiment_id: str, stage: str, rows: list[dict], artifact_sha25
         "code_commit": commit,
         "auditor": auditor,
         "author_sessions": author_sessions,
-        "author_git_emails": authors_git,
+        "author_sessions_from_git": git_sessions,
         "evaluated_at": evaluated_at,
         "n_scored": ev.n_eligible,
         "fight_ids_sha256": ev.fight_ids_sha256,
-        "inputs_sha256": hashlib.sha256(json.dumps(rows, sort_keys=True, default=str).encode()).hexdigest(),
+        "inputs_sha256": hashlib.sha256(json.dumps({"rows": rows, "card_population": card_population},
+                                                   sort_keys=True, default=str).encode()).hexdigest(),
         "delta_ll": None if math.isnan(ev.delta_ll) else round(ev.delta_ll, 6),
         "verdict": ev.verdict,
         "prev_entry_sha256": ents[-1]["entry_sha256"] if ents else "0" * 64,

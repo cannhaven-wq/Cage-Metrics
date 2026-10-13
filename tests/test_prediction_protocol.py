@@ -18,6 +18,7 @@ Amendment 1 (2026-10-13) added most of this after an independent review showed
 v1.0's thresholds could be loosened, and its fight set narrowed, with every
 test still green.
 """
+import datetime
 import hashlib
 import json
 import math
@@ -100,16 +101,21 @@ def sandbox(test, n_required=412, target=0.01, **block_overrides):
 
 def lock_rows(y, p_a, p_mkt, clusters, ids, experiment="PRED-900", artifact=ART):
     return [{"lock_id": i + 1, "fight_id": int(ids[i]), "event_id": int(clusters[i]),
-             "actual_lock_at": f"2027-01-{1 + i // 1000:02d}T00:00:{i % 60:02d}+00:00#{i:06d}",
+             "actual_lock_at": f"2027-01-01T{(i // 3600) % 24:02d}:{(i // 60) % 60:02d}:{i % 60:02d}+00:00",
              "p_a": float(p_a[i]), "market_p_a_vigfree": float(p_mkt[i]), "y_a": int(y[i]),
              "corners_unchanged": True, "experiment_id": experiment, "artifact_sha256": artifact}
             for i in range(len(y))]
 
 
 def population(rows):
+    """Every locked bout is priced; card k starts on day k, in event order."""
     pop = {}
     for r in rows:
-        pop.setdefault(str(r["event_id"]), []).append(r["fight_id"])
+        c = pop.setdefault(str(r["event_id"]), {"start": None, "priced": []})
+        c["priced"].append(r["fight_id"])
+    for k, ev in enumerate(sorted(pop, key=int)):
+        pop[ev]["start"] = (datetime.datetime(2027, 2, 1, 22, tzinfo=datetime.timezone.utc)
+                            + datetime.timedelta(days=k)).isoformat()
     return pop
 
 
@@ -144,7 +150,8 @@ class FreezeHistory(unittest.TestCase):
         for p in ("research/protocol/PREDICTION_RESEARCH_PROTOCOL.md",
                   "research/protocol/pred_protocol.py", "research/protocol/protocol.json",
                   "research/protocol/holdout_manifest.json", "research/protocol/holdout_manifest.sql",
-                  "research/protocol/h1_fight_ids.txt", "tests/test_prediction_protocol.py"):
+                  "research/protocol/h1_fight_ids.txt", "research/protocol/card_population.sql",
+                  "tests/test_prediction_protocol.py"):
             self.assertIn(p, last)
 
     def test_each_later_entry_is_a_recorded_amendment_with_a_decision(self):
@@ -191,13 +198,16 @@ class FreezeHistory(unittest.TestCase):
 def _from_main(path):
     """A file as it is on origin/main, or None if main has no such file.
     In CI the ref must exist: a missing main is a failure, not a skip."""
-    has_ref = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--verify", "-q", "origin/main"],
+    # On a push to main, origin/main IS this commit; CI sets PRED_BASE_REF to
+    # the commit before the push so the comparison still has a base.
+    ref = os.environ.get("PRED_BASE_REF") or "origin/main"
+    has_ref = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--verify", "-q", ref + "^{commit}"],
                              capture_output=True).returncode == 0
     if not has_ref:
         if os.environ.get("CI"):
-            raise AssertionError("origin/main is not fetched in CI; the anti-rewrite checks cannot run")
+            raise AssertionError(f"{ref} is not fetched in CI; the anti-rewrite checks cannot run")
         return None
-    r = subprocess.run(["git", "-C", str(REPO), "show", f"origin/main:{path}"], capture_output=True, text=True)
+    r = subprocess.run(["git", "-C", str(REPO), "show", f"{ref}:{path}"], capture_output=True, text=True)
     return r.stdout if r.returncode == 0 else None
 
 
@@ -418,24 +428,46 @@ class Provenance(unittest.TestCase):
         y, pt, pk, *_, cl, ids = world(1, n_events=n_events)
         return lock_rows(y, pt, pk, cl, ids)
 
-    def test_prospective_scores_exactly_the_first_n_required_locks(self):
+    def test_prospective_takes_whole_cards_until_n_required(self):
         regf, _ = sandbox(self, n_required=3000)
         rows = self._locks()
         ev = self._eval(rows, regf, stage="PROSPECTIVE", card_population=population(rows))
-        self.assertEqual(ev.n_eligible, 3000)
+        self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
+        self.assertGreaterEqual(ev.n_eligible, 3000)
+        self.assertEqual(ev.n_eligible % 12, 0, "a card must never be cut in half")
         shuffled = list(reversed(rows))
         ev2 = self._eval(shuffled, regf, stage="PROSPECTIVE", card_population=population(rows))
-        self.assertEqual(ev.fight_ids_sha256, ev2.fight_ids_sha256, "order must come from lock time, not the caller")
+        self.assertEqual(ev.fight_ids_sha256, ev2.fight_ids_sha256, "the caller's row order must not matter")
+
+    def test_a_draw_does_not_fail_an_honest_card(self):
+        # round 3: one draw on a 12-bout card read as 11/12 coverage -> INVALID
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        rows = [dict(r, y_a=None) if r["lock_id"] % 12 == 5 else r for r in rows]
+        ev = self._eval(rows, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
+
+    def test_timestamp_spelling_does_not_reorder_locks(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        respelled = [dict(r, actual_lock_at=r["actual_lock_at"].replace("T", " ").replace("+00:00", "Z")) if i % 2 else r
+                     for i, r in enumerate(rows)]
+        a = self._eval(rows, regf, stage="PROSPECTIVE", card_population=population(rows))
+        b = self._eval(respelled, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertEqual(a.fight_ids_sha256, b.fight_ids_sha256)
 
     def test_prospective_refusals(self):
         regf, _ = sandbox(self, n_required=3000)
         rows = self._locks()
         pop = population(rows)
+        worst_cards = {str(e) for e in range(10, 70)}
         cases = {
-            "too few locks": (rows[:2000], pop),
+            "too few locks": (rows[:2000], population(rows[:2000])),
             "foreign artifact": ([dict(r, artifact_sha256="c" * 64) if i == 0 else r for i, r in enumerate(rows)], pop),
-            "selective locking": ([r for r in rows if r["y_a"] == 1 or r["lock_id"] % 3], pop),
+            "selective locking within a card": ([r for r in rows if r["y_a"] == 1 or r["lock_id"] % 3], pop),
+            "whole cards dropped": ([r for r in rows if str(r["event_id"]) not in worst_cards], pop),
             "no population": (rows, None),
+            "naive timestamps": ([dict(r, actual_lock_at="2027-01-01 00:00:00") for r in rows], pop),
         }
         for name, (rr, pp_) in cases.items():
             self.assertEqual(self._eval(rr, regf, stage="PROSPECTIVE", card_population=pp_).verdict, "INVALID", name)
@@ -444,10 +476,21 @@ class Provenance(unittest.TestCase):
         regf, _ = sandbox(self, n_required=3000)
         rows = self._locks(n_events=150)
         ev = self._eval(rows, regf, stage="PROSPECTIVE_INTERIM", card_population=population(rows))
-        self.assertIn(ev.verdict, ("UNDERPOWERED", "REJECT"))
+        self.assertIn(ev.verdict, ("UNDERPOWERED", "REJECT"), ev.reasons)
         big = self._locks()
         ev = self._eval(big, regf, stage="PROSPECTIVE_INTERIM", card_population=population(big))
         self.assertEqual(ev.verdict, "INVALID")
+
+    def test_h1_facts_must_be_plain_ints(self):
+        # round 3: hashing int(x) while scoring x let 1000.1/1000.2 split a card
+        # and +/-0.99 on a price move the result
+        regf, _ = sandbox(self)
+        rows = self._h1()
+        self._patch_manifest(rows)
+        for name, bad in (("split card", [dict(r, event_id=r["event_id"] + 0.1 * (i % 2)) for i, r in enumerate(rows)]),
+                          ("nudged price", [dict(r, american_a=r["american_a"] + 0.9) if i == 3 else r for i, r in enumerate(rows)]),
+                          ("bool outcome", [dict(r, y=bool(r["y"])) if i == 0 else r for i, r in enumerate(rows)])):
+            self.assertEqual(self._eval(bad, regf).verdict, "INVALID", name)
 
 
 class Registration(unittest.TestCase):

@@ -28,7 +28,12 @@ class WinModelLocksMigration(unittest.TestCase):
 
     def test_event_date_and_deadline_come_from_the_database(self):
         self.assertIn("select event_date into new.event_date from public.events", self.sql)
-        self.assertIn("select min(start_at) into v_start from public.v_fight_start_best where event_id = f.event_id", self.sql)
+        self.assertIn("into v_start from public.v_fight_start_best where event_id = f.event_id", self.sql)
+        # a fallback start counts from midnight UTC, never from 18:00
+        self.assertIn("then (event_date::timestamp at time zone 'UTC') else start_at end", self.sql)
+
+    def test_quotes_agree_with_book_count(self):
+        self.assertIn("jsonb_array_length(market_quotes) = market_book_count", self.sql)
 
     def test_market_snapshot_is_required(self):
         for col in ("market_p_a_vigfree    numeric not null", "market_quotes         jsonb   not null",
