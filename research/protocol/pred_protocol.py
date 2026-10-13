@@ -569,9 +569,10 @@ def _prospective_inputs(rows: list[dict], reg: dict, stage: str, card_population
     # Coverage (round 5): EVERY priced bout on every card in the run carries a
     # lock row. A bout the model will not price is an ABSTENTION LOCK - a row
     # with p_a NULL, written before the bell like any other - and is scored at
-    # the market's probability, adding nothing. A bout first priced after the
-    # card's last lock is not in the population at all (card_population.sql
-    # defines "priced" as before that instant). Any other gap is INVALID: an
+    # the market's probability, adding nothing. "Priced" means priced before
+    # the card's start (card_population.sql), an instant the writer does not
+    # control; a bout priced too late to forecast needs an abstention lock.
+    # Any other gap is INVALID: an
     # allowance of even one missing bout per card let a writer roll back the
     # worst-scoring bout after the fight and gain more than the minimum useful
     # effect. A card with no locks - dropped or rolled back - fails the look.

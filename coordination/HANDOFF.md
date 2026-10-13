@@ -36,7 +36,17 @@ fixed, with a capture test that failed before the fix and passes after.
 - **Pipeline health** first run: healthy.
 
 **PRED-001 Amendment 1 ([D-023](DECISIONS.md)).** An independent reviewer
-tried to break the protocol twice before merge.
+tried to break the protocol in **six rounds** before merge. Rounds 1–5 each
+found blocking problems, all closed and turned into tests. Round 6 found
+nothing blocking, plus one small gap, which is also closed. Rounds 3–5 added
+three rules:
+
+- prospective looks take whole cards;
+- every priced bout needs a lock row, and a bout the model declines needs an
+  abstention lock (`p_a` NULL) written before the bell;
+- the population comes from a committed recipe whose cutoff is the card start.
+
+The two earliest rounds are summarised below.
 
 - **Round 1** found five bypasses that kept every test green.
 - **Round 2** found that two of them still worked:

@@ -13,10 +13,12 @@
 -- a card in the scored run has a lock row - a forecast, or an abstention lock
 -- (p_a NULL) written before the bell.
 --
--- "Priced" means a two-sided sportsbook price captured before the EARLIER of
--- the card's start and the experiment's last lock on that card. A bout first
--- priced after the last lock pass (a late replacement) could not have been
--- locked, so it is not owed one.
+-- "Priced" means a two-sided sportsbook price captured before the card's
+-- start - an instant the lock writer does not control. (Round 6: using the
+-- writer's own last lock as the cutoff let a late replacement's lock be
+-- rolled back after the result, moving the cutoff and dropping the bout.) A
+-- bout priced too late to forecast is owed an abstention lock before the
+-- start, which counts against the 5% abstention limit.
 --
 -- Start of a card: the same rule the lock guard uses - the earliest best-known
 -- start of any bout, with an event-date fallback counted from 00:00 UTC.
@@ -37,19 +39,13 @@ cards as (
    where s.event_date >= first_card.d
      and s.event_date < current_date        -- only cards that have happened
    group by s.event_id),
-last_lock as (
-  select l.event_id, max(l.actual_lock_at) as at
-    from public.win_model_locks l
-   where l.experiment_id = :experiment_id
-   group by l.event_id),
 two_sided as (
   select o.fight_id
     from public.fight_odds o
     join public.v_odds_books_sportsbooks b on b.id = o.book_id
     join public.fights f on f.id = o.fight_id
     join cards c on c.event_id = f.event_id
-    left join last_lock ll on ll.event_id = c.event_id
-   where o.captured_at < least(c.card_start, coalesce(ll.at, c.card_start))
+   where o.captured_at < c.card_start
      and o.captured_at > timestamptz '1990-01-01'
    group by o.fight_id, o.book_id
   having count(distinct o.fighter_id) filter (where o.fighter_id in (f.fighter_a_id, f.fighter_b_id)) = 2)

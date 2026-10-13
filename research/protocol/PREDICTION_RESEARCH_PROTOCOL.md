@@ -392,7 +392,9 @@ green. Changes:
    lock row** — a forecast, or an **abstention lock** (`p_a` NULL, written
    before the bell like any other) that is scored at the market's probability
    and so adds nothing; abstentions above 5% make the look INVALID, as on H1.
-   A bout first priced after the card's last lock is not owed one. Any other
+   "Priced" means priced before the card's start, an instant the writer does
+   not control; a bout priced too late to forecast is owed an abstention lock
+   (round 6). Any other
    gap is INVALID: the round-4 allowance of one missing bout per card let a
    writer roll back the worst-scoring bout after the fight and gain more than
    the minimum useful effect. A card left out — skipped, or rolled back — fails

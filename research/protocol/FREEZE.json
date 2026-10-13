@@ -18,16 +18,16 @@
       "amendment": 1,
       "motivated_by_observed_results": false,
       "looks_taken_before": 0,
-      "motivation": "independent review commissioned by the owner, two rounds before merge: round 1 found five bypasses (B1-B5) and seven weaknesses (S1-S7); round 2 found that B1, B2 and parts of B3-B5 still worked, plus four lock-table defects; round 3 found the coverage rule failed honest cards, whole cards could be dropped, text-sorted timestamps, and int-coerced H1 facts; round 4 found two false-INVALID paths (next-card locks, 95%-per-card meaning 100%); round 5 found the one-missing-bout allowance could be gamed by rolling back the worst bout",
+      "motivation": "independent review commissioned by the owner, two rounds before merge: round 1 found five bypasses (B1-B5) and seven weaknesses (S1-S7); round 2 found that B1, B2 and parts of B3-B5 still worked, plus four lock-table defects; round 3 found the coverage rule failed honest cards, whole cards could be dropped, text-sorted timestamps, and int-coerced H1 facts; round 4 found two false-INVALID paths (next-card locks, 95%-per-card meaning 100%); round 5 found the one-missing-bout allowance could be gamed by rolling back the worst bout; round 6 found no blocker and one small gap (writer-controlled pricing cutoff), closed",
       "files": {
-        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "758d09a4e25177e176661337133e615a512542a75b25febbb1c1b9d320572ea1",
-        "research/protocol/pred_protocol.py": "58e89328e1b4b2d1eebd117778b7efdf6f585b84aacdf266c6910db257b6b70d",
+        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "e4535809126c2f157598b5062bcfadc7952818813ccee07132a18dd733e12be4",
+        "research/protocol/pred_protocol.py": "86c21a5cc03cd4f5782694caf20ea923bfd5519a599647ad91d3324bd53f0aa9",
         "research/protocol/protocol.json": "c2a6f22163345e120c40f0e52d5b86eae85189d68919cc9a43313a9eb0c78366",
         "research/protocol/holdout_manifest.json": "f29fb66265d4a327adf7278cadf4122831e48f84ce183c02079b1b9cb9060117",
         "research/protocol/holdout_manifest.sql": "f368ce34fc6d21303f28625c119229179b99a2ecec453adcc5e7a52e118792eb",
         "research/protocol/h1_fight_ids.txt": "95716f3a0cb54e3a6fe905a1d02a761db2e2f106e1783435a41f8aa35db06b16",
         "tests/test_prediction_protocol.py": "1046f2759b967cc3f95de9f2b2ad507245f3baf9e19cc1c23241418ab911d1bc",
-        "research/protocol/card_population.sql": "b246011d0fae3e3ffef469d3c210bed7d41f1dca1d3fddd42150d03006934f8b"
+        "research/protocol/card_population.sql": "2ec07dff85898387db27d76fa4bd3522ad2e86849d94a162d46f4c6602111d3e"
       },
       "decision": "D-023"
     }
