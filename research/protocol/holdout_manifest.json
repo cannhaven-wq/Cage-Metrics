@@ -1,15 +1,18 @@
 {
   "_what": "Fingerprint of the sealed data at freeze. Lets anyone check later that the holdout scored is the holdout sealed, and that nobody edited a historical result in between. Computed by the auditor role with one SQL statement (below); the per-fight outcomes were hashed inside the database and never printed.",
-  "computed_at": "2026-10-12",
+  "computed_at": "2026-10-12; H1 re-derived 2026-10-13 (Amendment 1)",
   "database": "Supabase project uftancejftcryfvbggll",
-  "eligibility": "fights with both fighters set, winner_id equal to one of them (draws and no-contests excluded), is_active IS DISTINCT FROM false (dead bookings excluded), event_date < 2026-10-12. 'priced' additionally requires a BestFightOdds closing-consensus quote (odds_books.name ILIKE 'BFO%', is_closer) on BOTH fighters.",
+  "eligibility": "fights with both fighters set, winner_id equal to one of them (draws and no-contests excluded), is_active IS DISTINCT FROM false (dead bookings excluded), event_date < 2026-10-12. 'priced' additionally requires a BestFightOdds closing-consensus quote (odds_books.name ILIKE 'BFO%', is_closer) on BOTH fighters. Amendment 1 (2026-10-13) also excludes fights 43, 46 and 8780, rebooked in place: their stored prices may belong to a different matchup.",
   "hash_recipe": {
     "ids": "sha256(string_agg(fight_id::text, ',' ORDER BY fight_id)) over priced eligible fights",
     "outcomes": "sha256(string_agg(fight_id || ':' || (winner_id = fighter_a_id)::int, ',' ORDER BY fight_id)) over the same rows"
   },
   "partitions": {
     "DEV": {
-      "event_dates": ["1994-03-11", "2024-12-14"],
+      "event_dates": [
+        "1994-03-11",
+        "2024-12-14"
+      ],
       "decided": 7830,
       "decided_priced": 6824,
       "events_priced": 623,
@@ -17,15 +20,28 @@
       "priced_outcomes_sha256": "f1b1141dd03578b3aee895b2c4d7276da0b6aa2a01e49a2c4e4e8bb41b728e5d"
     },
     "H1": {
-      "event_dates": ["2025-01-11", "2026-07-11"],
+      "event_dates": [
+        "2025-01-11",
+        "2026-07-11"
+      ],
       "decided": 789,
-      "decided_priced": 713,
+      "decided_priced": 710,
       "events_priced": 63,
-      "priced_ids_sha256": "55642caafc579929bebab8a7aaabb28515ffeca0ac9a1cc359f7acf99c84ac9b",
-      "priced_outcomes_sha256": "013bed8c7941a26adea7af989d6d04d2382da1370da4fbac2c8c3336207e5320"
+      "priced_ids_sha256": "97ff805efc28921df03e91e126a4cf05c7ac539be10979fe07b597a892ee000a",
+      "priced_outcomes_sha256": "14112440771f6746f4696fd808fa576a64b68623fbafefc9b7652182f3d854ff",
+      "priced_prices_sha256": "7b259a1900c36946831bfcb5bb9b94f6ae019e2ebbdf6af009ef2f2d8117fa4d",
+      "superseded_v1_0": {
+        "decided_priced": 713,
+        "priced_ids_sha256": "55642caafc579929bebab8a7aaabb28515ffeca0ac9a1cc359f7acf99c84ac9b",
+        "priced_outcomes_sha256": "013bed8c7941a26adea7af989d6d04d2382da1370da4fbac2c8c3336207e5320",
+        "why": "included three rebooked-in-place fights; superseded before any look"
+      }
     },
     "RESERVE": {
-      "event_dates": ["2026-07-18", "2026-10-10"],
+      "event_dates": [
+        "2026-07-18",
+        "2026-10-10"
+      ],
       "decided": 169,
       "decided_priced": 0,
       "note": "no BFO closing consensus exists after 2026-07-11; sealed and unscored"
@@ -34,6 +50,13 @@
   "known_contamination": [
     "H1 is not virgin. The v4, v5 and v6 models and the engine's last walk-forward folds were scored on 2025-2026 fights, and the results (the market won) are published. Anyone who has read them knows how a typical model does there.",
     "The Factor Lab (factor-rates.json) computes its market-controlled verdicts over ALL years including H1. Any experiment whose features were chosen because a Factor Lab verdict looked good (age, UFC record) has selected on H1. Such an experiment must declare it, and its H1 result is recorded as non-confirmatory: it may go to a prospective test but cannot count as historical evidence.",
-    "The engine (engine_v1/v2) was trained with data through 2026-07, so it is not eligible for an H1 evaluation at all."
+    "The engine (engine_v1/v2) was trained with data through 2026-07, so it is not eligible for an H1 evaluation at all.",
+    "The incumbent engine's walk-forward folds and its market blend already span 2020-2026, so the engine has, in effect, seen H1 and cannot be first-opened on it (noted by INFO-AUDIT-001, recorded in D-022)."
+  ],
+  "recipe": "research/protocol/holdout_manifest.sql (the exact statement; re-run it to check every H1 hash)",
+  "h1_fight_ids_file": "research/protocol/h1_fight_ids.txt (ids only, comma-separated, ascending; no outcomes)",
+  "mutable_inputs": [
+    "fight_odds is not yet append-only (proposed_2026-09-16_fight_odds_immutability.sql is unapplied) and is_closer can be promoted or demoted by fetch-odds.js. The prices hash makes any change to an H1 benchmark price visible; it does not prevent one.",
+    "fights.is_active and fights.winner_id can change (booking retired, result corrected). The ids and outcomes hashes make that visible."
   ]
 }

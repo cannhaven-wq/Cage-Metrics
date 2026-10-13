@@ -1,9 +1,12 @@
 # PRED-001 — Prediction research protocol
 
-**Status: frozen 2026-10-12, on the owner's instruction.** Changing anything
-below is an L3 amendment (`coordination/CRITICAL_GATES.md` item 1): dated,
-appended to the `## Amendments` section, with `motivated_by_observed_results`
-recorded, and the new sha256 in `protocol.json`. The executable rules are in
+**Status: frozen 2026-10-12, on the owner's instruction; Amendment 1
+2026-10-13, before any look.** Changing anything below is an L3 amendment
+(`coordination/CRITICAL_GATES.md` item 1): dated, appended to the
+`## Amendments` section, with `motivated_by_observed_results` recorded, and a
+new entry in [`FREEZE.json`](FREEZE.json), which hashes every governed file —
+this text, the code, the thresholds, the manifest, its SQL recipe, the H1 id
+list and the test file. The executable rules are in
 [`pred_protocol.py`](pred_protocol.py) and the thresholds in
 [`protocol.json`](protocol.json). If the prose and the code disagree, the code
 is what ran. Fix the prose by amendment.
@@ -32,8 +35,8 @@ after seeing a result.
   matter. A result that is too good is treated as a bug until shown otherwise.
 - **This takes a long time, and that is a finding, not a delay.** A real but
   small advantage needs about 400 fights (roughly 10 months of UFC) to confirm
-  if it is large (0.01 log loss), and about 1,650 fights (roughly 3.4 years)
-  if it is 0.005. §6 has the arithmetic. There is no shortcut that is also
+  if it is large (0.01 log loss), about 1,650 fights (roughly 3.4 years) if it
+  is 0.005, and about 2,900 (six years) if it is 0.004. §6 has the arithmetic. There is no shortcut that is also
   honest.
 
 ---
@@ -60,7 +63,7 @@ significance, and it was fitted on years that are now sealed.
 | role | who | may | may not |
 |---|---|---|---|
 | **Researcher** | any agent or person building a model | read and fit DEV data; run walk-forward inside DEV; write a preregistration; freeze an artifact | read H1, RESERVE, or any outcome on or after 2025-01-01; evaluate on sealed data; record a verdict |
-| **Independent Auditor** | a session or person **that wrote none of the model's code or preregistration** (checked by git authorship and session id) | run the point-in-time audit; run `pred_protocol.evaluate` on sealed or prospective data at a pinned commit; append to `holdout_ledger.json` | change a model, a threshold, or the eligible fight set; evaluate an artifact twice on H1 |
+| **Independent Auditor** | a session or person **that wrote none of the model's code or preregistration** (checked by git authorship and session id) | run the point-in-time audit; run `pred_protocol.run_look` — the only sanctioned way to look, which evaluates and appends the hash-chained ledger entry in one step — at a pinned commit | change a model, a threshold, or the eligible fight set; evaluate an artifact twice on H1 |
 | **Owner** | Reed | record the verdict (L3 item 3); approve amendments; approve any public claim (L3 item 8) | — |
 
 The auditor computes the verdict **mechanically**. `evaluate()` returns it.
@@ -72,27 +75,37 @@ records what the code returned, not an interpretation of it.
 | partition | dates | decided fights | with BFO close | use |
 |---|---|---|---|---|
 | **DEV** | through 2024-12-31 | 7,830 | 6,824 (623 events) | everything: fitting, tuning, feature selection, walk-forward |
-| **H1** (sealed) | 2025-01-01 → 2026-07-11 | 789 | **713 (63 events)** | auditor only, one look per artifact, 10 looks ever |
+| **H1** (sealed) | 2025-01-01 → 2026-07-11 | 789 | **710 (63 events)** | auditor only, one look per experiment, 10 looks ever |
 | **RESERVE** (sealed) | 2026-07-12 → 2026-10-11 | 169 | 0 | nobody; no consistent benchmark exists for it |
 | **PROSPECTIVE** | forecasts locked after freeze, before the fight starts | — | — | the confirmatory test |
 
-Counts and sha256 fingerprints of the fight ids and the outcomes are in
-[`holdout_manifest.json`](holdout_manifest.json). The outcomes were hashed
-inside the database and never displayed.
+Counts and sha256 fingerprints of the fight ids, the benchmark prices and the
+outcomes are in [`holdout_manifest.json`](holdout_manifest.json); the exact
+statement that produces them is [`holdout_manifest.sql`](holdout_manifest.sql)
+and the ids themselves (no outcomes) are [`h1_fight_ids.txt`](h1_fight_ids.txt).
+The outcomes were hashed inside the database and never displayed. Fights 43,
+46 and 8780 are excluded: they were rebooked in place, so their stored prices
+may belong to a different matchup.
 
-**How access is prevented, and the limit of that.**
+**How access is controlled — conventions with tripwires, not a sandbox.**
 
-1. Development code reads fights only through `pred_protocol.dev_only()`, which
-   **raises** on any sealed date rather than silently dropping it.
+1. Development code is expected to read fights through
+   `pred_protocol.dev_only()`, which **raises** on any sealed date rather than
+   silently dropping it. Nothing forces a researcher to call it.
 2. Experiment code lives in `research/experiments/<ID>/`. A test fails if any
-   file there contains a direct database path (`supabase`, `psql`,
-   `SUPABASE_`, `DATABASE_URL`, `create_client`). Data reaches an experiment as
+   non-Markdown file there names a database route (`supabase`, `psql`, a
+   `postgres://` URL, `SUPABASE_`, `DATABASE_URL`, `create_client`,
+   `psycopg`, the export or capture scripts), and if any committed data file
+   there contains a date on or after 2025-01-01. Data reaches an experiment as
    a DEV export, never as a live query.
-3. Every look at sealed data is an entry in `holdout_ledger.json`, appended in
-   the same commit as the result. The test enforces the budgets.
+3. A look happens through `run_look`, which refuses a second look by the same
+   experiment, a spent budget, or an auditor who is one of the authors, then
+   evaluates and appends a hash-chained ledger entry in one step. A test
+   verifies the chain and that no entry present on `main` disappears.
 4. **The limit, stated plainly:** any agent holding database credentials *can*
-   read `fights.winner_id` for 2025. Controls 1–3 make a sealed read visible
-   and deliberate; they do not make it impossible. That is why **no claim rests
+   read `fights.winner_id` for 2025, and can import a helper from outside the
+   experiment folder. Controls 1–3 make a sealed read visible and deliberate;
+   they do not make it impossible. That is why **no claim rests
    on H1** (§9). Prospective outcomes do not exist when the forecast is locked,
    so no credential can leak them.
 
@@ -103,7 +116,9 @@ An experiment whose features were chosen because a Factor Lab verdict looked
 good has therefore selected on H1. It must declare that, and its H1 result is
 recorded as **non-confirmatory**: it may proceed to a prospective test, but it
 counts as no historical evidence. The engine was trained on data through
-2026-07 and is ineligible for H1.
+2026-07, and its walk-forward folds and market blend already span the sealed
+window, so it is ineligible for H1: it cannot be first-opened on data it has
+already seen.
 
 ## 3. Point-in-time inputs
 
@@ -159,9 +174,10 @@ verdict is INVALID.
 - **The primary question is incremental information.** "Does the model know
   something the market doesn't" is tested as a combination of market and
   model, with its weights frozen on DEV. It is scored against the market quote
-  it consumed. A standalone model may be submitted as is, but its paired
-  spread against the market is about five times larger (§6), so it needs
-  roughly 25 times more fights.
+  it consumed. **Confirmatory looks score the incremental form only.** A
+  standalone model's result is reported beside it, never decides: its paired
+  spread against the market is about five times larger (§6), so on H1 it
+  could only clear the bar with a gain above the 0.015 leak tripwire.
 - **Historically, the only consistent close is BFO's closing consensus.** It
   carries a 1970 placeholder timestamp, so it is a closing *price* with an
   unknown time. It is fine as a probability benchmark and is never used for
@@ -211,17 +227,22 @@ a news cycle.
 Clustering by card measured 0.72–0.85. That is floored at 1, because a lucky
 measurement is not a licence to need fewer fights.
 
-**Fights needed**, one-sided test at 80% power
-(`pred_protocol.required_n`):
+**Fights needed** for an 80% chance of PASS when the true gain is as stated
+(`pred_protocol.required_n(..., mue=0.003)`). PASS needs two things — the
+lower bound above 0 **and** the estimate at least 0.003 — so the sample must
+satisfy both. v1.0 sized for the first alone, which gives about 50% power at a
+true gain of 0.003 (Amendment 1).
 
-| true gain | blend, H1 (α = 0.005) | blend, prospective (α = 0.01) | ≈ years at 480 priced fights a year | standalone, prospective |
-|---|---|---|---|---|
-| 0.020 | 120 | 103 | 0.2 | 2,570 |
-| 0.010 | 479 | 412 | 0.9 | 10,277 |
-| 0.005 | 1,914 | 1,645 | 3.4 | 41,108 |
-| 0.003 | 5,316 | 4,568 | 9.5 | 114,188 |
+| true gain | blend, H1 (α = 0.005) | blend, prospective (α = 0.01) | ≈ years at 480 priced fights a year |
+|---|---|---|---|
+| 0.020 | 120 | 103 | 0.2 |
+| 0.010 | 479 | 412 | 0.9 |
+| 0.006 | 1,329 | 1,142 | 2.4 |
+| 0.005 | 1,914 | 1,645 | 3.4 |
+| 0.004 | 2,990 | 2,902 | 6.0 |
+| 0.003 | not reachable: a target equal to the minimum useful effect can never be powered | | |
 
-**What this means, without softening.** H1's 713 fights can only detect a gain
+**What this means, without softening.** H1's 710 fights can only detect a gain
 of about **0.008** for a blend, and about **0.041** for a standalone model.
 The best gain anyone has measured in this repo, 0.0034, is below what H1 can
 see. A model with a real advantage that small will most likely come back
@@ -230,13 +251,20 @@ The protocol does not lower the bar to make this faster.
 
 **Each prospective preregistration fixes, before its first lock:**
 
-- a target gain δ ≥ 0.003;
-- an SD of max(the class floor above, the SD the experiment measured on DEV);
-- n_required = `required_n(SD, δ, 0.01, 0.8)`;
+- a target gain δ ≥ 0.004;
+- an SD of max(0.064, the SD the experiment measured on DEV);
+- n_required ≥ `required_n(SD, δ, 0.01, 0.8, mue=0.003)`;
 - the analysis date.
 
-There is one analysis, at n_required. Before half of n_required, no rule
-applies. From half onward, the only early stop is futility.
+These live in the experiment's `research/registry.json` entry, and
+`load_registration` reads them from there and checks them against the frozen
+preregistration on disk: the auditor cannot supply a different n.
+
+There is one confirmatory analysis, on exactly the first n_required eligible
+locks in lock order. Earlier looks are `PROSPECTIVE_INTERIM`: logged in the
+ledger, never a pass, not counted against the budget, and before half of
+n_required no rule applies. From half onward, the only early stop is
+futility.
 
 ## 7. Decision rules
 
@@ -244,11 +272,11 @@ Implemented in `pred_protocol.evaluate`, and checked in this order:
 
 | verdict | rule |
 |---|---|
-| **INVALID** | preregistration or artifact hash mismatch; point-in-time audit failed; corner symmetry failed; fewer than 20 events; coverage under 95%. **The ledger slot is still spent.** |
-| **SUSPECT** | Δ > 0.015, or accuracy > 72%. Frozen until the auditor writes a leak audit. A found leak turns it INVALID. No leak found means the owner decides (L3 item 10). |
-| **REJECT** — no meaningful incremental information | Δ ≤ 0; **or** the upper end of the 95% range is below 0.003; **or**, prospectively at half of n_required or later, that same upper end is below 0.003 (futility). |
-| **UNDERPOWERED** | prospective, before n_required, and not futile. Never a pass. |
-| **FAIL_CALIBRATION** | would otherwise pass, but the calibration slope is outside 0.8–1.25 or \|intercept\| > 0.1. |
+| **INVALID** | an outcome not 0/1, a market probability missing or outside (0,1), a model probability outside [0,1]; a duplicate fight; artifact not the one registered; point-in-time audit failed; corner symmetry failed; fewer than 20 events or under two fights per event; coverage under 95%; **an H1 fight set that is not exactly the manifest's**; a confirmatory prospective look not on exactly n_required fights. **The ledger slot is still spent.** |
+| **SUSPECT** | Δ > 0.015, or the model's accuracy beats the market's on the same fights by more than 5 points. Frozen until the auditor writes a leak audit. A found leak turns it INVALID. No leak found means the owner decides (L3 item 10). |
+| **REJECT** — no meaningful incremental information | Δ ≤ 0; **or** the upper end of the 95% range is below 0.003; **or**, at an interim look at half of n_required or later, that same upper end is below 0.003 (futility). |
+| **UNDERPOWERED** | an interim look that is not futile. Never a pass. |
+| **FAIL_CALIBRATION** | would otherwise pass, but \|slope − 1\| > max(0.2, \|market slope − 1\| + 0.1) or \|intercept\| > max(0.1, \|market intercept\| + 0.05). Judged against the market's own calibration on the same fights, so a blend is not failed for a bias it inherited. |
 | **PASS_H1** | the one-sided lower bound at α = 0.005 is above 0 **and** Δ ≥ 0.003. This licenses a prospective test, and nothing else. |
 | **PASS_PROSPECTIVE** | the same rule at n_required, with α = 0.01 one-sided. |
 | **INCONCLUSIVE** | anything else. Treated as a failure for every claim. |
@@ -265,9 +293,11 @@ seeded and nothing else is random.
 
 ## 8. Rules against leakage, cherry-picking and holdout optimisation
 
-1. **One artifact, one look.** H1 scores a frozen artifact (model file sha256
-   plus code commit) exactly once. A changed artifact is a new look and spends
-   a new slot.
+1. **One experiment, one look.** H1 scores an experiment's frozen artifact
+   exactly once. Changing a byte of the artifact does not buy a second look:
+   it is a new experiment, with its own preregistration and its own slot.
+   Because PASS_H1 licenses nothing but a prospective test, successors and
+   `variants_tried_on_dev` cannot turn repeated tries into a claim.
 2. **Ten looks at H1, ever.** Each look runs at α = 0.005, so the chance that
    any of the ten passes by luck is held at 5% (Bonferroni). When the budget
    is spent, H1 retires and only prospective evidence counts.
@@ -280,12 +310,13 @@ seeded and nothing else is random.
    retrained, re-featured or recalibrated and resubmitted as the same
    experiment. A successor is a new experiment that names its predecessor.
    This is the DUR-001 `forbidden_changes` rule applied to win models.
-6. **Every look is recorded before it is discussed.** The ledger entry and the
-   verdict are committed together. Failures, INVALIDs and REJECTs stay in the
-   ledger, and a test fails if an entry disappears.
-7. **No subgroup rescue.** Results for subgroups (division, favourite or
-   underdog, title fights) are descriptive. Only a subgroup named as the
-   primary population in the preregistration can pass.
+6. **Every look is recorded before it is discussed.** `run_look` writes the
+   entry, hash-chained to the one before it, in the same step that computes
+   the verdict. Failures, INVALIDs and REJECTs stay in the ledger; a test
+   fails if an entry is edited, or if one present on `main` disappears.
+7. **No subgroup rescue, and no subgroup H1.** H1 is scored on the whole
+   sealed set or not at all. Results for subgroups (division, favourite or
+   underdog, title fights) are descriptive.
 8. **Prospective locks are append-only and are written before the start.**
    This uses the same pattern as `prop_model_locks` and `pre_fight_snapshots`:
    the database rejects UPDATE and DELETE, and refuses a lock after the start
@@ -311,4 +342,41 @@ any request to the auditor.
 
 ## Amendments
 
-None.
+### Amendment 1 — 2026-10-13
+
+**Motivation:** an independent review commissioned by the owner the day after
+the freeze. `motivated_by_observed_results: false` — the ledger was empty, no
+look at H1 or at prospective data had been taken, and no model exists under
+this protocol. The review showed that v1.0 could be bypassed with every test
+green. Changes:
+
+1. **Hash protection for everything governed** (review B1). `FREEZE.json` holds
+   a hash history of the protocol text, the code, `protocol.json`, the manifest,
+   its SQL, the H1 id list and the test file. The test pins the v1.0 entry and
+   requires one dated `### Amendment` here per later entry.
+2. **The H1 fight set is fixed by hash** (B2). `evaluate` refuses any H1 set
+   other than the manifest's. Subgroup H1 looks are removed (§8.7).
+3. **n_required comes from the registry** (B3). `load_registration` reads it
+   and checks it against the frozen preregistration and the sample-size rule.
+   A confirmatory prospective look uses exactly that many fights.
+4. **Looks go through `run_look`, hash-chained** (B4). Budgets and the
+   one-look rule are enforced before computing; a test checks the chain and
+   that no entry on `main` disappears.
+5. **Interim prospective looks are a separate, logged stage** (B5).
+6. **Sample size covers both halves of the PASS rule** (S1). Minimum target
+   raised from 0.003 to 0.004; the §6 table is recomputed.
+7. **Bad inputs are INVALID**, not silently clipped (S2). Cluster ids compare
+   as strings (N1).
+8. **The accuracy tripwire is relative to the market** (S3), and
+   **calibration is judged against the market's own** (S5).
+9. **Confirmatory looks score the incremental form only** (S4).
+10. **The manifest is reproducible** (S6): exact SQL, the H1 id list, a
+    benchmark-prices fingerprint, and the exclusion of fights 43, 46 and 8780
+    (rebooked in place). H1 is 710 fights, not 713.
+11. **Access controls are described as conventions with tripwires** (S7). The
+    experiment lint widens and committed data is scanned for sealed dates.
+12. **The engine cannot be first-opened on H1** (INFO-AUDIT-001), now stated
+    in §2 and the manifest.
+
+Not changed: the partitions, the 0.003 minimum useful effect, the budgets and
+their α, the leak tripwire on Δ, the benchmark, the claim ladder.

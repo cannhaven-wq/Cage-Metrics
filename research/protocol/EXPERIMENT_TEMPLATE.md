@@ -15,7 +15,7 @@ what result would mean "no".>
 
 - H0: the challenger adds no information to <benchmark>. Δ ≤ 0.
 - H1: Δ > 0 on <population>.
-- Target gain δ (≥ 0.003): <value>, and why that size is plausible.
+- Target gain δ (≥ 0.004): <value>, and why that size is plausible.
 
 ## Challenger
 
@@ -42,13 +42,22 @@ what result would mean "no".>
 
 ## Sample size
 
-- SD used: max(class floor, DEV-measured SD = <value>)
-- n_required (prospective): <required_n(...)>
-- Analysis date or trigger: <date or n>
+- SD used: max(0.064, DEV-measured SD = <value>)
+- n_required (prospective): <≥ required_n(SD, δ, 0.01, 0.8, mue=0.003)>
+- Analysis trigger: the first n_required eligible locks, in lock order
+
+## Registry entry (research/registry.json)
+
+These are what `load_registration` reads. The auditor cannot supply them.
+
+    "protocol": "PRED-001", "model_class": "incremental",
+    "model_artifact_sha256": "<64 hex>", "target_effect": <δ>, "sd_used": <SD>,
+    "n_required": <n>, "preregistration_path": "research/experiments/<ID>/PREREGISTRATION.md",
+    "preregistration_sha256": "<64 hex>", "author_sessions": ["<session ids that built it>"]
 
 ## Stages requested
 
-- [ ] H1 evaluation (spends 1 of 10 slots)
+- [ ] H1 evaluation (spends 1 of 10 slots; whole sealed set only)
 - [ ] Prospective test (spends 1 of 5 slots; needs the lock table, L3)
 
 ## Pre-stated interpretation

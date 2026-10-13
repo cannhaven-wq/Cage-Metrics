@@ -1,0 +1,33 @@
+{
+  "_what": "Hash history of every PRED-001-governed file. The first entry is the v1.0 freeze (commit bc945687) and is pinned in tests/test_prediction_protocol.py. Each later entry is one dated amendment in the protocol's ## Amendments section. A file that differs from the last entry fails the test.",
+  "history": [
+    {
+      "version": "1.0.0",
+      "date": "2026-10-12",
+      "commit": "bc945687",
+      "files": {
+        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "95c925c971ad66676d54b282dc567d79adc42ee8eaabbc7e211038dfa2612077",
+        "research/protocol/pred_protocol.py": "ff3dd9ba2436aa1ca568121cf2aed8e09c06554c6f96523db3425cf9418ac1d8",
+        "research/protocol/protocol.json": "e5f6927e0f5797f073c4eca09484dff136198bec8f7607085318bd07f7ac8c57",
+        "research/protocol/holdout_manifest.json": "525d1ae4cfe5cd4c728e335d3aeca5b4cbffb0f5f59c21ec3add27d1a8c1324e"
+      }
+    },
+    {
+      "version": "1.1.0",
+      "date": "2026-10-13",
+      "amendment": 1,
+      "motivated_by_observed_results": false,
+      "looks_taken_before": 0,
+      "motivation": "independent review commissioned by the owner; found five bypasses (B1-B5) and seven weaknesses (S1-S7)",
+      "files": {
+        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "08c04858bbf6c69aa15f04b04319ca277d4ce221b99c67fde5b1457158e1808c",
+        "research/protocol/pred_protocol.py": "abc3692902be4828846dbc392926c96b9ff807d1dc5e2cbfd4a29cf968084675",
+        "research/protocol/protocol.json": "c2a6f22163345e120c40f0e52d5b86eae85189d68919cc9a43313a9eb0c78366",
+        "research/protocol/holdout_manifest.json": "255c19c2f8e3d041d4794c6eeb8707835ca2928aa9da3147e01fdb5c98c76fff",
+        "research/protocol/holdout_manifest.sql": "bc2466a25b4abcef3933265c3c493bcd85e496f23eeb6460ea1b05dd0f55abab",
+        "research/protocol/h1_fight_ids.txt": "95716f3a0cb54e3a6fe905a1d02a761db2e2f106e1783435a41f8aa35db06b16",
+        "tests/test_prediction_protocol.py": "165d32753bf2a34ec1276936e79e28470c58510f9cb7ae633eaff9f3bfc86f66"
+      }
+    }
+  ]
+}
