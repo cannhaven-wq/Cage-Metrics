@@ -833,7 +833,12 @@
     'alert_clicked',
     // declared, not emitted: no checkout exists yet. They live here so the
     // sprint that builds one does not invent its own names.
-    'checkout_started', 'checkout_completed', 'return_visit'
+    'checkout_started', 'checkout_completed', 'return_visit',
+    // A person did something on the page: scrolled, clicked, tapped or typed.
+    // Added 2026-10-12. landing_view fires for anything that executes
+    // JavaScript, including search and AI crawlers, so it cannot tell a reader
+    // from a bot; this is the first event a crawler does not produce.
+    'engaged_session'
   ];
 
   // Keys we refuse to send even if a call site passes them. Rule 2 above.
@@ -910,7 +915,43 @@
   // Fires landing_view once per session, and return_visit when this session
   // follows an earlier one. "Same fight week" is answered here rather than in
   // SQL because localStorage is the only place the previous visit is known.
+  // User agents that announce themselves as automation. Only a flag is sent,
+  // never the string.
+  const BOT_UA = /bot|crawl|spider|slurp|headless|lighthouse|pagespeed|preview|facebookexternalhit|embedly|python|curl|wget|httpclient|java\/|go-http|phantomjs|puppeteer|playwright|selenium/i;
+
+  // engaged_session: once per session, on the first real interaction —
+  // pointer, touch, key, or a scroll past the first screen — at least two
+  // seconds after the page loaded, while the tab is visible. Crawlers that
+  // execute JavaScript load the page and leave; they do not do this.
+  const ENGAGED_KEY = 'cfl_engaged';
+  function watchEngagement() {
+    try {
+      if (sessionStorage.getItem(ENGAGED_KEY)) return;
+    } catch (e) { return; }
+    const t0 = Date.now();
+    const evs = ['pointerdown', 'keydown', 'touchstart', 'scroll'];
+    function onAct(e) {
+      try {
+        if (document.visibilityState && document.visibilityState !== 'visible') return;
+        if (Date.now() - t0 < 2000) return;
+        if (e.type === 'scroll' && (window.scrollY || 0) < 200) return;
+        if (sessionStorage.getItem(ENGAGED_KEY)) return stop();
+        sessionStorage.setItem(ENGAGED_KEY, '1');
+        stop();
+        cfl.track('engaged_session', {
+          via: e.type === 'pointerdown' ? 'pointer' : e.type === 'touchstart' ? 'touch' : e.type === 'keydown' ? 'key' : 'scroll',
+          secs: Math.round((Date.now() - t0) / 1000)
+        });
+      } catch (err) { stop(); }
+    }
+    function stop() { evs.forEach(n => window.removeEventListener(n, onAct, { passive: true, capture: true })); }
+    evs.forEach(n => window.addEventListener(n, onAct, { passive: true, capture: true }));
+  }
+
   cfl.trackSessionStart = function () {
+    // Every page, not only the first: a visitor who lands, reads, and only
+    // interacts on the second page is still a person. Once per session either way.
+    watchEngagement();
     try {
       const sid = sessionId();
       const started = 'cfl_started_' + sid;
@@ -926,7 +967,12 @@
         // utm_source only — never the full query string, which can carry
         // anything a link-builder put in it.
         utm_source: cfl.getQueryParam('utm_source') || '',
-        referrer_host: sameSite ? '' : ref
+        referrer_host: sameSite ? '' : ref,
+        // Two automation flags, both booleans, neither identifying: the
+        // browser's own "I am driven by a script" flag, and a user-agent that
+        // names itself a crawler or headless browser. Absent means false.
+        webdriver: navigator.webdriver === true || undefined,
+        ua_bot: BOT_UA.test(navigator.userAgent || '') || undefined
       });
 
       const prev = Number(localStorage.getItem(LAST_SEEN_KEY) || 0);

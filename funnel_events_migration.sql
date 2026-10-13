@@ -92,7 +92,8 @@ BEGIN
         'alert_clicked',
         'checkout_started',
         'checkout_completed',
-        'return_visit'
+        'return_visit',
+        'engaged_session'
       ));
 
   -- A runaway props object is how an analytics table becomes a data-retention
@@ -158,3 +159,58 @@ COMMENT ON VIEW public.v_funnel_daily IS
   'not readable by anon or authenticated.';
 
 GRANT SELECT ON public.v_funnel_daily TO anon, authenticated;
+
+-- ---------------------------------------------------------------------------
+-- 2026-10-12: telling people from crawlers.
+--
+-- landing_view fires for anything that executes JavaScript. In the first three
+-- weeks 3,000 of 3,033 sessions had no referrer, 7 opened a second page and the
+-- hourly spread was flat round the clock: crawlers fetching the prerendered
+-- pages, not readers. engaged_session (added to the CHECK list above) fires
+-- only on a real interaction. landing_view now also carries two automation
+-- flags, `webdriver` and `ua_bot`.
+--
+-- v_traffic_daily is the baseline: per day, every session, the ones that
+-- flagged themselves as automation, and the ones that engaged — split by where
+-- they came from and what they reached. Aggregates only, like v_funnel_daily.
+-- An engaged session is the closest thing this table has to "a person".
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE VIEW public.v_traffic_daily AS
+WITH s AS (
+  SELECT
+    session_id,
+    date_trunc('day', min(created_at))::date                         AS day,
+    bool_or(event = 'engaged_session')                               AS engaged,
+    bool_or(event = 'landing_view' AND (props->>'webdriver' = 'true'
+                                     OR props->>'ua_bot'    = 'true')) AS automation,
+    bool_or(event = 'return_visit')                                  AS is_returning,
+    max(CASE WHEN event = 'landing_view' THEN props->>'referrer_host' END) AS referrer_host,
+    max(CASE WHEN event = 'landing_view' THEN props->>'utm_source' END)    AS utm_source,
+    bool_or(path IN ('/', '/index.html', '/market.html', '/fight.html', '/stats.html')) AS product,
+    count(DISTINCT path)                                             AS pages
+  FROM public.funnel_events
+  GROUP BY session_id
+)
+SELECT
+  day,
+  count(*)::bigint                                                            AS sessions,
+  count(*) FILTER (WHERE automation)::bigint                                  AS automation_flagged,
+  count(*) FILTER (WHERE engaged)::bigint                                     AS engaged,
+  count(*) FILTER (WHERE engaged AND referrer_host ~* '(google|bing|duckduckgo|yahoo|ecosia|brave|yandex|baidu)\.')::bigint AS engaged_from_search,
+  count(*) FILTER (WHERE engaged AND coalesce(nullif(referrer_host, ''), nullif(utm_source, '')) IS NOT NULL)::bigint AS engaged_with_source,
+  count(*) FILTER (WHERE engaged AND is_returning)::bigint                       AS engaged_returning,
+  count(*) FILTER (WHERE engaged AND product)::bigint                         AS engaged_reached_product,
+  count(*) FILTER (WHERE engaged AND pages >= 2)::bigint                      AS engaged_multi_page
+FROM s
+GROUP BY day;
+
+COMMENT ON VIEW public.v_traffic_daily IS
+  'Daily sessions split into automation-flagged and engaged (a real scroll, '
+  'click, tap or keypress). Engaged sessions are the human-traffic baseline; '
+  'raw sessions include JavaScript-executing crawlers. Aggregates only.';
+
+-- Revoke first: a new view inherits Supabase's default grants, and on first
+-- apply (2026-10-13) anon held INSERT/UPDATE/DELETE/TRUNCATE on it.
+REVOKE ALL ON public.v_traffic_daily FROM anon, authenticated;
+GRANT SELECT ON public.v_traffic_daily TO anon, authenticated;
+

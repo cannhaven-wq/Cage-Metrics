@@ -241,12 +241,6 @@
   .read-row.bad .read-bar i { background: #d6603a; }
   .read-bar b { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; background: var(--text); opacity: .6; }
   .read-foot { font-size: 12px; color: var(--text-3); margin-top: 6px; }
-  .mr-bars { display: flex; flex-direction: column; gap: 8px; margin: 6px 0 12px; }
-  .mr-row { display: grid; grid-template-columns: 110px 1fr 40px; gap: 12px; align-items: center; font-size: 13px; color: var(--text-2); }
-  .mr-track { height: 10px; background: var(--bg-4); border-radius: 5px; overflow: hidden; }
-  .mr-track i { display: block; height: 100%; background: var(--text-3); }
-  .mr-track.act i { background: #3fae6b; }
-  .mr-row b { font-family: 'IBM Plex Mono', monospace; font-size: 13px; color: var(--text); text-align: right; }
   .nx-top { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
   .nx-when { font-weight: 400; font-size: 13px; color: var(--text-3); margin-left: 8px; }
   .nx-pick { font-size: 15px; margin: 6px 0 4px; }
@@ -281,7 +275,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl3"></script>
+<script src="_shared.js?v=rl5"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
@@ -415,11 +409,6 @@ async function load() {
         <div class="read-list" id="readList"></div>
       </div>
 
-      <div class="stat-section" id="modelRecSection" hidden>
-        <h2>Against the model's expectations</h2>
-        <div class="fin-wrap" id="modelRecCard"></div>
-      </div>
-
       <div class="stat-section" id="nextSection" hidden>
         <h2>Next fight</h2>
         <div class="fin-wrap" id="nextCard"></div>
@@ -476,7 +465,6 @@ async function load() {
 
   // Fire style, finisher, cardio and history loads in parallel — none blocks the others
   loadRead(f);
-  loadModelRecord(f);
   loadStyle(f);
   loadFinisher(f);
   loadCardio(f);
@@ -843,8 +831,8 @@ async function loadRead(f) {
     `${L}'s reach is about average for the division.`,
     `${cfl.formatReach(f.reach_in)} reach · division median ${d.reach_med != null ? cfl.formatReach(d.reach_med) : '—'}`, true);
   push(d.age_pct,
-    n => 'older than most of the division', n => `${L} is older than ${n} of 10 ${div}. Age is the one stat that still predicts fights once the odds are accounted for, and it cuts the wrong way here.`,
-    n => 'young for the division', n => `${L} is younger than ${n} of 10 ${div}. Age is the one stat that still predicts fights once the odds are accounted for, and it's on ${L}'s side.`,
+    n => 'older than most of the division', n => `${L} is older than ${n} of 10 ${div}. Across UFC history the younger fighter has won more often, even in fights the betting market priced as even — see the Factor Lab for the numbers.`,
+    n => 'young for the division', n => `${L} is younger than ${n} of 10 ${div}. Across UFC history the younger fighter has won more often, even in fights the betting market priced as even — see the Factor Lab for the numbers.`,
     `${L} is about the division's typical age.`,
     `${f.age ?? '—'} years old · division median ${num(d.age_med, 0)}`, false);
 
@@ -898,40 +886,16 @@ async function loadRead(f) {
   }).join('') + `<div class="read-foot">Bars show where ${cfl.escapeHtml(L)} ranks among ${d.pool_n} active ${cfl.escapeHtml(div)} (3+ UFC fights, fought in the last five years). The tick is the division middle.</div>`;
 }
 
-// ---------------------------------------------------------------------------
-// AGAINST THE MODEL'S EXPECTATIONS — the engine has scored this fighter's past
-// fights. Did they win more or fewer than it expected? Reads
-// v_fighter_model_record (built from the graded picks table).
-// ---------------------------------------------------------------------------
-async function loadModelRecord(f) {
-  const sb = window.cflSupabase;
-  const sec = document.getElementById('modelRecSection');
-  const box = document.getElementById('modelRecCard');
-  if (!sec || !box) return;
-  const { data: m } = await sb.from('v_fighter_model_record').select('*').eq('fighter_id', f.id).maybeSingle();
-  if (!m || m.n_scored < 3) return;
-
-  const L = lastName(f.name);
-  const exp = Number(m.expected_wins), wins = Number(m.wins), n = Number(m.n_scored);
-  const diff = wins - exp;
-  let tag, cls, line;
-  if (diff >= 1)       { tag = 'Beats expectations'; cls = 'granite'; line = `${L} wins fights the model doesn't expect. Across ${n} scored fights the engine expected about ${exp.toFixed(1)} wins and ${L} got ${wins}${m.won_as_underdog ? `, including ${m.won_as_underdog} as the underdog on our numbers` : ''}.`; }
-  else if (diff <= -1) { tag = 'Trails expectations'; cls = 'fragile'; line = `${L} loses fights the model expects ${L} to win. Across ${n} scored fights the engine expected about ${exp.toFixed(1)} wins and ${L} got ${wins}${m.lost_as_pick ? `, losing ${m.lost_as_pick} as our pick` : ''}.`; }
-  else                 { tag = 'About as expected';  cls = '';        line = `${L} lands about where the model expects: ${wins} wins across ${n} scored fights against about ${exp.toFixed(1)} expected.`; }
-  const wExp = Math.round(100 * exp / n), wAct = Math.round(100 * wins / n);
-  box.innerHTML = `
-    <div class="fin-tags"><span class="fin-tag ${cls}">${tag}</span><span class="fin-tag">Model called ${m.model_correct} of ${n}</span></div>
-    <div class="mr-bars">
-      <div class="mr-row"><span>Expected wins</span><div class="mr-track"><i style="width:${wExp}%"></i></div><b>${exp.toFixed(1)}</b></div>
-      <div class="mr-row"><span>Actual wins</span><div class="mr-track act"><i style="width:${wAct}%"></i></div><b>${wins}</b></div>
-    </div>
-    <div class="fin-note">${cfl.escapeHtml(line)} A fighter who keeps beating the number is telling you something the stats don't; one who keeps trailing it is a fade candidate at a short price.</div>`;
-  sec.hidden = false;
-}
+// The "Against the model's expectations" section was removed 2026-10-12. It
+// rendered the retired engine's graded record ("Model called X of N") and a
+// betting lean ("a fade candidate at a short price") on a public product page,
+// which D-011 forbids. v_fighter_model_record is still in the database for the
+// archive; no product page reads it.
 
 // ---------------------------------------------------------------------------
-// NEXT FIGHT — the engine's pick with its reasons, and the prop projection,
-// pulled from the same places the card and Prop Board read.
+// NEXT FIGHT — the market on this fight and the measured matchup differences.
+// The prop projection that used to sit here came off with the Prop Board's
+// archiving (D-013); it is model output and stays off product pages.
 // ---------------------------------------------------------------------------
 async function loadNextFight(f, fights) {
   const sb = window.cflSupabase;
@@ -949,13 +913,11 @@ async function loadNextFight(f, fights) {
   // panel. The model came off the public product in September 2026, so the
   // next-fight card now opens with the market on that fight and the measured
   // differences between the two corners.
-  const [mktRow, oppR, propR] = await Promise.all([
+  const [mktRow, oppR] = await Promise.all([
     window.cflMarket ? window.cflMarket.loadFightMovement(up.id) : Promise.resolve(null),
     oppId ? sb.from('fighters').select('id, name, age, height_in, reach_in, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def').eq('id', oppId).maybeSingle() : Promise.resolve({ data: null }),
-    sb.from('v_prop_projections_current').select('*').eq('fight_id', up.id).eq('fighter_id', f.id).maybeSingle(),
   ]);
   const opp = oppR.data;
-  const prop = propR.data;
 
   // --- the market on this fight, from this fighter's side
   let pickHtml;
@@ -990,25 +952,10 @@ async function loadNextFight(f, fights) {
       + `<div class="fin-note"><a href="fight.html?id=${up.id}">Open this fight in Fight Lab →</a></div>`;
   }
 
-  let propHtml = '';
-  if (prop) {
-    const pd = prop.p_distance != null ? Math.round(Number(prop.p_distance) * 100) : null;
-    const td1 = prop.p_td_1plus != null ? Math.round(Number(prop.p_td_1plus) * 100) : null;
-    const range = (prop.sig_lo != null && prop.sig_hi != null) ? ` (usually ${Math.round(Number(prop.sig_lo))}–${Math.round(Number(prop.sig_hi))})` : '';
-    propHtml = `<div class="nx-hd">Prop projection</div>
-      <div class="pa-grid">
-        <div class="pa-box"><div class="pa-val">${prop.sig_med != null ? Math.round(Number(prop.sig_med)) : '—'}</div><div class="pa-lbl">Significant strikes${range}</div></div>
-        <div class="pa-box"><div class="pa-val">${td1 != null ? td1 + '%' : '—'}</div><div class="pa-lbl">Chance of a takedown</div></div>
-        <div class="pa-box"><div class="pa-val">${pd != null ? pd + '%' : '—'}</div><div class="pa-lbl">Goes the distance</div></div>
-      </div>
-      ${prop.thin_tape ? '<div class="fin-note">Thin tape: under 30 minutes of prior film, so this projection is pulled toward the division average.</div>' : ''}`;
-  }
-
   box.innerHTML = `
     <div class="nx-top">vs <a class="opp-link" href="${oppId ? cfl.fighterUrl(oppId) : '#'}">${cfl.escapeHtml(oppName || 'TBA')}</a>
       <span class="nx-when">${cfl.formatDate(up._event.event_date)} · <a class="opp-link" href="${cfl.eventUrl(up._event.id)}">${cfl.escapeHtml(up._event.name || '')}</a></span></div>
-    ${pickHtml}
-    ${propHtml}`;
+    ${pickHtml}`;
   sec.hidden = false;
 }
 

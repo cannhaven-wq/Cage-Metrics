@@ -3,7 +3,18 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-12
+Last updated: 2026-10-13
+
+**Stabilization sprint, 2026-10-12 → 13.** The four stabilization PRs are
+**merged** (#54 credibility, #55 operations and the pipeline monitor, #56 human
+traffic, #57 commercial validation), the analytics migration is applied, and the
+live site was verified from GitHub's side on 2026-10-13 (served bytes match
+`main`; the card renders market cells only). The pipeline monitor's first run
+was healthy. Still waiting on the owner: the four-row stale-booking retirement
+before Friday 23:00 UTC (`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`),
+the CLV migration sequence, and the forecast-lock table below. Human traffic is
+about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
+No new prediction model is built except under PRED-001.
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -93,8 +104,9 @@ Git history is the audit trail. These files are the working surface.
 Any new attempt to forecast winners follows
 [`research/protocol/PREDICTION_RESEARCH_PROTOCOL.md`](../research/protocol/PREDICTION_RESEARCH_PROTOCOL.md).
 Fights from **2025-01-01 on are sealed**: no fitting, tuning or feature choice
-on them. The sealed 2025-01-01 to 2026-07-11 window (713 priced fights) gets
-one independent look per model and ten looks in total. **Any claim needs a
+on them. The sealed 2025-01-01 to 2026-07-11 window (710 priced fights since
+Amendment 1) gets one independent look per experiment and ten looks in total,
+through `run_look` only. **Any claim needs a
 prospective test**, and the dev-measured arithmetic says a 0.005 log-loss gain
 over the market takes about 1,650 fights, roughly 3.4 years, to confirm. No
 model has been built or trained under it yet. Computer vision is deferred.

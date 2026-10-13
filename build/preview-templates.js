@@ -32,14 +32,6 @@ function previewSlug(aName, bName, fightId) {
   return `${slugify(aName)}-vs-${slugify(bName)}-${fightId}`;
 }
 
-// Plain-English agreement label for the two public models (Value + Fight IQ).
-// Handles the one-model case too (a fight only one model has graded).
-function modelAgreementLabel(agree, total) {
-  if (total <= 1) return '1 model';
-  if (agree === total) return total === 2 ? 'both models agree' : `all ${total} models agree`;
-  return `${agree} of ${total} models agree`;
-}
-
 // Render one preview page for a single fight. All params are optional except
 // `fight`, `fighterA`, `fighterB`. Missing fields fall back to neutral copy
 // so the page always renders something (no NaN%, no "null fights" etc.).
@@ -62,40 +54,15 @@ function matchupPreview({
   const weight = fight.weight_class ? ` ${fight.weight_class}` : '';
   const flag = fight.is_title_fight ? ' Title Fight' : (fight.is_main_event ? ' Main Event' : '');
 
-  // ---- consensus model verdict ----
-  const validPicks = (picks || []).filter(p => p.model_p != null && +p.model_p > 0.5);
-  const tally = {};
-  validPicks.forEach(p => { tally[p.fighter_id] = (tally[p.fighter_id] || 0) + 1; });
-  const sortedSides = Object.entries(tally).sort((x, y) => y[1] - x[1]);
-
-  let verdictLine = '';
-  let descVerdict = '';
-  let winnerName = null;
-  if (sortedSides.length) {
-    const winnerId = +sortedSides[0][0];
-    const winner = winnerId === fighterA.id ? fighterA : fighterB;
-    winnerName = winner.name;
-    const winningPs = validPicks
-      .filter(p => p.fighter_id === winnerId)
-      .map(p => +p.model_p);
-    const avgP = winningPs.reduce((s, x) => s + x, 0) / winningPs.length;
-    const pct = Math.round(avgP * 100);
-    const agree = sortedSides[0][1];
-    const total = validPicks.length;
-    const agreeLabel = modelAgreementLabel(agree, total);
-    // The model's pick is computed above and deliberately NOT rendered.
-    // CFL stopped publishing a forecast in September 2026 when it could not
-    // be shown to beat the market price; these preview pages were one of the
-    // surfaces that carried it. The pick calculation is left in place because
-    // the snapshot pipeline shares this module's shape, but nothing downstream
-    // of here prints it.
-    void pct; void agreeLabel; void winner;
-    verdictLine = '';
-    descVerdict = '';
-  } else {
-    verdictLine = '';
-    descVerdict = '';
-  }
+  // ---- no verdict ----
+  // The consensus model verdict used to be computed here and kept in
+  // winnerName, which then leaked into the FAQ JSON-LD below as "Cannon Fight
+  // Lab's models pick X". Removed 2026-10-12 (D-011): these pages are public
+  // and CFL does not publish a forecast. `picks` is still accepted so callers
+  // need not change, and it is ignored.
+  void picks;
+  const verdictLine = '';
+  const descVerdict = '';
 
   // ---- per-fighter edge notes ----
   function cardioLine(cardio) {
@@ -159,18 +126,22 @@ function matchupPreview({
   // view-source).
   Object.keys(sportsEventJsonLd).forEach(k => sportsEventJsonLd[k] === undefined && delete sportsEventJsonLd[k]);
 
-  const faqJsonLd = winnerName ? {
+  // The FAQ answers what the page can actually answer. It must never name a
+  // winner or a model: structured data is a public claim even though no
+  // visitor sees it on the page. tests/no-model-on-public-surfaces.test.js
+  // renders this template and checks.
+  const faqJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'FAQPage',
     'mainEntity': [{
       '@type': 'Question',
-      'name': `Who wins ${fighterA.name} vs ${fighterB.name}?`,
+      'name': `Does Cannon Fight Lab pick a winner in ${fighterA.name} vs ${fighterB.name}?`,
       'acceptedAnswer': {
         '@type': 'Answer',
-        'text': `Cannon Fight Lab's models pick ${winnerName}. CFL runs two public models — one built only from fight tape, one built to beat the opening price. Every pick is locked before the bell and graded in public, misses included.`
+        'text': `No. Cannon Fight Lab is a research tool. For this fight it shows the vig-free sportsbook consensus, the best price on offer and which book is posting it, how far the line has moved since we started capturing it, and the measurable differences between the two fighters. It does not tell you who will win.`
       }
     }]
-  } : null;
+  };
 
   const breadcrumbJsonLd = {
     '@context': 'https://schema.org',
@@ -215,7 +186,7 @@ function matchupPreview({
 
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Edges`)}">
+<meta property="og:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Odds & Matchup Data`)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${SITE}/og-image.png">
@@ -225,7 +196,7 @@ function matchupPreview({
 <meta property="og:locale" content="en_US">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Prediction & Edges`)}">
+<meta name="twitter:title" content="${escapeHtml(`${fighterA.name} vs ${fighterB.name} — Odds & Matchup Data`)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${SITE}/og-image.png">
 

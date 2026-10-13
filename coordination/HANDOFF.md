@@ -3,47 +3,84 @@
 The live baton. Newest entry at the top; keep the last three, drop the rest —
 git history holds the others.
 
-Every entry carries **From**, **To**, **Date**, and a `### Verified after merge, which the entry above could not promise
-
-Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
-has now been run against the real database twice.
-
-**A review caught a defect that would have broken it on every run.**
-`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
-explicit permissions block sets every scope it does *not* name to `none`, so the
-token had `contents: none` and the job would have died 403 on its first step.
-Nothing caught it here: `workflow_dispatch` needs the workflow on the default
-branch, so the file had never executed, and the green CI on the pull request was
-`tests.yml`, a different workflow with its own correct scope. The one path that
-would have exposed it was shut by the same thing that stopped the live test.
-Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
-fails on any that pins permissions, runs a checkout and names no `contents` —
-verified against the broken file, so it is not decorative. `dead-man.yml` was
-the only offender of twenty-one.
-
-**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
-October card's deadlines has passed.
-
-**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
-`open_issues=false` so a card whose record is not yet due could not raise a
-false alarm):
-
-```
-BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
-        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
-   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
-  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
-```
-
-Real counts off the live database, the breach path firing, the job red. A run
-that merely says "no breach" proves nothing about whether it read anything,
-which is why the second run was worth the red tick in the Actions list.
-
-## Next action` that
+Every entry carries **From**, **To**, **Date**, and a `## Next action` that
 names something specific enough to start on without asking a question back.
 "Continue the work" is not a next action.
 
 Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
+
+---
+
+## 2026-10-13 — Stabilization merged and verified; PRED-001 reviewed and amended; forecast-lock table proposed
+
+**From:** Claude (project-audit session)
+**To:** Owner
+**Date:** 2026-10-13
+
+**Production.** #54, #55, #56 and #57 are merged. Before merging, an
+independent reviewer that had written none of the code found one blocking bug
+in #55: the Chookagian→Cerminara alias matched the bout, but the A/B step still
+read the raw feed name. It would have dropped her price and written one-sided
+rows into append-only `fight_odds`. The bug never reached production. It was
+fixed, with a capture test that failed before the fix and passes after.
+
+- **Analytics.** The migration was applied: `engaged_session` is in the CHECK,
+  and `v_traffic_daily` exists. On first apply the view inherited Supabase's
+  default grants (`anon` held INSERT/UPDATE/DELETE/TRUNCATE); it now holds
+  SELECT only, and the repo file revokes first.
+- **Main.** Tests are green at `77e38602`. The one red run, at the #54 merge,
+  was a preview page generated from the old template before the post-merge
+  prerender replaced it.
+- **Verify live site** passed: served bytes match `main`, and the card shows
+  only consensus, fair price, movement and best price.
+- **Pipeline health** first run: healthy.
+
+**PRED-001 Amendment 1.** An independent adversarial review found five bypasses
+that kept every test green:
+
+- unhashed thresholds;
+- a caller-chosen fight set;
+- a caller-chosen n_required;
+- an unenforced ledger;
+- undefined interim looks.
+
+It also found seven weaknesses. Every one is addressed, and each is now a test.
+Loosening a threshold, or raising a ledger budget, fails. Before the
+amendment, H1 contained three fights that were rebooked in place, so it is
+now 710 fights. No look had been taken, so `motivated_by_observed_results`
+is `false`.
+
+**Forecast-lock table: proposed, not applied** (`research/protocol/
+proposed_2026-10-13_win_model_locks.sql`).
+
+- Append-only for every role.
+- The lock time is the database clock.
+- The table refuses locks:
+  - after the start;
+  - on settled fights;
+  - on retired bookings;
+  - on swapped corners;
+  - with a training cutoff after the lock;
+  - with a market snapshot after the lock.
+- Private to both browser roles.
+
+All of that was checked against production inside transactions that always
+roll back. 10 of 10 checks passed and nothing persisted. Fixture fight 47881,
+which the check first picked, is one of the four stale bookings awaiting
+retirement. That is why the guard now also refuses retired bookings.
+
+## Next action
+
+The owner decides two things:
+
+1. **Apply the lock migration** after reading it. Claude applies it with
+   `apply_migration`, re-runs the grants check, and records it.
+2. **Confirm opponent-adjusted grappling as PRED-002.** Claude then writes
+   the preregistration on DEV data only; nothing is trained before it is
+   frozen.
+
+Separately, the four-row stale-booking update must be applied before Friday
+2026-10-16 23:00 UTC.
 
 ---
 
@@ -85,6 +122,164 @@ forecasts, built on the `prop_model_locks` pattern. Creating it is a production
 migration (L3 item 5); draft the SQL for the owner's approval. Until it exists,
 no PRED-001 experiment can get past an H1 look. The research agents start by
 copying `EXPERIMENT_TEMPLATE.md` and working on DEV only.
+
+---
+
+## 2026-10-12 (d) — Stabilization sprint, PR 4: what to sell first, and how to find out if anyone wants it
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+`research/commercial/COMMERCIAL_VALIDATION_2026-10-12.md`:
+
+- **The Pro boundary withholds nothing that exists.** Every built Pro item
+  (book table, charts, watchlists, alerts) is free; the rest is unbuilt.
+- **Smallest differentiated offer: fight-week price and movement alerts**, plus
+  a past-cards market history page. Remaining work is operational (mail key,
+  delivery test, cron), not development.
+- **Demand test before any build:** one honest "not available yet" page with
+  the intended price and a waitlist (existing `premium_waitlist` table and
+  `cflAuth.joinWaitlist`), two fight weeks of distribution in UFC betting
+  communities, ten conversations, and pass/fail thresholds fixed in advance.
+  An on-site box alone would measure nothing at one to four visitors a day.
+- **Blockers besides demand:** T-054 (privacy policy also wrongly describes a
+  cookie banner and affiliate cookies that do not exist), T-048, The Odds API
+  and UFCStats terms never read, price, Stripe, mail key.
+
+Small fixes in this PR: `disclaimer.html` and `about.html` share text no longer
+say "predictions" / "prediction model"; the no-model test now covers the legal
+and account pages (the disclaimer's legal body is exempted for one phrase and
+listed for the lawyer, not rewritten).
+
+## Next action
+
+Owner: decide whether to run the demand test, and if so set the price to show
+on the offer page. Correct the privacy policy's cookie statements regardless.
+Then Claude builds the one static offer page (no billing) and the two-week
+measurement.
+
+---
+
+## 2026-10-12 (c) — Stabilization sprint, PR 3: count people, not page loads
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+The funnel counted every JavaScript-executing crawler as a session. Measured
+by behaviour, human-signal sessions were 28, 20 and 10 in the three full weeks
+since tracking began, while raw sessions grew sixteen-fold
+(`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
+
+- `engaged_session`: once per session on a real scroll, click, tap or keypress.
+- `landing_view` gains `webdriver` and `ua_bot` booleans.
+- `v_traffic_daily`: the daily baseline (engaged sessions, by source and by
+  what they reached). Query validated read-only against production.
+- `_shared.js` cache-bust normalised to `?v=rl5` on every page (was rl3 on 29,
+  rl4 on one).
+- `tests/engagement.test.js` (7) pins the rule; the three-place event list
+  (JS, CHECK constraint, ANALYTICS_SCHEMA.md) is updated together.
+
+## Next action
+
+Owner: apply the updated `funnel_events_migration.sql` **before** merging this
+PR (otherwise the new event is rejected until it is applied), then merge. Export
+Plausible's visitors, sources and pages for 2026-09-21 → today so the baseline
+can be reconciled against a bot-filtered count.
+
+---
+
+## 2026-10-12 (b) — Stabilization sprint, PR 2: operational repairs and a monitor
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+Stacked on PR 1. What it changes in this repo:
+
+- **`public_read_odds.sql` now refuses to run.** It granted anon read on the raw
+  odds table; live policy is admin-only, so it was never (or no longer) applied,
+  and one `psql -f` would have published every quote. `tests/sql-hazards.test.js`
+  fails if any root SQL file grants that again.
+- **`export.yml` schedule off.** It failed every day on a missing
+  `SUPABASE_URL` secret. Adding the secret would have committed the raw odds and
+  fighter tables to this public repository daily — a licensing and exposure
+  decision, so it waits for one.
+- **New monitor, `pipeline-health.yml`** (twice daily): critical workflows
+  failing, stale or disabled by GitHub; odds older than 30 h; a finished card
+  with most results missing; an empty two-week calendar. One labelled issue per
+  problem, closed when it clears. Data checks verified against today's live
+  facts (all healthy).
+- **Odds matcher alias.** Saturday's Cerminara vs Stiller had no price: the feed
+  still says "Katlyn Chookagian". One reviewed alias, two tests.
+- **CI now runs `build/test-fetch-odds.js`** (73 capture-path tests that never
+  ran in CI).
+
+Investigations written up, nothing applied:
+`research/clv/MIGRATION_SEQUENCE_2026-10-12.md` (order and rollback for the five
+unapplied migrations; the ledger seed is used=33, remaining=467 from today's log)
+and `research/integrity/INTEGRITY_RECHECK_2026-10-12.md` (four checks grew; the
+new corner swaps come from the odds repo's Polymarket step; four dead
+double-bookings sit on the next two cards).
+
+Outside this repo: `cage-metrics-scrapper` PR #1 fixes the fighter scraper's
+build (same `mise.toml` fix as the event scraper). Corrections to the audit: the
+second Railway odds-scraper service is the model trainer, not a duplicate; and
+neither Railway odds service has a schedule, so their failed builds stop nothing
+— Polymarket and the v1–v6 retrain run from the odds repo's GitHub Action.
+
+## Next action
+
+Owner, in this order: (1) approve or decline the four-row `is_active = false`
+retirement in `INTEGRITY_RECHECK_2026-10-12.md` before Friday 23:00 UTC, when
+the 10-17 card's snapshot is taken; (2) merge PR 1 then PR 2; (3) decide whether
+to merge `cage-metrics-scrapper` #1, knowing the merge runs a full scrape once;
+(4) set `RESEND_API_KEY` / `RESEND_FROM` if the Brief and alerts are to deliver.
+
+---
+
+## 2026-10-12 — Stabilization sprint, PR 1: the retired forecast comes off every public channel
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+The current-state audit (`audits/cfl-current-state/`, on branch
+`claude/nice-bell-ussmhp`) found the forecast D-011 removed on 2026-09-21 still
+going out in four places. This pull request removes it from all four and makes
+each one a test failure if it returns.
+
+- **X.** The Mon/Wed/Fri poster tweeted model win percentages three times a week
+  (verified: tweet ids 2107245353053634817, 2107950714135761316,
+  2108670936010387493). Its schedule came off `main` on 2026-10-12 (`38d47f7d`).
+  This PR makes the guard real: the generator no longer stamps its own model copy
+  `research`, and `build/social-copy-guard.js` refuses any piece whose *words*
+  read as a forecast, on both posting paths.
+- **fighter.html**, the most visited page: the engine's graded record ("Model
+  called X of N", "a fade candidate at a short price") and the archived Prop
+  Board's projections are gone.
+- **Generated pages:** 14 match previews named "Cannon Fight Lab's models pick X"
+  in FAQ structured data; all 75 previews, 7 card pages and 7 event stubs were
+  titled "Predictions". Generators and published files both fixed;
+  `prerender.js` no longer reads `model_picks`.
+- **event.html** runtime title, description and keywords.
+
+Also fixed on the way: `send-digest.js` and `social-post.js` read `open_p_a`,
+removed by D-012, and the Brief's 24 h move subtracted two medians over
+different book sets (the D-015 error). Both now read the matched-cohort columns.
+
+Left deliberately: the Factor Lab's "not the record our pick engine uses"
+paragraph (a negative disambiguation pinned by D-008 and its test); the archive
+pages; `social/` batch files (served by Pages, carry old model copy — owner call
+whether to delete, see audit item A-055).
+
+## Next action
+
+Owner: review and merge this PR, then check one generated preview page and
+`fighter.html` on the live site. After merge, `prerender.yml` regenerates every
+stub on the push to `build/**`; confirm the next stub commit does not reintroduce
+"Predictions". Then PR 2 (operational repairs) — see `STATE.md`.
 
 ---
 
@@ -218,6 +413,44 @@ the `partial` / `thin` boundary at half the card the right place for it? It is
 the only judgement in the file that trades a missed alarm against a false one,
 and it was set from six observed cards (13–14 rows against 13–16 fights), which
 is a small sample to cut a threshold on.
+
+---
+
+### Verified after merge, which the entry above could not promise
+
+Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
+has now been run against the real database twice.
+
+**A review caught a defect that would have broken it on every run.**
+`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
+explicit permissions block sets every scope it does *not* name to `none`, so the
+token had `contents: none` and the job would have died 403 on its first step.
+Nothing caught it here: `workflow_dispatch` needs the workflow on the default
+branch, so the file had never executed, and the green CI on the pull request was
+`tests.yml`, a different workflow with its own correct scope. The one path that
+would have exposed it was shut by the same thing that stopped the live test.
+Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
+fails on any that pins permissions, runs a checkout and names no `contents` —
+verified against the broken file, so it is not decorative. `dead-man.yml` was
+the only offender of twenty-one.
+
+**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
+October card's deadlines has passed.
+
+**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
+`open_issues=false` so a card whose record is not yet due could not raise a
+false alarm):
+
+```
+BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
+        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
+   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
+  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
+```
+
+Real counts off the live database, the breach path firing, the job red. A run
+that merely says "no breach" proves nothing about whether it read anything,
+which is why the second run was worth the red tick in the Actions list.
 
 ---
 

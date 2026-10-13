@@ -9,7 +9,7 @@
      updateSEO() once the event loads from Supabase. -->
 <title>UFC Event Card — Odds, Line Movement and Matchup Data | Cannon Fight Lab</title>
 <meta name="description" content="The full UFC card with the market on every fight: vig-free sportsbook consensus, the best price on each side, how far the line has moved, and the measurable matchup differences between both corners.">
-<meta name="keywords" content="UFC event card, UFC fight predictions, UFC event analysis, MMA event picks, UFC fight breakdown">
+<meta name="keywords" content="UFC event card, UFC odds, UFC line movement, UFC fight stats, UFC fight breakdown">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://cannonfightlab.com/event.html">
@@ -657,7 +657,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl3"></script>
+<script src="_shared.js?v=rl5"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=8"></script>
@@ -693,9 +693,9 @@ function updateEventSEO(event, fights, fighterMap) {
   const url = `https://cannonfightlab.com/event.html?id=${event.id}`;
   const dateStr = cfl.formatDate(event.event_date);
   const verb = event.is_upcoming ? 'odds, line movement and matchup data' : 'results, closing prices and matchup data';
-  const title = `${event.name} — UFC ${event.is_upcoming ? 'Predictions' : 'Results'} | Cannon Fight Lab`;
+  const title = `${event.name} — UFC ${event.is_upcoming ? 'Odds & Fight Card' : 'Results'} | Cannon Fight Lab`;
   const fightCount = (fights || []).length;
-  const desc = `${event.name} on ${dateStr}${event.location ? ' in ' + event.location : ''}. Full card with model ${verb} for ${fightCount > 0 ? 'all ' + fightCount + ' fights' : 'every fight'}.`;
+  const desc = `${event.name} on ${dateStr}${event.location ? ' in ' + event.location : ''}. Full card with sportsbook ${verb} for ${fightCount > 0 ? 'all ' + fightCount + ' fights' : 'every fight'}.`;
 
   document.title = title;
   setMeta('name', 'description', desc);
