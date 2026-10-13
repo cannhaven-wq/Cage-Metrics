@@ -230,7 +230,7 @@ ok('every writer names who writes it, so the alert is actionable',
   C.WRITERS.every(w => w.writer && w.writer.length > 10));
 
 // ---------------------------------------------------------------------------
-group('a writer that cannot reach a card is not a writer that failed');
+group('the monitoring policy, and the record it must never cover for');
 
 {
   // D-021: the owner chose to accept the Friday-only coverage gap rather than
@@ -240,6 +240,13 @@ group('a writer that cannot reach a card is not a writer that failed');
   // would report every midweek card `dark` forever, with nothing anybody could
   // do, and an alarm nobody can act on is one people learn to skip. That would
   // cost the Saturday cards, which are the 97.7% the whole thing is for.
+  //
+  // It is a POLICY, not a fact about the cron: cfl-snapshotter takes the next
+  // upcoming card on any weekday, so a Friday wake does reach a Sunday card
+  // when nothing sits in between (UFC Freedom 250, 2026-06-14, would have
+  // been). These tests pin the policy's behaviour, and the group below pins the
+  // thing that makes the policy affordable — the pre-fight record has no policy
+  // and covers every card on every weekday.
   const mid = over => ({
     id: 9001, name: 'UFC Fight Night: Midweek Special', event_date: '2026-10-14', // Wednesday
     fights: 11, counts: { predictions: 0, pre_fight_snapshots: 0 }, ...over,
@@ -253,8 +260,15 @@ group('a writer that cannot reach a card is not a writer that failed');
   ok('and that is not a breach', pred.breach === false);
   ok('the message names the weekday, so the reason is checkable',
     /is a Wednesday/.test(C.describe(pred)), C.describe(pred));
-  ok('the message says there is nothing to fix, so nobody goes looking',
-    /nothing to fix/.test(C.describe(pred)));
+  ok('the message names the policy it is applying, not a fact about the cron',
+    /monitored on Saturdays/.test(C.describe(pred)), C.describe(pred));
+  // The sentence this replaced said the cron "cannot reach" the card, which was
+  // false — a Friday wake takes the next card on any weekday. A monitoring
+  // exemption must not read as a guarantee that nothing was missed.
+  ok('the message does NOT claim the cron could not have covered it',
+    !/cannot reach|never reached|unreachable/i.test(C.describe(pred)), C.describe(pred));
+  ok('the message says it is neither a failure nor a guarantee',
+    /neither a failure nor a guarantee/.test(C.describe(pred)), C.describe(pred));
   ok('the message cites the decision rather than asserting it',
     /D-021/.test(C.describe(pred)));
 
@@ -285,7 +299,7 @@ group('a writer that cannot reach a card is not a writer that failed');
   // Every weekday, so the scope is exactly Saturday and not "most days".
   // 2026-10-11 is a Sunday, so +0..+6 walks one full week.
   const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const reachable = [];
+  const monitored = [];
   for (let i = 0; i < 7; i++) {
     const date = new Date(Date.parse('2026-10-11T00:00:00Z') + i * 86400000)
       .toISOString().slice(0, 10);
@@ -296,19 +310,64 @@ group('a writer that cannot reach a card is not a writer that failed');
     const p = find(checks, 'predictions');
     ok(`${DAYS[i]}: the reported weekday matches the date`, p.weekday === DAYS[i],
       `${date} -> ${p.weekday}`);
-    if (p.status !== 'out_of_schedule') reachable.push(DAYS[i]);
+    if (p.status !== 'out_of_schedule') monitored.push(DAYS[i]);
     // Whatever the weekday, the append-only record is always in scope.
     ok(`${DAYS[i]}: the pre-fight record is in scope`,
       find(checks, 'pre_fight_snapshots').status === 'dark');
   }
-  ok('Saturday is the only weekday the Friday cron reaches',
-    reachable.length === 1 && reachable[0] === 'Saturday', JSON.stringify(reachable));
+  // Named as the policy, not as a property of the cron — the cron reaches more
+  // than Saturday, which is the whole correction this revision carries.
+  ok('Saturday is the only weekday the model picks are MONITORED on',
+    monitored.length === 1 && monitored[0] === 'Saturday', JSON.stringify(monitored));
 }
 
-ok('the scope lives on the writer, not scattered through assess()',
-  C.WRITERS.find(w => w.key === 'predictions').reachableWeekdays.join() === '6');
-ok('the pre-fight record declares NO weekday scope — snapshot.yml is daily',
-  C.WRITERS.find(w => w.key === 'pre_fight_snapshots').reachableWeekdays === null);
+ok('the policy lives on the writer, not scattered through assess()',
+  C.WRITERS.find(w => w.key === 'predictions').monitoredWeekdays.join() === '6');
+
+// ---------------------------------------------------------------------------
+group('THE FORECAST LOCK COVERS EVERY CARD, WHATEVER THE WEEKDAY');
+
+{
+  // The exemption is limited to the legacy `predictions` table and must stay
+  // there. `pre_fight_snapshots` is the append-only forecast lock the hard rule
+  // in CLAUDE.md is about, snapshot.yml is a daily schedule, and a card that
+  // goes off without a record cannot be filled in afterwards. So no weekday
+  // policy may ever be attached to it — not for convenience, not to quiet a
+  // noisy week.
+  const rec = C.WRITERS.find(w => w.key === 'pre_fight_snapshots');
+  ok('the pre-fight record declares NO weekday policy at all',
+    rec.monitoredWeekdays === null, JSON.stringify(rec.monitoredWeekdays));
+
+  // Behaviourally, not just by the field: a dark card on each of the seven
+  // weekdays must breach on the record.
+  const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+  const missed = [];
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(Date.parse('2026-10-11T00:00:00Z') + i * 86400000)
+      .toISOString().slice(0, 10);
+    const c = find(C.assess(
+      [{ id: 200 + i, name: `card ${DAYS[i]}`, event_date: date, fights: 9,
+         counts: { predictions: 0, pre_fight_snapshots: 0 } }],
+      `${date}T06:00:00Z`), 'pre_fight_snapshots');
+    if (!(c.status === 'dark' && c.breach)) missed.push(`${DAYS[i]}:${c.status}`);
+  }
+  ok('an empty pre-fight record breaches on all seven weekdays',
+    missed.length === 0, `did not breach on ${missed.join(', ')}`);
+
+  // And it is never described as out of scope, on any day.
+  ok('the record is never reported out_of_schedule',
+    DAYS.every((_, i) => {
+      const date = new Date(Date.parse('2026-10-11T00:00:00Z') + i * 86400000)
+        .toISOString().slice(0, 10);
+      return find(C.assess(
+        [{ id: 300 + i, name: 'x', event_date: date, fights: 9,
+           counts: { predictions: 0, pre_fight_snapshots: 0 } }],
+        `${date}T06:00:00Z`), 'pre_fight_snapshots').status !== 'out_of_schedule';
+    }));
+
+  ok('and it says so in its own note, for whoever edits it next',
+    /every card|append-only/i.test(rec.note), rec.note);
+}
 
 // ---------------------------------------------------------------------------
 group('the workflow can actually check out the repo');

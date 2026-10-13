@@ -1581,9 +1581,28 @@ those cards instead of raising an alarm nobody could act on.
 
 **What was found.** Fixing `cfl-snapshotter` surfaced that its cron is
 `0 18 * * 5` — Friday 18:00 UTC — and the script writes for whatever card is next
-upcoming at that instant. A card on another weekday is never the next upcoming
-event at any Friday wake, so it is not reached at all. This is coverage, not a
-bug: the service is working exactly as scheduled.
+upcoming at that instant. A card on another weekday is usually not the next
+upcoming event at a Friday wake, so it is usually not reached. This is coverage,
+not a bug: the service is working exactly as scheduled.
+
+**Corrected 2026-10-13, and the correction matters.** This entry first said a
+card on another weekday "is never the next upcoming event at any Friday wake".
+**That is false.** The script selects
+`.gte('event_date', today).order(asc).limit(1)` — the next card on *any*
+weekday — so a Friday wake reaches a non-Saturday card whenever no other card
+sits between that Friday and it. Checked against all three non-Saturday cards
+since 2024-01-01:
+
+| card | weekday | cards between the prior Friday and it | Friday wake reaches it? |
+|---|---|---|---|
+| UFC Freedom 250, 2026-06-14 | Sunday | 0 | **yes** |
+| DWCS 10.3, 2026-08-25 | Tuesday | 1 | no |
+| Road to UFC 4.6, 2025-08-22 | Friday | 0 | same-day race |
+
+So the Saturday-only exemption is a **monitoring policy** — the weekdays we
+choose to hold the writer responsible for — and **not** a statement of what the
+cron can reach. The field was renamed `reachableWeekdays` → `monitoredWeekdays`
+and every sentence reworded, because the old name asserted the false claim.
 
 **How big it is, measured rather than guessed.** Over the real schedule from
 2024-01-01: **125 of 128 cards were Saturdays (97.7%)**. The other three were one
@@ -1615,6 +1634,23 @@ skip, and that cost would have landed on the Saturday cards, which are the 97.7%
 the watchdog exists for. So `build/check-pre-fight-coverage.js` now carries a
 `reachableWeekdays` scope per writer and a fifth status, `out_of_schedule`.
 
+**What the policy gets wrong, in both directions.** Stated plainly rather than
+left for someone to discover:
+
+- **It exempts a non-Saturday card the cron could in fact have covered**, so a
+  genuine miss on one would raise no alarm. This is the harmful direction, and
+  it is accepted **only** because `predictions` has no public consumer. It
+  would not be acceptable for the pre-fight record.
+- **It holds the writer to a Saturday card** that an earlier same-weekend card
+  could have taken the Friday wake from — alarming where nothing is wrong. That
+  pair has never occurred in the data.
+
+Modelling the real mechanism is possible: widen the event load back about eight
+days and ask whether any card sits between the last Friday wake and this one.
+That is now written into **T-077** as what the fix would be. It was not built
+because the decision was to defer the coverage work, not to build a more exact
+model of a gap nobody is closing.
+
 **It is narrowed, not silenced, and the difference is the whole justification.**
 An out-of-scope check is still computed, still printed with its own `n/a` tag,
 still carried in the JSON, and gets **its own heading in the step summary** rather
@@ -1625,10 +1661,14 @@ trust.
 
 **What is explicitly NOT decided.**
 
-- **The pre-fight record's scope is untouched.** `pre_fight_snapshots` declares no
-  weekday scope and a midweek card still goes `dark` and still breaches on it.
-  `tests/dead-man.test.js` asserts that narrowing one writer did not quiet the
-  other, because that is the mistake this change could have made.
+- **The pre-fight record's scope is untouched, and this exemption may never be
+  extended to it.** `pre_fight_snapshots` declares no weekday policy, and the
+  forecast lock must cover **every** UFC card regardless of weekday:
+  `snapshot.yml` is a daily schedule and a card that goes off without a record
+  cannot be filled in afterwards. `tests/dead-man.test.js` asserts the field is
+  `null` *and* that an empty record breaches on all seven weekdays — because
+  "narrow one writer, quietly narrow the other" is the mistake this change
+  could have made.
 - **Whether `predictions` should exist at all.** It is the legacy table; the live
   record is `pre_fight_snapshots`. Retiring it is a separate decision nobody has
   taken, and D-011 is explicit that model infrastructure is not deleted to tidy up.
