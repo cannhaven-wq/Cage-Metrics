@@ -927,11 +927,16 @@
 
   // engaged_session: once per session, on the first real interaction —
   // pointer, touch, key, or a scroll past the first screen — at least two
-  // seconds after the page loaded, while the tab is visible. Crawlers that
-  // execute JavaScript load the page and leave; they do not do this.
+  // seconds after the page loaded, while the tab is visible.
+  // Corrected 2026-10-13, the first hour after launch: crawlers that execute
+  // JavaScript DO scroll. 24 of the first 27 engaged sessions came from user
+  // agents that call themselves bots, and 2 from headless browsers. A browser
+  // that declares itself automated (navigator.webdriver) or a bot (BOT_UA)
+  // is never counted as a person; the daily view applies the same rule.
   const ENGAGED_KEY = 'cfl_engaged';
   function watchEngagement() {
     try {
+      if (navigator.webdriver || BOT_UA.test(navigator.userAgent || '')) return;
       if (sessionStorage.getItem(ENGAGED_KEY)) return;
     } catch (e) { return; }
     const t0 = Date.now();

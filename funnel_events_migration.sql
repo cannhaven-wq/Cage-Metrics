@@ -174,6 +174,9 @@ GRANT SELECT ON public.v_funnel_daily TO anon, authenticated;
 -- flagged themselves as automation, and the ones that engaged — split by where
 -- they came from and what they reached. Aggregates only, like v_funnel_daily.
 -- An engaged session is the closest thing this table has to "a person".
+-- Corrected 2026-10-13: crawlers that run JavaScript also scroll (24 of the
+-- first 27 engaged sessions declared a bot user agent), so an engaged session
+-- that flagged itself as automation is excluded from every engaged column.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW public.v_traffic_daily AS
 WITH s AS (
@@ -181,8 +184,8 @@ WITH s AS (
     session_id,
     date_trunc('day', min(created_at))::date                         AS day,
     bool_or(event = 'engaged_session')                               AS engaged,
-    bool_or(event = 'landing_view' AND (props->>'webdriver' = 'true'
-                                     OR props->>'ua_bot'    = 'true')) AS automation,
+    coalesce(bool_or(event = 'landing_view' AND (props->>'webdriver' = 'true'
+                                              OR props->>'ua_bot'    = 'true')), false) AS automation,
     bool_or(event = 'return_visit')                                  AS is_returning,
     max(CASE WHEN event = 'landing_view' THEN props->>'referrer_host' END) AS referrer_host,
     max(CASE WHEN event = 'landing_view' THEN props->>'utm_source' END)    AS utm_source,
@@ -195,12 +198,12 @@ SELECT
   day,
   count(*)::bigint                                                            AS sessions,
   count(*) FILTER (WHERE automation)::bigint                                  AS automation_flagged,
-  count(*) FILTER (WHERE engaged)::bigint                                     AS engaged,
-  count(*) FILTER (WHERE engaged AND referrer_host ~* '(google|bing|duckduckgo|yahoo|ecosia|brave|yandex|baidu)\.')::bigint AS engaged_from_search,
-  count(*) FILTER (WHERE engaged AND coalesce(nullif(referrer_host, ''), nullif(utm_source, '')) IS NOT NULL)::bigint AS engaged_with_source,
-  count(*) FILTER (WHERE engaged AND is_returning)::bigint                       AS engaged_returning,
-  count(*) FILTER (WHERE engaged AND product)::bigint                         AS engaged_reached_product,
-  count(*) FILTER (WHERE engaged AND pages >= 2)::bigint                      AS engaged_multi_page
+  count(*) FILTER (WHERE engaged AND NOT automation)::bigint                  AS engaged,
+  count(*) FILTER (WHERE engaged AND NOT automation AND referrer_host ~* '(google|bing|duckduckgo|yahoo|ecosia|brave|yandex|baidu)\.')::bigint AS engaged_from_search,
+  count(*) FILTER (WHERE engaged AND NOT automation AND coalesce(nullif(referrer_host, ''), nullif(utm_source, '')) IS NOT NULL)::bigint AS engaged_with_source,
+  count(*) FILTER (WHERE engaged AND NOT automation AND is_returning)::bigint     AS engaged_returning,
+  count(*) FILTER (WHERE engaged AND NOT automation AND product)::bigint      AS engaged_reached_product,
+  count(*) FILTER (WHERE engaged AND NOT automation AND pages >= 2)::bigint   AS engaged_multi_page
 FROM s
 GROUP BY day;
 
