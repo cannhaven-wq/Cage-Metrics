@@ -1,11 +1,12 @@
 # Funnel analytics — the event schema
 
 Status: **instrumented 2026-09-21** (T-047), extended for watchlists and alerts
-(T-070). Twenty-one of the twenty-four events emit today; the other three are
+(T-070), and for telling people from crawlers (2026-10-12). Twenty-two of the
+twenty-five events emit today; the other three are
 declared hooks with nothing to fire on yet, and the table below says which is
 which.
 
-**One of the twenty-four is emitted by the server, not the browser.**
+**One of the twenty-five is emitted by the server, not the browser.**
 `alert_fired` is written by `build/send-alerts.js` with `session_id` set to the
 literal `srv:alerts`, because nothing a visitor does causes an alert to fire —
 a market does. It is obviously not a visitor session on sight, so it cannot be
@@ -60,7 +61,7 @@ sprint that builds a checkout or a share button does not invent its own names.
 
 | event | fires when | props |
 |---|---|---|
-| `landing_view` | first page of a session, whatever it is | `path`, `referrer_host`, `utm_source` |
+| `landing_view` | first page of a session, whatever it is. **Fires for crawlers that run JavaScript too** — count people with `engaged_session` | `path`, `referrer_host`, `utm_source`, `webdriver` (true if the browser reports script control), `ua_bot` (true if the user agent names a crawler or headless browser) |
 | `card_lab_view` | the card section is scrolled into view on `/` | `event_id`, `fight_count` |
 | `fight_opened` | Fight Lab opens, from any entry point | `fight_id`, `from` (`card`/`market`/`event`/`direct`) |
 | `market_lab_view` | `/market.html` renders its board | `event_id`, `fight_count` |
@@ -84,6 +85,7 @@ sprint that builds a checkout or a share button does not invent its own names.
 | `checkout_started` | **declared, not emitted** — no checkout exists | `plan` |
 | `checkout_completed` | **declared, not emitted** — no checkout exists | `plan` |
 | `return_visit` | a session begins with a prior session inside 7 days | `days_since`, `same_fight_week` |
+| `engaged_session` | once per session, on the first scroll past the first screen, click, tap or keypress, at least 2 s after load with the tab visible. The human-traffic signal: crawlers load and leave. Counted daily in `v_traffic_daily` | `via` (`scroll`/`pointer`/`touch`/`key`), `secs` |
 
 `landing_view` and `return_visit` fire from `cfl.trackSessionStart()` in
 `_shared.js`, once per session, on every page. Everything else is wired at the
