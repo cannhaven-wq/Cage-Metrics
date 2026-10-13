@@ -11,6 +11,27 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (h) — Sportsbook list write hole closed on production
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+While checking the T-084/T-085 runbook, Claude found that browsers could write
+`odds_books` through the definer view `v_odds_books_sportsbooks`. A delete
+there would have cascaded to every captured price from that book. On the
+owner's instruction the fix was applied to production the same day and
+verified ([D-025](DECISIONS.md)). This PR is the record: the migration file and
+the test that reproduces the hole and proves it is closed.
+
+## Next action
+
+Owner: merge this PR (it changes no page and nothing in the database that is
+not already applied). Claude: return to the T-086 migration plan, with no
+production change, then commercial readiness.
+
+---
+
 ## 2026-10-13 (f) — Fight Lab is live; T-083 answered; two production discrepancies
 
 **From:** Claude

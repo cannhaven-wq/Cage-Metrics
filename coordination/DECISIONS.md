@@ -1812,3 +1812,57 @@ that were cancelled and replaced no longer show on the next two cards.
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session.
 
+
+## D-025 — Browsers can no longer write sportsbooks through `v_odds_books_sportsbooks`
+
+| field | value |
+|---|---|
+| date | 2026-10-13 |
+| decided by | Reed Cannon (owner) |
+| task | none; security fix found during T-084/T-085 review |
+| level | L3 |
+| reversible | yes, but it should not be: `GRANT INSERT, UPDATE, DELETE ON public.v_odds_books_sportsbooks TO anon, authenticated;` |
+
+**The owner's instruction, quoted:** *"Apply now (Recommended)"*. The option
+read: run `security_odds_books_view_readonly.sql` on production now, verify
+reads still work and writes are refused, re-run the security advisor, then
+commit the fix and its test in their own PR for the record.
+
+**Plain version.** Anyone with the site's public key could have renamed or
+deleted a sportsbook, and deleting one would also have erased every price CFL
+ever captured from it. Browsers can now only read that list.
+
+**What was found.**
+- `v_odds_books_sportsbooks` is a SECURITY DEFINER view over the admin-only
+  `odds_books` table.
+- It is a simple one-table filter, so Postgres lets it be written through.
+- `anon` and `authenticated` held INSERT, UPDATE and DELETE on it, from
+  Supabase's default grants.
+- `fight_odds.book_id` is ON DELETE CASCADE.
+
+It was reproduced on a throwaway Postgres
+(`tests/test_security_odds_books_view.py`). No write was attempted against
+production.
+
+**What was done.** Applied as the Supabase migration
+`security_odds_books_view_readonly`: REVOKE ALL from both browser roles, then
+GRANT SELECT.
+
+**Verified after applying:**
+- Both roles hold SELECT and nothing else (checked with `has_table_privilege`
+  for seven privileges).
+- `anon` reads 10 sportsbooks through the view.
+- `odds_books` still has 14 rows.
+- `v_fight_odds_latest_by_book` still returns 7 rows for fight 46774.
+- No sign it was ever used. Book ids 1–14 are intact, and the API log shows no
+  request touching the view.
+- The security advisor is unchanged from the 2026-10-13 baseline (39, 10, 2,
+  8 + 8, 9, 1), so no new finding.
+
+**What is not decided.** Every other definer view still grants browsers more
+than SELECT. None of the others can be written through (checked in
+`information_schema.views.is_updatable`), so this is hygiene, not a hole. A
+separate pass is worth doing and is not scheduled.
+
+**Attribution note.** Recorded by Claude from the owner's answer in the
+project-audit session.
