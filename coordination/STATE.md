@@ -17,11 +17,13 @@ about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10
 No new prediction model is built except under PRED-001.
 Cosmetic, 2026-10-13: the country wash behind each fighter is now the real
 flag image rather than a stripe of its colours.
-**Fight Lab Phase 1 is in review (T-080), not merged.** It answers three
-questions: who these fighters are, how they compare (tale of the tape,
-late-round output with its sample, last five fights), and what the market
-says. Footage links (T-081) and expanded style labels (T-082) are queued as
-separate tasks. The data for T-082 is already in `fights`.
+**Fight Lab Phase 1 is live (T-080, merged 2026-10-13, verified on the live
+site).** **T-083 answered:** the `fights` table matches UFCStats on UFC bouts
+(73 of 74 fighters; the exception is a Contender Series card stored as a UFC
+event, T-086), while `fighters.ufc_wins/losses` is wrong for about two fighters
+in three and is still shown on four pages and the `/f/` stubs (T-084, proposed).
+The chart query is slow (T-085). Footage links (T-081) and expanded style
+labels (T-082) stay queued.
 
 **Next phase (owner, 2026-10-13): the first $100 of revenue.** The
 commercial-readiness audit

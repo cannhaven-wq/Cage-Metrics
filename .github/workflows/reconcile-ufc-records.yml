@@ -1,0 +1,41 @@
+name: Reconcile UFC records (T-083)
+
+# Read-only. Compares our `fights` and `fighters` tables against UFCStats for a
+# sample of fighters and prints a table to the step summary. Writes nothing to
+# the database: the publishable key it uses cannot. Manual only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      fighter_ids:
+        description: 'Fighter ids, comma-separated (blank = next card + well-known champions + seeded random sample)'
+        required: false
+        default: ''
+      sample_size:
+        description: 'Random sample size when fighter_ids is blank'
+        required: false
+        default: '40'
+
+permissions:
+  contents: read
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install requests==2.32.3 beautifulsoup4==4.12.3
+      - name: Reconcile
+        env:
+          FIGHTER_IDS: ${{ github.event.inputs.fighter_ids }}
+          SAMPLE_SIZE: ${{ github.event.inputs.sample_size }}
+        run: python research/data-integrity/reconcile_ufc_records.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: reconcile-report-${{ github.run_id }}
+          path: reconcile-report.json
+          if-no-files-found: warn

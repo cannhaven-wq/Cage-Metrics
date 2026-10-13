@@ -28,6 +28,10 @@ on:
         description: 'Site to verify'
         required: false
         default: 'https://cannonfightlab.com'
+      fight_ids:
+        description: 'Fight Lab ids to open, comma-separated (blank = the next card: most-priced and least-priced active bookings)'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -74,6 +78,7 @@ jobs:
           compare "/market.js" market.js "market.js"
           compare "/market-movement.js" market-movement.js "market-movement.js"
           compare "/fight-insights.js" fight-insights.js "fight-insights.js (plain path)"
+          compare "/fight-lab.js" fight-lab.js "fight-lab.js (Fight Lab helpers)"
           compare "/_shared.js" _shared.js "_shared.js"
           compare "/proof-gates.js" proof-gates.js "proof-gates.js"
           compare "/event.html" event.html "event.html"
@@ -120,4 +125,37 @@ jobs:
         with:
           name: live-screenshots-${{ github.run_id }}
           path: live-shots/
+          if-no-files-found: warn
+
+  fight-lab:
+    name: Fight Lab against the live database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: Open Fight Lab pages and report
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://cannonfightlab.com' }}
+          FIGHT_IDS: ${{ github.event.inputs.fight_ids }}
+          OUT_DIR: fight-lab-shots
+        run: node .github/scripts/verify-fight-lab.js
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fight-lab-screenshots-${{ github.run_id }}
+          path: fight-lab-shots/
           if-no-files-found: warn
