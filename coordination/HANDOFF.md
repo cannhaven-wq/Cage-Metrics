@@ -11,6 +11,78 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (j) — T-084 and T-085 are live and verified
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+Deployed database-first, as the runbook says. PR #66 was conditionally
+approved; it was merged once both views were live and checked.
+
+1. **T-085 applied.**
+   - The chart output is identical for 26712 (891 points), 46774 and 53620.
+   - One fight takes 0.26 s instead of 5.8 s.
+   - On the live site the chart now appears 190 ms after the page (it was
+     about 2,200).
+2. **T-084 view applied.**
+   - Read as `anon`, the five reference records match UFCStats.
+   - security_invoker; SELECT only for both browser roles; PUBLIC revoked.
+   - The advisor is unchanged (39 / 10 / 0 / 8 + 8 / 9 / 1).
+3. **PR #66 merged** (`1984d35`). `verify-live` passes all three jobs on
+   fights 46774, 53620 and 53618.
+
+**The T-087 lockdown is intact.** Both changed views read
+`anon=r, authenticated=r` and nothing else.
+
+**One CI incident, not a test failure.** Tests on `main` at `1984d35` stopped
+in the setup fetch: the prerender bot pushed seconds later, and a shallow
+`git fetch` rejected the newer `main` as non-fast-forward. Reproduced locally;
+fixed by this PR's `+` refspec.
+
+## Next action
+
+Claude: T-086 readiness. The gates are D-026's; report readiness before the
+destructive step.
+
+---
+
+## 2026-10-13 (g) — T-084 built, T-085 cause found, T-086 plan written; nothing applied
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+- **T-084: built.** `v_fighter_ufc_record` plus `ufc-record.js` on every
+  record-showing page and the `/f/` prerender. It was tested on a throwaway
+  Postgres (accuracy, retired bookings, permissions, re-run, and parity with
+  Fight Lab's own count) and against production through a temporary view
+  (records match UFCStats; 0.4 ms for one fighter). The migration is not
+  applied.
+- **T-085: cause found.** The `cohort` CTE was materialised, so every fight's
+  cohort was built before filtering. `NOT MATERIALIZED` takes one fight from
+  5.8 s to 0.26 s with byte-identical output on 8 fights. Not applied.
+- **T-086: plan only.** `is_active = false` would miss 33 of the 34 views.
+  The recommendation is an `events.promotion` column, moving the 5 non-UFC
+  bouts (same ids) into sibling tables, and a scraper guard. This is an L3
+  decision because it removes rows from `fights`.
+
+## Next action
+
+Owner:
+1. Merge the read-only audit PR (#65).
+2. Approve opening the T-084/T-085 PR.
+3. Decide on the T-086 plan.
+
+**Order of application for T-084:** apply the view first, then deploy the pages.
+Pages that load before the view exists show "—" instead of a record.
+
+---
+
+## 2026-10-13 (g′) — Sportsbook data is read-only to the browser (T-087)
+
+---
+
 ## 2026-10-13 (h) — Sportsbook list write hole closed on production
 
 **From:** Claude

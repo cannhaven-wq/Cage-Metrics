@@ -263,6 +263,27 @@ t('no opener language anywhere in the chart layer', () => {
   });
 });
 
+// T-085 (2026-10-13). A CTE referenced more than once is MATERIALIZED by
+// default, and a materialised CTE is an optimisation fence: `fight_id = X`
+// could not reach the index, so every fight's cohort was built for every
+// chart (5.8 s for one fight on production). NOT MATERIALIZED took it to
+// 0.26 s with identical output. If a later edit drops the keyword, this fails.
+t('every multiply-referenced CTE in the chart views is NOT MATERIALIZED', () => {
+  const body = stripComments(CHART_SQL);
+  const views = body.split(/CREATE OR REPLACE VIEW/i).slice(1);
+  views.forEach(v => {
+    const name = (v.match(/public\.(\w+)/) || [])[1];
+    const ctes = [...v.matchAll(/(?:WITH|,)\s*(\w+)\s+AS\s+(NOT\s+MATERIALIZED\s+)?\(/gi)];
+    ctes.forEach(m => {
+      const cte = m[1];
+      const refs = (v.match(new RegExp('\\b(?:FROM|JOIN)\\s+' + cte + '\\b', 'gi')) || []).length;
+      ok(refs < 2 || !!m[2], `${name}: CTE "${cte}" is referenced ${refs} times and is not NOT MATERIALIZED`);
+    });
+  });
+  ok(/v_fight_chart_series AS[\s\S]{0,200}WITH cohort AS NOT MATERIALIZED/i.test(body),
+     'v_fight_chart_series lost NOT MATERIALIZED on its cohort CTE');
+});
+
 // ------------------------------------------------------------------ report
 if (failures.length) {
   console.log(`\n  ${passed} passed, ${failures.length} FAILED\n`);

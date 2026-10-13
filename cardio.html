@@ -686,6 +686,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <script>
 cfl.renderNav('cardio');
 cfl.renderFooter();
@@ -821,9 +822,12 @@ let ccFighters = [];
 async function initCardioCurve() {
   const sb = window.cflSupabase;
   try {
-    ccFighters = await cfl.fetchAll(() => sb
-      .from('fighters')
-      .select('id, name, nickname, division, ufc_wins, ufc_losses, ufc_draws'));
+    // UFC record from v_fighter_ufc_record, never fighters.ufc_* (T-084).
+    const [fighters, ufcRows] = await Promise.all([
+      cfl.fetchAll(() => sb.from('fighters').select('id, name, nickname, division')),
+      cflUfcRecord.load(sb, null, { all: true }),
+    ]);
+    ccFighters = cflUfcRecord.apply(fighters, ufcRows);
   } catch (e) {
     console.warn('[cardio-curve] fighter load failed:', e.message);
   }

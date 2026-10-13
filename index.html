@@ -563,6 +563,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <!-- Every market number on this page is formatted by market.js, so the rules
      about showing a price (book count, age, movement measured only across the
      books quoting at both ends, and never an "opening line") live in one file
@@ -838,9 +839,11 @@ async function loadFights(event) {
 
   const { data: fighters, error: fErr } = await sb
     .from('fighters')
-    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
+    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
     .in('id', Array.from(fighterIds));
   if (fErr) { list.innerHTML = '<div class="load-err">Couldn\'t load fighter details. Try refreshing.</div>'; return; }
+  // UFC record from v_fighter_ufc_record, never fighters.ufc_* (T-084).
+  await cflUfcRecord.attach(sb, fighters);
 
   const fighterMap = {};
   fighters.forEach(f => { fighterMap[f.id] = f; });
