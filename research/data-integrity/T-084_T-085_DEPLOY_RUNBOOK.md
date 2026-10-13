@@ -139,8 +139,15 @@ needless.
 - **Galanti still reads UFC 1-0** after T-084. The view counts what `fights`
   holds, and `fights` still holds the DWCS card. That is T-086's job; see its
   plan.
-- **Other definer views grant browser roles more than SELECT.** It is not
-  exploitable (none is auto-updatable), but worth a hygiene pass later, as a
-  separate task.
+- **Other definer views grant browser roles more than SELECT.**
+  - CORRECTED 2026-10-13. An earlier draft said none of them could be written
+    through. That was wrong. `v_odds_books_sportsbooks` could be, so a browser
+    could delete a sportsbook and, by cascade, its odds history.
+  - It was fixed on production the same day ([D-025](../../coordination/DECISIONS.md),
+    cannhaven-wq/Cage-Metrics#67).
+  - `v_prop_projections_current` can also be written through, but it is
+    `security_invoker` over a table whose RLS is read-only, so it is safe.
+  - The rest cannot be written through. A grant hygiene pass is still worth
+    doing, as a separate task.
 - **The advisor's two `rls_disabled_in_public` findings** (`odds_aliases`,
   `unmatched_odds`) predate this work. They should be looked at separately.
