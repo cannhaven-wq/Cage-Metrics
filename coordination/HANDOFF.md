@@ -11,6 +11,42 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (c) — Commercial-readiness audit: what stands between CFL and its first $100
+
+**From:** Claude (project-audit session)
+**To:** Owner
+**Date:** 2026-10-13
+
+The audit is in `research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md`.
+CFL cannot take its first $100 today, and the model is not why. Four things
+stand in the way:
+
+1. Almost no audience: one engaged person in the first hour of the corrected
+   human count.
+2. The paid feature cannot deliver: no mail key, and the alerts cron is off.
+3. No lawful way to take money: no Stripe account, no Terms, and the privacy
+   page is wrong.
+4. Data rights for The Odds API and UFCStats are unchecked.
+
+The most plausible first $100 is one business customer, such as a betting
+newsletter, podcast or Discord, paying for a weekly card-market brief. The
+audit has a three-week plan and a kill rule.
+
+## Next action
+
+The owner does three things this week:
+
+- Create a Resend key and set `RESEND_API_KEY` / `RESEND_FROM`. Claude then
+  runs the alert delivery test and turns on the alerts schedule.
+- Read The Odds API terms on commercial use.
+- Book the first five conversations with people who publish about UFC
+  betting.
+
+Claude can build the non-transacting `/pro.html` offer page and a sample
+weekly brief once the owner sets the price to show.
+
+---
+
 ## 2026-10-13 (b) — American fighters get the real flag behind them
 
 **From:** Claude
