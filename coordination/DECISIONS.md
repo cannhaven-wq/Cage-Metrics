@@ -1561,3 +1561,120 @@ is `CHECK (channel IN ('email'))`, so adding one is a migration and a decision
 rather than a config change.
 
 **Attribution note.** As D-006 through D-019.
+
+---
+
+## D-021 — The legacy `predictions` table keeps its Friday-only coverage, and the watchdog is told so
+
+| field | value |
+|---|---|
+| date | 2026-10-05 |
+| decided by | Reed Cannon (owner) |
+| task | T-077 |
+| level | L3 |
+| reversible | yes, and cheaply. Nothing is deleted and no data is lost that was being collected before. Widening the cron later is a one-line schedule change plus a gate on the card calendar — option 1 below, still written down. What is NOT reversible is a midweek card that went off without model picks, and the decision accepts exactly that |
+
+**Plain version.** The Railway snapshotter only runs on Fridays, so a UFC card on
+any other day never gets model picks. We are leaving it that way, because nothing
+on the site reads that table. The watchdog is changed to say "out of scope" for
+those cards instead of raising an alarm nobody could act on.
+
+**What was found.** Fixing `cfl-snapshotter` surfaced that its cron is
+`0 18 * * 5` — Friday 18:00 UTC — and the script writes for whatever card is next
+upcoming at that instant. A card on another weekday is usually not the next
+upcoming event at a Friday wake, so it is usually not reached. This is coverage,
+not a bug: the service is working exactly as scheduled.
+
+**Corrected 2026-10-13, and the correction matters.** This entry first said a
+card on another weekday "is never the next upcoming event at any Friday wake".
+**That is false.** The script selects
+`.gte('event_date', today).order(asc).limit(1)` — the next card on *any*
+weekday — so a Friday wake reaches a non-Saturday card whenever no other card
+sits between that Friday and it. Checked against all three non-Saturday cards
+since 2024-01-01:
+
+| card | weekday | cards between the prior Friday and it | Friday wake reaches it? |
+|---|---|---|---|
+| UFC Freedom 250, 2026-06-14 | Sunday | 0 | **yes** |
+| DWCS 10.3, 2026-08-25 | Tuesday | 1 | no |
+| Road to UFC 4.6, 2025-08-22 | Friday | 0 | same-day race |
+
+So the Saturday-only exemption is a **monitoring policy** — the weekdays we
+choose to hold the writer responsible for — and **not** a statement of what the
+cron can reach. The field was renamed `reachableWeekdays` → `monitoredWeekdays`
+and every sentence reworded, because the old name asserted the false claim.
+
+**How big it is, measured rather than guessed.** Over the real schedule from
+2024-01-01: **125 of 128 cards were Saturdays (97.7%)**. The other three were one
+Sunday, one Tuesday and one Friday. No non-Saturday card is currently on the
+books, so the change lands before the first one needs it.
+
+**The three options that were on the table.**
+
+| # | option | cost |
+|---|---|---|
+| 1 | Widen the cron to daily and gate on "is there a card in the next 48 hours", the way `odds.yml` and `snapshot.yml` already do | small, and it matches the established pattern |
+| 2 | Move the job into GitHub Actions beside `snapshot.yml` and retire the Railway service | a migration; one scheduler instead of two |
+| 3 | **Chosen.** Leave it Friday-only; document the scope and narrow what the watchdog expects | nothing to build; midweek cards get no model picks, permanently |
+
+**Why 3.** `predictions` has **no public consumer**. Nothing on any page reads it;
+`closing_odds_american` is NULL in all 72 rows of all six batches ever written, so
+even its price column has never carried anything. The pre-fight record that the
+hard rule in `CLAUDE.md` is actually about comes from `pre_fight_snapshots` via
+`snapshot.yml`, which is a **daily** schedule and reaches every card regardless of
+weekday. So the gap costs the research product nothing today, and the owner's
+stated priority is odds comparison, movement charts and working alert delivery —
+the things a member might come back for.
+
+**The half of this decision that is work, and why it was not optional.** Choosing
+option 3 *requires* changing the watchdog. Left alone it would have reported every
+midweek card `dark` — a breach, an issue, a red build — forever, with nothing
+anybody could do about it. An alarm nobody can act on is an alarm people learn to
+skip, and that cost would have landed on the Saturday cards, which are the 97.7%
+the watchdog exists for. So `build/check-pre-fight-coverage.js` now carries a
+`reachableWeekdays` scope per writer and a fifth status, `out_of_schedule`.
+
+**What the policy gets wrong, in both directions.** Stated plainly rather than
+left for someone to discover:
+
+- **It exempts a non-Saturday card the cron could in fact have covered**, so a
+  genuine miss on one would raise no alarm. This is the harmful direction, and
+  it is accepted **only** because `predictions` has no public consumer. It
+  would not be acceptable for the pre-fight record.
+- **It holds the writer to a Saturday card** that an earlier same-weekend card
+  could have taken the Friday wake from — alarming where nothing is wrong. That
+  pair has never occurred in the data.
+
+Modelling the real mechanism is possible: widen the event load back about eight
+days and ask whether any card sits between the last Friday wake and this one.
+That is now written into **T-077** as what the fix would be. It was not built
+because the decision was to defer the coverage work, not to build a more exact
+model of a gap nobody is closing.
+
+**It is narrowed, not silenced, and the difference is the whole justification.**
+An out-of-scope check is still computed, still printed with its own `n/a` tag,
+still carried in the JSON, and gets **its own heading in the step summary** rather
+than one row in a table — because the argument for not alarming is that the gap
+stays visible. The message names the weekday, says there is nothing to fix, and
+cites this decision, so a reader can check the reasoning rather than take it on
+trust.
+
+**What is explicitly NOT decided.**
+
+- **The pre-fight record's scope is untouched, and this exemption may never be
+  extended to it.** `pre_fight_snapshots` declares no weekday policy, and the
+  forecast lock must cover **every** UFC card regardless of weekday:
+  `snapshot.yml` is a daily schedule and a card that goes off without a record
+  cannot be filled in afterwards. `tests/dead-man.test.js` asserts the field is
+  `null` *and* that an empty record breaches on all seven weekdays — because
+  "narrow one writer, quietly narrow the other" is the mistake this change
+  could have made.
+- **Whether `predictions` should exist at all.** It is the legacy table; the live
+  record is `pre_fight_snapshots`. Retiring it is a separate decision nobody has
+  taken, and D-011 is explicit that model infrastructure is not deleted to tidy up.
+- **Whether `closing_odds_american` should ever be populated.** Still open, and
+  now plainly lower priority.
+- **Option 1 is not refused, only deferred.** If anything ever starts reading
+  `predictions`, this comes straight back as a one-line schedule change plus a
+  calendar gate. T-077 stays open at `proposed` for that reason rather than being
+  dropped.

@@ -48,12 +48,63 @@
 // alarm that goes off on every card is an alarm that gets filtered to a folder.
 // So the ladder is:
 //
-//   dark      0 rows past the deadline                  -> BREACH, shout
-//   thin      below HALF the fights                     -> BREACH, shout
-//             (that is a run that died part-way, not a gap in the data)
-//   partial   between half and all                      -> noted, no alarm
-//   covered   a row for every fight                     -> quiet
-//   pending   deadline has not passed yet               -> quiet
+//   dark              0 rows past the deadline          -> BREACH, shout
+//   thin              below HALF the fights             -> BREACH, shout
+//                     (a run that died part-way, not a gap in the data)
+//   partial           between half and all              -> noted, no alarm
+//   covered           a row for every fight             -> quiet
+//   pending           deadline has not passed yet       -> quiet
+//   out_of_schedule   this card's weekday is outside    -> named, no alarm
+//                     the weekdays this writer is       (policy, see D-021)
+//                     monitored on
+//
+// -----------------------------------------------------------------------------
+// `monitoredWeekdays` IS A MONITORING POLICY, NOT A FACT ABOUT THE CRON
+// -----------------------------------------------------------------------------
+// Read this before changing the field or its name. An earlier revision called
+// it `reachableWeekdays` and said a Friday-only cron "cannot reach" a card on
+// another weekday. THAT WAS FALSE, and the false version is the dangerous one.
+//
+// cfl-snapshotter selects `.gte('event_date', today).order(asc).limit(1)` — the
+// next upcoming card, whatever weekday it falls on. So a Friday wake DOES reach
+// a Sunday card whenever no other card sits between that Friday and it.
+// Measured over the three non-Saturday cards since 2024-01-01:
+//
+//   Sun 2026-06-14  UFC Freedom 250    0 cards in between  -> WOULD be reached
+//   Tue 2026-08-25  DWCS 10.3          1 card in between   -> not reached
+//   Fri 2025-08-22  Road to UFC 4.6    same-day race
+//
+// So the Saturday-only rule is a POLICY: the weekdays we choose to hold this
+// writer responsible for. It gets two things wrong, in both directions:
+//
+//   - It exempts a non-Saturday card the cron could in fact have covered, so a
+//     genuine miss on one would NOT raise an alarm. That is the bad direction,
+//     and it is accepted ONLY because `predictions` has no public consumer
+//     (D-021). It would not be acceptable for the pre-fight record.
+//   - It holds the writer to a Saturday card that a same-weekend earlier card
+//     could have stolen the Friday wake from — alarming where nothing is wrong.
+//     That pair has never occurred in the data.
+//
+// Modelling the real mechanism is possible — widen the event load back ~8 days
+// and ask whether any card sits between the last Friday wake and this one — and
+// is written up as the fix in T-077. It was not done because the owner's call
+// was to defer the coverage work, not to build a more exact model of a gap
+// nobody is closing.
+//
+// WHY A POLICY IS NEEDED AT ALL: without one, every midweek card would read
+// `dark` forever, with nothing anybody could do about it, and an alarm nobody
+// can act on is one people learn to skip. That cost would land on the Saturday
+// cards, which are 97.7% of the schedule and the whole reason this file exists.
+//
+// NARROWED, NEVER SILENCED: an out-of-scope check is still computed, still
+// printed with its own tag, still in the JSON, and gets its own heading in the
+// step summary rather than one row in a table. The argument for not alarming is
+// that the gap stays visible, so the visibility is the deal.
+//
+// `pre_fight_snapshots` declares NO weekday policy and must never be given one.
+// snapshot.yml is a daily schedule and it is the writer the hard rule is about,
+// so EVERY card on EVERY weekday is held to it. Narrowing one writer must never
+// quiet the other; tests/dead-man.test.js asserts it.
 //
 // -----------------------------------------------------------------------------
 // DEADLINES ARE ABSOLUTE INSTANTS, NOT "DID THE CRON FIRE"
@@ -105,10 +156,15 @@ const WRITERS = [
     writer: 'cfl-snapshotter (Railway cron, Fridays 18:00 UTC)',
     // Fri 18:00 UTC + 3h grace = Fri 21:00 = 3h before Saturday 00:00 UTC.
     deadlineHoursBeforeDate: 3,
-    // A card not on a Saturday is never reached by a Friday-only cron. That is
-    // a real gap and this says so rather than hiding it, but it is a different
-    // sentence from "the cron is broken".
-    note: 'A card that is not on a Saturday is outside this cron entirely.',
+    // MONITORING POLICY, not a claim about what the cron can reach. The cron is
+    // `0 18 * * 5` and the script takes the next upcoming card on ANY weekday,
+    // so a Friday wake does reach a Sunday card when nothing sits in between.
+    // Saturday is the weekday we CHOOSE to hold this writer to. See the header
+    // for both directions this gets wrong and why that is accepted (D-021).
+    //
+    // 6 = Saturday, as getUTCDay() counts.
+    monitoredWeekdays: [6],
+    note: 'Monitored on Saturdays only — a monitoring policy, not a limit of the cron. See D-021.',
   },
   {
     key: 'pre_fight_snapshots',
@@ -119,6 +175,11 @@ const WRITERS = [
     // date boundary itself, which both gives it 50 minutes of slack and leaves
     // the whole of D for a person to fix it before a US bell.
     deadlineHoursBeforeDate: 0,
+    // NO weekday policy, and there must never be one. snapshot.yml is a daily
+    // schedule and this is the writer the hard rule in CLAUDE.md is about, so
+    // every card on every weekday is held to it. That is also what makes the
+    // policy on the writer above affordable.
+    monitoredWeekdays: null,
     note: 'Append-only by trigger. A card that goes off dark cannot be filled in afterwards.',
   },
 ];
@@ -126,6 +187,8 @@ const WRITERS = [
 // Below this share of the card, rows present means a run that died part-way
 // rather than fights with no usable data.
 const THIN_RATIO = 0.5;
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // ---------------------------------------------------------------------------
 // Pure core. No network, no clock of its own — `now` is always passed in, the
@@ -165,8 +228,16 @@ function assess(events, now, writers = WRITERS) {
       const due = Date.parse(deadline) <= nowMs;
       const thin = Math.max(1, Math.floor(ev.fights * THIN_RATIO));
 
+      // The monitoring policy is applied FIRST, because a writer we do not hold
+      // to this card has no deadline worth checking. Named and printed, never
+      // silent: the gap stays visible in the log and the summary, it just does
+      // not pull the alarm.
+      const weekday = new Date(Date.parse(`${ev.event_date}T00:00:00Z`)).getUTCDay();
+      const monitored = !w.monitoredWeekdays || w.monitoredWeekdays.includes(weekday);
+
       let status;
-      if (!due) status = 'pending';
+      if (!monitored) status = 'out_of_schedule';
+      else if (!due) status = 'pending';
       else if (have === 0) status = 'dark';
       else if (have < thin) status = 'thin';
       else if (have < ev.fights) status = 'partial';
@@ -183,6 +254,10 @@ function assess(events, now, writers = WRITERS) {
         fights: ev.fights,
         rows: have,
         deadline,
+        weekday: DAY_NAMES[weekday],
+        monitoredOn: w.monitoredWeekdays
+          ? w.monitoredWeekdays.map(d => `${DAY_NAMES[d]}s`).join(', ')
+          : 'every weekday',
         status,
         breach: status === 'dark' || status === 'thin',
       });
@@ -207,6 +282,12 @@ function describe(c) {
            + `${c.rows} rows for ${c.fights} fights, under half the card, `
            + `deadline ${d}. That shape means a run that stopped part-way. `
            + `Written by ${c.writtenBy}.`;
+    case 'out_of_schedule':
+      return `${c.label}: ${c.event_name} (${c.event_date}) is a ${c.weekday}, and `
+           + `${c.writtenBy} is only monitored on ${c.monitoredOn}. Accepted `
+           + `monitoring policy (D-021), not a claim that the cron could not have `
+           + `covered it — so this is neither a failure nor a guarantee. `
+           + `${c.rows} rows.`;
     case 'partial':
       return `${c.label}: ${c.rows}/${c.fights} for ${c.event_name} `
            + `(${c.event_date}) — short of the full card, within normal range `
@@ -334,7 +415,10 @@ async function main() {
   const breaches = checks.filter(c => c.breach);
 
   for (const c of checks) {
-    const tag = c.breach ? 'BREACH ' : c.status === 'pending' ? '  ...  ' : '   ok  ';
+    const tag = c.breach ? 'BREACH '
+      : c.status === 'pending' ? '  ...  '
+      : c.status === 'out_of_schedule' ? '  n/a  '
+      : '   ok  ';
     console.log(`${tag} ${describe(c)}`);
   }
 
@@ -353,12 +437,23 @@ async function main() {
       lines.push(`### ${breaches.length} breach${breaches.length === 1 ? '' : 'es'}`, '');
       for (const c of breaches) lines.push(`- **${c.status.toUpperCase()}** — ${describe(c)}`);
     } else {
-      lines.push('### No breach', '', 'Every card past its deadline has a record.');
+      lines.push('### No breach', '', 'Every card a writer can reach, and that is past its '
+               + 'deadline, has a record.');
     }
-    lines.push('', '| card | date | writer | rows | fights | deadline | status |',
-                   '|---|---|---|---|---|---|---|');
+    // Out-of-scope cards get their own heading rather than one row in a table.
+    // The whole justification for not alarming on them is that the gap stays
+    // VISIBLE; a status buried in a twelve-row table is not visible.
+    const oos = checks.filter(c => c.status === 'out_of_schedule');
+    if (oos.length) {
+      lines.push('', `### ${oos.length} check${oos.length === 1 ? '' : 's'} out of scope`, '',
+        'Not a failure, and not silence either — a card outside the weekdays we hold '
+        + 'that writer to. A monitoring policy (D-021), not a limit of the cron.', '');
+      for (const c of oos) lines.push(`- ${describe(c)}`);
+    }
+    lines.push('', '| card | date | day | writer | rows | fights | deadline | status |',
+                   '|---|---|---|---|---|---|---|---|');
     for (const c of checks) {
-      lines.push(`| ${c.event_name} | ${c.event_date} | ${c.writer} | ${c.rows} | `
+      lines.push(`| ${c.event_name} | ${c.event_date} | ${c.weekday} | ${c.writer} | ${c.rows} | `
                + `${c.fights} | ${c.deadline} | ${c.status} |`);
     }
     fs.appendFileSync(summary, lines.join('\n') + '\n');
