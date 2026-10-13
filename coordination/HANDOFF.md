@@ -417,6 +417,34 @@ it. So a 00:00 breach is a card that can still be saved by hand, and the 12:00
 check is the last word before US bells. That ordering is the difference between
 an alarm somebody can act on and a postmortem.
 
+**Reviewed and corrected 2026-10-13.** The exemption shipped describing itself
+as a limit of the cron — `reachableWeekdays`, "cannot reach a card on another
+weekday". **That was false**: `cfl-snapshotter` selects the next upcoming card
+on *any* weekday, so a Friday wake reaches a Sunday card whenever nothing sits
+between them (UFC Freedom 250, 2026-06-14, had nothing). An exemption that reads
+as a guarantee nothing was missed is the wrong kind of wrong, so it is now
+`monitoredWeekdays` and described as a monitoring policy, with both directions
+it gets wrong written down. The forecast lock (`pre_fight_snapshots`) has no
+policy and is tested to breach on all seven weekdays — the exemption stays
+limited to the legacy `predictions` table.
+
+**The watchdog's first week, measured.** 23 scheduled runs 2026-10-06 → 10-13,
+all green, **zero issues and zero false alarms**; median delivery gap 6.6 h,
+largest 15.2 h. The 2026-10-10 card came through fully covered on both writers
+(12 fights, 12 predictions, 12 snapshots; first snapshot 10-09 02:39 UTC). The
+00:45 run on 10-10 — 45 minutes past that card's record deadline — reported
+"No breach: every card past its deadline has a record", so it was reading real
+data, not passing vacuously.
+
+**Settled since this entry was written: T-077 is deferred, not refused**
+([D-021](DECISIONS.md), owner, 2026-10-05). The Friday-only cron stays; the
+watchdog was narrowed to match it in the same pass, so a card on another weekday
+reports `out_of_schedule` rather than raising an alarm nobody could act on. The
+pre-fight record's scope is untouched and a midweek card still breaches on it.
+Measured cost of the gap: 3 cards in 128 since 2024-01-01. **Next build priority
+is the member-facing work** — odds comparison, movement charts, alert delivery —
+not more snapshotter coverage.
+
 **Owner:** nothing is required for this to work. If you want the email channel as
 well as the issue, set `RESEND_API_KEY` and `RESEND_FROM` (**T-074**) — that same
 pair also unblocks the weekly digest and member alerts, and **T-073** (the
