@@ -54,7 +54,11 @@ const strip = src => src
 const PRODUCT = ['index.html', 'market.html', 'fight.html', 'event.html',
                  'fighter.html', 'fighters.html', 'h2h.html', 'parlay.html',
                  'cardio.html', 'stats.html', 'pricing.html',
-                 'about.html', 'signup.html', 'account.html', 'mybook.html'];
+                 'about.html', 'signup.html', 'account.html', 'mybook.html',
+                 // Added 2026-10-12: legal and account pages are public too, and
+                 // disclaimer.html's share text said "Stats and predictions".
+                 'disclaimer.html', 'privacy.html', 'contact.html', 'login.html',
+                 'watchlist.html'];
 
 // Documented history. Exempt from the model ban, required to say so.
 const ARCHIVE = ['proof.html', 'track-record.html', 'predictor.html', 'edges.html',
@@ -92,6 +96,8 @@ const BANNED = [
   [/\bfade candidates?\b/i,           'recommends fading a fighter'],
   [/\bUFC Predictions\b/i,            'titles the page as predictions'],
   [/\bPredictions? (?:&|&amp;) (?:Edges|Full-Card Picks)\b/i, 'titles the page as predictions'],
+  [/\bprediction model\b/i,           'describes CFL as a prediction model'],
+  [/\bStats and predictions\b/i,      'says the site publishes predictions'],
 ];
 
 // Tables and views that only exist to serve a forecast.
@@ -112,6 +118,12 @@ const BANNED_READS = [
 // names the one pattern — anything else on that page still fails.
 const EXEMPT = {
   'cardio.html': [/\b(High|Medium|Low) confidence\b/i],
+  // Legal text, not product copy: section 2 of the disclaimer illustrates
+  // variance with "a 62% favorite under our model". Legal wording belongs to
+  // the owner and the lawyer (CRITICAL_GATES.md L3 item 9), so it is listed for
+  // them in research/commercial/COMMERCIAL_VALIDATION_2026-10-12.md rather than
+  // rewritten here. Remove this exemption when the sentence changes.
+  'disclaimer.html': [/\bour model\b/i],
 };
 
 PRODUCT.forEach(file => {

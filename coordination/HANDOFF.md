@@ -11,6 +11,42 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-12 (d) — Stabilization sprint, PR 4: what to sell first, and how to find out if anyone wants it
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+`research/commercial/COMMERCIAL_VALIDATION_2026-10-12.md`:
+
+- **The Pro boundary withholds nothing that exists.** Every built Pro item
+  (book table, charts, watchlists, alerts) is free; the rest is unbuilt.
+- **Smallest differentiated offer: fight-week price and movement alerts**, plus
+  a past-cards market history page. Remaining work is operational (mail key,
+  delivery test, cron), not development.
+- **Demand test before any build:** one honest "not available yet" page with
+  the intended price and a waitlist (existing `premium_waitlist` table and
+  `cflAuth.joinWaitlist`), two fight weeks of distribution in UFC betting
+  communities, ten conversations, and pass/fail thresholds fixed in advance.
+  An on-site box alone would measure nothing at one to four visitors a day.
+- **Blockers besides demand:** T-054 (privacy policy also wrongly describes a
+  cookie banner and affiliate cookies that do not exist), T-048, The Odds API
+  and UFCStats terms never read, price, Stripe, mail key.
+
+Small fixes in this PR: `disclaimer.html` and `about.html` share text no longer
+say "predictions" / "prediction model"; the no-model test now covers the legal
+and account pages (the disclaimer's legal body is exempted for one phrase and
+listed for the lawyer, not rewritten).
+
+## Next action
+
+Owner: decide whether to run the demand test, and if so set the price to show
+on the offer page. Correct the privacy policy's cookie statements regardless.
+Then Claude builds the one static offer page (no billing) and the two-week
+measurement.
+
+---
+
 ## 2026-10-12 (c) — Stabilization sprint, PR 3: count people, not page loads
 
 **From:** Claude
