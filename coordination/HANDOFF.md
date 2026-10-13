@@ -11,6 +11,66 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (d) — Fight Lab Phase 1: one page for one matchup (T-080, in review)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+Owner-approved product direction: Fight Lab is the heart of CFL. Phase 1 is
+built on `claude/pensive-fermi-d6pbi0` and is **not merged**. It waits for review.
+
+`fight.html` now answers three questions in order. A row of jump links sits under
+the title.
+
+1. **Who are these fighters?** One card per corner: pro and UFC record, age,
+   stance, country, the style label (`v_fighter_style`, this bout's division
+   first and career second, with the fight count and a small-sample flag), and
+   the last five results as W/L chips, newest first.
+2. **How do they compare?**
+   - **Tale of the tape** is regrouped into physical / record / striking /
+     grappling, with both names pinned above the columns. On a phone the label
+     moves above the pair, so each number gets half the screen. A debutant's
+     rates read "no UFC data" rather than 0.
+   - **Late-round performance** is side by side (`v_fighter_consistency`). Each
+     card shows the plain label, the figure, the sample (solid / thin), how many
+     recent fights reached round three, and the late minutes behind it. It is
+     never called cardio or fatigue, and the caveat says output is not
+     tiredness and does not pick winners.
+   - **Last five fights** lists each fight with the opponent, method, round,
+     date and card.
+   - **What stands out** carries the existing matchup notes, unchanged.
+3. **What does the betting market say?** Consensus, chart and every-book
+   table, unchanged and now below the research.
+
+The rules live in a new pure module, `fight-lab.js`, tested by
+`tests/fight-lab.test.js` (19 tests). There is no database change. The labels
+"Takedowns per 15 min" and "Submission tries per 15 min" now say what UFCStats
+actually measures.
+
+**Tested** in Chromium at 1366 px and 390 px on two real 2026-10-17 bookings:
+Buckley vs Malott (full data, 7 books) and Mahjoub vs Sutherland (a debutant
+with no prices, an empty-state check). This container's network policy blocks
+Supabase, so the page ran against real rows read through the Supabase MCP and
+replayed to the browser. That is not the deployed site. Mahjoub vs Sutherland
+is one of the bookings retired by D-024; it was used only because it exercises
+every empty state.
+
+**Two findings.**
+
+- The per-fight strike breakdown by target and position is **already stored**
+  (`fights.*_head/_leg/_clinch…_landed`, 8,921 of 8,945 completed fights). Phase
+  3 style labels need no scraper expansion. T-082 is re-scoped to say so.
+- `fighters.ufc_wins/ufc_losses` is stale for at least one fighter (T-083).
+
+## Next action
+
+Owner: review the T-080 pull request on a phone and a desktop, against a fight on
+the 2026-10-17 card. If it is approved, merge it. Then T-081 (footage links) is
+next, but only if it serves the first-ten-customers goal; otherwise it waits.
+
+---
+
 ## 2026-10-13 (b) — American fighters get the real flag behind them
 
 **From:** Claude

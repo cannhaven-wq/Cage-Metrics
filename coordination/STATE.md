@@ -17,6 +17,11 @@ about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10
 No new prediction model is built except under PRED-001.
 Cosmetic, 2026-10-13: the country wash behind each fighter is now the real
 flag image rather than a stripe of its colours.
+**Fight Lab Phase 1 is in review (T-080), not merged.** It answers three
+questions: who these fighters are, how they compare (tale of the tape,
+late-round output with its sample, last five fights), and what the market
+says. Footage links (T-081) and expanded style labels (T-082) are queued as
+separate tasks. The data for T-082 is already in `fights`.
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
