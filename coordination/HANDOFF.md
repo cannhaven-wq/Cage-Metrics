@@ -11,6 +11,50 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (f) — Fight Lab is live; T-083 answered; two production discrepancies
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+**Fight Lab is live.** cannhaven-wq/Cage-Metrics#64 was merged at the verified
+commit (`bbcbbb9`), and Pages deployed it.
+- **Deployment:** the `verify-live` workflow confirms the site serves the
+  checked-out files.
+- **Live check:** a new Fight Lab job in that workflow opened three active
+  2026-10-17 bookings in Chromium at 1440 and 390 px against the production
+  database. All checks passed with no console errors.
+  - Buckley vs Malott: 7 books.
+  - Cerminara vs Stiller: no prices, and a debutant.
+  - Mahjoub vs Faglier: priced, two debutants.
+
+**T-083: the `fights` table is right.** It was checked against UFCStats for 74
+fighters and agrees on every UFC-event bout. `fighters.ufc_wins/losses/draws`
+agrees for 13 of 74. The full write-up is in
+`research/data-integrity/T-083_UFC_RECORDS_2026-10-13.md`.
+
+**Production discrepancies, both pre-dating T-080:**
+
+1. **The wrong UFC record is still shown** on `fighters.html`, `event.html`,
+   `h2h.html`, `cardio.html` and the `/f/` stubs (T-084).
+2. **The movement chart's series view takes ~3.3 s per fight** (T-085).
+
+**Tooling on `claude/pensive-fermi-d6pbi0`, not yet in a pull request:**
+- `.github/scripts/verify-fight-lab.js` and the `fight-lab` job in
+  `verify-live.yml`;
+- `research/data-integrity/reconcile_ufc_records.py` with its manual workflow.
+
+## Next action
+
+Owner:
+- **T-084:** approve the fix, and say whether a `v_fighter_ufc_record` view is
+  acceptable (a database change) or it should be done per page.
+- **Tooling:** say whether to open the pull request for it.
+
+After that, return to the revenue-first queue.
+
+---
+
 ## 2026-10-13 (e) — Fight Lab Phase 1: one page for one matchup (T-080, in review)
 
 **From:** Claude
