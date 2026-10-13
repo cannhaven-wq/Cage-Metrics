@@ -23,7 +23,9 @@ site).** **T-083 answered:** the `fights` table matches UFCStats on UFC bouts
 event, T-086). **T-084 and T-085 are live (2026-10-13):** every public UFC record
 is counted from `fights` through `v_fighter_ufc_record`, and the movement chart
 loads in about 0.2 s instead of 2. The DWCS correction (T-086) is approved with
-gates and not yet applied. Footage links (T-081) and expanded style
+gates and not yet applied. **Security, 2026-10-13 ([D-025](DECISIONS.md)):** browsers
+could write the sportsbook list through a definer view; closed on production
+the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
 **Security fix, 2026-10-13 (T-087, owner-approved, applied).** The browser

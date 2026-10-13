@@ -1812,3 +1812,65 @@ that were cancelled and replaced no longer show on the next two cards.
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session.
 
+
+## D-025 — Browsers can no longer write sportsbooks through `v_odds_books_sportsbooks`
+
+| field | value |
+|---|---|
+| date | 2026-10-13 |
+| decided by | Reed Cannon (owner) |
+| task | none; security fix found during T-084/T-085 review |
+| level | L3 |
+| reversible | yes, but it should not be: `GRANT INSERT, UPDATE, DELETE ON public.v_odds_books_sportsbooks TO anon, authenticated;` |
+
+**The owner's instruction, quoted:** *"Apply now (Recommended)"*. The option
+read: run `security_odds_books_view_readonly.sql` on production now, verify
+reads still work and writes are refused, re-run the security advisor, then
+commit the fix and its test in their own PR for the record.
+
+**Plain version.** Anyone with the site's public key could have renamed or
+deleted a sportsbook, and deleting one would also have erased every price CFL
+ever captured from it. Browsers can now only read that list.
+
+**What was found.**
+- `v_odds_books_sportsbooks` is a SECURITY DEFINER view over the admin-only
+  `odds_books` table.
+- It is a simple one-table filter, so Postgres lets it be written through.
+- `anon` and `authenticated` held INSERT, UPDATE and DELETE on it, from
+  Supabase's default grants.
+- `fight_odds.book_id` is ON DELETE CASCADE.
+
+It was reproduced on a throwaway Postgres
+(`tests/test_security_odds_books_view.py`). No write was attempted against
+production.
+
+**What was done.** Applied as the Supabase migration
+`security_odds_books_view_readonly`: REVOKE ALL from both browser roles, then
+GRANT SELECT.
+
+**Verified after applying:**
+- Both roles hold SELECT and nothing else (checked with `has_table_privilege`
+  for seven privileges).
+- `anon` reads 10 sportsbooks through the view.
+- `odds_books` still has 14 rows.
+- `v_fight_odds_latest_by_book` still returns 7 rows for fight 46774.
+- No sign it was ever used. Book ids 1–14 are intact, and the API log shows no
+  request touching the view.
+- The security advisor is unchanged from the 2026-10-13 baseline (39, 10, 2,
+  8 + 8, 9, 1), so no new finding.
+
+**Reconciled with T-087, same day.** T-087
+(`odds_write_lockdown_migration.sql`, cannhaven-wq/Cage-Metrics#68) was applied
+minutes after this fix. It revokes every write from both browser roles and
+`PUBLIC` on all four odds tables, every view reading them and their sequences.
+It includes this view, with the same end state: SELECT only. This decision stays
+as the record of the hole and its reproduction. T-087 is the standard any later
+grant on odds data is held to, and `tests/odds-write-lockdown.test.js` enforces
+it, including against this decision's SQL file.
+
+**What is not decided.** Grants on views outside the odds data are T-088's
+job. None of those views can be written through (checked in
+`information_schema.views.is_updatable`), so this is hygiene, not a hole.
+
+**Attribution note.** Recorded by Claude from the owner's answer in the
+project-audit session.
