@@ -30,6 +30,7 @@ import unittest
 from test_sql_behaviour import PostgresCase, REPO_ROOT
 
 VIEW_SQL = os.path.join(REPO_ROOT, "fighter_ufc_record_view.sql")
+ROLLBACK_SQL = os.path.join(REPO_ROOT, "fighter_ufc_record_view.rollback.sql")
 
 SCHEMA = """
 do $$ begin
@@ -174,6 +175,19 @@ class TestFighterUfcRecord(PostgresCase):
         out = self.psql("set role anon; select count(*) from public.v_fighter_ufc_record;",
                         db=self.db, expect_error=True)
         self.assertIn("permission denied", out)
+
+    # ---------------------------------------------------------------- rollback
+    def test_rollback_removes_only_the_view_and_can_be_reapplied(self):
+        counts = lambda: self.psql("select (select count(*) from public.fights) || ',' || "
+                                   "(select count(*) from public.events);", db=self.db).strip().splitlines()[-1].strip()
+        before = counts()
+        self.psql_file(ROLLBACK_SQL, db=self.db)
+        gone = self.psql("select to_regclass('public.v_fighter_ufc_record') is null;", db=self.db)
+        self.assertEqual(gone.strip().splitlines()[-1].strip(), "t", "the rollback left the view behind")
+        self.assertEqual(counts(), before, "the rollback touched fights or events")
+        self.psql_file(ROLLBACK_SQL, db=self.db)          # re-runnable
+        self.psql_file(VIEW_SQL, db=self.db)
+        self.assertEqual(self.record(1), "1,1,1,1,4")
 
     # ------------------------------------------------------------ re-runnable
     def test_applying_the_file_twice_changes_nothing(self):
