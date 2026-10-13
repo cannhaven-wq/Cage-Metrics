@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-13 (d) — Fight Lab Phase 1: one page for one matchup (T-080, in review)
+## 2026-10-13 (e) — Fight Lab Phase 1: one page for one matchup (T-080, in review)
 
 **From:** Claude
 **To:** Owner
@@ -71,24 +71,39 @@ next, but only if it serves the first-ten-customers goal; otherwise it waits.
 
 ---
 
-## 2026-10-13 (b) — American fighters get the real flag behind them
+## 2026-10-13 (d) — Commercial-readiness audit: what stands between CFL and its first $100
 
-**From:** Claude
+**From:** Claude (project-audit session)
 **To:** Owner
 **Date:** 2026-10-13
 
-The country wash behind a fighter (Card Lab sides, the fighters grid, the Prop
-Board names) was a gradient of three flag colours. For the US that read as a
-generic red-white-and-blue band with no stars. `cfl.flagStyle` in `_shared.js`
-now puts the real flag image (flagcdn, the same CDN `cfl.flagChip` already
-uses) on top of that gradient; if the image fails, the old colours still show.
-This applies to every country in the colour table, not only the US — the same
-complaint holds for any flag with a symbol. Opacity and fade are unchanged.
+The audit is in `research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md`.
+CFL cannot take its first $100 today, and the model is not why. Four things
+stand in the way:
+
+1. Almost no audience: one engaged person in the first hour of the corrected
+   human count.
+2. The paid feature cannot deliver: no mail key, and the alerts cron is off.
+3. No lawful way to take money: no Stripe account, no Terms, and the privacy
+   page is wrong.
+4. Data rights for The Odds API and UFCStats are unchecked.
+
+The most plausible first $100 is one business customer, such as a betting
+newsletter, podcast or Discord, paying for a weekly card-market brief. The
+audit has a three-week plan and a kill rule.
 
 ## Next action
 
-Owner: look at the next card on the live site and say whether the wash is
-strong enough to read as a flag, or should go up from 16% opacity.
+The owner does three things this week:
+
+- Create a Resend key and set `RESEND_API_KEY` / `RESEND_FROM`. Claude then
+  runs the alert delivery test and turns on the alerts schedule.
+- Read The Odds API terms on commercial use.
+- Book the first five conversations with people who publish about UFC
+  betting.
+
+Claude can build the non-transacting `/pro.html` offer page and a sample
+weekly brief once the owner sets the price to show.
 
 ---
 
@@ -117,6 +132,27 @@ CLAUDE.md.
 Draft PRED-002's preregistration (opponent-adjusted grappling) on DEV data,
 then run the commercial-readiness audit the owner asked for next. The owner's
 next phase is the first $100 of revenue.
+
+---
+
+## 2026-10-13 (b) — American fighters get the real flag behind them
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+The country wash behind a fighter (Card Lab sides, the fighters grid, the Prop
+Board names) was a gradient of three flag colours. For the US that read as a
+generic red-white-and-blue band with no stars. `cfl.flagStyle` in `_shared.js`
+now puts the real flag image (flagcdn, the same CDN `cfl.flagChip` already
+uses) on top of that gradient; if the image fails, the old colours still show.
+This applies to every country in the colour table, not only the US — the same
+complaint holds for any flag with a symbol. Opacity and fade are unchanged.
+
+## Next action
+
+Owner: look at the next card on the live site and say whether the wash is
+strong enough to read as a flag, or should go up from 16% opacity.
 
 ---
 

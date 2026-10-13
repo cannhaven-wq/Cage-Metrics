@@ -23,6 +23,14 @@ late-round output with its sample, last five fights), and what the market
 says. Footage links (T-081) and expanded style labels (T-082) are queued as
 separate tasks. The data for T-082 is already in `fights`.
 
+**Next phase (owner, 2026-10-13): the first $100 of revenue.** The
+commercial-readiness audit
+([`research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md`](../research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md))
+finds four blockers, none of them the model: there is almost no audience, alerts
+cannot send, there is no lawful way to take money, and data rights are
+unchecked. The most plausible first $100 is one business customer, not ten
+subscribers. There is a three-week plan with a kill rule.
+
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
 forecasting engine was removed from every forward-facing surface on the owner's
