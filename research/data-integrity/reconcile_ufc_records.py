@@ -49,6 +49,12 @@ WELL_KNOWN = ["Jon Jones", "Islam Makhachev", "Alexander Volkanovski", "Israel A
               "Kamaru Usman", "Leon Edwards", "Max Holloway", "Charles Oliveira"]
 
 FIGHT_ID_RE = re.compile(r"/fight-details/([0-9a-f]{16})")
+# UFCStats fighter pages also list bouts from other promotions a fighter had
+# before or beside the UFC: Dana White's Contender Series, Road to UFC, WEC,
+# PRIDE, Strikeforce, DREAM, Cage Warriors... Those are not UFC fights and are
+# correctly absent from `fights`. Measured 2026-10-13: every one of the 54
+# bouts UFCStats listed that `fights` lacked was one of these.
+UFC_EVENT_RE = re.compile(r"^(UFC\b|The Ultimate Fighter\b)", re.I)
 
 
 # ---------------------------------------------------------------- Supabase
@@ -172,7 +178,9 @@ def main() -> int:
         if html is None:
             could_not_look.append({"id": fid, "name": f["name"], "why": "UFCStats page not fetched"})
             continue
-        src = [r for r in parse_fighter_page(html) if r["result"] in ("win", "loss", "draw", "nc")]
+        rows = [r for r in parse_fighter_page(html) if r["result"] in ("win", "loss", "draw", "nc")]
+        src = [r for r in rows if UFC_EVENT_RE.match(r["event"])]
+        non_ufc = [r for r in rows if not UFC_EVENT_RE.match(r["event"])]
         ours = rest("fights", {"select": "id,ufc_fight_id,winner_id,method,is_active,event_id",
                                "or": f"(fighter_a_id.eq.{fid},fighter_b_id.eq.{fid})"})
         by_ufc = {o["ufc_fight_id"]: o for o in ours if o.get("ufc_fight_id")}
@@ -199,6 +207,7 @@ def main() -> int:
             "fighters_table": {"w": f["ufc_wins"], "l": f["ufc_losses"], "d": f["ufc_draws"]},
             "fighters_updated_at": f["updated_at"],
             "missing_from_fights": missing, "extra_in_fights": extra, "result_mismatches": wrong,
+            "non_ufc_bouts_ignored": len(non_ufc),
         })
 
     def rec(t): return f"{t['w']}-{t['l']}" + (f"-{t['d']}" if t.get("d") else "") + (f" ({t['nc']} NC)" if t.get("nc") else "")
@@ -209,7 +218,9 @@ def main() -> int:
     fighters_ok = sum(1 for r in report if same(r["fighters_table"], r["ufcstats"]))
     lines = [f"# UFC record reconciliation against UFCStats ({time.strftime('%Y-%m-%d %H:%M UTC', time.gmtime())})", "",
              f"Fighters checked: **{n}**. Could not look: **{len(could_not_look)}**.", "",
-             f"* `fights` agrees with UFCStats bout-for-bout: **{fights_ok} / {n}**",
+             f"* `fights` agrees with UFCStats bout-for-bout on UFC events: **{fights_ok} / {n}**",
+             f"* Non-UFC bouts on those UFCStats pages, ignored (DWCS, WEC, PRIDE...): "
+             f"**{sum(r['non_ufc_bouts_ignored'] for r in report)}**",
              f"* `fighters.ufc_wins/losses/draws` agrees with UFCStats: **{fighters_ok} / {n}**", "",
              "| fighter | UFCStats | fights table | fighters table | missing | extra | wrong result |",
              "|---|---|---|---|---|---|---|"]
@@ -219,7 +230,7 @@ def main() -> int:
                      f"{len(r['result_mismatches'])} |")
     gaps = [(r["name"], m) for r in report for m in r["missing_from_fights"]]
     if gaps:
-        lines += ["", "## UFC bouts on UFCStats that `fights` does not hold", "",
+        lines += ["", "## UFC-event bouts on UFCStats that `fights` does not hold", "",
                   "| fighter | result | opponent | event | date | ufcstats id |", "|---|---|---|---|---|---|"]
         lines += [f"| {n} | {m['result']} | {m['opponent']} | {m['event']} | {m['date']} | {m['ufc_fight_id']} |"
                   for n, m in gaps]
