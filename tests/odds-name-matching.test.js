@@ -60,7 +60,7 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(
   ['normalizeName', 'firstLast', 'squash', 'lastName', 'pairKey',
-   'buildFightIndex', 'lookupFight'].map(extract).join('\n'),
+   'buildFightIndex', 'feedAlias', 'lookupFight'].map(extract).join('\n'),
   sandbox);
 const { buildFightIndex, lookupFight, lastName, normalizeName } = sandbox;
 
@@ -96,6 +96,21 @@ t('the fights that already matched still match the same way', () => {
   const ix = buildFightIndex(CARD);
   eq(lookupFight(ix, 'Jean Silva', 'Yadong Wang').id, 4, 'an exact name stopped matching');
   eq(lookupFight(ix, 'Johnny Walker', 'Mick Parkin').id, 1, 'our own spelling stopped matching');
+});
+
+t('a fighter whose surname changed matches through the reviewed alias (2026-10-12)', () => {
+  // The feed sent "Mackenzie Stiller vs Katlyn Chookagian" for UFC FN Buckley
+  // vs. Malott; our record is "Katlyn Cerminara vs Mackenzie Stiller". No
+  // automatic tier can recover a changed surname.
+  const ix = buildFightIndex([...CARD, { id: 53620, fighter_a_name: 'Katlyn Cerminara', fighter_b_name: 'Mackenzie Stiller' }]);
+  const got = lookupFight(ix, 'Mackenzie Stiller', 'Katlyn Chookagian');
+  ok(got, 'the Chookagian/Cerminara bout still does not match');
+  eq(got.id, 53620, 'the alias matched the wrong fight');
+});
+
+t('an alias does not let a different opponent through', () => {
+  const ix = buildFightIndex([{ id: 53620, fighter_a_name: 'Katlyn Cerminara', fighter_b_name: 'Mackenzie Stiller' }]);
+  eq(lookupFight(ix, 'Someone Else', 'Katlyn Chookagian'), null, 'the alias matched a bout with a different opponent');
 });
 
 /* ----------------------------------------------- the refusals that matter more */

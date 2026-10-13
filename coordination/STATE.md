@@ -16,6 +16,10 @@ export red, alerts and Brief undeliverable; (3) measure human traffic — the
 in-house funnel counts JavaScript-executing crawlers as sessions, so the
 350–465 daily "sessions" are mostly not people; (4) a demand test before any
 Pro build. Stripe stays off.
+PR 1 (credibility) and PR 2 (operations, monitor) are open; the stale-booking
+retirement and the CLV migration sequence wait for owner approval
+(`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`,
+`research/clv/MIGRATION_SEQUENCE_2026-10-12.md`).
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The

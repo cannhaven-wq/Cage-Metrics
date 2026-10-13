@@ -15,9 +15,25 @@ name: Export tables
 #
 # Read-only against Supabase: build/export_tables.py issues GET requests only.
 
+# ---------------------------------------------------------------------------
+# THE SCHEDULE IS OFF (2026-10-12, stabilization sprint, audit item A-004).
+#
+# This job failed on every scheduled run ("SUPABASE_URL is not set": the
+# secret was never created), so no export has ever been committed. It was not
+# re-enabled by adding the secret, because that would do something nobody
+# has decided: commit the full raw fight_odds, prop_odds, prop_model_locks,
+# fighters, fights and fight_rounds tables to a PUBLIC repository every day.
+# fight_odds is admin-only in the database precisely so raw quotes are not
+# published, and neither The Odds API's nor UFCStats' terms have been checked
+# for redistribution.
+#
+# Before turning it back on, decide where the exports go. A private destination
+# (a private repo, a storage bucket) is the safe answer; this repository is
+# public. Then add SUPABASE_URL as a secret and restore:
+#     schedule:
+#       - cron: '0 5 * * *'
+# ---------------------------------------------------------------------------
 on:
-  schedule:
-    - cron: '0 5 * * *'
   workflow_dispatch:
 
 permissions:
