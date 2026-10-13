@@ -3,25 +3,18 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-12
+Last updated: 2026-10-13
 
-**Stabilization sprint, 2026-10-12.** The owner moved the project from feature
-development to commercial stabilization after the current-state audit
-(`audits/cfl-current-state/`, branch `claude/nice-bell-ussmhp`). No new features
-and no new prediction models until there is evidence of human demand. Order:
-(1) remove the retired forecast from every public channel — the X poster had been
-publishing it three times a week; (2) repair the silent operational failures —
-fighter scraper dead since May, odds-scraper deploys failing since July, daily
-export red, alerts and Brief undeliverable; (3) measure human traffic — the
-in-house funnel counts JavaScript-executing crawlers as sessions, so the
-350–465 daily "sessions" are mostly not people; (4) a demand test before any
-Pro build. Stripe stays off.
-PR 1 (credibility) and PR 2 (operations, monitor) are open; the stale-booking
-retirement and the CLV migration sequence wait for owner approval
-(`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`,
-`research/clv/MIGRATION_SEQUENCE_2026-10-12.md`).
-Human traffic is measured, not inferred, once PR 3 lands: about one to four
-people a day today, falling (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
+**Stabilization sprint, 2026-10-12 → 13.** The four stabilization PRs are
+**merged** (#54 credibility, #55 operations and the pipeline monitor, #56 human
+traffic, #57 commercial validation), the analytics migration is applied, and the
+live site was verified from GitHub's side on 2026-10-13 (served bytes match
+`main`; the card renders market cells only). The pipeline monitor's first run
+was healthy. Still waiting on the owner: the four-row stale-booking retirement
+before Friday 23:00 UTC (`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`),
+the CLV migration sequence, and the forecast-lock table below. Human traffic is
+about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
+No new prediction model is built except under PRED-001.
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
@@ -105,6 +98,18 @@ Git history is the audit trail. These files are the working surface.
 ---
 
 ## Where the project is
+
+### Prediction research is governed by PRED-001 — frozen 2026-10-12
+
+Any new attempt to forecast winners follows
+[`research/protocol/PREDICTION_RESEARCH_PROTOCOL.md`](../research/protocol/PREDICTION_RESEARCH_PROTOCOL.md).
+Fights from **2025-01-01 on are sealed**: no fitting, tuning or feature choice
+on them. The sealed 2025-01-01 to 2026-07-11 window (710 priced fights since
+Amendment 1) gets one independent look per experiment and ten looks in total,
+through `run_look` only. **Any claim needs a
+prospective test**, and the dev-measured arithmetic says a 0.005 log-loss gain
+over the market takes about 1,650 fights, roughly 3.4 years, to confirm. No
+model has been built or trained under it yet. Computer vision is deferred.
 
 ### Monetization sprint — started 2026-09-21
 

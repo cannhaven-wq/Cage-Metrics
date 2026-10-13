@@ -11,6 +11,134 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 — Stabilization merged and verified; PRED-001 reviewed and amended; forecast-lock table proposed
+
+**From:** Claude (project-audit session)
+**To:** Owner
+**Date:** 2026-10-13
+
+**Production.** #54, #55, #56 and #57 are merged. Before merging, an
+independent reviewer that had written none of the code found one blocking bug
+in #55: the Chookagian→Cerminara alias matched the bout, but the A/B step still
+read the raw feed name. It would have dropped her price and written one-sided
+rows into append-only `fight_odds`. The bug never reached production. It was
+fixed, with a capture test that failed before the fix and passes after.
+
+- **Analytics.** The migration was applied: `engaged_session` is in the CHECK,
+  and `v_traffic_daily` exists. On first apply the view inherited Supabase's
+  default grants (`anon` held INSERT/UPDATE/DELETE/TRUNCATE); it now holds
+  SELECT only, and the repo file revokes first.
+- **Main.** Tests are green at `77e38602`. The one red run, at the #54 merge,
+  was a preview page generated from the old template before the post-merge
+  prerender replaced it.
+- **Verify live site** passed: served bytes match `main`, and the card shows
+  only consensus, fair price, movement and best price.
+- **Pipeline health** first run: healthy.
+
+**PRED-001 Amendment 1 ([D-023](DECISIONS.md)).** An independent reviewer
+tried to break the protocol in **six rounds** before merge. Rounds 1–5 each
+found blocking problems, all closed and turned into tests. Round 6 found
+nothing blocking, plus one small gap, which is also closed. Rounds 3–5 added
+three rules:
+
+- prospective looks take whole cards;
+- every priced bout needs a lock row, and a bout the model declines needs an
+  abstention lock (`p_a` NULL) written before the bell;
+- the population comes from a committed recipe whose cutoff is the card start.
+
+The two earliest rounds are summarised below.
+
+- **Round 1** found five bypasses that kept every test green.
+- **Round 2** found that two of them still worked:
+  - the freeze history could be rewritten in place;
+  - H1 outcomes, prices and card groupings were not checked, and flipping 5%
+    of outcomes turned REJECT into PASS_H1.
+
+  It also found the registry was editable, prospective inputs were chosen by
+  the caller, and the lock table could be back-dated through `now()`.
+
+Every finding is closed and is a test. Inputs to a look are now checked or
+derived rather than trusted. Merged freeze, ledger and registry entries cannot
+change relative to main, and CI fails if it cannot fetch main. Selective
+locking makes a prospective look INVALID. H1 is 710 fights, after excluding
+three that were rebooked in place. No look has been taken.
+
+**What code cannot stop, stated in the protocol.** Anyone with database
+credentials can compute a sealed log loss by hand. So no claim ever rests on
+H1.
+
+**Forecast-lock table: proposed, not applied** (`research/protocol/
+proposed_2026-10-13_win_model_locks.sql`).
+
+- Append-only for every role.
+- The lock time is `clock_timestamp()`, the wall clock at insert.
+- The deadline is the card's earliest start.
+- One forecast per fight per experiment.
+- The market snapshot is required, and `event_date` comes from `events`.
+- The table refuses locks on settled fights, on retired bookings, on swapped
+  corners, and with a training cutoff after the event.
+- Private to both browser roles.
+
+12 checks ran against production inside rolled-back transactions, and every
+one passed. The tool times out on the full-length request, so it ran in two
+halves. Nothing persisted.
+
+## Next action
+
+The owner decides two things:
+
+1. **Apply the lock migration** after reading it. Claude applies it with
+   `apply_migration`, re-runs the grants check, and records it.
+2. **Confirm opponent-adjusted grappling as PRED-002.** Claude then writes
+   the preregistration on DEV data only; nothing is trained before it is
+   frozen.
+
+Separately, the four-row stale-booking update must be applied before Friday
+2026-10-16 23:00 UTC.
+
+---
+
+## 2026-10-12 — PRED-001: the bar a prediction model must clear, written before anyone tries
+
+**From:** Claude (project-audit session)
+**To:** Owner → research sessions (prediction benchmarks; research workstreams)
+**Date:** 2026-10-12
+
+The owner asked for an Independent Auditor and a preregistered research
+protocol before any new model work. It is frozen in `research/protocol/`:
+the protocol, its thresholds (`protocol.json`), the executable decision rules
+(`pred_protocol.py`), a fingerprint of the sealed data (`holdout_manifest.json`),
+an empty append-only ledger of looks at sealed data, and a preregistration
+template. `tests/test_prediction_protocol.py` (33 tests) fails if the text or
+the code drifts from its frozen hash, if a ledger budget is exceeded, or if
+experiment code queries the database directly. The decision rules are checked
+against synthetic worlds where the truth is known: real information passes; a
+copy of the market, a noisy market and an overconfident model are rejected or
+failed; a leak is flagged; and **a real gain of ~0.004 on 3,600 fights is not
+confirmed**, because that is honestly too small to see.
+
+**Said plainly.** The sealed history can only detect a gain of about 0.008. The
+best gain ever measured here is 0.0034. Confirming a gain of 0.005 forecast in
+advance takes about 1,650 fights. The sealed window is not virgin either: the
+Factor Lab and the v4–v6 results already cover it, and the protocol says so.
+
+**Coordination.** The prediction-benchmarks session owns the inventory of past
+results (INFO-AUDIT-001, `research/info_audit/` on
+`claude/optimistic-ptolemy-8g2smd` @ `cc7f810`); this protocol cites it rather
+than recomputing it. The seal is recorded as [D-022](DECISIONS.md). The
+research-workstreams session was told not to write a second Step 2. Both were
+asked to fit nothing on 2025+ fights from now on.
+
+## Next action
+
+Prospective testing needs an append-only lock table for win-probability
+forecasts, built on the `prop_model_locks` pattern. Creating it is a production
+migration (L3 item 5); draft the SQL for the owner's approval. Until it exists,
+no PRED-001 experiment can get past an H1 look. The research agents start by
+copying `EXPERIMENT_TEMPLATE.md` and working on DEV only.
+
+---
+
 ## 2026-10-12 (d) — Stabilization sprint, PR 4: what to sell first, and how to find out if anyone wants it
 
 **From:** Claude

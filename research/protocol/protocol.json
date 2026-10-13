@@ -1,0 +1,90 @@
+{
+  "protocol_id": "PRED-001",
+  "title": "Prediction research protocol: does a model know anything the betting market does not?",
+  "kind": "research_protocol",
+  "status": "frozen",
+  "version": "1.1.0",
+  "created": "2026-10-12",
+  "frozen_on_instruction_of": "owner, 2026-10-12: \"Proceed with Step 2: establish the Independent Auditor and preregister CFL's prediction research protocol.\"",
+  "protocol_path": "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md",
+  "code_path": "research/protocol/pred_protocol.py",
+  "anchor": {
+    "repository": "cannhaven-wq/Cage-Metrics",
+    "base_commit_on_main": "38d47f7d",
+    "base_commit_note": "main at freeze time: the stabilization session's schedule removal for the social poster. The stabilization pull requests #54-#57 are not merged at freeze and are not required by this protocol.",
+    "data_fingerprint": "research/protocol/holdout_manifest.json"
+  },
+  "partitions": {
+    "dev": {
+      "end_exclusive": "2025-01-01",
+      "rule": "the only fights development code may read, fit, tune, select features on or look at results for"
+    },
+    "h1": {
+      "start": "2025-01-01",
+      "end_inclusive": "2026-07-11",
+      "rule": "sealed historical holdout. Scored only by the auditor, only through the ledger, only once per registered model artifact. Ends on the last card that carries a BestFightOdds closing consensus, so one benchmark covers the whole window."
+    },
+    "reserve": {
+      "start": "2026-07-12",
+      "end_exclusive": "2026-10-12",
+      "rule": "sealed and unscored. No consistent closing benchmark exists for it (BestFightOdds history stops 2026-07-11; clean per-book capture starts 2026-09-19). Not available to development. Using it for anything needs an amendment."
+    },
+    "prospective": {
+      "rule": "fights whose forecast is locked, append-only, after the model artifact is frozen and before the fight's start. The only data on which an outcome cannot have been seen by anyone."
+    }
+  },
+  "thresholds": {
+    "primary_metric": "log loss, natural log, probabilities clipped to [1e-4, 1-1e-4]",
+    "probability_clip": 0.0001,
+    "minimum_useful_effect": 0.003,
+    "minimum_useful_effect_note": "per-fight mean log-loss gain over the market. Same value DUR-001/DUR-002 preregistered. A smaller gain is treated as no meaningful incremental information whatever its p-value.",
+    "alpha_h1_per_evaluation": 0.005,
+    "h1_evaluation_budget": 10,
+    "h1_familywise_alpha": 0.05,
+    "alpha_prospective_per_evaluation": 0.01,
+    "prospective_confirmatory_budget": 5,
+    "prospective_familywise_alpha": 0.05,
+    "power": 0.8,
+    "sd_floor_incremental": 0.064,
+    "sd_floor_standalone": 0.32,
+    "sd_floor_source": "measured on the dev partition only (2023-01-01..2024-12-31, 643 fights, 85 events, BFO closing consensus): SD of per-fight LL_model - LL_market was 0.311-0.317 for the standalone v1-v3 models and 0.062-0.063 for a fixed 80/20 logit blend of market and model. Rounded up.",
+    "design_effect_floor": 1.0,
+    "design_effect_measured": "0.72-0.85 on the same dev rows; floored at 1.0 because a measured value below 1 is not a licence to need fewer fights",
+    "bootstrap_resamples": 10000,
+    "bootstrap_seed": 20261012,
+    "cluster_unit": "UFC event",
+    "min_events_scored": 20,
+    "min_coverage": 0.95,
+    "leak_tripwire_delta_ll": 0.015,
+    "calibration_intercept_max_abs": 0.1,
+    "futility_min_fraction": 0.5,
+    "symmetry_tolerance": 1e-06,
+    "min_target_effect": 0.004,
+    "min_target_effect_note": "a preregistered target must exceed the minimum useful effect, because the PASS rule also requires the estimate to reach it; at a target equal to it, power is ~50% (Amendment 1).",
+    "leak_tripwire_accuracy_lift": 0.05,
+    "calibration_slope_tolerance": 0.2,
+    "calibration_relative_margin": 0.1,
+    "calibration_rule": "FAIL_CALIBRATION when |slope-1| > max(0.2, |market slope-1| + 0.1) or |intercept| > max(0.1, |market intercept| + 0.05): judged against the market's own calibration on the same fights (Amendment 1)."
+  },
+  "verdicts": [
+    "INVALID",
+    "SUSPECT",
+    "REJECT",
+    "FAIL_CALIBRATION",
+    "UNDERPOWERED",
+    "INCONCLUSIVE",
+    "PASS_H1",
+    "PASS_PROSPECTIVE"
+  ],
+  "claim_ladder": {
+    "PASS_H1": "may say internally: 'showed a historical signal on sealed data; prospective test registered'. Nothing public.",
+    "PASS_PROSPECTIVE": "may say: 'added information beyond the market on N fights forecast in advance'. Public use is still L3 (CRITICAL_GATES item 8).",
+    "betting_advantage": "requires PASS_PROSPECTIVE AND the frozen CLV-001 publication gate open AND a positive CLV_return lower bound on the same model's locked forecasts. Simulated ROI alone never supports it."
+  },
+  "freeze_record": "research/protocol/FREEZE.json (hash history of every governed file; tests/test_prediction_protocol.py checks it)",
+  "stages": {
+    "H1": "confirmatory, sealed historical set, counts against h1 budget",
+    "PROSPECTIVE_INTERIM": "logged, never a pass, does not count against a budget; only futility can stop",
+    "PROSPECTIVE": "confirmatory, exactly n_required locks, once per experiment, counts against prospective budget"
+  }
+}

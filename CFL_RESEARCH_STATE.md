@@ -48,6 +48,7 @@ Last updated: 2026-09-16.
 |---|---|---|---|
 | **DUR-001** | after the vig-free totals market is known, does PROP-0001@v1 still add information about whether a fight goes over a round total? | collecting | none yet |
 | **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **collecting** since 2026-09-16 | none |
+| **PRED-001** | the rules any win-probability model is judged by against the betting market: sealed holdout from 2025-01-01, log loss, pre-set accept/reject. A protocol, not an experiment — see [`research/protocol/`](research/protocol/PREDICTION_RESEARCH_PROTOCOL.md) | frozen 2026-10-12 | n/a |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---
