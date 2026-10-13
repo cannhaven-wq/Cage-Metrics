@@ -44,7 +44,7 @@ SUPA = "https://uftancejftcryfvbggll.supabase.co"
 KEY = "sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8"
 UA = "CannonFightLab/1.0 (record reconciliation; +https://cannonfightlab.com)"
 DELAY = float(os.environ.get("DELAY", "1.5"))
-SAMPLE_SIZE = int(os.environ.get("SAMPLE_SIZE", "40"))
+SAMPLE_SIZE = int(os.environ.get("SAMPLE_SIZE") or "40")
 WELL_KNOWN = ["Jon Jones", "Islam Makhachev", "Alexander Volkanovski", "Israel Adesanya",
               "Kamaru Usman", "Leon Edwards", "Max Holloway", "Charles Oliveira"]
 
