@@ -1,28 +1,29 @@
 -- =============================================================================
--- public_read_odds.sql — grant public (anon + authenticated) read on the live
--- odds tables so the Parlay Builder can read them directly.
+-- public_read_odds.sql — RETIRED. DO NOT APPLY. Running this file now fails.
 -- =============================================================================
--- Symptom this fixes: parlay.html queries `fight_odds` (and `odds_books` for
--- book names) with the publishable anon key and gets ZERO rows, HTTP 200, no
--- error — the documented anon-RLS trap. The consensus VIEW already works for
--- anon (index/event/picks show odds) because it's owned by a privileged role,
--- but the base-table reads in parlay.html are blocked.
+-- This file used to GRANT SELECT on fight_odds and odds_books to anon and
+-- authenticated, so parlay.html could read raw odds rows directly. That is the
+-- opposite of the rule every market surface is built on:
 --
--- Writes are unaffected: the odds workflow uses the service_role key, which
--- bypasses RLS. This only opens up SELECT, matching every other public table.
+--   fight_odds and odds_books are private_lockdown_admin_only for anon AND
+--   authenticated. The browser reads odds only through the definer views
+--   (v_fight_market_movement, v_fight_odds_latest_by_book, ...). See CLAUDE.md
+--   "Data layer" and D-012.
 --
--- Apply via Supabase → SQL Editor (direct DB is IPv6-only from this machine).
--- Idempotent — safe to re-run.
+-- Verified 2026-10-12: the live database carries only the
+-- private_lockdown_admin_only policy on both tables, so this file was either
+-- never applied or was reverted. parlay.html was fixed to read
+-- v_fight_odds_latest_by_book instead.
+--
+-- It was retired rather than deleted so that anyone following an old link or
+-- note finds the reason, and so the habit of applying root *.sql files cannot
+-- open the raw quote table by accident. The original text is in git history
+-- (git log -p -- public_read_odds.sql). tests/sql-hazards.test.js fails if a
+-- root SQL file grants anon read on either table again.
 -- =============================================================================
 
-ALTER TABLE fight_odds ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "public read fight_odds" ON fight_odds;
-CREATE POLICY "public read fight_odds" ON fight_odds
-  FOR SELECT TO anon, authenticated USING (true);
-GRANT SELECT ON fight_odds TO anon, authenticated;
-
-ALTER TABLE odds_books ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "public read odds_books" ON odds_books;
-CREATE POLICY "public read odds_books" ON odds_books
-  FOR SELECT TO anon, authenticated USING (true);
-GRANT SELECT ON odds_books TO anon, authenticated;
+DO $$
+BEGIN
+  RAISE EXCEPTION 'public_read_odds.sql is retired: fight_odds and odds_books stay admin-only. Read odds through the definer views. See the header of this file.';
+END
+$$;

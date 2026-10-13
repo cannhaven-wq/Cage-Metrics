@@ -139,7 +139,7 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
 
       # No framework and no dependencies: each file is a script that prints its
       # own count and exits non-zero on the first failure. Looped rather than
@@ -159,3 +159,16 @@ jobs:
           done
           exit $status
         shell: bash
+
+      # build/test-fetch-odds.js covers the odds capture path (row builders,
+      # cadence tiers, credit governor) and walks whole months offline. It sat
+      # outside CI because fetch-odds.js imports the Supabase client, which the
+      # loop above does not install. Installed exactly the way odds.yml installs
+      # it (there is no committed lockfile), so the tests run against the same
+      # resolution the capture job gets. The tests themselves use no network
+      # and no secret.
+      - name: Odds capture tests
+        working-directory: build
+        run: |
+          npm install --no-audit --no-fund
+          node test-fetch-odds.js

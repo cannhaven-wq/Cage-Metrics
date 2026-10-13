@@ -97,10 +97,14 @@ async function buildMarketLines(event) {
     const r = byFight[f.id];
     if (!r || r.market_p_a == null) continue;
     const pA = +r.market_p_a;
-    const open = r.open_p_a == null ? null : +r.open_p_a;
-    const h24  = r.market_p_a_24h == null ? null : +r.market_p_a_24h;
-    const move = open == null ? null : (pA - open) * 100;
-    const move24 = h24 == null ? null : (pA - h24) * 100;
+    // Both moves come from the view, measured over the matched book cohort
+    // (D-012, D-015) and NULL when fewer than three books quote at both ends.
+    // This used to read open_p_a, which D-012 removed on 2026-09-21, and to
+    // subtract the 24 h median from today's median — two medians over
+    // different book sets, the error D-015 took out of the product.
+    const num = v => (v == null || !isFinite(+v)) ? null : +v;
+    const move = num(r.movement_pts_a);
+    const move24 = num(r.movement_pts_a_24h);
     const favIsA = pA >= 0.5;
     lines.push({
       aName: f.fighter_a_name,
@@ -111,7 +115,7 @@ async function buildMarketLines(event) {
       bestAmerican: favIsA ? r.best_american_a : r.best_american_b,
       bestBook: favIsA ? r.best_book_a : r.best_book_b,
       books: r.book_count == null ? null : +r.book_count,
-      booksAtOpen: r.books_at_open == null ? null : +r.books_at_open,
+      matchedBooks: r.matched_book_count == null ? null : +r.matched_book_count,
       spread: r.book_spread_pts == null ? null : +r.book_spread_pts,
       move, move24,
       moveToward: move == null ? null : (move > 0 ? f.fighter_a_name : f.fighter_b_name),

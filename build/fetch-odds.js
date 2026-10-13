@@ -979,9 +979,24 @@ function buildFightIndex(fights) {
   return { strict, loose, squashed, surnames };
 }
 
+// Known cases where the feed and our record use a different NAME, not just a
+// different spelling — a surname change, most often on marriage. No automatic
+// tier can recover these (the surname tier keys on the surname), and guessing
+// would risk a permanent price on the wrong fight, so each one is listed by
+// hand after checking the bout is the same: same card, same date, same
+// opponent. Keys and values are normalizeName() output: feed name -> our name.
+// Added 2026-10-12: UFC FN Buckley vs. Malott (10-17) had no price on
+// Cerminara vs Stiller because the feed still says "Katlyn Chookagian".
+function feedAlias(normalized) {
+  const FEED_NAME_ALIASES = {
+    'katlyn chookagian': 'katlyn cerminara',
+  };
+  return FEED_NAME_ALIASES[normalized] || normalized;
+}
+
 function lookupFight(index, homeName, awayName) {
-  const a = normalizeName(homeName);
-  const b = normalizeName(awayName);
+  const a = feedAlias(normalizeName(homeName));
+  const b = feedAlias(normalizeName(awayName));
   const la = lastName(a), lb = lastName(b);
   const surnameKey = (la.length >= 3 && lb.length >= 3 && la !== lb)
     ? pairKey(la, lb) : null;
@@ -1300,7 +1315,9 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
     // home/away order, tolerating middle-name drift via the first+last fallback.
     for (const o of h2h.outcomes) {
       if (o.price == null) continue;
-      const n = normalizeName(o.name);
+      // feedAlias here too, not only in lookupFight: an alias that finds the
+      // bout but not the corner writes one-sided rows into append-only fight_odds.
+      const n = feedAlias(normalizeName(o.name));
       let side, fighter_id, opponent_fighter_id;
       if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) {
         side = 'A'; fighter_id = fight.fighter_a_id; opponent_fighter_id = fight.fighter_b_id;
@@ -1638,5 +1655,5 @@ module.exports = {
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
   resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
-  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight,
+  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight, feedAlias,
 };

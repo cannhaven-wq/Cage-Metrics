@@ -149,8 +149,8 @@ function eventPreview({ event, rows, previewSlugFor }) {
     '@type': 'BreadcrumbList',
     'itemListElement': [
       { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': SITE + '/' },
-      { '@type': 'ListItem', 'position': 2, 'name': 'Card predictions', 'item': SITE + '/card/' },
-      { '@type': 'ListItem', 'position': 3, 'name': `${event.name} predictions`, 'item': url }
+      { '@type': 'ListItem', 'position': 2, 'name': 'Fight cards', 'item': SITE + '/card/' },
+      { '@type': 'ListItem', 'position': 3, 'name': `${event.name} card`, 'item': url }
     ]
   };
 
@@ -191,17 +191,17 @@ function eventPreview({ event, rows, previewSlugFor }) {
 
 <meta property="og:type" content="article">
 <meta property="og:site_name" content="Cannon Fight Lab">
-<meta property="og:title" content="${escapeHtml(`${event.name} — Predictions & Full-Card Picks`)}">
+<meta property="og:title" content="${escapeHtml(`${event.name} — Odds, Line Movement & Full Card`)}">
 <meta property="og:description" content="${escapeHtml(description)}">
 <meta property="og:url" content="${url}">
 <meta property="og:image" content="${SITE}/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Cannon Fight Lab — UFC card predictions">
+<meta property="og:image:alt" content="Cannon Fight Lab — UFC card odds and matchup research">
 <meta property="og:locale" content="en_US">
 
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${escapeHtml(`${event.name} — Predictions & Full-Card Picks`)}">
+<meta name="twitter:title" content="${escapeHtml(`${event.name} — Odds, Line Movement & Full Card`)}">
 <meta name="twitter:description" content="${escapeHtml(description)}">
 <meta name="twitter:image" content="${SITE}/og-image.png">
 
