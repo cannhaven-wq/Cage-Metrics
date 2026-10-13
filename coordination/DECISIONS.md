@@ -1765,3 +1765,50 @@ on them never supports a claim. Only forecasts locked before the fight do.
 
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session.
+
+## D-024 — The forecast-lock table goes live, and four dead bookings are retired
+
+| field | value |
+|---|---|
+| date | 2026-10-13 |
+| decided by | Reed Cannon (owner) |
+| task | none; direct owner instruction |
+| level | L3 |
+| reversible | the table: before its first lock, yes (drop); after it, no - it is evidence. The bookings: yes, `update fights set is_active = true where id in (47881, 48644, 50990, 48648);` |
+
+**The owner's instruction, quoted:** *"I'd approve the three technical
+decisions above"* — that is, apply the forecast-lock migration with
+post-migration security verification; start PRED-002 (opponent-adjusted
+grappling); and retire the four outdated bookings after final verification,
+before Friday.
+
+**Plain version.** CFL now has a place to write down a model's forecast
+before a fight, which nobody can change or delete afterwards. And four bouts
+that were cancelled and replaced no longer show on the next two cards.
+
+**What was done:**
+
+- `win_model_locks`, its guard, its append-only triggers and
+  `v_win_model_locks_graded` were applied as three Supabase migrations.
+- **Verified after applying:**
+  - RLS is on, with no policies, and browsers hold no grants on the table,
+    the view or the sequence.
+  - All four triggers are present, and neither function is SECURITY DEFINER.
+  - In a rolled-back run, a valid lock was accepted.
+  - Update, delete and truncate were blocked, and a lock on a settled fight
+    was rejected.
+  - `anon` reads and `authenticated` reads and inserts were denied.
+  - 0 rows are left behind.
+- **Bookings retired** with `is_active = false`: 47881, 48644 and 50990 on
+  2026-10-17, and 48648 on 2026-10-24. Re-verified immediately before:
+  - each was active, unsettled and had no pre-fight snapshot;
+  - each had a live replacement on the same card;
+  - two had never been priced, and two were last priced on 10-09.
+
+  Afterwards, no fighter is booked twice on either card. Nothing was deleted.
+
+**What is not decided.** Any verdict, and any public claim.
+
+**Attribution note.** Recorded by Claude from the owner's message in the
+project-audit session.
+
