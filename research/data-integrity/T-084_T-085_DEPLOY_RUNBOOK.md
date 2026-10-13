@@ -49,6 +49,17 @@ against production.**
 
   **None of these comes from T-084 or T-085.** They are listed here so the
   after-check can be compared against them.
+
+  **UPDATED 2026-10-13, after T-087 (cannhaven-wq/Cage-Metrics#68):** the two
+  `rls_disabled_in_public` findings are gone, so the baseline to compare
+  against is 39 / 10 / 0 / 8 + 8 / 9 / 1. Re-read it immediately before
+  applying, in case anything else moved.
+- **T-087 lockdown must survive this deploy.** T-087 left browser roles with at
+  most SELECT on `v_fight_chart_series` and revoked `PUBLIC`. Both T-085 files
+  (migration and rollback) end with `REVOKE ALL ... FROM anon, authenticated,
+  PUBLIC` then `GRANT SELECT`, so neither direction can hand a write back.
+  `tests/odds-write-lockdown.test.js` scans them. After applying, the grants
+  check below must also show `PUBLIC` holding nothing.
 - **T-084 view.**
   - It is `security_invoker = on`, so it adds **no** `security_definer_view`
     finding.
@@ -85,7 +96,7 @@ T-085 is independent of T-084, so it can go first.
 3. Re-run step 1. The hashes must match.
    `EXPLAIN ANALYZE` for 46774 must be under 1 s (it was 5.8 s).
 4. Grants: `has_table_privilege` returns SELECT only for `anon` and
-   `authenticated`.
+   `authenticated`, and nothing for `PUBLIC` (T-087).
 5. Run `verify-live.yml` with `fight_ids = 46774,53620`. The Fight Lab job
    reports `chartMsAfterPage`, which should drop from about 2,200 ms.
 6. **If any check fails:** apply `chart_series_t085.rollback.sql` and re-run

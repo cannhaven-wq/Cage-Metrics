@@ -38,5 +38,5 @@ CREATE OR REPLACE VIEW public.v_fight_chart_series AS
    FROM standing
   GROUP BY fight_id, at;
 
-REVOKE ALL ON public.v_fight_chart_series FROM anon, authenticated;
+REVOKE ALL ON public.v_fight_chart_series FROM anon, authenticated, PUBLIC;
 GRANT SELECT ON public.v_fight_chart_series TO anon, authenticated;

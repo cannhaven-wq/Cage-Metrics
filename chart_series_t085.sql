@@ -59,5 +59,5 @@ COMMENT ON VIEW public.v_fight_chart_series IS
   'fight by construction. No rows when the cohort is under 3 - the series is '
   'refused rather than drawn on a shifting set of books.';
 
-REVOKE ALL ON public.v_fight_chart_series FROM anon, authenticated;
+REVOKE ALL ON public.v_fight_chart_series FROM anon, authenticated, PUBLIC;
 GRANT SELECT ON public.v_fight_chart_series TO anon, authenticated;

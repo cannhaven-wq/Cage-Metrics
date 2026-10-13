@@ -80,5 +80,5 @@ COMMENT ON VIEW public.v_fighter_ufc_record IS
   'wrong for most fighters and are kept only until an L3 decision drops them. '
   'No row = no completed UFC fight.';
 
-REVOKE ALL ON public.v_fighter_ufc_record FROM anon, authenticated;
+REVOKE ALL ON public.v_fighter_ufc_record FROM anon, authenticated, PUBLIC;
 GRANT SELECT ON public.v_fighter_ufc_record TO anon, authenticated;
