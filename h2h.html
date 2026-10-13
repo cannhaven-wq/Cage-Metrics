@@ -276,6 +276,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <script>
 cfl.renderNav('h2h');
 cfl.renderFooter();
@@ -286,9 +287,14 @@ let selA = null, selB = null;
 async function load() {
   const sb = window.cflSupabase;
   try {
-    allFighters = await cfl.fetchAll(() => sb
-      .from('fighters')
-      .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, height_in, reach_in, stance, age, slpm, sapm, str_acc, str_def, td_avg, td_acc, td_def, sub_avg, last_5, last_fight_date, country, country_code'));
+    // UFC record from v_fighter_ufc_record, never fighters.ufc_* (T-084).
+    const [fighters, ufcRows] = await Promise.all([
+      cfl.fetchAll(() => sb
+        .from('fighters')
+        .select('id, name, nickname, division, wins, losses, draws, height_in, reach_in, stance, age, slpm, sapm, str_acc, str_def, td_avg, td_acc, td_def, sub_avg, last_5, last_fight_date, country, country_code')),
+      cflUfcRecord.load(sb, null, { all: true }),
+    ]);
+    allFighters = cflUfcRecord.apply(fighters, ufcRows);
   } catch (err) {
     document.getElementById('compareArea').innerHTML = cfl.errorHtml('Failed to load fighters: ' + err.message);
     return;

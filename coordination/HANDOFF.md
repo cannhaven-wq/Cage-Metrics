@@ -11,7 +11,39 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-13 (g) — Sportsbook data is read-only to the browser (T-087)
+## 2026-10-13 (g) — T-084 built, T-085 cause found, T-086 plan written; nothing applied
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+- **T-084: built.** `v_fighter_ufc_record` plus `ufc-record.js` on every
+  record-showing page and the `/f/` prerender. It was tested on a throwaway
+  Postgres (accuracy, retired bookings, permissions, re-run, and parity with
+  Fight Lab's own count) and against production through a temporary view
+  (records match UFCStats; 0.4 ms for one fighter). The migration is not
+  applied.
+- **T-085: cause found.** The `cohort` CTE was materialised, so every fight's
+  cohort was built before filtering. `NOT MATERIALIZED` takes one fight from
+  5.8 s to 0.26 s with byte-identical output on 8 fights. Not applied.
+- **T-086: plan only.** `is_active = false` would miss 33 of the 34 views.
+  The recommendation is an `events.promotion` column, moving the 5 non-UFC
+  bouts (same ids) into sibling tables, and a scraper guard. This is an L3
+  decision because it removes rows from `fights`.
+
+## Next action
+
+Owner:
+1. Merge the read-only audit PR (#65).
+2. Approve opening the T-084/T-085 PR.
+3. Decide on the T-086 plan.
+
+**Order of application for T-084:** apply the view first, then deploy the pages.
+Pages that load before the view exists show "—" instead of a record.
+
+---
+
+## 2026-10-13 (g′) — Sportsbook data is read-only to the browser (T-087)
 
 **From:** Claude
 **To:** Owner

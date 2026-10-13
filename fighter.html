@@ -277,6 +277,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
@@ -370,6 +371,10 @@ async function load() {
     document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
     return;
   }
+  // The UFC record shown anywhere on this page comes from v_fighter_ufc_record,
+  // not fighters.ufc_* (T-084). It used to render the stored total first and
+  // correct it from the fight history afterwards; now there is nothing to correct.
+  await cflUfcRecord.attach(sb, [f]);
 
   updateFighterSEO(f);
 
@@ -390,7 +395,7 @@ async function load() {
         <div class="fh-records">
           ${hasUfc ? `
             <div class="record-block">
-              <div class="big-record" id="ufcRecordBig">${f.ufc_wins ?? 0}-${f.ufc_losses ?? 0}${f.ufc_draws ? '-' + f.ufc_draws : ''}</div>
+              <div class="big-record" id="ufcRecordBig">${f.ufc_wins == null ? '—' : `${f.ufc_wins}-${f.ufc_losses}${f.ufc_draws ? '-' + f.ufc_draws : ''}`}</div>
               <div class="record-label">UFC record</div>
             </div>
           ` : ''}
@@ -915,7 +920,8 @@ async function loadNextFight(f, fights) {
   // differences between the two corners.
   const [mktRow, oppR] = await Promise.all([
     window.cflMarket ? window.cflMarket.loadFightMovement(up.id) : Promise.resolve(null),
-    oppId ? sb.from('fighters').select('id, name, age, height_in, reach_in, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def').eq('id', oppId).maybeSingle() : Promise.resolve({ data: null }),
+    oppId ? sb.from('fighters').select('id, name, age, height_in, reach_in, slpm, sapm, td_avg, td_acc, td_def').eq('id', oppId).maybeSingle()
+      .then(async r => (r.data ? { data: (await cflUfcRecord.attach(sb, [r.data]))[0] } : r)) : Promise.resolve({ data: null }),
   ]);
   const opp = oppR.data;
 
