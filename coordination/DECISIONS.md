@@ -1859,10 +1859,18 @@ GRANT SELECT.
 - The security advisor is unchanged from the 2026-10-13 baseline (39, 10, 2,
   8 + 8, 9, 1), so no new finding.
 
-**What is not decided.** Every other definer view still grants browsers more
-than SELECT. None of the others can be written through (checked in
-`information_schema.views.is_updatable`), so this is hygiene, not a hole. A
-separate pass is worth doing and is not scheduled.
+**Reconciled with T-087, same day.** T-087
+(`odds_write_lockdown_migration.sql`, cannhaven-wq/Cage-Metrics#68) was applied
+minutes after this fix. It revokes every write from both browser roles and
+`PUBLIC` on all four odds tables, every view reading them and their sequences.
+It includes this view, with the same end state: SELECT only. This decision stays
+as the record of the hole and its reproduction. T-087 is the standard any later
+grant on odds data is held to, and `tests/odds-write-lockdown.test.js` enforces
+it, including against this decision's SQL file.
+
+**What is not decided.** Grants on views outside the odds data are T-088's
+job. None of those views can be written through (checked in
+`information_schema.views.is_updatable`), so this is hygiene, not a hole.
 
 **Attribution note.** Recorded by Claude from the owner's answer in the
 project-audit session.

@@ -79,6 +79,19 @@ class TestOddsBooksViewHole(PostgresCase):
         self.assertEqual(self.one("select count(*) from public.odds_books;"), "2")
         self.assertEqual(self.one("select count(*) from public.fight_odds;"), "3")
 
+    def test_after_the_fix_only_select_is_held_and_public_holds_nothing(self):
+        # The same end state T-087 (odds_write_lockdown_migration.sql) asserts.
+        self.psql("grant all on public.v_odds_books_sportsbooks to public;", db=self.db)
+        self.psql_file(FIX, db=self.db)
+        for role in ("anon", "authenticated"):
+            for priv in ("SELECT", "INSERT", "UPDATE", "DELETE", "TRUNCATE", "REFERENCES", "TRIGGER"):
+                want = "t" if priv == "SELECT" else "f"
+                got = self.one(f"select has_table_privilege('{role}', 'public.v_odds_books_sportsbooks', '{priv}');")
+                self.assertEqual(got, want, f"{role} {priv}")
+        acl = self.one("select coalesce(relacl::text, '') from pg_class "
+                       "where oid = 'public.v_odds_books_sportsbooks'::regclass;")
+        self.assertNotRegex(acl, r'(^|[{,])=', "PUBLIC still holds a privilege on the view")
+
     def test_the_fix_is_rerunnable(self):
         self.psql_file(FIX, db=self.db)
         self.psql_file(FIX, db=self.db)

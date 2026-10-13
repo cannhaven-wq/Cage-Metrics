@@ -17,10 +17,15 @@
 -- both browser roles and keep SELECT. Nothing that legitimately writes
 -- odds_books uses the view: the scrapers use service_role against the table.
 --
--- ROLLBACK (not recommended): GRANT INSERT, UPDATE, DELETE ON
--- public.v_odds_books_sportsbooks TO anon, authenticated;
+-- SUPERSEDED IN SCOPE by T-087 (odds_write_lockdown_migration.sql), applied the
+-- same day: it sets the same end state on this view and extends it to every odds
+-- relation and sequence. Kept as the record of D-025. Re-running either file is
+-- safe; they agree.
+--
+-- NO ROLLBACK. Giving browser roles a write here again would break T-087's
+-- guarantee and reopen the cascade-delete hole.
 -- Safe to re-run.
 -- =============================================================================
 
-REVOKE ALL ON public.v_odds_books_sportsbooks FROM anon, authenticated;
+REVOKE ALL ON public.v_odds_books_sportsbooks FROM anon, authenticated, PUBLIC;
 GRANT SELECT ON public.v_odds_books_sportsbooks TO anon, authenticated;
