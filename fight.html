@@ -10,7 +10,7 @@
      Matchup Data". The static copy below is what a crawler that does not run
      JavaScript sees, and the /f/ and /e/ prerendered stubs cover the rest. -->
 <title>UFC Fight Research — Odds, Line Movement and Matchup Data | Cannon Fight Lab</title>
-<meta name="description" content="One UFC matchup, fully researched: vig-free sportsbook consensus, every book's current price, the best number on each side, how far the line has moved across the books quoting at both ends, and the measurable differences between the two fighters.">
+<meta name="description" content="One UFC matchup, fully researched: tale of the tape, fighting styles, each fighter's last five fights, late-round output, vig-free sportsbook consensus, every book's current price and how far the line has moved.">
 <meta name="author" content="Cannon Fight Lab">
 <meta name="robots" content="index, follow, max-image-preview:large">
 
@@ -54,6 +54,10 @@
 #fl h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(28px, 4vw, 46px); line-height: 1.05; color: #fff; margin: 8px 0 6px; }
 #fl .fl-sub { font-size: 13px; color: var(--text-3); }
 
+#fl .jump { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+#fl .jump a { font: 600 12.5px var(--font-display); color: var(--text-2); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 6px 12px; }
+#fl .jump a:hover { color: #fff; background: var(--bg-3); }
+#fl .sec, #fl .sub { scroll-margin-top: 72px; }
 #fl h2 { font-family: var(--font-display); font-weight: 800; font-size: 24px; color: #fff; }
 #fl .sec { padding: 30px 0 0; }
 #fl .sec-sub { font-size: 13px; color: var(--text-3); margin-top: 4px; max-width: 720px; line-height: 1.5; }
@@ -102,13 +106,81 @@
 #fl .caveats li { font-size: 12.5px; color: var(--text-2); line-height: 1.45; }
 #fl .foot-note { font-size: 11.5px; color: var(--text-3); line-height: 1.5; margin-top: 12px; max-width: 760px; }
 
-/* Stat comparison rows */
-#fl .cmp { margin-top: 14px; display: flex; flex-direction: column; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
-#fl .cmp-row { display: grid; grid-template-columns: 1fr 150px 1fr; align-items: center; gap: 10px; background: var(--bg-1); padding: 10px 14px; }
-#fl .cmp-row .l { text-align: right; } #fl .cmp-row .r { text-align: left; }
-#fl .cmp-row .val { font-family: var(--font-display); font-weight: 700; font-size: 17px; color: var(--text-2); font-variant-numeric: tabular-nums; }
-#fl .cmp-row .val.lead { color: #fff; }
-#fl .cmp-row .lbl { text-align: center; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+
+/* Sub-sections inside "How do they compare?" */
+#fl .sub { padding: 22px 0 0; }
+#fl h3 { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: #fff; letter-spacing: .01em; }
+#fl .sub-sub { font-size: 12.5px; color: var(--text-3); margin-top: 3px; max-width: 720px; line-height: 1.5; }
+
+/* Who are these fighters — one identity card per corner */
+#fl .who { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+#fl .who-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+#fl .who-card .nm { font-family: var(--font-display); font-size: 21px; font-weight: 700; color: #fff; line-height: 1.15; }
+#fl .who-card .nm a { color: inherit; } #fl .who-card .nm a:hover { color: var(--red); }
+#fl .who-card .nick { font-size: 12px; color: var(--text-3); margin-top: 2px; }
+#fl .who-facts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12.5px; color: var(--text-2); }
+#fl .who-facts b { color: #fff; font-weight: 600; }
+#fl .who-k { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
+#fl .pill { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--text-2); }
+#fl .pill.striker  { color: #ff8a92; border-color: rgba(230,57,70,.4); }
+#fl .pill.grappler { color: #74b6f0; border-color: rgba(55,138,221,.4); }
+#fl .pill.hybrid   { color: #e8c35c; border-color: rgba(212,175,55,.4); }
+#fl .pill.thin     { color: var(--amber); border-color: rgba(255,181,71,.35); font-weight: 600; text-transform: none; letter-spacing: 0; }
+#fl .who-line { font-size: 12.5px; color: var(--text-2); line-height: 1.45; margin-top: 6px; }
+#fl .who-line .muted { color: var(--text-3); }
+#fl .chips { display: flex; gap: 5px; flex-wrap: wrap; }
+#fl .chip { width: 30px; height: 30px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; font: 700 13px var(--font-display); border: 1px solid var(--line-2); color: var(--text-2); background: var(--bg-3); }
+#fl .chip.W { color: #6fd39c; border-color: rgba(70,180,120,.4); background: rgba(70,180,120,.10); }
+#fl .chip.L { color: #ff7b7b; border-color: rgba(214,58,58,.4); background: rgba(214,58,58,.10); }
+
+/* Last five fights — a two-column list, one column per fighter */
+#fl .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+#fl .form-col { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; min-width: 0; }
+#fl .form-col .hd { padding: 10px 14px; font: 700 14px var(--font-display); color: #fff; border-bottom: 1px solid var(--line); }
+#fl .form-row { display: grid; grid-template-columns: 30px 1fr; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); align-items: start; }
+#fl .form-row:last-child { border-bottom: none; }
+#fl .form-row .opp { font-size: 13.5px; color: #fff; font-weight: 600; line-height: 1.3; }
+#fl .form-row .opp a { color: inherit; } #fl .form-row .opp a:hover { color: var(--red); }
+#fl .form-row .how { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+#fl .form-row .when { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+#fl .form-none { padding: 14px; font-size: 13px; color: var(--text-3); line-height: 1.5; }
+
+/* Late-round performance — two cards side by side */
+#fl .late-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 14px; }
+#fl .late-card { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+#fl .late-card .who-n { font: 700 14px var(--font-display); color: #fff; }
+#fl .late-card .lbl { font: 800 20px var(--font-display); color: #fff; margin-top: 6px; line-height: 1.15; }
+#fl .late-card .num { display: flex; align-items: baseline; gap: 8px; margin-top: 8px; }
+#fl .late-card .num .v { font: 800 30px var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; line-height: 1; }
+#fl .late-card .num .k { font-size: 11.5px; color: var(--text-3); line-height: 1.3; }
+#fl .late-bar { position: relative; height: 6px; background: var(--bg-4, #222); border-radius: 3px; margin-top: 10px; }
+#fl .late-bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--text-3); }
+#fl .late-bar b { position: absolute; top: -3px; bottom: -3px; width: 2px; background: var(--text-2); }
+#fl .late-scale { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--text-3); margin-top: 4px; }
+#fl .late-card .line { font-size: 12.5px; color: var(--text-2); line-height: 1.45; margin-top: 10px; }
+#fl .late-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+#fl .late-meta span { font-size: 11.5px; color: var(--text-2); background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 6px; padding: 3px 8px; }
+#fl .late-meta span.thin { color: var(--amber); border-color: rgba(255,181,71,.35); }
+#fl .late-none { font-size: 13px; color: var(--text-3); line-height: 1.5; margin-top: 8px; }
+
+/* Tale of the tape — names pinned above the two columns, grouped rows */
+/* overflow: clip, not hidden — hidden would make this a scroll container and
+   stop the name row sticking under the nav on a long phone scroll. */
+#fl .tape { margin-top: 14px; border: 1px solid var(--line); border-radius: 12px; overflow: clip; background: var(--bg-1); }
+#fl .tape-head { display: grid; grid-template-columns: 1fr 150px 1fr; gap: 10px; padding: 12px 14px; background: var(--bg-2); border-bottom: 1px solid var(--line-2); position: sticky; top: 60px; z-index: 2; }
+#fl .tape-head .l { text-align: right; } #fl .tape-head .r { text-align: left; }
+#fl .tape-head .n { font: 700 15px var(--font-display); color: #fff; line-height: 1.2; }
+#fl .tape-grp { padding: 8px 14px 6px; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--red); font-weight: 700; background: var(--bg-1); border-top: 1px solid var(--line); }
+#fl .tape-grp:first-of-type { border-top: none; }
+#fl .tape-row { display: grid; grid-template-columns: 1fr 150px 1fr; gap: 10px; align-items: center; padding: 9px 14px; border-top: 1px solid var(--line); }
+#fl .tape-row .l { text-align: right; } #fl .tape-row .r { text-align: left; }
+#fl .tape-row .val { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+#fl .tape-row .val.lead { color: #fff; }
+#fl .tape-row .val.lead::after { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); margin: 0 0 3px 6px; vertical-align: middle; }
+#fl .tape-row .l .val.lead::after { display: none; }
+#fl .tape-row .l .val.lead::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); margin: 0 6px 3px 0; vertical-align: middle; }
+#fl .tape-row .lbl { text-align: center; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; line-height: 1.3; }
+#fl .tape-row .val.na { color: var(--text-3); font-weight: 600; font-size: 14px; }
 
 #fl .empty { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 22px; color: var(--text-3); font-size: 13.5px; line-height: 1.55; margin-top: 14px; }
 #fl .cta-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 18px; }
@@ -119,8 +191,21 @@
   #fl .corners { grid-template-columns: 1fr; }
   #fl .vsmid { padding: 2px 0; }
   #fl .strip { grid-template-columns: repeat(2, 1fr); }
-  #fl .cmp-row { grid-template-columns: 1fr 96px 1fr; padding: 10px; }
-  #fl .cmp-row .val { font-size: 15px; }
+  #fl .who, #fl .form-grid, #fl .late-grid { grid-template-columns: 1fr; }
+  /* On a phone the label moves above the two numbers, so each number gets
+     half the screen instead of a third and the pair reads at a glance. */
+  #fl .tape-head { grid-template-columns: 1fr 1fr; padding: 10px 12px; top: 56px; }
+  #fl .tape-head .mid { display: none; }
+  #fl .tape-head .l, #fl .tape-row .l { text-align: left; }
+  #fl .tape-head .r, #fl .tape-row .r { text-align: right; }
+  #fl .tape-row { grid-template-columns: 1fr 1fr; grid-template-areas: "lbl lbl" "l r"; gap: 2px 10px; padding: 8px 12px; }
+  #fl .tape-row .lbl { grid-area: lbl; text-align: center; }
+  #fl .tape-row .l { grid-area: l; } #fl .tape-row .r { grid-area: r; }
+  #fl .tape-row .val { font-size: 19px; }
+  #fl .tape-row .l .val.lead::before { display: none; }
+  #fl .tape-row .l .val.lead::after { display: inline-block; }
+  #fl .tape-row .r .val.lead::after { display: none; }
+  #fl .tape-row .r .val.lead::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); margin: 0 6px 3px 0; vertical-align: middle; }
   #fl .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 }
 </style>
@@ -137,10 +222,49 @@
     <h1 id="flTitle">Loading matchup…</h1>
     <div class="fl-sub" id="flSub"></div>
     <div id="flStar" style="margin-top:10px"></div>
+    <nav class="jump" aria-label="On this page">
+      <a href="#secWho">The fighters</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a>
+    </nav>
   </header>
 
+  <!-- The page answers three questions, in this order: who are these two,
+       how do they compare, and what does the betting market say. -->
+  <section class="sec" id="secWho">
+    <h2>Who are these fighters?</h2>
+    <div class="sec-sub">Record, fighting style and the last five results for each corner. Style is read from what they actually did in their recent fights, not from their reputation.</div>
+    <div id="flWho"><div class="empty">Loading the fighters…</div></div>
+  </section>
+
+  <section class="sec" id="secCompare">
+    <h2>How do they compare?</h2>
+    <div class="sec-sub">Side by side, from UFCStats. Nothing here is a pick — CFL does not publish one on this fight.</div>
+
+    <section class="sub" id="secStats">
+      <h3>Tale of the tape</h3>
+      <div id="flStats"></div>
+    </section>
+
+    <section class="sub" id="secLate">
+      <h3>Late-round performance</h3>
+      <div class="sub-sub">A score comparing each fighter's output in round three and later with their own round one, in fights that got that far. 100 means they kept their round-one pace.</div>
+      <div id="flLate"></div>
+    </section>
+
+    <section class="sub" id="secForm">
+      <h3>Last five fights</h3>
+      <div class="sub-sub">Completed UFC fights, newest first.</div>
+      <div id="flForm"></div>
+    </section>
+
+    <section class="sub" id="secMatchup">
+      <h3>What stands out</h3>
+      <div class="sub-sub">Measured differences between these two fighters. Observations, not a forecast.</div>
+      <div id="flNotes"></div>
+    </section>
+  </section>
+
   <section class="sec" id="secMarket">
-    <h2>What does the market say?</h2>
+    <h2>What does the betting market say?</h2>
     <div class="sec-sub">The median sportsbook price with each book's cut removed, what it was when three or more books first had the fight priced, and the best number on offer right now. Prices are last captured, not live.</div>
     <div id="flMarket"><div class="empty">Loading the market…</div></div>
   </section>
@@ -155,18 +279,6 @@
     <h2>Sportsbook by sportsbook</h2>
     <div class="sec-sub">The latest quote we hold from every sportsbook we track on this fight. Sorted by the best price on the first corner. Ordering is by the American number and nothing else — no book pays to sit at the top of this table.</div>
     <div id="flBooks"></div>
-  </section>
-
-  <section class="sec" id="secMatchup">
-    <h2>What does the matchup data say?</h2>
-    <div class="sec-sub">Measured differences between these two fighters. Observations, not a forecast — CFL does not publish a pick on this fight.</div>
-    <div id="flNotes"></div>
-  </section>
-
-  <section class="sec" id="secStats">
-    <h2>The numbers behind it</h2>
-    <div class="sec-sub">Career UFC statistics for both corners, from UFCStats. Where a fighter has no UFC record the row reads zero, which is missing data rather than a measurement.</div>
-    <div id="flStats"></div>
   </section>
 
   <section class="sec" id="secAlerts">
@@ -191,6 +303,7 @@
 <script src="market.js?v=2"></script>
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
+<script src="fight-lab.js?v=1"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -347,7 +460,7 @@ async function load() {
   const [evR, ftR, mvt, books] = await Promise.all([
     sb.from('events').select('id, name, event_date, location').eq('id', fight.event_id).limit(1),
     sb.from('fighters')
-      .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
+      .select('id, name, nickname, age, height_in, reach_in, stance, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code')
       .in('id', [fight.fighter_a_id, fight.fighter_b_id].filter(x => x != null)),
     M.loadFightMovement(fight.id),
     M.loadByBook('fight_id', fight.id),
@@ -359,7 +472,21 @@ async function load() {
   const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name || 'Corner A' };
   const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name || 'Corner B' };
 
-  const [cardioMap, baseRates] = await Promise.all([loadCardio([a.id, b.id]), loadBaseRates()]);
+  const ids = [a.id, b.id].filter(x => x != null);
+  const [consRows, styleRows, form, baseRates] = await Promise.all([
+    loadConsistency(ids), loadStyles(ids), loadForm(ids), loadBaseRates()]);
+  const cardioMap = cardioMapFrom(consRows);
+  const FL = window.cflFightLab;
+  const today = localToday();
+  const opts = { excludeFightId: fight.id };
+  const formA = FL.recentForm(form.fights, form.events, a.id, today, opts);
+  const formB = FL.recentForm(form.fights, form.events, b.id, today, opts);
+  // The UFC record is counted from the same completed fights the page lists,
+  // never read from fighters.ufc_wins/ufc_losses, which lags (T-083).
+  if (form.ok) {
+    a.ufcRec = FL.ufcRecord(form.fights, form.events, a.id, today, opts);
+    b.ufcRec = FL.ufcRecord(form.fights, form.events, b.id, today, opts);
+  }
 
   // The movement chart loads on its own and is allowed to fail on its own.
   // Single fight only — see §Performance in market_chart_views.sql.
@@ -373,8 +500,11 @@ async function load() {
   renderHead(fight, event, a, b);
   renderMarket(mvt, a, b, event);
   renderBooks(books, a, b);
-  renderMatchup(a, b, fight, cardioMap, baseRates, mvt);
+  renderWho(a, b, fight, styleRows, formA, formB, form.ok);
   renderStats(a, b);
+  renderLate(a, b, fight, consRows);
+  renderForm(a, b, formA, formB, form.ok);
+  renderMatchup(a, b, fight, cardioMap, baseRates, mvt);
   renderCtas(fight, event, a, b);
   setMeta(a, b, event, mvt);
   renderWatch(fight, a, b);          // star + alert setup, signed-in only
@@ -512,25 +642,69 @@ async function renderWatch(fight, a, b) {
 function fail(title, sub) {
   document.getElementById('flTitle').textContent = title;
   document.getElementById('flSub').innerHTML = sub;
-  ['secMarket', 'secBooks', 'secMatchup', 'secStats'].forEach(id => {
+  ['secWho', 'secCompare', 'secMarket', 'secChart', 'secBooks'].forEach(id => {
     const n = document.getElementById(id); if (n) n.hidden = true;
   });
 }
 
-async function loadCardio(ids) {
-  const sb = window.cflSupabase;
-  const out = {};
+// Late-round output rows, every weight class plus CAREER. The page reads them
+// twice: the side-by-side cards (fight-lab.js) and the one-line note in
+// "What stands out" (fight-insights.js), which wants the older map shape.
+async function loadConsistency(ids) {
   try {
-    const { data, error } = await sb.from('v_fighter_consistency')
-      .select('fighter_id, weight_class, consistency_score, cardio_tier, confidence_tier').in('fighter_id', ids);
-    if (error) return out;
-    (data || []).forEach(r => {
-      const slot = out[r.fighter_id] || (out[r.fighter_id] = { byWc: {}, career: null });
-      const entry = { score: r.consistency_score, tier_word: r.cardio_tier, confidence: r.confidence_tier };
-      if (r.weight_class === 'CAREER') slot.career = entry; else slot.byWc[r.weight_class] = entry;
-    });
-  } catch (e) { /* a missing cardio note is a missing note */ }
+    const { data, error } = await window.cflSupabase.from('v_fighter_consistency')
+      .select('fighter_id, weight_class, recent_fights, r1_minutes, r3p_minutes, consistency_score, cardio_tier, confidence_tier, r1_sig_str_per_min')
+      .in('fighter_id', ids);
+    return error ? [] : (data || []);
+  } catch (e) { return []; }   // a missing panel is a missing panel
+}
+
+function cardioMapFrom(rows) {
+  const out = {};
+  (rows || []).forEach(r => {
+    const slot = out[r.fighter_id] || (out[r.fighter_id] = { byWc: {}, career: null });
+    const entry = { score: r.consistency_score, tier_word: r.cardio_tier, confidence: r.confidence_tier };
+    if (r.weight_class === 'CAREER') slot.career = entry; else slot.byWc[r.weight_class] = entry;
+  });
   return out;
+}
+
+async function loadStyles(ids) {
+  try {
+    const { data, error } = await window.cflSupabase.from('v_fighter_style')
+      .select('fighter_id, weight_class, style, sample_fights, confidence')
+      .in('fighter_id', ids);
+    return error ? [] : (data || []);
+  } catch (e) { return []; }
+}
+
+// Every UFC fight either corner has been booked in, plus the cards they sat
+// on. fight-lab.js decides which of them count as completed; a fighter has a
+// few dozen at most, so one read each is cheaper than a view.
+async function loadForm(ids) {
+  const sb = window.cflSupabase;
+  // ok:false means "could not look", which must never render as "no fights".
+  const empty = { fights: [], events: [], ok: false };
+  if (!ids.length) return empty;
+  try {
+    const list = ids.join(',');
+    const { data: fights, error } = await sb.from('fights')
+      .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_active')
+      .or('fighter_a_id.in.(' + list + '),fighter_b_id.in.(' + list + ')');
+    if (error || !fights) return empty;
+    const evIds = [...new Set(fights.map(f => f.event_id).filter(x => x != null))];
+    if (!evIds.length) return { fights, events: [], ok: true };
+    const { data: events, error: evErr } = await sb.from('events')
+      .select('id, name, event_date, is_upcoming').in('id', evIds);
+    if (evErr || !events) return empty;
+    return { fights, events, ok: true };
+  } catch (e) { return empty; }
+}
+
+// The visitor's own calendar date. A card dated today is not yet history.
+function localToday() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
 
 async function loadBaseRates() {
@@ -700,46 +874,214 @@ function renderMatchup(a, b, fight, cardioMap, baseRates, mvt) {
     'betting line is controlled for. Most of them do not.</div>';
 }
 
-// ---- career stat comparison ------------------------------------------------
+// ---- who are these fighters ----------------------------------------------
+function renderWho(a, b, fight, styleRows, formA, formB, formOk) {
+  const el = document.getElementById('flWho');
+  const FL = window.cflFightLab;
+  const wc = fight.weight_class || null;
+
+  const card = (f, form) => {
+    const st = FL.styleRead(styleRows, f.id, wc);
+    const facts = [];
+    facts.push('<span>Pro record <b>' + esc(recOf(f)) + '</b></span>');
+    if (f.ufcRec && !f.ufcRec.total) facts.push('<span><b>No UFC fights yet</b></span>');
+    else facts.push('<span>UFC <b>' + esc(ufcRec(f)) + '</b></span>');
+    if (f.age != null) facts.push('<span>Age <b>' + esc(String(f.age)) + '</b></span>');
+    if (f.stance) facts.push('<span>Stance <b>' + esc(f.stance) + '</b></span>');
+    if (f.country) facts.push('<span>' + esc(f.country) + '</span>');
+
+    const styleHtml = st
+      ? '<div><div class="who-k">Fighting style</div>' +
+          '<span class="pill ' + esc(st.key) + '">' + esc(st.label) + '</span>' +
+          (st.thin ? ' <span class="pill thin">small sample</span>' : '') +
+          '<div class="who-line">' + esc(st.line) + ' <span class="muted">' +
+            'Read from round one of their last ' + (st.fights != null ? st.fights + ' ' : '') +
+            'UFC fight' + (st.fights === 1 ? '' : 's') +
+            (st.scope === 'division' ? ' at ' + esc(st.weightClass) : ' across all divisions') +
+          '.</span></div></div>'
+      : '<div><div class="who-k">Fighting style</div><div class="who-line muted">' +
+          'Not enough UFC fights on record to label a style.</div></div>';
+
+    const formHtml = form.length
+      ? '<div><div class="who-k">Last ' + form.length + ' · newest first</div><div class="chips">' +
+          form.map(r => '<span class="chip ' + esc(r.result) + '" title="' +
+            esc(r.result + ' vs ' + r.opponentName + ' · ' + cfl.formatDate(r.date)) + '">' +
+            esc(r.result) + '</span>').join('') + '</div></div>'
+      : '<div><div class="who-k">Recent form</div><div class="who-line muted">' +
+          (formOk ? 'No completed UFC fights on record.' : 'Fight history could not be loaded.') + '</div></div>';
+
+    return '<div class="who-card">' +
+      '<div><div class="nm"><a href="' + cfl.fighterUrl(f.id) + '">' + esc(f.name) + '</a></div>' +
+        (f.nickname ? '<div class="nick">“' + esc(f.nickname) + '”</div>' : '') + '</div>' +
+      '<div class="who-facts">' + facts.join('') + '</div>' +
+      styleHtml + formHtml +
+    '</div>';
+  };
+
+  el.innerHTML = '<div class="who">' + card(a, formA) + card(b, formB) + '</div>' +
+    '<div class="foot-note">Style compares what a fighter does in round one — strikes landed against takedowns and ' +
+    'control time. "Mixes both" means they are busy at both and neither dominates. Three labels is deliberately ' +
+    'coarse; a label describes their recent fights, not what they will do in this one.</div>';
+}
+
+// ---- tale of the tape ------------------------------------------------------
+// Grouped, with both names pinned above the columns. On a phone each row puts
+// its label above the pair, so the two numbers sit side by side at full size.
 function renderStats(a, b) {
   const el = document.getElementById('flStats');
-  const rows = [
-    ['Age',                 a.age,       b.age,       v => v == null ? '—' : v, 'low'],
-    ['Reach',               a.reach_in,  b.reach_in,  v => v == null ? '—' : cfl.formatReach(v), 'high'],
-    ['Height',              a.height_in, b.height_in, v => v == null ? '—' : cfl.formatHeight(v), 'high'],
-    ['Strikes landed / min', a.slpm,     b.slpm,      v => v == null ? '—' : Number(v).toFixed(2), 'high'],
-    ['Strikes absorbed / min', a.sapm,   b.sapm,      v => v == null ? '—' : Number(v).toFixed(2), 'low'],
-    ['Takedowns / fight',   a.td_avg,    b.td_avg,    v => v == null ? '—' : Number(v).toFixed(2), 'high'],
-    ['Takedown accuracy',   a.td_acc,    b.td_acc,    v => v == null ? '—' : v + '%', 'high'],
-    ['Takedown defence',    a.td_def,    b.td_def,    v => v == null ? '—' : v + '%', 'high'],
-    ['UFC record',          ufcRec(a),   ufcRec(b),   v => v, null],
+  const I = window.cflInsights;
+  const tapeA = I ? I.hasTape(a) : true, tapeB = I ? I.hasTape(b) : true;
+  const num = d => v => v == null ? null : Number(v).toFixed(d);
+  const pct = v => v == null ? null : v + '%';
+  const groups = [
+    ['Physical', [
+      ['Age',    a.age,       b.age,       v => v, 'low', false],
+      ['Height', a.height_in, b.height_in, v => v == null ? null : cfl.formatHeight(v), 'high', false],
+      ['Reach',  a.reach_in,  b.reach_in,  v => v == null ? null : cfl.formatReach(v), 'high', false],
+      ['Stance', a.stance,    b.stance,    v => v || null, null, false],
+    ]],
+    ['Record', [
+      ['Pro record', recOf(a),  recOf(b),  v => v, null, false],
+      ['UFC record', ufcRec(a), ufcRec(b), v => v, null, false],
+    ]],
+    ['Striking', [
+      ['Strikes landed per min',   a.slpm,    b.slpm,    num(2), 'high', true],
+      ['Striking accuracy',        a.str_acc, b.str_acc, pct,    'high', true],
+      ['Strikes absorbed per min', a.sapm,    b.sapm,    num(2), 'low',  true],
+      ['Striking defence',         a.str_def, b.str_def, pct,    'high', true],
+    ]],
+    ['Grappling', [
+      ['Takedowns per 15 min',     a.td_avg,  b.td_avg,  num(2), 'high', true],
+      ['Takedown accuracy',        a.td_acc,  b.td_acc,  pct,    'high', true],
+      ['Takedown defence',         a.td_def,  b.td_def,  pct,    'high', true],
+      ['Submission tries per 15 min', a.sub_avg, b.sub_avg, num(1), 'high', true],
+    ]],
   ];
-  el.innerHTML = '<div class="cmp">' + rows.map(([label, va, vb, fmt, better]) => {
-    let leadA = false, leadB = false;
-    if (better && va != null && vb != null && +va !== +vb) {
-      const aWins = better === 'high' ? +va > +vb : +va < +vb;
-      leadA = aWins; leadB = !aWins;
+
+  // A UFC rate for a fighter with no UFC fights reads 0, which is missing data
+  // rather than a measurement — so it is shown as missing.
+  const cell = (v, fmt, rate, hasTape, lead) => {
+    if (rate && !hasTape) return '<span class="val na">no UFC data</span>';
+    const out = fmt(v);
+    if (out == null || out === '') return '<span class="val na">—</span>';
+    return '<span class="val' + (lead ? ' lead' : '') + '">' + esc(String(out)) + '</span>';
+  };
+
+  const rowsHtml = groups.map(([grp, rows]) =>
+    '<div class="tape-grp">' + esc(grp) + '</div>' +
+    rows.map(([label, va, vb, fmt, better, rate]) => {
+      let leadA = false, leadB = false;
+      const comparable = better && va != null && vb != null && +va !== +vb &&
+                         (!rate || (tapeA && tapeB));
+      if (comparable) {
+        const aWins = better === 'high' ? +va > +vb : +va < +vb;
+        leadA = aWins; leadB = !aWins;
+      }
+      return '<div class="tape-row">' +
+        '<div class="l">' + cell(va, fmt, rate, tapeA, leadA) + '</div>' +
+        '<div class="lbl">' + esc(label) + '</div>' +
+        '<div class="r">' + cell(vb, fmt, rate, tapeB, leadB) + '</div>' +
+        '</div>';
+    }).join('')
+  ).join('');
+
+  el.innerHTML = '<div class="tape">' +
+    '<div class="tape-head"><div class="l"><span class="n">' + esc(a.name) + '</span></div>' +
+    '<div class="mid"></div><div class="r"><span class="n">' + esc(b.name) + '</span></div></div>' +
+    rowsHtml + '</div>' +
+    '<div class="foot-note">The dot marks the higher number — or the lower one for age and strikes absorbed. ' +
+    'It marks a measurement, not an advantage: the <a href="stats.html">Factor Lab</a> has tested most of these ' +
+    'against the betting market and only some survive. Career rates are from UFCStats; the UFC record is ' +
+    'counted from every completed UFC fight in our data — the same history "Last five fights" is drawn from — ' +
+    'so the two always agree.</div>';
+}
+
+// ---- late-round performance -----------------------------------------------
+// Side by side, each with how much fighting it rests on. Never called cardio
+// or fatigue on this page: see fight-lab.js for why.
+function renderLate(a, b, fight, rows) {
+  const el = document.getElementById('flLate');
+  const FL = window.cflFightLab;
+  const wc = fight.weight_class || null;
+
+  const card = f => {
+    const r = FL.lateRoundRead(rows, f.id, wc);
+    if (!r) {
+      return '<div class="late-card"><div class="who-n">' + esc(f.name) + '</div>' +
+        '<div class="late-none">Not enough recent fighting in round three or later to score this.</div></div>';
     }
-    return '<div class="cmp-row">' +
-      '<div class="l"><span class="val' + (leadA ? ' lead' : '') + '">' + esc(String(fmt(va))) + '</span></div>' +
-      '<div class="lbl">' + esc(label) + '</div>' +
-      '<div class="r"><span class="val' + (leadB ? ' lead' : '') + '">' + esc(String(fmt(vb))) + '</span></div>' +
-      '</div>';
-  }).join('') + '</div>' +
-  '<div class="foot-note">Highlighting marks the higher (or, for age and strikes absorbed, the lower) number. ' +
-  'It marks a measurement, not an advantage: the Factor Lab has tested most of these against the betting market ' +
-  'and only some survive.</div>';
+    // 0 to 150 across the bar (150 is the highest cap); the tick marks 100, a
+    // pace held exactly. A score, so never printed with a % sign.
+    const w = Math.max(2, Math.min(100, r.score / 1.5));
+    const where = r.scope === 'division' ? 'at ' + r.weightClass : 'across all divisions';
+    return '<div class="late-card">' +
+      '<div class="who-n">' + esc(f.name) + '</div>' +
+      '<div class="lbl">' + esc(r.label) + '</div>' +
+      '<div class="num"><span class="v">' + r.score + '</span>' +
+        '<span class="k">late-round pace score<br>100 = kept round-one pace</span></div>' +
+      '<div class="late-bar" aria-hidden="true"><i style="width:' + w.toFixed(1) + '%"></i>' +
+        '<b style="left:' + (100 / 1.5).toFixed(1) + '%"></b></div>' +
+      '<div class="late-scale"><span>0</span><span>100 = same pace</span><span>150</span></div>' +
+      '<div class="line">' + esc(r.line) +
+        (r.lowPace ? ' Their round-one pace is low to begin with (' + r.r1Pace.toFixed(1) +
+          ' significant strikes thrown a minute), so holding it is easier than it looks.' : '') + '</div>' +
+      '<div class="late-meta">' +
+        '<span class="' + (r.thin ? 'thin' : '') + '">Sample: ' + (r.thin ? 'thin — treat as a rough guide' : 'solid') + '</span>' +
+        (r.fights != null ? '<span>' + r.fights + ' recent fight' + (r.fights === 1 ? '' : 's') + ' reached round 3</span>' : '') +
+        (r.lateMinutes != null ? '<span>' + r.lateMinutes.toFixed(0) + ' late-round minutes</span>' : '') +
+        (r.r1Minutes != null ? '<span>' + r.r1Minutes.toFixed(0) + ' round-one minutes</span>' : '') +
+        '<span>' + esc(where) + '</span>' +
+      '</div>' +
+    '</div>';
+  };
+
+  el.innerHTML = '<div class="late-grid">' + card(a) + card(b) + '</div>' +
+    '<div class="foot-note">' + esc(FL.LATE_ROUND_NOTE) + ' Read from each fighter\'s five most recent UFC fights that reached round three. ' +
+    esc(FL.SOLID_SAMPLE_NOTE) + ' The ' +
+    '<a href="cardio.html">full late-round table</a> covers every fighter.</div>';
 }
 
+// ---- last five fights ------------------------------------------------------
+function renderForm(a, b, formA, formB, formOk) {
+  const el = document.getElementById('flForm');
+  const col = (f, form) => {
+    const body = form.length
+      ? form.map(r => {
+          const opp = r.opponentId
+            ? '<a href="' + cfl.fighterUrl(r.opponentId) + '">' + esc(r.opponentName) + '</a>'
+            : esc(r.opponentName);
+          const how = [r.method, r.round ? 'Round ' + r.round + (r.time ? ', ' + r.time : '') : '']
+            .filter(Boolean).join(' · ');
+          const word = { W: 'Won', L: 'Lost', D: 'Draw', NC: 'No contest' }[r.result] || r.result;
+          return '<div class="form-row">' +
+            '<span class="chip ' + esc(r.result) + '" aria-label="' + esc(word) + '">' + esc(r.result) + '</span>' +
+            '<div><div class="opp">' + esc(word) + ' vs ' + opp + '</div>' +
+              (how ? '<div class="how">' + esc(how) + '</div>' : '') +
+              '<div class="when">' + esc(cfl.formatDate(r.date)) +
+                (r.eventId ? ' · <a href="' + cfl.eventUrl(r.eventId) + '" style="color:inherit">' + esc(r.eventName) + '</a>' : '') +
+              '</div></div>' +
+            '</div>';
+        }).join('')
+      : '<div class="form-none">' + (formOk
+          ? 'No completed UFC fights on record. This may be their UFC debut.'
+          : 'Fight history could not be loaded. Try refreshing.') + '</div>';
+    return '<div class="form-col"><div class="hd">' + esc(f.name) + '</div>' + body + '</div>';
+  };
+  el.innerHTML = '<div class="form-grid">' + col(a, formA) + col(b, formB) + '</div>' +
+    '<div class="foot-note">UFC fights only — results from other promotions are not in our data. ' +
+    'Who they beat matters as much as whether they won; follow an opponent\'s name to see their record.</div>';
+}
+
+// UFC record from the completed-fight list (see load). Before that list has
+// loaded there is no record to show, rather than a stale one.
 function ufcRec(f) {
-  const w = f.ufc_wins, l = f.ufc_losses, d = f.ufc_draws;
-  if (w == null && l == null) return '—';
-  const total = (+w || 0) + (+l || 0) + (+d || 0);
-  if (total === 0) return 'UFC debut';
-  return (+w || 0) + '-' + (+l || 0) + ((+d || 0) ? '-' + d : '');
+  return f.ufcRec ? window.cflFightLab.formatUfcRecord(f.ufcRec) : '—';
 }
 
+// Professional record, all promotions, from `fighters`. When the UFC count
+// already exceeds it, it is provably out of date and is not shown.
 function recOf(f) {
+  if (f.ufcRec && window.cflFightLab.proRecordIsBehind(f, f.ufcRec)) return 'not up to date';
   const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
   return (w + l + d) > 0 ? `${w}-${l}-${d}` : '0-0-0';
 }
@@ -763,8 +1105,8 @@ function setMeta(a, b, event, mvt) {
   const pair = a.name + ' vs ' + b.name;
   document.title = pair + ' — Odds, Line Movement and Matchup Data | Cannon Fight Lab';
   const desc = pair + (event ? ' at ' + event.name : '') +
-    ': vig-free sportsbook consensus, every book’s price, the best number on each side, ' +
-    'market movement across the books quoting at both ends, and the measurable differences between the two fighters.';
+    ': tale of the tape, fighting styles, the last five fights for each corner, late-round output, ' +
+    'vig-free sportsbook consensus, every book’s price and how the market has moved.';
   const set = (sel, attr, val) => { const n = document.querySelector(sel); if (n) n.setAttribute(attr, val); };
   set('meta[name="description"]', 'content', desc);
   set('meta[property="og:title"]', 'content', pair + ' — UFC Odds, Line Movement and Matchup Data');
