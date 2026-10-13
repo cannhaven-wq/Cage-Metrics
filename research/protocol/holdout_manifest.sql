@@ -38,9 +38,11 @@ select count(*)                       as fights,
        count(distinct event_id)       as events,
        encode(sha256(convert_to(string_agg(id::text, ',' order by id), 'UTF8')), 'hex')                               as ids_sha256,
        encode(sha256(convert_to(string_agg(id::text || ':' || a::text || ':' || b::text, ',' order by id), 'UTF8')), 'hex') as prices_sha256,
-       encode(sha256(convert_to(string_agg(id::text || ':' || ya::text, ',' order by id), 'UTF8')), 'hex')            as outcomes_sha256
+       encode(sha256(convert_to(string_agg(id::text || ':' || ya::text, ',' order by id), 'UTF8')), 'hex')            as outcomes_sha256,
+       encode(sha256(convert_to(string_agg(id::text || ':' || event_id::text, ',' order by id), 'UTF8')), 'hex')      as events_sha256
   from el;
 -- Expected (2026-10-13): 710 fights, 63 events,
 --   ids      97ff805efc28921df03e91e126a4cf05c7ac539be10979fe07b597a892ee000a
 --   prices   7b259a1900c36946831bfcb5bb9b94f6ae019e2ebbdf6af009ef2f2d8117fa4d
 --   outcomes 14112440771f6746f4696fd808fa576a64b68623fbafefc9b7652182f3d854ff
+--   events   49701a1ea9c730edc39bb4e64f6af1f9a129de3e01e02a5c7452b5aed20f5789

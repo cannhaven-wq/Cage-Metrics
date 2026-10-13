@@ -18,16 +18,17 @@
       "amendment": 1,
       "motivated_by_observed_results": false,
       "looks_taken_before": 0,
-      "motivation": "independent review commissioned by the owner; found five bypasses (B1-B5) and seven weaknesses (S1-S7)",
+      "motivation": "independent review commissioned by the owner, two rounds before merge: round 1 found five bypasses (B1-B5) and seven weaknesses (S1-S7); round 2 found that B1, B2 and parts of B3-B5 still worked, plus four lock-table defects",
       "files": {
-        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "08c04858bbf6c69aa15f04b04319ca277d4ce221b99c67fde5b1457158e1808c",
-        "research/protocol/pred_protocol.py": "abc3692902be4828846dbc392926c96b9ff807d1dc5e2cbfd4a29cf968084675",
+        "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md": "7293cf8492c36ab63585d0fa7f085e06ae7ec6527553d8adc4c0db2a0c612e25",
+        "research/protocol/pred_protocol.py": "3ad74cafe0438c5bde136e53418e05fedd293b97609068a66a8643be821fb805",
         "research/protocol/protocol.json": "c2a6f22163345e120c40f0e52d5b86eae85189d68919cc9a43313a9eb0c78366",
-        "research/protocol/holdout_manifest.json": "255c19c2f8e3d041d4794c6eeb8707835ca2928aa9da3147e01fdb5c98c76fff",
-        "research/protocol/holdout_manifest.sql": "bc2466a25b4abcef3933265c3c493bcd85e496f23eeb6460ea1b05dd0f55abab",
+        "research/protocol/holdout_manifest.json": "f29fb66265d4a327adf7278cadf4122831e48f84ce183c02079b1b9cb9060117",
+        "research/protocol/holdout_manifest.sql": "f368ce34fc6d21303f28625c119229179b99a2ecec453adcc5e7a52e118792eb",
         "research/protocol/h1_fight_ids.txt": "95716f3a0cb54e3a6fe905a1d02a761db2e2f106e1783435a41f8aa35db06b16",
-        "tests/test_prediction_protocol.py": "165d32753bf2a34ec1276936e79e28470c58510f9cb7ae633eaff9f3bfc86f66"
-      }
+        "tests/test_prediction_protocol.py": "d1d8a07f043f6440f6771ee0bc879b1bdd95536d1db000c7ef5c045ac2723250"
+      },
+      "decision": "D-023"
     }
   ]
 }

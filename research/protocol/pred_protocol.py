@@ -21,6 +21,7 @@ from __future__ import annotations
 import datetime as _dt
 import hashlib
 import json
+import re
 import math
 import pathlib
 import subprocess
@@ -232,12 +233,30 @@ def symmetry_violations(predict: Callable[[dict], float], rows: Iterable[dict],
 
 
 # ---------------------------------------------------------------------------
-# 6. Registration: what the experiment froze, read from the registry
+# 6. Registration: what the experiment froze, read from its preregistration
 # ---------------------------------------------------------------------------
 
+REG_FIELDS = ("experiment_id", "model_artifact_sha256", "model_class", "target_effect",
+              "sd_used", "n_required", "author_sessions")
+_REG_BLOCK = re.compile(r"```pred-registration\s*\n(.*?)\n```", re.S)
+
+
+def _registration_block(text: str) -> dict:
+    m = _REG_BLOCK.search(text)
+    if not m:
+        raise ProtocolViolation("the preregistration has no ```pred-registration``` block")
+    return json.loads(m.group(1))
+
+
 def load_registration(experiment_id: str, registry_path: pathlib.Path = None) -> dict:
-    """The frozen facts a look is judged against, taken from research/registry.json
-    and checked against the bytes on disk. The caller cannot supply them."""
+    """The frozen facts a look is judged against.
+
+    They are read from the ```pred-registration``` block INSIDE the hashed
+    preregistration file, and the registry entry must repeat them exactly. So
+    editing n_required or the artifact hash after a look means editing a
+    frozen file, which changes its hash, which the registry and a test against
+    main both record. The caller supplies none of it.
+    """
     reg = json.loads((registry_path or REGISTRY_PATH).read_text())
     hits = [e for e in reg.get("experiments", []) if e.get("experiment_id") == experiment_id]
     if len(hits) != 1:
@@ -245,30 +264,43 @@ def load_registration(experiment_id: str, registry_path: pathlib.Path = None) ->
     e = hits[0]
     if e.get("protocol") != "PRED-001":
         raise ProtocolViolation(f"{experiment_id} is not a PRED-001 experiment")
-    for k in ("preregistration_path", "preregistration_sha256", "model_artifact_sha256",
-              "model_class", "target_effect", "sd_used", "n_required"):
-        if e.get(k) in (None, ""):
+    for k in ("preregistration_path", "preregistration_sha256"):
+        if not e.get(k):
             raise ProtocolViolation(f"{experiment_id} registry entry lacks {k}")
     path = REPO / e["preregistration_path"]
     if not path.exists() or hashlib.sha256(path.read_bytes()).hexdigest() != e["preregistration_sha256"]:
         raise ProtocolViolation(f"{experiment_id}: preregistration on disk does not match its frozen sha256")
-    if e["model_class"] != "incremental":
+    block = _registration_block(path.read_text())
+    for k in REG_FIELDS:
+        if k not in block:
+            raise ProtocolViolation(f"{experiment_id}: pred-registration block lacks {k}")
+        if e.get(k) != block[k]:
+            raise ProtocolViolation(f"{experiment_id}: registry {k} disagrees with the frozen preregistration")
+    if block["experiment_id"] != experiment_id:
+        raise ProtocolViolation("the preregistration names a different experiment")
+    if not re.fullmatch(r"[0-9a-f]{64}", str(block["model_artifact_sha256"])):
+        raise ProtocolViolation(f"{experiment_id}: model_artifact_sha256 is not a sha256")
+    if block["model_class"] != "incremental":
         raise ProtocolViolation(
-            f"{experiment_id}: model_class {e['model_class']!r}. Confirmatory looks score the "
+            f"{experiment_id}: model_class {block['model_class']!r}. Confirmatory looks score the "
             f"incremental (market + model, weights frozen on DEV) form only - PRED-001 §4.")
-    if e["target_effect"] < T["min_target_effect"]:
-        raise ProtocolViolation(f"{experiment_id}: target_effect below {T['min_target_effect']}")
-    if e["sd_used"] < T["sd_floor_incremental"]:
+    if not (T["min_target_effect"] <= block["target_effect"] <= T["leak_tripwire_delta_ll"]):
+        raise ProtocolViolation(
+            f"{experiment_id}: target_effect must lie in [{T['min_target_effect']}, "
+            f"{T['leak_tripwire_delta_ll']}]; above the leak tripwire a pass would read as a leak")
+    if block["sd_used"] < T["sd_floor_incremental"]:
         raise ProtocolViolation(f"{experiment_id}: sd_used below the floor {T['sd_floor_incremental']}")
-    need = required_n(e["sd_used"], e["target_effect"], T["alpha_prospective_per_evaluation"],
+    need = required_n(block["sd_used"], block["target_effect"], T["alpha_prospective_per_evaluation"],
                       T["power"], mue=T["minimum_useful_effect"])
-    if int(e["n_required"]) < need:
-        raise ProtocolViolation(f"{experiment_id}: n_required {e['n_required']} is below the {need} its own target and SD imply")
-    return e
+    if int(block["n_required"]) < need:
+        raise ProtocolViolation(f"{experiment_id}: n_required {block['n_required']} is below the {need} its own target and SD imply")
+    if not block["author_sessions"]:
+        raise ProtocolViolation(f"{experiment_id}: author_sessions is empty; the auditor check needs it")
+    return dict(e)
 
 
 # ---------------------------------------------------------------------------
-# 7. The decision
+# 7. The decision rule (pure) and the look (provenance-checked)
 # ---------------------------------------------------------------------------
 
 @dataclass
@@ -297,12 +329,18 @@ class Evaluation:
         return dict(self.__dict__)
 
 
-def _input_problems(y, p_model, p_market, clusters, fight_ids) -> list[str]:
+def _invalid(stage, n, fid_sha, reasons) -> Evaluation:
+    nan = float("nan")
+    return Evaluation(stage, n, 0, 0.0, nan, nan, nan, nan, nan, nan, nan, nan,
+                      nan, nan, nan, nan, fid_sha, "INVALID", list(reasons))
+
+
+def _input_problems(y, p_model, p_market, clusters) -> list[str]:
     out = []
     n = len(y)
     if n == 0:
         return ["no fights supplied"]
-    if not (len(p_model) == len(p_market) == len(clusters) == len(fight_ids) == n):
+    if not (len(p_model) == len(p_market) == len(clusters) == n):
         return ["inputs have different lengths"]
     ya = np.asarray(y, dtype=float)
     if not np.all(np.isin(ya, (0.0, 1.0))):
@@ -317,8 +355,6 @@ def _input_problems(y, p_model, p_market, clusters, fight_ids) -> list[str]:
         if not math.isfinite(f) or f < 0 or f > 1:
             out.append("a model probability is outside [0, 1]")
             break
-    if len(set(int(i) for i in fight_ids)) != n:
-        out.append("a fight id appears twice")
     events = len({str(c) for c in clusters})
     if events < T["min_events_scored"]:
         out.append(f"fewer than {T['min_events_scored']} events scored")
@@ -327,24 +363,15 @@ def _input_problems(y, p_model, p_market, clusters, fight_ids) -> list[str]:
     return out
 
 
-def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
-             registration: dict, artifact_sha256: str,
-             pit_audit_passed: bool, symmetry_passed: bool) -> Evaluation:
-    """Score one frozen model against the market on one eligible fight set.
-
-    The fight set, the sample size and the model's identity are NOT the
-    caller's to choose:
-      * H1 must be exactly the sealed set in holdout_manifest.json (by hash);
-      * a confirmatory PROSPECTIVE look must be exactly n_required fights, the
-        number frozen in the registry, not one more or one fewer;
-      * the artifact must be the one the registry froze.
-
-    p_model may contain None for fights the model abstained on. Those are
-    scored at the market's probability - a zero contribution - so abstaining on
-    hard fights cannot improve the result.
+def decide(y, p_model, p_market, clusters, *, stage: str, n_required: int = 0,
+           fight_ids_sha256: str = "") -> Evaluation:
+    """The decision rule alone, on arrays. PURE AND UNCHECKED: it trusts its
+    inputs. It is exposed so the rule itself can be tested in synthetic worlds.
+    Nothing it returns is a look; only an entry run_look writes to the ledger
+    on main counts.
 
     Verdicts, in the order they are checked:
-      INVALID           a precondition failed; nothing else is read
+      INVALID           an input or precondition failed; nothing else is read
       SUSPECT           too good to be honest; frozen pending a written leak audit
       REJECT            no meaningful incremental information (incl. futility)
       UNDERPOWERED      an interim look: never a pass
@@ -357,28 +384,10 @@ def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
     """
     if stage not in STAGES:
         raise ValueError(stage)
-    reasons = _input_problems(y, p_model, p_market, clusters, fight_ids)
-    fid_sha = ids_sha256(fight_ids) if not any("twice" in r for r in reasons) and len(fight_ids) else ""
-
-    if artifact_sha256 != registration.get("model_artifact_sha256"):
-        reasons.append("model artifact does not match the one the registry froze")
-    if not pit_audit_passed:
-        reasons.append("point-in-time audit failed: a feature used information not available before the fight")
-    if not symmetry_passed:
-        reasons.append("model is not corner-symmetric")
     n = len(y)
-    n_req = int(registration.get("n_required") or 0)
-    if stage == "H1" and fid_sha != MANIFEST["partitions"]["H1"]["priced_ids_sha256"]:
-        reasons.append("the fight set is not the sealed H1 set in holdout_manifest.json")
-    if stage == "PROSPECTIVE" and n != n_req:
-        reasons.append(f"a confirmatory prospective look scores exactly the first {n_req} eligible locks, not {n}")
-    if stage == "PROSPECTIVE_INTERIM" and n >= n_req:
-        reasons.append("at or past n_required the look is confirmatory, not interim")
-
-    nan = float("nan")
-    if reasons:
-        return Evaluation(stage, n, 0, 0.0, nan, nan, nan, nan, nan, nan, nan, nan,
-                          nan, nan, nan, nan, fid_sha, "INVALID", reasons)
+    probs = _input_problems(y, p_model, p_market, clusters)
+    if probs:
+        return _invalid(stage, n, fight_ids_sha256, probs)
 
     y = np.asarray(y, dtype=float)
     pk = _clip(p_market)
@@ -400,7 +409,7 @@ def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
 
     ev = Evaluation(stage, n, int(covered.sum()), coverage, delta, lo_conf, lo95, hi95,
                     float(brier_each(y, pm).mean()), float(brier_each(y, pk).mean()),
-                    acc_m, acc_k, a, b, ak, bk, fid_sha, "INCONCLUSIVE", [])
+                    acc_m, acc_k, a, b, ak, bk, fight_ids_sha256, "INCONCLUSIVE", [])
     R = ev.reasons
     mue = T["minimum_useful_effect"]
 
@@ -409,8 +418,6 @@ def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
         R.append(f"coverage {coverage:.1%} below {T['min_coverage']:.0%}")
         return ev
 
-    # SUSPECT - leak tripwires, both measured against the market so a
-    # favourite-heavy population does not trip them on its own.
     if delta > T["leak_tripwire_delta_ll"]:
         R.append(f"log-loss gain {delta:.4f} exceeds the leak tripwire {T['leak_tripwire_delta_ll']}")
     if acc_m - acc_k > T["leak_tripwire_accuracy_lift"]:
@@ -421,16 +428,15 @@ def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
         return ev
 
     if stage == "PROSPECTIVE_INTERIM":
-        if n >= n_req * T["futility_min_fraction"] and hi95 < mue:
-            R.append(f"futility: at {n} of {n_req} fights the 95% range tops out at "
+        if n >= n_required * T["futility_min_fraction"] and hi95 < mue:
+            R.append(f"futility: at {n} of {n_required} fights the 95% range tops out at "
                      f"{hi95:.4f}, below the minimum useful effect {mue}")
             ev.verdict = "REJECT"
         else:
-            R.append(f"interim look at {n} of {n_req}; no success rule applies before n")
+            R.append(f"interim look at {n} of {n_required}; no success rule applies before n")
             ev.verdict = "UNDERPOWERED"
         return ev
 
-    # REJECT - the explicit "no meaningful incremental information" rules.
     if delta <= 0:
         R.append("the market was at least as good on average (point estimate <= 0)")
     if hi95 < mue:
@@ -456,8 +462,120 @@ def evaluate(y, p_model, p_market, clusters, fight_ids, *, stage: str,
     return ev
 
 
+def _sha(parts: Iterable[str]) -> str:
+    return hashlib.sha256(",".join(parts).encode()).hexdigest()
+
+
+def _h1_inputs(rows: list[dict]):
+    """H1 rows carry raw facts, not derived numbers: fight id, event id, the
+    outcome, the two BFO closing American prices, the model probability. Every
+    fact is checked against the manifest's fingerprints, and the market
+    probability is de-vigged here, so no caller-side arithmetic survives."""
+    probs = []
+    try:
+        rs = sorted(rows, key=lambda r: int(r["fight_id"]))
+        ids = [int(r["fight_id"]) for r in rs]
+        if any(int(r["fight_id"]) != r["fight_id"] for r in rs):
+            raise ValueError
+    except (KeyError, TypeError, ValueError):
+        return None, ["H1 rows need integer fight_id, event_id, y, american_a, american_b, p_model"]
+    h1 = MANIFEST["partitions"]["H1"]
+    checks = {
+        "fight set": (_sha(str(i) for i in ids), h1["priced_ids_sha256"]),
+        "benchmark prices": (_sha(f"{r['fight_id']}:{int(r['american_a'])}:{int(r['american_b'])}" for r in rs),
+                             h1["priced_prices_sha256"]),
+        "outcomes": (_sha(f"{r['fight_id']}:{int(r['y'])}" for r in rs), h1["priced_outcomes_sha256"]),
+        "card assignment": (_sha(f"{r['fight_id']}:{int(r['event_id'])}" for r in rs), h1["priced_events_sha256"]),
+    }
+    for name, (got, want) in checks.items():
+        if got != want:
+            probs.append(f"the H1 {name} does not match holdout_manifest.json")
+    if probs:
+        return None, probs
+    y = [int(r["y"]) for r in rs]
+    pk = [devig_proportional(r["american_a"], r["american_b"]) for r in rs]
+    pm = [r["p_model"] for r in rs]
+    cl = [str(r["event_id"]) for r in rs]
+    return (y, pm, pk, cl, checks["fight set"][0]), []
+
+
+def _prospective_inputs(rows: list[dict], reg: dict, stage: str, card_population: dict | None):
+    """Prospective rows are rows of v_win_model_locks_graded, as read. The
+    eligible set and its order are derived here, not chosen by the caller:
+    graded, corners unchanged, a market price on the lock; ordered by
+    actual_lock_at then lock_id. A confirmatory look takes the first
+    n_required; the model probability is the locked p_a, nothing else."""
+    n_req = int(reg["n_required"])
+    for r in rows:
+        if r.get("experiment_id") != reg["experiment_id"] or r.get("artifact_sha256") != reg["model_artifact_sha256"]:
+            return None, ["a lock row belongs to another experiment or another artifact"]
+    try:
+        elig = [r for r in rows if r.get("y_a") in (0, 1) and r.get("corners_unchanged") is True
+                and r.get("market_p_a_vigfree") is not None]
+        elig.sort(key=lambda r: (str(r["actual_lock_at"]), int(r["lock_id"])))
+    except (KeyError, TypeError, ValueError):
+        return None, ["lock rows need lock_id, actual_lock_at, fight_id, event_id, p_a, market_p_a_vigfree, y_a, corners_unchanged"]
+    if stage == "PROSPECTIVE":
+        if len(elig) < n_req:
+            return None, [f"only {len(elig)} eligible locks; the confirmatory look needs {n_req}"]
+        elig = elig[:n_req]
+    elif len(elig) >= n_req:
+        return None, ["at or past n_required the look is confirmatory, not interim"]
+    if len({int(r["fight_id"]) for r in elig}) != len(elig):
+        return None, ["a fight is locked twice under one experiment"]
+    # Selective locking - forecasting only the fights one likes - is the
+    # prospective form of cherry-picking. On every card in the scored set, at
+    # least min_coverage of the bouts that had a two-sided market at lock time
+    # must carry a lock. The population is re-derivable from fight_odds.
+    if not card_population:
+        return None, ["card_population (event_id -> bouts with a two-sided market) is required"]
+    locked = {}
+    for r in elig:
+        locked.setdefault(str(r["event_id"]), set()).add(int(r["fight_id"]))
+    for ev_id, fights in locked.items():
+        pop = {int(x) for x in card_population.get(ev_id, card_population.get(int(ev_id), []))}
+        if not pop or len(fights & pop) / len(pop) < T["min_coverage"]:
+            return None, [f"card {ev_id}: locks cover {len(fights & pop)} of {len(pop)} priced bouts; "
+                          f"selective locking is not allowed"]
+    y = [int(r["y_a"]) for r in elig]
+    pm = [float(r["p_a"]) for r in elig]
+    pk = [float(r["market_p_a_vigfree"]) for r in elig]
+    cl = [str(r["event_id"]) for r in elig]
+    return (y, pm, pk, cl, _sha(str(int(r["lock_id"])) for r in elig)), []
+
+
+def evaluate(rows: list[dict], *, stage: str, experiment_id: str, artifact_sha256: str,
+             pit_audit_passed: bool, symmetry_passed: bool,
+             registry_path: pathlib.Path = None, card_population: dict | None = None) -> Evaluation:
+    """One look's verdict, with its inputs checked rather than trusted.
+
+    The registration is loaded from the frozen preregistration; H1 facts are
+    checked against the manifest fingerprints; prospective inputs are derived
+    from the lock rows. Still not a look on its own - see run_look.
+    """
+    if stage not in STAGES:
+        raise ValueError(stage)
+    reg = load_registration(experiment_id, registry_path)
+    pre = []
+    if artifact_sha256 != reg["model_artifact_sha256"]:
+        pre.append("model artifact does not match the one the preregistration froze")
+    if not pit_audit_passed:
+        pre.append("point-in-time audit failed: a feature used information not available before the fight")
+    if not symmetry_passed:
+        pre.append("model is not corner-symmetric")
+    if stage == "H1":
+        got, probs = _h1_inputs(rows)
+    else:
+        got, probs = _prospective_inputs(rows, reg, stage, card_population)
+    pre += probs
+    if pre:
+        return _invalid(stage, len(rows), got[4] if got else "", pre)
+    y, pm, pk, cl, fid = got
+    return decide(y, pm, pk, cl, stage=stage, n_required=int(reg["n_required"]), fight_ids_sha256=fid)
+
+
 # ---------------------------------------------------------------------------
-# 8. The only sanctioned way to look: evaluate AND record, or neither
+# 8. The only look that counts: evaluate AND record, or neither
 # ---------------------------------------------------------------------------
 
 def _entry_hash(entry: dict) -> str:
@@ -490,53 +608,67 @@ def _git(*args) -> str:
                           check=True).stdout.strip()
 
 
-def run_look(*, experiment_id: str, stage: str, y, p_model, p_market, clusters, fight_ids,
-             artifact_sha256: str, pit_audit_passed: bool, symmetry_passed: bool,
-             auditor: str, evaluated_at: str, ledger_path: pathlib.Path = None,
-             registry_path: pathlib.Path = None) -> Evaluation:
+AUDITOR_ID = re.compile(r"session_[A-Za-z0-9]{8,}")
+
+
+def run_look(*, experiment_id: str, stage: str, rows: list[dict], artifact_sha256: str,
+             pit_audit_passed: bool, symmetry_passed: bool, auditor: str, evaluated_at: str,
+             card_population: dict | None = None,
+             _ledger_path: pathlib.Path = None, _registry_path: pathlib.Path = None,
+             _authors_from_git: bool = True) -> Evaluation:
     """Evaluate one look and append it to the ledger in the same step.
 
-    Refuses BEFORE computing anything when the look would break a budget or
-    repeat a look. Every look that computes is recorded - INVALID, REJECT and
-    failures included - so a bad look cannot be quietly retried. The ledger
-    entry is hash-chained to the one before it.
+    Refuses BEFORE computing anything when the look would break a budget,
+    repeat a look, or be run by one of the model's authors. Every look that
+    computes is recorded - INVALID, REJECT and crashes included. The entry is
+    hash-chained to the one before it.
+
+    THE TRUST MODEL, stated once: a look COUNTS only when its entry is
+    committed to the ledger on main. The underscore arguments exist for the
+    test sandbox; a look recorded anywhere else is not a look, and a person
+    with database access can always compute a log loss on H1 by hand. That is
+    why no claim rests on H1 (PRED-001 §9): prospective outcomes do not exist
+    when the lock is written, and no code path can leak them.
     """
-    ledger_path = ledger_path or LEDGER_PATH
+    if not AUDITOR_ID.fullmatch(auditor or ""):
+        raise ProtocolViolation("auditor must be a Claude session id (session_...) so it can be checked")
+    ledger_path = _ledger_path or LEDGER_PATH
     ledger = json.loads(ledger_path.read_text())
     probs = verify_ledger_chain(ledger)
     if probs:
         raise ProtocolViolation("ledger is damaged: " + "; ".join(probs))
-    reg = load_registration(experiment_id, registry_path)
+    reg = load_registration(experiment_id, _registry_path)
     ents = ledger["entries"]
 
     if stage == "H1":
         if sum(e["stage"] == "H1" for e in ents) >= ledger["h1_budget"]:
             raise ProtocolViolation("the H1 budget is spent; H1 is retired")
-        if any(e["stage"] == "H1" and e["artifact_sha256"] == artifact_sha256 for e in ents):
-            raise ProtocolViolation("this artifact has already had its H1 look")
-        if any(e["stage"] == "H1" and e["experiment_id"] == experiment_id for e in ents):
-            raise ProtocolViolation("this experiment has already had its H1 look; a successor is a new experiment")
+        if any(e["stage"] == "H1" and (e["experiment_id"] == experiment_id
+                                       or e["artifact_sha256"] == artifact_sha256) for e in ents):
+            raise ProtocolViolation("this experiment or artifact has already had its H1 look; a successor is a new experiment")
     if stage == "PROSPECTIVE":
         if sum(e["stage"] == "PROSPECTIVE" for e in ents) >= ledger["prospective_budget"]:
             raise ProtocolViolation("the prospective budget is spent")
         if any(e["stage"] == "PROSPECTIVE" and e["experiment_id"] == experiment_id for e in ents):
             raise ProtocolViolation("this experiment has already had its confirmatory look")
 
-    try:
-        authors = sorted(set(_git("log", "--format=%ae", "--", reg["preregistration_path"]).split()))
-    except Exception:  # noqa: BLE001 - a missing history is recorded, not guessed
-        authors = []
-    author_sessions = sorted(set(reg.get("author_sessions") or []))
-    if auditor in author_sessions or auditor in authors:
+    authors_git = []
+    if _authors_from_git:
+        # A failure to read authorship is a refusal, never an empty list.
+        authors_git = sorted(set(_git("log", "--format=%ae", "--", reg["preregistration_path"]).split()))
+        if not authors_git:
+            raise ProtocolViolation("no git history for the preregistration; commit it before any look")
+    author_sessions = sorted(set(reg["author_sessions"]))
+    if auditor in author_sessions:
         raise ProtocolViolation("the auditor is one of the model's authors")
 
-    ev = evaluate(y, p_model, p_market, clusters, fight_ids, stage=stage, registration=reg,
-                  artifact_sha256=artifact_sha256, pit_audit_passed=pit_audit_passed,
-                  symmetry_passed=symmetry_passed)
+    try:
+        ev = evaluate(rows, stage=stage, experiment_id=experiment_id, artifact_sha256=artifact_sha256,
+                      pit_audit_passed=pit_audit_passed, symmetry_passed=symmetry_passed,
+                      registry_path=_registry_path, card_population=card_population)
+    except Exception as exc:  # noqa: BLE001 - a crash is recorded, not retried quietly
+        ev = _invalid(stage, len(rows), "", [f"evaluation raised {type(exc).__name__}: {exc}"])
 
-    inputs = {"y": [int(v) for v in y], "p_model": [None if v is None else float(v) for v in p_model],
-              "p_market": [float(v) for v in p_market], "clusters": [str(c) for c in clusters],
-              "fight_ids": [int(i) for i in fight_ids]}
     try:
         commit = _git("rev-parse", "HEAD")
     except Exception:  # noqa: BLE001
@@ -549,11 +681,11 @@ def run_look(*, experiment_id: str, stage: str, y, p_model, p_market, clusters, 
         "code_commit": commit,
         "auditor": auditor,
         "author_sessions": author_sessions,
-        "author_git_emails": authors,
+        "author_git_emails": authors_git,
         "evaluated_at": evaluated_at,
         "n_scored": ev.n_eligible,
         "fight_ids_sha256": ev.fight_ids_sha256,
-        "inputs_sha256": hashlib.sha256(json.dumps(inputs, sort_keys=True).encode()).hexdigest(),
+        "inputs_sha256": hashlib.sha256(json.dumps(rows, sort_keys=True, default=str).encode()).hexdigest(),
         "delta_ll": None if math.isnan(ev.delta_ll) else round(ev.delta_ll, 6),
         "verdict": ev.verdict,
         "prev_entry_sha256": ents[-1]["entry_sha256"] if ents else "0" * 64,

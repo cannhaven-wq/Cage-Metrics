@@ -5,7 +5,9 @@
   "eligibility": "fights with both fighters set, winner_id equal to one of them (draws and no-contests excluded), is_active IS DISTINCT FROM false (dead bookings excluded), event_date < 2026-10-12. 'priced' additionally requires a BestFightOdds closing-consensus quote (odds_books.name ILIKE 'BFO%', is_closer) on BOTH fighters. Amendment 1 (2026-10-13) also excludes fights 43, 46 and 8780, rebooked in place: their stored prices may belong to a different matchup.",
   "hash_recipe": {
     "ids": "sha256(string_agg(fight_id::text, ',' ORDER BY fight_id)) over priced eligible fights",
-    "outcomes": "sha256(string_agg(fight_id || ':' || (winner_id = fighter_a_id)::int, ',' ORDER BY fight_id)) over the same rows"
+    "outcomes": "sha256(string_agg(fight_id || ':' || (winner_id = fighter_a_id)::int, ',' ORDER BY fight_id)) over the same rows",
+    "prices": "sha256(string_agg(fight_id || ':' || american_a || ':' || american_b, ',' ORDER BY fight_id))",
+    "events": "sha256(string_agg(fight_id || ':' || event_id, ',' ORDER BY fight_id)) - fixes which card each fight is resampled with"
   },
   "partitions": {
     "DEV": {
@@ -35,7 +37,8 @@
         "priced_ids_sha256": "55642caafc579929bebab8a7aaabb28515ffeca0ac9a1cc359f7acf99c84ac9b",
         "priced_outcomes_sha256": "013bed8c7941a26adea7af989d6d04d2382da1370da4fbac2c8c3336207e5320",
         "why": "included three rebooked-in-place fights; superseded before any look"
-      }
+      },
+      "priced_events_sha256": "49701a1ea9c730edc39bb4e64f6af1f9a129de3e01e02a5c7452b5aed20f5789"
     },
     "RESERVE": {
       "event_dates": [

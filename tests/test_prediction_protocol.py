@@ -75,25 +75,49 @@ def world(seed, n_events=300, per=12, market_noise=0.3):
 
 
 ART = "b" * 64
+AUDITOR = "session_auditor0001"
+BUILDER = "session_builder0001"
 
 
-def reg(n_required, **kw):
-    r = {"experiment_id": "PRED-900", "protocol": "PRED-001", "model_class": "incremental",
-         "model_artifact_sha256": ART, "target_effect": 0.01, "sd_used": 0.064,
-         "n_required": n_required}
-    r.update(kw)
-    return r
+def sandbox(test, n_required=412, target=0.01, **block_overrides):
+    """A temp preregistration (with its pred-registration block), registry and
+    ledger. Returns (registry_path, ledger_path)."""
+    d = pathlib.Path(tempfile.mkdtemp())
+    test.addCleanup(shutil.rmtree, d)
+    block = {"experiment_id": "PRED-900", "model_artifact_sha256": ART, "model_class": "incremental",
+             "target_effect": target, "sd_used": 0.064, "n_required": n_required,
+             "author_sessions": [BUILDER]}
+    block.update(block_overrides)
+    pre = d / "PREREG.md"
+    pre.write_text("# PRED-900\n\n```pred-registration\n" + json.dumps(block) + "\n```\n")
+    entry = dict(block, protocol="PRED-001", preregistration_path=str(pre), preregistration_sha256=sha256(pre))
+    regf = d / "registry.json"
+    regf.write_text(json.dumps({"experiments": [entry]}))
+    led = d / "ledger.json"
+    led.write_text(json.dumps({"h1_budget": 10, "prospective_budget": 5, "entries": []}))
+    return regf, led
 
 
-OK = dict(pit_audit_passed=True, symmetry_passed=True, artifact_sha256=ART)
+def lock_rows(y, p_a, p_mkt, clusters, ids, experiment="PRED-900", artifact=ART):
+    return [{"lock_id": i + 1, "fight_id": int(ids[i]), "event_id": int(clusters[i]),
+             "actual_lock_at": f"2027-01-{1 + i // 1000:02d}T00:00:{i % 60:02d}+00:00#{i:06d}",
+             "p_a": float(p_a[i]), "market_p_a_vigfree": float(p_mkt[i]), "y_a": int(y[i]),
+             "corners_unchanged": True, "experiment_id": experiment, "artifact_sha256": artifact}
+            for i in range(len(y))]
+
+
+def population(rows):
+    pop = {}
+    for r in rows:
+        pop.setdefault(str(r["event_id"]), []).append(r["fight_id"])
+    return pop
 
 
 def prospective(y, pm, pk, cl, ids, n_required=None, stage="PROSPECTIVE"):
-    return pp.evaluate(y, pm, pk, cl, ids, stage=stage,
-                       registration=reg(len(y) if n_required is None else n_required), **OK)
+    """The pure decision rule; provenance is tested separately below."""
+    return pp.decide(y, pm, pk, cl, stage=stage, n_required=len(y) if n_required is None else n_required)
 
 
-# ---------------------------------------------------------------------------
 class FreezeHistory(unittest.TestCase):
     def test_status(self):
         self.assertEqual(PROTOCOL["status"], "frozen")
@@ -112,8 +136,8 @@ class FreezeHistory(unittest.TestCase):
             self.assertEqual(
                 sha256(REPO / path), sha,
                 f"{path} changed after its last recorded freeze. Changing a frozen PRED-001 "
-                f"file is an L3 amendment: date it under '## Amendments' and append a new "
-                f"entry to FREEZE.json in the same commit.")
+                f"file is an L3 amendment: date it under '## Amendments', record a decision, and "
+                f"append a NEW entry to FREEZE.json in the same commit.")
 
     def test_every_governed_file_is_frozen(self):
         last = set(FREEZE["history"][-1]["files"])
@@ -123,8 +147,9 @@ class FreezeHistory(unittest.TestCase):
                   "research/protocol/h1_fight_ids.txt", "tests/test_prediction_protocol.py"):
             self.assertIn(p, last)
 
-    def test_each_later_entry_is_a_recorded_amendment(self):
+    def test_each_later_entry_is_a_recorded_amendment_with_a_decision(self):
         text = (REPO / "research/protocol/PREDICTION_RESEARCH_PROTOCOL.md").read_text()
+        decisions = (REPO / "coordination/DECISIONS.md").read_text()
         section = text.split("## Amendments", 1)[1]
         documented = re.findall(r"^### Amendment (\d+) — (\d{4}-\d{2}-\d{2})", section, re.M)
         later = FREEZE["history"][1:]
@@ -134,8 +159,46 @@ class FreezeHistory(unittest.TestCase):
             self.assertEqual(int(num), e["amendment"])
             self.assertEqual(date, e["date"])
             self.assertIs(e["motivated_by_observed_results"], False)
-            self.assertEqual(e["looks_taken_before"], 0,
-                             "an amendment after a look at sealed data needs the owner, not this file")
+            self.assertRegex(e.get("decision", ""), r"^D-\d{3}$", "an amendment needs an owner decision")
+            self.assertIn(f"## {e['decision']} ", decisions, f"{e['decision']} is not in DECISIONS.md")
+            self.assertLessEqual(e["looks_taken_before"], len(LEDGER["entries"]))
+
+    def test_history_only_grows_relative_to_main(self):
+        """The anti-rewrite check: an entry already on main can never change.
+        Rewriting the latest entry in place on a branch - instead of adding an
+        amendment - fails here once that entry has merged."""
+        main = _from_main("research/protocol/FREEZE.json")
+        if main is None:
+            self.skipTest("main has no FREEZE.json yet (first merge)")
+        base = json.loads(main)["history"]
+        self.assertEqual(FREEZE["history"][:len(base)], base,
+                         "a FREEZE.json entry that exists on main was edited or removed")
+
+    def test_registered_experiments_are_unchanged_relative_to_main(self):
+        main = _from_main("research/registry.json")
+        if main is None:
+            return
+        now = {e["experiment_id"]: e for e in json.loads((REPO / "research/registry.json").read_text())["experiments"]}
+        for e in json.loads(main).get("experiments", []):
+            if e.get("protocol") != "PRED-001":
+                continue
+            cur = now.get(e["experiment_id"])
+            self.assertIsNotNone(cur, f"{e['experiment_id']} was removed from the registry")
+            for k in pp.REG_FIELDS + ("preregistration_path", "preregistration_sha256"):
+                self.assertEqual(cur.get(k), e.get(k), f"{e['experiment_id']}.{k} changed after it merged")
+
+
+def _from_main(path):
+    """A file as it is on origin/main, or None if main has no such file.
+    In CI the ref must exist: a missing main is a failure, not a skip."""
+    has_ref = subprocess.run(["git", "-C", str(REPO), "rev-parse", "--verify", "-q", "origin/main"],
+                             capture_output=True).returncode == 0
+    if not has_ref:
+        if os.environ.get("CI"):
+            raise AssertionError("origin/main is not fetched in CI; the anti-rewrite checks cannot run")
+        return None
+    r = subprocess.run(["git", "-C", str(REPO), "show", f"origin/main:{path}"], capture_output=True, text=True)
+    return r.stdout if r.returncode == 0 else None
 
 
 # ---------------------------------------------------------------------------
@@ -243,25 +306,16 @@ class Decisions(unittest.TestCase):
         ev = prospective(y, 1 / (1 + np.exp(-1.5 * tl)), pk, cl, ids)
         self.assertEqual(ev.verdict, "FAIL_CALIBRATION")
 
-    def test_preconditions_make_it_invalid(self):
-        y, pt, pk, *_, cl, ids = world(1)
-        for kw in ({"pit_audit_passed": False}, {"symmetry_passed": False}, {"artifact_sha256": "c" * 64}):
-            args = dict(OK, **kw)
-            ev = pp.evaluate(y, pt, pk, cl, ids, stage="PROSPECTIVE", registration=reg(len(y)), **args)
-            self.assertEqual(ev.verdict, "INVALID", kw)
-
     def test_bad_inputs_are_invalid(self):
         y, pt, pk, *_, cl, ids = world(1)
         cases = {
             "y=0.5": (np.where(np.arange(len(y)) == 0, 0.5, y), pt, pk, ids),
             "nan market": (y, pt, np.where(np.arange(len(y)) == 0, np.nan, pk), ids),
             "model 1.7": (y, np.where(np.arange(len(y)) == 0, 1.7, pt), pk, ids),
-            "duplicate id": (y, pt, pk, np.where(np.arange(len(y)) == 1, ids[0], ids)),
         }
         for name, (yy, pm, pkk, ii) in cases.items():
             self.assertEqual(prospective(yy, pm, pkk, cl, ii).verdict, "INVALID", name)
-        self.assertEqual(pp.evaluate([], [], [], [], [], stage="PROSPECTIVE", registration=reg(1), **OK).verdict,
-                         "INVALID")
+        self.assertEqual(pp.decide([], [], [], [], stage="PROSPECTIVE", n_required=1).verdict, "INVALID")
 
     def test_too_few_events_is_invalid(self):
         y, pt, pk, *_, cl, ids = world(1, n_events=10, per=12)
@@ -293,58 +347,141 @@ class Decisions(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-class TheCallerCannotChoose(unittest.TestCase):
-    """v1.0 let the caller pass the fight set and n_required. Dropping the 5%
-    of fights where a noisy market copy did worst turned REJECT into PASS_H1,
-    and n_required=1 gave PASS_PROSPECTIVE at any sample size."""
+class Provenance(unittest.TestCase):
+    """evaluate() checks every input against a fingerprint or derives it.
+    Round 2 of the review: flipping 5% of H1 outcomes on the correct ids
+    turned REJECT into PASS_H1, and pseudo-cards narrowed the interval."""
 
-    def _h1_world(self, seed=11):
+    def _h1(self, seed=11):
         r = np.random.default_rng(seed)
         n = len(H1_IDS)
         tl = r.normal(0, 1, n)
         y = (r.random(n) < 1 / (1 + np.exp(-tl))).astype(int)
-        pk = 1 / (1 + np.exp(-(tl + r.normal(0, 0.3, n))))
-        cl = np.arange(n) % 63
-        return y, tl, pk, cl
+        p_mkt = 1 / (1 + np.exp(-(tl + r.normal(0, 0.3, n))))
+        # American prices whose proportional de-vig is close to p_mkt
+        amer = lambda p: int(round(-100 * p / (1 - p))) if p >= 0.5 else int(round(100 * (1 - p) / p))
+        rows = [{"fight_id": fid, "event_id": 900 + (i % 63), "y": int(y[i]),
+                 "american_a": amer(min(max(p_mkt[i], 0.02), 0.98)), "american_b": amer(1 - min(max(p_mkt[i], 0.02), 0.98)),
+                 "p_model": float(1 / (1 + np.exp(-tl[i])))} for i, fid in enumerate(H1_IDS)]
+        return rows
 
-    def test_h1_must_be_the_sealed_set(self):
-        y, tl, pk, cl = self._h1_world()
-        pm = 1 / (1 + np.exp(-tl))
-        ev = pp.evaluate(y, pm, pk, cl, H1_IDS, stage="H1", registration=reg(500), **OK)
-        self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
-        keep = np.arange(len(y)) % 20 != 0
-        ev2 = pp.evaluate(y[keep], pm[keep], pk[keep], cl[keep], np.array(H1_IDS)[keep],
-                          stage="H1", registration=reg(500), **OK)
-        self.assertEqual(ev2.verdict, "INVALID")
-        self.assertTrue(any("sealed H1 set" in r for r in ev2.reasons))
+    def _patch_manifest(self, rows):
+        rs = sorted(rows, key=lambda r: r["fight_id"])
+        h = lambda parts: hashlib.sha256(",".join(parts).encode()).hexdigest()
+        patched = json.loads(json.dumps(pp.MANIFEST))
+        patched["partitions"]["H1"].update({
+            "priced_ids_sha256": h(str(r["fight_id"]) for r in rs),
+            "priced_prices_sha256": h(f"{r['fight_id']}:{r['american_a']}:{r['american_b']}" for r in rs),
+            "priced_outcomes_sha256": h(f"{r['fight_id']}:{r['y']}" for r in rs),
+            "priced_events_sha256": h(f"{r['fight_id']}:{r['event_id']}" for r in rs)})
+        old = pp.MANIFEST
+        pp.MANIFEST = patched
+        self.addCleanup(setattr, pp, "MANIFEST", old)
 
-    def test_confirmatory_prospective_is_exactly_n_required(self):
-        y, pt, pk, *_, cl, ids = world(1)
-        for n_req in (1, len(y) - 1, len(y) + 1):
-            self.assertEqual(prospective(y, pt, pk, cl, ids, n_required=n_req).verdict, "INVALID", n_req)
+    def _eval(self, rows, regf, stage="H1", **kw):
+        args = dict(stage=stage, experiment_id="PRED-900", artifact_sha256=ART, pit_audit_passed=True,
+                    symmetry_passed=True, registry_path=regf)
+        args.update(kw)
+        return pp.evaluate(rows, **args)
 
-    def test_interim_never_passes_and_can_only_stop_for_futility(self):
-        y, pt, pk, *_, cl, ids = world(1)
-        ev = prospective(y, pt, pk, cl, ids, n_required=len(y) * 3, stage="PROSPECTIVE_INTERIM")
-        self.assertEqual(ev.verdict, "UNDERPOWERED")
-        ev = prospective(y, pk, pk, cl, ids, n_required=int(len(y) * 1.5), stage="PROSPECTIVE_INTERIM")
-        self.assertEqual(ev.verdict, "REJECT")
-        self.assertTrue(any("futility" in r for r in ev.reasons))
+    def test_h1_honest_rows_are_scored(self):
+        regf, _ = sandbox(self)
+        rows = self._h1()
+        self._patch_manifest(rows)
+        self.assertNotEqual(self._eval(rows, regf).verdict, "INVALID")
 
-    def test_registration_is_checked_against_disk(self):
-        with tempfile.TemporaryDirectory() as d:
-            d = pathlib.Path(d)
-            pre = d / "PREREG.md"
-            pre.write_text("frozen")
-            good = reg(412, preregistration_path=str(pre), preregistration_sha256=sha256(pre))
-            regf = d / "registry.json"
-            regf.write_text(json.dumps({"experiments": [good]}))
-            self.assertEqual(pp.load_registration("PRED-900", regf)["n_required"], 412)
-            for bad in ({"n_required": 100}, {"model_class": "standalone"}, {"target_effect": 0.003},
-                        {"sd_used": 0.03}, {"preregistration_sha256": "0" * 64}, {"protocol": "DUR"}):
-                regf.write_text(json.dumps({"experiments": [dict(good, **bad)]}))
-                with self.assertRaises(pp.ProtocolViolation, msg=str(bad)):
-                    pp.load_registration("PRED-900", regf)
+    def test_h1_real_manifest_rejects_synthetic_rows(self):
+        regf, _ = sandbox(self)
+        ev = self._eval(self._h1(), regf)
+        self.assertEqual(ev.verdict, "INVALID")
+
+    def test_h1_tampering_is_invalid(self):
+        regf, _ = sandbox(self)
+        rows = self._h1()
+        self._patch_manifest(rows)
+        flipped = [dict(r, y=1 - r["y"]) if i % 20 == 0 else r for i, r in enumerate(rows)]
+        repriced = [dict(r, american_a=r["american_a"] + 5) if i == 3 else r for i, r in enumerate(rows)]
+        pseudo = [dict(r, event_id=10000 + i // 2) for i, r in enumerate(rows)]
+        dropped = rows[:-35]
+        for name, bad in (("flipped outcomes", flipped), ("repriced", repriced),
+                          ("pseudo-cards", pseudo), ("dropped fights", dropped)):
+            self.assertEqual(self._eval(bad, regf).verdict, "INVALID", name)
+
+    def test_preconditions_make_it_invalid(self):
+        regf, _ = sandbox(self)
+        rows = self._h1()
+        self._patch_manifest(rows)
+        for kw in ({"pit_audit_passed": False}, {"symmetry_passed": False}, {"artifact_sha256": "c" * 64}):
+            self.assertEqual(self._eval(rows, regf, **kw).verdict, "INVALID", kw)
+
+    def _locks(self, n_events=300):
+        y, pt, pk, *_, cl, ids = world(1, n_events=n_events)
+        return lock_rows(y, pt, pk, cl, ids)
+
+    def test_prospective_scores_exactly_the_first_n_required_locks(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        ev = self._eval(rows, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertEqual(ev.n_eligible, 3000)
+        shuffled = list(reversed(rows))
+        ev2 = self._eval(shuffled, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertEqual(ev.fight_ids_sha256, ev2.fight_ids_sha256, "order must come from lock time, not the caller")
+
+    def test_prospective_refusals(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        pop = population(rows)
+        cases = {
+            "too few locks": (rows[:2000], pop),
+            "foreign artifact": ([dict(r, artifact_sha256="c" * 64) if i == 0 else r for i, r in enumerate(rows)], pop),
+            "selective locking": ([r for r in rows if r["y_a"] == 1 or r["lock_id"] % 3], pop),
+            "no population": (rows, None),
+        }
+        for name, (rr, pp_) in cases.items():
+            self.assertEqual(self._eval(rr, regf, stage="PROSPECTIVE", card_population=pp_).verdict, "INVALID", name)
+
+    def test_interim_is_interim(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks(n_events=150)
+        ev = self._eval(rows, regf, stage="PROSPECTIVE_INTERIM", card_population=population(rows))
+        self.assertIn(ev.verdict, ("UNDERPOWERED", "REJECT"))
+        big = self._locks()
+        ev = self._eval(big, regf, stage="PROSPECTIVE_INTERIM", card_population=population(big))
+        self.assertEqual(ev.verdict, "INVALID")
+
+
+class Registration(unittest.TestCase):
+    """Round 2: registry n_required and artifact could be edited after a look
+    because only the preregistration file was hashed. They are now read from
+    the hashed file and the registry must repeat them."""
+
+    def test_good_registration_loads(self):
+        regf, _ = sandbox(self)
+        self.assertEqual(pp.load_registration("PRED-900", regf)["n_required"], 412)
+
+    def test_registry_disagreeing_with_the_frozen_file_is_refused(self):
+        regf, _ = sandbox(self)
+        reg = json.loads(regf.read_text())
+        for k, v in (("n_required", 1), ("model_artifact_sha256", "c" * 64), ("target_effect", 0.02)):
+            bad = json.loads(json.dumps(reg))
+            bad["experiments"][0][k] = v
+            regf.write_text(json.dumps(bad))
+            with self.assertRaises(pp.ProtocolViolation, msg=k):
+                pp.load_registration("PRED-900", regf)
+
+    def test_frozen_values_are_validated(self):
+        for kw in ({"n_required": 100}, {"model_class": "standalone"}, {"target_effect": 0.003},
+                   {"target_effect": 0.05}, {"sd_used": 0.03}, {"author_sessions": []}):
+            regf, _ = sandbox(self, **kw)
+            with self.assertRaises(pp.ProtocolViolation, msg=str(kw)):
+                pp.load_registration("PRED-900", regf)
+
+    def test_edited_preregistration_is_refused(self):
+        regf, _ = sandbox(self)
+        pre = pathlib.Path(json.loads(regf.read_text())["experiments"][0]["preregistration_path"])
+        pre.write_text(pre.read_text().replace('"n_required": 412', '"n_required": 999'))
+        with self.assertRaises(pp.ProtocolViolation):
+            pp.load_registration("PRED-900", regf)
 
 
 # ---------------------------------------------------------------------------
@@ -371,62 +508,55 @@ class Ledger(unittest.TestCase):
         self.assertEqual(LEDGER["prospective_budget"], t["prospective_confirmatory_budget"])
 
     def test_ledger_only_grows_relative_to_main(self):
-        """No entry on main may disappear or change on a branch. Skips when
-        origin/main is not fetched (CI fetches it for this test)."""
-        try:
-            base = subprocess.run(["git", "-C", str(REPO), "show", "origin/main:research/protocol/holdout_ledger.json"],
-                                  capture_output=True, text=True, check=True).stdout
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            self.skipTest("origin/main has no ledger yet, or is not fetched")
-        main_entries = json.loads(base)["entries"]
+        main = _from_main("research/protocol/holdout_ledger.json")
+        if main is None:
+            self.skipTest("main has no ledger yet (first merge)")
+        main_entries = json.loads(main)["entries"]
         self.assertEqual(LEDGER["entries"][:len(main_entries)], main_entries,
                          "an entry that exists on main was removed or edited")
 
-    def _sandbox(self):
-        d = pathlib.Path(tempfile.mkdtemp())
-        self.addCleanup(shutil.rmtree, d)
-        pre = d / "PREREG.md"
-        pre.write_text("frozen")
-        regf = d / "registry.json"
-        regf.write_text(json.dumps({"experiments": [
-            reg(3600, preregistration_path=str(pre), preregistration_sha256=sha256(pre),
-                author_sessions=["builder-session"], target_effect=0.01)]}))
-        led = d / "ledger.json"
-        led.write_text(json.dumps({"h1_budget": 10, "prospective_budget": 5, "entries": []}))
-        return regf, led
-
-    def _look(self, regf, led, stage="PROSPECTIVE", auditor="auditor-session", seed=1):
-        # an interim look is taken on half the sample; the confirmatory one on all of it
-        y, pt, pk, *_, cl, ids = world(seed, n_events=150 if stage == "PROSPECTIVE_INTERIM" else 300)
-        return pp.run_look(experiment_id="PRED-900", stage=stage, y=y, p_model=pt, p_market=pk,
-                           clusters=cl, fight_ids=ids, artifact_sha256=ART, pit_audit_passed=True,
-                           symmetry_passed=True, auditor=auditor, evaluated_at="2027-01-01T00:00:00Z",
-                           ledger_path=led, registry_path=regf)
+    def _look(self, regf, led, stage="PROSPECTIVE", auditor=AUDITOR, n_events=300):
+        y, pt, pk, *_, cl, ids = world(1, n_events=n_events)
+        rows = lock_rows(y, pt, pk, cl, ids)
+        return pp.run_look(experiment_id="PRED-900", stage=stage, rows=rows, artifact_sha256=ART,
+                           pit_audit_passed=True, symmetry_passed=True, auditor=auditor,
+                           evaluated_at="2027-01-01T00:00:00Z", card_population=population(rows),
+                           _ledger_path=led, _registry_path=regf, _authors_from_git=False)
 
     def test_run_look_records_and_chains(self):
-        regf, led = self._sandbox()
-        self._look(regf, led, stage="PROSPECTIVE_INTERIM")
+        regf, led = sandbox(self, n_required=3600)
+        self._look(regf, led, stage="PROSPECTIVE_INTERIM", n_events=150)
         ev = self._look(regf, led)
-        self.assertEqual(ev.verdict, "PASS_PROSPECTIVE")
+        self.assertEqual(ev.verdict, "PASS_PROSPECTIVE", ev.reasons)
         data = json.loads(led.read_text())
         self.assertEqual([e["stage"] for e in data["entries"]], ["PROSPECTIVE_INTERIM", "PROSPECTIVE"])
         self.assertEqual(pp.verify_ledger_chain(data), [])
 
     def test_second_confirmatory_look_is_refused(self):
-        regf, led = self._sandbox()
+        regf, led = sandbox(self, n_required=3600)
         self._look(regf, led)
         with self.assertRaises(pp.ProtocolViolation):
-            self._look(regf, led, seed=2)
+            self._look(regf, led)
 
-    def test_author_cannot_audit(self):
-        regf, led = self._sandbox()
-        with self.assertRaises(pp.ProtocolViolation):
-            self._look(regf, led, auditor="builder-session")
+    def test_auditor_must_be_identifiable_and_not_an_author(self):
+        regf, led = sandbox(self, n_required=3600)
+        for who in (BUILDER, "me", ""):
+            with self.assertRaises(pp.ProtocolViolation, msg=who):
+                self._look(regf, led, auditor=who)
         self.assertEqual(json.loads(led.read_text())["entries"], [])
 
+    def test_a_crash_is_recorded(self):
+        regf, led = sandbox(self, n_required=3600)
+        pp.run_look(experiment_id="PRED-900", stage="PROSPECTIVE", rows=[{"nonsense": True}], artifact_sha256=ART,
+                    pit_audit_passed=True, symmetry_passed=True, auditor=AUDITOR, evaluated_at="x",
+                    card_population={"1": [1]}, _ledger_path=led, _registry_path=regf, _authors_from_git=False)
+        e = json.loads(led.read_text())["entries"]
+        self.assertEqual(len(e), 1)
+        self.assertEqual(e[0]["verdict"], "INVALID")
+
     def test_tampering_is_detected(self):
-        regf, led = self._sandbox()
-        self._look(regf, led, stage="PROSPECTIVE_INTERIM")
+        regf, led = sandbox(self, n_required=3600)
+        self._look(regf, led, stage="PROSPECTIVE_INTERIM", n_events=150)
         self._look(regf, led)
         data = json.loads(led.read_text())
         data["entries"][0]["verdict"] = "PASS_PROSPECTIVE"
@@ -434,25 +564,28 @@ class Ledger(unittest.TestCase):
         data = json.loads(led.read_text())
         del data["entries"][0]
         self.assertTrue(pp.verify_ledger_chain(data))
-        led.write_text(json.dumps(data))
-        with self.assertRaises(pp.ProtocolViolation):
-            self._look(regf, led, seed=3)
 
 
-# ---------------------------------------------------------------------------
 class ExperimentCode(unittest.TestCase):
     """Conventions with tripwires, not a sandbox: an agent holding database
     credentials can still read 2025 results. These catch the obvious routes."""
+    ALLOWED = (".py", ".md", ".json", ".csv", ".txt", ".yaml", ".yml", ".ipynb")
     FORBIDDEN = re.compile(r"supabase|psql|postgres(ql)?://|SUPABASE_|DATABASE_URL|create_client|"
                            r"\bpsycopg|\bfetch_odds\b|export_data", re.I)
-    SEALED_DATE = re.compile(r"\b(2025-\d\d-\d\d|2026-\d\d-\d\d|202[7-9]-\d\d-\d\d)")
-    DATA_SUFFIXES = (".csv", ".tsv", ".json", ".jsonl", ".txt")
+    SEALED_DATE = re.compile(r"\b20(2[5-9])[-/._]?(0[1-9]|1[0-2])[-/._]?(0[1-9]|[12]\d|3[01])\b")
+    DATA_SUFFIXES = (".csv", ".json", ".txt", ".yaml", ".yml")
 
     def _files(self):
         root = REPO / "research" / "experiments"
         if not root.exists():
             return []
         return [p for p in root.rglob("*") if p.is_file()]
+
+    def test_only_reviewable_file_types(self):
+        for path in self._files():
+            self.assertIn(path.suffix.lower(), self.ALLOWED,
+                          f"{path.relative_to(REPO)}: binary or unreviewable data (parquet, pickle, npy...) "
+                          f"cannot be checked for sealed rows and is not allowed in an experiment folder")
 
     def test_no_direct_database_access(self):
         for path in self._files():
@@ -463,9 +596,15 @@ class ExperimentCode(unittest.TestCase):
 
     def test_committed_data_holds_no_sealed_fight_dates(self):
         for path in self._files():
-            if path.suffix.lower() in self.DATA_SUFFIXES and path.name != "registry_entry.json":
+            if path.suffix.lower() in self.DATA_SUFFIXES:
                 m = self.SEALED_DATE.search(path.read_text(errors="ignore"))
                 self.assertIsNone(m, f"{path.relative_to(REPO)} contains a sealed date ({m and m.group(0)})")
+
+    def test_the_date_pattern_catches_the_common_spellings(self):
+        for d in ("2025-01-11", "2025/01/11", "20250111", "2026.07.11"):
+            self.assertRegex(d, self.SEALED_DATE)
+        for d in ("2024-12-31", "20241231"):
+            self.assertNotRegex(d, self.SEALED_DATE)
 
 
 if __name__ == "__main__":

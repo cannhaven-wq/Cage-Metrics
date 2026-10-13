@@ -345,7 +345,7 @@ any request to the auditor.
 ### Amendment 1 — 2026-10-13
 
 **Motivation:** an independent review commissioned by the owner the day after
-the freeze. `motivated_by_observed_results: false` — the ledger was empty, no
+the freeze, run twice before merge ([D-023](../../coordination/DECISIONS.md)). `motivated_by_observed_results: false` — the ledger was empty, no
 look at H1 or at prospective data had been taken, and no model exists under
 this protocol. The review showed that v1.0 could be bypassed with every test
 green. Changes:
@@ -354,14 +354,31 @@ green. Changes:
    a hash history of the protocol text, the code, `protocol.json`, the manifest,
    its SQL, the H1 id list and the test file. The test pins the v1.0 entry and
    requires one dated `### Amendment` here per later entry.
-2. **The H1 fight set is fixed by hash** (B2). `evaluate` refuses any H1 set
-   other than the manifest's. Subgroup H1 looks are removed (§8.7).
-3. **n_required comes from the registry** (B3). `load_registration` reads it
-   and checks it against the frozen preregistration and the sample-size rule.
-   A confirmatory prospective look uses exactly that many fights.
-4. **Looks go through `run_look`, hash-chained** (B4). Budgets and the
-   one-look rule are enforced before computing; a test checks the chain and
-   that no entry on `main` disappears.
+2. **H1 inputs are facts checked against fingerprints, not numbers the caller
+   supplies** (B2, round 2). An H1 row carries the fight id, the card, the
+   outcome, the two BFO closing American prices and the model probability;
+   `evaluate` checks ids, outcomes, prices and card assignment against the
+   manifest and de-vigs the prices itself. Round 1 checked only the ids, and
+   flipping 5% of outcomes turned REJECT into PASS_H1. Subgroup H1 looks are
+   removed (§8.7).
+3. **Frozen values live inside the frozen file** (B3, round 2). The
+   preregistration carries a ```` ```pred-registration ```` block —
+   artifact hash, model class, target, SD, n_required, author sessions — and
+   the registry must repeat it exactly. `load_registration` reads the block
+   and checks it against the sample-size rule; a target above the 0.015 leak
+   tripwire is refused. A test fails if a merged experiment's entry changes.
+4. **Looks go through `run_look`, hash-chained, and only main counts** (B4).
+   Budgets, one look per experiment, and an auditor who is a Claude session
+   that is not an author are enforced before computing. A crash is recorded as
+   INVALID. Tests fail if a ledger entry, a FREEZE.json entry or a registered
+   experiment present on `main` changes; CI fetches main and **fails, rather
+   than skips,** when it cannot.
+4a. **Prospective inputs are derived from the lock rows** (round 2). The
+   eligible set is the graded locks with unchanged corners, ordered by
+   `actual_lock_at`; a confirmatory look takes the first n_required, the model
+   probability is the locked `p_a`, and the market is the one frozen on the
+   lock. **Selective locking is INVALID:** on every scored card, locks must
+   cover at least 95% of the bouts that had a two-sided market.
 5. **Interim prospective looks are a separate, logged stage** (B5).
 6. **Sample size covers both halves of the PASS rule** (S1). Minimum target
    raised from 0.003 to 0.004; the §6 table is recomputed.
@@ -377,6 +394,21 @@ green. Changes:
     experiment lint widens and committed data is scanned for sealed dates.
 12. **The engine cannot be first-opened on H1** (INFO-AUDIT-001), now stated
     in §2 and the manifest.
+
+13. **The lock table** (round 2): the lock time is `clock_timestamp()` — the
+    wall clock at the insert, not the transaction's start, which a writer
+    could open before the bell; the deadline is the card's earliest start;
+    one forecast per fight per experiment; the market snapshot is required;
+    `event_date` comes from `events`; valid night-before locks are no longer
+    refused.
+
+**The trust model, said once.** Code in this repository cannot stop a person
+with database credentials from computing a log loss on the sealed fights by
+hand. What it can do is make the official record impossible to bend quietly:
+only a ledger entry on `main` counts, every governed file and entry is frozen
+against `main`, and every input to a look is checked or derived. That is why
+**no claim rests on H1**: prospective outcomes do not exist when a lock is
+written, and no credential can leak them.
 
 Not changed: the partitions, the 0.003 minimum useful effect, the budgets and
 their α, the leak tripwire on Δ, the benchmark, the claim ladder.

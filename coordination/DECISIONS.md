@@ -1608,3 +1608,43 @@ SD of 0.066 (2020–26) agrees with PRED-001's dev-only 0.063.
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session. The number D-022 is used because a D-021 already
 exists on an unmerged branch.
+
+## D-023 — PRED-001 Amendment 1: independent review before merge, and no way round the rules
+
+| field | value |
+|---|---|
+| date | 2026-10-13 |
+| decided by | Reed Cannon (owner) |
+| task | none; direct owner instruction |
+| level | L3 |
+| reversible | yes, by a further dated amendment; no look at sealed data had been taken when it was made |
+
+**The owner's instruction, quoted:** *"Finalize the prediction-testing protocol. Get PRED-001 independently reviewed, merge it, and ensure future models cannot bypass its testing rules."*
+
+**Plain version.** Before anyone used the testing rules, a separate reviewer
+tried to break them. It found ways to pass a model that should have failed, and
+each one is now closed and has a test. Every check counts the same as before;
+it is just harder to cheat.
+
+**What changed.** These are the review's findings, two rounds:
+
+- The thresholds, the sealed data's fingerprints and the test file are all
+  hash-frozen. The freeze history cannot be rewritten once it is on main.
+- A look at the sealed fights must use exactly those fights, outcomes, prices
+  and card groupings. A prospective look uses exactly the first n_required
+  locks, in lock order, with no selective locking.
+- n_required and the artifact are read from the frozen preregistration.
+- Every look is recorded in a hash-chained ledger, by an auditor who is not an
+  author. The ledger cannot shrink relative to main.
+- The proposed forecast-lock table takes the real clock, allows one forecast
+  per fight per experiment, and requires the market price at lock time.
+
+**What is not decided.** Applying the lock table (L3 item 5), and the first
+hypothesis.
+
+**What still cannot be prevented, said plainly.** Anyone with database
+credentials can compute a log loss on the sealed fights by hand. So a result
+on them never supports a claim. Only forecasts locked before the fight do.
+
+**Attribution note.** Recorded by Claude from the owner's message in the
+project-audit session.

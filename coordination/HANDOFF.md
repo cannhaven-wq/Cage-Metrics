@@ -35,39 +35,43 @@ fixed, with a capture test that failed before the fix and passes after.
   only consensus, fair price, movement and best price.
 - **Pipeline health** first run: healthy.
 
-**PRED-001 Amendment 1.** An independent adversarial review found five bypasses
-that kept every test green:
+**PRED-001 Amendment 1 ([D-023](DECISIONS.md)).** An independent reviewer
+tried to break the protocol twice before merge.
 
-- unhashed thresholds;
-- a caller-chosen fight set;
-- a caller-chosen n_required;
-- an unenforced ledger;
-- undefined interim looks.
+- **Round 1** found five bypasses that kept every test green.
+- **Round 2** found that two of them still worked:
+  - the freeze history could be rewritten in place;
+  - H1 outcomes, prices and card groupings were not checked, and flipping 5%
+    of outcomes turned REJECT into PASS_H1.
 
-It also found seven weaknesses. Every one is addressed, and each is now a test.
-Loosening a threshold, or raising a ledger budget, fails. Before the
-amendment, H1 contained three fights that were rebooked in place, so it is
-now 710 fights. No look had been taken, so `motivated_by_observed_results`
-is `false`.
+  It also found the registry was editable, prospective inputs were chosen by
+  the caller, and the lock table could be back-dated through `now()`.
+
+Every finding is closed and is a test. Inputs to a look are now checked or
+derived rather than trusted. Merged freeze, ledger and registry entries cannot
+change relative to main, and CI fails if it cannot fetch main. Selective
+locking makes a prospective look INVALID. H1 is 710 fights, after excluding
+three that were rebooked in place. No look has been taken.
+
+**What code cannot stop, stated in the protocol.** Anyone with database
+credentials can compute a sealed log loss by hand. So no claim ever rests on
+H1.
 
 **Forecast-lock table: proposed, not applied** (`research/protocol/
 proposed_2026-10-13_win_model_locks.sql`).
 
 - Append-only for every role.
-- The lock time is the database clock.
-- The table refuses locks:
-  - after the start;
-  - on settled fights;
-  - on retired bookings;
-  - on swapped corners;
-  - with a training cutoff after the lock;
-  - with a market snapshot after the lock.
+- The lock time is `clock_timestamp()`, the wall clock at insert.
+- The deadline is the card's earliest start.
+- One forecast per fight per experiment.
+- The market snapshot is required, and `event_date` comes from `events`.
+- The table refuses locks on settled fights, on retired bookings, on swapped
+  corners, and with a training cutoff after the event.
 - Private to both browser roles.
 
-All of that was checked against production inside transactions that always
-roll back. 10 of 10 checks passed and nothing persisted. Fixture fight 47881,
-which the check first picked, is one of the four stale bookings awaiting
-retirement. That is why the guard now also refuses retired bookings.
+12 checks ran against production inside rolled-back transactions, and every
+one passed. The tool times out on the full-length request, so it ran in two
+halves. Nothing persisted.
 
 ## Next action
 

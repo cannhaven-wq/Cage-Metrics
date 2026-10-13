@@ -125,10 +125,12 @@ jobs:
           python -m pip install --disable-pip-version-check --quiet pytest==9.1.1
           python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
 
-      # PRED-001: the ledger may only grow relative to main, and the test
-      # compares against origin/main, which a shallow checkout lacks.
-      - name: Fetch main for the ledger comparison
-        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main || true
+      # PRED-001: the ledger, the freeze history and registered experiments
+      # may only grow relative to main. The tests compare against origin/main,
+      # which a shallow checkout lacks - and a missing main FAILS them in CI
+      # rather than skipping, so this step must not be allowed to fail quietly.
+      - name: Fetch main for the PRED-001 anti-rewrite checks
+        run: git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
 
       # From the repo root, so all 17 test modules are collected.
       - name: Run tests
