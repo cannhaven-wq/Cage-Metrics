@@ -80,3 +80,15 @@ independent check. Please export, for 2026-09-21 → today: unique visitors per
 day, top sources, top pages, bounce rate, and visit duration. If Plausible shows
 hundreds of daily visitors, the conclusion above is wrong and should be revisited;
 if it shows a handful, it is confirmed.
+
+## Correction, 2026-10-13, first hour after launch
+
+The `engaged_session` signal assumed crawlers load a page and leave. They do
+not: in the first 45 minutes, 27 sessions fired it. 24 of them came from user
+agents that call themselves bots and scrolled, 2 came from headless browsers
+(GitHub's own live-site check), and **1 was a person**. Two fixes: the page
+no longer sends `engaged_session` from a browser that declares itself
+automated or a bot, and `v_traffic_daily` excludes automation-flagged
+sessions from every engaged column (applied to production). Crawlers that
+disguise themselves as browsers will still get through; the view can only
+remove the ones that say what they are.
