@@ -31,13 +31,56 @@ The DWCS 10.3 move is fully built and tested. Nothing has been applied.
 
 ## Next action
 
-Owner, three answers:
-1. Approve the plan, including moving the event row too.
-2. Acknowledge the RESERVE note.
-3. Approve grading 53618 as locked.
+**Approved 2026-10-13 ([D-026](DECISIONS.md)), with gates.** Claude:
+1. Get PR #69 green.
+2. Merge and verify event-scraper PR #1.
+3. Recheck fingerprints, foreign-key references and rollback preconditions.
+4. **Report readiness to the owner before applying the destructive step.**
 
-Then Claude merges the scraper, applies the migration and merges the pages, in
-that order.
+The RESERVE correction and the PROP-0001 sensitivity rule for 53618 are
+recorded in `research/data-integrity/T-086_RESEARCH_CORRECTIONS_2026-10-13.md`.
+
+---
+
+## 2026-10-13 (g′) — Sportsbook data is read-only to the browser (T-087)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+**Applied to production on the owner's approval.** Before this, anyone with the
+site's public key could add, change or delete rows in two odds tables
+(`odds_aliases`, `unmatched_odds`: RLS off, full grants), and the browser roles
+held TRUNCATE — which ignores RLS — on `fight_odds` and `odds_books`.
+
+- **Migration:** `odds_write_lockdown_migration.sql`. Privileges only: no row,
+  policy, view body or RLS flag changed. It asserts its own result and rolls
+  back if a browser role can still write or has lost a read.
+- **Verified as `anon` and as `authenticated`:** 15 write attempts (insert,
+  update, delete on the four tables and the auto-updatable
+  `v_odds_books_sportsbooks`) and every sequence call denied; the market views
+  the site reads still return rows; `fight_odds`/`odds_books` still return 0 rows
+  to browser roles, as before. Row counts identical before and after
+  (126,972 / 14 / 0 / 11).
+- **Writers unaffected:** `build/fetch-odds.js` and
+  `cage-metrics-odds-scrapper` (`odds_scraper.py`, `diagnose_unmatched.py`) use
+  the service-role key.
+- **Advisor:** both `rls_disabled_in_public` ERRORs are gone. The definer-view,
+  search-path, definer-function and leaked-password findings are unchanged and
+  pre-date this.
+- **Regression test:** `tests/odds-write-lockdown.test.js`.
+
+**Not fixed, deliberately (T-088):** about 25 other tables, including
+`pre_fight_snapshots`, `profiles` and `user_bets`, carry the same default grant
+behind RLS. It cannot be reached today, but the default privileges in `public`
+still make every new table writable to both browser roles.
+
+## Next action
+
+Claude: T-088 — the same revoke-and-assert for `pre_fight_snapshots` first (it
+is the append-only record, and its triggers stop UPDATE and DELETE but a
+TRUNCATE grant is still a grant), then the user tables, then propose the
+default-privilege change for review.
 
 ---
 

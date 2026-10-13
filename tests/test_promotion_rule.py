@@ -80,6 +80,24 @@ def js_answers(names):
     return json.loads(out.stdout)
 
 
+def t083_ufc_event_re() -> "re.Pattern[str]":
+    """UFC_EVENT_RE exactly as reconcile_ufc_records.py compiles it."""
+    import ast
+    path = os.path.join(REPO_ROOT, "research", "data-integrity", "reconcile_ufc_records.py")
+    tree = ast.parse(open(path, encoding="utf-8").read())
+    for node in tree.body:
+        if (isinstance(node, ast.Assign) and any(getattr(t, "id", None) == "UFC_EVENT_RE" for t in node.targets)
+                and isinstance(node.value, ast.Call)):
+            args = node.value.args
+            pattern = ast.literal_eval(args[0])
+            flags = 0
+            for a in args[1:]:
+                for name in ast.unparse(a).replace("re.", "").split("|"):
+                    flags |= getattr(re, name.strip())
+            return re.compile(pattern, flags)
+    raise AssertionError("UFC_EVENT_RE not found in reconcile_ufc_records.py")
+
+
 def sql_check_expression() -> str:
     sql = open(os.path.join(REPO_ROOT, "t086_dwcs_non_ufc.sql")).read()
     m = re.search(r"ADD CONSTRAINT events_ufc_name_only CHECK \((.*?)\);", sql, re.S)
@@ -97,10 +115,12 @@ class TestRuleWithoutDatabase(unittest.TestCase):
         self.assertEqual(dict(zip(names, got)), dict(NAMES))
 
     def test_t083_reconciliation_regex(self):
-        import reconcile_ufc_records as r
+        # Read UFC_EVENT_RE out of the source rather than importing the script:
+        # it imports `requests` at the top, which the test runner does not have.
+        rx = t083_ufc_event_re()
         for name, want in NAMES:
             with self.subTest(name=name):
-                self.assertEqual(bool(r.UFC_EVENT_RE.search(name)) if name else False, want)
+                self.assertEqual(bool(rx.search(name)) if name else False, want)
 
     def test_integrity_check_uses_the_migration_rule(self):
         import checks

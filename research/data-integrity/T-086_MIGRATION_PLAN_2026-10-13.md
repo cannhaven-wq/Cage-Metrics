@@ -1,5 +1,18 @@
 # T-086 — Complete migration plan for final approval (2026-10-13)
 
+**APPROVED by the owner on 2026-10-13 ([D-026](../../coordination/DECISIONS.md)),
+including moving the event row, with gates.** It may not run until:
+- PR #69's CI is green on its final commit;
+- event-scraper PR #1 is merged and verified;
+- fingerprints, foreign-key references and rollback preconditions are
+  rechecked;
+- readiness has been reported.
+
+Stop if anything differs.
+
+The RESERVE and PROP-0001 records are in
+[`T-086_RESEARCH_CORRECTIONS_2026-10-13.md`](T-086_RESEARCH_CORRECTIONS_2026-10-13.md).
+
 **Nothing in this plan has been run against production.** No fight has been
 moved, deleted or changed. Everything below was demonstrated on a throwaway
 Postgres or checked with read-only queries.
@@ -19,7 +32,7 @@ hold UFC fights only, and every page is right without being edited. The card's
 old links still work, and say plainly that it was not a UFC event. Its results
 are kept, but they never count toward a UFC record.
 
-## One change from the plan you approved in principle — needs your yes
+## One change from the plan approved in principle — approved 2026-10-13 (D-026)
 
 Option C as approved **kept the event row in `events`** and added a
 `promotion` column. This plan **moves the event row as well**, into
