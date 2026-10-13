@@ -16,6 +16,7 @@ const { fighterStub, eventStub, nonUfcEventStub } = require('./templates');
 const { isUfcEventName, nonUfcPromotion, PROMOTION_LABEL } = require('./promotion');
 const { matchupPreview, previewSlug } = require('./preview-templates');
 const { eventPreview, cardSlug, consensusPick, cardOrder } = require('./event-preview-templates');
+const ufcRecord = require('../ufc-record.js');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -78,9 +79,16 @@ async function prerenderFighters() {
   console.log('Fetching fighters...');
   const fighters = await fetchAll(() => sb
     .from('fighters')
-    .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, height_in')
+    .select('id, name, nickname, division, wins, losses, draws, height_in')
   );
   console.log(`Got ${fighters.length} fighters.`);
+  // The UFC record on every stub comes from v_fighter_ufc_record, never
+  // fighters.ufc_* (T-084). If it cannot be read, stop: rewriting ~2,800 stubs
+  // without a record (or with the stale one) is worse than a skipped run.
+  const ufcRows = await ufcRecord.load(sb, null, { all: true });
+  if (ufcRows == null) throw new Error('could not read v_fighter_ufc_record; refusing to prerender fighter stubs');
+  ufcRecord.apply(fighters, ufcRows);
+  console.log(`Got ${ufcRows.length} UFC records.`);
 
   ensureDir(FIGHTERS_DIR);
   const keep = new Set();
