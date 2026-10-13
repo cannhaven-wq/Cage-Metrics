@@ -47,27 +47,6 @@ weekly brief once the owner sets the price to show.
 
 ---
 
-## 2026-10-13 (b) — American fighters get the real flag behind them
-
-**From:** Claude
-**To:** Owner
-**Date:** 2026-10-13
-
-The country wash behind a fighter (Card Lab sides, the fighters grid, the Prop
-Board names) was a gradient of three flag colours. For the US that read as a
-generic red-white-and-blue band with no stars. `cfl.flagStyle` in `_shared.js`
-now puts the real flag image (flagcdn, the same CDN `cfl.flagChip` already
-uses) on top of that gradient; if the image fails, the old colours still show.
-This applies to every country in the colour table, not only the US — the same
-complaint holds for any flag with a symbol. Opacity and fade are unchanged.
-
-## Next action
-
-Owner: look at the next card on the live site and say whether the wash is
-strong enough to read as a flag, or should go up from 16% opacity.
-
----
-
 ## 2026-10-13 (c) — The forecast-lock table is live; four dead bookings retired; PRED-001 merged
 
 **From:** Claude (project-audit session)
@@ -93,6 +72,27 @@ CLAUDE.md.
 Draft PRED-002's preregistration (opponent-adjusted grappling) on DEV data,
 then run the commercial-readiness audit the owner asked for next. The owner's
 next phase is the first $100 of revenue.
+
+---
+
+## 2026-10-13 (b) — American fighters get the real flag behind them
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+The country wash behind a fighter (Card Lab sides, the fighters grid, the Prop
+Board names) was a gradient of three flag colours. For the US that read as a
+generic red-white-and-blue band with no stars. `cfl.flagStyle` in `_shared.js`
+now puts the real flag image (flagcdn, the same CDN `cfl.flagChip` already
+uses) on top of that gradient; if the image fails, the old colours still show.
+This applies to every country in the colour table, not only the US — the same
+complaint holds for any flag with a symbol. Opacity and fade are unchanged.
+
+## Next action
+
+Owner: look at the next card on the live site and say whether the wash is
+strong enough to read as a flag, or should go up from 16% opacity.
 
 ---
 
