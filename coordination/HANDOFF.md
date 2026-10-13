@@ -32,7 +32,7 @@ strong enough to read as a flag, or should go up from 16% opacity.
 
 ---
 
-## 2026-10-13 (b) — The forecast-lock table is live; four dead bookings retired; PRED-001 merged
+## 2026-10-13 (c) — The forecast-lock table is live; four dead bookings retired; PRED-001 merged
 
 **From:** Claude (project-audit session)
 **To:** Owner
