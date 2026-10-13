@@ -382,19 +382,22 @@ green. Changes:
    INVALID. Tests fail if a ledger entry, a FREEZE.json entry or a registered
    experiment present on `main` changes; CI fetches main and **fails, rather
    than skips,** when it cannot.
-4a. **Prospective inputs are derived from the lock rows** (rounds 2–3). The
+4a. **Prospective inputs are derived from the lock rows** (rounds 2–5). The
    unit is the **card**: cards are taken whole, in start order, from the
    experiment's first locked card, until the graded locks with unchanged
    corners reach n_required — so a confirmatory look scores at least
    n_required fights and never cuts a card in half. The model probability is
    the locked `p_a`; the market is the one frozen on the lock. **Every priced
-   card in that run must be covered:** counting every lock whatever the
-   result, at least 95% of the priced bouts across the run carry a lock, and
-   on every card at most max(1, 5%) priced bouts are missing (rounds 3–4). A
-   draw, a late replacement or a debutant the model cannot price never fails
-   an honest card; a card left out — skipped, or rolled back after the fights
-   — fails the look. Locks on the next card, not yet in the population and not
-   yet graded, are set aside; a graded lock on an unlisted card is INVALID. The
+   card in that run must be covered (round 5): every priced bout carries a
+   lock row** — a forecast, or an **abstention lock** (`p_a` NULL, written
+   before the bell like any other) that is scored at the market's probability
+   and so adds nothing; abstentions above 5% make the look INVALID, as on H1.
+   A bout first priced after the card's last lock is not owed one. Any other
+   gap is INVALID: the round-4 allowance of one missing bout per card let a
+   writer roll back the worst-scoring bout after the fight and gain more than
+   the minimum useful effect. A card left out — skipped, or rolled back — fails
+   the look. Locks on the next card, not yet in the population and not yet
+   graded, are set aside; a graded lock on an unlisted card is INVALID. The
    population comes from the committed recipe
    [`card_population.sql`](card_population.sql) and its hash is recorded with
    the look; **the auditor re-runs the recipe and must get the same hash**,

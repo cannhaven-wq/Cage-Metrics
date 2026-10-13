@@ -566,37 +566,34 @@ def _prospective_inputs(rows: list[dict], reg: dict, stage: str, card_population
 
     eligible_of = lambda rs: [r for r in rs if r.get("y_a") in (0, 1) and r.get("corners_unchanged") is True
                               and r.get("market_p_a_vigfree") is not None]
-    # Coverage, two layers (round 4): pooled over the run, at least min_coverage
-    # of priced bouts carry a lock; and on EVERY card in the run at most
-    # max(1, 5%) priced bouts may be missing. A single late replacement or a
-    # debutant the model cannot price does not void an honest card; a card
-    # with no locks - dropped, or rolled back after the fights - always fails.
-    scored, total, pooled_locked, pooled_priced = [], 0, 0, 0
+    # Coverage (round 5): EVERY priced bout on every card in the run carries a
+    # lock row. A bout the model will not price is an ABSTENTION LOCK - a row
+    # with p_a NULL, written before the bell like any other - and is scored at
+    # the market's probability, adding nothing. A bout first priced after the
+    # card's last lock is not in the population at all (card_population.sql
+    # defines "priced" as before that instant). Any other gap is INVALID: an
+    # allowance of even one missing bout per card let a writer roll back the
+    # worst-scoring bout after the fight and gain more than the minimum useful
+    # effect. A card with no locks - dropped or rolled back - fails the look.
+    scored, total = [], 0
     for ev_id, _start, priced in cards[first:last + 1]:
         if stage == "PROSPECTIVE" and total >= n_req:
             break
         locked = {int(r["fight_id"]) for r in by_card.get(ev_id, [])}
-        covered = len(locked & priced)
-        allowed_missing = max(1, math.floor(len(priced) * (1 - T["min_coverage"])))
-        if not priced or not locked or len(priced) - covered > allowed_missing:
-            return None, [f"card {ev_id}: locks cover {covered} of {len(priced)} priced bouts; every priced "
-                          f"card in the run must be covered (at most {allowed_missing} missing) - "
-                          f"skipping cards is not allowed"]
-        pooled_locked += covered
-        pooled_priced += len(priced)
+        missing = priced - locked
+        if not priced or missing:
+            return None, [f"card {ev_id}: {len(missing) if priced else 'all'} priced bout(s) have no lock row; "
+                          f"a bout the model will not price needs an abstention lock (p_a NULL) before the bell"]
         elig = eligible_of(by_card.get(ev_id, []))
         scored.extend(elig)
         total += len(elig)
-    if pooled_priced and pooled_locked / pooled_priced < T["min_coverage"]:
-        return None, [f"locks cover {pooled_locked} of {pooled_priced} priced bouts across the run, "
-                      f"below {T['min_coverage']:.0%}"]
     if stage == "PROSPECTIVE" and total < n_req:
         return None, [f"only {total} eligible locks on whole cards; the confirmatory look needs {n_req}"]
     if stage == "PROSPECTIVE_INTERIM" and total >= n_req:
         return None, ["at or past n_required the look is confirmatory, not interim"]
     try:
         y = [int(r["y_a"]) for r in scored]
-        pm = [float(r["p_a"]) for r in scored]
+        pm = [None if r["p_a"] is None else float(r["p_a"]) for r in scored]  # None = abstention lock
         pk = [float(r["market_p_a_vigfree"]) for r in scored]
     except (KeyError, TypeError, ValueError) as e:
         return None, [f"malformed lock rows: {e}"]

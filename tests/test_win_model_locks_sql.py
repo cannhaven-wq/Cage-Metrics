@@ -32,6 +32,9 @@ class WinModelLocksMigration(unittest.TestCase):
         # a fallback start counts from midnight UTC, never from 18:00
         self.assertIn("then (event_date::timestamp at time zone 'UTC') else start_at end", self.sql)
 
+    def test_an_abstention_lock_is_allowed(self):
+        self.assertIn("check (p_a is null or (p_a > 0 and p_a < 1))", self.sql)
+
     def test_quotes_agree_with_book_count(self):
         self.assertIn("jsonb_array_length(market_quotes) = market_book_count", self.sql)
 

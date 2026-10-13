@@ -459,19 +459,26 @@ class Provenance(unittest.TestCase):
         ev = self._eval(rows + graded, regf, stage="PROSPECTIVE", card_population=population(rows))
         self.assertEqual(ev.verdict, "INVALID")
 
-    def test_one_missing_bout_per_card_is_tolerated_but_not_everywhere(self):
+    def test_every_priced_bout_needs_a_lock_row(self):
+        # round 5: allowing even one missing bout per card let a writer roll
+        # back the worst-scoring bout after the fight: +0.004 to +0.008 on
+        # 3,000 fights, more than the minimum useful effect
         regf, _ = sandbox(self, n_required=3000)
         rows = self._locks()
         pop = population(rows)
-        # one bout missing on every 4th card: per-card limit holds, pooled stays >= 95%
-        some = [r for r in rows if not (r["lock_id"] % 12 == 0 and r["event_id"] % 4 == 0)]
-        self.assertNotEqual(self._eval(some, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
-        # one bout missing on EVERY card: pooled 11/12 = 92% < 95%
-        every = [r for r in rows if r["lock_id"] % 12 != 0]
-        self.assertEqual(self._eval(every, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
-        # two missing on one card: over the per-card limit
-        two = [r for r in rows if not (r["event_id"] == 5 and r["lock_id"] % 12 in (0, 1))]
-        self.assertEqual(self._eval(two, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
+        one_gap = [r for r in rows if r["lock_id"] != 50]
+        self.assertEqual(self._eval(one_gap, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
+
+    def test_abstention_locks_count_and_score_at_the_market(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        pop = population(rows)
+        few = [dict(r, p_a=None) if r["lock_id"] % 40 == 0 else r for r in rows]      # 2.5% abstain
+        ev = self._eval(few, regf, stage="PROSPECTIVE", card_population=pop)
+        self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
+        self.assertLess(ev.n_scored, ev.n_eligible)
+        many = [dict(r, p_a=None) if r["lock_id"] % 10 == 0 else r for r in rows]     # 10% abstain
+        self.assertEqual(self._eval(many, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
 
     def test_timestamp_spelling_does_not_reorder_locks(self):
         regf, _ = sandbox(self, n_required=3000)

@@ -32,7 +32,10 @@
 --   e. the market snapshot is dated after the lock, or is missing - the
 --      same-timestamp benchmark needs it;
 --   e2. generated_at is more than 5 minutes after the lock (clock skew);
---   f. the probability is not strictly inside (0, 1);
+--   f. the probability is not strictly inside (0, 1). NULL is allowed and
+--      means an ABSTENTION LOCK: the model declines this bout, on the record,
+--      before the bell. PRED-001 scores it at the market's probability and
+--      requires every priced bout to carry a lock row of one kind or the other;
 --   g. a required provenance field (artifact hash, code commit, experiment id)
 --      is missing or malformed.
 -- actual_lock_at is ALWAYS the database's clock_timestamp() - the wall clock
@@ -67,7 +70,7 @@ create table if not exists public.win_model_locks (
   event_date            date   not null,          -- overwritten by the guard from events
   fighter_a_id          bigint not null,
   fighter_b_id          bigint not null,
-  p_a                   numeric not null,          -- P(fighter_a_id wins); decided fights only are graded
+  p_a                   numeric,                   -- P(fighter_a_id wins); NULL = an abstention lock, scored at the market
 
   -- who made it (PRED-001 provenance)
   experiment_id         text   not null,           -- e.g. 'PRED-002'
@@ -94,7 +97,7 @@ create table if not exists public.win_model_locks (
 
   notes                 text,
 
-  constraint win_model_locks_p_open   check (p_a > 0 and p_a < 1),
+  constraint win_model_locks_p_open   check (p_a is null or (p_a > 0 and p_a < 1)),
   constraint win_model_locks_mkt_open check (market_p_a_vigfree > 0 and market_p_a_vigfree < 1),
   constraint win_model_locks_corners  check (fighter_a_id <> fighter_b_id),
   constraint win_model_locks_sha      check (artifact_sha256 ~ '^[0-9a-f]{64}$'),
