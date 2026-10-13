@@ -11,6 +11,36 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (i) — T-086 complete plan ready for final approval
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+The DWCS 10.3 move is fully built and tested. Nothing has been applied.
+
+- **Plan:** `research/data-integrity/T-086_MIGRATION_PLAN_2026-10-13.md`.
+- **Migration and rollback:** one transaction each, demonstrated on a
+  throwaway Postgres (13 tests, including a full round trip that is
+  byte-identical).
+- **Scraper guard:** cage-metrics-event-scrapper `claude/pensive-fermi-d6pbi0`.
+- **Found while checking frozen data:**
+  - PRED-001 RESERVE's recorded 169 includes the 5 bouts.
+  - Saturday's PROP-0001 locks for Galanti counted his Contender Series bout.
+  - "UFC - Road to UFC 4.6" sits in the sealed H1 set and is left alone.
+
+## Next action
+
+Owner, three answers:
+1. Approve the plan, including moving the event row too.
+2. Acknowledge the RESERVE note.
+3. Approve grading 53618 as locked.
+
+Then Claude merges the scraper, applies the migration and merges the pages, in
+that order.
+
+---
+
 ## 2026-10-13 (f) — Fight Lab is live; T-083 answered; two production discrepancies
 
 **From:** Claude

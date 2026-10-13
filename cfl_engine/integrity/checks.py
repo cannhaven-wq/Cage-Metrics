@@ -359,6 +359,24 @@ CHECKS: tuple[Check, ...] = (
         baseline=0,
         unit="fights",
     ),
+    # ------------------------------------------------------------ promotion
+    Check(
+        key="non_ufc_card_in_events",
+        title="Cards in the UFC events table that are not UFC events",
+        sql="""
+            select count(*) n from events
+            where not (name ~ '\\mUFC\\M|^The Ultimate Fighter\\M|^Ortiz vs\\.? Shamrock 3\\M'
+                       and name !~* '^\\s*road to ufc')
+        """,
+        why="A Contender Series or Road to UFC card stored as a UFC event gives "
+            "every fighter on it an extra UFC fight, on every page and in every "
+            "statistic. One existed (DWCS 10.3, T-086). Once T-086 is applied, "
+            "the database refuses new ones, so anything above zero means that "
+            "guard was removed.",
+        classification=L3,
+        baseline=1,   # measured 2026-10-13, before T-086; added after the 09-16 sweep
+        unit="cards",
+    ),
 )
 
 

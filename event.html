@@ -742,6 +742,60 @@ function updateEventSEO(event, fights, fighterMap) {
   });
 }
 
+// T-086. Contender Series / Road to UFC cards are kept, not counted. Returns
+// false when the id is not a non-UFC card either (or the table is absent).
+const NON_UFC_LABEL = {
+  DWCS: "Dana White's Contender Series",
+  RTU: 'Road to UFC',
+  OTHER: 'a non-UFC promotion',
+};
+async function renderNonUfcEvent(sb, id) {
+  try {
+    const { data: ev, error } = await sb.from('events_non_ufc')
+      .select('id, name, event_date, location, promotion').eq('id', id).maybeSingle();
+    if (error || !ev) return false;
+    const { data: bouts } = await sb.from('fights_non_ufc')
+      .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, bout_order')
+      .eq('event_id', ev.id).order('bout_order', { ascending: true, nullsFirst: false });
+
+    const robots = document.querySelector('meta[name="robots"]');
+    if (robots) robots.setAttribute('content', 'noindex, follow');
+    document.title = `${ev.name} — not a UFC event | Cannon Fight Lab`;
+
+    const label = NON_UFC_LABEL[ev.promotion] || NON_UFC_LABEL.OTHER;
+    const link = (fid, name) => fid
+      ? `<a href="${cfl.fighterUrl(fid)}">${cfl.escapeHtml(name || 'Unknown')}</a>`
+      : cfl.escapeHtml(name || 'Unknown');
+    const rows = (bouts || []).map(b => {
+      const aWon = b.winner_id && b.winner_id === b.fighter_a_id;
+      const bWon = b.winner_id && b.winner_id === b.fighter_b_id;
+      const head = aWon ? `${link(b.fighter_a_id, b.fighter_a_name)} beat ${link(b.fighter_b_id, b.fighter_b_name)}`
+        : bWon ? `${link(b.fighter_b_id, b.fighter_b_name)} beat ${link(b.fighter_a_id, b.fighter_a_name)}`
+        : `${link(b.fighter_a_id, b.fighter_a_name)} vs ${link(b.fighter_b_id, b.fighter_b_name)}`;
+      const how = [b.method, b.end_round ? `round ${b.end_round}` : '', b.end_time || '']
+        .filter(Boolean).map(cfl.escapeHtml).join(', ');
+      return `<li class="non-ufc-bout">${head}${how ? ` <span class="meta">— ${how}</span>` : ''}</li>`;
+    }).join('');
+
+    document.getElementById('content').innerHTML = `
+      <div class="event-hero">
+        <h1>${cfl.escapeHtml(ev.name)}</h1>
+        <div class="meta">${cfl.formatDate(ev.event_date)} · ${cfl.escapeHtml(ev.location || 'Location TBD')}</div>
+        <span class="pill">Not a UFC event</span>
+      </div>
+      <div class="page">
+        <p class="non-ufc-note">This was a ${cfl.escapeHtml(label)} card, not a UFC event.
+        The results are kept here for reference. They do not count toward anyone's UFC
+        record or any UFC statistic on this site.</p>
+        <ul class="non-ufc-bouts">${rows}</ul>
+      </div>
+    `;
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function load() {
   if (!eventId) {
     document.getElementById('content').innerHTML = cfl.errorHtml('No event id provided.');
@@ -750,8 +804,11 @@ async function load() {
 
   const sb = window.cflSupabase;
 
-  const { data: event, error } = await sb.from('events').select('*').eq('id', eventId).single();
+  const { data: event, error } = await sb.from('events').select('*').eq('id', eventId).maybeSingle();
   if (error || !event) {
+    // T-086: a card that is not a UFC event lives in events_non_ufc. Its old
+    // links still land here and get the results, labelled for what they are.
+    if (await renderNonUfcEvent(sb, eventId)) return;
     document.getElementById('content').innerHTML = cfl.errorHtml('Event not found.');
     return;
   }

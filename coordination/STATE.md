@@ -22,7 +22,8 @@ site).** **T-083 answered:** the `fights` table matches UFCStats on UFC bouts
 (73 of 74 fighters; the exception is a Contender Series card stored as a UFC
 event, T-086), while `fighters.ufc_wins/losses` is wrong for about two fighters
 in three and is still shown on four pages and the `/f/` stubs (T-084, proposed).
-The chart query is slow (T-085). Footage links (T-081) and expanded style
+The chart query is slow (T-085). **T-086 (DWCS card out of UFC records): complete plan
+awaiting final approval, nothing applied.** Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
 **Next phase (owner, 2026-10-13): the first $100 of revenue.** The

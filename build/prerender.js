@@ -12,7 +12,8 @@ const path = require('path');
 const { createClient } = require('@supabase/supabase-js');
 
 const { slugify } = require('./slug');
-const { fighterStub, eventStub } = require('./templates');
+const { fighterStub, eventStub, nonUfcEventStub } = require('./templates');
+const { isUfcEventName, nonUfcPromotion, PROMOTION_LABEL } = require('./promotion');
 const { matchupPreview, previewSlug } = require('./preview-templates');
 const { eventPreview, cardSlug, consensusPick, cardOrder } = require('./event-preview-templates');
 
@@ -101,6 +102,21 @@ async function prerenderFighters() {
   return urls;
 }
 
+// events_non_ufc exists once T-086 is applied. Before that, PostgREST answers
+// "relation not found" and there is nothing to read; any other error is real.
+async function fetchNonUfcEvents() {
+  const { data, error } = await sb.from('events_non_ufc')
+    .select('id, name, event_date, location, is_upcoming, promotion')
+    .order('id', { ascending: true });
+  if (error) {
+    const missing = error.code === 'PGRST205' || error.code === '42P01'
+      || /events_non_ufc/.test(error.message || '') && /(not find|does not exist)/i.test(error.message || '');
+    if (missing) return [];
+    throw new Error('events_non_ufc read failed: ' + error.message);
+  }
+  return data || [];
+}
+
 async function prerenderEvents() {
   console.log('Fetching events...');
   const events = await fetchAll(() => sb
@@ -133,8 +149,29 @@ async function prerenderEvents() {
   const urls = [];
   let written = 0;
 
+  // T-086: cards that are not UFC events. Before the migration one can still
+  // sit in `events` (caught by name); after it they live in events_non_ufc.
+  // Either way the stub URL keeps working, as a noindex page that says what
+  // the card was, and it never enters the sitemap.
+  const nonUfc = await fetchNonUfcEvents();
+  const nonUfcIds = new Set(nonUfc.map(e => e.id));
   for (const e of events) {
+    if (!e.id || !e.name || nonUfcIds.has(e.id)) continue;
+    if (!isUfcEventName(e.name)) nonUfc.push({ ...e, promotion: nonUfcPromotion(e.name) });
+  }
+  for (const e of nonUfc) {
     if (!e.id || !e.name) continue;
+    const filename = `${slugify(e.name)}-${e.id}.html`;
+    keep.add(filename);
+    if (writeIfChanged(path.join(EVENTS_DIR, filename),
+        nonUfcEventStub(e, PROMOTION_LABEL[e.promotion] || PROMOTION_LABEL.OTHER))) {
+      written++;
+    }
+  }
+  const nonUfcDone = new Set(nonUfc.map(e => e.id));
+
+  for (const e of events) {
+    if (!e.id || !e.name || nonUfcDone.has(e.id)) continue;
     const slug = slugify(e.name);
     const filename = `${slug}-${e.id}.html`;
     keep.add(filename);
