@@ -447,6 +447,32 @@ class Provenance(unittest.TestCase):
         ev = self._eval(rows, regf, stage="PROSPECTIVE", card_population=population(rows))
         self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
 
+    def test_next_cards_ungraded_locks_are_set_aside(self):
+        # round 4: locks written the night before for a card the population
+        # does not list yet made every look INVALID
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        upcoming = [{**rows[0], "lock_id": 999999, "fight_id": 999999, "event_id": 777777, "y_a": None}]
+        ev = self._eval(rows + upcoming, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertNotEqual(ev.verdict, "INVALID", ev.reasons)
+        graded = [dict(upcoming[0], y_a=1)]
+        ev = self._eval(rows + graded, regf, stage="PROSPECTIVE", card_population=population(rows))
+        self.assertEqual(ev.verdict, "INVALID")
+
+    def test_one_missing_bout_per_card_is_tolerated_but_not_everywhere(self):
+        regf, _ = sandbox(self, n_required=3000)
+        rows = self._locks()
+        pop = population(rows)
+        # one bout missing on every 4th card: per-card limit holds, pooled stays >= 95%
+        some = [r for r in rows if not (r["lock_id"] % 12 == 0 and r["event_id"] % 4 == 0)]
+        self.assertNotEqual(self._eval(some, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
+        # one bout missing on EVERY card: pooled 11/12 = 92% < 95%
+        every = [r for r in rows if r["lock_id"] % 12 != 0]
+        self.assertEqual(self._eval(every, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
+        # two missing on one card: over the per-card limit
+        two = [r for r in rows if not (r["event_id"] == 5 and r["lock_id"] % 12 in (0, 1))]
+        self.assertEqual(self._eval(two, regf, stage="PROSPECTIVE", card_population=pop).verdict, "INVALID")
+
     def test_timestamp_spelling_does_not_reorder_locks(self):
         regf, _ = sandbox(self, n_required=3000)
         rows = self._locks()
@@ -607,6 +633,17 @@ class Ledger(unittest.TestCase):
         data = json.loads(led.read_text())
         del data["entries"][0]
         self.assertTrue(pp.verify_ledger_chain(data))
+
+
+class CiWiring(unittest.TestCase):
+    """tests.yml is not a PRED-001 file, so it is guarded by content: the
+    anti-rewrite checks are only as good as the base they compare with."""
+
+    def test_ci_fetches_a_real_base(self):
+        w = (REPO / ".github/workflows/tests.yml").read_text()
+        self.assertIn("git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main", w)
+        self.assertIn('echo "PRED_BASE_REF=$BEFORE" >> "$GITHUB_ENV"', w)
+        self.assertNotRegex(w, r"refs/remotes/origin/main\s*\|\|\s*true")
 
 
 class ExperimentCode(unittest.TestCase):

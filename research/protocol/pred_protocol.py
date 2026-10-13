@@ -550,25 +550,46 @@ def _prospective_inputs(rows: list[dict], reg: dict, stage: str, card_population
     by_card = {}
     for r in rows:
         by_card.setdefault(str(r["event_id"]), []).append(r)
-    unknown = set(by_card) - {c[0] for c in cards}
-    if unknown:
-        return None, [f"locks on cards missing from card_population: {sorted(unknown)[:5]}"]
+    # Locks on a card the population does not list yet are the next card,
+    # written the night before: set aside while every one of them is still
+    # ungraded. A GRADED lock on an unlisted card means the population is
+    # wrong, and that is INVALID.
+    known = {c[0] for c in cards}
+    for ev_id in sorted(set(by_card) - known):
+        if any(r.get("y_a") in (0, 1) for r in by_card[ev_id]):
+            return None, [f"graded locks on card {ev_id}, which card_population does not list"]
+        del by_card[ev_id]
+    if not by_card:
+        return None, ["no locks on any card in card_population"]
     locked_idx = [i for i, c in enumerate(cards) if c[0] in by_card]
     first, last = locked_idx[0], locked_idx[-1]
 
     eligible_of = lambda rs: [r for r in rs if r.get("y_a") in (0, 1) and r.get("corners_unchanged") is True
                               and r.get("market_p_a_vigfree") is not None]
-    scored, total = [], 0
+    # Coverage, two layers (round 4): pooled over the run, at least min_coverage
+    # of priced bouts carry a lock; and on EVERY card in the run at most
+    # max(1, 5%) priced bouts may be missing. A single late replacement or a
+    # debutant the model cannot price does not void an honest card; a card
+    # with no locks - dropped, or rolled back after the fights - always fails.
+    scored, total, pooled_locked, pooled_priced = [], 0, 0, 0
     for ev_id, _start, priced in cards[first:last + 1]:
         if stage == "PROSPECTIVE" and total >= n_req:
             break
         locked = {int(r["fight_id"]) for r in by_card.get(ev_id, [])}
-        if not priced or len(locked & priced) / len(priced) < T["min_coverage"]:
-            return None, [f"card {ev_id}: locks cover {len(locked & priced)} of {len(priced)} priced bouts; "
-                          f"every priced card in the run must be covered - skipping cards is not allowed"]
+        covered = len(locked & priced)
+        allowed_missing = max(1, math.floor(len(priced) * (1 - T["min_coverage"])))
+        if not priced or not locked or len(priced) - covered > allowed_missing:
+            return None, [f"card {ev_id}: locks cover {covered} of {len(priced)} priced bouts; every priced "
+                          f"card in the run must be covered (at most {allowed_missing} missing) - "
+                          f"skipping cards is not allowed"]
+        pooled_locked += covered
+        pooled_priced += len(priced)
         elig = eligible_of(by_card.get(ev_id, []))
         scored.extend(elig)
         total += len(elig)
+    if pooled_priced and pooled_locked / pooled_priced < T["min_coverage"]:
+        return None, [f"locks cover {pooled_locked} of {pooled_priced} priced bouts across the run, "
+                      f"below {T['min_coverage']:.0%}"]
     if stage == "PROSPECTIVE" and total < n_req:
         return None, [f"only {total} eligible locks on whole cards; the confirmatory look needs {n_req}"]
     if stage == "PROSPECTIVE_INTERIM" and total >= n_req:
@@ -700,7 +721,11 @@ def run_look(*, experiment_id: str, stage: str, rows: list[dict], artifact_sha25
     git_sessions = []
     if _authors_from_git:
         exp_dir = str(pathlib.Path(reg["preregistration_path"]).parent)
-        log = _git("log", "--format=%(trailers:key=Claude-Session,valueonly)%n%ae", "--", exp_dir)
+        # The experiment folder plus any model code the frozen block names
+        # (e.g. a feature builder under cfl_engine/).
+        paths = [exp_dir] + [str(x) for x in (_registration_block((REPO / reg["preregistration_path"]).read_text())
+                                              .get("code_paths") or [])]
+        log = _git("log", "--format=%(trailers:key=Claude-Session,valueonly)%n%ae", "--", *paths)
         if not log.strip():
             raise ProtocolViolation("no git history for the experiment folder; commit it before any look")
         git_sessions = sorted(set(re.findall(r"session_[A-Za-z0-9]+", log)))

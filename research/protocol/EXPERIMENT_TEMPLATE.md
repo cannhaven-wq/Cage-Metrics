@@ -55,6 +55,12 @@ These are what `load_registration` reads. The auditor cannot supply them.
     "n_required": <n>, "preregistration_path": "research/experiments/<ID>/PREREGISTRATION.md",
     "preregistration_sha256": "<64 hex>", "author_sessions": ["<session ids that built it>"]
 
+The same fields, without the two preregistration_* ones, go in a fenced
+`pred-registration` JSON block inside PREREGISTRATION.md itself, plus
+"experiment_id" and, if any model code lives outside the experiment folder,
+"code_paths": ["cfl_engine/..."]. load_registration reads the block; the
+registry must repeat it exactly.
+
 ## Stages requested
 
 - [ ] H1 evaluation (spends 1 of 10 slots; whole sealed set only)

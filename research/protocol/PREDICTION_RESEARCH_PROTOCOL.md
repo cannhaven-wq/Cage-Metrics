@@ -358,7 +358,8 @@ green. Changes:
    supplies** (B2, rounds 2–3). Every fact must be a plain integer, and the
    same integers that are hashed are the ones scored — round 3 showed that
    hashing `int(x)` while scoring `x` let `1000.1`/`1000.2` split a card and a
-   ±0.99 nudge on a price move the result. An H1 row carries the fight id, the card, the
+   ±0.99 nudge on a price move the result. An export of a `numeric` column
+   must cast to int (`-150.0` is refused). An H1 row carries the fight id, the card, the
    outcome, the two BFO closing American prices and the model probability;
    `evaluate` checks ids, outcomes, prices and card assignment against the
    manifest and de-vigs the prices itself. Round 1 checked only the ids, and
@@ -374,7 +375,8 @@ green. Changes:
    Budgets, one look per experiment, and an auditor who is a Claude session
    that is not an author are enforced before computing. Authors are read from
    the `Claude-Session` trailers of every commit that touched the experiment
-   folder, as well as from the frozen block. On a push to `main` the
+   folder and every `code_paths` entry in the frozen block, as well as from
+   the block's own list. On a push to `main` the
    anti-rewrite checks compare against the commit before the push, not main
    with itself. A crash is recorded as
    INVALID. Tests fail if a ledger entry, a FREEZE.json entry or a registered
@@ -386,13 +388,18 @@ green. Changes:
    corners reach n_required — so a confirmatory look scores at least
    n_required fights and never cuts a card in half. The model probability is
    the locked `p_a`; the market is the one frozen on the lock. **Every priced
-   card in that run must be covered:** locks on at least 95% of the bouts that
-   had a two-sided sportsbook price before the card started, counting every
-   lock whatever the result, so a draw never fails an honest card and a card
-   left out — skipped, or rolled back after the fights — fails the look. The
+   card in that run must be covered:** counting every lock whatever the
+   result, at least 95% of the priced bouts across the run carry a lock, and
+   on every card at most max(1, 5%) priced bouts are missing (rounds 3–4). A
+   draw, a late replacement or a debutant the model cannot price never fails
+   an honest card; a card left out — skipped, or rolled back after the fights
+   — fails the look. Locks on the next card, not yet in the population and not
+   yet graded, are set aside; a graded lock on an unlisted card is INVALID. The
    population comes from the committed recipe
    [`card_population.sql`](card_population.sql) and its hash is recorded with
-   the look. Timestamps are parsed, never compared as text.
+   the look; **the auditor re-runs the recipe and must get the same hash**,
+   which is what catches a population trimmed at the front. Timestamps are
+   parsed, never compared as text.
 5. **Interim prospective looks are a separate, logged stage** (B5).
 6. **Sample size covers both halves of the PASS rule** (S1). Minimum target
    raised from 0.003 to 0.004; the §6 table is recomputed.
@@ -414,7 +421,10 @@ green. Changes:
     could open before the bell; the deadline is the card's earliest start,
     and a bout with only the event-date fallback counts from 00:00 UTC — in
     practice, locks are due by midnight UTC on fight day, the same schedule
-    the pre-fight snapshot already keeps; the quotes list must match the book
+    the pre-fight snapshot already keeps. A card in Australia, whose local
+    date runs ahead of UTC, can still start before that fallback when no
+    provider commence time is on file - a known gap, flagged for the auditor,
+    not enforced by the guard; the quotes list must match the book
     count;
     one forecast per fight per experiment; the market snapshot is required;
     `event_date` comes from `events`; valid night-before locks are no longer
