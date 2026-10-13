@@ -68,6 +68,34 @@ strong enough to read as a flag, or should go up from 16% opacity.
 
 ---
 
+## 2026-10-13 (c) — The forecast-lock table is live; four dead bookings retired; PRED-001 merged
+
+**From:** Claude (project-audit session)
+**To:** Owner
+**Date:** 2026-10-13
+
+**PRED-001 is merged** ([cannhaven-wq/Cage-Metrics#58](https://github.com/cannhaven-wq/Cage-Metrics/pull/58),
+`16de9de7`) after six rounds of independent review.
+
+**On the owner's approval ([D-024](DECISIONS.md)):**
+
+- `win_model_locks` is applied, and its security was verified on the live
+  objects (details in D-024). It is empty.
+- Four superseded bookings are retired (`is_active = false`). Afterwards, no
+  fighter is booked twice on the 10-17 or 10-24 card.
+
+**Found on the way.** The Supabase MCP tool hangs whenever a statement raises a
+NOTICE. That explains every unexplained timeout today, and it is now noted in
+CLAUDE.md.
+
+## Next action
+
+Draft PRED-002's preregistration (opponent-adjusted grappling) on DEV data,
+then run the commercial-readiness audit the owner asked for next. The owner's
+next phase is the first $100 of revenue.
+
+---
+
 ## 2026-10-13 — Stabilization merged and verified; PRED-001 reviewed and amended; forecast-lock table proposed
 
 **From:** Claude (project-audit session)

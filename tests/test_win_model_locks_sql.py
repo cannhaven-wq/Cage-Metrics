@@ -62,8 +62,8 @@ class WinModelLocksMigration(unittest.TestCase):
     def test_one_forecast_per_fight_per_experiment(self):
         self.assertIn("on public.win_model_locks (fight_id, experiment_id);", self.sql)
 
-    def test_still_marked_proposed(self):
-        self.assertIn("STATUS: PROPOSED. NOT APPLIED.", self.sql)
+    def test_marked_applied_with_its_decision(self):
+        self.assertIn("STATUS: APPLIED 2026-10-13 on the owner's approval (D-024)", self.sql)
 
     def test_verify_script_tests_these_exact_bytes(self):
         v = VERIFY.read_text()

@@ -19,7 +19,7 @@ function extract(name) {
 }
 const botUa = src.match(/const BOT_UA = (\/.*\/i);/)[1];
 
-function harness() {
+function harness(ua = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) Safari/604.1', webdriver = false) {
   let now = 1_000_000;
   const listeners = {};
   const store = {};
@@ -28,6 +28,7 @@ function harness() {
     Date: { now: () => now },
     sessionStorage: { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = String(v); } },
     document: { visibilityState: 'visible' },
+    navigator: { userAgent: ua, webdriver },
     window: {
       scrollY: 0,
       addEventListener: (n, f) => { (listeners[n] = listeners[n] || new Set()).add(f); },
@@ -36,7 +37,7 @@ function harness() {
     cfl: { track: (e, p) => sent.push([e, p]) },
   };
   vm.createContext(ctx);
-  vm.runInContext(`const ENGAGED_KEY = 'cfl_engaged';\n${extract('watchEngagement')}\nthis.watchEngagement = watchEngagement;`, ctx);
+  vm.runInContext(`const BOT_UA = ${botUa};\nconst ENGAGED_KEY = 'cfl_engaged';\n${extract('watchEngagement')}\nthis.watchEngagement = watchEngagement;`, ctx);
   const fire = type => [...(listeners[type] || [])].forEach(f => f({ type }));
   return { ctx, sent, fire, advance: ms => { now += ms; }, listeners };
 }
@@ -44,6 +45,18 @@ function harness() {
 let n = 0, failed = 0;
 const t = (name, fn) => { try { fn(); n++; } catch (e) { failed++; console.error('FAIL', name, '\n  ', e.message); } };
 const ok = (c, m) => { if (!c) throw new Error(m); };
+
+t('a crawler that scrolls is still not a person', () => {
+  // 2026-10-13: Googlebot-style agents fired engaged_session by scrolling
+  for (const ua of ['Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+                    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; bingbot/2.0)',
+                    'Mozilla/5.0 (X11; Linux x86_64) HeadlessChrome/120.0']) {
+    const h = harness(ua); h.ctx.watchEngagement(); h.advance(5000); h.ctx.window.scrollY = 900; h.fire('scroll');
+    ok(h.sent.length === 0, 'counted ' + ua);
+  }
+  const h = harness(undefined, true); h.ctx.watchEngagement(); h.advance(5000); h.fire('pointerdown');
+  ok(h.sent.length === 0, 'counted a webdriver browser');
+});
 
 t('loading a page sends nothing', () => {
   const h = harness(); h.ctx.watchEngagement(); h.advance(60000);

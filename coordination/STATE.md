@@ -11,8 +11,8 @@ traffic, #57 commercial validation), the analytics migration is applied, and the
 live site was verified from GitHub's side on 2026-10-13 (served bytes match
 `main`; the card renders market cells only). The pipeline monitor's first run
 was healthy. Still waiting on the owner: the four-row stale-booking retirement
-before Friday 23:00 UTC (`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`),
-the CLV migration sequence, and the forecast-lock table below. Human traffic is
+... — **done 2026-10-13 ([D-024](DECISIONS.md))**; still waiting: the CLV
+migration sequence. Human traffic is
 about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
 No new prediction model is built except under PRED-001.
 Cosmetic, 2026-10-13: the country wash behind each fighter is now the real

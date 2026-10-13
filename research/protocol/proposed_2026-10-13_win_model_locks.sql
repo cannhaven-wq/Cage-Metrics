@@ -1,8 +1,16 @@
 -- =============================================================================
 -- proposed_2026-10-13_win_model_locks.sql — PRED-001 §8.8: the forecast lock
 --
--- STATUS: PROPOSED. NOT APPLIED. Applying it is a production migration
--- (CRITICAL_GATES L3 item 5) and needs the owner's explicit go after review.
+-- STATUS: APPLIED 2026-10-13 on the owner's approval (D-024), as three
+-- Supabase migrations: pred001_win_model_locks_1_table, _2_append_only and
+-- _3_guard_view. Security verified on the live objects the same day (RLS on,
+-- no policies, no browser grants, four triggers, both functions SECURITY
+-- INVOKER, anon and authenticated denied; a rolled-back insert/update/delete/
+-- truncate/settled-fight run behaved as below; 0 rows left behind). The
+-- statements applied are these, minus the `drop trigger if exists` lines: on a
+-- fresh table they only raise a NOTICE, and the Supabase MCP tool hangs on a
+-- NOTICE (it timed out four times before that was found). Do not re-run this
+-- file against production.
 --
 -- Plain version: one row per forecast, written before the fight, that nobody
 -- can change or delete afterwards — not us, not the service key, not a
