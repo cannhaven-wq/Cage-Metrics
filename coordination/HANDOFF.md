@@ -81,38 +81,6 @@ Pages that load before the view exists show "—" instead of a record.
 
 ## 2026-10-13 (g′) — Sportsbook data is read-only to the browser (T-087)
 
----
-
-## 2026-10-13 (h) — Sportsbook list write hole closed on production
-
-**From:** Claude
-**To:** Owner
-**Date:** 2026-10-13
-
-While checking the T-084/T-085 runbook, Claude found that browsers could write
-`odds_books` through the definer view `v_odds_books_sportsbooks`. A delete
-there would have cascaded to every captured price from that book. On the
-owner's instruction the fix was applied to production the same day and
-verified ([D-025](DECISIONS.md)). This PR is the record: the migration file and
-the test that reproduces the hole and proves it is closed.
-
-**Reconciled with T-087 (cannhaven-wq/Cage-Metrics#68, below).** T-087 was
-applied minutes later and covers this view plus every other odds relation and
-sequence. The two agree: both leave `anon` and `authenticated` with SELECT only
-on `v_odds_books_sportsbooks`, and nothing for `PUBLIC`. D-025 records the one
-hole found and its reproduction; T-087 is the lockdown standard.
-`tests/odds-write-lockdown.test.js` also scans this PR's SQL file.
-
-## Next action
-
-Owner: merge this PR (it changes no page, and nothing in the database that is
-not already applied). Claude: T-086, then T-088 security hardening and
-commercial readiness.
-
----
-
-## 2026-10-13 (g) — Sportsbook data is read-only to the browser (T-087)
-
 **From:** Claude
 **To:** Owner
 **Date:** 2026-10-13
@@ -150,6 +118,34 @@ Claude: T-088 — the same revoke-and-assert for `pre_fight_snapshots` first (it
 is the append-only record, and its triggers stop UPDATE and DELETE but a
 TRUNCATE grant is still a grant), then the user tables, then propose the
 default-privilege change for review.
+
+---
+
+## 2026-10-13 (h) — Sportsbook list write hole closed on production
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+While checking the T-084/T-085 runbook, Claude found that browsers could write
+`odds_books` through the definer view `v_odds_books_sportsbooks`. A delete
+there would have cascaded to every captured price from that book. On the
+owner's instruction the fix was applied to production the same day and
+verified ([D-025](DECISIONS.md)). This PR is the record: the migration file and
+the test that reproduces the hole and proves it is closed.
+
+**Reconciled with T-087 (cannhaven-wq/Cage-Metrics#68, below).** T-087 was
+applied minutes later and covers this view plus every other odds relation and
+sequence. The two agree: both leave `anon` and `authenticated` with SELECT only
+on `v_odds_books_sportsbooks`, and nothing for `PUBLIC`. D-025 records the one
+hole found and its reproduction; T-087 is the lockdown standard.
+`tests/odds-write-lockdown.test.js` also scans this PR's SQL file.
+
+## Next action
+
+Owner: merge this PR (it changes no page, and nothing in the database that is
+not already applied). Claude: T-086, then T-088 security hardening and
+commercial readiness.
 
 ---
 
