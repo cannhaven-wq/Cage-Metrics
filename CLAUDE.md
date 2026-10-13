@@ -106,6 +106,10 @@ The site itself is plain static HTML/CSS/JS — no bundler, no test suite. There
 
 Why it can't just be the tables we already have: `model_picks` is insert-only but carries no price and no props; `prop_projections` is **full-table replaced** on every refresh, so it holds only the next card; `v_fight_odds_consensus` is overwritten as the line moves. The snapshot is the only place all three are frozen together ahead of the bell.
 
+**Model forecasts under PRED-001 go to `win_model_locks`** (applied 2026-10-13, [D-024](coordination/DECISIONS.md)), not to `pre_fight_snapshots`. Append-only for every role, private to both browser roles, lock time = `clock_timestamp()`, deadline = the card's earliest start (a date-only start counts from 00:00 UTC), one row per fight per experiment, `p_a` NULL = an abstention lock. The rules a look must follow are in [`research/protocol/`](research/protocol/PREDICTION_RESEARCH_PROTOCOL.md); do not score a model any other way.
+
+**Supabase MCP gotcha:** a statement that raises a NOTICE (e.g. `drop trigger if exists` on a trigger that does not exist) makes `execute_sql` / `apply_migration` hang until the 60 s tool timeout, with nothing applied and nothing left running. Leave such statements out when applying through the tool, or use `psql`.
+
 Grade it through `v_pre_fight_graded`, which joins snapshots to results — it can only ever contain picks that were on record before the fight.
 
 Not to be confused with the legacy `predictions` table, written by `cfl-snapshotter` on Railway. **Corrected 2026-10-05:** this line used to call it retired with its "cron dead since 2026-05-29". It was never retired — the cron had simply **never been set**, so the service built cleanly and ran zero times. It is live again on `0 18 * * 5` and writing.
