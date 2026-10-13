@@ -3,47 +3,55 @@
 The live baton. Newest entry at the top; keep the last three, drop the rest —
 git history holds the others.
 
-Every entry carries **From**, **To**, **Date**, and a `### Verified after merge, which the entry above could not promise
-
-Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
-has now been run against the real database twice.
-
-**A review caught a defect that would have broken it on every run.**
-`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
-explicit permissions block sets every scope it does *not* name to `none`, so the
-token had `contents: none` and the job would have died 403 on its first step.
-Nothing caught it here: `workflow_dispatch` needs the workflow on the default
-branch, so the file had never executed, and the green CI on the pull request was
-`tests.yml`, a different workflow with its own correct scope. The one path that
-would have exposed it was shut by the same thing that stopped the live test.
-Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
-fails on any that pins permissions, runs a checkout and names no `contents` —
-verified against the broken file, so it is not decorative. `dead-man.yml` was
-the only offender of twenty-one.
-
-**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
-October card's deadlines has passed.
-
-**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
-`open_issues=false` so a card whose record is not yet due could not raise a
-false alarm):
-
-```
-BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
-        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
-   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
-  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
-```
-
-Real counts off the live database, the breach path firing, the job red. A run
-that merely says "no breach" proves nothing about whether it read anything,
-which is why the second run was worth the red tick in the Actions list.
-
-## Next action` that
+Every entry carries **From**, **To**, **Date**, and a `## Next action` that
 names something specific enough to start on without asking a question back.
 "Continue the work" is not a next action.
 
 Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
+
+---
+
+## 2026-10-12 — Stabilization sprint, PR 1: the retired forecast comes off every public channel
+
+**From:** Claude
+**To:** Owner → ChatGPT
+**Date:** 2026-10-12
+
+The current-state audit (`audits/cfl-current-state/`, on branch
+`claude/nice-bell-ussmhp`) found the forecast D-011 removed on 2026-09-21 still
+going out in four places. This pull request removes it from all four and makes
+each one a test failure if it returns.
+
+- **X.** The Mon/Wed/Fri poster tweeted model win percentages three times a week
+  (verified: tweet ids 2107245353053634817, 2107950714135761316,
+  2108670936010387493). Its schedule came off `main` on 2026-10-12 (`38d47f7d`).
+  This PR makes the guard real: the generator no longer stamps its own model copy
+  `research`, and `build/social-copy-guard.js` refuses any piece whose *words*
+  read as a forecast, on both posting paths.
+- **fighter.html**, the most visited page: the engine's graded record ("Model
+  called X of N", "a fade candidate at a short price") and the archived Prop
+  Board's projections are gone.
+- **Generated pages:** 14 match previews named "Cannon Fight Lab's models pick X"
+  in FAQ structured data; all 75 previews, 7 card pages and 7 event stubs were
+  titled "Predictions". Generators and published files both fixed;
+  `prerender.js` no longer reads `model_picks`.
+- **event.html** runtime title, description and keywords.
+
+Also fixed on the way: `send-digest.js` and `social-post.js` read `open_p_a`,
+removed by D-012, and the Brief's 24 h move subtracted two medians over
+different book sets (the D-015 error). Both now read the matched-cohort columns.
+
+Left deliberately: the Factor Lab's "not the record our pick engine uses"
+paragraph (a negative disambiguation pinned by D-008 and its test); the archive
+pages; `social/` batch files (served by Pages, carry old model copy — owner call
+whether to delete, see audit item A-055).
+
+## Next action
+
+Owner: review and merge this PR, then check one generated preview page and
+`fighter.html` on the live site. After merge, `prerender.yml` regenerates every
+stub on the push to `build/**`; confirm the next stub commit does not reintroduce
+"Predictions". Then PR 2 (operational repairs) — see `STATE.md`.
 
 ---
 
@@ -177,6 +185,44 @@ the `partial` / `thin` boundary at half the card the right place for it? It is
 the only judgement in the file that trades a missed alarm against a false one,
 and it was set from six observed cards (13–14 rows against 13–16 fights), which
 is a small sample to cut a threshold on.
+
+---
+
+### Verified after merge, which the entry above could not promise
+
+Both pull requests are merged (#49 `d2d31119`, #48 `9922adaa`) and the watchdog
+has now been run against the real database twice.
+
+**A review caught a defect that would have broken it on every run.**
+`dead-man.yml` pinned `permissions:` and then ran `actions/checkout@v4` — and an
+explicit permissions block sets every scope it does *not* name to `none`, so the
+token had `contents: none` and the job would have died 403 on its first step.
+Nothing caught it here: `workflow_dispatch` needs the workflow on the default
+branch, so the file had never executed, and the green CI on the pull request was
+`tests.yml`, a different workflow with its own correct scope. The one path that
+would have exposed it was shut by the same thing that stopped the live test.
+Fixed, and `tests/dead-man.test.js` now sweeps every workflow in the repo and
+fails on any that pins permissions, runs a checkout and names no `contents` —
+verified against the broken file, so it is not decorative. `dead-man.yml` was
+the only offender of twenty-one.
+
+**Run 1, real clock:** no breach, correctly — on 5 October neither of the 10
+October card's deadlines has passed.
+
+**Run 2, forced past the deadline** (`now=2026-10-10T06:00:00Z`,
+`open_issues=false` so a card whose record is not yet due could not raise a
+false alarm):
+
+```
+BREACH  Pre-fight record is EMPTY for UFC Fight Night: Allen vs. Duncan (2026-10-10):
+        0 rows for 12 fights, and the deadline passed at 2026-10-10 00:00:00Z.
+   ok   Model picks: 12/12 for UFC Fight Night: Allen vs. Duncan (2026-10-10).
+  ...   Model picks: not due yet for Buckley vs. Malott (2026-10-17) — deadline 2026-10-16 21:00:00Z.
+```
+
+Real counts off the live database, the breach path firing, the job red. A run
+that merely says "no breach" proves nothing about whether it read anything,
+which is why the second run was worth the red tick in the Actions list.
 
 ---
 

@@ -142,7 +142,7 @@ function eventStub(e, fighters) {
   const canonicalUrl = `${SITE}/event.html?id=${id}`;
 
   const dateStr = formatDate(e.event_date);
-  const status = e.is_upcoming ? 'Predictions' : 'Results';
+  const status = e.is_upcoming ? 'Odds & Fight Card' : 'Results';
   const verb = e.is_upcoming ? 'sportsbook odds, line movement and matchup data' : 'results, closing prices and matchup data';
   const title = `${e.name} — UFC ${status} | Cannon Fight Lab`;
   const description = `${e.name}${dateStr ? ' on ' + dateStr : ''}${e.location ? ' in ' + e.location : ''}. Full card with ${verb} for every fight.`;

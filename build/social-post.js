@@ -27,6 +27,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
+const { forecastClaim } = require('./social-copy-guard');
 const { slugify } = require('./slug');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
@@ -69,9 +70,12 @@ async function buildPost(event) {
   const lines = [];
   for (const f of fights) {
     const r = byFight[f.id];
-    if (!r || r.market_p_a == null || r.open_p_a == null) continue;
-    const pA = +r.market_p_a, open = +r.open_p_a;
-    const move = (pA - open) * 100;
+    // movement_pts_a: matched-cohort move since the first broad capture
+    // (D-012). This used to read open_p_a, removed 2026-09-21, so every fight
+    // was skipped and the post came out empty.
+    if (!r || r.market_p_a == null || r.movement_pts_a == null) continue;
+    const pA = +r.market_p_a;
+    const move = +r.movement_pts_a;
     if (!isFinite(move)) continue;
     const favIsA = pA >= 0.5;
     lines.push({
@@ -347,7 +351,14 @@ async function postToReddit(title, selftext) {
       if (stale) {
         console.log(`[social] skipping ${stale} queued piece(s) generated before the research repositioning — regenerate with \`npm run social-engine\`.`);
       }
-      const pool = queue.filter(e => researchEra(e) && (!e.eventDate || e.eventDate >= today));
+      // The stamp alone is not a guard: the generator stamped its own model
+      // copy 'research' and it went out for three weeks. Every piece's words
+      // are checked too, and anything that reads like a forecast is refused.
+      const claims = queue.filter(e => researchEra(e) && forecastClaim(e.tweet));
+      if (claims.length) {
+        console.log(`[social] refusing ${claims.length} queued piece(s) that read as a forecast (${[...new Set(claims.map(e => forecastClaim(e.tweet)))].join(', ')}).`);
+      }
+      const pool = queue.filter(e => researchEra(e) && !forecastClaim(e.tweet) && (!e.eventDate || e.eventDate >= today));
       let pick = pool.find(e => !posted.includes(keyOf(e)));
       if (!pick && FORCE) pick = pool[0] || queue[0];
       if (!pick) {
@@ -362,7 +373,7 @@ async function postToReddit(title, selftext) {
       console.log(haveImage ? `[social] image: ${pick.image}` : '[social] no image file → text-only.');
 
       // Reddit gets the same content as a profile self-post (no subreddit spam).
-      const redditTitle = `${pick.eventName} — our model's read`;
+      const redditTitle = `${pick.eventName} — market and matchup research`;
       const [xRes, rRes] = await Promise.all([
         postToX(pick.tweet, haveImage ? imageAbs : null),
         postToReddit(redditTitle, pick.tweet),
@@ -396,6 +407,8 @@ async function postToReddit(title, selftext) {
     }
     const post = await buildPost(event);
     if (!post) { console.log('[social] no verdicts yet for this card — skipping.'); return; }
+    const legacyClaim = forecastClaim(post.tweet) || forecastClaim(post.redditTitle) || forecastClaim(post.redditBody);
+    if (legacyClaim) { console.log(`[social] refusing the legacy card summary: it reads as a forecast (${legacyClaim}).`); return; }
     const [xRes, rRes] = await Promise.all([
       postToX(post.tweet),
       postToReddit(post.redditTitle, post.redditBody)

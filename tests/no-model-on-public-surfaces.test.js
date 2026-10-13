@@ -85,12 +85,23 @@ const BANNED = [
   [/\bPick-lock\b/i,                  'sells a pick-lock email'],
   [/\bodds-blind forecast\b/i,        'advertises the forecast'],
   [/\bwould_bet\b/,                   'reads the betting flag'],
+  // Added 2026-10-12 after the current-state audit found each of these on a
+  // public surface the list above did not cover.
+  [/\bour model\b/i,                  'speaks for the model'],
+  [/\bmodels? picks?\b/i,             'names a model pick'],
+  [/\bfade candidates?\b/i,           'recommends fading a fighter'],
+  [/\bUFC Predictions\b/i,            'titles the page as predictions'],
+  [/\bPredictions? (?:&|&amp;) (?:Edges|Full-Card Picks)\b/i, 'titles the page as predictions'],
 ];
 
 // Tables and views that only exist to serve a forecast.
 const BANNED_READS = [
   'model_predictions', 'v_model_picks_graded', 'v_model_edges_graded',
   'v_fight_locked_forecast', 'stake_frac',
+  // fighter.html read both of these until 2026-10-12: the engine's graded
+  // record per fighter ("Model called X of N") and the archived Prop Board's
+  // projections, shown without the archive banner.
+  'v_fighter_model_record', 'v_prop_projections_current', "from('model_picks')",
 ];
 
 // One documented exemption, and it is narrow. `v_fighter_consistency` grades
@@ -206,6 +217,56 @@ t('the email product is the Cannon Card Brief and sells no picks', () => {
   ok(/No picks\./.test(shared), 'the Brief no longer says it contains no picks');
   ok(!/model’s verdict|model's verdict/.test(strip(shared)),
     'the signup copy still promises the model’s verdict');
+});
+
+// ---------------------------------------------------- generated surfaces
+// The prerender job writes ~5,400 public pages. They are not in PRODUCT, and
+// until 2026-10-12 nothing checked them: 14 match previews said "Cannon Fight
+// Lab's models pick X" in their FAQ structured data, and every card and preview
+// page was titled "Predictions". Structured data and share titles are public
+// claims even though no visitor sees them on the page, so this reads the raw
+// file — scripts and JSON-LD included.
+
+const GENERATED_BANNED = BANNED.concat([
+  [/\bwho wins\b/i, 'asks who wins in structured data'],
+]);
+['card', 'preview', 'e'].forEach(dir => {
+  const abs = path.join(__dirname, '..', dir);
+  if (!fs.existsSync(abs)) return;
+  const files = fs.readdirSync(abs).filter(f => f.endsWith('.html'));
+  t(`${dir}/ — ${files.length} generated pages publish no forecast`, () => {
+    for (const f of files) {
+      const raw = fs.readFileSync(path.join(abs, f), 'utf8');
+      for (const [re, why] of GENERATED_BANNED) {
+        const m = raw.match(re);
+        ok(!m, `${dir}/${f} ${why} — found "${m && m[0]}"`);
+      }
+    }
+  });
+});
+
+t('the preview and card generators print no pick even when handed one', () => {
+  const { matchupPreview } = require('../build/preview-templates');
+  const { eventPreview } = require('../build/event-preview-templates');
+  const A = { id: 2, name: 'Alpha Fighter' }, B = { id: 3, name: 'Bravo Fighter' };
+  const ev = { id: 9, name: 'UFC Test Night', event_date: '2026-10-17', is_upcoming: true };
+  const fight = { id: 1, weight_class: 'Lightweight', is_main_event: true };
+  // A pick the old code would have printed: Alpha at 70%.
+  const picks = [{ fighter_id: 2, model_p: 0.7 }];
+  const html = matchupPreview({ fight, fighterA: A, fighterB: B, event: ev, picks });
+  const card = eventPreview({ event: ev, rows: [{ fight, fighterA: A, fighterB: B, slug: 'x', pick: { name: A.name, pct: 70 } }], previewSlugFor: () => 'x' });
+  for (const [label, out] of [['preview', html], ['card', card]]) {
+    for (const [re, why] of GENERATED_BANNED) {
+      const m = out.match(re);
+      ok(!m, `${label} template ${why} — found "${m && m[0]}"`);
+    }
+    ok(!/\b70\s?%/.test(out), `${label} template printed the pick's probability`);
+  }
+});
+
+t('prerender does not read the engine picks', () => {
+  ok(!/from\(['"]model_picks['"]\)/.test(strip(read('build/prerender.js'))),
+    'build/prerender.js reads model_picks again');
 });
 
 // ----------------------------------------------------------------- report

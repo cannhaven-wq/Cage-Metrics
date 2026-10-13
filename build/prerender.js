@@ -208,9 +208,11 @@ async function prerenderMatchupPreviews() {
 
   const [fightersData, predsData, cardioData, finishData] = await Promise.all([
     safe(sb.from('fighters').select('id, name, nickname').in('id', fighterIds)),
-    // Engine picks (model_picks) — the one current model; a locked 'live' row
-    // outranks a 'backtest' replay row for the same fight.
-    safe(sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds)),
+    // Engine picks are no longer read here (2026-10-12). Generated pages are
+    // public and D-011 keeps the model off every public surface; the preview
+    // FAQ used to name the engine's pick in its JSON-LD. Nothing downstream
+    // needs a pick, so the read is gone rather than computed and discarded.
+    Promise.resolve([]),
     safe(sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds)),
     safe(sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds)),
   ]);
