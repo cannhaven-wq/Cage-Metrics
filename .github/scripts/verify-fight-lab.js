@@ -68,7 +68,17 @@ async function shoot(browser, id, { name, viewport, mobile }) {
       !!document.querySelector('#flForm .form-grid') && !!document.querySelector('#flLate .late-grid') &&
       !/Loading the market/.test(document.getElementById('flMarket').textContent), null, { timeout: 45000 });
   } catch (e) { rendered = false; }
-  await page.waitForTimeout(1500);   // the chart loads on its own
+  // The chart loads on its own, after the rest of the page. On 2026-10-13 its
+  // series query took ~3.3 s at the database for a single fight, so wait for
+  // it explicitly and report how long it took rather than guessing a pause.
+  const chartStart = Date.now();
+  let chartMs = null;
+  try {
+    await page.waitForFunction(() => !/Loading the history/.test(document.getElementById('flChart').textContent),
+      null, { timeout: 20000 });
+    chartMs = Date.now() - chartStart;
+  } catch (e) { /* reported as chartSectionRendered: false */ }
+  await page.waitForTimeout(300);
   const report = await page.evaluate(() => {
     const txt = el => el ? el.textContent.replace(/\s+/g, ' ').trim() : null;
     const clone = document.body.cloneNode(true);
@@ -136,6 +146,7 @@ async function shoot(browser, id, { name, viewport, mobile }) {
     };
   });
   report.rendered = rendered;
+  report.chartMsAfterPage = chartMs;
   report.consoleErrors = errors;
   await page.screenshot({ path: path.join(OUT, 'fight-' + id + '-' + name + '-full.png'), fullPage: true });
   await ctx.close();
