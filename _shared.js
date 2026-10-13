@@ -343,9 +343,15 @@
     const f = fighter || {};
     const tint = cfl.flagTint(f.country_code);
     if (!tint) return '';
-    // The gradient comes from our own colour table, never from user input.
+    // The real flag, not the stripes: a gradient of the US colours read as a
+    // generic red-white-and-blue band, with no stars and no canton. The image
+    // is layered over the gradient, so a CDN miss still leaves the colours.
+    // The code is the two letters hasFlag() just matched in our own table,
+    // and the gradient comes from that table too — never from user input.
+    const code = String(f.country_code).trim().toLowerCase();
+    const flag = 'url(https://flagcdn.com/w320/' + code + '.png) left center / cover no-repeat, ' + tint;
     const title = f.country ? ' title="' + cfl.escapeHtml(f.country) + '"' : '';
-    return ' style="--flag:' + tint + '"' + title;
+    return ' style="--flag:' + flag + '"' + title;
   };
 
   // Legible version: the real flag next to the country name, for pages where
