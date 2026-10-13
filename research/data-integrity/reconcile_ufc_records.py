@@ -54,7 +54,9 @@ FIGHT_ID_RE = re.compile(r"/fight-details/([0-9a-f]{16})")
 # PRIDE, Strikeforce, DREAM, Cage Warriors... Those are not UFC fights and are
 # correctly absent from `fights`. Measured 2026-10-13: every one of the 54
 # bouts UFCStats listed that `fights` lacked was one of these.
-UFC_EVENT_RE = re.compile(r"^(UFC\b|The Ultimate Fighter\b)", re.I)
+# A UFC card: named "UFC ...", "Noche UFC ...", "The Ultimate Fighter ...", or
+# the 2006 "Ortiz vs Shamrock 3" Fight Night. "Road to UFC" and DWCS are not.
+UFC_EVENT_RE = re.compile(r"^(?!Road to UFC)(.*\bUFC\b|The Ultimate Fighter\b|Ortiz vs\.? Shamrock 3\b)", re.I)
 
 
 # ---------------------------------------------------------------- Supabase
