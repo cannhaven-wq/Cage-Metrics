@@ -209,5 +209,8 @@ COMMENT ON VIEW public.v_traffic_daily IS
   'click, tap or keypress). Engaged sessions are the human-traffic baseline; '
   'raw sessions include JavaScript-executing crawlers. Aggregates only.';
 
+-- Revoke first: a new view inherits Supabase's default grants, and on first
+-- apply (2026-10-13) anon held INSERT/UPDATE/DELETE/TRUNCATE on it.
+REVOKE ALL ON public.v_traffic_daily FROM anon, authenticated;
 GRANT SELECT ON public.v_traffic_daily TO anon, authenticated;
 
