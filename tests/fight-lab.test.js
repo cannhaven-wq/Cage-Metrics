@@ -136,7 +136,7 @@ const LATE_ROWS = [
 
 t('a division row with no score falls back to career', () => {
   const r = FL.lateRoundRead(LATE_ROWS, 1, 'Bantamweight');
-  eq([r.scope, r.keptPct, r.fights, r.lateMinutes], ['career', 127, 5, 25]);
+  eq([r.scope, r.score, r.fights, r.lateMinutes], ['career', 127, 5, 25]);
   ok(!r.thin, 'a high-sample read flagged thin');
 });
 
@@ -156,7 +156,7 @@ t('late-round output is never worded as fatigue or cardio', () => {
     ok(!words.test(v.label), `label "${v.label}" reads as a fatigue claim`);
     ok(!words.test(v.line), `line "${v.line}" reads as a fatigue claim`);
   });
-  ok(/not tiredness/i.test(FL.LATE_ROUND_NOTE), 'the note no longer says output is not tiredness');
+  ok(/not a measurement of tiredness/i.test(FL.LATE_ROUND_NOTE), 'the note no longer says the score is not tiredness');
   ok(/nothing useful about who wins/i.test(FL.LATE_ROUND_NOTE), 'the note no longer says it does not pick winners');
 });
 
@@ -167,6 +167,129 @@ t('every tier the view can emit has a plain-English label', () => {
 // ------------------------------------------------------- the page itself
 
 const PAGE = fs.readFileSync(path.join(__dirname, '..', 'fight.html'), 'utf8');
+
+// ------------------------------------------- retired and cancelled bookings
+// A booking retired under D-024 has is_active = false. None carries a method
+// today, but the rule must not depend on that: a method written to a retired
+// row must still never make it "completed".
+
+const EV2 = [
+  { id: 1, name: 'Past A', event_date: '2026-01-10', is_upcoming: false },
+  { id: 2, name: 'Past B', event_date: '2026-03-10', is_upcoming: false },
+  { id: 3, name: 'Past C', event_date: '2026-05-10', is_upcoming: false },
+  { id: 4, name: 'Mis-flagged', event_date: '2026-06-10', is_upcoming: true },
+  { id: 5, name: 'Future', event_date: '2026-11-10', is_upcoming: false },
+];
+const G = (id, ev, winner, method, extra) => Object.assign({
+  id, event_id: ev, fighter_a_id: 1, fighter_b_id: 50 + id,
+  fighter_a_name: 'Me', fighter_b_name: 'Opp' + id, winner_id: winner, method,
+}, extra || {});
+const BOOKINGS = [
+  G(1, 1, 1, 'KO/TKO'),                                           // real win
+  G(2, 2, 52, 'Submission'),                                      // real loss
+  G(3, 3, 1, 'Decision - Unanimous', { is_active: false }),       // retired, method populated
+  G(4, 3, 54, 'KO/TKO',              { is_active: false }),       // retired, loss populated
+  G(5, 4, 1, 'Submission'),                                       // event still flagged upcoming
+  G(6, 5, 1, 'KO/TKO'),                                           // future date, method populated
+  G(7, 2, null, '   '),                                           // blank method
+  G(8, 1, null, null),                                            // never fought
+  G(9, 3, null, 'Overturned', { is_active: true }),               // real no contest
+];
+
+t('a retired booking never counts as a completed fight, even with a method', () => {
+  const ids = FL.recentForm(BOOKINGS, EV2, 1, TODAY).map(r => r.fightId);
+  [3, 4].forEach(id => ok(ids.indexOf(id) === -1, `retired booking ${id} listed as form`));
+});
+
+t('upcoming, future-dated, blank-method and unfought bookings never count', () => {
+  const ids = FL.recentForm(BOOKINGS, EV2, 1, TODAY).map(r => r.fightId);
+  [5, 6, 7, 8].forEach(id => ok(ids.indexOf(id) === -1, `booking ${id} listed as form`));
+  eq(ids, [9, 2, 1]);
+});
+
+t('isCompleted needs an active booking, a past card and a method', () => {
+  const past = EV2[0];
+  ok(FL.isCompleted(G(1, 1, 1, 'KO/TKO'), past, TODAY), 'a real fight rejected');
+  ok(!FL.isCompleted(G(1, 1, 1, 'KO/TKO', { is_active: false }), past, TODAY), 'retired accepted');
+  ok(!FL.isCompleted(G(1, 1, 1, 'KO/TKO'), null, TODAY), 'a fight with no event accepted');
+  ok(FL.isCompleted(G(1, 1, 1, 'KO/TKO', { is_active: null }), past, TODAY), 'a NULL is_active must not hide a real fight');
+});
+
+// ----------------------------------------------- UFC record vs fight history
+// 2026-10-13, Louie Sutherland: fighters.ufc_wins/ufc_losses read 0-2 while
+// fights held four completed UFC bouts (1-3). The page printed both.
+
+const SUTHERLAND = { id: 1, wins: 11, losses: 6, draws: 0, ufc_wins: 0, ufc_losses: 2, ufc_draws: 0 };
+
+t('the UFC record is counted from completed fights, not fighters totals', () => {
+  const rec = FL.ufcRecord(BOOKINGS, EV2, 1, TODAY);
+  eq(rec, { w: 1, l: 1, d: 0, nc: 1, total: 3 });
+  eq(FL.formatUfcRecord(rec), '1-1 (1 NC)');
+});
+
+t('stale fighter totals cannot reach the record (regression: 0-2 vs 1-3)', () => {
+  const ev = [
+    { id: 10, name: 'a', event_date: '2025-10-25', is_upcoming: false },
+    { id: 11, name: 'b', event_date: '2026-03-21', is_upcoming: false },
+    { id: 12, name: 'c', event_date: '2026-05-02', is_upcoming: false },
+    { id: 13, name: 'd', event_date: '2026-08-08', is_upcoming: false },
+  ];
+  const f = [
+    { id: 322, event_id: 10, fighter_a_id: 275, fighter_b_id: 1, winner_id: 275, method: 'Submission' },
+    { id: 142, event_id: 11, fighter_a_id: 1, fighter_b_id: 3673, winner_id: 3673, method: 'KO/TKO' },
+    { id: 5,   event_id: 12, fighter_a_id: 4548, fighter_b_id: 1, winner_id: 1, method: 'Decision - Unanimous' },
+    { id: 45887, event_id: 13, fighter_a_id: 1, fighter_b_id: 428, winner_id: 428, method: 'Submission' },
+  ];
+  const rec = FL.ufcRecord(f, ev, 1, TODAY);
+  eq(FL.formatUfcRecord(rec), '1-3');
+  const form = FL.recentForm(f, ev, 1, TODAY);
+  eq(form.filter(r => r.result === 'W').length, rec.w, 'record wins differ from listed wins');
+  eq(form.filter(r => r.result === 'L').length, rec.l, 'record losses differ from listed losses');
+  ok(FL.formatUfcRecord(rec) !== SUTHERLAND.ufc_wins + '-' + SUTHERLAND.ufc_losses, 'stale total reproduced');
+});
+
+t('a fighter with no completed fights reads "No UFC fights", never a stale total', () => {
+  eq(FL.formatUfcRecord(FL.ufcRecord(BOOKINGS, EV2, 999, TODAY)), 'No UFC fights');
+});
+
+t('a pro record smaller than the UFC record is flagged as out of date', () => {
+  ok(FL.proRecordIsBehind({ wins: 0, losses: 5 }, { w: 1, l: 1 }), 'stale pro wins not flagged');
+  ok(!FL.proRecordIsBehind({ wins: 11, losses: 6 }, { w: 1, l: 3 }), 'a normal pro record flagged');
+});
+
+t('Fight Lab never prints fighters.ufc_wins as the UFC record', () => {
+  const fn = PAGE.slice(PAGE.indexOf('function ufcRec('), PAGE.indexOf('function recOf('));
+  ok(fn.length > 0, 'ufcRec not found in fight.html');
+  ok(!/ufc_wins|ufc_losses/.test(fn), 'ufcRec reads the fighters totals again');
+  ok(/formatUfcRecord/.test(fn), 'ufcRec no longer formats the counted record');
+  ok(/is_active/.test(PAGE.slice(PAGE.indexOf('async function loadForm'), PAGE.indexOf('function localToday'))),
+    'loadForm no longer reads is_active, so retired bookings cannot be excluded');
+});
+
+// ------------------------------- late-round copy matches the SQL it explains
+
+const SQL = fs.readFileSync(path.join(__dirname, '..', 'v_fighter_consistency.sql'), 'utf8');
+
+t('"solid" is defined by the same thresholds the view uses', () => {
+  const conf = SQL.slice(SQL.indexOf('AS consistency_score'), SQL.indexOf('AS confidence_tier'));
+  ok(new RegExp('r1_minutes < ' + FL.SOLID_R1_MINUTES + '\\b').test(conf), 'round-one minutes threshold drifted from the SQL');
+  ok(new RegExp('r3p_minutes >= ' + FL.SOLID_LATE_MINUTES + '\\b').test(conf), 'late-minutes threshold drifted from the SQL');
+  ok(FL.SOLID_SAMPLE_NOTE.indexOf(String(FL.SOLID_LATE_MINUTES)) > -1 &&
+     FL.SOLID_SAMPLE_NOTE.indexOf(String(FL.SOLID_R1_MINUTES)) > -1, 'the sample note no longer states both thresholds');
+});
+
+t('the score caps and the minimum late minutes match the view', () => {
+  ok(new RegExp('ELSE\\s+' + (FL.SCORE_CAP_MIN / 100).toFixed(2)).test(SQL), 'lowest cap drifted from the SQL');
+  ok(new RegExp('THEN ' + (FL.SCORE_CAP_MAX / 100).toFixed(1) + '\\b').test(SQL), 'highest cap drifted from the SQL');
+  ok(new RegExp('r3p_minutes >= ' + FL.MIN_LATE_MINUTES + '\\b').test(SQL), 'minimum late minutes drifted from the SQL');
+});
+
+t('the score is explained as a weighted, capped blend and never shown as a percentage', () => {
+  ok(/weighted/i.test(FL.LATE_ROUND_NOTE) && /capped/i.test(FL.LATE_ROUND_NOTE), 'the note no longer says weighted and capped');
+  ok(!/%/.test(FL.LATE_ROUND_NOTE), 'the note prints a percentage');
+  const late = PAGE.slice(PAGE.indexOf('function renderLate'), PAGE.indexOf('function renderForm'));
+  ok(!/r\.score \+ '%/.test(late) && !/keptPct/.test(late), 'the late-round card prints the score as a percentage');
+});
 
 t('Fight Lab loads fight-lab.js', () => {
   ok(/<script src="fight-lab\.js\?v=\d+"><\/script>/.test(PAGE), 'fight.html does not load fight-lab.js');

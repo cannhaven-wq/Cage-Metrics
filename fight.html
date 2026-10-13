@@ -246,7 +246,7 @@
 
     <section class="sub" id="secLate">
       <h3>Late-round performance</h3>
-      <div class="sub-sub">How much of their round-one output each fighter kept in round three and later, in fights that got that far.</div>
+      <div class="sub-sub">A score comparing each fighter's output in round three and later with their own round one, in fights that got that far. 100 means they kept their round-one pace.</div>
       <div id="flLate"></div>
     </section>
 
@@ -476,6 +476,17 @@ async function load() {
   const [consRows, styleRows, form, baseRates] = await Promise.all([
     loadConsistency(ids), loadStyles(ids), loadForm(ids), loadBaseRates()]);
   const cardioMap = cardioMapFrom(consRows);
+  const FL = window.cflFightLab;
+  const today = localToday();
+  const opts = { excludeFightId: fight.id };
+  const formA = FL.recentForm(form.fights, form.events, a.id, today, opts);
+  const formB = FL.recentForm(form.fights, form.events, b.id, today, opts);
+  // The UFC record is counted from the same completed fights the page lists,
+  // never read from fighters.ufc_wins/ufc_losses, which lags (T-083).
+  if (form.ok) {
+    a.ufcRec = FL.ufcRecord(form.fights, form.events, a.id, today, opts);
+    b.ufcRec = FL.ufcRecord(form.fights, form.events, b.id, today, opts);
+  }
 
   // The movement chart loads on its own and is allowed to fail on its own.
   // Single fight only — see §Performance in market_chart_views.sql.
@@ -489,14 +500,10 @@ async function load() {
   renderHead(fight, event, a, b);
   renderMarket(mvt, a, b, event);
   renderBooks(books, a, b);
-  const FL = window.cflFightLab;
-  const today = localToday();
-  const formA = FL.recentForm(form.fights, form.events, a.id, today, { excludeFightId: fight.id });
-  const formB = FL.recentForm(form.fights, form.events, b.id, today, { excludeFightId: fight.id });
-  renderWho(a, b, fight, styleRows, formA, formB);
+  renderWho(a, b, fight, styleRows, formA, formB, form.ok);
   renderStats(a, b);
   renderLate(a, b, fight, consRows);
-  renderForm(a, b, formA, formB);
+  renderForm(a, b, formA, formB, form.ok);
   renderMatchup(a, b, fight, cardioMap, baseRates, mvt);
   renderCtas(fight, event, a, b);
   setMeta(a, b, event, mvt);
@@ -676,19 +683,21 @@ async function loadStyles(ids) {
 // few dozen at most, so one read each is cheaper than a view.
 async function loadForm(ids) {
   const sb = window.cflSupabase;
-  const empty = { fights: [], events: [] };
+  // ok:false means "could not look", which must never render as "no fights".
+  const empty = { fights: [], events: [], ok: false };
   if (!ids.length) return empty;
   try {
     const list = ids.join(',');
     const { data: fights, error } = await sb.from('fights')
-      .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class')
+      .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_active')
       .or('fighter_a_id.in.(' + list + '),fighter_b_id.in.(' + list + ')');
     if (error || !fights) return empty;
     const evIds = [...new Set(fights.map(f => f.event_id).filter(x => x != null))];
-    if (!evIds.length) return { fights, events: [] };
-    const { data: events } = await sb.from('events')
+    if (!evIds.length) return { fights, events: [], ok: true };
+    const { data: events, error: evErr } = await sb.from('events')
       .select('id, name, event_date, is_upcoming').in('id', evIds);
-    return { fights, events: events || [] };
+    if (evErr || !events) return empty;
+    return { fights, events, ok: true };
   } catch (e) { return empty; }
 }
 
@@ -866,7 +875,7 @@ function renderMatchup(a, b, fight, cardioMap, baseRates, mvt) {
 }
 
 // ---- who are these fighters ----------------------------------------------
-function renderWho(a, b, fight, styleRows, formA, formB) {
+function renderWho(a, b, fight, styleRows, formA, formB, formOk) {
   const el = document.getElementById('flWho');
   const FL = window.cflFightLab;
   const wc = fight.weight_class || null;
@@ -875,7 +884,8 @@ function renderWho(a, b, fight, styleRows, formA, formB) {
     const st = FL.styleRead(styleRows, f.id, wc);
     const facts = [];
     facts.push('<span>Pro record <b>' + esc(recOf(f)) + '</b></span>');
-    facts.push('<span>UFC <b>' + esc(ufcRec(f)) + '</b></span>');
+    if (f.ufcRec && !f.ufcRec.total) facts.push('<span><b>No UFC fights yet</b></span>');
+    else facts.push('<span>UFC <b>' + esc(ufcRec(f)) + '</b></span>');
     if (f.age != null) facts.push('<span>Age <b>' + esc(String(f.age)) + '</b></span>');
     if (f.stance) facts.push('<span>Stance <b>' + esc(f.stance) + '</b></span>');
     if (f.country) facts.push('<span>' + esc(f.country) + '</span>');
@@ -897,7 +907,8 @@ function renderWho(a, b, fight, styleRows, formA, formB) {
           form.map(r => '<span class="chip ' + esc(r.result) + '" title="' +
             esc(r.result + ' vs ' + r.opponentName + ' · ' + cfl.formatDate(r.date)) + '">' +
             esc(r.result) + '</span>').join('') + '</div></div>'
-      : '<div><div class="who-k">Recent form</div><div class="who-line muted">No completed UFC fights on record.</div></div>';
+      : '<div><div class="who-k">Recent form</div><div class="who-line muted">' +
+          (formOk ? 'No completed UFC fights on record.' : 'Fight history could not be loaded.') + '</div></div>';
 
     return '<div class="who-card">' +
       '<div><div class="nm"><a href="' + cfl.fighterUrl(f.id) + '">' + esc(f.name) + '</a></div>' +
@@ -980,7 +991,9 @@ function renderStats(a, b) {
     rowsHtml + '</div>' +
     '<div class="foot-note">The dot marks the higher number — or the lower one for age and strikes absorbed. ' +
     'It marks a measurement, not an advantage: the <a href="stats.html">Factor Lab</a> has tested most of these ' +
-    'against the betting market and only some survive. Career UFC figures from UFCStats.</div>';
+    'against the betting market and only some survive. Career rates are from UFCStats; the UFC record is ' +
+    'counted from every completed UFC fight in our data — the same history "Last five fights" is drawn from — ' +
+    'so the two always agree.</div>';
 }
 
 // ---- late-round performance -----------------------------------------------
@@ -995,19 +1008,20 @@ function renderLate(a, b, fight, rows) {
     const r = FL.lateRoundRead(rows, f.id, wc);
     if (!r) {
       return '<div class="late-card"><div class="who-n">' + esc(f.name) + '</div>' +
-        '<div class="late-none">Not enough recent UFC fights reached round three to measure this.</div></div>';
+        '<div class="late-none">Not enough recent fighting in round three or later to score this.</div></div>';
     }
-    // 0% to 150% across the bar; the tick marks 100%, a pace held exactly.
-    const w = Math.max(2, Math.min(100, r.keptPct / 1.5));
+    // 0 to 150 across the bar (150 is the highest cap); the tick marks 100, a
+    // pace held exactly. A score, so never printed with a % sign.
+    const w = Math.max(2, Math.min(100, r.score / 1.5));
     const where = r.scope === 'division' ? 'at ' + r.weightClass : 'across all divisions';
     return '<div class="late-card">' +
       '<div class="who-n">' + esc(f.name) + '</div>' +
       '<div class="lbl">' + esc(r.label) + '</div>' +
-      '<div class="num"><span class="v">' + r.keptPct + '%</span>' +
-        '<span class="k">late-round output<br>compared with round one</span></div>' +
+      '<div class="num"><span class="v">' + r.score + '</span>' +
+        '<span class="k">late-round pace score<br>100 = kept round-one pace</span></div>' +
       '<div class="late-bar" aria-hidden="true"><i style="width:' + w.toFixed(1) + '%"></i>' +
         '<b style="left:' + (100 / 1.5).toFixed(1) + '%"></b></div>' +
-      '<div class="late-scale"><span>0%</span><span>100% = same pace</span><span>150%</span></div>' +
+      '<div class="late-scale"><span>0</span><span>100 = same pace</span><span>150</span></div>' +
       '<div class="line">' + esc(r.line) +
         (r.lowPace ? ' Their round-one pace is low to begin with (' + r.r1Pace.toFixed(1) +
           ' significant strikes thrown a minute), so holding it is easier than it looks.' : '') + '</div>' +
@@ -1015,19 +1029,20 @@ function renderLate(a, b, fight, rows) {
         '<span class="' + (r.thin ? 'thin' : '') + '">Sample: ' + (r.thin ? 'thin — treat as a rough guide' : 'solid') + '</span>' +
         (r.fights != null ? '<span>' + r.fights + ' recent fight' + (r.fights === 1 ? '' : 's') + ' reached round 3</span>' : '') +
         (r.lateMinutes != null ? '<span>' + r.lateMinutes.toFixed(0) + ' late-round minutes</span>' : '') +
+        (r.r1Minutes != null ? '<span>' + r.r1Minutes.toFixed(0) + ' round-one minutes</span>' : '') +
         '<span>' + esc(where) + '</span>' +
       '</div>' +
     '</div>';
   };
 
   el.innerHTML = '<div class="late-grid">' + card(a) + card(b) + '</div>' +
-    '<div class="foot-note">' + esc(FL.LATE_ROUND_NOTE) + ' Read from each fighter\'s five most recent UFC fights that reached round three; ' +
-    '"solid" means at least 15 minutes of round-three-or-later fighting. The ' +
+    '<div class="foot-note">' + esc(FL.LATE_ROUND_NOTE) + ' Read from each fighter\'s five most recent UFC fights that reached round three. ' +
+    esc(FL.SOLID_SAMPLE_NOTE) + ' The ' +
     '<a href="cardio.html">full late-round table</a> covers every fighter.</div>';
 }
 
 // ---- last five fights ------------------------------------------------------
-function renderForm(a, b, formA, formB) {
+function renderForm(a, b, formA, formB, formOk) {
   const el = document.getElementById('flForm');
   const col = (f, form) => {
     const body = form.length
@@ -1047,7 +1062,9 @@ function renderForm(a, b, formA, formB) {
               '</div></div>' +
             '</div>';
         }).join('')
-      : '<div class="form-none">No completed UFC fights on record. This may be their UFC debut.</div>';
+      : '<div class="form-none">' + (formOk
+          ? 'No completed UFC fights on record. This may be their UFC debut.'
+          : 'Fight history could not be loaded. Try refreshing.') + '</div>';
     return '<div class="form-col"><div class="hd">' + esc(f.name) + '</div>' + body + '</div>';
   };
   el.innerHTML = '<div class="form-grid">' + col(a, formA) + col(b, formB) + '</div>' +
@@ -1055,15 +1072,16 @@ function renderForm(a, b, formA, formB) {
     'Who they beat matters as much as whether they won; follow an opponent\'s name to see their record.</div>';
 }
 
+// UFC record from the completed-fight list (see load). Before that list has
+// loaded there is no record to show, rather than a stale one.
 function ufcRec(f) {
-  const w = f.ufc_wins, l = f.ufc_losses, d = f.ufc_draws;
-  if (w == null && l == null) return '—';
-  const total = (+w || 0) + (+l || 0) + (+d || 0);
-  if (total === 0) return 'UFC debut';
-  return (+w || 0) + '-' + (+l || 0) + ((+d || 0) ? '-' + d : '');
+  return f.ufcRec ? window.cflFightLab.formatUfcRecord(f.ufcRec) : '—';
 }
 
+// Professional record, all promotions, from `fighters`. When the UFC count
+// already exceeds it, it is provably out of date and is not shown.
 function recOf(f) {
+  if (f.ufcRec && window.cflFightLab.proRecordIsBehind(f, f.ufcRec)) return 'not up to date';
   const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
   return (w + l + d) > 0 ? `${w}-${l}-${d}` : '0-0-0';
 }

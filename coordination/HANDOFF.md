@@ -63,6 +63,26 @@ every empty state.
   3 style labels need no scraper expansion. T-082 is re-scoped to say so.
 - `fighters.ufc_wins/ufc_losses` is stale for at least one fighter (T-083).
 
+**Review corrections (same day, owner review of PR #64).**
+
+1. **No contradictory UFC record.** The record is now counted from the same
+   completed `fights` rows the page lists. `fighters.ufc_wins/ufc_losses` is
+   no longer printed. A pro record smaller than the counted UFC record reads
+   "not up to date". A failed history read says so instead of "no fights".
+2. **The late-round figure is a score, not a percentage.** The note now says
+   what the view computes: a weighted blend of up to four capped
+   late-vs-round-one ratios. "Solid" means at least 15 late minutes and at
+   least 8 round-one minutes, and below 10 late minutes there is no score.
+   The test reads `v_fighter_consistency.sql` and fails if either drifts.
+3. **Retired and cancelled bookings never count**, even with a method
+   populated. A fight counts only if `is_active` is not false, the card is
+   past, the event is not flagged upcoming, and the method is non-blank.
+   Checked live: none of the 5 inactive rows carries a method today; the
+   rule does not rely on that.
+
+`tests/fight-lab.test.js` now has 30 tests. The new regression tests were
+confirmed to fail with each fix reverted.
+
 ## Next action
 
 Owner: review the T-080 pull request on a phone and a desktop, against a fight on
