@@ -136,11 +136,16 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
         run: |
-          # '+' forces the tracking ref. In this shallow clone git cannot prove a
-          # newer main descends from the checked-out commit, so an unforced fetch is
-          # rejected as non-fast-forward whenever main moves during the run (the
-          # prerender bot pushes seconds after a merge). That failed main at 1984d35.
-          git fetch --no-tags --depth=1 origin +main:refs/remotes/origin/main
+          # Drop the tracking ref checkout created, then fetch it fresh. In this
+          # shallow clone git cannot prove a newer main descends from the
+          # checked-out commit, so updating an EXISTING ref is rejected as
+          # non-fast-forward whenever main moves during the run (the prerender bot
+          # pushes seconds after a merge; that failed main at 1984d35). A fetch
+          # into a missing ref has no such check, and a real fetch error still
+          # fails this step. The fetch line itself is pinned by the frozen
+          # tests/test_prediction_protocol.py, so it stays exactly as written.
+          git update-ref -d refs/remotes/origin/main
+          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
           if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
             git fetch --no-tags --depth=1 origin "$BEFORE"
             echo "PRED_BASE_REF=$BEFORE" >> "$GITHUB_ENV"
