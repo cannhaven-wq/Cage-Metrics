@@ -18,8 +18,9 @@ No new prediction model is built except under PRED-001.
 Cosmetic, 2026-10-13: the country wash behind each fighter is now the real
 flag image rather than a stripe of its colours.
 **Fight Lab Phase 1 is live (T-080, merged 2026-10-13, verified on the live
-site).** **T-083 answered:** the `fights` table matches UFCStats on every UFC
-bout checked, while `fighters.ufc_wins/losses` is wrong for about two fighters
+site).** **T-083 answered:** the `fights` table matches UFCStats on UFC bouts
+(73 of 74 fighters; the exception is a Contender Series card stored as a UFC
+event, T-086), while `fighters.ufc_wins/losses` is wrong for about two fighters
 in three and is still shown on four pages and the `/f/` stubs (T-084, proposed).
 The chart query is slow (T-085). Footage links (T-081) and expanded style
 labels (T-082) stay queued.

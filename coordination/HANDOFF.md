@@ -28,8 +28,12 @@ commit (`bbcbbb9`), and Pages deployed it.
   - Cerminara vs Stiller: no prices, and a debutant.
   - Mahjoub vs Faglier: priced, two debutants.
 
-**T-083: the `fights` table is right.** It was checked against UFCStats for 74
-fighters and agrees on every UFC-event bout. `fighters.ufc_wins/losses/draws`
+**T-083: the `fights` table is right, with one exception.** It was checked
+against UFCStats for 74 fighters and agrees for 73.
+
+The exception is the Contender Series card "DWCS 10.3" (2026-08-25, 5 bouts),
+which is stored as a UFC event. Because of it, Nicholas Galanti (2026-10-17
+card) shows on Fight Lab as UFC 1-0 instead of a debut (T-086). `fighters.ufc_wins/losses/draws`
 agrees for 13 of 74. The full write-up is in
 `research/data-integrity/T-083_UFC_RECORDS_2026-10-13.md`.
 
@@ -47,6 +51,9 @@ agrees for 13 of 74. The full write-up is in
 ## Next action
 
 Owner:
+- **T-086:** approve retiring the 5 DWCS 10.3 bouts with
+  `is_active = false`. It is reversible and is the D-024 path. It should
+  happen before Saturday, because Galanti is on the card.
 - **T-084:** approve the fix, and say whether a `v_fighter_ufc_record` view is
   acceptable (a database change) or it should be done per page.
 - **Tooling:** say whether to open the pull request for it.
