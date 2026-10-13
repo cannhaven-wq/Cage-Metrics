@@ -136,7 +136,11 @@ jobs:
           EVENT: ${{ github.event_name }}
           REF: ${{ github.ref }}
         run: |
-          git fetch --no-tags --depth=1 origin main:refs/remotes/origin/main
+          # '+' forces the tracking ref. In this shallow clone git cannot prove a
+          # newer main descends from the checked-out commit, so an unforced fetch is
+          # rejected as non-fast-forward whenever main moves during the run (the
+          # prerender bot pushes seconds after a merge). That failed main at 1984d35.
+          git fetch --no-tags --depth=1 origin +main:refs/remotes/origin/main
           if [ "$EVENT" = "push" ] && [ "$REF" = "refs/heads/main" ] && [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ]; then
             git fetch --no-tags --depth=1 origin "$BEFORE"
             echo "PRED_BASE_REF=$BEFORE" >> "$GITHUB_ENV"
