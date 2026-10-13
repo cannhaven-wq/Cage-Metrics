@@ -943,3 +943,32 @@ test('the daily baseline survives a wake that misses the top of the hour', () =>
     shouldCaptureNow([], new Date('2026-09-19T11:00:00Z'), false, {}, justTaken).yes, false,
     'the baseline is one capture a day, not every wake after the anchor hour');
 });
+
+// ---------------------------------------------------------------------------
+// A feed alias must reach the A/B assignment, not just the fight lookup.
+// Added 2026-10-13 after review of the Chookagian alias: lookupFight matched
+// the bout, but buildMoneylineRows compared the raw feed name, dropped her
+// price as "unexpected", and wrote ONE-SIDED rows into append-only fight_odds.
+// ---------------------------------------------------------------------------
+test('an aliased feed name is priced on the right corner, both sides present', () => {
+  const ev = JSON.parse(JSON.stringify(EVENT));
+  for (const bm of ev.bookmakers) {
+    const h2h = (bm.markets || []).find(m => m.key === 'h2h');
+    if (!h2h) continue;
+    h2h.outcomes = [{ name: 'Mackenzie Stiller', price: 150 }, { name: 'Katlyn Chookagian', price: -180 }];
+  }
+  const fight = { ...FIGHT, fighter_a_name: 'Katlyn Cerminara', fighter_b_name: 'Mackenzie Stiller' };
+  const r = buildMoneylineRows(ev, fight, BOOK_ID, CAPTURED_AT, RETRIEVED_AT);
+  assert.ok(r.length > 0, 'no rows at all');
+  const byBook = new Map();
+  for (const row of r) {
+    if (!byBook.has(row.book_id)) byBook.set(row.book_id, {});
+    byBook.get(row.book_id)[row.side] = row;
+  }
+  for (const [book, sides] of byBook) {
+    assert.ok(sides.A && sides.B, `book ${book} is one-sided: ${Object.keys(sides)}`);
+    assert.strictEqual(sides.A.american_odds, -180);
+    assert.strictEqual(sides.A.fighter_id, fight.fighter_a_id);
+    assert.strictEqual(sides.B.american_odds, 150);
+  }
+});

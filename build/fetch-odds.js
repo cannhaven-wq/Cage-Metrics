@@ -1315,7 +1315,9 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
     // home/away order, tolerating middle-name drift via the first+last fallback.
     for (const o of h2h.outcomes) {
       if (o.price == null) continue;
-      const n = normalizeName(o.name);
+      // feedAlias here too, not only in lookupFight: an alias that finds the
+      // bout but not the corner writes one-sided rows into append-only fight_odds.
+      const n = feedAlias(normalizeName(o.name));
       let side, fighter_id, opponent_fighter_id;
       if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) {
         side = 'A'; fighter_id = fight.fighter_a_id; opponent_fighter_id = fight.fighter_b_id;
