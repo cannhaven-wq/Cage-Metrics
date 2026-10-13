@@ -11,6 +11,42 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (j) — T-084 and T-085 are live and verified
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+Deployed database-first, as the runbook says. PR #66 was conditionally
+approved; it was merged once both views were live and checked.
+
+1. **T-085 applied.**
+   - The chart output is identical for 26712 (891 points), 46774 and 53620.
+   - One fight takes 0.26 s instead of 5.8 s.
+   - On the live site the chart now appears 190 ms after the page (it was
+     about 2,200).
+2. **T-084 view applied.**
+   - Read as `anon`, the five reference records match UFCStats.
+   - security_invoker; SELECT only for both browser roles; PUBLIC revoked.
+   - The advisor is unchanged (39 / 10 / 0 / 8 + 8 / 9 / 1).
+3. **PR #66 merged** (`1984d35`). `verify-live` passes all three jobs on
+   fights 46774, 53620 and 53618.
+
+**The T-087 lockdown is intact.** Both changed views read
+`anon=r, authenticated=r` and nothing else.
+
+**One CI incident, not a test failure.** Tests on `main` at `1984d35` stopped
+in the setup fetch: the prerender bot pushed seconds later, and a shallow
+`git fetch` rejected the newer `main` as non-fast-forward. Reproduced locally;
+fixed by this PR's `+` refspec.
+
+## Next action
+
+Claude: T-086 readiness. The gates are D-026's; report readiness before the
+destructive step.
+
+---
+
 ## 2026-10-13 (g) — T-084 built, T-085 cause found, T-086 plan written; nothing applied
 
 **From:** Claude
