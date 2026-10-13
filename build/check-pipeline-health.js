@@ -52,15 +52,17 @@ const H = 3600 * 1000;
 
 // Each critical scheduled workflow and how long it may go without a success.
 // Windows are generous on purpose: GitHub delivers schedules late and drops
-// some, and an alarm that fires on every throttled day gets ignored.
+// some, and an alarm that fires on every throttled day gets ignored. Once-a-day
+// jobs get 36 h: their deliveries have been measured up to ~8 h late, so an early
+// run followed by a late one can sit ~32 h apart with nothing wrong.
 const WORKFLOWS = [
   { file: 'odds.yml',         label: 'Odds capture (The Odds API)',      maxAgeHours: 30 },
   { file: 'prerender.yml',    label: 'Prerendered pages and sitemap',     maxAgeHours: 18 },
   { file: 'snapshot.yml',     label: 'Pre-fight snapshot',                maxAgeHours: 30 },
   { file: 'dead-man.yml',     label: 'Dead man (pre-fight coverage)',     maxAgeHours: 30 },
-  { file: 'engine-serve.yml', label: 'Engine daily publish (private)',    maxAgeHours: 30 },
-  { file: 'settle-clv.yml',   label: 'Closing-price settlement',          maxAgeHours: 30 },
-  { file: 'prop-locks.yml',   label: 'DUR-001/002 duration locks',        maxAgeHours: 30 },
+  { file: 'engine-serve.yml', label: 'Engine daily publish (private)',    maxAgeHours: 36 },
+  { file: 'settle-clv.yml',   label: 'Closing-price settlement',          maxAgeHours: 36 },
+  { file: 'prop-locks.yml',   label: 'DUR-001/002 duration locks',        maxAgeHours: 36 },
 ];
 
 const ODDS_MAX_AGE_HOURS = 30;
