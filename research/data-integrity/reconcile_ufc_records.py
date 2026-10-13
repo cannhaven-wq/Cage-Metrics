@@ -130,8 +130,14 @@ def parse_fighter_page(html: str) -> list[dict]:
         if not m:
             continue
         flag = tr.select_one(".b-flag__text")
+        tds = tr.find_all("td")
+        ev_ps = tds[6].find_all("p") if len(tds) > 6 else []
+        names = [a.get_text(strip=True) for a in (tds[1].find_all("a") if len(tds) > 1 else [])]
         rows.append({"ufc_fight_id": m.group(1),
-                     "result": (flag.get_text(strip=True).lower() if flag else "")})
+                     "result": (flag.get_text(strip=True).lower() if flag else ""),
+                     "event": ev_ps[0].get_text(" ", strip=True) if ev_ps else "",
+                     "date": ev_ps[1].get_text(" ", strip=True) if len(ev_ps) > 1 else "",
+                     "opponent": names[1] if len(names) > 1 else ""})
     return rows
 
 
@@ -172,7 +178,8 @@ def main() -> int:
         by_ufc = {o["ufc_fight_id"]: o for o in ours if o.get("ufc_fight_id")}
         src_ids = {r["ufc_fight_id"] for r in src}
         completed_ours = [o for o in ours if o.get("method") and o.get("is_active") is not False]
-        missing = [r["ufc_fight_id"] for r in src if r["ufc_fight_id"] not in by_ufc]
+        missing = [{k: r[k] for k in ("ufc_fight_id", "result", "opponent", "event", "date")}
+                   for r in src if r["ufc_fight_id"] not in by_ufc]
         extra = [o["id"] for o in completed_ours if o.get("ufc_fight_id") not in src_ids]
         wrong = []
         for r in src:
@@ -210,6 +217,12 @@ def main() -> int:
         lines.append(f"| {r['name']} ({r['id']}) | {rec(r['ufcstats'])} | {rec(r['fights_table'])} | "
                      f"{rec(r['fighters_table'])} | {len(r['missing_from_fights'])} | {len(r['extra_in_fights'])} | "
                      f"{len(r['result_mismatches'])} |")
+    gaps = [(r["name"], m) for r in report for m in r["missing_from_fights"]]
+    if gaps:
+        lines += ["", "## UFC bouts on UFCStats that `fights` does not hold", "",
+                  "| fighter | result | opponent | event | date | ufcstats id |", "|---|---|---|---|---|---|"]
+        lines += [f"| {n} | {m['result']} | {m['opponent']} | {m['event']} | {m['date']} | {m['ufc_fight_id']} |"
+                  for n, m in gaps]
     if could_not_look:
         lines += ["", "## Could not look", ""] + [f"* {c}" for c in could_not_look]
     md = "\n".join(lines)
