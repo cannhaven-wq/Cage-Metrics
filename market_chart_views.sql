@@ -60,6 +60,19 @@
 -- because with several ids the cohort CTE loses its per-fight index path, and a
 -- subquery predicate does not push down at all.
 --
+-- CORRECTED 2026-10-13 (T-085). The 22 ms above no longer holds: on production,
+-- v_fight_chart_series for one fight took 5,848 ms (v_fight_market_quotes
+-- alone: 4.7 ms). The cause is the `cohort` CTE below: referenced twice
+-- (ticks, standing), so PostgreSQL materialised it. A materialised CTE is an
+-- optimisation fence, so `fight_id = X` could not reach the index and every
+-- fight's cohort was built first (466 other fight-book pairs discarded). Its cost grows with all the
+-- odds history held, not with the fight asked for. `cohort` is now
+-- `NOT MATERIALIZED`: 257 ms, identical output (md5 of the full series matched
+-- on 8 fights, 0-891 points). tests/market-chart.test.js keeps the keyword.
+-- How the original 22 ms was measured cannot be reconstructed (broad-baseline
+-- fights grew only 78 -> 113). Evidence:
+-- research/data-integrity/T-085_CHART_SERIES_PERF_2026-10-13.md.
+--
 -- That is why the chart lives on Fight Lab, one fight to a page, and why
 -- Market Lab has **no** per-row sparkline. A twelve-row board would cost 4.6
 -- seconds. If card-wide charts are ever wanted, this view is the wrong shape
@@ -114,7 +127,8 @@ GRANT SELECT ON public.v_fight_chart_meta TO anon, authenticated;
 -- 2. The consensus series. Every point, the same books.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE VIEW public.v_fight_chart_series AS
-WITH cohort AS (
+-- NOT MATERIALIZED is load-bearing: see §Performance, 2026-10-13 correction.
+WITH cohort AS NOT MATERIALIZED (
   SELECT h.fight_id, h.book_id
   FROM public.v_fight_market_horizon_cohorts h
   JOIN public.v_fight_chart_meta m
