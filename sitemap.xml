@@ -6155,13 +6155,6 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-buckley-vs-malott-4368.html</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
     <loc>https://cannonfightlab.com/e/ufc-fight-night-medic-vs-rodriguez-2620.html</loc>
     <lastmod>2026-10-13</lastmod>
     <changefreq>weekly</changefreq>
@@ -6218,28 +6211,7 @@
   </url>
 
   <url>
-    <loc>https://cannonfightlab.com/e/ufc-333-volkanovski-vs-evloev-4542.html</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-moicano-vs-nolan-4617.html</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-fight-night-bonfim-vs-brady-4629.html</loc>
-    <lastmod>2026-10-13</lastmod>
-    <changefreq>weekly</changefreq>
-    <priority>0.6</priority>
-  </url>
-
-  <url>
-    <loc>https://cannonfightlab.com/e/ufc-334-gane-vs-hokit-4926.html</loc>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-buckley-vs-malott-4368.html</loc>
     <lastmod>2026-10-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
@@ -6274,7 +6246,35 @@
   </url>
 
   <url>
+    <loc>https://cannonfightlab.com/e/ufc-333-volkanovski-vs-evloev-4542.html</loc>
+    <lastmod>2026-10-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-moicano-vs-nolan-4617.html</loc>
+    <lastmod>2026-10-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-fight-night-bonfim-vs-brady-4629.html</loc>
+    <lastmod>2026-10-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
     <loc>https://cannonfightlab.com/e/ufc-331-van-vs-pantoja-2-4433.html</loc>
+    <lastmod>2026-10-13</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <url>
+    <loc>https://cannonfightlab.com/e/ufc-334-gane-vs-hokit-4926.html</loc>
     <lastmod>2026-10-13</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
