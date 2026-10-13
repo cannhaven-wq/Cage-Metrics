@@ -15,6 +15,8 @@ before Friday 23:00 UTC (`research/integrity/INTEGRITY_RECHECK_2026-10-12.md`),
 the CLV migration sequence, and the forecast-lock table below. Human traffic is
 about one to four people a day (`research/traffic/HUMAN_TRAFFIC_BASELINE_2026-10-12.md`).
 No new prediction model is built except under PRED-001.
+Cosmetic, 2026-10-13: the country wash behind each fighter is now the real
+flag image rather than a stripe of its colours.
 
 **Product position, since 2026-09-21 ([D-011](DECISIONS.md)):** Cannon Fight
 Lab is a **UFC research and market-intelligence tool**, not a picks product. The
