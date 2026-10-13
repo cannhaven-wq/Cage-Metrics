@@ -25,12 +25,13 @@ in three and is still shown on four pages and the `/f/` stubs (T-084, proposed).
 The chart query is slow (T-085). Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
-**Security fix, 2026-10-13 (T-087, owner-approved, applied).** The browser
-roles could write sportsbook data: `anon`/`authenticated` held INSERT, UPDATE,
-DELETE and TRUNCATE on the odds tables, and two of them (`odds_aliases`,
-`unmatched_odds`) had RLS off. Now read-only where the site reads and closed
-where it does not; verified per role; no data touched. Other tables still carry
-the same default grant behind RLS (T-088, proposed).
+**Security, 2026-10-13.** T-087 is merged and verified on `main` (sportsbook
+data read-only to the browser; 40 of 40 write probes denied after the merge).
+**T-088 is waiting on the owner (L3):** the audit and a rehearsed
+least-privilege plan are in `research/security/`. Three browser write paths
+are live today, all small; nothing has been applied. **It also found that the
+Card Brief signup had never worked** (T-089). That is fixed in code and ships
+with the T-088 PR, with no database change.
 
 **Next phase (owner, 2026-10-13): the first $100 of revenue.** The
 commercial-readiness audit

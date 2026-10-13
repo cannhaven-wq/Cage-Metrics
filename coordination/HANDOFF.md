@@ -11,6 +11,48 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-13 (h) — T-088 audit and plan; the Card Brief signup never worked
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+**T-087 merged** (cannhaven-wq/Cage-Metrics#68, `d4e5dc1`). `main` holds the
+same migration and test blobs as the PR. A re-run on production after the
+merge: all 40 write and sequence probes denied for both browser roles, every
+market read still works, and row counts are unchanged.
+
+**T-088: audited and rehearsed, nothing applied.** It needs the owner's call
+(L3). The audit is `research/security/T-088_PRIVILEGE_AUDIT_2026-10-13.md`.
+- **Live today:** a visitor can choose their own unsubscribe token; a member
+  can rewrite `profiles.email` (alert mail does not use it); anyone can write
+  `hub_visits`, which nothing reads.
+- **Latent:**
+  - TRUNCATE on 26 tables, with no REST path.
+  - `pre_fight_snapshots` refuses UPDATE and DELETE but not TRUNCATE, for every role.
+  - Every new table is born writable.
+- **The plan** is two self-asserting files under `research/security/`. They
+  keep exactly what the site writes and leave reads unchanged. On a replica of
+  production's schema and grants: 28 legitimate actions are unchanged, 13
+  attack paths close, the files are idempotent, and the assertion block catches
+  a leaked write, a missing grant and a changed read.
+
+**The Card Brief signup had never worked (T-089).** The upsert needs a SELECT
+policy that visitors rightly lack, so every submission failed and showed the
+raw database error. That is why the list is empty. Fixed in `_auth.js` as a
+plain insert, with no database change. It goes live when this PR merges.
+
+## Next action
+
+Owner: decide D-T088-1..5 at the end of the T-088 audit. Approving D-T088-1
+and D-T088-3 lets Claude run the production rehearsal (rolled back), apply
+both files, re-run the probe and the advisor, and submit the Card Brief form
+once on the live site. Then commercial readiness resumes at week 1 of
+`research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md`, starting with
+the Resend key.
+
+---
+
 ## 2026-10-13 (g) — Sportsbook data is read-only to the browser (T-087)
 
 **From:** Claude
