@@ -156,6 +156,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <script>
 cfl.renderNav('fighters');
 cfl.renderFooter();
@@ -166,9 +167,15 @@ let activeFilters = { roster: 'active', division: 'all', search: '' };
 async function load() {
   const sb = window.cflSupabase;
   try {
-    allFighters = await cfl.fetchAll(() => sb
-      .from('fighters')
-      .select('id, name, nickname, division, wins, losses, draws, ufc_wins, ufc_losses, ufc_draws, stance, last_fight_date, country, country_code'));
+    // The UFC record comes from v_fighter_ufc_record, never fighters.ufc_*
+    // (T-084). Loaded in parallel so it adds no round trip.
+    const [fighters, ufcRows] = await Promise.all([
+      cfl.fetchAll(() => sb
+        .from('fighters')
+        .select('id, name, nickname, division, wins, losses, draws, stance, last_fight_date, country, country_code')),
+      cflUfcRecord.load(sb, null, { all: true }),
+    ]);
+    allFighters = cflUfcRecord.apply(fighters, ufcRows);
     // Sort: active fighters first by recency, then inactive by record
     allFighters.sort((a, b) => {
       if (a.last_fight_date && b.last_fight_date) {

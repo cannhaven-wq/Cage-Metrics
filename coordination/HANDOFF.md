@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-13 (h) — T-088 audit and plan; the Card Brief signup never worked
+## 2026-10-14 (k) — T-088 audit and plan; the Card Brief signup never worked
 
 **From:** Claude
 **To:** Owner
@@ -53,7 +53,75 @@ the Resend key.
 
 ---
 
-## 2026-10-13 (g) — Sportsbook data is read-only to the browser (T-087)
+## 2026-10-13 (j) — T-084 and T-085 are live and verified
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+Deployed database-first, as the runbook says. PR #66 was conditionally
+approved; it was merged once both views were live and checked.
+
+1. **T-085 applied.**
+   - The chart output is identical for 26712 (891 points), 46774 and 53620.
+   - One fight takes 0.26 s instead of 5.8 s.
+   - On the live site the chart now appears 190 ms after the page (it was
+     about 2,200).
+2. **T-084 view applied.**
+   - Read as `anon`, the five reference records match UFCStats.
+   - security_invoker; SELECT only for both browser roles; PUBLIC revoked.
+   - The advisor is unchanged (39 / 10 / 0 / 8 + 8 / 9 / 1).
+3. **PR #66 merged** (`1984d35`). `verify-live` passes all three jobs on
+   fights 46774, 53620 and 53618.
+
+**The T-087 lockdown is intact.** Both changed views read
+`anon=r, authenticated=r` and nothing else.
+
+**One CI incident, not a test failure.** Tests on `main` at `1984d35` stopped
+in the setup fetch: the prerender bot pushed seconds later, and a shallow
+`git fetch` rejected the newer `main` as non-fast-forward. Reproduced locally;
+fixed by this PR's `+` refspec.
+
+## Next action
+
+Claude: T-086 readiness. The gates are D-026's; report readiness before the
+destructive step.
+
+---
+
+## 2026-10-13 (g) — T-084 built, T-085 cause found, T-086 plan written; nothing applied
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+- **T-084: built.** `v_fighter_ufc_record` plus `ufc-record.js` on every
+  record-showing page and the `/f/` prerender. It was tested on a throwaway
+  Postgres (accuracy, retired bookings, permissions, re-run, and parity with
+  Fight Lab's own count) and against production through a temporary view
+  (records match UFCStats; 0.4 ms for one fighter). The migration is not
+  applied.
+- **T-085: cause found.** The `cohort` CTE was materialised, so every fight's
+  cohort was built before filtering. `NOT MATERIALIZED` takes one fight from
+  5.8 s to 0.26 s with byte-identical output on 8 fights. Not applied.
+- **T-086: plan only.** `is_active = false` would miss 33 of the 34 views.
+  The recommendation is an `events.promotion` column, moving the 5 non-UFC
+  bouts (same ids) into sibling tables, and a scraper guard. This is an L3
+  decision because it removes rows from `fights`.
+
+## Next action
+
+Owner:
+1. Merge the read-only audit PR (#65).
+2. Approve opening the T-084/T-085 PR.
+3. Decide on the T-086 plan.
+
+**Order of application for T-084:** apply the view first, then deploy the pages.
+Pages that load before the view exists show "—" instead of a record.
+
+---
+
+## 2026-10-13 (g′) — Sportsbook data is read-only to the browser (T-087)
 
 **From:** Claude
 **To:** Owner
@@ -92,6 +160,34 @@ Claude: T-088 — the same revoke-and-assert for `pre_fight_snapshots` first (it
 is the append-only record, and its triggers stop UPDATE and DELETE but a
 TRUNCATE grant is still a grant), then the user tables, then propose the
 default-privilege change for review.
+
+---
+
+## 2026-10-13 (h) — Sportsbook list write hole closed on production
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+While checking the T-084/T-085 runbook, Claude found that browsers could write
+`odds_books` through the definer view `v_odds_books_sportsbooks`. A delete
+there would have cascaded to every captured price from that book. On the
+owner's instruction the fix was applied to production the same day and
+verified ([D-025](DECISIONS.md)). This PR is the record: the migration file and
+the test that reproduces the hole and proves it is closed.
+
+**Reconciled with T-087 (cannhaven-wq/Cage-Metrics#68, below).** T-087 was
+applied minutes later and covers this view plus every other odds relation and
+sequence. The two agree: both leave `anon` and `authenticated` with SELECT only
+on `v_odds_books_sportsbooks`, and nothing for `PUBLIC`. D-025 records the one
+hole found and its reproduction; T-087 is the lockdown standard.
+`tests/odds-write-lockdown.test.js` also scans this PR's SQL file.
+
+## Next action
+
+Owner: merge this PR (it changes no page, and nothing in the database that is
+not already applied). Claude: T-086, then T-088 security hardening and
+commercial readiness.
 
 ---
 

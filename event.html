@@ -659,6 +659,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
+<script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=2"></script>
 <script src="fight-insights.js?v=8"></script>
 <script>
@@ -777,10 +778,11 @@ async function load() {
   // used to add ~4 round trips of latency before render. streakMap is left
   // empty; the v_fighter_recent_form view query was removed when edges.js's
   // streak factors went away.
-  const fighterColumns = 'id, name, nickname, age, height_in, ufc_wins, ufc_losses, ufc_draws, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
+  // No ufc_* here: the UFC record comes from v_fighter_ufc_record (T-084).
+  const fighterColumns = 'id, name, nickname, age, height_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
   const fightIds = (fights || []).map(f => f.id);
   const idList = fighterIds.join(',');
-  const [fightersR, cardioR, finishR, movementMap, baseRatesR, formR] = await Promise.all([
+  const [fightersR, cardioR, finishR, movementMap, baseRatesR, formR, ufcRows] = await Promise.all([
     fighterIds.length
       ? sb.from('fighters').select(fighterColumns).in('id', fighterIds)
       : Promise.resolve({ data: [] }),
@@ -813,10 +815,13 @@ async function load() {
           .not('method', 'is', null))
           .then(data => ({ data }), err => ({ data: [], error: err }))
       : Promise.resolve({ data: [] }),
+    // The UFC record for every fighter on the card (T-084). null on failure,
+    // which renders as the labelled career record rather than a stale number.
+    cflUfcRecord.load(sb, fighterIds),
   ]);
 
   if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
-  (fightersR.data || []).forEach(f => { fighterMap[f.id] = f; });
+  cflUfcRecord.apply(fightersR.data || [], ufcRows).forEach(f => { fighterMap[f.id] = f; });
 
   if (cardioR.error) console.warn('Cardio data not available:', cardioR.error.message);
   (cardioR.data || []).forEach(r => {
