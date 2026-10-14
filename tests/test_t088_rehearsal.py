@@ -128,7 +128,7 @@ class T088Rehearsal(unittest.TestCase):
 
     def test_probe_saw_every_case(self):
         self.assertEqual(len(self.before), len(self.after))
-        self.assertGreaterEqual(len(self.after), 45)
+        self.assertGreaterEqual(len(self.after), 48)
 
     def test_every_legitimate_action_works_before_and_after(self):
         for label, lines in (("before", self.before), ("after", self.after)):
@@ -147,7 +147,7 @@ class T088Rehearsal(unittest.TestCase):
     def test_no_attack_is_allowed_after(self):
         for ln in self.after:
             role, probe, outcome = ln.split("|")
-            if probe.startswith("A_") or probe == "D_new_table_anon_can_write":
+            if probe.startswith("A_") or probe.startswith("D_new_table_anon_can_"):
                 with self.subTest(role=role, probe=probe):
                     self.assertIn(outcome, ("denied", "zero_rows"))
 

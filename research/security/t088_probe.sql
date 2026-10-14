@@ -26,6 +26,8 @@
 --     rolled back with everything else.
 --
 -- No RAISE NOTICE anywhere (it hangs the Supabase MCP tool; CLAUDE.md).
+-- On production, set t088.static_truncate = on first (see the TRUNCATE note in
+-- the loop): SELECT set_config('t088.static_truncate', 'on', true);
 -- =============================================================================
 DO $probe$
 DECLARE
@@ -55,6 +57,8 @@ BEGIN
     VALUES (u1, fid, 'market_move', 3, 'either') RETURNING id INTO seed_alert;
   INSERT INTO public.email_subscribers (email, source) VALUES ('t088-dup@example.invalid', 'probe')
     RETURNING unsubscribe_token INTO tok;
+  INSERT INTO public.user_bankrolls (user_id, current_amount, initial_deposit) VALUES (u2, 100, 100);
+  INSERT INTO public.user_watchlist (user_id, fight_id) VALUES (u2, fid);
 
   -- ---------- the probes ----------
   -- (role, jwt subject or NULL, label, sql, rows_matter)
@@ -81,6 +85,7 @@ BEGIN
     ('anon', NULL, 'L_read_fighters', 'SELECT 1 FROM public.fighters LIMIT 1', false),
     ('anon', NULL, 'L_read_pre_fight_snapshots', 'SELECT 1 FROM public.pre_fight_snapshots LIMIT 1', false),
     ('authenticated', u1, 'L_read_events', 'SELECT 1 FROM public.events LIMIT 1', false),
+    ('anon', NULL, 'L_read_existing_view', 'SELECT 1 FROM public.v_prop_projections_current LIMIT 1', false),
     -- LEGITIMATE: account, My Book, watchlist, alerts
     ('authenticated', u1, 'L_profile_read_own', format('SELECT 1 FROM public.profiles WHERE id = %L', u1), true),
     ('authenticated', u1, 'L_profile_set_display_name', format('UPDATE public.profiles SET display_name = %L WHERE id = %L', 'Probe', u1), true),
@@ -89,10 +94,16 @@ BEGIN
     ('authenticated', u1, 'L_bet_settle_own', format('UPDATE public.user_bets SET status = %L, won = true WHERE id = %s', 'won', seed_bet), true),
     ('authenticated', u1, 'L_bet_delete_own', format('DELETE FROM public.user_bets WHERE id = %s', seed_bet), true),
     ('authenticated', u1, 'L_bets_read_own', format('SELECT 1 FROM public.user_bets WHERE user_id = %L', u1), true),
-    ('authenticated', u1, 'L_bankroll_create_then_update',
-       format('INSERT INTO public.user_bankrolls (user_id, current_amount, initial_deposit) VALUES (%L, 100, 100); UPDATE public.user_bankrolls SET current_amount = 90 WHERE user_id = %L', u1, u1), true),
-    ('authenticated', u1, 'L_watchlist_star_unstar',
-       format('INSERT INTO public.user_watchlist (user_id, fight_id) VALUES (%L, %s); DELETE FROM public.user_watchlist WHERE user_id = %L AND fight_id = %s', u1, fid, u1, fid), true),
+    -- One statement per probe: a two-statement EXECUTE hangs the Supabase MCP
+    -- tool (2026-10-14). The update/delete halves act on fixtures seeded above.
+    ('authenticated', u1, 'L_bankroll_create',
+       format('INSERT INTO public.user_bankrolls (user_id, current_amount, initial_deposit) VALUES (%L, 100, 100)', u1), false),
+    ('authenticated', u2, 'L_bankroll_update_own',
+       format('UPDATE public.user_bankrolls SET current_amount = 90 WHERE user_id = %L', u2), true),
+    ('authenticated', u1, 'L_watchlist_star',
+       format('INSERT INTO public.user_watchlist (user_id, fight_id) VALUES (%L, %s)', u1, fid), false),
+    ('authenticated', u2, 'L_watchlist_unstar_own',
+       format('DELETE FROM public.user_watchlist WHERE user_id = %L AND fight_id = %s', u2, fid), true),
     ('authenticated', u1, 'L_alert_create',
        format('INSERT INTO public.user_alerts (user_id, fight_id, kind, side, target_american) VALUES (%L, %s, %L, %L, 150)', u1, fid, 'price_target', 'A'), false),
     ('authenticated', u1, 'L_alert_pause_own', format('UPDATE public.user_alerts SET is_active = false WHERE id = %s', seed_alert), true),
@@ -115,7 +126,7 @@ BEGIN
     ('anon', NULL, 'A_insert_fighter', $$INSERT INTO public.fighters (name) VALUES ('forged')$$, false),
     ('authenticated', u1, 'A_update_events', $$UPDATE public.events SET name = 'forged'$$, true),
     ('anon', NULL, 'A_insert_hub_visit',
-       $$INSERT INTO public.hub_visits (id, visitor_key, event_id, page) VALUES (990001, gen_random_uuid(), 1, 'home')$$, false),
+       $$INSERT INTO public.hub_visits (visitor_key, event_id, page) VALUES (gen_random_uuid(), 1, 'home')$$, false),
     ('anon', NULL, 'A_subscribe_with_forged_token',
        $$INSERT INTO public.email_subscribers (email, source, unsubscribe_token) VALUES ('t088-forged@example.invalid', 'probe', 'chosen')$$, false),
     ('anon', NULL, 'A_unsubscribe_everyone', 'UPDATE public.email_subscribers SET unsubscribed_at = now()', true),
@@ -130,10 +141,26 @@ BEGIN
     ('anon', NULL, 'A_setval_sequence', $$SELECT setval('public.user_bets_id_seq', 1)$$, false)
   ) AS v(role_name, sub, label, stmt, rows_matter) LOOP
     BEGIN
-      EXECUTE format('SET LOCAL ROLE %I', p.role_name);
+      -- Supabase Auth inserts users as supabase_auth_admin; a session that cannot
+      -- become it (production's `postgres` cannot) inserts as itself. Same path:
+      -- handle_new_user() runs as its owner either way.
+      IF NOT (p.role_name = 'supabase_auth_admin'
+              AND NOT pg_has_role(current_user, 'supabase_auth_admin', 'MEMBER')) THEN
+        EXECUTE format('SET LOCAL ROLE %I', p.role_name);
+      END IF;
       PERFORM set_config('request.jwt.claims',
         CASE WHEN p.sub IS NULL THEN json_build_object('role', p.role_name)::text
              ELSE json_build_object('role', p.role_name, 'sub', p.sub)::text END, true);
+      -- On production (t088.static_truncate = on) a TRUNCATE probe is answered by
+      -- the privilege system instead of executed: through the Supabase MCP tool a
+      -- TRUNCATE hangs the call (2026-10-14), and TRUNCATE privilege is exactly
+      -- what the migration changes. The replica always executes it for real.
+      IF p.stmt ILIKE 'TRUNCATE %' AND coalesce(current_setting('t088.static_truncate', true), '') = 'on' THEN
+        IF NOT has_table_privilege(p.role_name, split_part(split_part(p.stmt, ' ', 2), ' ', 1), 'TRUNCATE') THEN
+          RAISE EXCEPTION USING ERRCODE = '42501', MESSAGE = 'no TRUNCATE privilege';
+        END IF;
+        RAISE EXCEPTION USING ERRCODE = 'ZT004', MESSAGE = 'allowed (privilege held)';
+      END IF;
       EXECUTE p.stmt;
       GET DIAGNOSTICS n = ROW_COUNT;
       IF p.label = 'L_signup_creates_profile' THEN

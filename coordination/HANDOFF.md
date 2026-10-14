@@ -11,45 +11,52 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-14 (k) — T-088 audit and plan; the Card Brief signup never worked
+## 2026-10-14 (k) — T-088 revised and rehearsed on production; nothing applied
 
 **From:** Claude
 **To:** Owner
-**Date:** 2026-10-13
+**Date:** 2026-10-14
 
-**T-087 merged** (cannhaven-wq/Cage-Metrics#68, `d4e5dc1`). `main` holds the
-same migration and test blobs as the PR. A re-run on production after the
-merge: all 40 write and sequence probes denied for both browser roles, every
-market read still works, and row counts are unchanged.
+**PR #71 reconciled.** `main` merged in (D-025, T-084/T-085), keeping both
+handoff entries. 275 tests passed on the merged tree.
 
-**T-088: audited and rehearsed, nothing applied.** It needs the owner's call
-(L3). The audit is `research/security/T-088_PRIVILEGE_AUDIT_2026-10-13.md`.
-- **Live today:** a visitor can choose their own unsubscribe token; a member
-  can rewrite `profiles.email` (alert mail does not use it); anyone can write
-  `hub_visits`, which nothing reads.
-- **Latent:**
-  - TRUNCATE on 26 tables, with no REST path.
-  - `pre_fight_snapshots` refuses UPDATE and DELETE but not TRUNCATE, for every role.
-  - Every new table is born writable.
-- **The plan** is two self-asserting files under `research/security/`. They
-  keep exactly what the site writes and leave reads unchanged. On a replica of
-  production's schema and grants: 28 legitimate actions are unchanged, 13
-  attack paths close, the files are idempotent, and the assertion block catches
-  a leaked write, a missing grant and a changed read.
+**T-088 revised to the owner's review ([D-026](DECISIONS.md)).**
+- **New tables, views and sequences are private by default.** Existing reads
+  are unchanged, and the migration proves it before committing.
+- **A new test keeps future grants honest.** It fails if a page reads an object
+  that no repo SQL grants. The 16 reads granted only in production are frozen
+  as a named legacy list.
+- **`hub_visits`:** browser access revoked, table kept.
 
-**The Card Brief signup had never worked (T-089).** The upsert needs a SELECT
-policy that visitors rightly lack, so every submission failed and showed the
-raw database error. That is why the list is empty. Fixed in `_auth.js` as a
-plain insert, with no database change. It goes live when this PR merges.
+**Rehearsed twice, nothing applied.**
+- **Replica**, re-captured from production and byte-identical for tables,
+  policies and grants: 50 probes, 31 legitimate actions unchanged, every attack
+  denied, idempotent, and the assertion block catches mutations.
+- **Production, rolled back** (`lock_timeout` 3 s on every run):
+  - the assertion passes in 0.1 s against every real view;
+  - 49 of 50 probes match the replica, and the 50th was a broken probe,
+    re-checked correctly (`hub_visits` anonymous insert: allowed today, denied
+    under the migration);
+  - the guard refuses an owner TRUNCATE;
+  - the before/after fingerprint is identical.
+- **Two Supabase tool limits found and worked around:** a `service_role`
+  TRUNCATE, and a two-statement `EXECUTE`, both hang `execute_sql`. Details
+  are in the audit.
+
+**Card Brief.** The signup fix (T-089) ships with #71. No Brief can be emailed
+until double opt-in exists: `MARKETING_SEND_BLOCKERS` in `build/send-digest.js`
+(T-090) locks it.
 
 ## Next action
 
-Owner: decide D-T088-1..5 at the end of the T-088 audit. Approving D-T088-1
-and D-T088-3 lets Claude run the production rehearsal (rolled back), apply
-both files, re-run the probe and the advisor, and submit the Card Brief form
-once on the live site. Then commercial readiness resumes at week 1 of
-`research/commercial/COMMERCIAL_READINESS_AUDIT_2026-10-13.md`, starting with
-the Resend key.
+Owner:
+1. Sign off on the production rehearsal results in the T-088 audit.
+2. Merge #71 once its CI is green.
+
+On sign-off, Claude applies both T-088 files, re-runs the production probe and
+the advisor, and submits the Card Brief form on the live site. Commercial
+readiness then resumes at week 1, which starts with a Resend key, and T-090
+before any Brief is sent.
 
 ---
 

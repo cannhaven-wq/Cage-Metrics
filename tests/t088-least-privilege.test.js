@@ -104,9 +104,45 @@ t('sequences: USAGE only, only behind a browser insert', () => {
   }
 });
 
-t('new tables stop being born writable', () => {
-  ok(/ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public\s+REVOKE INSERT, UPDATE, DELETE, TRUNCATE/i.test(mig), 'default table privileges unchanged');
-  ok(/ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public\s+REVOKE ALL ON SEQUENCES/i.test(mig), 'default sequence privileges unchanged');
+t('new tables, views and sequences are private by default (D-T088-2)', () => {
+  ok(/ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public\s+REVOKE ALL ON TABLES FROM anon, authenticated/i.test(mig), 'new tables and views still get a default browser grant');
+  ok(/ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public\s+REVOKE ALL ON SEQUENCES FROM anon, authenticated/i.test(mig), 'new sequences still get a default browser grant');
+  ok(!/ALTER DEFAULT PRIVILEGES[^;]*\bGRANT\b/i.test(mig), 'a default privilege is granted back');
+});
+
+// Once new objects are private, a page that reads a new table or view gets
+// "permission denied" unless a migration grants it. Every object the site reads
+// must therefore be granted in repo SQL — except these, whose read predates the
+// habit and exists only in production (and which T-088 leaves exactly as is;
+// its step 5 (c) proves it). Do not add to this list: grant the new object.
+const LEGACY_READS_GRANTED_ONLY_IN_PRODUCTION = new Set([
+  'email_subscribers', 'events', 'fight_odds', 'fighters', 'fights', 'funnel_events',
+  'model_predictions', 'model_versions', 'odds_books', 'prediction_indicators',
+  'premium_waitlist', 'profiles', 'user_bankrolls', 'user_bets', 'v_fighter_style',
+  'v_predictions_with_results',
+]);
+t('every object a page reads is granted SELECT in repo SQL (or is a named legacy read)', () => {
+  const sqlFiles = [];
+  const walk = d => { for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+    if (e.name === 'node_modules' || e.name.startsWith('.')) continue;
+    const p = path.join(d, e.name);
+    if (e.isDirectory()) walk(p); else if (e.name.endsWith('.sql') && !/t088_replica_/.test(e.name)) sqlFiles.push(p);
+  } };
+  walk(ROOT);
+  const allSql = sqlFiles.map(f => noComments(fs.readFileSync(f, 'utf8'))).join('\n');
+  const reads = new Set();
+  for (const f of siteFiles) {
+    const re = /\.from\(\s*['"]([a-z_0-9]+)['"]\s*\)/g;
+    let m; const src = fs.readFileSync(path.join(ROOT, f), 'utf8');
+    while ((m = re.exec(src))) reads.add(m[1]);
+  }
+  ok(reads.size >= 30, `found only ${reads.size} reads — the scan is broken`);
+  for (const r of reads) {
+    if (LEGACY_READS_GRANTED_ONLY_IN_PRODUCTION.has(r)) continue;
+    const g = new RegExp(`grant\\s+(?:all\\b|[^;]*\\bselect\\b)[^;]*\\bon\\s+(?:table\\s+)?[^;]*\\b(?:public\\.)?${r}\\b[^;]*\\bto\\s+[^;]*\\b(anon|authenticated)\\b`, 'i');
+    ok(g.test(allSql), `a page reads ${r}, and no repo SQL grants it SELECT — once T-088 lands, a NEW object like this is unreadable`);
+  }
+  for (const r of LEGACY_READS_GRANTED_ONLY_IN_PRODUCTION) ok(reads.has(r), `${r} is on the legacy list but no page reads it any more — remove it`);
 });
 
 t('the allowlist in the assertion block matches the GRANTs exactly', () => {

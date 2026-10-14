@@ -10,14 +10,17 @@ anon|L_read_fights|allowed
 anon|L_read_fighters|allowed
 anon|L_read_pre_fight_snapshots|allowed
 authenticated|L_read_events|allowed
+anon|L_read_existing_view|allowed
 authenticated|L_profile_read_own|allowed
 authenticated|L_profile_set_display_name|allowed
 authenticated|L_bet_add|allowed
 authenticated|L_bet_settle_own|allowed
 authenticated|L_bet_delete_own|allowed
 authenticated|L_bets_read_own|allowed
-authenticated|L_bankroll_create_then_update|allowed
-authenticated|L_watchlist_star_unstar|allowed
+authenticated|L_bankroll_create|allowed
+authenticated|L_bankroll_update_own|allowed
+authenticated|L_watchlist_star|allowed
+authenticated|L_watchlist_unstar_own|allowed
 authenticated|L_alert_create|allowed
 authenticated|L_alert_pause_own|allowed
 authenticated|L_alert_delete_own|allowed
@@ -44,4 +47,4 @@ authenticated|A_forge_alert_delivery|denied
 anon|A_write_through_invoker_view|denied
 anon|A_setval_sequence|denied
 postgres|D_new_table_anon_can_write|denied
-postgres|D_new_table_anon_can_read|allowed
+postgres|D_new_table_anon_can_read|denied

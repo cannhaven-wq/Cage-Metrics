@@ -1,8 +1,9 @@
 # T-088 — Who can write to the database from a browser? (audit and plan, 2026-10-13)
 
-**Status:** audit done; plan rehearsed; **nothing applied.** Applying the
-migration is an L3 gate (`coordination/CRITICAL_GATES.md` item 5). The owner
-decides; the decisions are listed at the end.
+**Status:** audit done; plan revised to the owner's 2026-10-14 review; rehearsed on a
+replica **and on production (rolled back)**; **nothing applied.** Applying it
+is an L3 gate (`coordination/CRITICAL_GATES.md` item 5) and waits on the owner's
+sign-off on the production rehearsal results below.
 
 ## In plain terms
 
@@ -76,27 +77,45 @@ Plus the F1 fix in `_auth.js` (no database change; it ships when the PR merges).
 
 Everything else a browser role holds — every TRUNCATE, REFERENCES, TRIGGER,
 MAINTAIN, every write on a read-only table, `hub_visits`, sequence UPDATE —
-goes. New tables stop being born writable. **Every RLS policy stays exactly as
-it is.**
+goes. **Every RLS policy stays exactly as it is.**
 
-## Rehearsal (done — on a replica, never on production)
+**New tables, views and sequences are private by default** (owner,
+2026-10-14). Nothing created after this migration is readable or writable from
+a browser until its own migration says
+`GRANT SELECT ON public.<object> TO anon, authenticated`. Objects that exist
+today keep every read they have, because default privileges only apply to
+objects created later; the migration proves that before committing. What it
+takes from future work:
+- **Every new public table or view needs an explicit grant.**
+  `tests/t088-least-privilege.test.js` fails if a page reads an object no repo
+  SQL grants. 16 current reads were granted only in production, never in a
+  file; they are frozen as a named legacy list, and the test refuses additions
+  to it.
+- **Drop-and-recreate loses grants.** `CREATE OR REPLACE VIEW` keeps them. Of
+  the 15 drop-and-recreate views in repo SQL, 13 already re-grant, and the other
+  2 (`dur001_migration.sql`) have no browser reader. No job creates tables or
+  views at runtime.
+
+## Rehearsal 1 — replica (2026-10-13, repeated 2026-10-14)
 
 `tests/test_t088_rehearsal.py` builds a throwaway local Postgres from
 [`t088_replica_bootstrap.sql`](t088_replica_bootstrap.sql) and
-[`t088_replica_schema.sql`](t088_replica_schema.sql) — production's schema,
-policies, triggers and exact grants, captured read-only on 2026-10-13, no rows.
-Then [`t088_probe.sql`](t088_probe.sql) runs 47 probes as the real roles with
-real JWT subjects. Each probe runs in a savepoint and the whole run rolls back.
+[`t088_replica_schema.sql`](t088_replica_schema.sql). Those files hold production's schema, policies, triggers,
+identity columns and exact grants, captured read-only with no rows. They were
+re-captured on 2026-10-14 after `main` merged D-025 and T-084/T-085, and came
+out byte-identical for tables, policies and grants. Then
+[`t088_probe.sql`](t088_probe.sql) runs 50 probes as the real roles with real
+JWT subjects. Each probe runs in a savepoint and the whole run rolls back.
 
 | | before | after |
 |---|---|---|
-| 28 legitimate actions: signup, Card Brief (new and repeat), waitlist, analytics, unsubscribe, public reads, profile, My Book, watchlist, alerts, alert settings, deliveries, backend writers | all work | **all work** |
+| 31 legitimate actions: signup, Card Brief (new and repeat), waitlist, analytics, unsubscribe, public reads incl. an existing view, profile, My Book, watchlist, alerts, alert settings, deliveries, backend writers | all work | **all work** |
 | TRUNCATE `pre_fight_snapshots` / `fights` / `profiles` / `user_bets` / `email_subscribers` | allowed | denied |
 | forged unsubscribe token · rewrite `profiles.email` · `hub_visits` insert · `setval` | allowed | denied |
 | update `events` · unsubscribe everyone | refused by RLS (zero rows) | denied |
 | self-admin · bet as another user · forge an alert delivery · write through the invoker view | denied | denied |
 | edit another member's bets | zero rows (RLS) | zero rows (RLS) — correct: members keep UPDATE on their own |
-| a brand-new table: can a visitor write it? | yes | **no** (still readable, D-T088-2) |
+| a brand-new table: can a visitor write it? read it? | yes / yes | **no / no** |
 
 Also proved on the replica:
 - **Idempotent.** Both files apply twice cleanly.
@@ -105,46 +124,76 @@ Also proved on the replica:
 
 The expected after-state is pinned in
 [`t088_expected_after.txt`](t088_expected_after.txt).
-`tests/t088-least-privilege.test.js` keeps the grants and the site in step: a
-new browser write without a grant fails CI.
+
+## Rehearsal 2 — production, rolled back (2026-10-14)
+
+Run against the live database through the Supabase tool. Every run started
+with `lock_timeout = 3s`, so nothing could queue behind live traffic. Each run
+ended in an exception, so all of it rolled back. Raw results:
+[`t088_production_rehearsal_2026-10-14.txt`](t088_production_rehearsal_2026-10-14.txt).
+
+- **The migration and its assertion block pass on production in 0.1 s** with no
+  violation. That includes every real view, which the replica does not carry.
+- **All 50 probes ran under the migration.** 49 match the replica's expected
+  matrix exactly:
+  - every legitimate action works;
+  - every attack is denied;
+  - a new table is unreadable and unwritable.
+- **The one difference was a broken probe, not a policy gap.** The `hub_visits`
+  probe set `id` explicitly. Production's `id` is an identity column, which
+  rejects that before any privilege check (`428C9`). Re-run correctly on
+  production: anonymous insert is **allowed today** and **denied under the
+  migration**. The probe is fixed, and the replica now reproduces all 13
+  identity columns.
+- **The TRUNCATE guard on production:** trigger creation takes 10 ms, and a TRUNCATE
+  by the table owner is refused with the append-only message. The
+  `service_role` half could not be run through the tool. See below.
+- **Nothing persisted.** A fingerprint taken before and after the rehearsals
+  matched exactly:
+  - an md5 of every privilege on every object in `public`;
+  - an md5 of the default privileges;
+  - row counts of 12 tables;
+  - no guard trigger, no probe rows, no probe table, and no open session.
+
+**Two tooling limits found, and how the probe works around them.** Both make the
+Supabase `execute_sql` tool hang until its 60-second timeout, with nothing
+applied and nothing left running. That is the same failure mode CLAUDE.md
+records for NOTICEs.
+1. **A TRUNCATE run as `service_role`.** On production the probe answers
+   TRUNCATE probes from the privilege system (`has_table_privilege`), which is
+   exactly what the migration changes: set `t088.static_truncate = on`. The
+   replica still executes them for real.
+2. **An `EXECUTE` of a two-statement string.** Every probe is now one
+   statement, with its other half seeded as a fixture.
 
 ## Applying it (owner-approved only)
 
-1. **Production rehearsal (optional; nothing persists).** In one `execute_sql` call, send:
-   - the body of the least-privilege file without `BEGIN;`/`COMMIT;`;
-   - then the body of `t088_probe.sql`.
-
-   The probe ends by raising `T088_RESULT`, which rolls the migration back with it. Compare the lines to `t088_expected_after.txt`.
-2. **Apply** the least-privilege file. It aborts on its own if anything is off.
-3. **Apply** the TRUNCATE guard file (separate decision, D-T088-3).
-4. **Verify:**
-   - Re-run the probe on its own. It rolls back, and must still match `t088_expected_after.txt`.
+1. **Apply** the least-privilege file. It sets `lock_timeout = 3s` itself, and
+   aborts on its own if the result is not exactly the allowlist with reads
+   unchanged.
+2. **Apply** the TRUNCATE guard file (D-T088-3).
+3. **Verify:**
+   - Re-run the production probe (rolled back, static TRUNCATE). It must match
+     `t088_expected_after.txt`.
    - Re-run the Security Advisor.
    - Submit the Card Brief form on the live site once and see "Subscribed".
-5. **Rollback, if a page breaks:** the `GRANT` lines in `t088_replica_schema.sql`
+4. **Rollback, if a page breaks:** the `GRANT` lines in `t088_replica_schema.sql`
    are production's pre-change grants, verbatim (add back `MAINTAIN`, which the
    PG16 copy omits). Re-running them restores the old state. The default
    privileges come back with `ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public GRANT ALL ON TABLES / SEQUENCES TO anon, authenticated`.
 
-## Decisions for the owner
+## Decisions (owner review, 2026-10-14)
 
-- **D-T088-1 — apply the least-privilege migration?** Recommended: **yes.** It
-  removes three live browser write paths and one latent one. The 28-action
-  rehearsal shows it keeps everything the site does.
-- **D-T088-2 — should new tables also stop being *readable* by default?**
-  Recommended: **not yet.** This plan keeps today's convention, where a new
-  table is readable but RLS decides which rows. Making reads explicit too is
-  stricter. It also means every future public view needs a GRANT, and forgetting
-  one breaks a page with "permission denied". Decide this once, then write it
-  into CLAUDE.md.
-- **D-T088-3 — add the TRUNCATE guard to `pre_fight_snapshots`?** Recommended:
-  **yes.** It is the evidence table, and its sister tables already refuse
-  TRUNCATE.
-- **D-T088-4 — `hub_visits`.** Recommended: revoke now (in the migration), then
-  drop the table and its policy later once it is confirmed dead. Dropping it
-  removes data, so it is L3 on its own.
-- **D-T088-5 — confirm Card Brief addresses before the first send.** Anyone can
-  type anyone's address. That is how signup forms work, but sending mail to an
-  address nobody confirmed is a deliverability and legal risk. Recommended:
-  ask the address to confirm itself (double opt-in) before the first Brief goes
-  out. That is a product and legal call, and it belongs with T-054.
+- **D-T088-1 — least-privilege migration:** approved in principle, pending
+  sign-off on the production rehearsal results above.
+- **D-T088-2 — default visibility of new tables:** **private by default**,
+  explicit review for each grant. Done in the migration; existing reads
+  unchanged.
+- **D-T088-3 — pre-fight TRUNCATE protection:** approved. Applies with D-T088-1.
+- **D-T088-4 — `hub_visits`:** revoke browser access (in the migration); **keep
+  the table**.
+- **D-T088-5 — Card Brief double opt-in:** required before any marketing email.
+  Enforced in code now: `build/send-digest.js::MARKETING_SEND_BLOCKERS` holds
+  T-090 and forces dry-run whatever secrets are set, and
+  `tests/marketing-send-blocker.test.js` keeps it there. Building confirmation
+  itself is T-090.

@@ -39,9 +39,15 @@
 --     six minutes on 2026-09-16;
 --   * UPDATE/SELECT on every sequence (setval). USAGE stays only where the
 --     browser inserts into a serial column.
---   * the default grant that makes every NEW table in public writable by both
---     browser roles. New tables are still readable by default (unchanged
---     convention, owner decision D-T088-2 in the audit).
+--   * the default grant that hands every NEW table, view and sequence in
+--     public to both browser roles. New objects are now PRIVATE by default:
+--     no read, no write (owner decision D-T088-2, 2026-10-14). A migration
+--     that creates something a page reads must say so:
+--         GRANT SELECT ON public.<object> TO anon, authenticated;
+--     tests/t088-least-privilege.test.js fails if a page reads an object no
+--     repo SQL grants. EXISTING objects keep every read they have today —
+--     default privileges only ever apply to objects created later, and
+--     step 5 (c) proves no current read moved.
 --
 -- NOT IN THIS FILE (separate decisions, see the audit)
 --   * the TRUNCATE guard on pre_fight_snapshots — proposed_2026-10-13_t088_pre_fight_truncate_guard.sql
@@ -58,6 +64,11 @@
 -- =============================================================================
 
 BEGIN;
+
+-- Never queue behind live traffic: if a lock is not free within 3 s, abort and
+-- retry later. A queued lock request blocks every reader that arrives after it.
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '60s';
 
 -- What both browser roles can read right now, so step 5 can prove it did not move.
 CREATE TEMP TABLE t088_reads_before ON COMMIT DROP AS
@@ -92,9 +103,9 @@ GRANT USAGE ON SEQUENCE public.email_subscribers_id_seq,
 GRANT USAGE ON SEQUENCE public.user_bets_id_seq,
                         public.user_alerts_id_seq        TO authenticated;
 
--- 4. New objects stop being born writable -------------------------------------
+-- 4. New objects are private until a migration grants them -----------------
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
-  REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN ON TABLES FROM anon, authenticated;
+  REVOKE ALL ON TABLES FROM anon, authenticated;
 ALTER DEFAULT PRIVILEGES FOR ROLE postgres IN SCHEMA public
   REVOKE ALL ON SEQUENCES FROM anon, authenticated;
 
@@ -184,16 +195,15 @@ BEGIN
     bad := bad || format(' %s on sequence %s;', r.rolname, r.relname);
   END LOOP;
 
-  -- (e) the default no longer hands browser roles writes on new tables
+  -- (e) new tables, views and sequences give the browser roles nothing at all
   IF EXISTS (
     SELECT 1 FROM pg_default_acl d
     JOIN pg_namespace n ON n.oid = d.defaclnamespace AND n.nspname = 'public'
     CROSS JOIN LATERAL aclexplode(d.defaclacl) a
     WHERE d.defaclrole = 'postgres'::regrole AND d.defaclobjtype IN ('r', 'S')
       AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole)
-      AND (d.defaclobjtype = 'S' OR a.privilege_type <> 'SELECT')
   ) THEN
-    bad := bad || ' default privileges still grant browser writes;';
+    bad := bad || ' default privileges still grant browser roles something on new objects;';
   END IF;
 
   IF bad <> '' THEN

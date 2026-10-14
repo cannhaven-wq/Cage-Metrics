@@ -30,6 +30,11 @@
 
 BEGIN;
 
+-- Never queue behind live traffic: if a lock is not free within 3 s, abort and
+-- retry later. A queued lock request blocks every reader that arrives after it.
+SET LOCAL lock_timeout = '3s';
+SET LOCAL statement_timeout = '60s';
+
 CREATE OR REPLACE FUNCTION public.pre_fight_snapshots_no_truncate()
 RETURNS trigger
 LANGUAGE plpgsql

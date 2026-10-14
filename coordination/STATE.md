@@ -28,13 +28,13 @@ could write the sportsbook list through a definer view; closed on production
 the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
-**Security, 2026-10-13.** T-087 is merged and verified on `main` (sportsbook
-data read-only to the browser; 40 of 40 write probes denied after the merge).
-**T-088 is waiting on the owner (L3):** the audit and a rehearsed
-least-privilege plan are in `research/security/`. Three browser write paths
-are live today, all small; nothing has been applied. **It also found that the
-Card Brief signup had never worked** (T-089). That is fixed in code and ships
-with the T-088 PR, with no database change.
+**Security, 2026-10-14.** T-087 is merged and verified. **T-088 has been revised
+to the owner's review (D-026) and rehearsed on production in rolled-back
+transactions; nothing is applied.** Applying it waits on the owner's sign-off on
+those results. The revision makes new tables private by default and leaves
+existing reads unchanged. **The Card Brief signup had never worked** (T-089):
+the fix ships with PR #71. Marketing email is now locked in code until double
+opt-in exists (T-090).
 
 **Next phase (owner, 2026-10-13): the first $100 of revenue.** The
 commercial-readiness audit
