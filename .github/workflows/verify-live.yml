@@ -32,6 +32,19 @@ on:
         description: 'Fight Lab ids to open, comma-separated (blank = the next card: most-priced and least-priced active bookings)'
         required: false
         default: ''
+      fighter_id:
+        description: 'Fighter profile id to open in the stabilization checks (blank = skip)'
+        required: false
+        default: ''
+      submit_card_brief:
+        description: 'Submit the real Card Brief form once with card_brief_email (writes one row; remove it afterwards)'
+        type: boolean
+        required: false
+        default: false
+      card_brief_email:
+        description: 'Controlled test address for the Card Brief check; must end in @example.invalid'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -83,6 +96,9 @@ jobs:
           compare "/proof-gates.js" proof-gates.js "proof-gates.js"
           compare "/event.html" event.html "event.html"
           compare "/fighter.html" fighter.html "fighter.html"
+          compare "/_auth.js" _auth.js "_auth.js (Card Brief signup, T-089)"
+          compare "/sitemap.xml" sitemap.xml "sitemap.xml"
+          compare "/e/dwcs-10-3-4259.html" e/dwcs-10-3-4259.html "DWCS 10.3 stub (T-086)"
           echo "::group::cache-bust query strings the served homepage asks for"
           grep -oE 'src="[^"]+\?v=[^"]+"' /tmp/fresh.bin || true
           for q in "/fight-insights.js?v=9" "/market.js?v=2" "/_shared.js?v=rl6"; do
@@ -159,3 +175,30 @@ jobs:
           name: fight-lab-screenshots-${{ github.run_id }}
           path: fight-lab-shots/
           if-no-files-found: warn
+
+  stabilization:
+    name: Stabilization checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Playwright
+        run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+
+      - name: DWCS, page loads, Card Brief
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://cannonfightlab.com' }}
+          FIGHT_ID: ${{ github.event.inputs.fight_ids }}
+          FIGHTER_ID: ${{ github.event.inputs.fighter_id }}
+          SUBMIT_CARD_BRIEF: ${{ github.event.inputs.submit_card_brief }}
+          CARD_BRIEF_EMAIL: ${{ github.event.inputs.card_brief_email }}
+        run: node .github/scripts/verify-live-stabilization.js
