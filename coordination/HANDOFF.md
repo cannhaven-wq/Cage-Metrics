@@ -11,6 +11,55 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-14 (k) — T-088 revised and rehearsed on production; nothing applied
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-14
+
+**PR #71 reconciled.** `main` merged in (D-025, T-084/T-085), keeping both
+handoff entries. 275 tests passed on the merged tree.
+
+**T-088 revised to the owner's review ([D-027](DECISIONS.md)).**
+- **New tables, views and sequences are private by default.** Existing reads
+  are unchanged, and the migration proves it before committing.
+- **A new test keeps future grants honest.** It fails if a page reads an object
+  that no repo SQL grants. The 16 reads granted only in production are frozen
+  as a named legacy list.
+- **`hub_visits`:** browser access revoked, table kept.
+
+**Rehearsed twice, nothing applied.**
+- **Replica**, re-captured from production and byte-identical for tables,
+  policies and grants: 50 probes, 31 legitimate actions unchanged, every attack
+  denied, idempotent, and the assertion block catches mutations.
+- **Production, rolled back** (`lock_timeout` 3 s on every run):
+  - the assertion passes in 0.1 s against every real view;
+  - 49 of 50 probes match the replica, and the 50th was a broken probe,
+    re-checked correctly (`hub_visits` anonymous insert: allowed today, denied
+    under the migration);
+  - the guard refuses an owner TRUNCATE;
+  - the before/after fingerprint is identical.
+- **Two Supabase tool limits found and worked around:** a `service_role`
+  TRUNCATE, and a two-statement `EXECUTE`, both hang `execute_sql`. Details
+  are in the audit.
+
+**Card Brief.** The signup fix (T-089) ships with #71. No Brief can be emailed
+until double opt-in exists: `MARKETING_SEND_BLOCKERS` in `build/send-digest.js`
+(T-090) locks it.
+
+## Next action
+
+Owner:
+1. Sign off on the production rehearsal results in the T-088 audit.
+2. Merge #71 once its CI is green.
+
+On sign-off, Claude applies both T-088 files, re-runs the production probe and
+the advisor, and submits the Card Brief form on the live site. Commercial
+readiness then resumes at week 1, which starts with a Resend key, and T-090
+before any Brief is sent.
+
+---
+
 ## 2026-10-13 (i) — T-086 approved with gates (D-026); nothing applied yet
 
 **From:** Claude

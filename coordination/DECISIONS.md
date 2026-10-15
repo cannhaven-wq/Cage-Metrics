@@ -1935,3 +1935,40 @@ independent verification against an official source.
 
 **Attribution note.** Recorded by Claude from the owner's message in the
 project-audit session.
+
+## D-027 — T-088 direction: least privilege approved in principle; new tables private by default; double opt-in before marketing email
+
+| field | value |
+|---|---|
+| date | 2026-10-14 |
+| decided by | Reed Cannon (owner), review of cannhaven-wq/Cage-Metrics#71 |
+| task | T-088, T-090 |
+| level | L3 |
+| reversible | the decisions are; applying the migration later is reversible from the pre-change grants kept verbatim in `research/security/t088_replica_schema.sql` |
+
+**The owner's direction, quoted:** *"I approve the intended least-privilege
+restrictions and pre-fight TRUNCATE protection in principle, but require a fresh
+production-safe rehearsal and results before applying either migration."* And:
+*"I prefer new tables private by default, with SELECT access explicitly granted
+where needed. Existing public reads can remain unchanged."*
+
+**Plain version.** The plan to stop browsers writing where they should not is
+approved, but not applied. Anything added to the database from now on starts
+private. The Card Brief may not email anyone until each address has confirmed
+itself.
+
+| decision | outcome |
+|---|---|
+| D-T088-1 least-privilege migration | approved in principle; **apply waits on sign-off of the production rehearsal results** |
+| D-T088-2 default visibility of new objects | **private by default**, explicit SELECT grant per object; existing reads unchanged |
+| D-T088-3 pre-fight TRUNCATE guard | approved; applies with D-T088-1 |
+| D-T088-4 `hub_visits` | revoke browser access; **keep the table** |
+| D-T088-5 Card Brief double opt-in | required **before any marketing email** (T-090) |
+
+**What was done on 2026-10-14, nothing applied.**
+- The migration now revokes default SELECT as well as writes.
+- It was re-rehearsed on a replica re-captured from production.
+- It was then rehearsed on production in rolled-back transactions. Results are
+  in the T-088 audit. The fingerprint before and after is identical.
+- The Card Brief sender is locked in code to dry-run by
+  `MARKETING_SEND_BLOCKERS` (T-090).

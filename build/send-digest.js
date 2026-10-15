@@ -33,7 +33,17 @@ const SUPABASE_ANON_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RESEND_KEY  = process.env.RESEND_API_KEY;
 const FROM        = process.env.RESEND_FROM || 'Cannon Fight Lab <hello@cannonfightlab.com>';
-const DRY_RUN     = !RESEND_KEY || /^(1|true|yes)$/i.test(process.env.DIGEST_DRY_RUN || '');
+// Marketing email is blocked in code, not in a note (owner, 2026-10-14). While
+// any blocker stands this script is dry-run whatever secrets are set: it renders
+// and logs, and sends nothing. Anyone can type anyone's address into the Card
+// Brief form, so no Brief goes out until each address has confirmed itself.
+// Clearing a blocker means deleting its line here, in a reviewed PR — the same
+// arrangement as entitlements.js::CHECKOUT_BLOCKERS.
+const MARKETING_SEND_BLOCKERS = [
+  'T-090: Card Brief addresses are not confirmed yet (double opt-in is not built)',
+];
+const DRY_RUN     = !RESEND_KEY || /^(1|true|yes)$/i.test(process.env.DIGEST_DRY_RUN || '')
+                    || MARKETING_SEND_BLOCKERS.length > 0;
 const SITE        = 'https://cannonfightlab.com';
 
 // Service key bypasses RLS so we can read email_subscribers; fall back to
@@ -335,6 +345,9 @@ async function markSent(emails) {
 
 (async () => {
   try {
+    if (MARKETING_SEND_BLOCKERS.length) {
+      console.log('[digest] DRY RUN — sending is blocked by: ' + MARKETING_SEND_BLOCKERS.join('; '));
+    }
     const event = await findNextEvent();
     if (!event) { console.log('[digest] no upcoming events — nothing to send.'); return; }
     console.log(`[digest] next event: ${event.name} (${event.event_date})`);
