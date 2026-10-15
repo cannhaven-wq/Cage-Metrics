@@ -18,12 +18,14 @@ email stays **locked** until double opt-in exists (T-090).
 identical, and the migration proved that before it committed.
 **T-093: the duplicates are fixed (D-029).** Three double-booked bouts are flagged
 inactive, nothing is deleted, and six records are corrected.
-**Still open:** fight 7349 needs T-091's database functions, which you approved.
-The Supabase tool will not run SQL containing DELETE, so you apply them in the
-SQL editor.
+**Fight 7349 is restored** (2026-10-15 rescan; round 1 equals its totals), and no
+completed fight has totals without rounds. **Still open:** T-091's database
+functions, which you approved. The Supabase tool will not run SQL containing
+DELETE, so you apply them in the SQL editor; then scraper PR #3 adds retries and
+fails a run whose round write fails.
 Full rescans can no longer start on a merge: Railway watch pattern
 `FULL_RESCAN_APPROVED` (2026-10-15).
-- 1 is a scraper loss (7349). T-091 restores it.
+- 1 was a scraper loss (7349), restored by the 2026-10-15 rescan.
 - **3 are the same bout booked twice.** They add a bout to six fighters' public
   UFC records, and retiring them is the owner's call.
 - 21 from 1994–98 look like fights UFCStats never published stats for.
@@ -49,8 +51,8 @@ event, T-086). **T-084 and T-085 are live (2026-10-13):** every public UFC recor
 is counted from `fights` through `v_fighter_ufc_record`, and the movement chart
 loads in about 0.2 s instead of 2. **T-086 is live (2026-10-15):** DWCS 10.3 is
 out of the UFC tables and Galanti reads as a debut. **T-091 (scraper round
-writes in one transaction) is built and waits on the owner to apply** — fight
-7349 lost its rounds in a full rescan; it is the only such fight. **Security, 2026-10-13 ([D-025](DECISIONS.md)):** browsers
+writes in one transaction) is built and waits on the owner to apply**; fight
+7349, the one fight it lost, was restored by the 2026-10-15 rescan. **Security, 2026-10-13 ([D-025](DECISIONS.md)):** browsers
 could write the sportsbook list through a definer view; closed on production
 the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.

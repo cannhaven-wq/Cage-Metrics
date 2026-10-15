@@ -375,7 +375,8 @@ CHECKS: tuple[Check, ...] = (
             "behind, and every per-round number for that fight reads as empty. "
             "Early UFC fights with no stats at all are not counted.",
         classification=REVIEW,
-        baseline=1,   # measured 2026-10-15: fight 7349, lost in the 2026-10-14 rescan
+        baseline=0,   # 2026-10-15 20:30 UTC. Was 1 (fight 7349, lost in the 2026-10-14
+                      # rescan) until the 2026-10-15 rescan restored it.
         unit="fights",
     ),
     # ------------------------------------------------------------ promotion

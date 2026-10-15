@@ -11,6 +11,34 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (d) — Fight 7349 restored; T-091 still waits on the SQL editor
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+**Fight 7349 is restored.** The full rescan that PR #2's merge started reached it
+at about 20:10 UTC and wrote its round back. Round 1 equals the fight totals:
+sig. strikes 6–19, KD 0–1, TD 0–0, control 0–140 s. The integrity check
+`fight_totals_without_rounds` reads 0, and its baseline is now 0.
+
+**The rescan shows why T-091 still matters.** It logged two more
+dropped-connection round writes, fights 3011 and 6252. Neither lost anything,
+and both still sum to their totals, because PR #2 writes before it prunes. But
+neither was retried, and the run will still finish looking green. Scraper PR #3
+retries those and fails the run.
+
+## Next action
+
+Unchanged from (c), except that 7349 no longer needs repairing:
+1. Owner: run `fight_rounds_replace_rpc.sql` from PR #73 in the SQL editor.
+2. Claude: verify the functions and their grants, then merge scraper PR #3 and
+   then PR #4.
+3. After that, stop on the scraper unless new evidence turns up. The next work
+   is the UFC card experience and matchup analytics.
+
+---
+
 ## 2026-10-15 (c) — T-092 and T-093 live; T-091 approved but blocked by the tooling
 
 **From:** Claude
