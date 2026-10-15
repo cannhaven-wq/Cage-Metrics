@@ -101,7 +101,7 @@ jobs:
           compare "/e/dwcs-10-3-4259.html" e/dwcs-10-3-4259.html "DWCS 10.3 stub (T-086)"
           echo "::group::cache-bust query strings the served homepage asks for"
           grep -oE 'src="[^"]+\?v=[^"]+"' /tmp/fresh.bin || true
-          for q in "/fight-insights.js?v=9" "/market.js?v=2" "/_shared.js?v=rl6"; do
+          for q in "/fight-insights.js?v=9" "/market.js?v=3" "/_shared.js?v=rl6"; do
             curl -sS -o /dev/null -w "  $q -> HTTP %{http_code}, %{size_download} bytes\n" "$BASE_URL$q"
           done
           echo "::endgroup::"
