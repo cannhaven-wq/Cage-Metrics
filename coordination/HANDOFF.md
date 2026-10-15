@@ -11,6 +11,32 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (i) — T-097 deployed and verified live
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- PR #82 merged (`193e421`, owner-approved) and served by cannonfightlab.com:
+  `index.html`, `fight.html`, `fight-overview.js`, `fight-workspace.js`,
+  `fight-lab.js`, `market.js`, `_shared.js` byte-match `main`.
+- Verified on the live site against production rows, desktop and 390 px
+  phone: all 13 active bouts on UFC Fight Night: Buckley vs. Malott, full cards
+  and compact list, search, three sorts, reverse order, remembered view, row
+  links, both corners' best price, book and market %; Fight Lab overview for
+  Buckley–Malott, Cerminara–Stiller (debut), Anheliger–Koslow (11.6 pt move)
+  and Jourdain–Cuamba (no market). No overflow, no console errors, phone menu
+  works.
+- Two display fixes after verification: the compact list printed any move
+  under 0.5 pts as "0.0 steady" (Cerminara–Stiller is 0.4); a fighter with one
+  UFC fight was headed "Last 1 UFC fights".
+- Seen, not touched (out of scope): every price on the card was captured
+  ~25 hours before the check, so the page labels it stale.
+
+## Next action
+
+1. **Owner:** decide the T-096 running-order migration; until it is applied
+   the card order is announcement order, labelled as such.
 ## 2026-10-15 (h) — Customer research platform: matchup overview and compact card (T-097)
 
 **From:** Claude

@@ -5,11 +5,14 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
-**Customer research platform, 2026-10-15 (T-097): in review, not merged.**
+**Customer research platform, 2026-10-15 (T-097): live on cannonfightlab.com.**
 Fight Lab opens with a one-screen matchup overview (profile, records, measured
-tendencies, last five, striking, grappling, late rounds, best prices) above the
-existing analytics; Card Lab gains a compact whole-card list. No database
-change, no model, no subscription change.
+tendencies kept apart from recorded finishing results, last five, striking,
+grappling, late rounds, best prices) above the existing analytics; Card Lab
+gains a compact whole-card list. Merged in PR #82 (`193e421`), owner-approved;
+verified against the live site and production rows (196 checks, desktop and
+390 px phone). No database change, no model, no subscription change. Running
+order is still announcement order — the T-096 migration is not applied.
 
 **Event card sprint, 2026-10-15 (T-096): code in review, three owner decisions open.**
 Card Lab and the event page gain search within the card and a reader for the

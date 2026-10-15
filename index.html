@@ -1191,7 +1191,7 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   let mvTxt = '<span class="mv flat"><b>—</b></span>';
   if (moveRead && moveRead.moveSinceBaseline != null) {
     const mv = moveRead.moveSinceBaseline;
-    mvTxt = Math.abs(mv) < 0.5 ? '<span class="mv flat"><b>0.0</b> steady</span>'
+    mvTxt = Math.abs(mv) < 0.5 ? '<span class="mv flat"><b>' + Math.abs(mv).toFixed(1) + '</b> steady</span>'
       : '<span class="mv"><b>' + Math.abs(mv).toFixed(1) + '</b> → ' + cfl.escapeHtml(lastName((mv > 0 ? a : b).name)) + '</span>';
   }
   const listRow = '<a class="clist-row" href="fight.html?id=' + fight.id + '">' +
