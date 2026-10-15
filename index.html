@@ -568,7 +568,7 @@
      about showing a price (book count, age, movement measured only across the
      books quoting at both ends, and never an "opening line") live in one file
      and cannot drift between surfaces. -->
-<script src="market.js?v=2"></script>
+<script src="market.js?v=3"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
@@ -713,6 +713,7 @@ setTimeout(() => {
 const HP_VISIBLE_MODELS = [];   // retained: nothing model-shaped reaches the UI
 let _cardioMap  = null;
 let _marketMap  = null;   // fight_id -> v_fight_market_movement row
+let _marketLoadFailed = false; // the read failed, as opposed to "no prices yet"
 let _cardState  = null;   // { fights, fighterMap, eventId, event }
 let _hpSortKey  = 'order';
 let _fightDay   = false;  // set by renderCardHead; decides the "stale" bar for a quote's age
@@ -855,6 +856,7 @@ async function loadFights(event) {
     MKT() ? MKT().loadCardMovement(event.id) : Promise.resolve({}),
   ]);
   _marketMap = market || {};
+  _marketLoadFailed = !!(market && market.loadFailed);
 
   _cardState = { fights, fighterMap, eventId: event.id, event };
 
@@ -1234,6 +1236,11 @@ function renderOddsStatus() {
   if (!rows) { el.textContent = ''; return; }
   const priced = rows.filter(r => r.read);
   el.classList.remove('stale');
+  if (!priced.length && _marketLoadFailed) {
+    el.textContent = 'Prices didn\'t load. This is on our side, not the market\'s. Refresh in a moment.';
+    el.classList.add('stale');
+    return;
+  }
   if (!priced.length) { el.textContent = 'No sportsbook prices captured for this card yet.'; return; }
   let latest = null, booksMin = null, booksMax = null;
   priced.forEach(r => {
