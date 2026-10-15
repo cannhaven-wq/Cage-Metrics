@@ -40,6 +40,9 @@ async function main() {
     if (active.length) { ev = e; break; }
   }
   if (!ev) throw new Error('no upcoming card with active fights');
+  const fx = await rest('fighters?select=id,name&id=in.(' + active.flatMap(f => [f.fighter_a_id, f.fighter_b_id]).join(',') + ')');
+  const NM = {}; fx.forEach(x => { NM[x.id] = x.name; });
+  active.forEach(f => { f.nameA = NM[f.fighter_a_id] || f.fighter_a_name; f.nameB = NM[f.fighter_b_id] || f.fighter_b_name; });
   const mv = await rest('v_fight_market_movement?select=fight_id,market_p_a,market_p_b,book_count,best_american_a,best_book_a,best_american_b,best_book_b,movement_pts_a&fight_id=in.(' + active.map(f => f.id).join(',') + ')');
   const M = {}; mv.forEach(m => { M[m.fight_id] = m; });
   console.log('Card: ' + ev.name + ' (' + ev.event_date + '), ' + active.length + ' active fights');
@@ -66,7 +69,7 @@ async function main() {
     for (const c of cards) {
       const f = active.find(x => String(x.id) === c.id), m = M[f.id];
       const [sa, sb] = c.px;
-      if (sa.nm !== f.fighter_a_name || sb.nm !== f.fighter_b_name) { priceOk = false; priceLog.push(c.id + ' names ' + sa.nm + '/' + sb.nm); }
+      if (sa.nm !== f.nameA || sb.nm !== f.nameB) { priceOk = false; priceLog.push(c.id + ' names ' + sa.nm + '/' + sb.nm); }
       if (m && m.best_american_a != null) {
         const ea = fmtAm(m.best_american_a), eb = fmtAm(m.best_american_b);
         const pa = Math.round(m.market_p_a * 100) + '% market', pb = Math.round(m.market_p_b * 100) + '% market';
@@ -82,7 +85,7 @@ async function main() {
     // compact list
     await page.click('#viewSeg [data-view="list"]');
     await page.waitForSelector('#fightsList .clist-row', { timeout: 10000 });
-    const rows = () => page.$$eval('#fightsList .clist-row', els => els.filter(e => e.offsetParent !== null).map(e => ({ href: e.getAttribute('href'), nms: e.querySelector('.nms').textContent, od: [...e.querySelectorAll('.od')].map(o => o.textContent.trim()), wc: e.querySelector('.wc').textContent })));
+    const rows = () => page.$$eval('#fightsList a.clist-row', els => els.filter(e => e.offsetParent !== null).map(e => ({ href: e.getAttribute('href'), nms: e.querySelector('.nms').textContent, od: [...e.querySelectorAll('.od')].map(o => o.textContent.trim()), wc: e.querySelector('.wc').textContent })));
     let r = await rows();
     check(vp.name + ': compact list shows every active fight', JSON.stringify(r.map(x => x.href.replace(/\D+/g, '')).sort()) === JSON.stringify(want), r.length + ' rows');
     let odOk = true, odLog = [];
@@ -123,7 +126,7 @@ async function main() {
     await page.fill('#cardSearch', 'bantam'); await page.waitForTimeout(600);
     r = await rows();
     check(vp.name + ': search "bantam" shows the bantamweight bouts only', r.length === bantam && r.every(x => /bantam/i.test(x.wc)), r.length + ' of ' + bantam);
-    const lastA = main.fighter_b_name.split(' ').pop();
+    const lastA = main.nameB.split(' ').pop();
     await page.fill('#cardSearch', lastA); await page.waitForTimeout(600);
     r = await rows();
     check(vp.name + ': search by fighter name finds the bout', r.length >= 1 && r.some(x => x.href.endsWith('=' + main.id)), lastA + ' → ' + r.length);
@@ -143,7 +146,7 @@ async function main() {
     check(vp.name + ': clicking the main-event row opens its Fight Lab', page.url().includes('id=' + main.id), page.url());
     await page.waitForSelector('#flOverview .ov-corner', { timeout: 45000 }).catch(() => {});
     const t = await page.textContent('#flOverview').catch(() => '');
-    check(vp.name + ': that Fight Lab page is the right matchup', t.includes(main.fighter_a_name) && t.includes(main.fighter_b_name));
+    check(vp.name + ': that Fight Lab page is the right matchup', t.includes(main.nameA) && t.includes(main.nameB));
     // full-card link also works
     await page.goto(BASE + '/?verify=' + Date.now(), { waitUntil: 'load' });
     await page.waitForSelector('#fightsList .clist-row', { timeout: 45000 });
@@ -196,7 +199,7 @@ async function main() {
       o.cols.forEach((c, i) => { console.log('  col ' + i + ' headings: ' + c.heads.join(' / ') + ' | style pills: ' + c.pills.join(',')); c.l5.forEach(r => console.log('     ' + r)); });
       console.log('  groups: ' + o.groups.join(', '));
       o.tapeRows.forEach(r => console.log('     ' + r));
-      check(L + 'corners are the right fighters', o.corners.length === 2 && o.corners[0].nm === f.fighter_a_name && o.corners[1].nm === f.fighter_b_name, o.corners.map(c => c.nm).join(' / '));
+      check(L + 'corners are the right fighters', o.corners.length === 2 && o.corners[0].nm === f.nameA && o.corners[1].nm === f.nameB, o.corners.map(c => c.nm).join(' / '));
       check(L + 'physical attributes shown', o.corners.every(c => ['Age', 'Height', 'Reach', 'Stance'].every(k => c.facts.some(x => x.startsWith(k + '=')))));
       check(L + 'pro and UFC records shown', o.corners.every(c => /Pro record/.test(c.recs) && /UFC/.test(c.recs)));
       if (m && m.best_american_a != null) {
@@ -204,7 +207,7 @@ async function main() {
         check(L + 'consensus %, best price and book match the stored market', o.corners.every((c, i) => c.pr === exp[i][0] && c.bp === exp[i][1] && c.px.includes(exp[i][2])), o.corners.map(c => c.pr + ' ' + c.bp).join(' / ') + ' want ' + exp.map(e => e.join(' ')).join(' / '));
         const mvAbs = m.movement_pts_a != null ? Math.abs(+m.movement_pts_a) : null;
         if (mvAbs != null && mvAbs >= 0.5) {
-          const toward = (+m.movement_pts_a > 0 ? f.fighter_a_name : f.fighter_b_name).split(' ').pop();
+          const toward = (+m.movement_pts_a > 0 ? f.nameA : f.nameB).split(' ').pop();
           check(L + 'line movement matches stored movement', o.split && o.split.includes('moved ' + mvAbs.toFixed(1) + ' pts toward ' + toward), (o.split || '').replace(/\s+/g, ' '));
         }
         check(L + 'split shows book count', o.split && o.split.includes(m.book_count + ' books'));
