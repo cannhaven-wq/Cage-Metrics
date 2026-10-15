@@ -11,6 +11,38 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (d) — Fight Lab research workspace (T-094, customer experience sprint 1)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **What a visitor can now do on `fight.html`:** explore the matchup by
+  category with bars instead of a table; see career and last-5 figures side by
+  side, each with its sample; open any metric for what it measures, whether
+  the Factor Lab has tested it against winning, and the fight-by-fight rows
+  behind it; and build a research sheet of the things *they* think matter,
+  then copy, download or print it.
+- **What it does not do:** rank fighters, add rows up, name a side, or show a
+  CFL number. `tests/fight-workspace.test.js` checks the summary carries no
+  tally and the copy carries no pick language.
+- **Data:** `fight_rounds` (already public) for the last-5 rates;
+  `factor-rates.json` for evidence. `fight_rounds_public_read.sql` records the
+  existing grant so T-088's read check passes; **production already holds it,
+  nothing to apply.**
+- **Verified locally** against real rows for fight 46774 (Buckley vs Malott)
+  at 1280 px and 390 px: no horizontal scroll, sheet survives a reload. The
+  container cannot reach Supabase or the live site, so the post-merge check is
+  `verify-live`.
+
+## Next action
+
+1. **Owner:** review and merge the T-094 pull request.
+2. **Claude:** after merge, run `verify-live` and open a 2026-10-17 bout on the
+   live site at phone and desktop width; then mark T-094 done.
+
+---
+
 ## 2026-10-15 (c) — T-092 and T-093 live; T-091 approved but blocked by the tooling
 
 **From:** Claude

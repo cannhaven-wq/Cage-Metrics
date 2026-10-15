@@ -133,6 +133,12 @@ async function shoot(browser, id, { name, viewport, mobile }) {
       noPickOrEdge: !/Model pick|value bet|betting edge|best bet|CFL higher|market higher|our model/i.test(body),
       noOpeningLineClaim: !/opening line|since open\b/i.test(body),
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
+      // T-094: the research workspace.
+      workspaceScriptsLoaded: !!window.cflWorkspace && !!window.cflWorkspaceUI,
+      explorerRendered: document.querySelectorAll('#flExplore .ws-tabs [role="tab"]').length === 6 &&
+        document.querySelectorAll('#flExplore .ws-m').length > 0,
+      explorerShowsSample: /UFCStats career|Last 5/.test(txt(document.getElementById('flExplore')) || ''),
+      sheetRendered: !!document.querySelector('#flSheet .sh'),
     };
     return {
       title: document.title,

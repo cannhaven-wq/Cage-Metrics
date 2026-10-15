@@ -187,6 +187,123 @@
 #fl .cta-row a { display: inline-flex; align-items: center; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 16px; font: 600 13px var(--font-display); color: var(--text); }
 #fl .cta-row a:hover { background: var(--bg-3); }
 
+
+/* =====================================================================
+   Research workspace — the matchup explorer and the visitor's sheet.
+   Corner colours mark whose bar is whose and nothing else: neither is
+   the "good" colour, and no bar is ever highlighted as ahead.
+   ===================================================================== */
+#fl { --ws-a: #ff6b5e; --ws-b: #5aa9f0; }
+#fl .ws { margin-top: 14px; }
+#fl .ws-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+#fl .ws-tabs::-webkit-scrollbar { display: none; }
+#fl .ws-tabs button { flex: 0 0 auto; font: 700 13px var(--font-display); letter-spacing: .02em; color: var(--text-2); background: var(--bg-2);
+  border: 1px solid var(--line-2); border-radius: 999px; padding: 8px 15px; cursor: pointer; }
+#fl .ws-tabs button:hover { color: #fff; background: var(--bg-3); }
+#fl .ws-tabs button[aria-selected="true"] { color: #fff; background: var(--bg-4); border-color: var(--text-3); box-shadow: inset 0 -2px 0 var(--red); }
+#fl .ws-tabs button:focus-visible, #fl .ws button:focus-visible, #fl .sh button:focus-visible { outline: 2px solid var(--probe); outline-offset: 2px; }
+#fl .ws-legend { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; font-size: 12.5px; color: var(--text-2); margin-top: 12px; }
+#fl .sw { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 2px; vertical-align: -1px; }
+#fl .sw.a { background: var(--ws-a); } #fl .sw.b { background: var(--ws-b); }
+#fl .ws-legend-note { color: var(--text-3); font-size: 11.5px; }
+#fl .ws-tabnote { font-size: 12px; color: var(--text-3); margin-top: 6px; line-height: 1.5; max-width: 760px; }
+#fl .ws-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+#fl .ws-m { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+#fl .ws-mh { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+#fl .ws-mh h4 { font: 700 15px var(--font-display); color: #fff; line-height: 1.25; margin: 0; }
+#fl .ws-tag { flex-shrink: 0; font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; border-radius: 999px; padding: 3px 8px;
+  border: 1px solid var(--line-2); color: var(--text-3); white-space: nowrap; }
+#fl .ws-tag.v-real { color: var(--green); border-color: rgba(63,208,122,.35); }
+#fl .ws-tag.v-proxy, #fl .ws-tag.v-unproven, #fl .ws-tag.v-insufficient { color: var(--text-2); }
+#fl .ws-tag.v-lean { color: #d29922; border-color: rgba(210,153,34,.35); }
+#fl .ws-tag.v-inverted { color: var(--amber); border-color: rgba(255,181,71,.35); }
+#fl .ws-tag.mkt { color: var(--probe); border-color: rgba(47,220,203,.3); }
+#fl .ws-line { display: flex; flex-direction: column; gap: 3px; }
+#fl .ws-scope { font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; text-align: center; }
+#fl .ws-bfly { display: grid; grid-template-columns: minmax(64px, auto) 1fr 2px 1fr minmax(64px, auto); align-items: center; gap: 8px; }
+#fl .ws-v { font: 700 16px var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+#fl .ws-bfly .ws-v:first-child { text-align: right; }
+#fl .ws-v.na { font: 600 12px var(--font-body); color: var(--text-3); }
+#fl .ws-bar { position: relative; height: 10px; background: var(--bg-3); border-radius: 5px; overflow: hidden; }
+#fl .ws-bar i { position: absolute; top: 0; bottom: 0; border-radius: 5px; }
+#fl .ws-bar.a i { right: 0; background: var(--ws-a); }
+#fl .ws-bar.b i { left: 0; background: var(--ws-b); }
+#fl .ws-axis { width: 2px; height: 18px; background: var(--line-2); }
+#fl .ws-gap { font-size: 12px; color: var(--text-2); line-height: 1.45; }
+#fl .ws-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 2px; }
+#fl .ws-more, #fl .ws-pin { font: 600 12px var(--font-body); border-radius: 8px; padding: 6px 10px; cursor: pointer; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text-2); }
+#fl .ws-more:hover, #fl .ws-pin:hover { color: #fff; background: var(--bg-3); }
+#fl .ws-pin.on { color: var(--probe); border-color: rgba(47,220,203,.4); background: rgba(47,220,203,.07); }
+#fl .ws-ctx { border-top: 1px solid var(--line); padding-top: 10px; font-size: 12.5px; color: var(--text-2); line-height: 1.55; display: flex; flex-direction: column; gap: 8px; }
+#fl .ws-ctx[hidden] { display: none; }
+#fl .ws-ctx p { margin: 0; }
+#fl .ws-ctx b { color: #fff; }
+#fl .ws-ev { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 9px 11px; }
+#fl .ws-ev a, #fl .ws-fine a { color: var(--red); }
+#fl .ws-fine { font-size: 11.5px; color: var(--text-3); line-height: 1.5; }
+#fl .ws-k { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
+#fl .ws-hgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+#fl .ws-hcol { min-width: 0; }
+#fl .ws-hhd { font: 700 12.5px var(--font-display); color: #fff; margin-bottom: 3px; }
+#fl .ws-hnone { font-size: 12px; color: var(--text-3); }
+#fl .ws-htab { width: 100%; border-collapse: collapse; font-size: 11.5px; font-variant-numeric: tabular-nums; }
+#fl .ws-htab th { text-align: left; font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 3px 4px; border-bottom: 1px solid var(--line-2); }
+#fl .ws-htab td { padding: 4px; border-bottom: 1px solid var(--line); color: var(--text-2); vertical-align: top; }
+#fl .ws-htab .n { text-align: right; white-space: nowrap; }
+#fl .ws-htab tr.skip td { color: var(--text-3); font-style: italic; }
+#fl .ws-form2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+#fl .ws-dl { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 14px; margin: 0; font-size: 13px; align-items: baseline; }
+#fl .ws-dl dt { color: var(--text-3); font-size: 12px; }
+#fl .ws-dl dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; text-align: right; }
+#fl .ws-dl dd:nth-of-type(odd) { color: var(--ws-a); } #fl .ws-dl dd:nth-of-type(even) { color: var(--ws-b); }
+#fl .ws-split { display: flex; height: 34px; border-radius: 8px; overflow: hidden; background: var(--bg-3); }
+#fl .ws-split i { display: flex; align-items: center; font: 800 15px var(--font-display); color: #0b0e12; font-style: normal; min-width: 0; }
+#fl .ws-split i.a { background: var(--ws-a); justify-content: flex-start; padding-left: 10px; }
+#fl .ws-split i.b { background: var(--ws-b); justify-content: flex-end; padding-right: 10px; }
+#fl .notes li .note-t { flex: 1; }
+#fl .notes li .ws-pin { flex-shrink: 0; align-self: center; }
+
+/* The sheet */
+#fl .sh { margin-top: 14px; display: flex; flex-direction: column; gap: 12px; max-width: 860px; }
+#fl .sh-empty { background: var(--bg-1); border: 1px dashed var(--line-2); border-radius: 12px; padding: 18px; font-size: 13.5px; color: var(--text-2); line-height: 1.55; }
+#fl .sh-empty b { color: #fff; }
+#fl .sh-k { font-weight: 600; color: var(--probe); white-space: nowrap; }
+#fl .sh-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+#fl .sh-item { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; }
+#fl .sh-top { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; flex-wrap: wrap; }
+#fl .sh-lbl { font: 700 14.5px var(--font-display); color: #fff; line-height: 1.3; }
+#fl .sh-ctl { display: flex; gap: 4px; align-items: center; }
+#fl .sh-imp, #fl .sh textarea, #fl .sh input[type=text] { background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; color: var(--text); font: 500 13px var(--font-body); }
+#fl .sh-imp { padding: 5px 8px; }
+#fl .sh-ic { width: 30px; height: 30px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--bg-2); color: var(--text-2); cursor: pointer; font-size: 13px; }
+#fl .sh-ic:hover:not(:disabled) { color: #fff; background: var(--bg-3); }
+#fl .sh-ic:disabled { opacity: .35; cursor: default; }
+#fl .sh-vals { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 13px; color: var(--text-2); }
+#fl .sh-vals b { color: #fff; font-weight: 600; }
+#fl .sh-text { font-size: 13.5px; color: var(--text); line-height: 1.5; }
+#fl .sh-src { font-size: 11.5px; color: var(--text-3); line-height: 1.45; }
+#fl .sh textarea, #fl .sh input[type=text] { width: 100%; padding: 8px 10px; resize: vertical; box-sizing: border-box; }
+#fl .sh-add label { display: block; font-size: 10px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 5px; }
+#fl .sh-addrow { display: flex; gap: 8px; }
+#fl .sh-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+#fl .sh-status { font-size: 12.5px; color: var(--probe); }
+#fl .sh-prev summary { cursor: pointer; font-size: 12.5px; color: var(--text-2); }
+#fl .sh-prev pre, #fl .sh-print { white-space: pre-wrap; font: 500 12px/1.55 var(--font-mono); color: var(--text-2); background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 8px; }
+#fl .sh-print { display: none; }
+
+.ws-fab { position: fixed; right: 16px; bottom: 16px; z-index: 40; display: inline-flex; gap: 8px; align-items: center; font: 700 13px var(--font-display);
+  color: #fff; background: var(--bg-4); border: 1px solid var(--line-2); border-radius: 999px; padding: 10px 16px; box-shadow: var(--shadow); }
+.ws-fab b { background: var(--red); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 6px; }
+.ws-fab[hidden], body.ws-sheet-visible .ws-fab { display: none; }
+
+@media print {
+  body.ws-printing > *:not(#fl), body.ws-printing #fl > *:not(#secSheet), body.ws-printing .ws-fab { display: none !important; }
+  body.ws-printing #secSheet .sh > *:not(.sh-print) { display: none !important; }
+  body.ws-printing #secSheet .sh-print { display: block !important; color: #000; background: #fff; border: none; }
+  body.ws-printing, body.ws-printing #fl, body.ws-printing h2 { background: #fff !important; color: #000 !important; }
+  body.ws-printing .sec-sub { color: #333 !important; }
+}
+
 @media (max-width: 760px) {
   #fl .corners { grid-template-columns: 1fr; }
   #fl .vsmid { padding: 2px 0; }
@@ -207,6 +324,16 @@
   #fl .tape-row .r .val.lead::after { display: none; }
   #fl .tape-row .r .val.lead::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); margin: 0 6px 3px 0; vertical-align: middle; }
   #fl .tablewrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #fl .ws-panel, #fl .ws-hgrid { grid-template-columns: 1fr; }
+  #fl .ws-bfly { grid-template-columns: minmax(52px, auto) 1fr 2px 1fr minmax(52px, auto); gap: 6px; }
+  #fl .ws-v { font-size: 14.5px; }
+  #fl .notes li { flex-wrap: wrap; }
+  .ws-fab { right: 12px; bottom: 12px; padding: 9px 14px; font-size: 12.5px; }
+  #fl .ws-dl { grid-template-columns: 1fr 1fr; }
+  #fl .ws-dl dt { grid-column: 1 / -1; margin-top: 4px; }
+  #fl .ws-dl dd { text-align: left; }
+  #fl .ws-mh { flex-wrap: wrap; }
+  #fl { padding-bottom: 72px; }
 }
 </style>
 </head>
@@ -223,7 +350,7 @@
     <div class="fl-sub" id="flSub"></div>
     <div id="flStar" style="margin-top:10px"></div>
     <nav class="jump" aria-label="On this page">
-      <a href="#secWho">The fighters</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a>
+      <a href="#secWho">The fighters</a><a href="#secExplore">Explore the matchup</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a><a href="#secSheet" id="jumpSheet">My sheet</a>
     </nav>
   </header>
 
@@ -238,6 +365,12 @@
   <section class="sec" id="secCompare">
     <h2>How do they compare?</h2>
     <div class="sec-sub">Side by side, from UFCStats. Nothing here is a pick — CFL does not publish one on this fight.</div>
+
+    <section class="sub" id="secExplore">
+      <h3>Matchup explorer</h3>
+      <div class="sub-sub">Pick a category. Every bar shows its source and sample; open "What this means" for what a number measures, whether it has been tested against winning, and the fight-by-fight history behind it. Add anything that matters to you to your research sheet.</div>
+      <div id="flExplore"><div class="empty">Loading the explorer…</div></div>
+    </section>
 
     <section class="sub" id="secStats">
       <h3>Tale of the tape</h3>
@@ -281,6 +414,12 @@
     <div id="flBooks"></div>
   </section>
 
+  <section class="sec" id="secSheet">
+    <h2>My research sheet</h2>
+    <div class="sec-sub">The statistics and observations you chose, in the order and with the importance you gave them. Copy it, download it or print it. CFL adds nothing of its own — no ranking, no score, no pick.</div>
+    <div id="flSheet"><div class="empty">Loading your sheet…</div></div>
+  </section>
+
   <section class="sec" id="secAlerts">
     <h2>Alert me when&hellip;</h2>
     <div class="sec-sub">
@@ -294,6 +433,8 @@
   <div class="cta-row" id="flCtas"></div>
 </main>
 
+<a class="ws-fab" id="wsFab" href="#secSheet" hidden></a>
+
 <div class="cfl-email-capture" data-source="fight-lab"></div>
 
 <footer class="cfl-footer"></footer>
@@ -305,6 +446,8 @@
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=1"></script>
+<script src="fight-workspace.js?v=1"></script>
+<script src="fight-workspace-ui.js?v=1"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -477,8 +620,8 @@ async function load() {
   const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name || 'Corner B' };
 
   const ids = [a.id, b.id].filter(x => x != null);
-  const [consRows, styleRows, form, baseRates] = await Promise.all([
-    loadConsistency(ids), loadStyles(ids), loadForm(ids), loadBaseRates()]);
+  const [consRows, styleRows, form, baseRates, factorRates] = await Promise.all([
+    loadConsistency(ids), loadStyles(ids), loadForm(ids), loadBaseRates(), loadFactorRates()]);
   const cardioMap = cardioMapFrom(consRows);
   const FL = window.cflFightLab;
   const today = localToday();
@@ -508,6 +651,9 @@ async function load() {
   renderStats(a, b);
   renderLate(a, b, fight, consRows);
   renderForm(a, b, formA, formB, form.ok);
+  // The research workspace. Its round data is one more read, made only after
+  // the fight list says which five fights each corner's "last 5" is.
+  await mountWorkspace({ fight, event, a, b, form, today, opts, formA, formB, consRows, styleRows, mvt, factorRates });
   renderMatchup(a, b, fight, cardioMap, baseRates, mvt);
   renderCtas(fight, event, a, b);
   setMeta(a, b, event, mvt);
@@ -646,7 +792,7 @@ async function renderWatch(fight, a, b) {
 function fail(title, sub) {
   document.getElementById('flTitle').textContent = title;
   document.getElementById('flSub').innerHTML = sub;
-  ['secWho', 'secCompare', 'secMarket', 'secChart', 'secBooks'].forEach(id => {
+  ['secWho', 'secCompare', 'secMarket', 'secChart', 'secBooks', 'secSheet'].forEach(id => {
     const n = document.getElementById(id); if (n) n.hidden = true;
   });
 }
@@ -709,6 +855,60 @@ async function loadForm(ids) {
 function localToday() {
   const d = new Date();
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// Factor Lab's published, reviewed artifact — the only place "does this
+// predict winners" is answered. Missing is fine: every metric then says it
+// could not be checked rather than guessing.
+async function loadFactorRates() {
+  try {
+    const res = await fetch('factor-rates.json');
+    return res.ok ? await res.json() : null;
+  } catch (e) { return null; }
+}
+
+// Round-by-round rows for the given fights. null means "could not look",
+// which the explorer reports as such rather than as "no data".
+async function loadRounds(fightIds) {
+  if (!fightIds.length) return {};
+  try {
+    const { data, error } = await window.cflSupabase.from('fight_rounds')
+      .select('fight_id, round_number, fighter_a_id, fighter_b_id, a_kd, b_kd, a_sig_str_landed, b_sig_str_landed, ' +
+              'a_sig_str_attempted, b_sig_str_attempted, a_td_landed, b_td_landed, a_td_attempted, b_td_attempted, ' +
+              'a_sub_attempts, b_sub_attempts, a_ctrl_seconds, b_ctrl_seconds')
+      .in('fight_id', fightIds);
+    if (error || !data) return null;
+    const out = {};
+    data.forEach(r => { (out[r.fight_id] = out[r.fight_id] || []).push(r); });
+    return out;
+  } catch (e) { return null; }
+}
+
+async function mountWorkspace(x) {
+  const UI = window.cflWorkspaceUI, W = window.cflWorkspace, FL = window.cflFightLab;
+  const ex = document.getElementById('flExplore');
+  if (!UI || !W) { if (ex) ex.innerHTML = '<div class="empty">The explorer could not load. Everything below is unaffected.</div>'; return; }
+  try {
+    const compA = x.form.ok ? FL.completedFights(x.form.fights, x.form.events, x.a.id, x.today, x.opts) : [];
+    const compB = x.form.ok ? FL.completedFights(x.form.fights, x.form.events, x.b.id, x.today, x.opts) : [];
+    const recentIds = compA.slice(0, W.RECENT_N).concat(compB.slice(0, W.RECENT_N)).map(c => c.f.id);
+    const rounds = await loadRounds([...new Set(recentIds)]);
+    const fightDay = x.event ? M.isFightDay(x.event.event_date) : false;
+    UI.mount({
+      fight: x.fight, event: x.event, a: x.a, b: x.b,
+      formOk: x.form.ok, formA: x.formA, formB: x.formB,
+      factsA: x.form.ok ? W.formFacts(compA, x.a.id, x.today) : null,
+      factsB: x.form.ok ? W.formFacts(compB, x.b.id, x.today) : null,
+      recentA: x.form.ok && rounds ? W.recentWindow(compA, rounds, x.a.id) : null,
+      recentB: x.form.ok && rounds ? W.recentWindow(compB, rounds, x.b.id) : null,
+      consRows: x.consRows, styleRows: x.styleRows, factorRates: x.factorRates,
+      rA: x.mvt ? M.readSide(x.mvt, 'a', { isFightDay: fightDay }) : null,
+      rB: x.mvt ? M.readSide(x.mvt, 'b', { isFightDay: fightDay }) : null,
+    });
+  } catch (err) {
+    console.warn('[fight-lab] workspace failed', err);
+    if (ex) ex.innerHTML = '<div class="empty">The explorer could not load. Everything below is unaffected.</div>';
+  }
 }
 
 async function loadBaseRates() {
@@ -869,7 +1069,11 @@ function renderMatchup(a, b, fight, cardioMap, baseRates, mvt) {
   const caveats = I.buildMatchupCaveats(a, b, ctx);
 
   const notesHtml = notes.length
-    ? '<ul class="notes">' + notes.map(n => '<li>' + esc(n.text) + '</li>').join('') + '</ul>'
+    ? '<ul class="notes">' + notes.map((n, i) => '<li><span class="note-t">' + esc(n.text) + '</span>' +
+        (window.cflWorkspaceUI ? window.cflWorkspaceUI.pinButton({
+          id: 'obs-cfl:' + (n.factor || i), cat: 'notes', label: 'Matchup note',
+          text: n.text, source: 'CFL measured difference — an observation, not a forecast' }) : '') +
+        '</li>').join('') + '</ul>'
     : '<div class="empty">Nothing separates these two by a meaningful margin on the statistics we track. ' +
       'On a research surface that is a finding, not a gap — it means the measurable case for either corner is thin.</div>';
 
