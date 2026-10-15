@@ -384,6 +384,7 @@
 #fl .ov-tend { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
 #fl .ov-tend li { font-size: 13px; color: var(--text); line-height: 1.45; padding-left: 14px; position: relative; }
 #fl .ov-tend li::before { content: ''; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); }
+#fl .ov-res li::before { background: var(--text-3); }
 #fl .ov-tend li .b { display: block; font-size: 11px; color: var(--text-3); }
 #fl .ov-muted { font-size: 12.5px; color: var(--text-3); line-height: 1.5; margin-top: 6px; }
 #fl .ov-l5 { margin-top: 6px; }
@@ -1659,6 +1660,12 @@ function renderOverview(x) {
       ? '<ul class="ov-tend">' + t.lines.map(l => '<li>' + esc(l.text) + '<span class="b">' + esc(l.basis) + '</span></li>').join('') + '</ul>' +
         (t.reason ? '<div class="ov-muted">' + esc(t.reason) + '</div>' : '')
       : '<div class="ov-muted">' + esc(t.reason || 'No tendencies to report.') + '</div>';
+    const resHtml = t.results && t.results.length
+      ? '<div class="blk"><div class="who-k">Recorded results · how their UFC fights ended</div>' +
+        '<ul class="ov-tend ov-res">' + t.results.map(l => '<li>' + esc(l.text) + '<span class="b">' + esc(l.basis) + '</span></li>').join('') + '</ul>' +
+        '<div class="ov-muted">A count of what happened, not a statistical tendency' +
+        (t.lines.length ? '' : ' — the sample is too small to call it a pattern') + '.</div></div>'
+      : '';
     const l5 = S.form.length
       ? S.form.map(r => {
           const opp = r.opponentId ? '<a href="' + cfl.fighterUrl(r.opponentId) + '">' + esc(r.opponentName) + '</a>' : esc(r.opponentName);
@@ -1672,7 +1679,7 @@ function renderOverview(x) {
       : '<div class="ov-muted">' + (x.form.ok ? 'No completed UFC fights on record — this may be their UFC debut.' : 'Fight history could not be loaded.') + '</div>';
     return '<div class="ov-col ' + S.key + '"><div class="hd">' + esc(S.f.name) + '</div>' +
       '<div class="blk"><div class="who-k">Fighting style (measured)</div>' + styleHtml + '</div>' +
-      '<div class="blk"><div class="who-k">Tendencies from the fight records</div>' + tendHtml + '</div>' +
+      '<div class="blk"><div class="who-k">Statistical tendencies from the fight records</div>' + tendHtml + '</div>' + resHtml +
       '<div class="blk"><div class="who-k">Last ' + (S.form.length || 5) + ' UFC fights · newest first</div><div class="ov-l5">' + l5 + '</div></div>' +
     '</div>';
   };

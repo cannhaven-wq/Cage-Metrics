@@ -57,7 +57,7 @@ t('no background label in any tendency line, across a range of profiles', () => 
     world([bout({ method: 'KO/TKO', end_round: 1, end_time: '2:00' }), bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' }), bout()]),
     world([bout({ method: 'Submission' }), bout({ method: 'Submission' }), bout({ method: 'Submission' })]),
   ];
-  profiles.forEach(p => O.tendencies(p).lines.forEach(l => ok(!O.hasBackgroundClaim(l.text), 'background claim: ' + l.text)));
+  profiles.forEach(p => { const r = O.tendencies(p); r.lines.concat(r.results).forEach(l => ok(!O.hasBackgroundClaim(l.text), 'background claim: ' + l.text)); });
 });
 
 t('the background detector catches the labels the owner named', () => {
@@ -92,6 +92,17 @@ t('under the fight floor there are no rate tendencies, and the reason says so', 
   ok(/too little/.test(r.reason), 'reason missing: ' + r.reason);
 });
 
+t('recorded finishing results are never presented as a tendency, on any sample', () => {
+  const RESULT_KEYS = ['kowins', 'subwins', 'decwins', 'kolosses', 'sublosses', 'judges'];
+  const quick = () => bout({ method: 'KO/TKO', end_round: 1, end_time: '1:00' });
+  const thin = O.tendencies(world([quick(), quick(), quick()]));
+  ok(thin.results.some(l => l.key === 'kowins'), 'KO result missing from a short-fight sample');
+  ok(!thin.lines.some(l => RESULT_KEYS.includes(l.key)), 'a result was listed as a tendency');
+  ok(/statistical tendencies/.test(thin.reason), 'reason must name statistical tendencies: ' + thin.reason);
+  const full = O.tendencies(world([bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' }), bout(), bout()]));
+  ok(!full.lines.some(l => RESULT_KEYS.includes(l.key)), 'a result was listed as a tendency on a full sample');
+});
+
 t('a profile summary alone never produces rate tendencies', () => {
   const s = O.statLine({ slpm: 6, sapm: 2, td_avg: 4, str_acc: 50 }, null);
   eq(s.source, 'profile');
@@ -105,9 +116,9 @@ t('a debut has no stats source at all', () => {
 
 t('finishing methods need three wins, losses need two', () => {
   const two = O.tendencies(world([bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' })]));
-  ok(!two.lines.some(l => l.key === 'kowins'), 'KO tendency from two wins');
+  ok(!two.results.some(l => l.key === 'kowins'), 'KO result from two wins');
   const three = O.tendencies(world([bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' }), bout({ method: 'KO/TKO' })]));
-  ok(three.lines.some(l => l.key === 'kowins' && /3 of 3 UFC wins/.test(l.text)), 'KO tendency missing from three KO wins');
+  ok(three.results.some(l => l.key === 'kowins' && /3 of 3 UFC wins/.test(l.text)), 'KO result missing from three KO wins');
 });
 
 // ---- how far fights go -------------------------------------------------------

@@ -35,11 +35,17 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
   reach Supabase, so the page ran against those rows through a local stub.
 - **Not done, unchanged:** the official running order still needs the T-096
   migration; until then the order toggle says it is announcement order.
+- **Pre-merge fixes (owner-approved deploy):** recorded finishing results
+  ("3 of 3 UFC wins came by KO/TKO", "went to the judges") are no longer listed
+  as tendencies. `tendencies()` returns them as `results`, shown under
+  "Recorded results · how their UFC fights ended" with "a count of what
+  happened, not a statistical tendency". The nine review screenshots were
+  removed from the site tree (Pages serves the whole repo); they stay in
+  commit `03994a3` and the PR body links them there.
 
 ## Next action
 
-1. **Owner:** review the T-097 PR (screenshots attached) and decide whether to
-   merge. Nothing is deployed until it is merged.
+1. **Owner:** approved merge and deploy of the T-097 PR on 2026-10-15.
 2. **Claude, after merge:** run `verify-live` and confirm the served
    `fight.html` and `fight-overview.js` match `main`.
 

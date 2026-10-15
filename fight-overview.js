@@ -102,20 +102,26 @@
   // ---- tendencies --------------------------------------------------------
   // x: { stats (statLine), mix (fight-workspace strikeMix), methods
   //      (fight-workspace methods), facts (fight-workspace formFacts) }.
-  // Returns { lines: [{ key, text, basis }], reason } — reason set when
-  // there are no lines and why.
+  // Returns { lines, results, reason }. `lines` are statistical tendencies
+  // (rates, needing the sample floor); `results` are recorded outcomes — how
+  // UFC fights actually ended — which are counts, never a tendency, and are
+  // kept apart so a thin sample cannot dress a count up as a pattern. reason
+  // is set when there are no tendency lines and says why.
   function tendencies(x) {
     const s = x.stats || {};
     const lines = [];
+    const results = [];
     const push = (key, text, basis) => lines.push({ key, text, basis });
+    const record = (key, text, basis) => results.push({ key, text, basis });
 
     if (s.source !== 'fights' || (s.fights || 0) < MIN_FIGHTS || (s.minutes || 0) < MIN_MINUTES) {
       const why = s.source === 'fights'
-        ? 'Only ' + plural(s.fights || 0, 'UFC fight') + ' (' + Math.round(s.minutes || 0) + ' minutes) with fight totals on record — too little to describe tendencies.'
-        : 'No UFC fight totals on record — tendencies are not described from a profile summary alone.';
-      // Finishing methods still stand on their own: they are results, not rates.
-      methodLines(x, push);
-      return { lines, reason: why };
+        ? 'Only ' + plural(s.fights || 0, 'UFC fight') + ' (' + Math.round(s.minutes || 0) + ' minutes) with fight totals on record — too little to describe statistical tendencies.'
+        : 'No UFC fight totals on record — statistical tendencies are not described from a profile summary alone.';
+      // Finishing methods are recorded results, not rates: they are listed
+      // separately and never presented as a tendency.
+      methodLines(x, record);
+      return { lines, results, reason: why };
     }
     const basis = 'UFC career, ' + plural(s.fights, 'fight') + ', ' + Math.round(s.minutes) + ' min';
     const mix = x.mix;
@@ -158,16 +164,16 @@
       else if (s.td_def <= 50) push('tdweak', 'Has been taken down on ' + (s.oppTdL || 0) + ' of ' + s.oppTdA + ' attempts against them.', basis);
     }
 
-    methodLines(x, push);
+    methodLines(x, record);
 
     const f = x.facts;
     if (f && f.last5Count >= 4 && f.last5Distance >= 3) {
-      push('judges', f.last5Distance + ' of their last ' + f.last5Count + ' fights went to the judges.', 'Last ' + f.last5Count + ' UFC fights');
+      record('judges', f.last5Distance + ' of their last ' + f.last5Count + ' fights went to the judges.', 'Last ' + f.last5Count + ' UFC fights');
     }
-    return { lines, reason: lines.length ? null : 'Nothing in their UFC numbers stands out past the cut-offs CFL uses here.' };
+    return { lines, results, reason: lines.length ? null : 'Nothing in their UFC numbers stands out past the cut-offs CFL uses here.' };
   }
 
-  // How they win and lose — results, so they need no rate sample.
+  // How they win and lose — recorded results, so they need no rate sample.
   function methodLines(x, push) {
     const m = x.methods;
     if (!m) return;
@@ -191,6 +197,7 @@
     'Tendencies are measured from UFC fight records, not from reputation or where someone trained — CFL does ' +
     'not hold training backgrounds. Each line shows the number behind it and appears only past a fixed cut-off on ' +
     'the fighter’s own numbers, with at least ' + MIN_FIGHTS + ' UFC fights and ' + MIN_MINUTES + ' minutes on record. ' +
+    'Recorded results (how their UFC fights ended) are listed separately: they are a count of what happened, not a tendency. ' +
     'Nothing here is a pick: two fighters are described, not compared into a winner.';
 
   const api = { MIN_FIGHTS, MIN_MINUTES, BACKGROUND_WORDS, statLine, distance, tendencies, hasBackgroundClaim, clock, OVERVIEW_NOTE };
