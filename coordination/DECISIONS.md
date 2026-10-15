@@ -1972,3 +1972,48 @@ itself.
   in the T-088 audit. The fingerprint before and after is identical.
 - The Card Brief sender is locked in code to dry-run by
   `MARKETING_SEND_BLOCKERS` (T-090).
+
+## D-028 — T-086 and T-088 are applied to production; stabilization closes on evidence
+
+| field | value |
+|---|---|
+| date | 2026-10-15 |
+| decided by | Reed Cannon (owner), stabilization brief of 2026-10-15; migrations applied by ChatGPT, state re-verified by Claude |
+| task | T-086, T-088, T-089 |
+| level | L3 |
+| reversible | T-086 by `research/data-integrity/t086_dwcs_non_ufc.rollback.sql` (proves it restored the original bytes); T-088 from the pre-change grants in `research/security/t088_replica_schema.sql` |
+
+**Plain version.** The DWCS card is out of the UFC tables. Browsers can no
+longer write where they should not. Nothing that was supposed to keep working
+stopped. These migrations are done and must not be run again.
+
+**What was applied.** The owner's brief states that ChatGPT applied and verified
+three migrations on 2026-10-15. Production lists them:
+
+| version | name |
+|---|---|
+| `20261015141652` | `t086_dwcs_non_ufc` |
+| `20261015142345` | `t088_least_privilege` |
+| `20261015142358` | `t088_pre_fight_truncate_guard` |
+
+**Re-verified by Claude the same day, read-only:**
+- Event 4259 is in `events_non_ufc` and not in `events`.
+- `fights_non_ufc` holds 5 rows and `fight_rounds_non_ufc` 8.
+- `fights` has no row on event 4259, and Nick Galanti (23040) has no UFC
+  record row.
+- The CHECK `events_ufc_name_only` is on `events`.
+- `pre_fight_snapshots` carries `_block_update`, `_block_delete` and
+  `_block_truncate`.
+- No `public` table grants TRUNCATE, REFERENCES or TRIGGER to `anon` or
+  `authenticated`. Table-level writes remain only on the five member tables,
+  plus column-level inserts on `email_subscribers`, `funnel_events` and
+  `premium_waitlist`.
+- The default privileges for objects `postgres` creates in `public` grant
+  nothing to browser roles.
+
+Of the D-027 probes, 13 attacks are denied and 8 legitimate actions allowed in
+the privilege system. A real Card Brief insert as `anon` succeeded in a
+rolled-back transaction and left no row.
+
+**What is not decided.** Double opt-in (T-090) stays L3 and open. Marketing
+email stays locked in code until it lands.

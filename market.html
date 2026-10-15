@@ -163,7 +163,7 @@
 
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
-<script src="market.js?v=2"></script>
+<script src="market.js?v=3"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('market');
@@ -210,6 +210,7 @@ async function load() {
     M.loadByBook('event_id', event.id),
   ]);
 
+  _movementLoadFailed = !!movement.loadFailed;
   const fights = cfl.orderCard(fightsR.data || [], event.name);
   if (!fights.length) { fail('No fights listed for this card yet.'); return; }
 
@@ -238,6 +239,9 @@ function fail(msg) {
   document.getElementById('secChanged').hidden = true;
 }
 
+// The movement read failed outright, as opposed to "no prices yet" (T-092).
+let _movementLoadFailed = false;
+
 function renderHead(event, rows) {
   document.getElementById('mlEyebrow').textContent =
     _fightDay ? 'Market Lab · fight day' : 'Market Lab · next card';
@@ -251,8 +255,11 @@ function renderHead(event, rows) {
     cfl.formatDate(event.event_date),
     event.location || 'Location TBD',
     `prices on ${priced.length} of ${rows.length} fights`,
-    fresh ? (fresh.stale ? 'last capture ' + fresh.when + ' — stale' : 'last capture ' + fresh.when) : 'no capture yet',
+    !priced.length && _movementLoadFailed
+      ? 'prices didn\'t load — this is on our side, refresh in a moment'
+      : fresh ? (fresh.stale ? 'last capture ' + fresh.when + ' — stale' : 'last capture ' + fresh.when) : 'no capture yet',
   ].join(' · ');
+  if (!priced.length && _movementLoadFailed) meta.classList.add('stale');
   if (fresh && fresh.stale) meta.classList.add('stale');
 }
 

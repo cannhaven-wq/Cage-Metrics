@@ -11,6 +11,121 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 — T-086 and T-088 live, PRs #69 and #71 merged; round gaps traced; market view too slow (T-092)
+
+**From:** Claude
+**To:** Owner / ChatGPT
+**Date:** 2026-10-15
+
+**Production state re-verified, read-only ([D-028](DECISIONS.md)).** The three
+migrations ChatGPT applied this morning are listed by production as
+`20261015141652` (`t086_dwcs_non_ufc`), `20261015142345`
+(`t088_least_privilege`) and `20261015142358`
+(`t088_pre_fight_truncate_guard`). Every result in the brief still holds. **None
+was re-run, and no workflow applies SQL.**
+
+**PR #69 (T-086 website) merged as `000fcd2`.**
+- The only conflict was `sitemap.xml`. The resolution kept DWCS 10.3 out.
+- 739 Python tests and every Node test pass, and CI was green.
+
+**PR #71 merged as `87feffd`.**
+- Both branches had written a **D-026**. Main's (T-086) kept the number.
+  PR #71's T-088 decision became **D-027**, with every citation updated.
+- 745 Python tests pass, and CI was green.
+- Production grants match the intended end state: 13 attacks denied, 8
+  legitimate actions allowed.
+- A real Card Brief insert as `anon` succeeded in a rolled-back transaction and
+  left no row.
+- Marketing email stays locked: `MARKETING_SEND_BLOCKERS` forces dry-run.
+
+**Live verification.** Agent sessions cannot reach `cannonfightlab.com`, so
+`verify-live.yml` gained a **Stabilization checks** job. It checks:
+- that the DWCS page says "Not a UFC event";
+- that the old stub is noindex and the sitemap leaves it out;
+- that each product page loads with its nav and no script error;
+- optionally, a real Card Brief submission from an `@example.invalid` address,
+  made twice so the repeat-address path is tested as well.
+
+Run 38753407231 passed every one of those checks, including both Card Brief
+submissions.
+- **Not yet removed:** the test row it wrote, `email_subscribers.id = 26`
+  (`cfl-live-verify-2026-10-15@example.invalid`). The Supabase tool held the
+  DELETE for a confirmation that never arrived. The address cannot receive
+  mail, and marketing sends are locked.
+
+**T-092, found by the same run.** Fight Lab's own check failed:
+`v_fight_market_movement` returned HTTP 500, from statement timeouts, while
+three browsers loaded the site at once.
+- The view takes 5.6 s for one card against an 8 s limit, because it
+  recomputes the whole odds history on every request.
+- Today's migrations did not cause it: all 48 reads in the previous 24 h
+  succeeded, including after them.
+- **Mitigated in this PR.** `market.js` retries once. If that also fails, Card
+  Lab, Fight Lab and Market Lab say "prices didn't load" instead of
+  wrongly saying "no price captured".
+- **The real fix is a view rewrite, which is L3.** See T-092.
+
+**T-093, missing round records: an audit of 25 fights, which feeds T-091.**
+This reconciles with the parallel session's T-091 (RPC round writes, event-scraper
+PR #3, not merged).
+- **1 scraper loss:** 7349, the 2026-10-14 rescan failure. T-091 restores it.
+- **3 duplicate bookings, not missing data.** 43, 46 and 8780 are the same
+  bouts as 27872, 27877 and 27879 on the same card. **They inflate six public
+  UFC records**: Vera reads 2-0 and Zhu 0-2 from one bout. Retiring them is a
+  production delete: L3, owner, precedent D-024.
+- **21 from 1994–98 hold no statistic of any kind.** That is probably a source
+  limitation, unconfirmed because UFCStats is unreachable from agent sessions.
+- **Event-scraper PR #2 is merged as `b977434`.** Rounds are upserted before
+  anything is pruned, fetches retry, a finished fight with no rounds is logged,
+  and a new phase 5 handles repair. **PR #3 must rebase onto it.**
+- **Merging PR #2 started a full `events_scraper.py` rescan at 14:34 UTC**
+  (that service rescans on every deploy). This ran against the owner's hold,
+  which I learned of from PR #72 only afterwards. Railway's tools cannot stop
+  a single deployment.
+  - Baseline at 14:52 UTC: 20,976 rounds over 8,915 fights, and 25 completed
+    fights without rounds. Compare against it when the run finishes.
+- **Phase 5 is OFF** (`REPAIR_MAX_FIGHTS=0` on *Weekly Scraper*, 14:53 UTC), so
+  tonight's cron repairs nothing. PR #4 (open, not merged) makes phase 5 skip
+  duplicates. Merging it redeploys, which means another full rescan.
+- Downstream views inner-join `fight_rounds`, so a missing fight is left out,
+  never counted as zero.
+- Evidence: `research/data-integrity/T-093_MISSING_ROUND_RECORDS_2026-10-15.md`.
+
+**Remaining limitations, none of them a regression:**
+- Security Advisor still lists the following, all of them pre-existing:
+  - 39 definer views. This is how the browser reads odds by design, and the
+    task said not to redesign them.
+  - 9 functions with no fixed search path.
+  - 8 definer functions that any role can run.
+  - Leaked-password protection is off. That is a one-click dashboard setting
+    for the owner.
+- `v_funnel_daily` and `v_traffic_daily` (daily visit counts) can be read by
+  the browser. The legacy engine record is public on purpose: the Proof Center
+  grades it in the open (D-011). The PRED-001 and prop locks and
+  `billing_events` are unreadable from a browser, as checked today.
+- Default privileges for objects created by `supabase_admin` still open to
+  browser roles. Only Supabase controls those. Objects we create as `postgres`
+  are private by default.
+
+## Next action
+
+1. **Owner, now:** decide whether to let the running full rescan finish or to
+   stop it from the Railway dashboard (service `cage-metrics-event-scrapper`,
+   deployment `7e8e1204`). Whoever checks it next compares the round counts
+   against the 14:52 baseline.
+   **Owner, T-093 (L3):** approve retiring duplicate fights 43, 46 and 8780.
+2. **Owner, T-092 (L3):** approve rewriting `v_fight_market_movement` so it
+   reads only the requested card's fights. The output must be proven identical
+   to today's before it is applied. Until then, the retry in `market.js` is
+   the only protection, and fight week is the heaviest load.
+3. **Owner:** delete the verification row with
+   `delete from email_subscribers where id = 26;`, and turn on
+   leaked-password protection (Supabase → Auth → Password security).
+4. Then the next phase, customer experience and revenue. T-090 (double opt-in)
+   comes before any Card Brief is sent.
+
+---
+
 ## 2026-10-15 — T-086 is live and verified; scraper round-data integrity is next
 
 **From:** Claude
