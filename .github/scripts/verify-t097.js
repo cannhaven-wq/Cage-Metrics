@@ -99,6 +99,9 @@ async function main() {
     check(vp.name + ': compact list prices and market % match the stored market', odOk, odLog.join(' | ') || 'all match');
     console.log('  card order (main event first):'); r.forEach((x, i) => console.log('   ' + (i + 1) + '. ' + x.nms + ' — ' + x.od.join(' | ') + ' — ' + x.wc));
     const main = active.find(f => f.is_main_event);
+    { const small = active.find(f => M[f.id] && M[f.id].movement_pts_a != null && Math.abs(+M[f.id].movement_pts_a) < 0.5 && Math.abs(+M[f.id].movement_pts_a) >= 0.05);
+      if (small) { const row = await page.$eval('#fightsList a.clist-row[href$="=' + small.id + '"] .mv', e => e.textContent);
+        check(vp.name + ': small move shows its stored value, not 0.0', row.includes(Math.abs(+M[small.id].movement_pts_a).toFixed(1)), row + ' vs stored ' + M[small.id].movement_pts_a); } }
     check(vp.name + ': main event first in default order', main && r[0].href.endsWith('=' + main.id), r[0].nms);
     check(vp.name + ': no horizontal overflow (compact list)', await overflow(page) <= 1, 'excess ' + await overflow(page) + 'px');
     await page.screenshot({ path: path.join(OUT, 'cardlab-list-' + vp.name + '.png'), fullPage: true });
@@ -226,6 +229,7 @@ async function main() {
         check(L + 'style label for corner ' + (i ? 'B' : 'A') + ' is backed by v_fighter_style', shown ? has : true, 'shown=' + shown + ' rows=' + styles.filter(s => s.fighter_id === fid).map(s => s.weight_class + ':' + s.style + '(' + s.sample_fights + ')').join(','));
         if (!shown) check(L + 'missing style for corner ' + (i ? 'B' : 'A') + ' is stated', /Not enough UFC fights on record to measure a style/.test(o.cols[i].text));
       });
+      check(L + 'no "Last 1 UFC fights" heading', !/Last 1 UFC fights/.test(o.all));
       check(L + 'no training-background claims', !BG.test(o.all));
       check(L + 'recorded results are not listed under tendencies', o.cols.every(c => { const i = c.text.indexOf('Statistical tendencies'); const j = c.text.indexOf('Recorded results'); const seg = c.text.slice(i, j > i ? j : undefined); return !/UFC wins came by|UFC losses came by|went to the judges/.test(seg); }));
       check(L + 'missing data is labelled (no blank cells)', !/undefined|NaN|null%/.test(o.all));

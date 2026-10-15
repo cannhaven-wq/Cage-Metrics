@@ -1,9 +1,0 @@
-index.html fresh:MATCH plain:MATCH
-fight.html fresh:MATCH plain:MATCH
-fight-overview.js fresh:MATCH plain:MATCH
-fight-workspace.js fresh:MATCH plain:MATCH
-fight-lab.js fresh:MATCH plain:MATCH
-market.js fresh:MATCH plain:MATCH
-_shared.js fresh:MATCH plain:MATCH
-screenshot path -> HTTP 404
-main HEAD: 193e4216600d41b2d1aed0ca0191b92c7c42b091
