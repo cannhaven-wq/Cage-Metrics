@@ -19,6 +19,8 @@
 --   * a fight id that does not exist in the matching fights table;
 --   * a payload whose rows name a different fight;
 --   * duplicate round numbers;
+--   * a set that is not exactly rounds 1..end_round of a finished fight (a
+--     partial page would otherwise shrink the fight's stored rounds);
 -- and it checks that the number of rows written equals the number sent.
 -- Returns the number of rows written.
 --
@@ -41,6 +43,7 @@ AS $fn$
 DECLARE
   n_sent    integer;
   n_written integer;
+  n_end     integer;
 BEGIN
   IF p_rounds IS NULL OR jsonb_typeof(p_rounds) <> 'array' OR jsonb_array_length(p_rounds) = 0 THEN
     RAISE EXCEPTION 'replace_fight_rounds: refusing an empty or non-array payload for fight %', p_fight_id;
@@ -59,13 +62,28 @@ BEGIN
     RAISE EXCEPTION 'replace_fight_rounds: round numbers must be present and distinct for fight %', p_fight_id;
   END IF;
 
+  -- A fight that ended in round N has exactly rounds 1..N (true of all 8,915
+  -- fights with rounds on 2026-10-15). A payload that is not exactly that set
+  -- is a partial or wrong page, and replacing with it would LOSE rounds.
+  SELECT f.end_round INTO n_end FROM public.fights f WHERE f.id = p_fight_id;
+  IF n_end IS NOT NULL AND (
+       n_sent <> n_end
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_rounds) e
+                   WHERE (e->>'round_number')::int NOT BETWEEN 1 AND n_end)) THEN
+    RAISE EXCEPTION 'replace_fight_rounds: fight % ended in round %, payload has % round(s); refusing a partial set',
+      p_fight_id, n_end, n_sent;
+  END IF;
+
   DELETE FROM public.fight_rounds WHERE fight_id = p_fight_id;
 
+  -- LATERAL, not (jsonb_populate_record(...)).*: the latter evaluates the
+  -- record once per column, calling nextval() 37 times for every row.
   INSERT INTO public.fight_rounds
-  SELECT (jsonb_populate_record(NULL::public.fight_rounds,
+  SELECT r.*
+    FROM jsonb_array_elements(p_rounds) e
+    CROSS JOIN LATERAL jsonb_populate_record(NULL::public.fight_rounds,
             (e - 'id') || jsonb_build_object('fight_id', p_fight_id,
-                                             'id', nextval(pg_get_serial_sequence('public.fight_rounds', 'id'))))).*
-    FROM jsonb_array_elements(p_rounds) e;
+                                             'id', nextval(pg_get_serial_sequence('public.fight_rounds', 'id')))) r;
   GET DIAGNOSTICS n_written = ROW_COUNT;
 
   IF n_written <> n_sent THEN
@@ -84,6 +102,7 @@ AS $fn$
 DECLARE
   n_sent    integer;
   n_written integer;
+  n_end     integer;
 BEGIN
   IF p_rounds IS NULL OR jsonb_typeof(p_rounds) <> 'array' OR jsonb_array_length(p_rounds) = 0 THEN
     RAISE EXCEPTION 'replace_fight_rounds_non_ufc: refusing an empty or non-array payload for fight %', p_fight_id;
@@ -102,13 +121,28 @@ BEGIN
     RAISE EXCEPTION 'replace_fight_rounds_non_ufc: round numbers must be present and distinct for fight %', p_fight_id;
   END IF;
 
+  -- A fight that ended in round N has exactly rounds 1..N (true of all 8,915
+  -- fights with rounds on 2026-10-15). A payload that is not exactly that set
+  -- is a partial or wrong page, and replacing with it would LOSE rounds.
+  SELECT f.end_round INTO n_end FROM public.fights_non_ufc f WHERE f.id = p_fight_id;
+  IF n_end IS NOT NULL AND (
+       n_sent <> n_end
+       OR EXISTS (SELECT 1 FROM jsonb_array_elements(p_rounds) e
+                   WHERE (e->>'round_number')::int NOT BETWEEN 1 AND n_end)) THEN
+    RAISE EXCEPTION 'replace_fight_rounds_non_ufc: fight % ended in round %, payload has % round(s); refusing a partial set',
+      p_fight_id, n_end, n_sent;
+  END IF;
+
   DELETE FROM public.fight_rounds_non_ufc WHERE fight_id = p_fight_id;
 
+  -- LATERAL, not (jsonb_populate_record(...)).*: the latter evaluates the
+  -- record once per column, calling nextval() 37 times for every row.
   INSERT INTO public.fight_rounds_non_ufc
-  SELECT (jsonb_populate_record(NULL::public.fight_rounds_non_ufc,
+  SELECT r.*
+    FROM jsonb_array_elements(p_rounds) e
+    CROSS JOIN LATERAL jsonb_populate_record(NULL::public.fight_rounds_non_ufc,
             (e - 'id') || jsonb_build_object('fight_id', p_fight_id,
-                                             'id', nextval(pg_get_serial_sequence('public.fight_rounds', 'id'))))).*
-    FROM jsonb_array_elements(p_rounds) e;
+                                             'id', nextval(pg_get_serial_sequence('public.fight_rounds', 'id')))) r;
   GET DIAGNOSTICS n_written = ROW_COUNT;
 
   IF n_written <> n_sent THEN
