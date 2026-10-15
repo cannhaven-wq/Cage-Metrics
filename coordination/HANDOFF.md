@@ -11,6 +11,42 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (h) — #80 live; running order activation blocked at the bot wall (T-096)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **#80 merged as `b5f4e66`, Pages deployed, verify-live 38792331899 green**
+  (served bytes match, Fight Lab, stabilization, visitor checks).
+- **Running order, staged activation:** runbook written with exact SQL
+  verification, dry-run instructions, what a person must check on the real
+  page, the `REAL_PAGE_CHECK.json` contents, booking-safety rules and the
+  single-event execution. **Blocked at step 0:** the ingester's page fetch has
+  no solver for UFCStats' proof-of-work interstitial (the event scraper's
+  `challenge.py` has one), so a live dry run would fail before printing any
+  order. Adding the solver was refused by this session's safety controls;
+  the owner decides between porting it and reusing the scraper's copy from
+  the workflow.
+- **Booking safety reviewed:** nothing automated writes `fights.is_active`
+  today; the ingester's rule needs two consecutive complete observations of
+  absence, ignores never-seen bookings, reactivates returning ones, and only
+  ever flips that one column after a persisted `--execute` append.
+- **UFC.com:** its Terms of Use prohibit automated access. Sections and start
+  times stay unsourced unless UFC grants permission or a paid provider is
+  approved.
+
+## Next action
+
+1. **Owner:** choose step 0 (port or reuse) and apply step 1 (migration) in
+   the SQL editor; run the step 1 verification SQL.
+2. **Owner or Claude (after 0):** dispatch the dry run, read the order
+   against the real card, commit `REAL_PAGE_CHECK.json`.
+3. **Claude:** after the single-event execute, flip `RUNNING_ORDER_LIVE`,
+   run verify-live, then the schedule.
+
+---
+
 ## 2026-10-15 (g) — Event card sprint: search shipped, running order ready, three decisions (T-096)
 
 **From:** Claude

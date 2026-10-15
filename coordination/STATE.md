@@ -5,9 +5,13 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
-**Event card sprint, 2026-10-15 (T-096): code in review, three owner decisions open.**
-Card Lab and the event page gain search within the card and a reader for the
-real running order. The running order itself needs the owner: a migration
+**Event card sprint, 2026-10-15 (T-096): live as `b5f4e66`, running order in staged activation.**
+Search within the card is live (verify-live 38792331899 green). The running
+order is approved for staged activation — runbook in
+`research/event-card/RUNNING_ORDER_ACTIVATION_RUNBOOK.md`; blocked at step 0
+(the ingester cannot pass UFCStats' bot wall; the fix needs the owner). UFC.com's
+terms bar automated access, so sections and start times stay unsourced. The
+running order itself needs the owner: a migration
 (`research/event-card/proposed_2026-10-15_card_running_order.sql`, cost none),
 a one-time real-page check of the existing event-flow ingester, and the cron
 switched on. Card sections and start times have **no source in the stack** —

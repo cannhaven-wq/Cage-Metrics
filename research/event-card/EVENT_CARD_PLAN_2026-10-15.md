@@ -55,6 +55,16 @@ script.
 
 No source in the stack has them. Options, none started:
 
+**Finding, later on 2026-10-15 — UFC.com is not a permitted source.** The
+owner asked for UFC.com first. Its [Terms of Use](https://www.ufc.com/terms)
+prohibit using any "deep-link, page-scrape, robot, spider or other automatic
+device, program, algorithm or methodology" to access, copy or monitor the site,
+and separately bar automated systems that send more requests than a person
+could in a browser. (Read via search; `ufc.com` does not resolve from this
+container, so the live page could not be fetched — verify the wording on the
+site.) Option A below therefore needs **UFC's written permission** before any
+scraper is built; without it, A is off the table and the choice is B or C.
+
 - **A. UFC.com event pages.** They list the sections and their start times.
   Would need an addition to the event scraper on Railway plus columns or a
   ledger for section and start time, and a check of UFC.com's terms of use for
