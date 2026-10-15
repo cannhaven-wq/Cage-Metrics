@@ -5,11 +5,12 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
-**Customer experience sprint 1, 2026-10-15 (T-094): Fight Lab research workspace, in review.**
+**Customer experience sprint 1, 2026-10-15 (T-094): Fight Lab research workspace, live.**
 Fight Lab gains a matchup explorer (six categories, career vs last-5, sample and
 source on every bar, "does it predict winners" from the Factor Lab artifact) and
 a personal research sheet kept in the visitor's browser. No pick, no score, no
-new table, no migration to apply. Live once the PR merges and Pages deploys.
+new table, no migration to apply. PR #77 merged as `d5c850c`; verify-live
+run 38770578048 green on that commit.
 
 **Stabilization, 2026-10-15 ([D-028](DECISIONS.md)): done except two open items.** T-086 and
 T-088 are **applied** to production: migrations `20261015141652`,
