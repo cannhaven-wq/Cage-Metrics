@@ -29,12 +29,13 @@ could write the sportsbook list through a definer view; closed on production
 the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
-**Security fix, 2026-10-13 (T-087, owner-approved, applied).** The browser
-roles could write sportsbook data: `anon`/`authenticated` held INSERT, UPDATE,
-DELETE and TRUNCATE on the odds tables, and two of them (`odds_aliases`,
-`unmatched_odds`) had RLS off. Now read-only where the site reads and closed
-where it does not; verified per role; no data touched. Other tables still carry
-the same default grant behind RLS (T-088, proposed).
+**Security, 2026-10-14.** T-087 is merged and verified. **T-088 has been revised
+to the owner's review (D-027) and rehearsed on production in rolled-back
+transactions; nothing is applied.** Applying it waits on the owner's sign-off on
+those results. The revision makes new tables private by default and leaves
+existing reads unchanged. **The Card Brief signup had never worked** (T-089):
+the fix ships with PR #71. Marketing email is now locked in code until double
+opt-in exists (T-090).
 
 **Next phase (owner, 2026-10-13): the first $100 of revenue.** The
 commercial-readiness audit

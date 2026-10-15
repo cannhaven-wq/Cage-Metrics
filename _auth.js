@@ -290,15 +290,21 @@
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleaned)) {
       return { data: null, error: { message: 'Please enter a valid email address.' } };
     }
-    // ON CONFLICT DO NOTHING via upsert with ignoreDuplicates so re-submitting
-    // an already-subscribed email returns success without erroring.
-    const { data, error } = await sb
+    // A plain INSERT, not an upsert. `upsert(..., { ignoreDuplicates: true })`
+    // sends INSERT ... ON CONFLICT (email) DO NOTHING, and Postgres makes an
+    // ON CONFLICT insert pass a SELECT policy as well — this table has none for
+    // visitors, on purpose (the list is private). So that call failed for every
+    // visitor with "new row violates row-level security policy" and the list
+    // stayed at zero (T-088, 2026-10-13). An address already on the list is a
+    // unique violation (23505) and reads as success: the visitor is subscribed,
+    // and the reply does not tell anyone whether an address was already there.
+    const { error } = await sb
       .from('email_subscribers')
-      .upsert(
-        { email: cleaned, source: source || 'unknown' },
-        { onConflict: 'email', ignoreDuplicates: true }
-      );
-    return { data, error };
+      .insert({ email: cleaned, source: source || 'unknown' });
+    if (error && error.code === '23505') return { data: null, error: null };
+    // Never show a visitor the database's own wording.
+    if (error) return { data: null, error: { message: 'Something went wrong. Try again.', code: error.code } };
+    return { data: null, error: null };
   };
 
   // -------- nav integration helpers --------

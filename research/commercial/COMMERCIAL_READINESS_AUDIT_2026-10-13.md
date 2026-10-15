@@ -21,6 +21,17 @@ Four things stand in the way, in this order:
 The first is the hardest and the cheapest to test. The fastest honest $100
 probably comes from **one business customer**, not from ten subscribers.
 
+**Correction, later on 2026-10-13 (T-088).** The "0 email subscribers" below
+was not only an audience problem. **The Card Brief signup form had never
+worked:** every submission failed with a database error shown to the visitor,
+because the browser asked for an upsert that row security refuses. Fixed in
+`_auth.js` (a plain insert; an address already on the list counts as success),
+proven against production in a rolled-back transaction, and shipping with the
+T-088 pull request. No subscriber is known to have been lost: the funnel table
+records no signup attempt. Until that merges, blocker 2's "a real Brief" has
+nobody to send to. See
+[`../security/T-088_PRIVILEGE_AUDIT_2026-10-13.md`](../security/T-088_PRIVILEGE_AUDIT_2026-10-13.md), finding F1.
+
 ## 1. The audience, measured today
 
 | measure | value | source |
