@@ -235,12 +235,16 @@ async function main() {
       await page.screenshot({ path: path.join(OUT, 'fight-' + id + '-' + vp.name + '.png'), fullPage: true });
       if (vp.mobile) {
         // nav works on the phone: open the menu if there is one, then go to Card Lab
-        const navLink = await page.$('nav.cfl-nav a[href*="index.html#next"], nav.cfl-nav a[href="/"], nav.cfl-nav a[href="index.html"]');
-        const burger = await page.$('nav.cfl-nav button');
-        if (burger && !(navLink && await navLink.isVisible())) await burger.click().catch(() => {});
-        const link = await page.$('nav.cfl-nav a[href*="index.html#next"]') || navLink;
+        const burger = await page.$('#cflNavBurger');
+        const link = await page.$('nav.cfl-nav a.cfl-nav-cta-link[href="index.html#next"]');
+        if (burger && await burger.isVisible() && !(await link.isVisible())) { await burger.click(); await page.waitForTimeout(400); }
+        const expanded = burger ? await burger.getAttribute('aria-expanded') : null;
         let navOk = false;
-        if (link) { await Promise.all([page.waitForURL(u => !/fight\.html/.test(String(u)), { timeout: 20000 }).catch(() => {}), link.click().catch(() => {})]); navOk = !/fight\.html/.test(page.url()); }
+        if (link && await link.isVisible()) {
+          await Promise.all([page.waitForURL(u => !/fight\.html/.test(String(u)), { timeout: 20000 }).catch(() => {}), link.click()]);
+          navOk = !/fight\.html/.test(page.url());
+        }
+        console.log('  phone nav: burger visible=' + !!burger + ' expanded=' + expanded);
         check(L + 'nav takes a phone visitor back to Card Lab', navOk, page.url());
       }
       await ctx.close();
