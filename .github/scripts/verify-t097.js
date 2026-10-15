@@ -84,7 +84,7 @@ async function main() {
 
     // compact list
     await page.click('#viewSeg [data-view="list"]');
-    await page.waitForSelector('#fightsList .clist-row', { timeout: 10000 });
+    await page.waitForSelector('#fightsList a.clist-row', { timeout: 10000 });
     const rows = () => page.$$eval('#fightsList a.clist-row', els => els.filter(e => e.offsetParent !== null).map(e => ({ href: e.getAttribute('href'), nms: e.querySelector('.nms').textContent, od: [...e.querySelectorAll('.od')].map(o => o.textContent.trim()), wc: e.querySelector('.wc').textContent })));
     let r = await rows();
     check(vp.name + ': compact list shows every active fight', JSON.stringify(r.map(x => x.href.replace(/\D+/g, '')).sort()) === JSON.stringify(want), r.length + ' rows');
@@ -137,7 +137,7 @@ async function main() {
 
     // view remembered
     await page.reload({ waitUntil: 'load' });
-    await page.waitForSelector('#fightsList .clist-row', { timeout: 45000 }).catch(() => {});
+    await page.waitForSelector('#fightsList a.clist-row', { timeout: 45000 }).catch(() => {});
     check(vp.name + ': compact-list choice is remembered on reload', (await rows()).length === active.length);
 
     // row opens the right Fight Lab page
@@ -149,7 +149,7 @@ async function main() {
     check(vp.name + ': that Fight Lab page is the right matchup', t.includes(main.nameA) && t.includes(main.nameB));
     // full-card link also works
     await page.goto(BASE + '/?verify=' + Date.now(), { waitUntil: 'load' });
-    await page.waitForSelector('#fightsList .clist-row', { timeout: 45000 });
+    await page.waitForSelector('#fightsList a.clist-row', { timeout: 45000 });
     await page.click('#viewSeg [data-view="cards"]'); await page.waitForTimeout(400);
     const other = active.find(f => !f.is_main_event);
     await Promise.all([page.waitForURL(/fight\.html\?id=/, { timeout: 30000 }), page.click('#fight-' + other.id + ' a.btn-block')]);
