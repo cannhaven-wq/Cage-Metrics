@@ -270,33 +270,53 @@
   // Movement + best price + spread, one row per fight, for a whole card.
   // Returns {} rather than throwing: a market panel that cannot load is a
   // missing panel, never a broken page.
+  // A read of v_fight_market_movement can hit the browser roles' 8 s statement
+  // timeout when several pages load at once (T-092: about 5.6 s for one card
+  // with nothing else running). One retry after a short pause clears a spike.
+  // If both attempts fail the caller is TOLD, so a page says the prices did not
+  // load instead of "no price captured" — a dash always carries its true reason.
+  M.MOVEMENT_RETRY_MS = 1200;
+  async function readMovement(build) {
+    let last = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      if (attempt) await new Promise(r => setTimeout(r, M.MOVEMENT_RETRY_MS));
+      try {
+        const { data, error } = await build();
+        if (!error) return { data: data || [], failed: false };
+        last = error.message;
+      } catch (e) { last = e.message; }
+    }
+    console.warn('[market] movement view unavailable:', last);
+    return { data: [], failed: true };
+  }
+
+  // The returned map carries a non-enumerable `loadFailed`, so code that walks
+  // its keys still sees fight ids only.
   M.loadCardMovement = async function (eventId) {
     const sb = window.cflSupabase;
     const out = {};
     if (!sb || eventId == null) return out;
-    try {
-      const { data, error } = await sb
-        .from('v_fight_market_movement')
-        .select('*')
-        .eq('event_id', eventId);
-      if (error) { console.warn('[market] movement view unavailable:', error.message); return out; }
-      (data || []).forEach(r => { out[r.fight_id] = r; });
-    } catch (e) { console.warn('[market] movement view unavailable:', e.message); }
+    const res = await readMovement(() => sb
+      .from('v_fight_market_movement')
+      .select('*')
+      .eq('event_id', eventId));
+    res.data.forEach(r => { out[r.fight_id] = r; });
+    Object.defineProperty(out, 'loadFailed', { value: res.failed, enumerable: false });
     return out;
   };
 
-  M.loadFightMovement = async function (fightId) {
+  // opts.onFailed is called when the row could not be read at all, as distinct
+  // from a fight that simply has no price yet (both return null).
+  M.loadFightMovement = async function (fightId, opts) {
     const sb = window.cflSupabase;
     if (!sb || fightId == null) return null;
-    try {
-      const { data, error } = await sb
-        .from('v_fight_market_movement')
-        .select('*')
-        .eq('fight_id', fightId)
-        .limit(1);
-      if (error) { console.warn('[market] movement view unavailable:', error.message); return null; }
-      return (data && data[0]) || null;
-    } catch (e) { console.warn('[market] movement view unavailable:', e.message); return null; }
+    const res = await readMovement(() => sb
+      .from('v_fight_market_movement')
+      .select('*')
+      .eq('fight_id', fightId)
+      .limit(1));
+    if (res.failed && opts && typeof opts.onFailed === 'function') opts.onFailed();
+    return res.data[0] || null;
   };
 
   // Latest quote from each sportsbook. `by` is 'event_id' or 'fight_id'.

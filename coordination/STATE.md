@@ -5,6 +5,26 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
+**Stabilization, 2026-10-15 ([D-028](DECISIONS.md)): done except two open items.** T-086 and
+T-088 are **applied** to production: migrations `20261015141652`,
+`20261015142345` and `20261015142358`. **Do not run them again.** PR #69 (DWCS
+website) is merged as `000fcd2`, and PR #71 (T-088 records, the Card Brief
+signup fix, the marketing-email lock) as `87feffd`. Both are live, checked from
+GitHub's side by verify-live run 38753407231: served bytes match `main`, the
+DWCS page says "Not a UFC event", and the Card Brief form subscribes. Marketing
+email stays **locked** until double opt-in exists (T-090).
+**Open, T-092 (needs the owner, L3):** the market view takes 5.6 s against an
+8 s browser limit. When several visitors load at once, prices can fail to load.
+`market.js` now retries once and says "prices didn't load" honestly, but the
+view itself needs rewriting.
+**Open, T-093 (owner, L3):** 25 finished fights with no round stats.
+- 1 is a scraper loss (7349). T-091 restores it.
+- **3 are the same bout booked twice.** They add a bout to six fighters' public
+  UFC records, and retiring them is the owner's call.
+- 21 from 1994–98 look like fights UFCStats never published stats for.
+
+Next phase: customer experience and revenue, not more infrastructure.
+
 **Stabilization sprint, 2026-10-12 → 13.** The four stabilization PRs are
 **merged** (#54 credibility, #55 operations and the pipeline monitor, #56 human
 traffic, #57 commercial validation), the analytics migration is applied, and the
@@ -30,10 +50,9 @@ could write the sportsbook list through a definer view; closed on production
 the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.
 
-**Security, 2026-10-14.** T-087 is merged and verified. **T-088 has been revised
+**Security, 2026-10-14 (superseded 2026-10-15: T-088 is applied, D-028).** T-087 is merged and verified. T-088 was revised
 to the owner's review (D-027) and rehearsed on production in rolled-back
-transactions; nothing is applied.** Applying it waits on the owner's sign-off on
-those results. The revision makes new tables private by default and leaves
+transactions. The revision makes new tables private by default and leaves
 existing reads unchanged. **The Card Brief signup had never worked** (T-089):
 the fix ships with PR #71. Marketing email is now locked in code until double
 opt-in exists (T-090).

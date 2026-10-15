@@ -301,7 +301,7 @@
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
-<script src="market.js?v=2"></script>
+<script src="market.js?v=3"></script>
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=1"></script>
@@ -458,6 +458,7 @@ async function load() {
   if (error || !fights || !fights[0]) { fail('Fight not found.', 'It may have been rebooked. <a href="index.html#next">Back to Card Lab</a>.'); return; }
   const fight = fights[0];
 
+  let mvtFailed = false;
   const [evR, ftR, mvt, books] = await Promise.all([
     sb.from('events').select('id, name, event_date, location').eq('id', fight.event_id).limit(1),
     sb.from('fighters')
@@ -465,7 +466,7 @@ async function load() {
       .in('id', [fight.fighter_a_id, fight.fighter_b_id].filter(x => x != null))
       // ufc_* comes from v_fighter_ufc_record (T-084); it feeds hasTape.
       .then(async r => r.error ? r : { data: await cflUfcRecord.attach(sb, r.data || []) }),
-    M.loadFightMovement(fight.id),
+    M.loadFightMovement(fight.id, { onFailed: () => { mvtFailed = true; } }),
     M.loadByBook('fight_id', fight.id),
   ]);
 
@@ -501,7 +502,7 @@ async function load() {
   });
 
   renderHead(fight, event, a, b);
-  renderMarket(mvt, a, b, event);
+  renderMarket(mvt, a, b, event, mvtFailed);
   renderBooks(books, a, b);
   renderWho(a, b, fight, styleRows, formA, formB, form.ok);
   renderStats(a, b);
@@ -735,12 +736,18 @@ function renderHead(fight, event, a, b) {
 }
 
 // ---- the market panel ------------------------------------------------------
-function renderMarket(row, a, b, event) {
+function renderMarket(row, a, b, event, loadFailed) {
   const el = document.getElementById('flMarket');
   const fightDay = event ? M.isFightDay(event.event_date) : false;
   const rA = row ? M.readSide(row, 'a', { isFightDay: fightDay }) : null;
   const rB = row ? M.readSide(row, 'b', { isFightDay: fightDay }) : null;
 
+  if (!row && loadFailed) {
+    el.innerHTML = '<div class="empty"><strong>Prices didn\'t load.</strong><br>' +
+      'This is on our side, not the market\'s. Refresh the page in a moment.</div>';
+    document.getElementById('secBooks').hidden = true;
+    return;
+  }
   if (!rA || !rB) {
     el.innerHTML = '<div class="empty"><strong>No sportsbook price captured for this fight yet.</strong><br>' +
       'We capture moneyline prices on a schedule that tightens as a card approaches, so a newly booked fight ' +
