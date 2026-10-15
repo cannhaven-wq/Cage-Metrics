@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-13
+Last updated: 2026-10-15
 
 **Stabilization sprint, 2026-10-12 → 13.** The four stabilization PRs are
 **merged** (#54 credibility, #55 operations and the pipeline monitor, #56 human
@@ -23,8 +23,9 @@ site).** **T-083 answered:** the `fights` table matches UFCStats on UFC bouts
 event, T-086). **T-084 and T-085 are live (2026-10-13):** every public UFC record
 is counted from `fights` through `v_fighter_ufc_record`, and the movement chart
 loads in about 0.2 s instead of 2. **T-086 is live (2026-10-15):** DWCS 10.3 is
-out of the UFC tables and Galanti reads as a debut. Next: scraper round-data
-integrity (fight 7349 lost its rounds in a full rescan). **Security, 2026-10-13 ([D-025](DECISIONS.md)):** browsers
+out of the UFC tables and Galanti reads as a debut. **T-091 (scraper round
+writes in one transaction) is built and waits on the owner to apply** — fight
+7349 lost its rounds in a full rescan; it is the only such fight. **Security, 2026-10-13 ([D-025](DECISIONS.md)):** browsers
 could write the sportsbook list through a definer view; closed on production
 the same day, then covered by T-087. Footage links (T-081) and expanded style
 labels (T-082) stay queued.

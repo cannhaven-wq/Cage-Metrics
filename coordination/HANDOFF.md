@@ -11,6 +11,58 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (b) — T-091: atomic round writes built; waiting on the owner to apply
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+**What happened to fight 7349.** The scraper replaced a fight's rounds in two
+requests: delete, then insert. During the 2026-10-14 full rescan the
+connection dropped between them. McSweeney vs Browne (2010) kept its fight
+totals and lost every round row, and the run still looked successful. It is
+the only completed fight in that state.
+
+**The other 25 completed fights without rounds are not losses.**
+- 21 are 1994–98 bouts. UFCStats has no per-round tables for them, and there
+  are no fight totals either.
+- 43, 46 and 8780 have no totals at the source.
+- 3012 lost its rounds the same way and was restored by the 2026-10-14 run.
+The new integrity check `fight_totals_without_rounds` finds a fight that has
+totals and no rounds. Today it reads 1 (7349).
+
+**Built, not applied:**
+- `fight_rounds_replace_rpc.sql` runs the delete and insert inside one
+  function call, so Postgres keeps either the new set or the old one. It has a
+  rollback file and 9 tests on a throwaway Postgres.
+- The scraper PR in cage-metrics-event-scrapper writes rounds only through that
+  function. It retries only transient errors (network, timeouts, overload),
+  four attempts with backoff. The stored count must equal the rows sent. There
+  is no fallback. Any failed round write exits the run non-zero, in both
+  `events_scraper.py` and `weekly_refresh.py`.
+
+**Already running.** The other session's scraper PR #2 (write first, prune
+second) was merged at 14:34 UTC. That redeployed `events_scraper.py`, which
+does a full rescan on every deploy. It started at 14:36 and takes about 6–7
+hours. With that code a dropped connection can no longer leave a fight with no
+rounds, but it is still two requests, it does not retry, and a failure is
+only logged.
+
+## Next action
+
+Owner: approve applying `fight_rounds_replace_rpc.sql` (CRITICAL_GATES item 5).
+Then Claude:
+1. Apply it and confirm EXECUTE is held by service_role only.
+2. Merge the scraper PR. Its deploy is the next full rescan.
+3. Confirm fight 7349 has one round and that it equals the fight totals
+   (sig 6–19, KD 0–1, control 0–140 s).
+4. Close T-091.
+
+Do not merge the scraper PR first: every round write would fail, loudly and
+harmlessly, for a whole rescan.
+
+---
+
 ## 2026-10-15 — T-086 is live and verified; scraper round-data integrity is next
 
 **From:** Claude
