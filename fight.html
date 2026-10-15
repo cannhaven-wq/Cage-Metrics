@@ -294,6 +294,7 @@
 /* Workspace, sprint 2: key points, mixes, rounds, opposition, context. */
 #fl .ws-rank { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 1px; }
 #fl .ws-rank.thin { color: var(--amber); }
+#fl .ws-rankrow { text-align: left; line-height: 1.45; border-top: 1px dashed var(--line); padding-top: 6px; margin-top: 2px; }
 #fl .ws-wide { grid-column: 1 / -1; }
 #fl .ws-kpl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
 #fl .ws-kpl li { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; font-size: 13px; color: var(--text); line-height: 1.5;
@@ -493,8 +494,8 @@
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=1"></script>
 <script src="card-research.js?v=1"></script>
-<script src="fight-workspace.js?v=2"></script>
-<script src="fight-workspace-ui.js?v=2"></script>
+<script src="fight-workspace.js?v=3"></script>
+<script src="fight-workspace-ui.js?v=3"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -946,14 +947,13 @@ async function loadRounds(fightIds) {
 
 // The weight class over the last three years, with per-fight totals, for
 // division rank. One class is a few hundred bouts.
-async function loadDivision(weightClass, today) {
-  if (!weightClass || /catch/i.test(weightClass)) return null;
-  const from = (parseInt(today.slice(0, 4), 10) - 3) + today.slice(4);
+async function loadDivision(crit) {
+  if (!crit || /catch/i.test(crit.weightClass)) return null;
   try {
     const data = await cfl.fetchAll(() => window.cflSupabase.from('fights')
-      .select('id, fighter_a_id, fighter_b_id, end_round, end_time, is_active, ' + FIGHT_TOTALS + ', events!inner(event_date)')
-      .eq('weight_class', weightClass).not('method', 'is', null)
-      .gte('events.event_date', from).lt('events.event_date', today).order('id'));
+      .select('id, fighter_a_id, fighter_b_id, weight_class, end_round, end_time, is_active, ' + FIGHT_TOTALS + ', events!inner(event_date)')
+      .eq('weight_class', crit.weightClass).not('method', 'is', null)
+      .gte('events.event_date', crit.from).lt('events.event_date', crit.to).order('id'));
     return (data || []).filter(f => f.is_active !== false);
   } catch (e) { return null; }
 }
@@ -981,23 +981,30 @@ async function mountWorkspace(x) {
     // own bookings, for opponent changes. Each may fail alone.
     const allIds = [...new Set(compA.concat(compB).map(c => c.f.id))];
     const oppIds = [...new Set(x.formA.concat(x.formB).map(r => r.opponentId).filter(v => v != null))];
+    // Division rank compares like with like: one weight class, one window.
+    const divCrit = W.divisionWindow(x.fight.weight_class, x.today);
     const [rounds, oppForm, divFights, cardFights] = await Promise.all([
-      loadRounds(allIds), loadForm(oppIds), loadDivision(x.fight.weight_class, x.today), loadCard(x.fight.event_id)]);
+      loadRounds(allIds), loadForm(oppIds), loadDivision(divCrit), loadCard(x.fight.event_id)]);
     const oppCompleted = {};
     if (oppForm.ok) oppIds.forEach(id => { oppCompleted[id] = FL.completedFights(oppForm.fights, oppForm.events, id, x.today); });
     const fightDay = x.event ? M.isFightDay(x.event.event_date) : false;
     const careerA = x.form.ok ? W.careerWindow(compA, x.a.id) : null;
     const careerB = x.form.ok ? W.careerWindow(compB, x.b.id) : null;
-    const base = divFights ? W.divisionBaseline(divFights, [x.a.id, x.b.id]) : null;
-    const pct = cw => {
-      if (!base || !cw || !cw.rates || cw.minutes < W.MIN_DIV_MINUTES) return null;
-      const o = {}; W.DIV_KEYS.forEach(k => { o[k] = W.percentile(base[k], cw.rates[k]); }); return o;
-    };
-    const divLabel = x.fight.weight_class ? x.fight.weight_class.toLowerCase() + 's in CFL\u2019s pool' : 'the division';
+    // Each corner is ranked by its own bouts inside the pool's window (same
+    // weight class, same three years, same minimum minutes), never by the
+    // all-career figure, which stays on its own line.
+    const base = divFights ? W.divisionBaseline(divFights, [x.a.id, x.b.id], divCrit) : null;
+    const rankA = base ? W.divisionRank(base, x.a.id) : null;
+    const rankB = base ? W.divisionRank(base, x.b.id) : null;
+    const wc = x.fight.weight_class || '';
+    const since = d => new Date(d + 'T00:00:00Z').toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+    const divLabel = wc ? wc.toLowerCase() + 's in CFL\u2019s pool' : 'the division';
+    const windowLabel = wc ? wc.toLowerCase() + ' bouts since ' + (divCrit ? since(divCrit.from) : 'three years ago') : 'this weight class';
     const divNote = base && base.fighters >= 10
-      ? 'Division rank compares each fighter\u2019s all-UFC figure with ' + base.fighters + ' fighters who logged at least ' +
-        W.MIN_DIV_MINUTES + ' minutes at ' + x.fight.weight_class + ' in the last three years, counted only among fighters linked to these two ' +
-        'by actual bouts (so men\u2019s and women\u2019s divisions with the same name are kept apart).'
+      ? 'Division rank is like for like: each fighter\u2019s own ' + wc + ' bouts since ' + since(divCrit.from) +
+        ' are set against ' + base.fighters + ' fighters measured the same way — the same weight class, the same window, at least ' +
+        W.MIN_DIV_MINUTES + ' minutes of fighting — and counted only among fighters linked to these two by actual bouts (so men\u2019s ' +
+        'and women\u2019s divisions with the same name are kept apart). The figure ranked is shown beside each rank; it can differ from the all-UFC figure above it.'
       : 'No division rank: too few fighters in this weight class over the last three years to compare against.';
     const ctx = {
       fight: x.fight, event: x.event, a: x.a, b: x.b,
@@ -1007,7 +1014,7 @@ async function mountWorkspace(x) {
       recentA: x.form.ok && rounds ? W.recentWindow(compA, rounds, x.a.id) : null,
       recentB: x.form.ok && rounds ? W.recentWindow(compB, rounds, x.b.id) : null,
       careerA, careerB,
-      pctA: pct(careerA), pctB: pct(careerB), divNote,
+      rankA, rankB, divNote, windowLabel,
       roundsA: rounds ? W.roundByRound(compA, rounds, x.a.id) : null,
       roundsB: rounds ? W.roundByRound(compB, rounds, x.b.id) : null,
       methodsA: x.form.ok ? W.methods(compA, x.a.id) : null,
@@ -1022,11 +1029,11 @@ async function mountWorkspace(x) {
     const corner = (p, side) => ({
       name: p.name, last: lastName(p.name), age: p.age, reach: W.n(p.reach_in), height: W.n(p.height_in), stance: p.stance,
       debut: x.form.ok && !ctx['facts' + side].ufcFights, career: ctx['career' + side], recent: ctx['recent' + side],
-      facts: ctx['facts' + side], methods: ctx['methods' + side], pct: ctx['pct' + side],
+      facts: ctx['facts' + side], methods: ctx['methods' + side], rank: ctx['rank' + side],
       style: FL.styleRead(x.styleRows, p.id, x.fight.weight_class || null),
       late: FL.lateRoundRead(x.consRows, p.id, x.fight.weight_class || null),
     });
-    ctx.keyPoints = W.keyPoints(corner(x.a, 'A'), corner(x.b, 'B'), { fight: x.fight, changes: ctx.changes, divisionLabel: divLabel });
+    ctx.keyPoints = W.keyPoints(corner(x.a, 'A'), corner(x.b, 'B'), { fight: x.fight, changes: ctx.changes, divisionLabel: divLabel, windowLabel });
     UI.mount(ctx);
   } catch (err) {
     console.warn('[fight-lab] workspace failed', err);

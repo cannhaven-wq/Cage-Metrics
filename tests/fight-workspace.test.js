@@ -291,13 +291,21 @@ t('key points come in three labelled kinds and never name a winner', () => {
   const x = (last, o) => Object.assign({ name: last, last, age: 30, reach: 72, height: 70, stance: 'Orthodox', debut: false,
     career: { fights: 8, rates: { slpm: 5, sapm: 3, td_avg: 2.5, td_def: 60, str_def: 55 } }, recent: null,
     facts: { streak: { kind: 'W', count: 4 }, daysSinceLast: 400 }, methods: { win: { ko: 5, sub: 0, dec: 1, other: 0, total: 6 }, loss: { ko: 2, sub: 0, dec: 0, other: 0, total: 2 } },
-    pct: { slpm: 92, str_def: 50, td_avg: 85, td_def: 10, sapm: 50 }, style: { key: 'grappler' }, late: { tier: 'steady', score: 104 } }, o);
+    rank: { fights: 4, pct: { slpm: 92, str_def: 50, td_avg: 85, td_def: 10, sapm: 50 },
+            rates: { slpm: 6.1, str_def: 55, td_avg: 2.9, td_def: 40, sapm: 3.3 } },
+    style: { key: 'grappler' }, late: { tier: 'steady', score: 104 } }, o);
   const A = x('Alpha'), B = x('Bravo', { reach: 76, age: 35, stance: 'Southpaw', style: { key: 'striker' }, late: { tier: 'fades', score: 70 }, debut: true });
-  const pts = W.keyPoints(A, B, { fight: { is_title_fight: true }, changes: [{ fighterName: 'Bravo', formerOpponent: 'Charlie' }], divisionLabel: 'welterweights' });
+  const pts = W.keyPoints(A, B, { fight: { is_title_fight: true }, changes: [{ fighterName: 'Bravo', formerOpponent: 'Charlie' }],
+    divisionLabel: 'welterweights', windowLabel: 'welterweight bouts since Oct 15, 2023' });
   ['fact', 'calc', 'read'].forEach(k => ok(pts.some(p => p.kind === k), 'no ' + k + ' point'));
   ok(pts.every(p => W.KIND_LABEL[p.kind]), 'every point has a label');
   ok(pts.some(p => /Opponent change/.test(p.text)) && pts.some(p => /debut/.test(p.text)), 'context facts missing');
   ok(pts.some(p => /higher than about 92%/.test(p.text)), 'percentile not stated as a plain share');
+  // Regression (division rank like for like): the sentence quotes the WINDOW
+  // figure that was ranked (6.10), names the window, and never the career 5.00.
+  const rk = pts.find(p => /higher than about 92%/.test(p.text)).text;
+  ok(/6\.10/.test(rk) && !/5\.00/.test(rk), 'rank sentence must quote the ranked window figure, not the career one: ' + rk);
+  ok(/welterweight bouts since/.test(rk) && /same window/.test(rk), 'rank sentence must name its window: ' + rk);
   pts.forEach(p => {
     ok(!/\b(will win|should win|favou?red to|edge|advantage in this fight|lock|pick|bet on)\b/i.test(p.text), 'key point reads as a pick: ' + p.text);
     ok(!/\b(he|she|his|her|him)\b/i.test(p.text), 'key point assumes a pronoun: ' + p.text);
@@ -311,6 +319,72 @@ t('Fight Lab loads the card rules before the workspace and shows fight context',
   ok(PAGE.indexOf('id="secContext"') > 0 && PAGE.indexOf('id="secContext"') < PAGE.indexOf('id="secCompare"'), 'fight context missing or misplaced');
   ok(/Not covered yet/.test(read('fight-workspace-ui.js')), 'the context must say what CFL does not cover');
   ok(/\bdob\b/.test(PAGE) && /ageOn\(/.test(PAGE), 'Fight Lab does not compute age from the date of birth');
+});
+
+
+// ------------------------------------------------- division rank, like for like
+// Regression for the review of PR #79: the first version ranked a fighter's
+// ALL-CAREER figure against a pool of three-year, one-weight-class figures.
+// Every fighter — the two on the page included — must be measured the same
+// way: same weight class, same window, same minimum minutes.
+const WIN = { weightClass: 'Welterweight', from: '2023-10-15', to: '2026-10-15' };
+function poolBout(id, a, b, aLanded, bLanded, date, wc) {
+  return { id, fighter_a_id: a, fighter_b_id: b, weight_class: wc || 'Welterweight', events: { event_date: date },
+    end_round: 3, end_time: '5:00', is_active: true,
+    a_sig_str_landed: aLanded, a_sig_str_attempted: 100, b_sig_str_landed: bLanded, b_sig_str_attempted: 100 };
+}
+// Twelve linked pool fighters (1..12), each landing 30+i in a 15-minute bout.
+const ring = [];
+for (let i = 1; i <= 12; i++) ring.push(poolBout(100 + i, i, (i % 12) + 1, 30 + i, 30 + ((i % 12) + 1), '2025-06-01'));
+// Fighter 7 also has an old, huge welterweight fight and a huge lightweight
+// fight. Neither is in the window / weight class, so neither may count.
+const outside = [poolBout(900, 7, 99, 300, 1, '2019-01-01'), poolBout(901, 7, 98, 300, 1, '2025-01-01', 'Lightweight'),
+                 poolBout(902, 7, 97, 300, 1, '2026-10-15')];
+
+t('division pool enforces the weight class and the window itself', () => {
+  const base = W.divisionBaseline(ring.concat(outside), [7], WIN);
+  eq(base.fighters, 12, 'out-of-window, other-division and today’s bouts must not enter the pool');
+  ok(!base.byFighter[99] && !base.byFighter[98] && !base.byFighter[97], 'their opponents must not enter either');
+  eq(base.byFighter[7].fights, 2, 'fighter 7 has exactly two in-window welterweight bouts');
+  ok(W.inCriteria(ring[0], WIN) && !W.inCriteria(outside[0], WIN) && !W.inCriteria(outside[1], WIN) && !W.inCriteria(outside[2], WIN));
+});
+
+t('a fighter is ranked on the same measurement as the pool, not on the career figure', () => {
+  const base = W.divisionBaseline(ring.concat(outside), [7], WIN);
+  const rk = W.divisionRank(base, 7);
+  // In-window figure: fighter 7 landed 37 (vs 8) and 37 (vs 6) over 30 minutes.
+  near(rk.rates.slpm, 74 / 30, 'ranked figure is the in-window welterweight rate');
+  eq(rk.pct.slpm, W.percentile(base.slpm, 74 / 30), 'percentile is of that same figure');
+  // The career figure, which includes the outside bouts, is far higher and
+  // would have ranked at the very top — the old behaviour.
+  const careerSlpm = (74 + 900) / (30 + 45);
+  ok(W.percentile(base.slpm, careerSlpm) === 100 && rk.pct.slpm < 100, 'rank must not use the career figure');
+});
+
+t('a fighter outside the window or under the minimum is not ranked, and says why', () => {
+  const base = W.divisionBaseline(ring, [1], WIN);
+  eq(W.divisionRank(base, 555).reason, 'no bouts in this weight class in the window');
+  const short = ring.concat([Object.assign(poolBout(950, 1, 400, 10, 5, '2025-08-01'), { end_round: 1, end_time: '1:00' })]);
+  const b2 = W.divisionBaseline(short, [1], WIN);
+  ok(/under 15 minutes/.test(W.divisionRank(b2, 400).reason), 'one-minute fighter must not be ranked');
+  eq(b2.fighters, 12, 'and must not enter the pool');
+  eq(W.divisionRank(W.divisionBaseline(ring.slice(0, 4), [1], WIN), 1).reason, 'too few fighters in the pool');
+});
+
+t('the window is three years back from today, today excluded', () => {
+  const w = W.divisionWindow('Welterweight', '2026-10-15');
+  eq(w.from, '2023-10-15'); eq(w.to, '2026-10-15'); eq(w.weightClass, 'Welterweight');
+  eq(W.divisionWindow(null, '2026-10-15'), null);
+});
+
+t('career figures are kept separately and untouched by the rank', () => {
+  const ui = read('fight-workspace-ui.js');
+  ok(/scope: 'All UFC fights'/.test(ui), 'the all-UFC career line must stay');
+  ok(!/C\.pct[AB]/.test(ui) && /C\.rank[AB]/.test(ui), 'the page must rank with the like-for-like rank, not a career percentile');
+  ok(/rankRow\(m\)/.test(ui) && /W\.fmt\(r\.rates\[m\.recent\], m\)/.test(ui), 'the rank row must show the figure that was ranked');
+  ok(/divisionRank\(base, x\.a\.id\)/.test(PAGE) && /divisionBaseline\(divFights, \[x\.a\.id, x\.b\.id\], divCrit\)/.test(PAGE),
+    'fight.html must build the pool and the ranks with the same criteria');
+  ok(!/percentile\(base\[k\], cw\.rates/.test(PAGE), 'fight.html still ranks the career figure');
 });
 
 if (failures.length) {

@@ -35,7 +35,7 @@ Legend: ✅ works (before or after this change) · 🟡 partial · ⛔ blocked o
 
 **Recent form.** Last five, opponents, results, methods ✅ · KO/submission history ✅ how they win and how they lose *new* · finishing trends ✅ · quality of competition ✅ *new* (each opponent's UFC record going into the fight) · time since last fight ✅.
 
-**Advanced analytics.** Landed/absorbed per minute, accuracy, defence, takedown accuracy/defence, submissions, control time, knockdowns ✅ — now from every UFC fight (fresh, R4) and the last five · division rank ✅ *new* · finishing percentages ✅ · round-by-round ✅ *new* · cardio indicators ✅ (late-round score) · historical trends 🟡 fight-by-fight rows under each metric; no chart.
+**Advanced analytics.** Landed/absorbed per minute, accuracy, defence, takedown accuracy/defence, submissions, control time, knockdowns ✅ — now from every UFC fight (fresh, R4) and the last five · division rank ✅ *new* — like for like: each fighter's own bouts in this weight class over the last three years (at least 15 minutes), against every pool fighter measured the same way; the all-career figure is shown separately and never ranked · finishing percentages ✅ · round-by-round ✅ *new* · cardio indicators ✅ (late-round score) · historical trends 🟡 fight-by-fight rows under each metric; no chart.
 
 **Betting intelligence.** Current moneyline, every book, implied probability (vig-free), line movement ✅ · "opening odds" — CFL has never observed a sportsbook opener; it shows the first broad capture and says so (D-012) · historical odds trends ⛔ R7.
 

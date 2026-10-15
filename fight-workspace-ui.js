@@ -123,10 +123,21 @@
       (cw.skipped.length ? ' (' + cw.skipped.length + ' left out: ' + cw.skipped[0].reason + ')' : '');
   }
 
-  // "Higher than 45% of the division" for each corner, from the same pool.
-  function rankText(r) {
-    const one = (p, v) => last(p.name) + ' ' + (v == null ? 'not ranked' : 'higher than ' + v + '%');
-    return 'Division rank: ' + one(C.a, r.a) + ' · ' + one(C.b, r.b);
+  // Division rank for one metric, like for like: the figure each fighter is
+  // ranked on is their own bouts inside the pool's window (same weight class,
+  // same years, same minimum minutes) — shown beside the rank, because it is
+  // not the all-UFC figure above it. null when neither corner has a rank row.
+  function rankRow(m) {
+    const ra = C.rankA, rb = C.rankB;
+    if (!ra && !rb) return null;
+    const has = r => r && r.pct && r.pct[m.recent] != null;
+    if (!has(ra) && !has(rb) && !(ra && ra.reason) && !(rb && rb.reason)) return null;
+    const one = (p, r) => {
+      if (has(r)) return last(p.name) + ' ' + W.fmt(r.rates[m.recent], m) + ' in ' + r.fights + ' fight' + (r.fights === 1 ? '' : 's') +
+        ' — higher than ' + r.pct[m.recent] + '%';
+      return last(p.name) + ' not ranked (' + ((r && r.reason) || 'no figure') + ')';
+    };
+    return 'Division rank, ' + (C.windowLabel || 'this weight class') + ': ' + one(C.a, ra) + ' · ' + one(C.b, rb);
   }
 
   // The scraped UFCStats career figure, kept for reference with its age.
@@ -183,12 +194,10 @@
       const ca = C.careerA && C.careerA.rates, cb = C.careerB && C.careerB.rates;
       const ln = W.line(m, ca ? ca[m.recent] : null, cb ? cb[m.recent] : null);
       ln.noTapeA = !(C.careerA && C.careerA.fights); ln.noTapeB = !(C.careerB && C.careerB.fights);
-      const pa = C.pctA && C.pctA[m.recent], pb = C.pctB && C.pctB[m.recent];
       const thin = [[C.a, C.careerA], [C.b, C.careerB]].filter(([, cw]) => cw && cw.fights > 0 && cw.fights < 3)
         .map(([p, cw]) => last(p.name) + ' ' + cw.fights + ' UFC fight' + (cw.fights === 1 ? '' : 's'));
       lines.push({ scope: 'All UFC fights', ln, thin: thin.length ? 'Small sample: ' + thin.join(', ') + ' — treat as a rough guide' : null,
-        sample: last(C.a.name) + ': ' + careerSample(C.careerA) + ' · ' + last(C.b.name) + ': ' + careerSample(C.careerB),
-        rank: (pa != null || pb != null) ? { a: pa, b: pb } : null });
+        sample: last(C.a.name) + ': ' + careerSample(C.careerA) + ' · ' + last(C.b.name) + ': ' + careerSample(C.careerB) });
     }
     if (m.recent) {
       const ra = C.recentA && C.recentA.rates, rb = C.recentB && C.recentB.rates;
@@ -198,6 +207,7 @@
     }
     const ev = m.factor ? W.evidence(C.factorRates, m.factor) : null;
     const id = 'wsx-' + m.key;
+    const rank = m.single ? null : rankRow(m);
     const gaps = lines.map(l => { const g = gapWords(m, l.ln); return g ? l.scope + ': ' + g : null; }).filter(Boolean);
 
     const item = {
@@ -205,22 +215,22 @@
       a: lines.map(l => (l.ln.aText || 'no data') + (m.single ? '' : ' ' + l.scope.toLowerCase())).join(' · '),
       b: lines.map(l => (l.ln.bText || 'no data') + (m.single ? '' : ' ' + l.scope.toLowerCase())).join(' · '),
       source: m.single ? 'Fighter profile' : 'CFL, from every UFC fight in our data + the last ' + W.RECENT_N,
-      sample: lines[0] && lines[0].rank ? 'Division rank (all UFC fights): ' + rankText(lines[0].rank) : null,
+      sample: rank,
       evidence: ev ? ev.verdictWords + ' (Factor Lab, ' + ev.n + ' even-odds fights)' : 'Not tested as a predictor',
     };
 
     return '<article class="ws-m">' +
       '<header class="ws-mh"><h4>' + esc(m.label) + '</h4>' + tested(ev) + '</header>' +
       lines.map(l => '<div class="ws-line"><span class="ws-scope">' + esc(l.scope) + '</span>' + bfly(m, l.ln) +
-        (l.rank ? '<div class="ws-rank">' + esc(rankText(l.rank)) + '</div>' : '') +
         (l.thin ? '<div class="ws-rank thin">' + esc(l.thin) + '</div>' : '') + '</div>').join('') +
+      (rank ? '<div class="ws-rank ws-rankrow">' + esc(rank) + '</div>' : '') +
       '<div class="ws-gap">' + (gaps.length ? 'Measured difference — ' + esc(gaps.join(' · ')) : 'No difference can be measured: a figure is missing.') + '</div>' +
       '<div class="ws-acts">' + ctxBtn(id) + pinBtn(item) + '</div>' +
       '<div class="ws-ctx" id="' + id + '" hidden>' +
         '<p><b>What it measures.</b> ' + esc(m.what) + '</p>' +
         evidenceBlock(ev, m.factor) +
         '<p class="ws-fine"><b>Sample.</b> ' + lines.map(l => esc(l.scope) + ': ' + esc(l.sample)).join('<br>') + '</p>' +
-        (lines[0] && lines[0].rank ? '<p class="ws-fine"><b>Division rank.</b> ' + esc(C.divNote || '') + '</p>' : '') +
+        (rank ? '<p class="ws-fine"><b>Division rank.</b> ' + esc(C.divNote || '') + '</p>' : '') +
         (m.career && !m.single ? profileNote(m) : '') +
         history(m) +
       '</div>' +
@@ -561,7 +571,7 @@
   ];
   const TAB_NOTE = {
     key:       'What stands out, sorted by how much to trust it: verified facts, numbers CFL calculated, and interpretation. Nothing here says who wins.',
-    striking:  '"All UFC fights" is rebuilt by CFL from every completed UFC fight in our data. "Last 5" is the five most recent. Division rank compares with fighters in this weight class over the last three years.',
+    striking:  '"All UFC fights" is rebuilt by CFL from every completed UFC fight in our data. "Last 5" is the five most recent. Division rank is like for like: each fighter\u2019s own bouts in this weight class over the last three years, against fighters measured the same way.',
     grappling: 'Same sources as Striking: CFL\u2019s figures from the fight records, all UFC fights and the last five.',
     cardio:    'Late-round output and fight length. Neither is a measure of who wins.',
     form:      'Results and record are counted from completed UFC fights only — other promotions are not in our data.',

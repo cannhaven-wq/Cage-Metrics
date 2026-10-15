@@ -267,50 +267,89 @@
   }
 
   // ---- division context ----------------------------------------------------
-  // Every fighter who logged at least MIN_DIV_MINUTES in this weight class in
-  // the window, each reduced to their own rate. A percentile is then "how
-  // many of them sit below this number". Built from `fights` rows, the same
-  // source as careerWindow.
-  const MIN_DIV_MINUTES = 15;
-  const DIV_KEYS = ['slpm', 'str_acc', 'sapm', 'str_def', 'td_avg', 'td_acc', 'td_def', 'sub_avg'];
+  // LIKE FOR LIKE. Every fighter in the pool — the two on the page included —
+  // is reduced to the same measurement: their own bouts in THIS weight class,
+  // inside THIS date window, with at least MIN_DIV_MINUTES of fighting. A
+  // fighter's rank is the position of that window figure among everyone
+  // else's. It is never their all-career figure: that would set a number
+  // drawn from other divisions and other years against a three-year,
+  // one-division pool. The career figure stays on its own line, separately.
+  //
+  // `crit` is { weightClass, from, to } ('YYYY-MM-DD', from inclusive, to
+  // exclusive). The query asks for the same thing; the rule is enforced here
+  // too, so a looser query cannot widen the pool in silence.
   //
   // Weight-class labels do not say men's or women's — "Flyweight" holds both —
   // so the pool is cut to the fighters linked by actual bouts to `anchors` (the
   // two fighters on this page). Men and women never meet, so the link graph
   // separates them without needing a sex field (fighters.sex is almost empty).
-  function divisionBaseline(divFights, anchors) {
+  const MIN_DIV_MINUTES = 15;
+  const DIV_YEARS = 3;
+  const DIV_KEYS = ['slpm', 'str_acc', 'sapm', 'str_def', 'td_avg', 'td_acc', 'td_def', 'sub_avg'];
+  const fightDate = f => (f && f.events && f.events.event_date) || (f && f.event_date) || null;
+  function inCriteria(f, crit) {
+    if (!crit) return true;
+    if (crit.weightClass && f.weight_class !== crit.weightClass) return false;
+    const d = fightDate(f);
+    if ((crit.from || crit.to) && !d) return false;
+    if (crit.from && d < crit.from) return false;
+    if (crit.to && !(d < crit.to)) return false;
+    return true;
+  }
+  function divisionBaseline(divFights, anchors, crit) {
+    const pool = (divFights || []).filter(f => f && f.is_active !== false && inCriteria(f, crit));
     const parent = {};
     const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
     const join = (x, y) => {
       [x, y].forEach(k => { if (!(k in parent)) parent[k] = k; });
       const rx = find(x), ry = find(y); if (rx !== ry) parent[rx] = ry;
     };
-    (divFights || []).forEach(f => { if (f.fighter_a_id != null && f.fighter_b_id != null) join(f.fighter_a_id, f.fighter_b_id); });
+    pool.forEach(f => { if (f.fighter_a_id != null && f.fighter_b_id != null) join(f.fighter_a_id, f.fighter_b_id); });
     const roots = new Set((anchors || []).filter(x => x in parent).map(find));
     const inPool = id => !anchors || !anchors.length || (id in parent && roots.has(find(id)));
     const per = {};
-    (divFights || []).forEach(f => {
+    pool.forEach(f => {
       if (!inPool(f.fighter_a_id)) return;
       const mins = fightMinutes(f);
       if (mins == null || f.a_sig_str_attempted == null) return;
       [f.fighter_a_id, f.fighter_b_id].forEach(id => {
         if (id == null) return;
         const t = sideTotals([f], id);
-        const p = per[id] || (per[id] = { t: null, minutes: 0 });
-        p.t = p.t ? addTotals(p.t, t) : t; p.minutes += mins;
+        const p = per[id] || (per[id] = { t: null, minutes: 0, fights: 0 });
+        p.t = p.t ? addTotals(p.t, t) : t; p.minutes += mins; p.fights += 1;
       });
     });
-    const out = { fighters: 0 };
+    const out = { fighters: 0, crit: crit || null, byFighter: {} };
     DIV_KEYS.forEach(k => { out[k] = []; });
     Object.keys(per).forEach(id => {
       const p = per[id];
+      const r = rates(p.t, p.minutes);
+      out.byFighter[id] = { fights: p.fights, minutes: p.minutes, rates: r, counted: p.minutes >= MIN_DIV_MINUTES };
       if (p.minutes < MIN_DIV_MINUTES) return;
       out.fighters += 1;
-      const r = rates(p.t, p.minutes);
       DIV_KEYS.forEach(k => { if (r[k] != null) out[k].push(r[k]); });
     });
     DIV_KEYS.forEach(k => out[k].sort((x, y) => x - y));
     return out;
+  }
+
+  // One fighter's rank, measured exactly the way the pool was. Returns the
+  // window figure that was ranked (so the page can show it), or a reason.
+  function divisionRank(base, fighterId) {
+    if (!base) return { reason: 'no division data' };
+    if (base.fighters < 10) return { reason: 'too few fighters in the pool' };
+    const me = base.byFighter[fighterId];
+    if (!me) return { reason: 'no bouts in this weight class in the window' };
+    if (!me.counted) return { reason: 'under ' + MIN_DIV_MINUTES + ' minutes in this weight class in the window', fights: me.fights, minutes: me.minutes };
+    const pct = {};
+    DIV_KEYS.forEach(k => { pct[k] = percentile(base[k], me.rates[k]); });
+    return { pct, fights: me.fights, minutes: me.minutes, rates: me.rates };
+  }
+
+  // The window, as dates: DIV_YEARS back from `today`, today excluded.
+  function divisionWindow(weightClass, today) {
+    if (!weightClass || !/^\d{4}-\d{2}-\d{2}$/.test(today || '')) return null;
+    return { weightClass, from: (+today.slice(0, 4) - DIV_YEARS) + today.slice(4), to: today };
   }
   // Share of the division below v, 0-100. Ties count half, so a value equal to
   // everyone else's reads as the middle rather than the top.
@@ -356,8 +395,8 @@
   //   read  — an interpretation: a question the numbers raise. Never a
   //           verdict, never "X wins", never a side. The page says so.
   // `x` is { name, last, age, reach, height, stance, debut, career, recent,
-  //          facts, methods, pct, style, late } for each corner, and
-  //   ctx is { fight, changes, divisionLabel }.
+  //          facts, methods, rank, style, late } for each corner, and
+  //   ctx is { fight, changes, divisionLabel, windowLabel }.
   function keyPoints(A, B, ctx) {
     ctx = ctx || {};
     const out = [];
@@ -399,16 +438,21 @@
                         td_avg: 'takedowns landed per 15 minutes', td_def: 'takedown defence',
                         sapm: 'significant strikes absorbed a minute' };
     [A, B].forEach(x => {
-      if (!x.pct || !x.career || !x.career.rates || x.career.fights < 3) return;
-      Object.keys(PCT_LABEL).forEach(k => {
-        const p = x.pct[k];
-        if (p == null || (p > 20 && p < 80)) return;
-        const v = x.career.rates[k];
-        const unitless = k === 'str_def' || k === 'td_def';
-        add('calc', x.last + '’s ' + PCT_LABEL[k] + ' across ' + x.career.fights + ' UFC fights (' +
-          (unitless ? Math.round(v) + '%' : v.toFixed(2)) + ') is higher than about ' + p + '% of ' +
-          (ctx.divisionLabel || 'the division') + '.', 'rank');
-      });
+      // A rank describes the fighter's figure INSIDE the pool's window — the
+      // same bouts, years and weight class as everyone it is ranked against —
+      // and the sentence quotes that figure, never the career one.
+      const rk = x.rank;
+      if (rk && rk.pct && rk.fights >= 3) {
+        Object.keys(PCT_LABEL).forEach(k => {
+          const p = rk.pct[k], v = rk.rates[k];
+          if (p == null || v == null || (p > 20 && p < 80)) return;
+          const unitless = k === 'str_def' || k === 'td_def';
+          add('calc', x.last + '’s ' + PCT_LABEL[k] + ' in ' + (ctx.windowLabel || 'this weight class') + ' (' +
+            (unitless ? Math.round(v) + '%' : v.toFixed(2)) + ', ' + rk.fights + ' fights) is higher than about ' + p + '% of ' +
+            (ctx.divisionLabel || 'the division') + ', measured over the same window.', 'rank');
+        });
+      }
+      if (!x.career || !x.career.rates || x.career.fights < 3) return;
       const c = x.career.rates, r = x.recent && x.recent.rates;
       if (r && x.recent.used.length >= 3 && x.career.fights >= x.recent.used.length + 2 && c.slpm > 0 && r.slpm != null) {
         const ch = (r.slpm - c.slpm) / c.slpm;
@@ -715,7 +759,7 @@
   const api = {
     RECENT_N, n, clockMinutes, fightMinutes, sideTotals, rates, recentWindow,
     ageOn, careerWindow, strikeMix, roundByRound, methodKind, methods, recordBefore, opposition,
-    MIN_DIV_MINUTES, DIV_KEYS, divisionBaseline, percentile, percentileWords,
+    MIN_DIV_MINUTES, DIV_YEARS, DIV_KEYS, inCriteria, divisionBaseline, divisionRank, divisionWindow, percentile, percentileWords,
     opponentChanges, WEIGHT_LIMIT, weightLimit, keyPoints, KIND_LABEL,
     isFinish, formFacts, daysBetween,
     evidence, VERDICT_WORDS, NOT_TESTED, ONE_FIGHT,
