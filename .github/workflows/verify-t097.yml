@@ -4,7 +4,7 @@ on:
   push:
     branches: [claude/verify-t097-live]
 permissions:
-  contents: read
+  contents: write
 jobs:
   served-bytes:
     runs-on: ubuntu-latest
@@ -24,19 +24,40 @@ jobs:
           echo "main HEAD: $(git rev-parse HEAD)"
           exit $s
   live:
+    needs: served-bytes
+    if: always()
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
       - uses: actions/setup-node@v4
         with: { node-version: '22' }
       - run: |
           npm init -y >/dev/null
           npm install --no-audit --no-fund playwright@1.56.1
           npx playwright install --with-deps chromium
+      - name: Served bytes vs main
+        run: |
+          git fetch -q origin main
+          for f in index.html fight.html fight-overview.js fight-workspace.js fight-lab.js market.js _shared.js; do
+            want=$(git show origin/main:$f | sha256sum | cut -c1-64); got=$(curl -sSL "https://cannonfightlab.com/$f?nocache=$GITHUB_RUN_ID" | sha256sum | cut -c1-64)
+            plain=$(curl -sSL "https://cannonfightlab.com/$f" | sha256sum | cut -c1-64)
+            echo "$f fresh:$([ "$want" = "$got" ] && echo MATCH || echo MISMATCH) plain:$([ "$want" = "$plain" ] && echo MATCH || echo MISMATCH)"
+          done | tee served.txt
+          echo "screenshot path -> HTTP $(curl -s -o /dev/null -w '%{http_code}' "https://cannonfightlab.com/research/customer-platform/screenshots/01-card-lab-compact-desktop.png?nocache=$GITHUB_RUN_ID")" | tee -a served.txt
+          echo "main HEAD: $(git rev-parse origin/main)" | tee -a served.txt
       - name: Verify Card Lab and Fight Lab
         env:
           EXTRA_FIGHTS: '53620,49168'
-        run: node .github/scripts/verify-t097.js
+        run: |
+          set -o pipefail
+          node .github/scripts/verify-t097.js 2>&1 | tee t097-report.txt
+      - name: Commit report back to this branch
+        if: always()
+        run: |
+          mkdir -p verify-out && cp -r t097-shots verify-out/ 2>/dev/null; cp t097-report.txt served.txt verify-out/ 2>/dev/null
+          git config user.name github-actions[bot]; git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add verify-out && git commit -m "T-097 live verification output [skip ci]" && git push origin HEAD:claude/verify-t097-live
       - if: always()
         uses: actions/upload-artifact@v4
         with: { name: t097-shots, path: t097-shots/ }
