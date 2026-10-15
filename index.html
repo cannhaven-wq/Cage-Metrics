@@ -394,6 +394,37 @@
 #home .side .px.none { color: var(--text-3); background: transparent; border-color: var(--line); }
 #home .side .pxb { font-size: 10px; color: var(--text-3); letter-spacing: .02em; }
 
+/* Each corner's consensus probability, beside its best price. */
+#home .side .pp { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
+
+/* Compact list — the whole card on one screen. Same order, sort and search
+   as the full cards; every row links to Fight Lab. */
+#home .clist { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
+#home .clist-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 168px 168px 116px 22px; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
+#home .clist-row:first-child { border-top: none; }
+#home a.clist-row:hover { background: var(--bg-2); }
+#home .clist-hd { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; background: var(--bg-2); padding-top: 8px; padding-bottom: 8px; }
+#home .clist-row .no { font: 700 12px var(--font-mono); color: var(--text-3); text-align: center; }
+#home .clist-row .mu { min-width: 0; }
+#home .clist-row .mu .nms { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.3; }
+#home .clist-row .mu .nms .vs { color: var(--text-3); font-weight: 500; font-size: 12px; margin: 0 4px; }
+#home .clist-row .mu .wc { font-size: 11px; color: var(--text-3); margin-top: 1px; }
+#home .clist-row .mu .wc b { color: var(--red); font-weight: 700; }
+#home .clist-row .od { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#home .clist-row .od span { color: var(--text-3); }
+#home .clist-row .mv { font-size: 12px; color: var(--text-2); line-height: 1.3; }
+#home .clist-row .mv b { font-family: var(--font-display); font-size: 14px; color: var(--probe); }
+#home .clist-row .mv.flat b { color: var(--text-3); }
+#home .clist-row .go { color: var(--text-3); font-size: 16px; text-align: right; }
+@media (max-width: 700px) {
+  #home .clist-hd { display: none; }
+  #home .clist-row { grid-template-columns: 26px minmax(0, 1fr) auto; grid-template-areas: "no mu go" "no oa mv" "no ob mv"; row-gap: 4px; }
+  #home .clist-row .no { grid-area: no; align-self: start; padding-top: 2px; }
+  #home .clist-row .mu { grid-area: mu; } #home .clist-row .go { grid-area: go; }
+  #home .clist-row .od.a { grid-area: oa; } #home .clist-row .od.b { grid-area: ob; }
+  #home .clist-row .mv { grid-area: mv; text-align: right; align-self: end; }
+}
+
 /* Provenance line under the market cells. */
 #home .mkt-note { font-size: 11px; color: var(--text-3); line-height: 1.45; }
 #home .mkt-note.warn { color: var(--amber); }
@@ -502,6 +533,10 @@
       <div class="seg" id="dirSeg" aria-label="Card direction">
         <button data-dir="down" class="active" aria-pressed="true">Main event first</button>
         <button data-dir="up" aria-pressed="false">Main event last</button>
+      </div>
+      <div class="seg" id="viewSeg" aria-label="Card view">
+        <button data-view="cards" class="active" aria-pressed="true">Full cards</button>
+        <button data-view="list" aria-pressed="false">Compact list</button>
       </div>
       <span class="fl-hint" id="sortHint"></span>
     </div>
@@ -745,6 +780,9 @@ let _cardState  = null;   // { fights, fighterMap, eventId, event }
 let _hpSortKey  = 'order';
 let _hpDir      = 'down';  // 'down' = main event first; 'up' = main event last
 let _hpQuery    = '';      // search within the card
+// 'cards' = one full card per fight; 'list' = the whole card, one row each.
+// Remembered per browser; a blocked localStorage just means the default.
+let _hpView     = (function () { try { return localStorage.getItem('cfl.cardView') === 'list' ? 'list' : 'cards'; } catch (e) { return 'cards'; } })();
 let _fightDay   = false;  // set by renderCardHead; decides the "stale" bar for a quote's age
 
 // Card Lab shows the market and the matchup. It does not show a CFL number,
@@ -949,7 +987,10 @@ function renderCards() {
   renderOrderNote();
   renderSearchStatus(cards.length, ordered.length);
 
-  list.innerHTML = cards.length ? cards.map(c => c.html).join('')
+  const listHead = '<div class="clist-row clist-hd"><span class="no">#</span><span>Matchup</span><span>Odds · best price</span>' +
+    '<span>Odds · best price</span><span>Market move</span><span></span></div>';
+  list.innerHTML = cards.length
+    ? (_hpView === 'list' ? '<div class="clist">' + listHead + cards.map(c => c.row).join('') + '</div>' : cards.map(c => c.html).join(''))
     : '<div class="search-empty">No fight on this card matches “' + cfl.escapeHtml(_hpQuery) + '”. ' +
       '<button type="button" class="linkish" id="cardSearchClear2">Clear the search</button></div>';
 }
@@ -1142,7 +1183,27 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
       <a href="fight.html?id=${fight.id}" class="btn btn-ghost btn-block">Research this matchup in Fight Lab →</a>
     </div>`;
 
-  return { order: idx, absMove, spread, html };
+  // ---- the compact-list row: names, division, both prices, the move
+  const odds = (f, r) => '<span class="od ' + (f === a ? 'a' : 'b') + '">' + cfl.escapeHtml(lastName(f.name)) + ' ' +
+    (r && r.bestAmerican != null
+      ? cfl.escapeHtml(M.fmtAmerican(r.bestAmerican)) + ' <span>' + Math.round(r.prob * 100) + '%</span>'
+      : (r ? '<span>' + Math.round(r.prob * 100) + '%</span>' : '<span>no line</span>')) + '</span>';
+  let mvTxt = '<span class="mv flat"><b>—</b></span>';
+  if (moveRead && moveRead.moveSinceBaseline != null) {
+    const mv = moveRead.moveSinceBaseline;
+    mvTxt = Math.abs(mv) < 0.5 ? '<span class="mv flat"><b>0.0</b> steady</span>'
+      : '<span class="mv"><b>' + Math.abs(mv).toFixed(1) + '</b> → ' + cfl.escapeHtml(lastName((mv > 0 ? a : b).name)) + '</span>';
+  }
+  const listRow = '<a class="clist-row" href="fight.html?id=' + fight.id + '">' +
+    '<span class="no">' + (idx + 1) + '</span>' +
+    '<span class="mu"><div class="nms">' + cfl.escapeHtml(a.name) + '<span class="vs">vs</span>' + cfl.escapeHtml(b.name) + '</div>' +
+      '<div class="wc">' + (fight.is_main_event ? '<b>Main event</b> · ' : fight.is_title_fight ? '<b>Title</b> · ' : '') +
+      cfl.escapeHtml(fight.weight_class || 'Bout') + (bout ? ' · ' + cfl.escapeHtml(bout) : '') +
+      (priced && readA.bookCount ? ' · ' + readA.bookCount + ' books' + (readA.fresh ? ', ' + cfl.escapeHtml(readA.fresh.when) : '') : '') + '</div></span>' +
+    odds(a, readA) + odds(b, readB) + mvTxt +
+    '<span class="go" aria-hidden="true">›</span></a>';
+
+  return { order: idx, absMove, spread, html, row: listRow };
 }
 
 // A corner: name, record, and the best price anyone is posting on that side.
@@ -1156,7 +1217,8 @@ function fighterSideHtml(f, read, side) {
   const flagVar = cfl.flagStyle ? cfl.flagStyle(f) : '';
   const px = (read && read.bestAmerican != null)
     ? `<div class="px">${cfl.escapeHtml(M.fmtAmerican(read.bestAmerican))}</div>` +
-      `<div class="pxb">best · ${cfl.escapeHtml(read.bestBook || 'tracked book')}</div>`
+      `<div class="pxb">best · ${cfl.escapeHtml(read.bestBook || 'tracked book')}</div>` +
+      `<div class="pp">${Math.round(read.prob * 100)}% market</div>`
     : `<div class="px none">—</div><div class="pxb">no price</div>`;
   return `
     <a class="side${flagCls}" href="${cfl.fighterUrl(f.id)}"${flagVar}>
@@ -1202,6 +1264,21 @@ function wireControls() {
     q.addEventListener('keydown', e => { if (e.key === 'Escape') { q.value = ''; apply(''); } });
     document.addEventListener('click', e => {
       if (e.target && (e.target.id === 'cardSearchClear' || e.target.id === 'cardSearchClear2')) { q.value = ''; apply(''); q.focus(); }
+    });
+  }
+  const view = document.getElementById('viewSeg');
+  if (view && !view._wired) {
+    view._wired = true;
+    const mark = () => [].forEach.call(view.querySelectorAll('button'), b => {
+      b.classList.toggle('active', b.dataset.view === _hpView); b.setAttribute('aria-pressed', String(b.dataset.view === _hpView));
+    });
+    mark();
+    view.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      _hpView = btn.dataset.view === 'list' ? 'list' : 'cards';
+      try { localStorage.setItem('cfl.cardView', _hpView); } catch (err) {}
+      mark();
+      renderCards();
     });
   }
   const dir = document.getElementById('dirSeg');

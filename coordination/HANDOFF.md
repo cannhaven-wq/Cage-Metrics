@@ -11,6 +11,40 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (h) — Customer research platform: matchup overview and compact card (T-097)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **Fight Lab:** a "Matchup overview" now opens the page, above every
+  existing section (all kept, in their order). Per fighter: age, height,
+  reach, stance, records, streak, layoff, market consensus with best price
+  and book; measured style; tendency lines from `fight-overview.js` (each
+  states its number and sample, needs 3 UFC fights and 25 minutes, and a test
+  forbids training-background words such as boxer or wrestler); last five with
+  opponent, method and round; striking, strike distribution, grappling,
+  control, late-round score, decisions and rounds reached. Rates come from
+  `fight-workspace.js::careerWindow`, so the overview and the explorer agree.
+- **Card Lab:** a "Full cards / Compact list" toggle. The list is the whole
+  card on one screen, through the same order toggle, sort and search; each
+  corner's best price and market % sit on the full cards too.
+- **Verified** on real rows read from production (Buckley vs Malott,
+  Volkanovski vs Evloev with no price yet, Cerminara vs Stiller with a
+  debutant), desktop and phone, no horizontal scroll. The sandbox cannot
+  reach Supabase, so the page ran against those rows through a local stub.
+- **Not done, unchanged:** the official running order still needs the T-096
+  migration; until then the order toggle says it is announcement order.
+
+## Next action
+
+1. **Owner:** review the T-097 PR (screenshots attached) and decide whether to
+   merge. Nothing is deployed until it is merged.
+2. **Claude, after merge:** run `verify-live` and confirm the served
+   `fight.html` and `fight-overview.js` match `main`.
+
+---
+
 ## 2026-10-15 (g) — Event card sprint: search shipped, running order ready, three decisions (T-096)
 
 **From:** Claude
