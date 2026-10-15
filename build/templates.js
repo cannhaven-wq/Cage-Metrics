@@ -244,4 +244,62 @@ function eventStub(e, fighters) {
 `;
 }
 
-module.exports = { fighterStub, eventStub };
+// T-086. A card that is not a UFC event (Contender Series, Road to UFC). Its
+// stub URL keeps working, so old links and shares do not 404, but it is not
+// presented as a UFC event, is marked noindex, carries no SportsEvent markup
+// naming the UFC as organiser, and is never listed in the sitemap.
+function nonUfcEventStub(e, promotionLabel) {
+  const id = e.id;
+  const slug = slugify(e.name);
+  const stubUrl = `${SITE}/e/${slug}-${id}.html`;
+  const canonicalUrl = `${SITE}/event.html?id=${id}`;
+  const dateStr = formatDate(e.event_date);
+  const label = promotionLabel || 'a non-UFC promotion';
+  const title = `${e.name} — not a UFC event | Cannon Fight Lab`;
+  const description = `${e.name}${dateStr ? ' on ' + dateStr : ''} was a ${label} card, not a UFC event. `
+    + 'Its results are kept for reference and are not counted in any UFC record.';
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>${escapeHtml(title)}</title>
+<meta name="description" content="${escapeHtml(description)}">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="${canonicalUrl}">
+<meta http-equiv="refresh" content="0; url=${canonicalUrl}">
+
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Cannon Fight Lab">
+<meta property="og:title" content="${escapeHtml(e.name)} — Cannon Fight Lab">
+<meta property="og:description" content="${escapeHtml(description)}">
+<meta property="og:url" content="${stubUrl}">
+<meta property="og:image" content="${SITE}/og-image.png">
+
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+
+<style>
+  body { background: #0a0a0a; color: #e8e8e8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; padding: 60px 20px; text-align: center; margin: 0; line-height: 1.5; }
+  h1 { font-size: 36px; color: #fff; margin: 0 0 12px; }
+  .meta { color: #a0a0a0; margin-bottom: 28px; }
+  a { color: #ff3838; text-decoration: none; }
+  .loading { color: #707070; font-size: 13px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<h1>${escapeHtml(e.name)}</h1>
+<div class="meta">${escapeHtml(dateStr)}${e.location ? ' &middot; ' + escapeHtml(e.location) : ''}</div>
+<p>${escapeHtml(description)}</p>
+<p><a href="${canonicalUrl}">See the results &rarr;</a></p>
+<p class="loading">Redirecting&hellip;</p>
+<script>setTimeout(function(){location.replace(${JSON.stringify(canonicalUrl)});},120);</script>
+</body>
+</html>
+`;
+}
+
+module.exports = { fighterStub, eventStub, nonUfcEventStub };

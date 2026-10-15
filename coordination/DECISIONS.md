@@ -1874,3 +1874,64 @@ job. None of those views can be written through (checked in
 
 **Attribution note.** Recorded by Claude from the owner's answer in the
 project-audit session.
+
+## D-026 — T-086 approved: DWCS 10.3 leaves the UFC tables, with gates; RESERVE and PROP-0001 corrections recorded before the bell
+
+| field | value |
+|---|---|
+| date | 2026-10-13 |
+| decided by | Reed Cannon (owner) |
+| task | T-086 |
+| level | L3 |
+| reversible | the move: yes, `t086_dwcs_non_ufc.rollback.sql` restores the original bytes. The two research records below are dated notes and are not reversed. |
+
+**The owner's instruction, quoted:** *"Approve the revised architecture,
+including moving the event record. I approve separating DWCS 10.3, its five
+bouts and eight round records into the non-UFC tables."*
+
+**Gates the owner set before any production move:**
+- PR #69's CI is fixed, its conflict resolved, and CI is green on the final
+  commit.
+- Event-scraper PR #1 is merged and verified first.
+- Source-row fingerprints, foreign-key references and rollback preconditions
+  are rechecked.
+- Stop immediately if anything differs from the reviewed plan.
+- **The destructive part is not applied until those checks have passed and
+  readiness has been reported.**
+
+**Plain version.** The Contender Series card moves out of the UFC tables
+exactly as planned, only after every gate has passed. Two research records
+are corrected openly, in writing, before Saturday's fight, rather than
+quietly changed.
+
+**PRED-001 RESERVE (owner: "acknowledged").**
+- The sealed manifest (`research/protocol/holdout_manifest.json`) keeps its
+  recorded **169** and is not edited.
+- The dated correction is in
+  [`research/data-integrity/T-086_RESEARCH_CORRECTIONS_2026-10-13.md`](../research/data-integrity/T-086_RESEARCH_CORRECTIONS_2026-10-13.md).
+  Five DWCS bouts are no longer UFC-eligible, which gives **164** under the
+  corrected definition.
+- The corrected cohort is a different cohort. It may not be used as though it
+  were the original frozen one.
+
+**PROP-0001 locks on fight 53618 (owner: "approved").**
+- All eight existing locks (ids 457–460 and 505–508) are preserved and graded
+  under their original rules.
+- The known contamination is documented here and in the corrections file,
+  **before the fight**. Galanti's only prior bout in the data at lock time was
+  the Contender Series one, so the locked `m_fh_n_fights` reads 1.0 where a
+  UFC-only history gives 0.5.
+- Results are also reported separately as a sensitivity check, with and
+  without 53618.
+- No outcome-based exclusion.
+
+**Road to UFC (owner).** "Leave the Road to UFC classification untouched
+pending independent verification. Being included in a sealed holdout is not
+itself proof that a bout belongs in the UFC category." Event 146 and bouts 417
+and 418 are not moved, and no rule is changed for them.
+
+**What is not decided.** Whether Road to UFC 4.6 is a UFC card. That needs
+independent verification against an official source.
+
+**Attribution note.** Recorded by Claude from the owner's message in the
+project-audit session.
