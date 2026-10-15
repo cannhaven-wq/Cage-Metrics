@@ -13,11 +13,15 @@ signup fix, the marketing-email lock) as `87feffd`. Both are live, checked from
 GitHub's side by verify-live run 38753407231: served bytes match `main`, the
 DWCS page says "Not a UFC event", and the Card Brief form subscribes. Marketing
 email stays **locked** until double opt-in exists (T-090).
-**Open, T-092 (needs the owner, L3):** the market view takes 5.6 s against an
-8 s browser limit. When several visitors load at once, prices can fail to load.
-`market.js` now retries once and says "prices didn't load" honestly, but the
-view itself needs rewriting.
-**Open, T-093 (owner, L3):** 25 finished fights with no round stats.
+**Open, T-092 (owner GO needed, L3): fix ready, not applied.** The market view
+took 5.6 s of an 8 s browser limit. A per-fight rewrite gives the same answers
+in 11.6 ms per card (`market_movement_t092.sql`), and the migration proves the
+equivalence itself before it commits.
+**Open, T-093 (owner GO needed, L3):** 25 finished fights with no round stats.
+The duplicate-booking fix is ready: `dead_bookings_t093.sql` flags three rows
+inactive, deletes nothing, and was rehearsed on production.
+Full rescans can no longer start on a merge: Railway watch pattern
+`FULL_RESCAN_APPROVED` (2026-10-15).
 - 1 is a scraper loss (7349). T-091 restores it.
 - **3 are the same bout booked twice.** They add a bout to six fighters' public
   UFC records, and retiring them is the owner's call.
