@@ -11,6 +11,30 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (e) — T-094 is live and verified
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- PR #77 merged as `d5c850c` with the owner's go-ahead; Pages deployed.
+- `verify-live` run 38770578048 on `d5c850c`: all four jobs green. Served
+  bytes match `main`, including `fight-workspace.js` and
+  `fight-workspace-ui.js`; on live bouts the explorer shows six tabs with
+  samples and the research sheet renders, at desktop and phone width, with no
+  console errors and no pick language.
+
+## Next action
+
+1. **Owner:** watch the Card Lab → Fight Lab click-through on the 2026-10-17
+   card (`fight_opened` with `from=card` in `v_funnel_daily`) to see whether
+   visitors reach the workspace.
+2. **Claude:** next customer-experience step, if approved: let a visitor share
+   a read-only link to their research sheet (still no account, encoded in
+   the URL), and add the explorer to `h2h.html` for any two fighters.
+
+---
+
 ## 2026-10-15 (d) — Fight Lab research workspace (T-094, customer experience sprint 1)
 
 **From:** Claude
