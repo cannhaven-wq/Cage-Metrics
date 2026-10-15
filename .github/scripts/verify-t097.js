@@ -237,11 +237,12 @@ async function main() {
         // nav works on the phone: open the menu if there is one, then go to Card Lab
         const burger = await page.$('#cflNavBurger');
         const link = await page.$('nav.cfl-nav a.cfl-nav-cta-link[href="index.html#next"]');
-        if (burger && await burger.isVisible() && !(await link.isVisible())) { await burger.click(); await page.waitForTimeout(400); }
+        await page.evaluate(() => window.scrollTo(0, 0));
+        if (burger && await burger.isVisible()) { await burger.click(); await page.waitForTimeout(600); }
         const expanded = burger ? await burger.getAttribute('aria-expanded') : null;
         let navOk = false;
         if (link && await link.isVisible()) {
-          await Promise.all([page.waitForURL(u => !/fight\.html/.test(String(u)), { timeout: 20000 }).catch(() => {}), link.click()]);
+          await Promise.all([page.waitForURL(u => !/fight\.html/.test(String(u)), { timeout: 20000 }).catch(() => {}), link.click({ timeout: 10000 }).catch(e => console.log('  nav click: ' + e.message.split('\n')[0]))]);
           navOk = !/fight\.html/.test(page.url());
         }
         console.log('  phone nav: burger visible=' + !!burger + ' expanded=' + expanded);
