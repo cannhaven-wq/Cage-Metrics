@@ -11,6 +11,38 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (c) — T-092 and T-093 live; T-091 approved but blocked by the tooling
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **Applied with the owner's approval (D-029):**
+  - **T-092:** the market view, verified at 11.3 ms per card;
+  - **T-093:** three duplicate bookings flagged inactive; all odds, predictions
+    and model predictions are retained.
+- **Not applied: T-091.** The Supabase tool holds any SQL containing DELETE
+  for a confirmation that never arrives. It was not bypassed.
+- **PR #76 is merged into PR #73** (`31b6733`), so the reviewed SQL is what
+  ships.
+- **Scraper PRs #3 and #4 stay unmerged** until the functions exist.
+- **The full rescan** is fenced by the watch pattern. Round counts still match
+  the baseline: 0 rows missing, 0 changed.
+
+## Next action
+
+1. **Owner:** in the Supabase SQL editor, run `fight_rounds_replace_rpc.sql`
+   from PR #73 (head `31b6733`), then merge PR #73.
+2. **Claude:** confirm that both functions exist and that only `service_role`
+   can execute them, then merge scraper PR #3 and then PR #4.
+   - Neither merge starts a rescan.
+   - The Weekly Scraper cron is redeployed and waits for 00:00 UTC.
+3. **Claude:** set `REPAIR_MAX_FIGHTS` back to 60 so phase 5 repairs 7349 and
+   classifies the 21. Then compare the round counts against
+   `cfl_audit.fight_rounds_baseline_20261015`.
+
+---
+
 ## 2026-10-15 (b) — Rescans fenced; T-091 reviewed; T-092 and T-093 ready for GO
 
 **From:** Claude
