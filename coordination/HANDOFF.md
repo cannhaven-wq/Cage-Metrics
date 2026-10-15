@@ -11,6 +11,93 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (c) — T-092 and T-093 live; T-091 approved but blocked by the tooling
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **Applied with the owner's approval (D-029):**
+  - **T-092:** the market view, verified at 11.3 ms per card;
+  - **T-093:** three duplicate bookings flagged inactive; all odds, predictions
+    and model predictions are retained.
+- **Not applied: T-091.** The Supabase tool holds any SQL containing DELETE
+  for a confirmation that never arrives. It was not bypassed.
+- **PR #76 is merged into PR #73** (`31b6733`), so the reviewed SQL is what
+  ships.
+- **Scraper PRs #3 and #4 stay unmerged** until the functions exist.
+- **The full rescan** is fenced by the watch pattern. Round counts still match
+  the baseline: 0 rows missing, 0 changed.
+
+## Next action
+
+1. **Owner:** in the Supabase SQL editor, run `fight_rounds_replace_rpc.sql`
+   from PR #73 (head `31b6733`), then merge PR #73.
+2. **Claude:** confirm that both functions exist and that only `service_role`
+   can execute them, then merge scraper PR #3 and then PR #4.
+   - Neither merge starts a rescan.
+   - The Weekly Scraper cron is redeployed and waits for 00:00 UTC.
+3. **Claude:** set `REPAIR_MAX_FIGHTS` back to 60 so phase 5 repairs 7349 and
+   classifies the 21. Then compare the round counts against
+   `cfl_audit.fight_rounds_baseline_20261015`.
+
+---
+
+## 2026-10-15 (b) — Rescans fenced; T-091 reviewed; T-092 and T-093 ready for GO
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+**Rescans.**
+- The full rescan started by the PR #2 deploy (deployment `7e8e1204`) is still
+  running. At 15:19 UTC it was on event 86 of 799.
+- Round counts have not moved: 20,976 rows over 8,915 fights.
+- Every round row and every fight row is copied to
+  `cfl_audit.fight_rounds_baseline_20261015` and `cfl_audit.fights_baseline_20261015`.
+  That schema is private and not exposed to the browser API.
+- **A merge can no longer start a rescan.** Service `cage-metrics-event-scrapper`
+  now has the Railway watch pattern `FULL_RESCAN_APPROVED`, so it only
+  redeploys when a file of that name changes. To undo, clear the watch
+  patterns.
+- Phase 5 is still off (`REPAIR_MAX_FIGHTS=0`).
+
+**T-091 review (PR #3 and its RPC).**
+- Sound. PR #3 is already rebased onto `b977434`, and 19 scraper tests and 9
+  SQL tests pass.
+- I found two issues and fixed them on `claude/dreamy-wright-nludxq-rpc`, on
+  top of `claude/pensive-fermi-d6pbi0-rounds-rpc`; 11 SQL tests pass:
+  1. **A partial page still shrank a fight.** The function now refuses any set
+     that is not exactly rounds 1..`end_round`. That shape holds for all 8,915
+     fights that have rounds.
+  2. **`(jsonb_populate_record(...)).*` called `nextval()` once per column**,
+     37 times per row. It now uses one `LATERAL` call per row.
+- A production rehearsal through the Supabase tool is impossible: it holds any
+  statement containing DELETE. The local replica stands in.
+- **Order:** apply the RPC, then merge PR #3, then merge PR #4. Neither merge
+  starts a rescan now.
+
+**T-092 and T-093.** The proposals, evidence and GO recommendations are in the
+TASK_QUEUE rows.
+
+**Card Brief test row.** Row 26 is unsubscribed through `unsubscribe_email`,
+the email link's own path, so no send can reach it. Removing the row still
+needs a DELETE, which the Supabase tool holds for confirmation.
+
+## Next action
+
+**Owner:**
+1. GO or NO-GO on `market_movement_t092.sql`.
+2. GO or NO-GO on `dead_bookings_t093.sql`.
+3. GO or NO-GO on the T-091 RPC, `fight_rounds_replace_rpc.sql` with the
+   review fixes.
+4. Delete row 26 with `delete from email_subscribers where id = 26;`.
+
+**Claude, after each GO:** run verify-live, compare round counts against the
+baseline, and drop `cfl_audit.v_mm_candidate`.
+
+---
+
 ## 2026-10-15 — T-086 and T-088 live, PRs #69 and #71 merged; round gaps traced; market view too slow (T-092)
 
 **From:** Claude

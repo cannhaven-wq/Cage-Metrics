@@ -655,7 +655,11 @@ async function loadHistory() {
   const { data: fights, error } = await sb
     .from('fights')
     .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_title_fight, event_id')
-    .or(`fighter_a_id.eq.${fighterId},fighter_b_id.eq.${fighterId}`);
+    .or(`fighter_a_id.eq.${fighterId},fighter_b_id.eq.${fighterId}`)
+    // A retired booking (is_active = false: a dead or duplicate row, D-024 /
+    // T-093) is not a fight. NULL still passes, same rule as
+    // v_fighter_ufc_record, so the list and the record cannot disagree.
+    .not('is_active', 'is', false);
 
   if (error) {
     container.innerHTML = cfl.errorHtml('Failed to load fight history: ' + error.message);

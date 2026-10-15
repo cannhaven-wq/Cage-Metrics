@@ -2017,3 +2017,44 @@ rolled-back transaction and left no row.
 
 **What is not decided.** Double opt-in (T-090) stays L3 and open. Marketing
 email stays locked in code until it lands.
+
+## D-029 — T-092 and T-093 applied; T-091 approved, blocked by the tooling
+
+| field | value |
+|---|---|
+| date | 2026-10-15 |
+| decided by | Reed Cannon (owner), "Approved: All three" in the stabilization session; applied by Claude |
+| task | T-092, T-093 |
+| level | L3 |
+| reversible | T-092 by `market_movement_t092.rollback.sql` (no data); T-093 by `dead_bookings_t093.rollback.sql` (one UPDATE) |
+
+**Plain version.** Card prices load in about a hundredth of a second, down from
+almost six seconds, and the numbers are the same. Three bouts that were counted
+twice now count once. No odds, predictions or research records were touched.
+
+**T-092 applied.**
+- The migration's own check confirmed the new output was equivalent to the old
+  one before it committed: same rows, same values, and book names differing
+  only between books tied on the best price.
+- The new definition hashes to md5 `010970d6…`. The old one, `eaa359c1…`, is
+  exactly what the rollback file restores (checked on production).
+- A card read now takes 11.3 ms, where it took 5,646 ms.
+- `anon` keeps SELECT, and `v_fight_alert_market` still reads 120 rows.
+
+**T-093 applied.**
+- Fights 43, 46 and 8780 are `is_active = false`; their twins 27872, 27877
+  and 27879 stay active.
+- Retained: 10,514 odds rows, 3 predictions, 44 model predictions and 1
+  consensus snapshot.
+- The six corrected records: Matthews 16-8, Harris 4-4, Tsuruya 3-1,
+  Gurule 1-4, Vera 1-0, Zhu 0-1.
+- The H1 set is untouched: none of the six ids is in it.
+- The Model Archive's numbers are unchanged, because it reads
+  `model_predictions` directly.
+
+**T-091 approved and NOT applied.** The Supabase tool holds any statement
+containing DELETE for a confirmation that never reaches the agent, and the
+function body contains one. Disguising it to get past that check would bypass
+a safeguard. The owner applies `fight_rounds_replace_rpc.sql` (PR #73, head
+`31b6733`) in the SQL editor. After that comes scraper PR #3, then PR #4.
+

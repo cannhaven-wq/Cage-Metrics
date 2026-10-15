@@ -1,3 +1,13 @@
+-- =============================================================================
+-- DO NOT RUN. Superseded 2026-10-15 by dead_bookings_t093.sql (T-093).
+-- This script moves the stale bookings' odds onto the canonical fights and then
+-- deletes, with every FK cascading. PRED-001's frozen H1 manifest excludes fights
+-- 43, 46 and 8780 because their stored prices may belong to a different matchup;
+-- re-attaching those prices to 27872 / 27877 / 27879 would put suspect prices on
+-- rows H1 can see. T-093 retires the stale rows with is_active = false instead
+-- and moves nothing. Kept for the record only.
+-- =============================================================================
+
 -- Dead-booking cleanup: UFC Fight Night: Song vs. Figueiredo (event 113, 2026-05-30)
 -- ufcstats reassigned three bouts' fight ids; the scraper inserted fresh rows and
 -- the stale bookings survived. Stats/rounds live on the NEW rows; the odds capture
