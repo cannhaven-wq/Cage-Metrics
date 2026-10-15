@@ -1680,7 +1680,7 @@ function renderOverview(x) {
     return '<div class="ov-col ' + S.key + '"><div class="hd">' + esc(S.f.name) + '</div>' +
       '<div class="blk"><div class="who-k">Fighting style (measured)</div>' + styleHtml + '</div>' +
       '<div class="blk"><div class="who-k">Statistical tendencies from the fight records</div>' + tendHtml + '</div>' + resHtml +
-      '<div class="blk"><div class="who-k">Last ' + (S.form.length || 5) + ' UFC fights · newest first</div><div class="ov-l5">' + l5 + '</div></div>' +
+      '<div class="blk"><div class="who-k">' + (S.form.length === 1 ? 'Last UFC fight' : 'Last ' + (S.form.length || 5) + ' UFC fights · newest first') + '</div><div class="ov-l5">' + l5 + '</div></div>' +
     '</div>';
   };
 
