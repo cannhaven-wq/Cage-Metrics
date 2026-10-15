@@ -359,6 +359,25 @@ CHECKS: tuple[Check, ...] = (
         baseline=0,
         unit="fights",
     ),
+    # ------------------------------------------------------------ rounds
+    Check(
+        key="fight_totals_without_rounds",
+        title="Completed fights with fight totals but no round-by-round rows",
+        sql="""
+            select count(*) n from fights f join events e on e.id = f.event_id
+            where f.method is not null and e.event_date < current_date
+              and f.a_sig_str_landed is not null
+              and not exists (select 1 from fight_rounds r where r.fight_id = f.id)
+        """,
+        why="UFCStats published this fight's round stats (its totals are here), "
+            "but the round rows are missing. That is what a scraper write that "
+            "deleted the old rows and failed before inserting new ones leaves "
+            "behind, and every per-round number for that fight reads as empty. "
+            "Early UFC fights with no stats at all are not counted.",
+        classification=REVIEW,
+        baseline=1,   # measured 2026-10-15: fight 7349, lost in the 2026-10-14 rescan
+        unit="fights",
+    ),
     # ------------------------------------------------------------ promotion
     Check(
         key="non_ufc_card_in_events",
