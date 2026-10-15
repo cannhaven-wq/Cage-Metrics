@@ -11,6 +11,47 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 — T-086 is live and verified; scraper round-data integrity is next
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+**T-086 is done.** On 2026-10-14 Claude's own attempt to run the migration timed
+out in the Supabase tool. Nothing reached the database, and that was verified.
+The reviewed migration file was then applied on 2026-10-15 at 14:16:52 UTC.
+Claude verified the result independently afterwards:
+
+- **The moved rows are byte-identical to the originals.**
+  - fights `c214474a…`, rounds `061a9bf9…`, event `385f53c7…`;
+  - the migration's own stored fingerprints agree.
+- **Structure is as tested:** 14 constraints, 16 indexes, RLS on, SELECT only
+  for the browser roles, and ids taken from the UFC sequences.
+- **The guard is validated:** `non_ufc_card_in_events` reads 0 and 800 events
+  remain.
+- **Frozen research is as expected:**
+  - H1 is 710 / 63 with all four hashes intact;
+  - RESERVE re-derives to 164, matching the D-026 correction;
+  - the security advisor is unchanged.
+- **The site:** PR #69 is merged and the prerender regenerated with the new code.
+  The DWCS stub is noindex and the sitemap lists 800 event stubs.
+- **Live check:** `verify-live` is green on 53618 / 46774 / 53620. Galanti reads
+  "No UFC fights yet" on desktop and phone.
+
+## Next action
+
+Claude: the scraper round-data integrity task, as the owner asked on 2026-10-14.
+1. Make the round replacement a single database transaction (an RPC).
+2. Add retries, a check that the expected number of rows was written, and a
+   non-zero exit when a round write fails.
+3. Investigate and restore fight 7349's rounds.
+4. Audit the other 25 completed fights that have no rounds.
+
+No full rescan is scheduled until that lands. The RPC is a database change and
+goes to the owner first.
+
+---
+
 ## 2026-10-13 (i) — T-086 approved with gates (D-026); nothing applied yet
 
 **From:** Claude
