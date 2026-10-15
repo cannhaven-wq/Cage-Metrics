@@ -648,6 +648,15 @@
   .ev-seg button:hover { color: #fff; }
   .ev-seg button.active { background: var(--red); color: #fff; }
   .ev-order-note { font-size: 12px; color: var(--text-3); line-height: 1.5; margin: 0; flex: 1 1 280px; }
+  .fight-card-header .badge.bout { background: var(--bg-3); color: var(--text-2); border: 1px solid var(--line-2); }
+  .ev-search { display: flex; align-items: center; gap: 10px; flex: 1 1 300px; flex-wrap: wrap; }
+  .ev-search input { flex: 1 1 220px; max-width: 380px; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; color: var(--text); font: 500 14px var(--font-body); padding: 9px 12px; }
+  .ev-search input:focus { outline: 2px solid var(--probe); outline-offset: 1px; border-color: transparent; }
+  .ev-search-status { font-size: 12.5px; color: var(--text-3); }
+  .ev-order-note { flex-basis: 100%; }
+  .ev-search-empty { background: var(--bg-1); border: 1px dashed var(--line-2); border-radius: 12px; padding: 18px; color: var(--text-2); font-size: 14px; }
+  .linkish { background: none; border: 0; color: var(--red); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
+  .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
   .fight-card-header .badge.change { color: var(--amber); border-color: rgba(255,181,71,.35); background: rgba(255,181,71,.06); }
 </style>
 </head>
@@ -667,7 +676,7 @@
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
-<script src="card-research.js?v=1"></script>
+<script src="card-research.js?v=2"></script>
 <script src="market.js?v=3"></script>
 <script src="fight-insights.js?v=8"></script>
 <script>
@@ -951,6 +960,9 @@ async function load() {
     formMap,
     allBookings: fightsRaw || [],
     dir: 'down',
+    query: '',
+    // The verified running order, when the event-flow ledger holds one.
+    ro: window.cflCard ? cflCard.runningOrder(fights || [], await cflCard.loadRunningOrder(sb, event.id)) : null,
   };
 
   document.getElementById('content').innerHTML = `
@@ -962,6 +974,11 @@ async function load() {
     <div class="page">
       <div class="ev-order">
         <div class="ev-seg" id="evDir" aria-label="Card direction"></div>
+        <div class="ev-search" role="search">
+          <label class="sr-only" for="evSearch">Search this card</label>
+          <input id="evSearch" type="text" enterkeyhint="search" placeholder="Search this card — fighter or weight class" autocomplete="off" spellcheck="false">
+          <span class="ev-search-status" id="evSearchStatus" aria-live="polite"></span>
+        </div>
         <p class="ev-order-note" id="evOrderNote"></p>
       </div>
       <div id="fightsList"></div>
@@ -972,6 +989,12 @@ async function load() {
     const btn = e.target.closest('button'); if (!btn) return;
     _renderState.dir = btn.dataset.dir;
     renderFightList();
+  });
+  const q = document.getElementById('evSearch');
+  q.addEventListener('input', () => { _renderState.query = q.value.trim(); renderFightList(); });
+  q.addEventListener('keydown', e => { if (e.key === 'Escape') { q.value = ''; _renderState.query = ''; renderFightList(); } });
+  document.addEventListener('click', e => {
+    if (e.target && e.target.id === 'evSearchClear') { q.value = ''; _renderState.query = ''; renderFightList(); q.focus(); }
   });
 
 }
@@ -993,10 +1016,16 @@ let _renderState = null;
 // (card-research.js: the running order is not in our data yet).
 function renderFightList() {
   const st = _renderState;
-  const list = st.dir === 'up' ? st.fights.slice().reverse() : st.fights;
-  document.getElementById('fightsList').innerHTML = list.map(f => renderFight(f, st)).join('');
-  if (!window.cflCard) return;
-  const info = cflCard.orderInfo(st.fights);
+  const C = window.cflCard;
+  const ordered = C ? C.sortCard(st.fights, st.ro, st.dir) : (st.dir === 'up' ? st.fights.slice().reverse() : st.fights);
+  const list = st.query && C ? ordered.filter(f => C.fightMatches(f, st.fighterMap, st.query)) : ordered;
+  document.getElementById('fightsList').innerHTML = list.length ? list.map(f => renderFight(f, st)).join('')
+    : '<div class="ev-search-empty">No fight on this card matches “' + cfl.escapeHtml(st.query) + '”. ' +
+      '<button type="button" class="linkish" id="evSearchClear">Clear the search</button></div>';
+  const status = document.getElementById('evSearchStatus');
+  if (status) status.textContent = st.query ? list.length + ' of ' + ordered.length + ' fight' + (ordered.length === 1 ? '' : 's') + ' match' : '';
+  if (!C) return;
+  const info = C.orderInfo(st.ro);
   document.getElementById('evDir').innerHTML = ['down', 'up'].map((d, i) =>
     '<button type="button" data-dir="' + d + '" aria-pressed="' + (st.dir === d) + '" class="' + (st.dir === d ? 'active' : '') + '">' +
     cfl.escapeHtml(info.labels[i]) + '</button>').join('');
@@ -1042,6 +1071,8 @@ function renderFight(fight, st) {
     if (ch.length && isUpcoming) tags.push('<span class="badge change" title="' + cfl.escapeHtml(ch.map(c => c.fighterName + ' was booked against ' + c.formerOpponent).join('; ')) + '">Opponent change</span>');
     if (isUpcoming) [a, b].forEach(f => { if (cflCard.isDebut(f)) tags.push('<span class="badge change">' + cfl.escapeHtml(f.name.split(' ').slice(-1)[0]) + ' UFC debut</span>'); });
   }
+  const boutTxt = window.cflCard ? cflCard.boutLabel(st.ro, fight.id) : null;
+  if (boutTxt) tags.unshift('<span class="badge bout">' + cfl.escapeHtml(boutTxt) + '</span>');
   if (fight.is_main_event) {
     tags.push('<span class="badge">Main event</span>');
     if (!fight.is_title_fight) cardClass += ' main';

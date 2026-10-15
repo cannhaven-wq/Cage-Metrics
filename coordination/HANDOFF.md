@@ -11,6 +11,40 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (g) — Event card sprint: search shipped, running order ready, three decisions (T-096)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **Investigated first, built nothing twice.** The running-order pipeline
+  (`cfl_engine/event_flow/`) already exists, is tested, and has never run:
+  its ledger table was never created and its one-time real-page check was
+  never recorded. The PR reuses it rather than writing another reader.
+- **In the PR:** search within the card on both card surfaces; "Bout N of M"
+  labels, walkout-order sorting and "First bout first" wording, all behind
+  `RUNNING_ORDER_LIVE = false` until the view exists; a proposed migration
+  (`research/event-card/proposed_2026-10-15_card_running_order.sql`) that
+  creates only the ledger and a select-only view, verified twice-applied on a
+  throwaway Postgres; the plan with costs and risks.
+- **Not shipped, and not faked:** card sections and start times. No source
+  holds them. The odds provider's per-fight times are estimates.
+- **T-095 closed** (merged `e103d4e`, verify-live green).
+
+## Next action
+
+1. **Owner:** decide the three items in
+   `research/event-card/EVENT_CARD_PLAN_2026-10-15.md`. For the running
+   order: apply the migration in the SQL editor, dispatch `event-flow.yml`
+   as a dry run and read the printed order against the real card, commit
+   `REAL_PAGE_CHECK.json`.
+2. **Claude, after 1a:** flip `RUNNING_ORDER_LIVE`, add
+   `v_card_running_order` to verify-live, run it.
+3. **Owner:** merge the T-096 PR when ready; it is safe to merge before the
+   migration (the reader stays off).
+
+---
+
 ## 2026-10-15 (f) — Research platform audit and the first round of fixes (T-095)
 
 **From:** Claude
