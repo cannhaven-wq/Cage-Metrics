@@ -1,0 +1,42 @@
+name: Verify T-097 live
+# One-off live check of the T-097 deploy. Runs only on its own verification branch.
+on:
+  push:
+    branches: [claude/verify-t097-live]
+permissions:
+  contents: read
+jobs:
+  served-bytes:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: main }
+      - name: Served files match main
+        run: |
+          s=0
+          for f in index.html fight.html fight-overview.js fight-workspace.js fight-lab.js market.js _shared.js; do
+            want=$(sha256sum "$f" | cut -c1-64); got=$(curl -sSL "https://cannonfightlab.com/$f?nocache=$GITHUB_RUN_ID" | sha256sum | cut -c1-64)
+            echo "$f $([ "$want" = "$got" ] && echo MATCH || { s=1; echo MISMATCH; })"
+          done
+          for p in research/customer-platform/screenshots/01-card-lab-compact-desktop.png; do
+            echo "/$p -> HTTP $(curl -s -o /dev/null -w '%{http_code}' "https://cannonfightlab.com/$p?nocache=$GITHUB_RUN_ID")"
+          done
+          echo "main HEAD: $(git rev-parse HEAD)"
+          exit $s
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - run: |
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify Card Lab and Fight Lab
+        env:
+          EXTRA_FIGHTS: '53620,49168'
+        run: node .github/scripts/verify-t097.js
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with: { name: t097-shots, path: t097-shots/ }
