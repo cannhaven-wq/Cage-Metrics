@@ -135,10 +135,14 @@ async function shoot(browser, id, { name, viewport, mobile }) {
       noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
       // T-094: the research workspace.
       workspaceScriptsLoaded: !!window.cflWorkspace && !!window.cflWorkspaceUI,
-      explorerRendered: document.querySelectorAll('#flExplore .ws-tabs [role="tab"]').length === 6 &&
+      explorerRendered: document.querySelectorAll('#flExplore .ws-tabs [role="tab"]').length >= 6 &&
         document.querySelectorAll('#flExplore .ws-m').length > 0,
-      explorerShowsSample: /UFCStats career|Last 5/.test(txt(document.getElementById('flExplore')) || ''),
+      explorerShowsSample: /Verified fact|Calculated by CFL|All UFC fights|Last 5/.test(txt(document.getElementById('flExplore')) || ''),
       sheetRendered: !!document.querySelector('#flSheet .sh'),
+      // T-095: fight context names what is not covered; Key points renders.
+      contextRendered: /Not covered yet/.test(txt(document.getElementById('flContext')) || ''),
+      keyPointsTab: !!document.querySelector('#flExplore [data-tab="key"]'),
+      explorerSevenTabs: document.querySelectorAll('#flExplore .ws-tabs [role="tab"]').length === 7,
     };
     return {
       title: document.title,

@@ -5,6 +5,14 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
+**Research platform sprint, 2026-10-15 (T-095): audit done, PR open, not deployed.**
+Card Lab, the event page and Fight Lab now compute age from date of birth, say
+honestly what the card order is (the running order has never been captured),
+flag opponent changes and UFC debuts, and Fight Lab rebuilds every career rate
+from the fight records because the profile scraper has had no working deploy
+since 2026-07-01. Three items need the owner: the event-flow migration, the
+scraper redeploy and a closing-odds view. No database change in the PR.
+
 **Customer experience sprint 1, 2026-10-15 (T-094): Fight Lab research workspace, live.**
 Fight Lab gains a matchup explorer (six categories, career vs last-5, sample and
 source on every bar, "does it predict winners" from the Factor Lab artifact) and

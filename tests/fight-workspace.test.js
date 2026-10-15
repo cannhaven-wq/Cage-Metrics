@@ -220,6 +220,99 @@ t('round data is read through the public table with the columns the rates need',
     ok(PAGE.indexOf(c) > 0, 'fight_rounds read is missing ' + c));
 });
 
+
+// ------------------------------------------------------------ sprint 2
+
+// The same three fights as fight rows with per-fight totals, for careerWindow.
+const withTotals = fights.map(f => Object.assign({}, f, f.id === 3 ? { a_sig_str_attempted: null } : {
+  a_sig_str_landed: f.id === 1 ? 2 : 30, a_sig_str_attempted: f.id === 1 ? 10 : 90,
+  b_sig_str_landed: f.id === 1 ? 10 : 36, b_sig_str_attempted: f.id === 1 ? 20 : 72,
+  a_head_landed: f.id === 1 ? 1 : 20, b_head_landed: f.id === 1 ? 6 : 10,
+  a_body_landed: 0, b_body_landed: f.id === 1 ? 4 : 10, a_leg_landed: f.id === 1 ? 1 : 10, b_leg_landed: f.id === 1 ? 0 : 16,
+  a_td_landed: 1, a_td_attempted: 6, b_td_landed: 1, b_td_attempted: 2,
+}));
+const compT = FL.completedFights(withTotals, events, ME, '2026-10-15');
+
+t('all-UFC rates are rebuilt from fight rows, from the fighter’s own side, and a row without totals is named', () => {
+  const cw = W.careerWindow(compT, ME);
+  eq(cw.fights, 2); eq(cw.skipped.length, 1); eq(cw.skipped[0].reason, 'no fight totals');
+  near(cw.rates.slpm, (10 + 30) / 17.5, 'fight 1 is read from corner B');
+  near(cw.rates.sapm, (2 + 36) / 17.5);
+  eq(cw.last, '2026-06-01'); eq(cw.first, '2026-03-01');
+});
+
+t('strike mix is shares of what landed', () => {
+  const mix = W.strikeMix(W.careerWindow(compT, ME).totals);
+  eq(mix.landed, 40);
+  near(mix.target.head, 26 / 40 * 100); near(mix.target.body, 4 / 40 * 100); near(mix.target.leg, 10 / 40 * 100);
+  eq(W.strikeMix(null), null);
+});
+
+t('round by round counts a final round only for the minutes it lasted', () => {
+  const rr = W.roundByRound(comp, rounds, ME);
+  eq(rr[0].round, 1); eq(rr[0].fights, 2);
+  near(rr[0].minutes, 2.5 + 5); near(rr[0].landedPm, 20 / 7.5);
+  eq(rr[2].fights, 1); near(rr[2].minutes, 5);
+});
+
+t('methods split wins and losses by how they ended', () => {
+  const m = W.methods(comp, ME);
+  eq(m.win.ko, 1); eq(m.win.sub, 1); eq(m.loss.dec, 1); eq(m.win.total, 2); eq(m.loss.total, 1);
+});
+
+t('an opponent’s record is counted only from fights before the one described', () => {
+  const opp = [{ f: { id: 9, winner_id: OPP1, method: 'KO/TKO' }, e: { event_date: '2025-01-01' } },
+               { f: { id: 8, winner_id: 99, method: 'KO/TKO' }, e: { event_date: '2026-09-01' } }];
+  const rec = W.recordBefore(opp, OPP1, '2026-06-01');
+  eq(rec.w, 1); eq(rec.l, 0, 'a later loss must not count');
+  const rows = W.opposition([{ opponentId: OPP1, date: '2026-06-01' }, { opponentId: OPP2, date: '2026-03-01' }], { [OPP1]: opp, [OPP2]: [] });
+  eq(rows[0].oppRecord.w, 1); eq(rows[1].oppDebut, true);
+});
+
+t('division rank keeps men and women apart by who actually fought whom', () => {
+  const bout = (a, b, id) => ({ id, fighter_a_id: a, fighter_b_id: b, end_round: 3, end_time: '5:00',
+    a_sig_str_landed: a, a_sig_str_attempted: 100, b_sig_str_landed: b, b_sig_str_attempted: 100 });
+  const pool = [];
+  for (let i = 0; i < 12; i++) pool.push(bout(100 + i, 100 + ((i + 1) % 12), i));        // one group
+  for (let i = 0; i < 12; i++) pool.push(bout(200 + i, 200 + ((i + 1) % 12), 50 + i));   // a separate group
+  const base = W.divisionBaseline(pool, [100]);
+  eq(base.fighters, 12, 'only the anchor’s group is in the pool');
+  const all = W.divisionBaseline(pool, null);
+  eq(all.fighters, 24);
+  eq(W.percentile(base.slpm, 1e9), 100); eq(W.percentile(base.slpm, -1), 0);
+  eq(W.percentile([1, 2, 3], 2), null, 'under ten fighters is no rank at all');
+});
+
+t('the weight limit is the division’s, and catch weight has none', () => {
+  eq(W.weightLimit('Welterweight'), 170); eq(W.weightLimit('Strawweight'), 115); eq(W.weightLimit('Catch Weight'), null);
+});
+
+t('key points come in three labelled kinds and never name a winner', () => {
+  const x = (last, o) => Object.assign({ name: last, last, age: 30, reach: 72, height: 70, stance: 'Orthodox', debut: false,
+    career: { fights: 8, rates: { slpm: 5, sapm: 3, td_avg: 2.5, td_def: 60, str_def: 55 } }, recent: null,
+    facts: { streak: { kind: 'W', count: 4 }, daysSinceLast: 400 }, methods: { win: { ko: 5, sub: 0, dec: 1, other: 0, total: 6 }, loss: { ko: 2, sub: 0, dec: 0, other: 0, total: 2 } },
+    pct: { slpm: 92, str_def: 50, td_avg: 85, td_def: 10, sapm: 50 }, style: { key: 'grappler' }, late: { tier: 'steady', score: 104 } }, o);
+  const A = x('Alpha'), B = x('Bravo', { reach: 76, age: 35, stance: 'Southpaw', style: { key: 'striker' }, late: { tier: 'fades', score: 70 }, debut: true });
+  const pts = W.keyPoints(A, B, { fight: { is_title_fight: true }, changes: [{ fighterName: 'Bravo', formerOpponent: 'Charlie' }], divisionLabel: 'welterweights' });
+  ['fact', 'calc', 'read'].forEach(k => ok(pts.some(p => p.kind === k), 'no ' + k + ' point'));
+  ok(pts.every(p => W.KIND_LABEL[p.kind]), 'every point has a label');
+  ok(pts.some(p => /Opponent change/.test(p.text)) && pts.some(p => /debut/.test(p.text)), 'context facts missing');
+  ok(pts.some(p => /higher than about 92%/.test(p.text)), 'percentile not stated as a plain share');
+  pts.forEach(p => {
+    ok(!/\b(will win|should win|favou?red to|edge|advantage in this fight|lock|pick|bet on)\b/i.test(p.text), 'key point reads as a pick: ' + p.text);
+    ok(!/\b(he|she|his|her|him)\b/i.test(p.text), 'key point assumes a pronoun: ' + p.text);
+  });
+  ok(pts.filter(p => p.kind === 'read').every(p => /\?/.test(p.text) || /If it goes/.test(p.text)), 'an interpretation must be framed as a question');
+});
+
+t('Fight Lab loads the card rules before the workspace and shows fight context', () => {
+  const i = s => PAGE.indexOf(s);
+  ok(i('<script src="card-research.js?v=') > 0 && i('<script src="card-research.js?v=') < i('<script src="fight-workspace.js?v='), 'card-research.js must load first');
+  ok(PAGE.indexOf('id="secContext"') > 0 && PAGE.indexOf('id="secContext"') < PAGE.indexOf('id="secCompare"'), 'fight context missing or misplaced');
+  ok(/Not covered yet/.test(read('fight-workspace-ui.js')), 'the context must say what CFL does not cover');
+  ok(/\bdob\b/.test(PAGE) && /ageOn\(/.test(PAGE), 'Fight Lab does not compute age from the date of birth');
+});
+
 if (failures.length) {
   console.error('fight-workspace: ' + failures.length + ' failed, ' + passed + ' passed');
   failures.forEach(f => console.error('  ✗ ' + f));

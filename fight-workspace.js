@@ -66,7 +66,8 @@
   // read off each round row's own fighter_a_id, never assumed from `fights`.
   function sideTotals(rounds, fighterId) {
     const t = { sigL: 0, sigA: 0, oppSigL: 0, oppSigA: 0, tdL: 0, tdA: 0,
-                oppTdL: 0, oppTdA: 0, ctrl: 0, kd: 0, sub: 0, rounds: 0 };
+                oppTdL: 0, oppTdA: 0, ctrl: 0, kd: 0, sub: 0, rounds: 0,
+                head: 0, body: 0, leg: 0, dist: 0, clinch: 0, ground: 0 };
     (rounds || []).forEach(r => {
       if (!r) return;
       const me = r.fighter_a_id === fighterId ? 'a' : r.fighter_b_id === fighterId ? 'b' : null;
@@ -80,6 +81,10 @@
       t.ctrl += g(me + '_ctrl_seconds');
       t.kd += g(me + '_kd');
       t.sub += g(me + '_sub_attempts');
+      t.head += g(me + '_head_landed');     t.body += g(me + '_body_landed');
+      t.leg += g(me + '_leg_landed');
+      t.dist += g(me + '_distance_landed'); t.clinch += g(me + '_clinch_landed');
+      t.ground += g(me + '_ground_landed');
       t.rounds += 1;
     });
     return t;
@@ -108,6 +113,7 @@
       sub_avg: ratio(t.sub, minutes, 15),
       ctrl15:  ratio(t.ctrl / 60, minutes, 15),
       kd15:    ratio(t.kd, minutes, 15),
+      tdA15:   ratio(t.tdA, minutes, 15),
     };
   }
 
@@ -143,6 +149,307 @@
       totals, rates: totals ? rates(totals, minutes) : null,
     };
   }
+
+
+  // Age today and opponent changes are card-level facts shared with Card Lab
+  // and the event page; they live in card-research.js.
+  const CR = (typeof module !== 'undefined' && module.exports) ? require('./card-research.js') : window.cflCard;
+  const ageOn = (dob, today) => CR.ageOn(dob, today);
+  const opponentChanges = (cardFights, fight) => CR.opponentChanges(cardFights, fight);
+
+  // ---- every UFC fight, from our own fight rows ---------------------------
+  // The UFCStats career figures on `fighters` are only as fresh as the last
+  // profile scrape; on 2026-10-15, 68 of 150 fighters on upcoming cards had
+  // fought since theirs. `fights` carries the per-fight totals for every UFC
+  // bout (complete since 2015 and earlier), so the same rates are rebuilt here
+  // from every completed fight in our data. A fight row is shaped like a round
+  // row (a_/b_ columns plus fighter ids), so sideTotals reads both.
+  function careerWindow(completed, fighterId) {
+    const used = [], skipped = [];
+    let totals = null, minutes = 0;
+    (completed || []).forEach(({ f, e }) => {
+      const mins = fightMinutes(f);
+      if (mins == null || f.a_sig_str_attempted == null) {
+        skipped.push({ fightId: f.id, date: e.event_date, reason: mins == null ? 'fight length not recorded' : 'no fight totals' });
+        return;
+      }
+      const t = sideTotals([f], fighterId);
+      if (!t.rounds) return;
+      used.push({ fightId: f.id, date: e.event_date, minutes: mins, rates: rates(t, mins), totals: t });
+      totals = totals ? addTotals(totals, t) : t;
+      minutes += mins;
+    });
+    return {
+      fights: used.length, used, skipped, minutes, totals,
+      rates: totals ? rates(totals, minutes) : null,
+      first: used.length ? used[used.length - 1].date : null,
+      last: used.length ? used[0].date : null,
+    };
+  }
+
+  // Where the landed significant strikes went. Shares of what landed, so they
+  // describe a style, not a volume.
+  function strikeMix(t) {
+    if (!t) return null;
+    const tgt = t.head + t.body + t.leg, pos = t.dist + t.clinch + t.ground;
+    const pct = (x, d) => d > 0 ? x / d * 100 : null;
+    return {
+      landed: tgt,
+      target: tgt ? { head: pct(t.head, tgt), body: pct(t.body, tgt), leg: pct(t.leg, tgt) } : null,
+      position: pos ? { distance: pct(t.dist, pos), clinch: pct(t.clinch, pos), ground: pct(t.ground, pos) } : null,
+    };
+  }
+
+  // ---- round by round ------------------------------------------------------
+  // Significant strikes landed and absorbed per minute in each round number,
+  // over every fight that reached it. The last round of a fight counts only
+  // the minutes it lasted, so a 30-second finish does not read as a quiet round.
+  function roundByRound(completed, roundsByFight, fighterId) {
+    const by = {};
+    (completed || []).forEach(({ f }) => {
+      const rows = (roundsByFight && roundsByFight[f.id]) || [];
+      const endR = n(f.end_round), endClock = clockMinutes(f.end_time);
+      if (!rows.length || !endR || endClock == null) return;
+      rows.forEach(r => {
+        const rn = n(r.round_number);
+        if (!rn || rn > endR) return;
+        const mins = rn === endR ? endClock : ROUND_MIN;
+        const t = sideTotals([r], fighterId);
+        if (!t.rounds) return;
+        const b = by[rn] || (by[rn] = { round: rn, fights: 0, minutes: 0, landed: 0, absorbed: 0 });
+        b.fights += 1; b.minutes += mins; b.landed += t.sigL; b.absorbed += t.oppSigL;
+      });
+    });
+    return Object.keys(by).map(k => by[k]).sort((x, y) => x.round - y.round).map(b => Object.assign(b, {
+      landedPm: b.minutes ? b.landed / b.minutes : null,
+      absorbedPm: b.minutes ? b.absorbed / b.minutes : null,
+    }));
+  }
+
+  // ---- how they win and how they lose ------------------------------------
+  function methodKind(m) {
+    const s = String(m || '').trim();
+    if (/^(ko|tko)/i.test(s)) return 'ko';
+    if (/^submission/i.test(s)) return 'sub';
+    if (/^decision/i.test(s)) return 'dec';
+    return 'other';
+  }
+  function methods(completed, fighterId) {
+    const out = { win: { ko: 0, sub: 0, dec: 0, other: 0, total: 0 }, loss: { ko: 0, sub: 0, dec: 0, other: 0, total: 0 } };
+    (completed || []).forEach(({ f }) => {
+      if (f.winner_id == null) return;
+      const side = f.winner_id === fighterId ? out.win : out.loss;
+      side[methodKind(f.method)] += 1; side.total += 1;
+    });
+    return out;
+  }
+
+  // ---- quality of opposition ---------------------------------------------
+  // Each recent opponent's UFC record going INTO that fight, counted from the
+  // same completed-fight rules. A record built afterwards would include the
+  // fight being described. `oppCompleted` maps opponent id -> completedFights.
+  function recordBefore(completed, fighterId, date) {
+    const rec = { w: 0, l: 0, other: 0 };
+    (completed || []).forEach(({ f, e }) => {
+      if (!(e.event_date < date)) return;
+      if (f.winner_id == null) rec.other += 1;
+      else if (f.winner_id === fighterId) rec.w += 1;
+      else rec.l += 1;
+    });
+    return rec;
+  }
+  function opposition(form, oppCompleted) {
+    return (form || []).map(r => {
+      const list = oppCompleted && oppCompleted[r.opponentId];
+      const rec = list ? recordBefore(list, r.opponentId, r.date) : null;
+      return Object.assign({}, r, { oppRecord: rec, oppDebut: !!(rec && rec.w + rec.l + rec.other === 0) });
+    });
+  }
+
+  // ---- division context ----------------------------------------------------
+  // Every fighter who logged at least MIN_DIV_MINUTES in this weight class in
+  // the window, each reduced to their own rate. A percentile is then "how
+  // many of them sit below this number". Built from `fights` rows, the same
+  // source as careerWindow.
+  const MIN_DIV_MINUTES = 15;
+  const DIV_KEYS = ['slpm', 'str_acc', 'sapm', 'str_def', 'td_avg', 'td_acc', 'td_def', 'sub_avg'];
+  //
+  // Weight-class labels do not say men's or women's — "Flyweight" holds both —
+  // so the pool is cut to the fighters linked by actual bouts to `anchors` (the
+  // two fighters on this page). Men and women never meet, so the link graph
+  // separates them without needing a sex field (fighters.sex is almost empty).
+  function divisionBaseline(divFights, anchors) {
+    const parent = {};
+    const find = x => { while (parent[x] !== x) { parent[x] = parent[parent[x]]; x = parent[x]; } return x; };
+    const join = (x, y) => {
+      [x, y].forEach(k => { if (!(k in parent)) parent[k] = k; });
+      const rx = find(x), ry = find(y); if (rx !== ry) parent[rx] = ry;
+    };
+    (divFights || []).forEach(f => { if (f.fighter_a_id != null && f.fighter_b_id != null) join(f.fighter_a_id, f.fighter_b_id); });
+    const roots = new Set((anchors || []).filter(x => x in parent).map(find));
+    const inPool = id => !anchors || !anchors.length || (id in parent && roots.has(find(id)));
+    const per = {};
+    (divFights || []).forEach(f => {
+      if (!inPool(f.fighter_a_id)) return;
+      const mins = fightMinutes(f);
+      if (mins == null || f.a_sig_str_attempted == null) return;
+      [f.fighter_a_id, f.fighter_b_id].forEach(id => {
+        if (id == null) return;
+        const t = sideTotals([f], id);
+        const p = per[id] || (per[id] = { t: null, minutes: 0 });
+        p.t = p.t ? addTotals(p.t, t) : t; p.minutes += mins;
+      });
+    });
+    const out = { fighters: 0 };
+    DIV_KEYS.forEach(k => { out[k] = []; });
+    Object.keys(per).forEach(id => {
+      const p = per[id];
+      if (p.minutes < MIN_DIV_MINUTES) return;
+      out.fighters += 1;
+      const r = rates(p.t, p.minutes);
+      DIV_KEYS.forEach(k => { if (r[k] != null) out[k].push(r[k]); });
+    });
+    DIV_KEYS.forEach(k => out[k].sort((x, y) => x - y));
+    return out;
+  }
+  // Share of the division below v, 0-100. Ties count half, so a value equal to
+  // everyone else's reads as the middle rather than the top.
+  function percentile(sorted, v) {
+    if (!sorted || sorted.length < 10 || v == null) return null;
+    let below = 0, eq = 0;
+    sorted.forEach(x => { if (x < v) below += 1; else if (x === v) eq += 1; });
+    return Math.round((below + eq / 2) / sorted.length * 100);
+  }
+  // Plain words for a percentile. "Higher" is just higher — absorbed strikes
+  // is a metric where a high number is not a compliment, and the words do not
+  // pretend otherwise either way.
+  function percentileWords(p) {
+    if (p == null) return null;
+    if (p >= 90) return 'top 10%';
+    if (p >= 75) return 'top quarter';
+    if (p > 60) return 'above the middle';
+    if (p >= 40) return 'around the middle';
+    if (p > 25) return 'below the middle';
+    if (p > 10) return 'bottom quarter';
+    return 'bottom 10%';
+  }
+
+  // Weight-class limits in pounds, as the UFC defines them. A fixed fact
+  // about the division, not a weigh-in result — CFL does not capture those.
+  const WEIGHT_LIMIT = {
+    'Strawweight': 115, "Women's Strawweight": 115, 'Flyweight': 125, "Women's Flyweight": 125,
+    'Bantamweight': 135, "Women's Bantamweight": 135, 'Featherweight': 145, "Women's Featherweight": 145,
+    'Lightweight': 155, 'Welterweight': 170, 'Middleweight': 185, 'Light Heavyweight': 205,
+    'Heavyweight': 265,
+  };
+  function weightLimit(wc) {
+    if (!wc) return null;
+    const k = String(wc).replace(/\s+Bout$/i, '').replace(/^UFC\s+/i, '').replace(/\s+Title$/i, '').trim();
+    return WEIGHT_LIMIT[k] || null;
+  }
+
+
+  // ---- key points: facts, calculations, interpretation ---------------------
+  // Three kinds, kept apart because they deserve different amounts of trust:
+  //   fact  — read straight off the record (a reach in inches, a result).
+  //   calc  — a number CFL computed (a rate, a percentile, a change).
+  //   read  — an interpretation: a question the numbers raise. Never a
+  //           verdict, never "X wins", never a side. The page says so.
+  // `x` is { name, last, age, reach, height, stance, debut, career, recent,
+  //          facts, methods, pct, style, late } for each corner, and
+  //   ctx is { fight, changes, divisionLabel }.
+  function keyPoints(A, B, ctx) {
+    ctx = ctx || {};
+    const out = [];
+    const add = (kind, text, topic) => out.push({ kind, text, topic: topic || null });
+    const gap = (va, vb, min, words) => {
+      if (va == null || vb == null || Math.abs(va - vb) < min) return;
+      const [hi, lo, hv, lv] = va > vb ? [A, B, va, vb] : [B, A, vb, va];
+      add('fact', words(hi, lo, hv, lv), 'physical');
+    };
+    const fight = ctx.fight || {};
+
+    // facts
+    if (fight.is_title_fight) add('fact', 'Title fight, scheduled for five rounds.', 'context');
+    else if (+fight.scheduled_rounds === 5) add('fact', 'Scheduled for five rounds.', 'context');
+    [A, B].forEach(x => { if (x.debut) add('fact', x.last + ' makes a UFC debut: there is no UFC fight data for them.', 'context'); });
+    (ctx.changes || []).forEach(c => add('fact', 'Opponent change: ' + c.fighterName + ' was previously booked on this card against ' +
+      c.formerOpponent + '; that booking is no longer on the card.', 'context'));
+    gap(A.reach, B.reach, 2, (hi, lo, hv, lv) => hi.last + ' has a ' + Math.round(hv - lv) + '-inch reach advantage (' + Math.round(hv) + '″ to ' + Math.round(lv) + '″).');
+    gap(A.height, B.height, 2, (hi, lo, hv, lv) => hi.last + ' is ' + Math.round(hv - lv) + ' inches taller (' + Math.round(hv) + '″ to ' + Math.round(lv) + '″).');
+    gap(A.age, B.age, 3, (hi, lo, hv, lv) => lo.last + ' is ' + Math.round(hv - lv) + ' years younger (' + lv + ' to ' + hv + ').');
+    if (A.stance && B.stance && A.stance !== B.stance && /southpaw/i.test(A.stance + B.stance) && /orthodox/i.test(A.stance + B.stance)) {
+      add('fact', 'Southpaw against orthodox: ' + A.last + ' ' + A.stance.toLowerCase() + ', ' + B.last + ' ' + B.stance.toLowerCase() + '.', 'physical');
+    }
+    [A, B].forEach(x => {
+      const m = x.methods;
+      if (m && m.win.total >= 3 && m.win.ko / m.win.total >= 0.5) add('fact', x.last + ' has won ' + m.win.ko + ' of ' + m.win.total + ' UFC wins by KO/TKO.', 'form');
+      if (m && m.win.total >= 3 && m.win.sub / m.win.total >= 0.4) add('fact', x.last + ' has won ' + m.win.sub + ' of ' + m.win.total + ' UFC wins by submission.', 'form');
+      if (m && m.loss.ko >= 2) add('fact', x.last + ' has lost ' + m.loss.ko + ' UFC fights by KO/TKO.', 'form');
+      if (m && m.loss.sub >= 2) add('fact', x.last + ' has lost ' + m.loss.sub + ' UFC fights by submission.', 'form');
+      const st = x.facts && x.facts.streak;
+      if (st && st.count >= 3) add('fact', x.last + (st.kind === 'W' ? ' has won ' : ' has lost ') + st.count + ' UFC fights in a row.', 'form');
+      if (x.facts && x.facts.daysSinceLast != null && x.facts.daysSinceLast >= 365) {
+        add('fact', x.last + ' has not fought in the UFC for ' + Math.floor(x.facts.daysSinceLast / 30.4) + ' months.', 'form');
+      }
+    });
+
+    // calculations
+    const PCT_LABEL = { slpm: 'significant strikes landed a minute', str_def: 'striking defence',
+                        td_avg: 'takedowns landed per 15 minutes', td_def: 'takedown defence',
+                        sapm: 'significant strikes absorbed a minute' };
+    [A, B].forEach(x => {
+      if (!x.pct || !x.career || !x.career.rates || x.career.fights < 3) return;
+      Object.keys(PCT_LABEL).forEach(k => {
+        const p = x.pct[k];
+        if (p == null || (p > 20 && p < 80)) return;
+        const v = x.career.rates[k];
+        const unitless = k === 'str_def' || k === 'td_def';
+        add('calc', x.last + '’s ' + PCT_LABEL[k] + ' across ' + x.career.fights + ' UFC fights (' +
+          (unitless ? Math.round(v) + '%' : v.toFixed(2)) + ') is higher than about ' + p + '% of ' +
+          (ctx.divisionLabel || 'the division') + '.', 'rank');
+      });
+      const c = x.career.rates, r = x.recent && x.recent.rates;
+      if (r && x.recent.used.length >= 3 && x.career.fights >= x.recent.used.length + 2 && c.slpm > 0 && r.slpm != null) {
+        const ch = (r.slpm - c.slpm) / c.slpm;
+        if (Math.abs(ch) >= 0.25) add('calc', x.last + ' has landed ' + r.slpm.toFixed(2) + ' significant strikes a minute over the last ' +
+          x.recent.used.length + ' fights, ' + (ch > 0 ? 'up' : 'down') + ' from ' + c.slpm.toFixed(2) + ' across all ' + x.career.fights + ' UFC fights.', 'trend');
+      }
+      if (c && c.slpm != null && c.sapm != null && x.career.fights >= 3) {
+        const d = c.slpm - c.sapm;
+        if (Math.abs(d) >= 1) add('calc', x.last + ' has ' + (d > 0 ? 'landed ' : 'absorbed ') + Math.abs(d).toFixed(1) +
+          ' more significant strikes a minute than ' + (d > 0 ? 'absorbed' : 'landed') + ' across ' + x.career.fights + ' UFC fights.', 'striking');
+      }
+    });
+
+    // interpretation — questions, not answers
+    const sty = x => x.style && x.style.key;
+    if ((sty(A) === 'striker' && sty(B) === 'grappler') || (sty(A) === 'grappler' && sty(B) === 'striker')) {
+      const g = sty(A) === 'grappler' ? A : B, k = g === A ? B : A;
+      add('read', 'Where does this fight happen? In round one of their last ' + RECENT_N + ' fights, ' + g.last +
+        '’s output was mostly takedowns and control and ' + k.last + '’s mostly striking. Which of those this fight becomes is a ' +
+        'question the numbers can help with, not answer.', 'style');
+    }
+    [[A, B], [B, A]].forEach(([w, d]) => {
+      const tw = w.career && w.career.rates, td = d.career && d.career.rates;
+      if (!tw || !td || tw.td_avg == null || td.td_def == null || w.career.fights < 3 || d.career.fights < 3) return;
+      if (tw.td_avg >= 1.5) add('read', 'Can ' + w.last + '’s takedowns (' + tw.td_avg.toFixed(1) + ' landed per 15 minutes) get past ' +
+        d.last + '’s takedown defence (' + Math.round(td.td_def) + '% stopped)? Both numbers come from different opponents.', 'grappling');
+    });
+    if (A.late && B.late && A.late.tier && B.late.tier && A.late.tier !== B.late.tier &&
+        ((A.late.score >= 100) !== (B.late.score >= 100))) {
+      const held = A.late.score >= 100 ? A : B, dropped = held === A ? B : A;
+      add('read', 'If it goes past round two: ' + held.last + '’s output has held late in fights and ' + dropped.last +
+        '’s has dropped. CFL’s testing found this says more about how long fights go than who wins them.', 'cardio');
+    }
+    return out;
+  }
+
+  const KIND_LABEL = {
+    fact: 'Verified fact',
+    calc: 'Calculated by CFL',
+    read: 'Interpretation',
+  };
 
   // ---- record-shaped facts ----------------------------------------------
   // All from the same completed-fight list the page's "Last five" uses.
@@ -252,7 +559,7 @@
         what: 'Of the significant strikes thrown at them, the share that miss.' },
       { key: 'kd15', label: 'Knockdowns per 15 minutes', unit: '', dp: 2, max: 2,
         career: null, recent: 'kd15',
-        what: 'Knockdowns scored per 15 minutes of fighting. UFCStats publishes no career figure, so only the recent window is shown. Knockdowns are rare — one more or less moves this a lot.' },
+        what: 'Knockdowns scored per 15 minutes of fighting. UFCStats publishes no career figure for this; both lines are CFL\u2019s, from the fight records. Knockdowns are rare — one more or less moves this a lot.' },
     ],
     grappling: [
       { key: 'td_avg', label: 'Takedowns landed per 15 minutes', unit: '', dp: 2, max: 6,
@@ -266,17 +573,20 @@
         what: 'Of the takedowns opponents attempt on them, the share they stop. Against opponents who never shoot it rests on very few attempts.' },
       { key: 'ctrl15', label: 'Control time per 15 minutes', unit: ' min', dp: 1, max: 10,
         career: null, recent: 'ctrl15',
-        what: 'Minutes spent in a controlling position (on top, on the back, pressed against the fence) per 15 minutes of fighting. Only the recent window — UFCStats publishes no career figure.' },
+        what: 'Minutes spent in a controlling position (on top, on the back, pressed against the fence) per 15 minutes of fighting. UFCStats publishes no career figure for this; both lines are CFL\u2019s, from the fight records.' },
+      { key: 'tdA15', label: 'Takedown attempts per 15 minutes', unit: '', dp: 2, max: 8,
+        career: null, recent: 'tdA15',
+        what: 'How often a fighter shoots for a takedown, landed or not, per 15 minutes. It shows how much a fighter wants the fight on the mat, separately from how often they succeed.' },
       { key: 'sub_avg', label: 'Submission attempts per 15 minutes', unit: '', dp: 1, max: 3,
         career: 'sub_avg', recent: 'sub_avg',
         what: 'Submission attempts per 15 minutes. An attempt is not a near-finish; UFCStats counts any clear try.' },
     ],
     physical: [
-      { key: 'age', label: 'Age', unit: '', dp: 0, max: 45, career: 'age', recent: null, factor: 'age', single: true,
+      { key: 'age', label: 'Age', unit: '', dp: 0, max: 45, career: 'age', recent: null, factor: 'age', single: true, more: ' years older',
         what: 'Age in years, from the fighter profile in our data.' },
-      { key: 'height', label: 'Height', unit: '″', dp: 0, max: 84, career: 'height_in', recent: null, factor: 'height', single: true,
+      { key: 'height', label: 'Height', unit: '″', dp: 0, max: 84, career: 'height_in', recent: null, factor: 'height', single: true, more: '″ taller', unitless: true,
         what: 'Height in inches off the tale of the tape.' },
-      { key: 'reach', label: 'Reach', unit: '″', dp: 0, max: 84, career: 'reach_in', recent: null, factor: 'reach', single: true,
+      { key: 'reach', label: 'Reach', unit: '″', dp: 0, max: 84, career: 'reach_in', recent: null, factor: 'reach', single: true, more: '″ longer reach', unitless: true,
         what: 'Arm span in inches off the tale of the tape.' },
     ],
   };
@@ -404,6 +714,9 @@
 
   const api = {
     RECENT_N, n, clockMinutes, fightMinutes, sideTotals, rates, recentWindow,
+    ageOn, careerWindow, strikeMix, roundByRound, methodKind, methods, recordBefore, opposition,
+    MIN_DIV_MINUTES, DIV_KEYS, divisionBaseline, percentile, percentileWords,
+    opponentChanges, WEIGHT_LIMIT, weightLimit, keyPoints, KIND_LABEL,
     isFinish, formFacts, daysBetween,
     evidence, VERDICT_WORDS, NOT_TESTED, ONE_FIGHT,
     METRICS, fmt, line,

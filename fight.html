@@ -291,6 +291,44 @@
 #fl .sh-prev pre, #fl .sh-print { white-space: pre-wrap; font: 500 12px/1.55 var(--font-mono); color: var(--text-2); background: var(--bg-1); border: 1px solid var(--line); border-radius: 10px; padding: 12px; margin-top: 8px; }
 #fl .sh-print { display: none; }
 
+/* Workspace, sprint 2: key points, mixes, rounds, opposition, context. */
+#fl .ws-rank { font-size: 11px; color: var(--text-3); text-align: center; margin-top: 1px; }
+#fl .ws-rank.thin { color: var(--amber); }
+#fl .ws-wide { grid-column: 1 / -1; }
+#fl .ws-kpl { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+#fl .ws-kpl li { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; font-size: 13px; color: var(--text); line-height: 1.5;
+  border-top: 1px solid var(--line); padding-top: 7px; }
+#fl .ws-kpl li:first-child { border-top: none; padding-top: 0; }
+#fl .ws-kpl li .ws-pin { flex-shrink: 0; padding: 4px 8px; font-size: 11px; }
+#fl .ws-kp.fact { border-left: 3px solid var(--green); }
+#fl .ws-kp.calc { border-left: 3px solid var(--probe); }
+#fl .ws-kp.read { border-left: 3px solid var(--amber); }
+#fl .ws-tag.k-fact { color: var(--green); border-color: rgba(63,208,122,.35); }
+#fl .ws-tag.k-calc { color: var(--probe); border-color: rgba(47,220,203,.3); }
+#fl .ws-tag.k-read { color: var(--amber); border-color: rgba(255,181,71,.35); }
+#fl .ws-stack { display: flex; height: 20px; border-radius: 6px; overflow: hidden; background: var(--bg-3); margin-top: 5px; }
+#fl .ws-stack i { display: flex; align-items: center; justify-content: center; font: 700 10.5px var(--font-body); font-style: normal; color: #0b0e12; min-width: 0; overflow: hidden; white-space: nowrap; }
+#fl .ws-stack .s0, #fl .ws-slegend .s0 { background: #e8c35c; }
+#fl .ws-stack .s1, #fl .ws-slegend .s1 { background: #8fb3d9; }
+#fl .ws-stack .s2, #fl .ws-slegend .s2 { background: #b49ad8; }
+#fl .ws-stack .m-ko { background: #ff8a80; } #fl .ws-stack .m-sub { background: #8fb3d9; }
+#fl .ws-stack .m-dec { background: #c9ced6; } #fl .ws-stack .m-other { background: #6b7480; }
+#fl .ws-slegend { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 11px; color: var(--text-3); }
+#fl .ws-slegend b { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+#fl .ws-mrow { margin-top: 6px; }
+#fl .ws-rtab { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+#fl .ws-rtab th { font-size: 10px; letter-spacing: .06em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 4px 6px; text-align: left; }
+#fl .ws-rtab thead tr:first-child th { color: #fff; font: 700 12px var(--font-display); text-transform: none; letter-spacing: 0; }
+#fl .ws-rtab td { padding: 5px 6px; border-top: 1px solid var(--line); color: var(--text); }
+#fl .ws-rtab tbody th { color: var(--text-2); }
+#fl .ws-rtab .n { text-align: right; } #fl .ws-rtab .mute { color: var(--text-3); }
+#fl .ctx { margin-top: 14px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; max-width: 900px; }
+#fl .ctx-dl { display: grid; grid-template-columns: max-content 1fr; gap: 7px 16px; margin: 0; font-size: 13px; }
+#fl .ctx-dl dt { color: var(--text-3); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; padding-top: 2px; }
+#fl .ctx-dl dd { margin: 0; color: var(--text); line-height: 1.45; }
+#fl .ctx-gap { margin-top: 12px; font-size: 12.5px; color: var(--text-2); line-height: 1.5; background: rgba(255,181,71,.06); border: 1px solid rgba(255,181,71,.18); border-radius: 8px; padding: 9px 11px; }
+#fl .ctx-gap b { color: var(--amber); }
+
 .ws-fab { position: fixed; right: 16px; bottom: 16px; z-index: 40; display: inline-flex; gap: 8px; align-items: center; font: 700 13px var(--font-display);
   color: #fff; background: var(--bg-4); border: 1px solid var(--line-2); border-radius: 999px; padding: 10px 16px; box-shadow: var(--shadow); }
 .ws-fab b { background: var(--red); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 6px; }
@@ -333,6 +371,8 @@
   #fl .ws-dl dt { grid-column: 1 / -1; margin-top: 4px; }
   #fl .ws-dl dd { text-align: left; }
   #fl .ws-mh { flex-wrap: wrap; }
+  #fl .ctx-dl { grid-template-columns: 1fr; gap: 2px; }
+  #fl .ctx-dl dd { margin-bottom: 6px; }
   #fl { padding-bottom: 72px; }
 }
 </style>
@@ -350,7 +390,7 @@
     <div class="fl-sub" id="flSub"></div>
     <div id="flStar" style="margin-top:10px"></div>
     <nav class="jump" aria-label="On this page">
-      <a href="#secWho">The fighters</a><a href="#secExplore">Explore the matchup</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a><a href="#secSheet" id="jumpSheet">My sheet</a>
+      <a href="#secWho">The fighters</a><a href="#secContext">Context</a><a href="#secExplore">Explore the matchup</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a><a href="#secSheet" id="jumpSheet">My sheet</a>
     </nav>
   </header>
 
@@ -360,6 +400,12 @@
     <h2>Who are these fighters?</h2>
     <div class="sec-sub">Record, fighting style and the last five results for each corner. Style is read from what they actually did in their recent fights, not from their reputation.</div>
     <div id="flWho"><div class="empty">Loading the fighters…</div></div>
+  </section>
+
+  <section class="sec" id="secContext">
+    <h2>Fight context</h2>
+    <div class="sec-sub">What we know about this booking, and what we do not cover.</div>
+    <div id="flContext"><div class="empty">Loading…</div></div>
   </section>
 
   <section class="sec" id="secCompare">
@@ -446,8 +492,9 @@
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=1"></script>
-<script src="fight-workspace.js?v=1"></script>
-<script src="fight-workspace-ui.js?v=1"></script>
+<script src="card-research.js?v=1"></script>
+<script src="fight-workspace.js?v=2"></script>
+<script src="fight-workspace-ui.js?v=2"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -605,7 +652,7 @@ async function load() {
   const [evR, ftR, mvt, books] = await Promise.all([
     sb.from('events').select('id, name, event_date, location').eq('id', fight.event_id).limit(1),
     sb.from('fighters')
-      .select('id, name, nickname, age, height_in, reach_in, stance, wins, losses, draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code')
+      .select('id, name, nickname, age, dob, height_in, reach_in, stance, wins, losses, draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code, updated_at')
       .in('id', [fight.fighter_a_id, fight.fighter_b_id].filter(x => x != null))
       // ufc_* comes from v_fighter_ufc_record (T-084); it feeds hasTape.
       .then(async r => r.error ? r : { data: await cflUfcRecord.attach(sb, r.data || []) }),
@@ -618,6 +665,13 @@ async function load() {
   (ftR.data || []).forEach(f => { fmap[f.id] = f; });
   const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name || 'Corner A' };
   const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name || 'Corner B' };
+  // Age from date of birth. The stored age is not recomputed as birthdays
+  // pass (45 of 150 upcoming fighters read a year young on 2026-10-15), and
+  // age is the one physical factor that survives market control.
+  [a, b].forEach(f => {
+    const now = window.cflWorkspace ? window.cflWorkspace.ageOn(f.dob, localToday()) : null;
+    if (now != null) f.age = now;
+  });
 
   const ids = [a.id, b.id].filter(x => x != null);
   const [consRows, styleRows, form, baseRates, factorRates] = await Promise.all([
@@ -792,7 +846,7 @@ async function renderWatch(fight, a, b) {
 function fail(title, sub) {
   document.getElementById('flTitle').textContent = title;
   document.getElementById('flSub').innerHTML = sub;
-  ['secWho', 'secCompare', 'secMarket', 'secChart', 'secBooks', 'secSheet'].forEach(id => {
+  ['secWho', 'secContext', 'secCompare', 'secMarket', 'secChart', 'secBooks', 'secSheet'].forEach(id => {
     const n = document.getElementById(id); if (n) n.hidden = true;
   });
 }
@@ -831,6 +885,12 @@ async function loadStyles(ids) {
 // Every UFC fight either corner has been booked in, plus the cards they sat
 // on. fight-lab.js decides which of them count as completed; a fighter has a
 // few dozen at most, so one read each is cheaper than a view.
+// Per-fight totals, read off `fights`. The research workspace rebuilds every
+// career rate from these rather than trusting the scraped profile figures.
+const FIGHT_TOTALS = ['kd', 'sig_str_landed', 'sig_str_attempted', 'td_landed', 'td_attempted', 'sub_attempts',
+  'ctrl_seconds', 'head_landed', 'body_landed', 'leg_landed', 'distance_landed', 'clinch_landed', 'ground_landed']
+  .map(c => 'a_' + c + ', b_' + c).join(', ');
+
 async function loadForm(ids) {
   const sb = window.cflSupabase;
   // ok:false means "could not look", which must never render as "no fights".
@@ -839,7 +899,7 @@ async function loadForm(ids) {
   try {
     const list = ids.join(',');
     const { data: fights, error } = await sb.from('fights')
-      .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_active')
+      .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, winner_id, method, end_round, end_time, weight_class, is_active, ' + FIGHT_TOTALS)
       .or('fighter_a_id.in.(' + list + '),fighter_b_id.in.(' + list + ')');
     if (error || !fights) return empty;
     const evIds = [...new Set(fights.map(f => f.event_id).filter(x => x != null))];
@@ -872,15 +932,39 @@ async function loadFactorRates() {
 async function loadRounds(fightIds) {
   if (!fightIds.length) return {};
   try {
-    const { data, error } = await window.cflSupabase.from('fight_rounds')
-      .select('fight_id, round_number, fighter_a_id, fighter_b_id, a_kd, b_kd, a_sig_str_landed, b_sig_str_landed, ' +
+    const data = await cfl.fetchAll(() => window.cflSupabase.from('fight_rounds')
+      .select('id, fight_id, round_number, fighter_a_id, fighter_b_id, a_kd, b_kd, a_sig_str_landed, b_sig_str_landed, ' +
               'a_sig_str_attempted, b_sig_str_attempted, a_td_landed, b_td_landed, a_td_attempted, b_td_attempted, ' +
               'a_sub_attempts, b_sub_attempts, a_ctrl_seconds, b_ctrl_seconds')
-      .in('fight_id', fightIds);
-    if (error || !data) return null;
+      .in('fight_id', fightIds).order('id'));
+    if (!data) return null;
     const out = {};
     data.forEach(r => { (out[r.fight_id] = out[r.fight_id] || []).push(r); });
     return out;
+  } catch (e) { return null; }
+}
+
+// The weight class over the last three years, with per-fight totals, for
+// division rank. One class is a few hundred bouts.
+async function loadDivision(weightClass, today) {
+  if (!weightClass || /catch/i.test(weightClass)) return null;
+  const from = (parseInt(today.slice(0, 4), 10) - 3) + today.slice(4);
+  try {
+    const data = await cfl.fetchAll(() => window.cflSupabase.from('fights')
+      .select('id, fighter_a_id, fighter_b_id, end_round, end_time, is_active, ' + FIGHT_TOTALS + ', events!inner(event_date)')
+      .eq('weight_class', weightClass).not('method', 'is', null)
+      .gte('events.event_date', from).lt('events.event_date', today).order('id'));
+    return (data || []).filter(f => f.is_active !== false);
+  } catch (e) { return null; }
+}
+
+// Every booking on this card, retired ones included, for opponent changes.
+async function loadCard(eventId) {
+  if (eventId == null) return null;
+  try {
+    const { data, error } = await window.cflSupabase.from('fights')
+      .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, is_active').eq('event_id', eventId);
+    return error ? null : data;
   } catch (e) { return null; }
 }
 
@@ -891,20 +975,59 @@ async function mountWorkspace(x) {
   try {
     const compA = x.form.ok ? FL.completedFights(x.form.fights, x.form.events, x.a.id, x.today, x.opts) : [];
     const compB = x.form.ok ? FL.completedFights(x.form.fights, x.form.events, x.b.id, x.today, x.opts) : [];
-    const recentIds = compA.slice(0, W.RECENT_N).concat(compB.slice(0, W.RECENT_N)).map(c => c.f.id);
-    const rounds = await loadRounds([...new Set(recentIds)]);
+    // Every completed fight of both corners, for round-by-round and the last-5
+    // rates; the opponents in each corner's last five, for "their record then";
+    // the weight class over three years, for division rank; and this card's
+    // own bookings, for opponent changes. Each may fail alone.
+    const allIds = [...new Set(compA.concat(compB).map(c => c.f.id))];
+    const oppIds = [...new Set(x.formA.concat(x.formB).map(r => r.opponentId).filter(v => v != null))];
+    const [rounds, oppForm, divFights, cardFights] = await Promise.all([
+      loadRounds(allIds), loadForm(oppIds), loadDivision(x.fight.weight_class, x.today), loadCard(x.fight.event_id)]);
+    const oppCompleted = {};
+    if (oppForm.ok) oppIds.forEach(id => { oppCompleted[id] = FL.completedFights(oppForm.fights, oppForm.events, id, x.today); });
     const fightDay = x.event ? M.isFightDay(x.event.event_date) : false;
-    UI.mount({
+    const careerA = x.form.ok ? W.careerWindow(compA, x.a.id) : null;
+    const careerB = x.form.ok ? W.careerWindow(compB, x.b.id) : null;
+    const base = divFights ? W.divisionBaseline(divFights, [x.a.id, x.b.id]) : null;
+    const pct = cw => {
+      if (!base || !cw || !cw.rates || cw.minutes < W.MIN_DIV_MINUTES) return null;
+      const o = {}; W.DIV_KEYS.forEach(k => { o[k] = W.percentile(base[k], cw.rates[k]); }); return o;
+    };
+    const divLabel = x.fight.weight_class ? x.fight.weight_class.toLowerCase() + 's in CFL\u2019s pool' : 'the division';
+    const divNote = base && base.fighters >= 10
+      ? 'Division rank compares each fighter\u2019s all-UFC figure with ' + base.fighters + ' fighters who logged at least ' +
+        W.MIN_DIV_MINUTES + ' minutes at ' + x.fight.weight_class + ' in the last three years, counted only among fighters linked to these two ' +
+        'by actual bouts (so men\u2019s and women\u2019s divisions with the same name are kept apart).'
+      : 'No division rank: too few fighters in this weight class over the last three years to compare against.';
+    const ctx = {
       fight: x.fight, event: x.event, a: x.a, b: x.b,
       formOk: x.form.ok, formA: x.formA, formB: x.formB,
       factsA: x.form.ok ? W.formFacts(compA, x.a.id, x.today) : null,
       factsB: x.form.ok ? W.formFacts(compB, x.b.id, x.today) : null,
       recentA: x.form.ok && rounds ? W.recentWindow(compA, rounds, x.a.id) : null,
       recentB: x.form.ok && rounds ? W.recentWindow(compB, rounds, x.b.id) : null,
+      careerA, careerB,
+      pctA: pct(careerA), pctB: pct(careerB), divNote,
+      roundsA: rounds ? W.roundByRound(compA, rounds, x.a.id) : null,
+      roundsB: rounds ? W.roundByRound(compB, rounds, x.b.id) : null,
+      methodsA: x.form.ok ? W.methods(compA, x.a.id) : null,
+      methodsB: x.form.ok ? W.methods(compB, x.b.id) : null,
+      oppA: oppForm.ok ? W.opposition(x.formA, oppCompleted) : null,
+      oppB: oppForm.ok ? W.opposition(x.formB, oppCompleted) : null,
+      changes: cardFights ? W.opponentChanges(cardFights, x.fight) : [],
       consRows: x.consRows, styleRows: x.styleRows, factorRates: x.factorRates,
       rA: x.mvt ? M.readSide(x.mvt, 'a', { isFightDay: fightDay }) : null,
       rB: x.mvt ? M.readSide(x.mvt, 'b', { isFightDay: fightDay }) : null,
+    };
+    const corner = (p, side) => ({
+      name: p.name, last: lastName(p.name), age: p.age, reach: W.n(p.reach_in), height: W.n(p.height_in), stance: p.stance,
+      debut: x.form.ok && !ctx['facts' + side].ufcFights, career: ctx['career' + side], recent: ctx['recent' + side],
+      facts: ctx['facts' + side], methods: ctx['methods' + side], pct: ctx['pct' + side],
+      style: FL.styleRead(x.styleRows, p.id, x.fight.weight_class || null),
+      late: FL.lateRoundRead(x.consRows, p.id, x.fight.weight_class || null),
     });
+    ctx.keyPoints = W.keyPoints(corner(x.a, 'A'), corner(x.b, 'B'), { fight: x.fight, changes: ctx.changes, divisionLabel: divLabel });
+    UI.mount(ctx);
   } catch (err) {
     console.warn('[fight-lab] workspace failed', err);
     if (ex) ex.innerHTML = '<div class="empty">The explorer could not load. Everything below is unaffected.</div>';

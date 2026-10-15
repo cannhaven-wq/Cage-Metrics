@@ -11,6 +11,41 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-15 (f) — Research platform audit and the first round of fixes (T-095)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-15
+
+- **Audit:** [`research/data-integrity/T-095_RESEARCH_PLATFORM_AUDIT_2026-10-15.md`](../research/data-integrity/T-095_RESEARCH_PLATFORM_AUDIT_2026-10-15.md),
+  measured against production; nothing written.
+- **Three causes found:**
+  - `fights.bout_order` has never been written, so "card order" is the
+    order bouts were announced;
+  - the profile scraper's 2026-07-01 deploy failed to build, so 68 of 150
+    upcoming fighters' profiles miss at least one fight;
+  - `fighters.age` lags birthdays (45 of 150).
+- **Shipped in the PR, pages only:**
+  - honest order wording and a direction toggle;
+  - ages from date of birth;
+  - opponent-change and debut badges;
+  - Fight Lab rebuilt on the fight records, with division rank, strike
+    mix, round by round, win/loss methods, opposition quality, Key points
+    (fact / calculation / interpretation) and fight context.
+- **Verified locally** at 1280 px and 390 px against real rows for the
+  2026-10-17 card. The container cannot reach Supabase or the site.
+
+## Next action
+
+1. **Owner:** review the T-095 pull request; merge to deploy.
+2. **Owner:** decide the three blocked items in the audit, section 3:
+   - the event-flow migration (running order);
+   - the profile-scraper redeploy;
+   - a closing-odds view for historical odds.
+3. **Claude:** after merge, run `verify-live`, then mark T-095 done.
+
+---
+
 ## 2026-10-15 (e) — T-094 is live and verified
 
 **From:** Claude

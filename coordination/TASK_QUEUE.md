@@ -19,6 +19,7 @@ it died is usually worth more than the task was.
 
 | id | task | level | owner | status |
 |---|---|---|---|---|
+| T-095 | **Research platform sprint: audit + Card Lab / event page / Fight Lab.** Audit in [`research/data-integrity/T-095_RESEARCH_PLATFORM_AUDIT_2026-10-15.md`](../research/data-integrity/T-095_RESEARCH_PLATFORM_AUDIT_2026-10-15.md). Shipped in the PR: ages from date of birth (45/150 stored ages stale); honest card-order wording plus a main-event-first/last toggle (running order never captured); opponent-change and UFC-debut badges; Fight Lab rates rebuilt from every UFC fight (68/150 profiles miss a fight), division rank, strike mix, round by round, how they win and lose, opponents' record at the time, Key points split into fact / calculation / interpretation, and a fight-context panel that names what is not covered. No database change. **Blocked, owner:** event-flow migration (running order), profile-scraper redeploy (failed build since 2026-07-01), a closing-odds view for historical odds | L2 | Claude | in-progress |
 | T-002 | Individual votes on the nine held amendment clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k) | L3 | Owner | blocked |
 | T-003 | Review the CLV measurement protocol draft before freeze | L1 | ChatGPT | in-progress |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |

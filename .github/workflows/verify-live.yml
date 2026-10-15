@@ -93,6 +93,7 @@ jobs:
           compare "/fight-insights.js" fight-insights.js "fight-insights.js (plain path)"
           compare "/fight-lab.js" fight-lab.js "fight-lab.js (Fight Lab helpers)"
           compare "/fight-workspace.js" fight-workspace.js "fight-workspace.js (research workspace rules)"
+          compare "/card-research.js" card-research.js "card-research.js (card facts, T-095)"
           compare "/fight-workspace-ui.js" fight-workspace-ui.js "fight-workspace-ui.js (research workspace UI)"
           compare "/_shared.js" _shared.js "_shared.js"
           compare "/proof-gates.js" proof-gates.js "proof-gates.js"
