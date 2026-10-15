@@ -188,6 +188,17 @@
 #home .seg button { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--text-2); background: transparent; border: 0; padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: .15s; }
 #home .seg button:hover { color: #fff; }
 #home .seg button.active { background: var(--red); color: #fff; }
+#home .card-search { position: relative; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin: 4px 0 10px; }
+#home .cs-wrap { position: relative; flex: 1 1 260px; max-width: 420px; display: block; }
+#home .card-search input { width: 100%; box-sizing: border-box; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 10px; color: var(--text);
+  font: 500 14px var(--font-body); padding: 10px 36px 10px 12px; }
+#home .card-search input:focus { outline: 2px solid var(--probe); outline-offset: 1px; border-color: transparent; }
+#home .card-search-clear[hidden] { display: none; }
+#home .card-search-clear { position: absolute; right: 6px; top: 50%; transform: translateY(-50%); width: 26px; height: 26px; border: 0; border-radius: 6px; background: var(--bg-3); color: var(--text-2); cursor: pointer; font-size: 16px; line-height: 1; }
+#home .card-search-status { font-size: 12.5px; color: var(--text-3); }
+#home .search-empty { background: var(--bg-1); border: 1px dashed var(--line-2); border-radius: 12px; padding: 18px; color: var(--text-2); font-size: 14px; }
+#home .linkish { background: none; border: 0; color: var(--red); cursor: pointer; font: inherit; padding: 0; text-decoration: underline; }
+#home .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 #home .order-note { font-size: 12px; color: var(--text-3); line-height: 1.5; margin: -4px 0 12px; max-width: 760px; }
 #home .cbadge.info { color: var(--amber); border-color: rgba(255,181,71,.35); background: rgba(255,181,71,.06); }
 
@@ -494,6 +505,14 @@
       </div>
       <span class="fl-hint" id="sortHint"></span>
     </div>
+    <div class="card-search" role="search">
+      <label class="sr-only" for="cardSearch">Search this card</label>
+      <span class="cs-wrap">
+        <input id="cardSearch" type="text" enterkeyhint="search" placeholder="Search this card — fighter or weight class" autocomplete="off" spellcheck="false">
+        <button type="button" id="cardSearchClear" class="card-search-clear" aria-label="Clear search" hidden>×</button>
+      </span>
+      <span class="card-search-status" id="cardSearchStatus" aria-live="polite"></span>
+    </div>
     <p class="order-note" id="orderNote"></p>
     <div class="fights" id="fightsList"></div>
     <p class="model-def" id="hpModelDef"></p>
@@ -571,7 +590,7 @@
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
-<script src="card-research.js?v=1"></script>
+<script src="card-research.js?v=2"></script>
 <!-- Every market number on this page is formatted by market.js, so the rules
      about showing a price (book count, age, movement measured only across the
      books quoting at both ends, and never an "opening line") live in one file
@@ -725,6 +744,7 @@ let _marketLoadFailed = false; // the read failed, as opposed to "no prices yet"
 let _cardState  = null;   // { fights, fighterMap, eventId, event }
 let _hpSortKey  = 'order';
 let _hpDir      = 'down';  // 'down' = main event first; 'up' = main event last
+let _hpQuery    = '';      // search within the card
 let _fightDay   = false;  // set by renderCardHead; decides the "stale" bar for a quote's age
 
 // Card Lab shows the market and the matchup. It does not show a CFL number,
@@ -869,7 +889,11 @@ async function loadFights(event) {
   _marketMap = market || {};
   _marketLoadFailed = !!(market && market.loadFailed);
 
-  _cardState = { fights, fighterMap, eventId: event.id, event, allBookings: fightsRaw || [] };
+  // The verified running order, when the event-flow ledger has one for this
+  // card (card-research.js). null until then; the page says so.
+  const roRows = window.cflCard ? await cflCard.loadRunningOrder(sb, event.id) : null;
+  const ro = window.cflCard ? cflCard.runningOrder(fights, roRows) : null;
+  _cardState = { fights, fighterMap, eventId: event.id, event, allBookings: fightsRaw || [], ro };
 
   // Which fights this visitor has starred, before the first paint, so a starred
   // fight never draws as un-starred. A signed-out visitor gets an empty set and
@@ -902,9 +926,15 @@ function renderSourceNote() {
 function renderCards() {
   if (!_cardState) return;
   const list = document.getElementById('fightsList');
-  const { fights, fighterMap, eventId, event } = _cardState;
+  const { fights, fighterMap, eventId, event, ro } = _cardState;
 
-  const cards = fights.map((fight, idx) => buildFightCard(fight, idx, fighterMap, eventId, event))
+  // Card position first (the verified running order when there is one), then
+  // the search, then the reader's sort. `idx` is the card position, so the
+  // "Card order" sort and the reverse toggle both work on it.
+  const ordered = window.cflCard ? cflCard.sortCard(fights, ro, 'down') : fights;
+  const shown = ordered.map((fight, idx) => ({ fight, idx }))
+    .filter(x => !_hpQuery || !window.cflCard || cflCard.fightMatches(x.fight, fighterMap, _hpQuery));
+  const cards = shown.map(x => buildFightCard(x.fight, x.idx, fighterMap, eventId, event))
     .filter(Boolean);
 
   // A fight with no sportsbook quote sinks to the bottom of a market sort
@@ -917,8 +947,20 @@ function renderCards() {
   cards.sort(sorters[_hpSortKey] || sorters.order);
   if (_hpSortKey === 'order' && _hpDir === 'up') cards.reverse();
   renderOrderNote();
+  renderSearchStatus(cards.length, ordered.length);
 
-  list.innerHTML = cards.map(c => c.html).join('');
+  list.innerHTML = cards.length ? cards.map(c => c.html).join('')
+    : '<div class="search-empty">No fight on this card matches “' + cfl.escapeHtml(_hpQuery) + '”. ' +
+      '<button type="button" class="linkish" id="cardSearchClear2">Clear the search</button></div>';
+}
+
+// "3 of 13 fights" while a search is active; empty otherwise.
+function renderSearchStatus(shown, total) {
+  const el = document.getElementById('cardSearchStatus');
+  if (!el) return;
+  el.textContent = _hpQuery ? shown + ' of ' + total + ' fight' + (total === 1 ? '' : 's') + ' match' : '';
+  const clr = document.getElementById('cardSearchClear');
+  if (clr) clr.hidden = !_hpQuery;
 }
 
 // What the order on screen actually is. Card Lab used to say "top of the card
@@ -926,7 +968,7 @@ function renderCards() {
 function renderOrderNote() {
   const el = document.getElementById('orderNote');
   if (!el || !_cardState || !window.cflCard) return;
-  const info = cflCard.orderInfo(_cardState.fights);
+  const info = cflCard.orderInfo(_cardState.ro);
   el.textContent = _hpSortKey === 'order' ? (_hpDir === 'up' ? info.noteReversed : info.note)
     : 'Sorted by the market, not by card position. ' + (info.official ? '' : 'The official running order, main card / prelims split and start times are not in our data yet.');
   const seg = document.getElementById('dirSeg');
@@ -948,6 +990,8 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   let wt = fight.weight_class || 'Bout';
   if (fight.is_main_event) wt = 'Main event · ' + wt;
   else if (fight.is_title_fight) wt = 'Title · ' + wt;
+  const bout = window.cflCard && _cardState ? cflCard.boutLabel(_cardState.ro, fight.id) : null;
+  if (bout) wt = bout + ' · ' + wt;
 
   const row   = _marketMap ? _marketMap[fight.id] : null;
   const opts  = { isFightDay: _fightDay };
@@ -1148,6 +1192,16 @@ function wireControls() {
       _hpSortKey = btn.dataset.sort;
       renderCards();
       if (hint) hint.textContent = hints[_hpSortKey] || '';
+    });
+  }
+  const q = document.getElementById('cardSearch');
+  if (q && !q._wired) {
+    q._wired = true;
+    const apply = v => { _hpQuery = (v || '').trim(); renderCards(); };
+    q.addEventListener('input', () => apply(q.value));
+    q.addEventListener('keydown', e => { if (e.key === 'Escape') { q.value = ''; apply(''); } });
+    document.addEventListener('click', e => {
+      if (e.target && (e.target.id === 'cardSearchClear' || e.target.id === 'cardSearchClear2')) { q.value = ''; apply(''); q.focus(); }
     });
   }
   const dir = document.getElementById('dirSeg');

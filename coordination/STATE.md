@@ -5,7 +5,15 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
-**Research platform sprint, 2026-10-15 (T-095): audit done, PR open, not deployed.**
+**Event card sprint, 2026-10-15 (T-096): code in review, three owner decisions open.**
+Card Lab and the event page gain search within the card and a reader for the
+real running order. The running order itself needs the owner: a migration
+(`research/event-card/proposed_2026-10-15_card_running_order.sql`, cost none),
+a one-time real-page check of the existing event-flow ingester, and the cron
+switched on. Card sections and start times have **no source in the stack** —
+see the plan. T-095 is **done**: merged `e103d4e`, verify-live green.
+
+**Research platform sprint, 2026-10-15 (T-095): done, live as `e103d4e`.**
 Card Lab, the event page and Fight Lab now compute age from date of birth, say
 honestly what the card order is (the running order has never been captured),
 flag opponent changes and UFC debuts, and Fight Lab rebuilds every career rate
