@@ -177,6 +177,10 @@ GRANT SELECT ON public.v_fight_market_broad_baseline TO anon, authenticated;
 --    page older than a fortnight keeps its market history instead of going
 --    blank.
 -- ---------------------------------------------------------------------------
+-- SUPERSEDED IN PRODUCTION 2026-10-15 (T-092, D-029): the live definition is
+-- market_movement_t092.sql, the same rules computed per fight. This text is the
+-- rollback target (market_movement_t092.rollback.sql) and the spec the T-092
+-- migration proved itself equivalent to. Change both or neither.
 CREATE OR REPLACE VIEW public.v_fight_market_movement AS
 WITH base AS (
   SELECT * FROM public.v_fight_market_broad_baseline
