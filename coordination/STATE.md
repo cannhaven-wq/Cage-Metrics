@@ -5,6 +5,12 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-15
 
+**Customer research platform, 2026-10-15 (T-097): in review, not merged.**
+Fight Lab opens with a one-screen matchup overview (profile, records, measured
+tendencies, last five, striking, grappling, late rounds, best prices) above the
+existing analytics; Card Lab gains a compact whole-card list. No database
+change, no model, no subscription change.
+
 **Event card sprint, 2026-10-15 (T-096): code in review, three owner decisions open.**
 Card Lab and the event page gain search within the card and a reader for the
 real running order. The running order itself needs the owner: a migration

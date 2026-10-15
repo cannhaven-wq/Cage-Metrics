@@ -335,6 +335,68 @@
 .ws-fab b { background: var(--red); color: #fff; border-radius: 999px; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; padding: 0 6px; }
 .ws-fab[hidden], body.ws-sheet-visible .ws-fab { display: none; }
 
+/* =====================================================================
+   Matchup overview — the one-screen read above the detailed analytics.
+   Reuses the tape rows below; adds the corner header, the market split,
+   strike-distribution bars and one research column per fighter.
+   ===================================================================== */
+#fl .ov-top { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 16px; }
+#fl .ov-corner { background: var(--bg-1); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+#fl .ov-corner.a { border-top: 3px solid var(--ws-a); } #fl .ov-corner.b { border-top: 3px solid var(--ws-b); }
+#fl .ov-corner .nm { font-family: var(--font-display); font-size: 22px; font-weight: 800; color: #fff; line-height: 1.12; }
+#fl .ov-corner .nm a { color: inherit; } #fl .ov-corner .nm a:hover { color: var(--red); }
+#fl .ov-corner .nick { font-size: 12px; color: var(--text-3); }
+#fl .ov-facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+#fl .ov-fact { background: var(--bg-2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; min-width: 0; }
+#fl .ov-fact .k { font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#fl .ov-fact .v { font: 700 15px var(--font-display); color: #fff; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#fl .ov-recs { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12.5px; color: var(--text-2); }
+#fl .ov-recs b { color: #fff; font-weight: 600; }
+#fl .ov-px { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding-top: 10px; border-top: 1px solid var(--line); }
+#fl .ov-px .pr { font: 800 28px var(--font-display); color: #fff; font-variant-numeric: tabular-nums; line-height: 1; }
+#fl .ov-px .pk { font-size: 11.5px; color: var(--text-3); line-height: 1.35; }
+#fl .ov-px .bp { font: 600 16px var(--font-mono); color: var(--probe); }
+#fl .ov-px .none { font-size: 12.5px; color: var(--text-3); }
+#fl .ov-split { margin-top: 12px; }
+#fl .ov-split .bar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; background: var(--bg-3); }
+#fl .ov-split .bar i { display: block; height: 100%; }
+#fl .ov-split .bar i.a { background: var(--ws-a); } #fl .ov-split .bar i.b { background: var(--ws-b); }
+#fl .ov-split .cap { display: flex; justify-content: space-between; gap: 10px; font-size: 11.5px; color: var(--text-3); margin-top: 5px; flex-wrap: wrap; }
+#fl .ov-grp-h { font: 700 18px var(--font-display); color: #fff; margin-top: 22px; }
+#fl .ov-grp-s { font-size: 12px; color: var(--text-3); margin-top: 2px; line-height: 1.45; }
+#fl .ov-dist { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+#fl .ov-dist-c { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+#fl .ov-dist-c .hd { font: 700 14px var(--font-display); color: #fff; }
+#fl .ov-dist-row { margin-top: 10px; }
+#fl .ov-dist-row .k { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#fl .ov-stack { display: flex; height: 18px; border-radius: 5px; overflow: hidden; margin-top: 4px; background: var(--bg-3); }
+#fl .ov-stack i { display: block; height: 100%; }
+#fl .ov-stack i.s1 { background: #e8edf2; } #fl .ov-stack i.s2 { background: #8b96a3; } #fl .ov-stack i.s3 { background: #4a5462; }
+#fl .ov-legend { display: flex; flex-wrap: wrap; gap: 3px 12px; font-size: 11.5px; color: var(--text-2); margin-top: 5px; }
+#fl .ov-legend span::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+#fl .ov-legend .s1::before { background: #e8edf2; } #fl .ov-legend .s2::before { background: #8b96a3; } #fl .ov-legend .s3::before { background: #4a5462; }
+#fl .ov-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 12px; }
+#fl .ov-col { background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; min-width: 0; overflow: hidden; }
+#fl .ov-col.a { border-top: 3px solid var(--ws-a); } #fl .ov-col.b { border-top: 3px solid var(--ws-b); }
+#fl .ov-col .hd { padding: 11px 14px; font: 700 15px var(--font-display); color: #fff; border-bottom: 1px solid var(--line); }
+#fl .ov-col .blk { padding: 12px 14px; border-bottom: 1px solid var(--line); }
+#fl .ov-col .blk:last-child { border-bottom: none; }
+#fl .ov-tend { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+#fl .ov-tend li { font-size: 13px; color: var(--text); line-height: 1.45; padding-left: 14px; position: relative; }
+#fl .ov-tend li::before { content: ''; position: absolute; left: 0; top: 7px; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); }
+#fl .ov-res li::before { background: var(--text-3); }
+#fl .ov-tend li .b { display: block; font-size: 11px; color: var(--text-3); }
+#fl .ov-muted { font-size: 12.5px; color: var(--text-3); line-height: 1.5; margin-top: 6px; }
+#fl .ov-l5 { margin-top: 6px; }
+#fl .ov-l5 .form-row { padding: 8px 0; }
+#fl .ov-more { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+#fl .ov-more a { font: 600 12.5px var(--font-display); color: var(--text); background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 999px; padding: 7px 13px; }
+#fl .ov-more a:hover { background: var(--bg-3); }
+@media (max-width: 760px) {
+  #fl .ov-top, #fl .ov-dist, #fl .ov-cols { grid-template-columns: 1fr; }
+  #fl .ov-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
 @media print {
   body.ws-printing > *:not(#fl), body.ws-printing #fl > *:not(#secSheet), body.ws-printing .ws-fab { display: none !important; }
   body.ws-printing #secSheet .sh > *:not(.sh-print) { display: none !important; }
@@ -391,9 +453,17 @@
     <div class="fl-sub" id="flSub"></div>
     <div id="flStar" style="margin-top:10px"></div>
     <nav class="jump" aria-label="On this page">
-      <a href="#secWho">The fighters</a><a href="#secContext">Context</a><a href="#secExplore">Explore the matchup</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a><a href="#secSheet" id="jumpSheet">My sheet</a>
+      <a href="#secOverview">Overview</a><a href="#secWho">The fighters</a><a href="#secContext">Context</a><a href="#secExplore">Explore the matchup</a><a href="#secCompare">Compare</a><a href="#secForm">Last five</a><a href="#secMarket">The market</a><a href="#secChart">Line movement</a><a href="#secSheet" id="jumpSheet">My sheet</a>
     </nav>
   </header>
+
+  <!-- The overview answers "what do I need to know about this fight" on one
+       screen. Everything under it is the detail behind it. -->
+  <section class="sec" id="secOverview">
+    <h2>Matchup overview</h2>
+    <div class="sec-sub">Both fighters at a glance: physical profile, records, measured tendencies, the last five fights, striking and grappling numbers, late-round output and the best prices we captured. The detailed analytics follow underneath.</div>
+    <div id="flOverview"><div class="empty">Loading the overview…</div></div>
+  </section>
 
   <!-- The page answers three questions, in this order: who are these two,
        how do they compare, and what does the betting market say. -->
@@ -496,6 +566,7 @@
 <script src="card-research.js?v=2"></script>
 <script src="fight-workspace.js?v=3"></script>
 <script src="fight-workspace-ui.js?v=3"></script>
+<script src="fight-overview.js?v=1"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -706,6 +777,11 @@ async function load() {
   renderStats(a, b);
   renderLate(a, b, fight, consRows);
   renderForm(a, b, formA, formB, form.ok);
+  try { renderOverview({ fight, event, a, b, mvt, mvtFailed, form, formA, formB, styleRows, consRows, today, opts }); }
+  catch (err) {
+    console.warn('[fight-lab] overview failed', err);
+    document.getElementById('flOverview').innerHTML = '<div class="empty">The overview could not load. Everything below is unaffected.</div>';
+  }
   // The research workspace. Its round data is one more read, made only after
   // the fight list says which five fights each corner's "last 5" is.
   await mountWorkspace({ fight, event, a, b, form, today, opts, formA, formB, consRows, styleRows, mvt, factorRates });
@@ -847,7 +923,7 @@ async function renderWatch(fight, a, b) {
 function fail(title, sub) {
   document.getElementById('flTitle').textContent = title;
   document.getElementById('flSub').innerHTML = sub;
-  ['secWho', 'secContext', 'secCompare', 'secMarket', 'secChart', 'secBooks', 'secSheet'].forEach(id => {
+  ['secOverview', 'secWho', 'secContext', 'secCompare', 'secMarket', 'secChart', 'secBooks', 'secSheet'].forEach(id => {
     const n = document.getElementById(id); if (n) n.hidden = true;
   });
 }
@@ -1414,6 +1490,219 @@ function renderForm(a, b, formA, formB, formOk) {
   el.innerHTML = '<div class="form-grid">' + col(a, formA) + col(b, formB) + '</div>' +
     '<div class="foot-note">UFC fights only — results from other promotions are not in our data. ' +
     'Who they beat matters as much as whether they won; follow an opponent\'s name to see their record.</div>';
+}
+
+// ---- matchup overview -------------------------------------------------------
+// One screen, both corners, everything a visitor needs to start. The numbers
+// are the same ones the sections below use — rebuilt career rates
+// (fight-workspace.js), the measured style and late-round reads (fight-lab.js),
+// the market read (market.js) — so the overview and the detail cannot disagree.
+function renderOverview(x) {
+  const el = document.getElementById('flOverview');
+  const O = window.cflOverview, W = window.cflWorkspace, FL = window.cflFightLab;
+  if (!el) return;
+  if (!O || !W || !FL) { el.innerHTML = '<div class="empty">The overview could not load. Everything below is unaffected.</div>'; return; }
+  const { fight, event, a, b, mvt } = x;
+  const wc = fight.weight_class || null;
+  const fightDay = event ? M.isFightDay(event.event_date) : false;
+  const rA = mvt ? M.readSide(mvt, 'a', { isFightDay: fightDay }) : null;
+  const rB = mvt ? M.readSide(mvt, 'b', { isFightDay: fightDay }) : null;
+  const priced = !!(rA && rB);
+
+  const side = (f, form, key) => {
+    const comp = x.form.ok ? FL.completedFights(x.form.fights, x.form.events, f.id, x.today, x.opts) : [];
+    const career = x.form.ok ? W.careerWindow(comp, f.id) : null;
+    const stats = O.statLine(f, career);
+    const methods = x.form.ok ? W.methods(comp, f.id) : null;
+    const facts = x.form.ok ? W.formFacts(comp, f.id, x.today) : null;
+    return {
+      f, form, key, comp, career, stats, methods, facts,
+      mix: career && career.totals ? W.strikeMix(career.totals) : null,
+      dist: x.form.ok ? O.distance(comp, f.id) : null,
+      style: FL.styleRead(x.styleRows, f.id, wc),
+      late: FL.lateRoundRead(x.consRows, f.id, wc),
+      read: key === 'a' ? rA : rB,
+    };
+  };
+  const A = side(a, x.formA, 'a'), B = side(b, x.formB, 'b');
+  A.tend = O.tendencies(A); B.tend = O.tendencies(B);
+
+  // -- corner headers: profile, records, market
+  const fact = (k, v) => '<div class="ov-fact"><div class="k">' + esc(k) + '</div><div class="v">' + esc(v == null || v === '' ? '—' : String(v)) + '</div></div>';
+  const head = S => {
+    const f = S.f, r = S.read;
+    const px = r
+      ? '<div class="ov-px"><span class="pr">' + Math.round(r.prob * 100) + '%</span>' +
+          '<span class="pk">market consensus<br>vig removed</span>' +
+          (r.bestAmerican != null
+            ? '<span class="bp">' + esc(M.fmtAmerican(r.bestAmerican)) + '</span><span class="pk">best price<br>' + esc(r.bestBook || 'a tracked book') + '</span>'
+            : '<span class="none">no per-book quote captured</span>') +
+          (r.fairAmerican != null ? '<span class="pk">fair ' + esc(M.fmtAmerican(r.fairAmerican)) + '<br>not bettable</span>' : '') +
+        '</div>'
+      : '<div class="ov-px"><span class="none">' + (x.mvtFailed ? 'Prices did not load — refresh in a moment.' : 'No sportsbook price captured for this fight yet.') + '</span></div>';
+    return '<div class="ov-corner ' + S.key + '">' +
+      '<div><div class="nm"><a href="' + cfl.fighterUrl(f.id) + '">' + esc(f.name) + '</a></div>' +
+        (f.nickname ? '<div class="nick">“' + esc(f.nickname) + '”</div>' : '') + '</div>' +
+      '<div class="ov-facts">' +
+        fact('Age', f.age) +
+        fact('Height', f.height_in ? cfl.formatHeight(f.height_in) : null) +
+        fact('Reach', f.reach_in ? cfl.formatReach(f.reach_in) : null) +
+        fact('Stance', f.stance) +
+      '</div>' +
+      '<div class="ov-recs"><span>Pro record <b>' + esc(recOf(f)) + '</b></span>' +
+        '<span>UFC <b>' + esc(f.ufcRec && !f.ufcRec.total ? 'debut' : ufcRec(f)) + '</b></span>' +
+        (S.facts && S.facts.streak && S.facts.streak.count >= 2
+          ? '<span>' + (S.facts.streak.kind === 'W' ? 'Won' : 'Lost') + ' last <b>' + S.facts.streak.count + '</b></span>' : '') +
+        (S.facts && S.facts.daysSinceLast != null ? '<span>Last fought <b>' + esc(monthsAgo(S.facts.daysSinceLast)) + '</b></span>' : '') +
+      '</div>' + px +
+    '</div>';
+  };
+
+  // The market split, with the book count and capture age every price carries.
+  let split = '';
+  if (priced) {
+    const pa = Math.round(rA.prob * 100), pb = 100 - pa;
+    const fresh = rA.fresh;
+    split = '<div class="ov-split"><div class="bar" role="img" aria-label="Market consensus ' + pa + '% ' + esc(lastName(a.name)) + ', ' + pb + '% ' + esc(lastName(b.name)) + '">' +
+      '<i class="a" style="width:' + pa + '%"></i><i class="b" style="width:' + pb + '%"></i></div>' +
+      '<div class="cap"><span>' + esc(lastName(a.name)) + ' ' + pa + '%</span>' +
+      '<span>' + (rA.bookCount ? rA.bookCount + (rA.bookCount === 1 ? ' book' : ' books') : 'consensus') + ', vig removed' +
+        (fresh ? ' · ' + (fresh.stale ? 'stale · ' : '') + 'captured ' + esc(fresh.when) : '') +
+        (rA.moveSinceBaseline != null && Math.abs(rA.moveSinceBaseline) >= 0.5
+          ? ' · moved ' + Math.abs(rA.moveSinceBaseline).toFixed(1) + ' pts toward ' + esc(lastName(rA.moveSinceBaseline > 0 ? a.name : b.name)) : '') +
+      '</span><span>' + esc(lastName(b.name)) + ' ' + pb + '%</span></div></div>';
+  }
+
+  // -- comparison rows (the tape's layout, so phones get the same treatment)
+  const tapeA = A.stats.source !== 'none', tapeB = B.stats.source !== 'none';
+  const num = d => v => v == null ? null : Number(v).toFixed(d);
+  const pc = v => v == null ? null : Math.round(v) + '%';
+  const mmss = v => v == null ? null : O.clock(v);
+  const rowHtml = (label, va, vb, fmt, better, isRate) => {
+    const cell = (v, has, lead) => {
+      if (isRate && !has) return '<span class="val na">no UFC data</span>';
+      const out = fmt(v);
+      if (out == null || out === '') return '<span class="val na">—</span>';
+      return '<span class="val' + (lead ? ' lead' : '') + '">' + esc(String(out)) + '</span>';
+    };
+    let la = false, lb = false;
+    if (better && va != null && vb != null && +va !== +vb && (!isRate || (tapeA && tapeB))) {
+      const aw = better === 'high' ? +va > +vb : +va < +vb; la = aw; lb = !aw;
+    }
+    return '<div class="tape-row"><div class="l">' + cell(va, tapeA, la) + '</div><div class="lbl">' + esc(label) +
+      '</div><div class="r">' + cell(vb, tapeB, lb) + '</div></div>';
+  };
+  const tape = (rows) => '<div class="tape"><div class="tape-head"><div class="l"><span class="n">' + esc(a.name) +
+    '</span></div><div class="mid"></div><div class="r"><span class="n">' + esc(b.name) + '</span></div></div>' + rows.join('') + '</div>';
+  const sa = A.stats, sb = B.stats;
+  const srcWords = S => S.stats.source === 'fights'
+    ? lastName(S.f.name) + ': ' + S.stats.fights + ' UFC fight' + (S.stats.fights === 1 ? '' : 's') + ', ' + Math.round(S.stats.minutes) + ' min'
+    : S.stats.source === 'profile' ? lastName(S.f.name) + ': UFCStats profile summary (no fight totals on record)'
+    : lastName(S.f.name) + ': no UFC fight data';
+  const srcLine = 'Rebuilt from every completed UFC fight in our data — ' + esc(srcWords(A)) + '; ' + esc(srcWords(B)) + '.';
+
+  const striking = tape([
+    rowHtml('Sig. strikes landed / min', sa.slpm, sb.slpm, num(2), 'high', true),
+    rowHtml('Striking accuracy', sa.str_acc, sb.str_acc, pc, 'high', true),
+    rowHtml('Sig. strikes absorbed / min', sa.sapm, sb.sapm, num(2), 'low', true),
+    rowHtml('Striking defence', sa.str_def, sb.str_def, pc, 'high', true),
+    rowHtml('Knockdowns scored (UFC)', sa.kd, sb.kd, v => v == null ? null : String(v), null, true),
+  ]);
+  const grappling = tape([
+    rowHtml('Takedowns landed / 15 min', sa.td_avg, sb.td_avg, num(2), 'high', true),
+    rowHtml('Takedown accuracy', sa.td_acc, sb.td_acc, pc, 'high', true),
+    rowHtml('Takedown defence', sa.td_def, sb.td_def, pc, 'high', true),
+    rowHtml('Control time / 15 min', sa.ctrl15, sb.ctrl15, mmss, 'high', true),
+    rowHtml('Submission attempts / 15 min', sa.sub_avg, sb.sub_avg, num(1), 'high', true),
+    rowHtml('Wins by submission (UFC)', A.methods ? A.methods.win.sub : null, B.methods ? B.methods.win.sub : null, v => v == null ? null : String(v), null, false),
+  ]);
+
+  // Strike distribution: shares of what landed, so it describes where, not how much.
+  const stack = (k, parts) => {
+    const have = parts.filter(p => p[1] != null);
+    if (!have.length) return '';
+    return '<div class="ov-dist-row"><div class="k">' + esc(k) + '</div><div class="ov-stack">' +
+      have.map((p, i) => '<i class="s' + (i + 1) + '" style="width:' + p[1].toFixed(1) + '%" title="' + esc(p[0] + ' ' + Math.round(p[1]) + '%') + '"></i>').join('') +
+      '</div><div class="ov-legend">' + have.map((p, i) => '<span class="s' + (i + 1) + '">' + esc(p[0]) + ' ' + Math.round(p[1]) + '%</span>').join('') + '</div></div>';
+  };
+  const distCard = S => {
+    const m = S.mix;
+    const body = m && m.target
+      ? stack('Target', [['Head', m.target.head], ['Body', m.target.body], ['Legs', m.target.leg]]) +
+        (m.position ? stack('Position', [['Distance', m.position.distance], ['Clinch', m.position.clinch], ['Ground', m.position.ground]]) : '') +
+        '<div class="ov-muted">' + m.landed + ' landed significant strikes in UFC fights.</div>'
+      : '<div class="ov-muted">No UFC strike breakdown on record.</div>';
+    return '<div class="ov-dist-c"><div class="hd">' + esc(S.f.name) + '</div>' + body + '</div>';
+  };
+
+  // Late rounds and cardio indicators: what the records show, never "gas tank".
+  const lateCell = S => S.late ? S.late.score + ' · ' + S.late.label + (S.late.thin ? ' (thin sample)' : '') : null;
+  const frac = (k, n) => n ? k + ' of ' + n : null;
+  const decRec = S => S.dist && S.dist.decisions.total ? S.dist.decisions.w + '-' + S.dist.decisions.l + (S.dist.decisions.other ? '-' + S.dist.decisions.other : '') : (S.dist ? 'none' : null);
+  const late = tape([
+    rowHtml('Late-round pace score', lateCell(A), lateCell(B), v => v, null, false),
+    rowHtml('UFC fights reaching round 3', A.dist ? frac(A.dist.reachedR3, A.dist.fights) : null, B.dist ? frac(B.dist.reachedR3, B.dist.fights) : null, v => v, null, false),
+    rowHtml('UFC fights into round 4 or 5', A.dist ? A.dist.intoR4 : null, B.dist ? B.dist.intoR4 : null, v => v == null ? null : String(v), null, false),
+    rowHtml('Record in decisions (W-L)', decRec(A), decRec(B), v => v, null, false),
+    rowHtml('Wins finished in round 3+', A.dist ? A.dist.finishedIn.r3plus : null, B.dist ? B.dist.finishedIn.r3plus : null, v => v == null ? null : String(v), null, false),
+  ]);
+
+  // -- one research column per fighter: style, tendencies, last five
+  const col = S => {
+    const st = S.style;
+    const styleHtml = st
+      ? '<span class="pill ' + esc(st.key) + '">' + esc(st.label) + '</span>' + (st.thin ? ' <span class="pill thin">small sample</span>' : '') +
+        '<div class="ov-muted">' + esc(st.line) + ' Measured from round one of ' + (st.fights != null ? st.fights + ' ' : '') +
+        'UFC fight' + (st.fights === 1 ? '' : 's') + (st.scope === 'division' ? ' at ' + esc(st.weightClass) : '') + ' — not a training background.</div>'
+      : '<div class="ov-muted">Not enough UFC fights on record to measure a style.</div>';
+    const t = S.tend;
+    const tendHtml = t.lines.length
+      ? '<ul class="ov-tend">' + t.lines.map(l => '<li>' + esc(l.text) + '<span class="b">' + esc(l.basis) + '</span></li>').join('') + '</ul>' +
+        (t.reason ? '<div class="ov-muted">' + esc(t.reason) + '</div>' : '')
+      : '<div class="ov-muted">' + esc(t.reason || 'No tendencies to report.') + '</div>';
+    const resHtml = t.results && t.results.length
+      ? '<div class="blk"><div class="who-k">Recorded results · how their UFC fights ended</div>' +
+        '<ul class="ov-tend ov-res">' + t.results.map(l => '<li>' + esc(l.text) + '<span class="b">' + esc(l.basis) + '</span></li>').join('') + '</ul>' +
+        '<div class="ov-muted">A count of what happened, not a statistical tendency' +
+        (t.lines.length ? '' : ' — the sample is too small to call it a pattern') + '.</div></div>'
+      : '';
+    const l5 = S.form.length
+      ? S.form.map(r => {
+          const opp = r.opponentId ? '<a href="' + cfl.fighterUrl(r.opponentId) + '">' + esc(r.opponentName) + '</a>' : esc(r.opponentName);
+          const how = [r.method, r.round ? 'R' + r.round + (r.time ? ' ' + r.time : '') : ''].filter(Boolean).join(' · ');
+          const word = { W: 'Won', L: 'Lost', D: 'Draw', NC: 'No contest' }[r.result] || r.result;
+          return '<div class="form-row"><span class="chip ' + esc(r.result) + '" aria-label="' + esc(word) + '">' + esc(r.result) + '</span>' +
+            '<div><div class="opp">' + esc(word) + ' vs ' + opp + '</div>' +
+            (how ? '<div class="how">' + esc(how) + '</div>' : '') +
+            '<div class="when">' + esc(cfl.formatDate(r.date)) + '</div></div></div>';
+        }).join('')
+      : '<div class="ov-muted">' + (x.form.ok ? 'No completed UFC fights on record — this may be their UFC debut.' : 'Fight history could not be loaded.') + '</div>';
+    return '<div class="ov-col ' + S.key + '"><div class="hd">' + esc(S.f.name) + '</div>' +
+      '<div class="blk"><div class="who-k">Fighting style (measured)</div>' + styleHtml + '</div>' +
+      '<div class="blk"><div class="who-k">Statistical tendencies from the fight records</div>' + tendHtml + '</div>' + resHtml +
+      '<div class="blk"><div class="who-k">Last ' + (S.form.length || 5) + ' UFC fights · newest first</div><div class="ov-l5">' + l5 + '</div></div>' +
+    '</div>';
+  };
+
+  el.innerHTML =
+    '<div class="ov-top">' + head(A) + head(B) + '</div>' + split +
+    '<div class="ov-cols">' + col(A) + col(B) + '</div>' +
+    '<div class="ov-grp-h">Striking</div><div class="ov-grp-s">' + srcLine + '</div>' + striking +
+    '<div class="ov-dist">' + distCard(A) + distCard(B) + '</div>' +
+    '<div class="ov-grp-h">Grappling</div><div class="ov-grp-s">Same fights. Control time is minutes:seconds in a dominant position per 15 minutes fought.</div>' + grappling +
+    '<div class="ov-grp-h">Late rounds and cardio indicators</div><div class="ov-grp-s">' + esc(FL.LATE_ROUND_NOTE.split('. ')[0]) +
+      '. 100 means they kept their round-one pace. How far fights go is counted from completed UFC fights.</div>' + late +
+    '<div class="foot-note">' + esc(O.OVERVIEW_NOTE) + ' The dot marks the higher number (lower for strikes absorbed) — a measurement, not an advantage. ' +
+      'Prices are the last capture, not live; check the book before acting on any of them.</div>' +
+    '<div class="ov-more"><a href="#secExplore">Explore the matchup in depth ↓</a><a href="#secMarket">Market detail ↓</a>' +
+      '<a href="#secChart">Line movement ↓</a><a href="#secSheet">My research sheet ↓</a></div>';
+}
+
+// "3 months ago", from a day count. Coarse on purpose: a layoff, not a date.
+function monthsAgo(days) {
+  if (days < 45) return days + ' days ago';
+  const m = Math.round(days / 30.44);
+  return m < 24 ? m + ' months ago' : (m / 12).toFixed(1).replace(/\.0$/, '') + ' years ago';
 }
 
 // UFC record from the completed-fight list (see load). Before that list has
