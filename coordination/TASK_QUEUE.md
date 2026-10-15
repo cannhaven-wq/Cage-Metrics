@@ -19,6 +19,7 @@ it died is usually worth more than the task was.
 
 | id | task | level | owner | status |
 |---|---|---|---|---|
+| T-094 | **Customer Experience Sprint 1: Fight Lab research workspace.** A matchup explorer on `fight.html` (Striking, Grappling, Cardio, Recent form, Physical, Market) with side-by-side bars on a fixed scale per metric; career rates (UFCStats) beside last-5 rates recomputed from `fight_rounds`, each with its sample; "What this means" for every metric, quoting `factor-rates.json` where the Factor Lab tested it and saying "not tested" where it did not; and a personal research sheet in `localStorage` (pin, rank by the visitor's own importance, notes, copy / download / print). No pick, no tally, no new table; `fight_rounds_public_read.sql` only records a grant production already holds. `fight-workspace.js`, `fight-workspace-ui.js`, `tests/fight-workspace.test.js` | L2 | Claude | in-progress |
 | T-002 | Individual votes on the nine held amendment clauses — (a) (b) (c) (d) (e) (f) (g) (j) (k) | L3 | Owner | blocked |
 | T-003 | Review the CLV measurement protocol draft before freeze | L1 | ChatGPT | in-progress |
 | T-006 | Two-sided quote capture at the publish instant | L1 | Claude | queued |
