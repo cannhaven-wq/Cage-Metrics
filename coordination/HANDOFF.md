@@ -20,7 +20,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 **PR #71 reconciled.** `main` merged in (D-025, T-084/T-085), keeping both
 handoff entries. 275 tests passed on the merged tree.
 
-**T-088 revised to the owner's review ([D-026](DECISIONS.md)).**
+**T-088 revised to the owner's review ([D-027](DECISIONS.md)).**
 - **New tables, views and sequences are private by default.** Existing reads
   are unchanged, and the migration proves it before committing.
 - **A new test keeps future grants honest.** It fails if a page reads an object
@@ -57,6 +57,37 @@ On sign-off, Claude applies both T-088 files, re-runs the production probe and
 the advisor, and submits the Card Brief form on the live site. Commercial
 readiness then resumes at week 1, which starts with a Resend key, and T-090
 before any Brief is sent.
+
+---
+
+## 2026-10-13 (i) — T-086 approved with gates (D-026); nothing applied yet
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-13
+
+The DWCS 10.3 move is fully built and tested. Nothing has been applied.
+
+- **Plan:** `research/data-integrity/T-086_MIGRATION_PLAN_2026-10-13.md`.
+- **Migration and rollback:** one transaction each, demonstrated on a
+  throwaway Postgres (13 tests, including a full round trip that is
+  byte-identical).
+- **Scraper guard:** cage-metrics-event-scrapper `claude/pensive-fermi-d6pbi0`.
+- **Found while checking frozen data:**
+  - PRED-001 RESERVE's recorded 169 includes the 5 bouts.
+  - Saturday's PROP-0001 locks for Galanti counted his Contender Series bout.
+  - "UFC - Road to UFC 4.6" sits in the sealed H1 set and is left alone.
+
+## Next action
+
+**Approved 2026-10-13 ([D-026](DECISIONS.md)), with gates.** Claude:
+1. Get PR #69 green.
+2. Merge and verify event-scraper PR #1.
+3. Recheck fingerprints, foreign-key references and rollback preconditions.
+4. **Report readiness to the owner before applying the destructive step.**
+
+The RESERVE correction and the PROP-0001 sensitivity rule for 53618 are
+recorded in `research/data-integrity/T-086_RESEARCH_CORRECTIONS_2026-10-13.md`.
 
 ---
 
