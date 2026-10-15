@@ -642,6 +642,13 @@
   .fight-why .why-hd.against { color: var(--amber, #d39a2b); }
   .fight-why .why-list { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.5; color: var(--text-2); }
   .fight-why .why-list li { margin: 3px 0; }
+  .ev-order { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; margin: 0 0 14px; }
+  .ev-seg { display: inline-flex; background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 3px; gap: 2px; }
+  .ev-seg button { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--text-2); background: transparent; border: 0; padding: 7px 14px; border-radius: 8px; cursor: pointer; }
+  .ev-seg button:hover { color: #fff; }
+  .ev-seg button.active { background: var(--red); color: #fff; }
+  .ev-order-note { font-size: 12px; color: var(--text-3); line-height: 1.5; margin: 0; flex: 1 1 280px; }
+  .fight-card-header .badge.change { color: var(--amber); border-color: rgba(255,181,71,.35); background: rgba(255,181,71,.06); }
 </style>
 </head>
 <body>
@@ -660,6 +667,7 @@
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
+<script src="card-research.js?v=1"></script>
 <script src="market.js?v=3"></script>
 <script src="fight-insights.js?v=8"></script>
 <script>
@@ -836,7 +844,7 @@ async function load() {
   // empty; the v_fighter_recent_form view query was removed when edges.js's
   // streak factors went away.
   // No ufc_* here: the UFC record comes from v_fighter_ufc_record (T-084).
-  const fighterColumns = 'id, name, nickname, age, height_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
+  const fighterColumns = 'id, name, nickname, age, dob, height_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, str_acc, str_def, reach_in, stance, last_fight_date, country, country_code';
   const fightIds = (fights || []).map(f => f.id);
   const idList = fighterIds.join(',');
   const [fightersR, cardioR, finishR, movementMap, baseRatesR, formR, ufcRows] = await Promise.all([
@@ -879,6 +887,8 @@ async function load() {
 
   if (fightersR.error) console.warn('Fighter details not available:', fightersR.error.message);
   cflUfcRecord.apply(fightersR.data || [], ufcRows).forEach(f => { fighterMap[f.id] = f; });
+  // Age today from date of birth; the stored age lags birthdays.
+  if (window.cflCard) cflCard.applyAges(Object.values(fighterMap), cfl.eventWindow().todayStr);
 
   if (cardioR.error) console.warn('Cardio data not available:', cardioR.error.message);
   (cardioR.data || []).forEach(r => {
@@ -939,6 +949,8 @@ async function load() {
     baseRates,
     eventDate: event.event_date,
     formMap,
+    allBookings: fightsRaw || [],
+    dir: 'down',
   };
 
   document.getElementById('content').innerHTML = `
@@ -948,11 +960,19 @@ async function load() {
       <span class="pill ${event.is_upcoming ? 'upcoming' : ''}">${event.is_upcoming ? 'Upcoming' : 'Completed'}</span>
     </div>
     <div class="page">
-      <div id="fightsList">
-        ${_renderState.fights.map(f => renderFight(f, _renderState)).join('')}
+      <div class="ev-order">
+        <div class="ev-seg" id="evDir" aria-label="Card direction"></div>
+        <p class="ev-order-note" id="evOrderNote"></p>
       </div>
+      <div id="fightsList"></div>
     </div>
   `;
+  renderFightList();
+  document.getElementById('evDir').addEventListener('click', e => {
+    const btn = e.target.closest('button'); if (!btn) return;
+    _renderState.dir = btn.dataset.dir;
+    renderFightList();
+  });
 
 }
 
@@ -968,6 +988,20 @@ async function load() {
 // form, which is what edges.js ships.
 
 let _renderState = null;
+
+// The card in the chosen direction, with an honest note on what the order is
+// (card-research.js: the running order is not in our data yet).
+function renderFightList() {
+  const st = _renderState;
+  const list = st.dir === 'up' ? st.fights.slice().reverse() : st.fights;
+  document.getElementById('fightsList').innerHTML = list.map(f => renderFight(f, st)).join('');
+  if (!window.cflCard) return;
+  const info = cflCard.orderInfo(st.fights);
+  document.getElementById('evDir').innerHTML = ['down', 'up'].map((d, i) =>
+    '<button type="button" data-dir="' + d + '" aria-pressed="' + (st.dir === d) + '" class="' + (st.dir === d ? 'active' : '') + '">' +
+    cfl.escapeHtml(info.labels[i]) + '</button>').join('');
+  document.getElementById('evOrderNote').textContent = st.dir === 'up' ? info.noteReversed : info.note;
+}
 
 // =============================================================================
 // Method-of-victory inference and the model verdict bands used to live here.
@@ -1003,6 +1037,11 @@ function renderFight(fight, st) {
   const tags = [];
   let cardClass = 'fight-card';
   if (fight.is_title_fight) { tags.push('<span class="badge title">Title</span>'); cardClass += ' title'; }
+  if (window.cflCard) {
+    const ch = cflCard.opponentChanges(st.allBookings, fight);
+    if (ch.length && isUpcoming) tags.push('<span class="badge change" title="' + cfl.escapeHtml(ch.map(c => c.fighterName + ' was booked against ' + c.formerOpponent).join('; ')) + '">Opponent change</span>');
+    if (isUpcoming) [a, b].forEach(f => { if (cflCard.isDebut(f)) tags.push('<span class="badge change">' + cfl.escapeHtml(f.name.split(' ').slice(-1)[0]) + ' UFC debut</span>'); });
+  }
   if (fight.is_main_event) {
     tags.push('<span class="badge">Main event</span>');
     if (!fight.is_title_fight) cardClass += ' main';

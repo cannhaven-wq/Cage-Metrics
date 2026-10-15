@@ -20,7 +20,7 @@
   let C = null;            // the page context handed to mount()
   let sheet = null;        // the visitor's sheet for this fight
   const registry = {};     // pin id -> item, for buttons drawn anywhere on the page
-  let activeTab = 'striking';
+  let activeTab = 'key';
 
   // ---- storage: this browser only ----------------------------------------
   function loadSheet(fightId) {
@@ -57,6 +57,7 @@
   function gapWords(m, ln) {
     if (ln.gap == null) return null;
     if (ln.gapText === 'level') return 'level';
+    if (m.more) return last(ln.gap > 0 ? C.a.name : C.b.name) + ' ' + Math.abs(ln.gap).toFixed(m.dp) + m.more;
     return last(ln.gap > 0 ? C.a.name : C.b.name) + ' ' + ln.gapText + ' higher';
   }
 
@@ -115,6 +116,44 @@
     return m ? MONTHS[+m[2] - 1] + ' ' + m[1] : (d || '');
   }
 
+  function careerSample(cw) {
+    if (!cw) return 'fight records could not be loaded';
+    if (!cw.fights) return 'no UFC fights with stats';
+    return cw.fights + ' UFC fight' + (cw.fights === 1 ? '' : 's') + ', ' + Math.round(cw.minutes) + ' min' +
+      (cw.skipped.length ? ' (' + cw.skipped.length + ' left out: ' + cw.skipped[0].reason + ')' : '');
+  }
+
+  // Division rank for one metric, like for like: the figure each fighter is
+  // ranked on is their own bouts inside the pool's window (same weight class,
+  // same years, same minimum minutes) — shown beside the rank, because it is
+  // not the all-UFC figure above it. null when neither corner has a rank row.
+  function rankRow(m) {
+    const ra = C.rankA, rb = C.rankB;
+    if (!ra && !rb) return null;
+    const has = r => r && r.pct && r.pct[m.recent] != null;
+    if (!has(ra) && !has(rb) && !(ra && ra.reason) && !(rb && rb.reason)) return null;
+    const one = (p, r) => {
+      if (has(r)) return last(p.name) + ' ' + W.fmt(r.rates[m.recent], m) + ' in ' + r.fights + ' fight' + (r.fights === 1 ? '' : 's') +
+        ' — higher than ' + r.pct[m.recent] + '%';
+      return last(p.name) + ' not ranked (' + ((r && r.reason) || 'no figure') + ')';
+    };
+    return 'Division rank, ' + (C.windowLabel || 'this weight class') + ': ' + one(C.a, ra) + ' · ' + one(C.b, rb);
+  }
+
+  // The scraped UFCStats career figure, kept for reference with its age.
+  function profileNote(m) {
+    const one = (p, cw) => {
+      const v = W.n(p[m.career]);
+      if (v == null) return last(p.name) + ': none';
+      const upd = p.updated_at ? String(p.updated_at).slice(0, 10) : null;
+      const since = upd && cw ? cw.used.filter(u => u.date > upd).length : 0;
+      return last(p.name) + ' ' + W.fmt(v, m) + (upd ? ' (profile refreshed ' + monthYear(upd) +
+        (since ? '; ' + since + ' UFC fight' + (since === 1 ? '' : 's') + ' since, not included' : '') + ')' : '');
+    };
+    return '<p class="ws-fine"><b>UFCStats profile figure.</b> ' + esc(one(C.a, C.careerA)) + ' · ' + esc(one(C.b, C.careerB)) +
+      '. CFL\u2019s "All UFC fights" line is rebuilt from the fight records, so it includes fights a stale profile misses.</p>';
+  }
+
   // The fight-by-fight numbers behind a "last 5" figure.
   function history(m) {
     if (!m.recent) return '';
@@ -145,14 +184,20 @@
     const tapeA = window.cflInsights ? window.cflInsights.hasTape(C.a) : true;
     const tapeB = window.cflInsights ? window.cflInsights.hasTape(C.b) : true;
     const lines = [];
-    if (m.career) {
-      const rate = !m.single;
-      const va = rate && !tapeA ? null : W.n(C.a[m.career]);
-      const vb = rate && !tapeB ? null : W.n(C.b[m.career]);
-      const ln = W.line(m, va, vb);
-      ln.noTapeA = rate && !tapeA; ln.noTapeB = rate && !tapeB;
-      lines.push({ scope: m.single ? 'Tale of the tape' : 'Career', ln,
-        sample: m.single ? 'fighter profile' : 'UFCStats career rate, every UFC fight' });
+    if (m.single) {
+      const ln = W.line(m, W.n(C.a[m.career]), W.n(C.b[m.career]));
+      lines.push({ scope: 'Tale of the tape', ln, sample: m.key === 'age' ? 'computed from date of birth where we hold one' : 'fighter profile' });
+    } else {
+      // "All UFC fights" is CFL's own figure from every completed UFC fight in
+      // our data, so it includes fights the scraped profile has not caught up
+      // with. The UFCStats profile figure is kept for reference in the context.
+      const ca = C.careerA && C.careerA.rates, cb = C.careerB && C.careerB.rates;
+      const ln = W.line(m, ca ? ca[m.recent] : null, cb ? cb[m.recent] : null);
+      ln.noTapeA = !(C.careerA && C.careerA.fights); ln.noTapeB = !(C.careerB && C.careerB.fights);
+      const thin = [[C.a, C.careerA], [C.b, C.careerB]].filter(([, cw]) => cw && cw.fights > 0 && cw.fights < 3)
+        .map(([p, cw]) => last(p.name) + ' ' + cw.fights + ' UFC fight' + (cw.fights === 1 ? '' : 's'));
+      lines.push({ scope: 'All UFC fights', ln, thin: thin.length ? 'Small sample: ' + thin.join(', ') + ' — treat as a rough guide' : null,
+        sample: last(C.a.name) + ': ' + careerSample(C.careerA) + ' · ' + last(C.b.name) + ': ' + careerSample(C.careerB) });
     }
     if (m.recent) {
       const ra = C.recentA && C.recentA.rates, rb = C.recentB && C.recentB.rates;
@@ -162,25 +207,31 @@
     }
     const ev = m.factor ? W.evidence(C.factorRates, m.factor) : null;
     const id = 'wsx-' + m.key;
+    const rank = m.single ? null : rankRow(m);
     const gaps = lines.map(l => { const g = gapWords(m, l.ln); return g ? l.scope + ': ' + g : null; }).filter(Boolean);
 
     const item = {
       id: 'm:' + m.key, cat, label: m.label,
       a: lines.map(l => (l.ln.aText || 'no data') + (m.single ? '' : ' ' + l.scope.toLowerCase())).join(' · '),
       b: lines.map(l => (l.ln.bText || 'no data') + (m.single ? '' : ' ' + l.scope.toLowerCase())).join(' · '),
-      source: m.single ? 'Fighter profile' : (m.career ? 'UFCStats career' : '') + (m.career && m.recent ? ' + ' : '') + (m.recent ? 'CFL round data, last ' + W.RECENT_N : ''),
+      source: m.single ? 'Fighter profile' : 'CFL, from every UFC fight in our data + the last ' + W.RECENT_N,
+      sample: rank,
       evidence: ev ? ev.verdictWords + ' (Factor Lab, ' + ev.n + ' even-odds fights)' : 'Not tested as a predictor',
     };
 
     return '<article class="ws-m">' +
       '<header class="ws-mh"><h4>' + esc(m.label) + '</h4>' + tested(ev) + '</header>' +
-      lines.map(l => '<div class="ws-line"><span class="ws-scope">' + esc(l.scope) + '</span>' + bfly(m, l.ln) + '</div>').join('') +
+      lines.map(l => '<div class="ws-line"><span class="ws-scope">' + esc(l.scope) + '</span>' + bfly(m, l.ln) +
+        (l.thin ? '<div class="ws-rank thin">' + esc(l.thin) + '</div>' : '') + '</div>').join('') +
+      (rank ? '<div class="ws-rank ws-rankrow">' + esc(rank) + '</div>' : '') +
       '<div class="ws-gap">' + (gaps.length ? 'Measured difference — ' + esc(gaps.join(' · ')) : 'No difference can be measured: a figure is missing.') + '</div>' +
       '<div class="ws-acts">' + ctxBtn(id) + pinBtn(item) + '</div>' +
       '<div class="ws-ctx" id="' + id + '" hidden>' +
         '<p><b>What it measures.</b> ' + esc(m.what) + '</p>' +
         evidenceBlock(ev, m.factor) +
         '<p class="ws-fine"><b>Sample.</b> ' + lines.map(l => esc(l.scope) + ': ' + esc(l.sample)).join('<br>') + '</p>' +
+        (rank ? '<p class="ws-fine"><b>Division rank.</b> ' + esc(C.divNote || '') + '</p>' : '') +
+        (m.career && !m.single ? profileNote(m) : '') +
         history(m) +
       '</div>' +
     '</article>';
@@ -349,8 +400,168 @@
       '</article>';
   }
 
+
+  // ---- key points -------------------------------------------------------
+  function keyTab() {
+    const pts = C.keyPoints || [];
+    if (!pts.length) return '<div class="empty">Not enough data on these two fighters to say anything with confidence.</div>';
+    const group = kind => {
+      const list = pts.filter(p => p.kind === kind);
+      if (!list.length) return '';
+      return '<article class="ws-m ws-kp ' + kind + '"><header class="ws-mh"><h4>' + esc(W.KIND_LABEL[kind]) + '</h4>' +
+        '<span class="ws-tag k-' + kind + '">' + esc({ fact: 'From the record', calc: 'CFL’s numbers', read: 'Questions, not answers' }[kind]) + '</span></header>' +
+        '<ul class="ws-kpl">' + list.map((p, i) => '<li><span>' + esc(p.text) + '</span>' +
+          pinBtn({ id: 'kp:' + kind + ':' + p.text.slice(0, 60), cat: 'key', label: W.KIND_LABEL[kind], text: p.text,
+                   source: kind === 'fact' ? 'CFL fight records' : kind === 'calc' ? 'Calculated by CFL from the fight records' : 'CFL interpretation — a question, not a forecast' }) +
+          '</li>').join('') + '</ul>' +
+        (kind === 'read' ? '<div class="ws-fine">Each of these is a question the numbers raise. None of them says who wins, and none of them is a reason to bet.</div>' : '') +
+        (kind === 'calc' ? '<div class="ws-fine">' + esc(C.divNote || '') + '</div>' : '') +
+      '</article>';
+    };
+    return group('fact') + group('calc') + group('read');
+  }
+
+  // ---- where strikes land ------------------------------------------------
+  function mixCard() {
+    const mixA = W.strikeMix(C.careerA && C.careerA.totals), mixB = W.strikeMix(C.careerB && C.careerB.totals);
+    const bar = (mix, which, labels) => {
+      const d = mix && mix[which];
+      if (!d) return '<div class="ws-fine">No data.</div>';
+      const keys = Object.keys(labels);
+      return '<div class="ws-stack" role="img" aria-label="' + esc(keys.map(k => labels[k] + ' ' + Math.round(d[k]) + '%').join(', ')) + '">' +
+        keys.map((k, i) => '<i class="s' + i + '" style="width:' + d[k].toFixed(1) + '%">' + (d[k] >= 12 ? esc(Math.round(d[k]) + '%') : '') + '</i>').join('') + '</div>';
+    };
+    const T = { head: 'Head', body: 'Body', leg: 'Legs' }, P = { distance: 'At distance', clinch: 'In the clinch', ground: 'On the ground' };
+    const legend = L => '<div class="ws-slegend">' + Object.keys(L).map((k, i) => '<span><b class="s' + i + '"></b>' + esc(L[k]) + '</span>').join('') + '</div>';
+    const txt = (mix, which, L) => mix && mix[which] ? Object.keys(L).map(k => L[k].toLowerCase() + ' ' + Math.round(mix[which][k]) + '%').join(', ') : 'no data';
+    const item = { id: 'm:mix', cat: 'striking', label: 'Where significant strikes land (all UFC fights)',
+      a: txt(mixA, 'target', T) + '; ' + txt(mixA, 'position', P), b: txt(mixB, 'target', T) + '; ' + txt(mixB, 'position', P),
+      source: 'CFL, from the fight records' };
+    const col = (p, mix) => '<div><div class="ws-k">' + esc(p.name) + (mix ? ' · ' + mix.landed + ' landed' : '') + '</div>' +
+      bar(mix, 'target', T) + bar(mix, 'position', P) + '</div>';
+    return '<article class="ws-m"><header class="ws-mh"><h4>Where their strikes land</h4><span class="ws-tag untested">Not tested as a predictor</span></header>' +
+      '<div class="ws-form2">' + col(C.a, mixA) + col(C.b, mixB) + '</div>' + legend(T) + legend(P) +
+      '<div class="ws-gap">Shares of the significant strikes each fighter landed across all UFC fights. A style description, not a measure of how good it is.</div>' +
+      '<div class="ws-acts">' + pinBtn(item) + '</div></article>';
+  }
+
+  // ---- submissions -------------------------------------------------------
+  function subCard() {
+    const ma = C.methodsA, mb = C.methodsB;
+    const item = { id: 'm:subs', cat: 'grappling', label: 'Submissions in the UFC',
+      a: ma ? ma.win.sub + ' wins by submission, ' + ma.loss.sub + ' losses' : 'no data',
+      b: mb ? mb.win.sub + ' wins by submission, ' + mb.loss.sub + ' losses' : 'no data', source: 'Completed UFC fights' };
+    return '<article class="ws-m"><header class="ws-mh"><h4>Submission record</h4></header>' +
+      '<dl class="ws-dl"><dt>Wins by submission</dt><dd>' + (ma ? ma.win.sub : '—') + '</dd><dd>' + (mb ? mb.win.sub : '—') + '</dd>' +
+      '<dt>Losses by submission</dt><dd>' + (ma ? ma.loss.sub : '—') + '</dd><dd>' + (mb ? mb.loss.sub : '—') + '</dd></dl>' +
+      '<div class="ws-gap">UFC fights only. Attempts per 15 minutes are in the card above.</div>' +
+      '<div class="ws-acts">' + pinBtn(item) + '</div></article>';
+  }
+
+  // ---- weight ------------------------------------------------------------
+  function weightCard() {
+    const lim = W.weightLimit(C.fight.weight_class);
+    return '<article class="ws-m"><header class="ws-mh"><h4>Weight</h4></header>' +
+      '<dl class="ws-dl"><dt>Division</dt><dd>' + esc(C.fight.weight_class || '—') + '</dd><dd></dd>' +
+      '<dt>Division limit</dt><dd>' + (lim ? lim + ' lb' : '—') + '</dd><dd></dd>' +
+      '<dt>Stance</dt><dd>' + esc(C.a.stance || '—') + '</dd><dd>' + esc(C.b.stance || '—') + '</dd></dl>' +
+      '<div class="ws-gap">The division limit is the most either fighter may weigh at the weigh-in (one pound over is allowed for non-title fights). ' +
+      'CFL does not capture weigh-in results, so a missed weight will not show here — check the official weigh-in.</div></article>';
+  }
+
+  // ---- round by round ----------------------------------------------------
+  function roundsCard() {
+    const ra = C.roundsA || [], rb = C.roundsB || [];
+    if (!ra.length && !rb.length) return '<article class="ws-m ws-wide"><header class="ws-mh"><h4>Round by round</h4></header><div class="ws-fine">No round data for either fighter.</div></article>';
+    const tab = (p, rs) => '<div class="ws-hcol"><div class="ws-hhd">' + esc(p.name) + '</div>' + (rs.length
+      ? '<table class="ws-rtab"><thead><tr><th>Round</th><th class="n">Landed</th><th class="n">Absorbed</th><th class="n">Fights</th></tr></thead><tbody>' +
+        rs.map(r => '<tr><th>R' + r.round + '</th><td class="n">' + r.landedPm.toFixed(2) + '</td><td class="n">' + r.absorbedPm.toFixed(2) +
+          '</td><td class="n mute">' + r.fights + '</td></tr>').join('') + '</tbody></table>'
+      : '<div class="ws-hnone">No round data.</div>') + '</div>';
+    const fmt = rs => rs.map(r => 'R' + r.round + ' ' + r.landedPm.toFixed(1) + '/' + r.absorbedPm.toFixed(1)).join(', ');
+    const item = { id: 'm:rounds', cat: 'cardio', label: 'Round by round: significant strikes landed/absorbed a minute (all UFC fights)',
+      a: fmt(ra) || 'no data', b: fmt(rb) || 'no data', source: 'CFL round data' };
+    return '<article class="ws-m ws-wide"><header class="ws-mh"><h4>Round by round</h4><span class="ws-tag untested">Not tested as a predictor</span></header>' +
+      '<div class="ws-hgrid">' + tab(C.a, ra) + tab(C.b, rb) + '</div>' +
+      '<div class="ws-gap">Significant strikes landed and absorbed a minute in each round, across every UFC fight that reached it. A final round counts only the minutes it lasted. ' +
+      'Rounds four and five come from five-round fights only, so they rest on fewer fights — the count is beside each one.</div>' +
+      '<div class="ws-acts">' + pinBtn(item) + '</div></article>';
+  }
+
+  // ---- how they win and lose ---------------------------------------------
+  function methodsCard() {
+    const row = (p, m) => {
+      if (!m) return '<div class="ws-fine">' + esc(p.name) + ': no data.</div>';
+      const seg = (side, cls) => {
+        const t = m[side].total;
+        if (!t) return '<div class="ws-mrow"><span class="ws-k">' + (side === 'win' ? 'Wins' : 'Losses') + '</span><span class="ws-fine">none in the UFC</span></div>';
+        return '<div class="ws-mrow"><span class="ws-k">' + (side === 'win' ? 'Wins' : 'Losses') + ' · ' + t + '</span><div class="ws-stack ' + cls + '">' +
+          ['ko', 'sub', 'dec', 'other'].filter(k => m[side][k]).map(k =>
+            '<i class="m-' + k + '" style="width:' + (m[side][k] / t * 100).toFixed(1) + '%">' + esc({ ko: 'KO', sub: 'SUB', dec: 'DEC', other: 'OTH' }[k] + ' ' + m[side][k]) + '</i>').join('') +
+          '</div></div>';
+      };
+      return '<div><div class="ws-k">' + esc(p.name) + '</div>' + seg('win') + seg('loss') + '</div>';
+    };
+    const w = m => m ? 'W ' + m.win.ko + ' KO / ' + m.win.sub + ' SUB / ' + m.win.dec + ' DEC; L ' + m.loss.ko + ' KO / ' + m.loss.sub + ' SUB / ' + m.loss.dec + ' DEC' : 'no data';
+    const item = { id: 'm:methods', cat: 'form', label: 'How they win and lose (UFC)', a: w(C.methodsA), b: w(C.methodsB), source: 'Completed UFC fights' };
+    return '<article class="ws-m"><header class="ws-mh"><h4>How they win and lose</h4></header>' +
+      '<div class="ws-form2">' + row(C.a, C.methodsA) + row(C.b, C.methodsB) + '</div>' +
+      '<div class="ws-gap">Every completed UFC fight, by how it ended. KO includes TKO and doctor stoppages.</div>' +
+      '<div class="ws-acts">' + pinBtn(item) + '</div></article>';
+  }
+
+  // ---- quality of opposition ---------------------------------------------
+  function oppositionCard() {
+    const col = (p, list) => {
+      if (!list || !list.length) return '<div class="ws-hcol"><div class="ws-hhd">' + esc(p.name) + '</div><div class="ws-hnone">No completed UFC fights.</div></div>';
+      return '<div class="ws-hcol"><div class="ws-hhd">' + esc(p.name) + '</div><table class="ws-htab"><thead><tr><th>Date</th><th>Result</th><th>Opponent</th><th class="n">Their UFC record then</th></tr></thead><tbody>' +
+        list.map(r => '<tr><td>' + esc(monthYear(r.date)) + '</td><td>' + esc(r.result + ' · ' + r.method) + '</td><td>' + esc(r.opponentName) + '</td><td class="n">' +
+          (r.oppRecord ? (r.oppDebut ? 'UFC debut' : esc(r.oppRecord.w + '-' + r.oppRecord.l + (r.oppRecord.other ? '-' + r.oppRecord.other : ''))) : '—') + '</td></tr>').join('') +
+        '</tbody></table></div>';
+    };
+    const s = list => (list || []).map(r => r.result + ' vs ' + r.opponentName + ' (' + (r.oppRecord ? (r.oppDebut ? 'debut' : r.oppRecord.w + '-' + r.oppRecord.l) : '?') + ')').join('; ');
+    const item = { id: 'm:opp', cat: 'form', label: 'Last ' + W.RECENT_N + ' opponents and their UFC record at the time',
+      a: s(C.oppA) || 'no data', b: s(C.oppB) || 'no data', source: 'Completed UFC fights' };
+    return '<article class="ws-m ws-wide"><header class="ws-mh"><h4>Who they beat, and who beat them</h4><span class="ws-tag untested">Not tested as a predictor</span></header>' +
+      '<div class="ws-hgrid">' + col(C.a, C.oppA) + col(C.b, C.oppB) + '</div>' +
+      '<div class="ws-gap">Each opponent’s UFC record going into that fight, from our fight records — UFC fights only, so a strong record elsewhere reads as a debut. ' +
+      'A record is a rough guide to quality: it does not see who those wins came against.</div>' +
+      '<div class="ws-acts">' + pinBtn(item) + '</div></article>';
+  }
+
+  // ---- fight context (a section of its own, above the comparison) ----------
+  function renderContext() {
+    const el = document.getElementById('flContext');
+    if (!el) return;
+    const facts = [];
+    const f = C.fight;
+    const lim = W.weightLimit(f.weight_class);
+    facts.push(['Bout', (f.is_main_event ? 'Main event · ' : '') + (f.is_title_fight ? 'Title fight · ' : '') + (f.weight_class || 'Weight class not recorded') +
+      (lim ? ' (' + lim + ' lb limit)' : '') + (f.scheduled_rounds ? ' · ' + f.scheduled_rounds + ' rounds' : '')]);
+    [[C.a, C.factsA], [C.b, C.factsB]].forEach(([p, fx]) => {
+      if (!fx) return;
+      if (!fx.ufcFights) facts.push([last(p.name), 'UFC debut — no UFC fight data']);
+      else facts.push([last(p.name), 'last UFC fight ' + monthYear(fx.lastDate) + ' (' + Math.round(fx.daysSinceLast / 30.4) + ' months ago)' +
+        (fx.daysSinceLast >= 365 ? ' — over a year out' : '')]);
+    });
+    (C.changes || []).forEach(c => facts.push(['Card change', c.fighterName + ' was previously booked here against ' + c.formerOpponent + '; that booking is off the card.']));
+    [C.a, C.b].forEach(p => {
+      const upd = p.updated_at ? String(p.updated_at).slice(0, 10) : null;
+      const cw = p === C.a ? C.careerA : C.careerB;
+      const since = upd && cw ? cw.used.filter(u => u.date > upd).length : 0;
+      if (since) facts.push(['Data note', last(p.name) + '’s scraped profile was last refreshed ' + monthYear(upd) + ' and misses ' + since +
+        ' UFC fight' + (since === 1 ? '' : 's') + '. The page uses CFL’s figures rebuilt from the fight records instead.']);
+    });
+    el.innerHTML = '<div class="ctx">' +
+      '<dl class="ctx-dl">' + facts.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + esc(v) + '</dd>').join('') + '</dl>' +
+      '<div class="ctx-gap"><b>Not covered yet.</b> CFL has no source for injuries, weigh-in results, short-notice timing or fight-week news, ' +
+      'so nothing here reports them. A booking change shows only once the UFCStats card changes. Check the UFC’s official channels for fight-week news.</div>' +
+      '</div>';
+  }
+
   // ---- tabs --------------------------------------------------------------
   const TABS = [
+    { key: 'key',       label: 'Key points' },
     { key: 'striking',  label: 'Striking' },
     { key: 'grappling', label: 'Grappling' },
     { key: 'cardio',    label: 'Cardio' },
@@ -359,8 +570,9 @@
     { key: 'market',    label: 'Market' },
   ];
   const TAB_NOTE = {
-    striking:  'Career rates are UFCStats’ figures over every UFC fight. "Last 5" is recomputed by CFL from the round-by-round data of each fighter’s five most recent UFC fights.',
-    grappling: 'Same two sources as Striking. Control time and knockdowns have no published career figure, so only the recent window is shown for them.',
+    key:       'What stands out, sorted by how much to trust it: verified facts, numbers CFL calculated, and interpretation. Nothing here says who wins.',
+    striking:  '"All UFC fights" is rebuilt by CFL from every completed UFC fight in our data. "Last 5" is the five most recent. Division rank is like for like: each fighter\u2019s own bouts in this weight class over the last three years, against fighters measured the same way.',
+    grappling: 'Same sources as Striking: CFL\u2019s figures from the fight records, all UFC fights and the last five.',
     cardio:    'Late-round output and fight length. Neither is a measure of who wins.',
     form:      'Results and record are counted from completed UFC fights only — other promotions are not in our data.',
     physical:  'Fixed facts off the tale of the tape.',
@@ -368,8 +580,12 @@
   };
 
   function panel(key) {
-    if (key === 'cardio') return cardioTab();
-    if (key === 'form') return formTab();
+    if (key === 'key') return keyTab();
+    if (key === 'striking') return (W.METRICS.striking || []).map(m => metricCard(key, m)).join('') + mixCard();
+    if (key === 'grappling') return (W.METRICS.grappling || []).map(m => metricCard(key, m)).join('') + subCard();
+    if (key === 'physical') return (W.METRICS.physical || []).map(m => metricCard(key, m)).join('') + weightCard();
+    if (key === 'cardio') return roundsCard() + cardioTab();
+    if (key === 'form') return methodsCard() + formTab() + oppositionCard();
     if (key === 'market') return marketTab();
     return (W.METRICS[key] || []).map(m => metricCard(key, m)).join('');
   }
@@ -615,6 +831,7 @@
     } catch (e) {}
     if (!bound) { bind(); watchSheetInView(); bound = true; }
     renderExplorer();
+    renderContext();
     renderSheet();
   }
 

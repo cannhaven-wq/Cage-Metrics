@@ -188,6 +188,8 @@
 #home .seg button { font-family: var(--font-display); font-size: 12.5px; font-weight: 600; color: var(--text-2); background: transparent; border: 0; padding: 7px 14px; border-radius: 8px; cursor: pointer; transition: .15s; }
 #home .seg button:hover { color: #fff; }
 #home .seg button.active { background: var(--red); color: #fff; }
+#home .order-note { font-size: 12px; color: var(--text-3); line-height: 1.5; margin: -4px 0 12px; max-width: 760px; }
+#home .cbadge.info { color: var(--amber); border-color: rgba(255,181,71,.35); background: rgba(255,181,71,.06); }
 
 /* ===== Lean fight cards ===== */
 #home .fights { display: grid; grid-template-columns: repeat(auto-fit, minmax(430px, 1fr)); gap: 16px;
@@ -486,8 +488,13 @@
         <button data-sort="move">Biggest move</button>
         <button data-sort="spread">Books disagree</button>
       </div>
-      <span class="fl-hint" id="sortHint">Main event first, top of the card down.</span>
+      <div class="seg" id="dirSeg" aria-label="Card direction">
+        <button data-dir="down" class="active" aria-pressed="true">Main event first</button>
+        <button data-dir="up" aria-pressed="false">Main event last</button>
+      </div>
+      <span class="fl-hint" id="sortHint"></span>
     </div>
+    <p class="order-note" id="orderNote"></p>
     <div class="fights" id="fightsList"></div>
     <p class="model-def" id="hpModelDef"></p>
     <div class="card-foot">
@@ -564,6 +571,7 @@
 <script src="_shared.js?v=rl6"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
+<script src="card-research.js?v=1"></script>
 <!-- Every market number on this page is formatted by market.js, so the rules
      about showing a price (book count, age, movement measured only across the
      books quoting at both ends, and never an "opening line") live in one file
@@ -716,6 +724,7 @@ let _marketMap  = null;   // fight_id -> v_fight_market_movement row
 let _marketLoadFailed = false; // the read failed, as opposed to "no prices yet"
 let _cardState  = null;   // { fights, fighterMap, eventId, event }
 let _hpSortKey  = 'order';
+let _hpDir      = 'down';  // 'down' = main event first; 'up' = main event last
 let _fightDay   = false;  // set by renderCardHead; decides the "stale" bar for a quote's age
 
 // Card Lab shows the market and the matchup. It does not show a CFL number,
@@ -840,11 +849,13 @@ async function loadFights(event) {
 
   const { data: fighters, error: fErr } = await sb
     .from('fighters')
-    .select('id, name, nickname, age, height_in, reach_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
+    .select('id, name, nickname, age, dob, height_in, reach_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
     .in('id', Array.from(fighterIds));
   if (fErr) { list.innerHTML = '<div class="load-err">Couldn\'t load fighter details. Try refreshing.</div>'; return; }
   // UFC record from v_fighter_ufc_record, never fighters.ufc_* (T-084).
   await cflUfcRecord.attach(sb, fighters);
+  // Age today from date of birth; the stored age lags birthdays.
+  if (window.cflCard) cflCard.applyAges(fighters, cfl.eventWindow().todayStr);
 
   const fighterMap = {};
   fighters.forEach(f => { fighterMap[f.id] = f; });
@@ -858,7 +869,7 @@ async function loadFights(event) {
   _marketMap = market || {};
   _marketLoadFailed = !!(market && market.loadFailed);
 
-  _cardState = { fights, fighterMap, eventId: event.id, event };
+  _cardState = { fights, fighterMap, eventId: event.id, event, allBookings: fightsRaw || [] };
 
   // Which fights this visitor has starred, before the first paint, so a starred
   // fight never draws as un-starred. A signed-out visitor gets an empty set and
@@ -904,8 +915,27 @@ function renderCards() {
     spread: (a, b) => (b.spread  == null ? -1 : b.spread)  - (a.spread  == null ? -1 : a.spread)  || a.order - b.order,
   };
   cards.sort(sorters[_hpSortKey] || sorters.order);
+  if (_hpSortKey === 'order' && _hpDir === 'up') cards.reverse();
+  renderOrderNote();
 
   list.innerHTML = cards.map(c => c.html).join('');
+}
+
+// What the order on screen actually is. Card Lab used to say "top of the card
+// down", but the running order is not in our data (card-research.js).
+function renderOrderNote() {
+  const el = document.getElementById('orderNote');
+  if (!el || !_cardState || !window.cflCard) return;
+  const info = cflCard.orderInfo(_cardState.fights);
+  el.textContent = _hpSortKey === 'order' ? (_hpDir === 'up' ? info.noteReversed : info.note)
+    : 'Sorted by the market, not by card position. ' + (info.official ? '' : 'The official running order, main card / prelims split and start times are not in our data yet.');
+  const seg = document.getElementById('dirSeg');
+  if (seg) {
+    const btns = seg.querySelectorAll('button');
+    if (btns[0]) btns[0].textContent = info.labels[0];
+    if (btns[1]) btns[1].textContent = info.labels[1];
+    seg.style.visibility = _hpSortKey === 'order' ? '' : 'hidden';
+  }
 }
 
 function buildFightCard(fight, idx, fmap, eventId, event) {
@@ -945,6 +975,12 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
     if (spread != null && spread >= SPREAD_BADGE_PTS) {
       badges.push('<span class="cbadge split">Books ' + spread.toFixed(1) + ' pts apart</span>');
     }
+  }
+  // Card facts, not market facts: a debut and a changed opponent.
+  if (window.cflCard && _cardState) {
+    const ch = cflCard.opponentChanges(_cardState.allBookings, fight);
+    if (ch.length) badges.push('<span class="cbadge info" title="' + cfl.escapeHtml(ch.map(c => c.fighterName + ' was booked against ' + c.formerOpponent).join('; ')) + '">Opponent change</span>');
+    [a, b].forEach(f => { if (cflCard.isDebut(f)) badges.push('<span class="cbadge info">' + cfl.escapeHtml(lastName(f.name)) + ' UFC debut</span>'); });
   }
   const badgesHtml = '<span class="badges">' + badges.join('') + '</span>';
 
@@ -1101,7 +1137,7 @@ function wireControls() {
   if (seg && !seg._wired) {
     seg._wired = true;
     const hints = {
-      order:  'Main event first, top of the card down.',
+      order:  '',
       move:   'Furthest from our first broad capture, either direction, across the books quoting at both ends. A move is not a signal.',
       spread: 'Where the sportsbooks are furthest apart right now.',
     };
@@ -1112,6 +1148,18 @@ function wireControls() {
       _hpSortKey = btn.dataset.sort;
       renderCards();
       if (hint) hint.textContent = hints[_hpSortKey] || '';
+    });
+  }
+  const dir = document.getElementById('dirSeg');
+  if (dir && !dir._wired) {
+    dir._wired = true;
+    dir.addEventListener('click', (e) => {
+      const btn = e.target.closest('button'); if (!btn) return;
+      _hpDir = btn.dataset.dir;
+      [].forEach.call(dir.querySelectorAll('button'), b => {
+        b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn));
+      });
+      renderCards();
     });
   }
 }
