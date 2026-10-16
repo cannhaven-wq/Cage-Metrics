@@ -51,7 +51,25 @@
     return null;
   }
 
-  // ---- style -------------------------------------------------------------
+  // ---- discipline ----------------------------------------------------------
+  // The fighter's discipline as the UFC lists it on their UFC.com athlete page
+  // ("Boxer", "Kickboxer", "Wrestling"...), copied by
+  // build/check-fighting-style.js into fighters.fighting_style. This is what
+  // the pages show (owner, 2026-10-16, T-102). A generic entry ("MMA",
+  // "Freestyle") says nothing about a discipline, so it shows nothing — never
+  // a calculated stand-in.
+  const GENERIC_STYLE = /^(mma|mixed martial arts?|freestyle|n\/?a|none|-+)$/i;
+  function disciplineRead(fighter) {
+    const raw = fighter && fighter.fighting_style ? String(fighter.fighting_style).trim() : '';
+    if (!raw || GENERIC_STYLE.test(raw)) return null;
+    return { key: 'discipline', label: raw, source: fighter.fighting_style_src === 'manual' ? 'manual' : 'ufc.com' };
+  }
+
+  // ---- calculated style (no longer shown, T-102) ---------------------------
+  // The round-one striker / grappler / hybrid read from v_fighter_style. Kept
+  // for the record and its tests; no page renders it since the owner replaced
+  // it with the UFC's listed discipline. It called Joaquin Buckley a grappler
+  // because being held down dragged his striking numbers to nothing.
   const STYLE = {
     striker:  { label: 'Striker',
                 line: 'Most of their early output is stand-up striking rather than takedowns and control.' },
@@ -229,7 +247,7 @@
     'anything less is "thin". With under ' + MIN_LATE_MINUTES + ' late-round minutes there is ' +
     'no score at all.';
 
-  const api = { pickScope, styleRead, STYLE, resultFor, shortMethod,
+  const api = { pickScope, styleRead, STYLE, disciplineRead, GENERIC_STYLE, resultFor, shortMethod,
                 isCompleted, completedFights, recentForm, ufcRecord, formatUfcRecord,
                 proRecordIsBehind, lateRoundRead, LATE, LATE_ROUND_NOTE, SOLID_SAMPLE_NOTE,
                 SOLID_LATE_MINUTES, SOLID_R1_MINUTES, MIN_LATE_MINUTES, SCORE_CAP_MIN, SCORE_CAP_MAX };
