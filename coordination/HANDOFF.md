@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-16 (c) — Card Lab: Compact List redesign (T-100, PR open, awaiting owner approval)
+## 2026-10-16 (c) — Card Lab: Compact List redesign (T-100, owner-approved, merged)
 
 **From:** Claude
 **To:** Owner
@@ -51,8 +51,8 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ## Next action
 
-1. **Owner:** review the T-100 pull request and its screenshots; reply
-   "approved" to merge and deploy, or list changes.
+1. **Owner:** open cannonfightlab.com once the Pages deploy lands and open
+   one fight on a phone; report anything that reads wrong.
 2. **Owner (unchanged):** decide the T-096 running-order migration — it is
    what would make "Card order" the real running order and let the Prelims
    filters switch on.

@@ -5,8 +5,8 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
-**Card Lab Compact List redesign, 2026-10-16 (T-100): PR open, waiting on the
-owner's approval to merge.** The homepage opens on the card as a compact list
+**Card Lab Compact List redesign, 2026-10-16 (T-100): owner-approved, merged
+(#90).** The homepage opens on the card as a compact list
 (flags, names, best prices, records); a row opens tale of the tape, betting
 odds and line movement side by side, Additional Analytics collapsed. Prelims
 filters stay disabled until the card split has a source (T-096). No database
