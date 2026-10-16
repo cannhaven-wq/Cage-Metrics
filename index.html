@@ -101,9 +101,9 @@
 #home .hp-eyebrow { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
   letter-spacing: .12em; text-transform: uppercase; color: var(--red); margin-bottom: 10px; }
 #home .hp-eyebrow::before { content: ''; width: 22px; height: 1px; background: var(--red); }
-#home .hero h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 3.4vw, 58px); line-height: 1.05;
+#home .hero .hero-title { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 3.4vw, 58px); line-height: 1.05;
   letter-spacing: -.4px; color: #fff; }
-#home .hero h1 .hl { color: var(--red); }
+#home .hero .hero-title .hl { color: var(--red); }
 #home .hero p.lede { color: var(--text-2); font-size: 15px; line-height: 1.55; max-width: 660px; margin: 12px 0 18px; }
 #home .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; }
 
@@ -344,30 +344,11 @@
   .beta-banner .tag { display: none; }
 }
 
-/* Mobile pitch strip — hidden on desktop, where the hero says all this. */
-#home .m-pitch { display: none; }
-
 @media (max-width: 900px) {
-  /* Phones: the card comes first, the full pitch reads underneath it. */
-  #home { display: flex; flex-direction: column; }
-  #home > * { order: 3; }
-  #home > .m-pitch { order: 0; }
-  #home > #next { order: 1; }
-  #home > .hero { order: 2; }
-
-  #home .m-pitch { display: block; padding: 14px 0 2px; }
-  #home .m-pitch b { display: block; font-family: var(--font-display); font-weight: 800;
-    font-size: 21px; line-height: 1.15; color: #fff; letter-spacing: -.2px; text-wrap: balance; }
-  #home .m-pitch b .hl { color: var(--red); }
-  #home .m-pitch span { display: block; font-size: 12px; color: var(--text-3); margin-top: 5px; }
-
   #home .section#next { padding-top: 16px; }
   #home .hero { grid-template-columns: 1fr; gap: 22px; padding: 22px 0 18px; }
-  #home .hero h1 { font-size: 36px; }
-  /* Both of these just scroll to the card that is now above them. */
-  #home .hero-cta { display: none; }
+  #home .hero .hero-title { font-size: 36px; }
   #home .fights { grid-template-columns: 1fr; }
-  #home .card-head h2 { font-size: 24px; }
   #home .fl-hint { display: none; }
   #home .past-events-grid { grid-template-columns: 1fr; }
   #home .tools { grid-template-columns: 1fr; }
@@ -397,76 +378,116 @@
 /* Each corner's consensus probability, beside its best price. */
 #home .side .pp { font-family: var(--font-display); font-size: 12px; font-weight: 700; color: var(--text-2); font-variant-numeric: tabular-nums; }
 
-/* Compact list — the whole card on one screen. Same order, sort and search
-   as the full cards; every row links to Fight Lab. */
-#home .clist { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
-#home .clist-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 168px 168px 116px 22px; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
-#home .clist-row:first-child { border-top: none; }
-#home button.clist-row:hover { background: var(--bg-2); }
-#home .clist-hd { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; background: var(--bg-2); padding-top: 8px; padding-bottom: 8px; }
-#home .clist-row .no { font: 700 12px var(--font-mono); color: var(--text-3); text-align: center; }
-#home .clist-row .mu { min-width: 0; }
-#home .clist-row .mu .nms { font-size: 14px; font-weight: 600; color: #fff; line-height: 1.3; }
-#home .clist-row .mu .nms .vs { color: var(--text-3); font-weight: 500; font-size: 12px; margin: 0 4px; }
-#home .clist-row .mu .wc { font-size: 11px; color: var(--text-3); margin-top: 1px; }
-#home .clist-row .mu .wc b { color: var(--red); font-weight: 700; }
-#home .clist-row .od { font-family: var(--font-mono); font-size: 12.5px; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-#home .clist-row .od span { color: var(--text-3); }
-#home .clist-row .mv { font-size: 12px; color: var(--text-2); line-height: 1.3; }
-#home .clist-row .mv b { font-family: var(--font-display); font-size: 14px; color: var(--probe); }
-#home .clist-row .mv.flat b { color: var(--text-3); }
-#home .clist-row .go { color: var(--text-3); font-size: 16px; text-align: right; }
-@media (max-width: 700px) {
-  #home .clist-hd { display: none; }
-  #home .clist-row { grid-template-columns: 26px minmax(0, 1fr) auto; grid-template-areas: "no mu go" "no oa mv" "no ob mv"; row-gap: 4px; }
-  #home .clist-row .no { grid-area: no; align-self: start; padding-top: 2px; }
-  #home .clist-row .mu { grid-area: mu; } #home .clist-row .go { grid-area: go; }
-  #home .clist-row .od.a { grid-area: oa; } #home .clist-row .od.b { grid-area: ob; }
-  #home .clist-row .mv { grid-area: mv; text-align: right; align-self: end; }
-}
-
-/* ===== Expandable matchups ===========================================
-   The card is a list of previews. A click opens the tale of the tape and
-   the betting panel directly underneath; several can be open at once, and
-   none of them navigates away. Single column so card order reads top to
-   bottom and an open fight never leaves a hole in a grid. */
+/* ===== Card Lab: the compact list (approved design "Compact List #2") ======
+   One row per fight: position, both flags and names, both best prices, both
+   pro records, a chevron. A click opens three panels directly underneath —
+   tale of the tape, betting odds, line movement — and several fights can be
+   open at once; nothing navigates away. Single column so card order reads top
+   to bottom and an open fight never leaves a hole in a grid. */
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-#home .fight, #home .clist-item { scroll-margin-top: 76px; }
-#home .fights.fx-list { grid-template-columns: minmax(0, 1fr); max-width: 1180px; gap: 10px; }
-#home .fight.fx { padding: 0; gap: 0; }
-#home .fight.fx:hover { border-color: var(--line-2); }
-#home .fight.fx.open { border-color: var(--line-2); }
-#home .fight.fx .fight-hd { padding: 12px 16px 0; }
-#home .fx-toggle { display: block; width: 100%; background: none; border: 0; margin: 0; color: inherit; font: inherit; text-align: inherit; cursor: pointer; padding: 10px 16px 12px; }
-#home .fx-toggle:focus-visible, #home .clist-row:focus-visible, #home .fx-close:focus-visible { outline: 2px solid var(--probe); outline-offset: -2px; border-radius: 12px; }
-#home .fx .matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
-#home .fx .vs { align-self: center; font-size: 13px; }
-#home .fx .side { flex-direction: row; justify-content: space-between; align-items: center; text-align: left; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--bg-2); }
-/* The flag keeps its own shape. The shared wash stretches the flag across
-   the whole element with background-size: cover, which is fine on a narrow
-   card but turns a wide preview into a thin strip through the middle of the
-   flag — Canada read as red-white-red bands with a sliver of maple leaf. Here
-   the flag sits at the fighter's end at a flag's proportions, full height,
-   centred, and fades toward the VS. */
-#home .fx .side.cfl-flagged::before { top: 0; bottom: 0; height: auto; width: auto; aspect-ratio: 3 / 2; max-width: 100%;
-  left: 0; right: auto; opacity: .3; background-size: cover; background-position: center;
-  -webkit-mask-image: linear-gradient(90deg, #000 35%, transparent); mask-image: linear-gradient(90deg, #000 35%, transparent); }
-#home .fx .side-b.cfl-flagged::before { left: auto; right: 0;
-  -webkit-mask-image: linear-gradient(270deg, #000 35%, transparent); mask-image: linear-gradient(270deg, #000 35%, transparent); }
-#home .fx .side-b { flex-direction: row-reverse; text-align: right; }
-#home .fx .side .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-#home .fx .side .nm { font-size: 15px; font-weight: 700; color: #fff; }
-#home .fight.fx.is-main .side .nm { font-size: 16px; }
-#home .fx .side .rec { font-size: 11.5px; color: var(--text-2); }
-#home .fx .side .price { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
-#home .fx .side-b .price { align-items: flex-start; }
-#home .fx .side .px { font-size: 17px; padding: 3px 10px; }
-#home .fx-cue { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
-#home .fx-toggle:hover .fx-cue { color: var(--text); }
-#home .fx-chev { display: inline-block; transition: transform .15s; }
-#home .open > .fx-toggle .fx-chev, #home .clist-item.open .go { transform: rotate(180deg); }
-#home .fx-body { border-top: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 16px; background: rgba(0,0,0,.12); }
+#home .card-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+#home .card-top .card-head { margin-bottom: 0; min-width: 0; }
+#home .card-head .ch-line { display: flex; align-items: baseline; gap: 6px 18px; flex-wrap: wrap; margin-top: 6px; }
+#home .card-head h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 2.4vw, 36px); line-height: 1.1; color: #fff; margin: 0; letter-spacing: -.2px; }
+#home .card-head .ch-line .meta { margin: 0; text-transform: uppercase; letter-spacing: .04em; font-size: 12.5px; font-weight: 600; }
+#home .card-head .meta .sep { color: var(--text-3); margin: 0 8px; }
+#home .seg-dir button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; }
+#home .seg-dir svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+#home .seg-dir.off button.active { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line-2); }
+#home .seg button:disabled { color: var(--text-3); opacity: .55; cursor: not-allowed; }
+#home .seg button:disabled:hover { color: var(--text-3); }
+#home .filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 8px; }
+#home .seg-sec button { padding: 8px 18px; }
+#home .sort-sel { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
+#home .sort-sel select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: 600 12.5px var(--font-display); cursor: pointer; text-transform: none; letter-spacing: 0; }
+#home .filters .card-search { flex: 1 1 260px; margin: 0; max-width: 460px; }
+#home .cs-wrap { position: relative; display: block; flex: 1; }
+#home .cs-ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
+#home .filters .card-search input { padding-left: 34px; }
+#home p.fl-hint { margin: 0 0 6px; }
+#home p.fl-hint:empty { display: none; }
+
+#home .fights.fx-list { display: block; max-width: none; }
+#home .cl { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
+#home .cl-head, #home .cl-toggle { display: grid; grid-template-columns: 44px minmax(0, 1fr) 176px 168px 34px; gap: 12px; align-items: center; }
+#home .cl-head { white-space: nowrap; padding: 9px 50px 9px 12px; background: var(--bg-2); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
+#home .cl-head .cl-odds, #home .cl-head .cl-rec { text-align: center; }
+#home .cl-item { border-top: 1px solid var(--line); scroll-margin-top: 76px; }
+#home .cl-head + .cl-item { border-top: 1px solid var(--line); }
+#home .cl-item.open { box-shadow: inset 0 0 0 1px rgba(255,59,71,.55); background: rgba(255,59,71,.025); }
+#home .cl-item.is-main .cl-no { color: var(--red); }
+#home .cl-row { display: flex; align-items: center; }
+#home .cl-row .cfl-star { flex-shrink: 0; margin-right: 12px; }
+#home .cl-toggle { flex: 1; min-width: 0; padding: 11px 0 11px 12px; background: none; border: 0; margin: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#home .cl-toggle:hover { background: rgba(255,255,255,.025); }
+#home .cl-toggle:focus-visible, #home .fx-close:focus-visible, #home .fx-more > summary:focus-visible { outline: 2px solid var(--probe); outline-offset: -2px; border-radius: 10px; }
+#home .cl-no { font: 700 15px var(--font-display); color: var(--text-2); text-align: center; font-variant-numeric: tabular-nums; }
+#home .cl-fight { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+#home .cl-names { display: flex; align-items: center; gap: 10px; min-width: 0; }
+#home .cl-f { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+#home .cl-f .nm { font: 700 16px var(--font-display); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .1px; }
+#home .cl-names .vs { font-size: 12px; color: var(--text-3); font-weight: 600; flex-shrink: 0; }
+#home .cl-flag { width: 30px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid rgba(255,255,255,.16); flex-shrink: 0; display: inline-block; }
+#home .cl-flag.none { background: var(--bg-3); }
+#home .cl-sub { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-3); line-height: 1.3; }
+#home .cl-sub .cbadge { font-size: 10px; padding: 2px 7px; }
+#home .cl-tag { font: 700 10px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); border: 1px solid var(--line-2); border-radius: 5px; padding: 2px 6px; }
+#home .cl-tag.main { color: #fff; background: var(--red); border-color: var(--red); }
+#home .cl-odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+#home .cl-ob { display: flex; align-items: center; justify-content: center; height: 40px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-2);
+  font: 700 17px var(--font-display); color: #fff; font-variant-numeric: tabular-nums; }
+#home .cl-ob.none { color: var(--text-3); font-weight: 600; }
+#home .cl-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; font: 600 14px var(--font-display); color: var(--text-2); font-variant-numeric: tabular-nums; }
+#home .cl-chev { display: flex; justify-content: center; color: var(--text-2); }
+#home .cl-chev svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s; }
+#home .cl-item.open .cl-chev svg { transform: rotate(180deg); }
+#home .cl-item.open .cl-chev { color: #fff; }
+
+/* The expanded fight: three panels, then Additional Analytics. */
+#home .fx-body { border-top: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 14px; background: rgba(0,0,0,.16); }
 #home .fx-body[hidden] { display: none; }
+#home .fx-3 { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+#home .fx-panel { min-width: 0; display: flex; flex-direction: column; gap: 10px; background: var(--bg-1); border: 1px solid var(--line); border-radius: 12px; padding: 14px; }
+#home .fx-ph { display: flex; align-items: center; gap: 9px; margin: 0; font: 700 15px var(--font-display); color: #fff; letter-spacing: .2px; }
+#home .fx-ph::before { content: ''; width: 4px; height: 16px; border-radius: 2px; background: var(--red); }
+#home .fx-psub { font-size: 11.5px; color: var(--text-3); margin-top: -4px; }
+#home .fx-psub.warn { color: var(--amber); }
+
+/* Tale of the tape: each fighter's flag washed in behind their column,
+   faded toward the middle so the numbers stay legible. */
+#home .fx-tape { position: relative; overflow: hidden; isolation: isolate; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); }
+#home .fx-wash { position: absolute; top: 0; bottom: 0; width: 50%; z-index: -1; background: var(--flag); background-size: cover; background-position: center; opacity: .13; pointer-events: none; }
+#home .fx-wash.a { left: 0; -webkit-mask-image: linear-gradient(90deg, #000 15%, transparent 85%); mask-image: linear-gradient(90deg, #000 15%, transparent 85%); }
+#home .fx-wash.b { right: 0; -webkit-mask-image: linear-gradient(270deg, #000 15%, transparent 85%); mask-image: linear-gradient(270deg, #000 15%, transparent 85%); }
+#home .fx-tape .fx-tab { border: 0; border-radius: 0; background: transparent; }
+#home .fx-tape .fx-row { border-top-color: rgba(255,255,255,.07); }
+#home .fx-tape-hd { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 8px; padding: 12px; border-bottom: 1px solid rgba(255,255,255,.08); }
+#home .fx-tn { display: flex; align-items: center; gap: 10px; min-width: 0; color: #fff; text-decoration: none; }
+#home .fx-tn.b { flex-direction: row-reverse; text-align: right; }
+#home .fx-tn .cl-flag { width: 42px; height: 28px; }
+#home .fx-tn-t { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+#home .fx-tn .fn { font: 600 13px var(--font-display); color: var(--text-2); }
+#home .fx-tn .ln { font: 800 21px var(--font-display); text-transform: uppercase; letter-spacing: .3px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#home .fx-tn .rc { font: 600 12.5px var(--font-display); color: var(--text-2); margin-top: 3px; }
+#home .fx-tn:hover .ln { text-decoration: underline; }
+#home .fx-vs { font: 800 14px var(--font-display); color: var(--text-3); }
+
+/* Betting odds and movement panels. */
+#home .fx-bt.fx-bt-c { min-width: 0; }
+#home .fx-bt-c th:not(:first-child), #home .fx-bt-c td:not(:first-child) { text-align: center; }
+#home .fx-bt-c td.px.best { color: #fff; background: rgba(47,220,203,.1); box-shadow: inset 0 0 0 1px rgba(47,220,203,.35); }
+#home .fx-bt-c td.ag { color: var(--text-3); font-size: 11.5px; }
+#home .fx-bt-c td.ag.warn { color: var(--amber); }
+#home .fx-sum .fx-row { grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr); }
+#home .fx-p-move .fx-plot { min-height: 60px; }
+#home .fx-p-move .mc-svg { height: 190px; }
+#home .fx-mvt { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 8px; }
+#home .fx-mvt th { font-size: 9.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; text-align: center; padding: 0 6px 6px; vertical-align: bottom; }
+#home .fx-mvt th span { display: block; text-transform: none; letter-spacing: 0; font: 500 10px var(--font-mono); margin-top: 2px; }
+#home .fx-mvt td { padding: 6px; border-top: 1px solid var(--line); text-align: center; font: 700 14px var(--font-display); color: var(--text); font-variant-numeric: tabular-nums; }
+#home .fx-mvt td.who { text-align: left; font: 600 13px var(--font-display); color: var(--text); white-space: nowrap; }
+#home .fx-mvt td.who .cl-flag { width: 21px; height: 14px; margin-right: 7px; vertical-align: -2px; }
+#home .fx-mvt td.ar { color: var(--text-3); font-weight: 500; }
 #home .fx-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 #home .fx-sec { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 #home .fx-h { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--red); font-weight: 700; margin: 0; }
@@ -493,6 +514,7 @@
 #home .fx-note.warn { color: var(--amber); }
 #home .fx-empty, #home .fx-lazy { font-size: 12.5px; color: var(--text-2); background: var(--bg-1); border: 1px dashed var(--line-2); border-radius: 10px; padding: 12px 14px; line-height: 1.5; }
 #home .fx-lazy:empty { display: none; }
+#home .fx-done { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
 #home .fx-mv { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); padding: 10px 12px; }
 #home .fx-mv-h { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 6px; }
 #home .fx-mv-g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 8px; }
@@ -512,39 +534,64 @@
 #home .fx-bt .bestflag { margin-left: 6px; font: 700 9px var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--probe); }
 #home .fx-bt .dim, #home .fx-bt td.dim { color: var(--text-3); }
 #home .fx-plot { min-height: 60px; }
-#home .fx-more { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); }
-#home .fx-more > summary { list-style: none; cursor: pointer; padding: 11px 14px; font: 700 13px var(--font-display); color: var(--text); display: flex; align-items: center; gap: 8px; }
+#home .fx-more { border: 1px solid var(--line); border-radius: 12px; background: var(--bg-1); }
+#home .fx-more > summary { list-style: none; cursor: pointer; padding: 12px 16px; display: flex; align-items: center; gap: 14px; }
 #home .fx-more > summary::-webkit-details-marker { display: none; }
-#home .fx-more > summary::before { content: '▸'; color: var(--text-3); transition: transform .15s; }
-#home .fx-more[open] > summary::before { transform: rotate(90deg); }
-#home .fx-more > summary::after { content: 'collapsed — open for striking, grappling, late rounds and matchup notes'; font: 500 11.5px var(--font-body); color: var(--text-3); }
-#home .fx-more[open] > summary::after { content: ''; }
+#home .fx-more-ic svg { width: 26px; height: 26px; fill: none; stroke: var(--red); stroke-width: 2.4; stroke-linecap: round; display: block; }
+#home .fx-more-t { flex: 1; display: flex; flex-direction: column; gap: 2px; font: 700 15px var(--font-display); color: #fff; }
+#home .fx-more-s { font: 500 12px var(--font-body); color: var(--text-3); }
+#home .fx-more-c svg { width: 20px; height: 20px; fill: none; stroke: var(--text-2); stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; display: block; transition: transform .18s; }
+#home .fx-more[open] .fx-more-c svg { transform: rotate(180deg); }
+#home .fx-more > summary:hover .fx-more-t { color: #fff; }
 #home .fx-more-b { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
 #home .fx-end { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
 #home .fx-close { background: var(--bg-2); border: 1px solid var(--line-2); color: var(--text-2); border-radius: 9px; padding: 8px 14px; font: 600 12.5px var(--font-display); cursor: pointer; }
 #home .fx-close:hover { color: #fff; }
 #home .fx-link { font-size: 12.5px; color: var(--text-2); font-weight: 600; text-decoration: none; }
 #home .fx-link:hover { color: #fff; }
-/* Compact list rows are buttons that expand in place too. */
-#home .clist-item { border-top: 1px solid var(--line); }
-#home .clist-item:first-of-type { border-top: 0; }
-#home .clist-item .clist-row { border-top: 0; }
-#home button.clist-row { width: 100%; background: none; border: 0; margin: 0; font: inherit; text-align: left; cursor: pointer; }
-#home .clist-row .mu .nms, #home .clist-row .mu .wc { display: block; }
-#home .clist-row .go { transition: transform .15s; }
-@media (max-width: 760px) {
+@media (max-width: 1180px) {
+  #home .fx-3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  #home .fx-p-move { grid-column: 1 / -1; }
+}
+@media (max-width: 900px) {
+  #home .card-top { align-items: stretch; }
+  #home .seg-dir { width: 100%; }
+  #home .seg-dir button { flex: 1; justify-content: center; }
+  #home .seg-sec { width: 100%; }
+  #home .seg-sec button { flex: 1; padding: 8px 6px; }
+  #home .filters .card-search { max-width: none; }
+  #home .cl-head { display: none; }
+  /* Phone row: names on top, both prices and records underneath. */
+  #home .cl-toggle { grid-template-columns: 22px minmax(0, 1fr) 24px; grid-template-areas: "no fight chev" "no odds odds" "no rec rec"; gap: 8px 10px; padding: 12px 0 12px 10px; }
+  #home .cl-no { grid-area: no; align-self: start; padding-top: 2px; font-size: 14px; }
+  #home .cl-fight { grid-area: fight; }
+  #home .cl-chev { grid-area: chev; align-self: start; }
+  #home .cl-odds { grid-area: odds; }
+  #home .cl-rec { grid-area: rec; font-size: 12.5px; color: var(--text-3); margin-top: -4px; }
+  #home .cl-names { gap: 7px; }
+  #home .cl-f { gap: 7px; }
+  #home .cl-f .nm { font-size: 15px; }
+  #home .cl-f .nm .fn { display: none; }
+  #home .filters { gap: 8px; }
+  #home .sort-sel > span { display: none; }
+  #home .filters .card-search { flex: 1 1 0; min-width: 0; }
+  #home .order-note { font-size: 11.5px; }
+  #home .cl-flag { width: 24px; height: 16px; }
+  #home .cl-ob { height: 36px; font-size: 16px; }
+  #home .cl-row .cfl-star { align-self: flex-start; margin: 10px 8px 0 4px; }
+  #home .fx-3 { grid-template-columns: 1fr; }
+  #home .fx-p-move { grid-column: auto; }
   #home .fx-grid { grid-template-columns: 1fr; }
-  #home .fx .side, #home .fx .side-b { flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 12px 8px; }
-  #home .fx .side .price, #home .fx .side-b .price { align-items: center; }
-  #home .fx .side.cfl-flagged::before, #home .fx .side-b.cfl-flagged::before { left: 0; right: 0; width: 100%; aspect-ratio: auto; -webkit-mask-image: linear-gradient(180deg, transparent, #000 70%); mask-image: linear-gradient(180deg, transparent, #000 70%); }
-  #home .fx .side .nm { font-size: 14px; }
-  #home .fx-cue { justify-content: center; }
-  #home .fx-body { padding: 12px; }
+  #home .fx-body { padding: 10px; }
+  #home .fx-panel { padding: 12px; }
   #home .fx-row { grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr); padding: 7px 8px; }
+  #home .fx-tn .ln { font-size: 17px; }
+  #home .fx-tn .cl-flag { width: 34px; height: 23px; }
+  #home .fx-more-s { display: none; }
 }
 @media (max-width: 420px) {
   #home .fx-mv-g { grid-template-columns: 1fr; }
-  #home .fx .side .pxb { font-size: 9.5px; }
+  #home .cl-names { flex-wrap: wrap; row-gap: 3px; }
 }
 
 /* Provenance line under the market cells. */
@@ -608,21 +655,61 @@
 
 <main id="home">
 
-  <!-- 1a · MOBILE PITCH STRIP — phones only; the full hero sits below the card. -->
-  <div class="m-pitch">
-    <b id="mPitchTitle">The next UFC card — <span class="hl">the whole market, one screen.</span></b>
-    <span id="mProof">Vig-free consensus &middot; best price &middot; what moved &middot; every number timestamped</span>
-  </div>
+  <!-- 1 · THE CARD — the next UFC card as a compact list, first thing on the page. -->
+  <section class="section" id="next">
+    <div class="card-top">
+      <div class="card-head" id="cardHead">
+        <div class="eyebrow-live"><span class="dot"></span> Loading…</div>
+        <h1>Card Lab</h1>
+      </div>
+      <div class="seg seg-dir" id="dirSeg" role="group" aria-label="Card direction">
+        <button data-dir="down" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Card order</button>
+        <button data-dir="up" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h9M4 17h6M18 9v11M15 17l3 3 3-3"/></svg>Reverse order</button>
+      </div>
+    </div>
+    <div class="filters">
+      <!-- Card sections: only "Full card" until a source tells us which bouts
+           are prelims (card-research.js — the split is not in our data). -->
+      <div class="seg seg-sec" id="sectionSeg" role="group" aria-label="Card section">
+        <button type="button" class="active" aria-pressed="true">Full card</button>
+        <button type="button" disabled aria-disabled="true" title="The main card / prelims split is not in our data yet">Prelims</button>
+        <button type="button" disabled aria-disabled="true" title="The main card / prelims split is not in our data yet">Early prelims</button>
+      </div>
+      <label class="sort-sel"><span>Sort</span>
+        <select id="sortSel">
+          <option value="order" selected>Card position</option>
+          <option value="move">Biggest move</option>
+          <option value="spread">Books disagree</option>
+        </select>
+      </label>
+      <div class="card-search" role="search">
+        <label class="sr-only" for="cardSearch">Search this card</label>
+        <span class="cs-wrap">
+          <svg class="cs-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+          <input id="cardSearch" type="text" enterkeyhint="search" placeholder="Search fighters or division" autocomplete="off" spellcheck="false">
+          <button type="button" id="cardSearchClear" class="card-search-clear" aria-label="Clear search" hidden>×</button>
+        </span>
+        <span class="card-search-status" id="cardSearchStatus" aria-live="polite"></span>
+      </div>
+    </div>
+    <p class="fl-hint" id="sortHint"></p>
+    <p class="order-note" id="orderNote"></p>
+    <div class="fights" id="fightsList"></div>
+    <p class="model-def" id="hpModelDef"></p>
+    <div class="card-foot">
+      <div class="fineprint">Prices are what sportsbooks were posting when we last captured them, not live quotes — check the book before you act on anything here. Nothing on this page is betting advice, and a line that has moved is not a line that is wrong.</div>
+    </div>
+  </section>
 
-  <!-- 1 · HERO — the next card as a research surface. The event name is filled
-       in once the card loads; the static text is the fallback a crawler sees. -->
+  <!-- 2 · AT A GLANCE — sits under the card, which is what a visitor came for.
+       The event name is filled in once the card loads; the static text is the
+       fallback a crawler sees. -->
   <section class="hero" id="hero">
     <div>
       <div class="hp-eyebrow" id="heroEyebrow">Next UFC card</div>
-      <h1 id="heroTitle">The next UFC card. <span class="hl">The whole market, one screen.</span></h1>
+      <h2 class="hero-title" id="heroTitle">The next UFC card. <span class="hl">The whole market, one screen.</span></h2>
       <p class="lede" id="heroLede">Every fight on the card with the sportsbook consensus (the book's cut removed), the best price on offer and who is posting it, how far the line has moved since we started watching, and how far apart the books are right now. Every number carries its book count and its timestamp. We do not tell you what to bet.</p>
       <div class="hero-cta">
-        <a href="#next" class="btn btn-primary btn-lg">Open Card Lab →</a>
         <a href="market.html" class="btn btn-ghost btn-lg">Market Lab — every book, side by side</a>
       </div>
       <div class="hero-proofline" id="heroProofline">
@@ -637,45 +724,6 @@
       <div class="panel-foot" id="heroGlanceFoot">Counts and timestamps only. CFL reports what sportsbooks are posting and how it has changed — it does not tell you which side to take, and a line that moved is not a line that was wrong.</div>
       <details class="model-how" id="modelHow"><summary>Where these numbers come from</summary><div id="modelHowBody"></div></details>
     </aside>
-  </section>
-
-  <!-- 2 · NEXT CARD -->
-  <section class="section" id="next">
-    <div class="card-head" id="cardHead">
-      <div class="eyebrow-live"><span class="dot"></span> Loading…</div>
-      <h2>Card Lab</h2>
-    </div>
-    <div class="filters">
-      <span class="fl-label">Sort</span>
-      <div class="seg" id="sortSeg">
-        <button data-sort="order" class="active">Card order</button>
-        <button data-sort="move">Biggest move</button>
-        <button data-sort="spread">Books disagree</button>
-      </div>
-      <div class="seg" id="dirSeg" aria-label="Card direction">
-        <button data-dir="down" class="active" aria-pressed="true">Main event first</button>
-        <button data-dir="up" aria-pressed="false">Main event last</button>
-      </div>
-      <div class="seg" id="viewSeg" aria-label="Card view">
-        <button data-view="cards" class="active" aria-pressed="true">Full cards</button>
-        <button data-view="list" aria-pressed="false">Compact list</button>
-      </div>
-      <span class="fl-hint" id="sortHint"></span>
-    </div>
-    <div class="card-search" role="search">
-      <label class="sr-only" for="cardSearch">Search this card</label>
-      <span class="cs-wrap">
-        <input id="cardSearch" type="text" enterkeyhint="search" placeholder="Search this card — fighter or weight class" autocomplete="off" spellcheck="false">
-        <button type="button" id="cardSearchClear" class="card-search-clear" aria-label="Clear search" hidden>×</button>
-      </span>
-      <span class="card-search-status" id="cardSearchStatus" aria-live="polite"></span>
-    </div>
-    <p class="order-note" id="orderNote"></p>
-    <div class="fights" id="fightsList"></div>
-    <p class="model-def" id="hpModelDef"></p>
-    <div class="card-foot">
-      <div class="fineprint">Prices are what sportsbooks were posting when we last captured them, not live quotes — check the book before you act on anything here. Nothing on this page is betting advice, and a line that has moved is not a line that is wrong.</div>
-    </div>
   </section>
 
   <!-- 3 · WHAT CHANGED — the model came off the public product in September
@@ -904,9 +952,6 @@ let _cardState  = null;   // { fights, fighterMap, eventId, event }
 let _hpSortKey  = 'order';
 let _hpDir      = 'down';  // 'down' = main event first; 'up' = main event last
 let _hpQuery    = '';      // search within the card
-// 'cards' = one full card per fight; 'list' = the whole card, one row each.
-// Remembered per browser; a blocked localStorage just means the default.
-let _hpView     = (function () { try { return localStorage.getItem('cfl.cardView') === 'list' ? 'list' : 'cards'; } catch (e) { return 'cards'; } })();
 let _fightDay   = false;  // set by renderCardHead; decides the "stale" bar for a quote's age
 
 // Card Lab shows the market and the matchup. It does not show a CFL number,
@@ -997,8 +1042,8 @@ function renderCardHead(event, phase) {
   _fightDay = phase === 'happening' || days <= 1;
   el.innerHTML = `
     <div class="eyebrow-live"><span class="dot"></span> ${cfl.escapeHtml(live)}</div>
-    <h2>${cfl.escapeHtml(event.name)}</h2>
-    <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))} · ${cfl.escapeHtml(event.location || 'Location TBD')}</div>
+    <div class="ch-line"><h1>${cfl.escapeHtml(event.name)}</h1>
+    <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))}<span class="sep">|</span>${cfl.escapeHtml(event.location || 'Location TBD')}</div></div>
     <div class="meta odds-status" id="oddsStatus"></div>
   `;
 }
@@ -1118,11 +1163,13 @@ function renderCards() {
   renderOrderNote();
   renderSearchStatus(cards.length, ordered.length);
 
-  const listHead = '<div class="clist-row clist-hd"><span class="no">#</span><span>Matchup</span><span>Odds · best price</span>' +
-    '<span>Odds · best price</span><span>Market move</span><span></span></div>';
+  // One layout: the compact list. Each row is the whole matchup at a glance
+  // and opens in place; the column heads only show where there is room.
+  const listHead = '<div class="cl-head" aria-hidden="true"><span class="cl-no">#</span><span>Fight</span>' +
+    '<span class="cl-odds">Best odds</span><span class="cl-rec">Pro record</span><span></span></div>';
   list.classList.add('fx-list');
   list.innerHTML = cards.length
-    ? (_hpView === 'list' ? '<div class="clist">' + listHead + cards.map(c => c.row).join('') + '</div>' : cards.map(c => c.html).join(''))
+    ? '<div class="cl">' + listHead + cards.map(c => c.html).join('') + '</div>'
     : '<div class="search-empty">No fight on this card matches “' + cfl.escapeHtml(_hpQuery) + '”. ' +
       '<button type="button" class="linkish" id="cardSearchClear2">Clear the search</button></div>';
   // Re-rendering rebuilds the markup; every fight the reader had open comes
@@ -1140,7 +1187,9 @@ function renderSearchStatus(shown, total) {
 }
 
 // What the order on screen actually is. Card Lab used to say "top of the card
-// down", but the running order is not in our data (card-research.js).
+// down", but the running order is not in our data (card-research.js). The
+// buttons read "Card order" / "Reverse order"; their titles and this note say
+// exactly what each one means for this card.
 function renderOrderNote() {
   const el = document.getElementById('orderNote');
   if (!el || !_cardState || !window.cflCard) return;
@@ -1150,10 +1199,34 @@ function renderOrderNote() {
   const seg = document.getElementById('dirSeg');
   if (seg) {
     const btns = seg.querySelectorAll('button');
-    if (btns[0]) btns[0].textContent = info.labels[0];
-    if (btns[1]) btns[1].textContent = info.labels[1];
-    seg.style.visibility = _hpSortKey === 'order' ? '' : 'hidden';
+    if (btns[0]) btns[0].title = info.labels[0];
+    if (btns[1]) btns[1].title = info.labels[1];
+    seg.classList.toggle('off', _hpSortKey !== 'order');
   }
+}
+
+// A flag the size of a word. The country code is checked against two letters
+// before it reaches a URL; anything else draws nothing rather than a broken image.
+function miniFlag(f) {
+  const code = String((f && f.country_code) || '').trim();
+  if (!/^[A-Za-z]{2}$/.test(code)) return '<span class="cl-flag none" aria-hidden="true"></span>';
+  return '<img class="cl-flag" src="https://flagcdn.com/w40/' + code.toLowerCase() + '.png" width="24" height="16" loading="lazy" alt=""' +
+    (f.country ? ' title="' + cfl.escapeHtml(f.country) + '"' : '') + '>';
+}
+
+// Full name on a wide screen, surname on a phone (the first name hides in CSS).
+function rowName(f) {
+  const full = String(f.name || '').trim();
+  const cut = full.lastIndexOf(lastName(full));
+  return cut > 0
+    ? '<span class="nm"><span class="fn">' + cfl.escapeHtml(full.slice(0, cut)) + '</span>' + cfl.escapeHtml(full.slice(cut)) + '</span>'
+    : '<span class="nm">' + cfl.escapeHtml(full) + '</span>';
+}
+
+// The pro record as stored on the fighter: W-L-D.
+function rowRecord(f) {
+  if (f.wins == null && f.losses == null) return '—';
+  return (f.wins ?? 0) + '-' + (f.losses ?? 0) + '-' + (f.draws ?? 0);
 }
 
 function buildFightCard(fight, idx, fmap, eventId, event) {
@@ -1161,13 +1234,9 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   const b = fmap[fight.fighter_b_id];
   if (!a || !b) return null;
   const M = MKT();
+  const esc = cfl.escapeHtml;
 
-  // Card-position label
-  let wt = fight.weight_class || 'Bout';
-  if (fight.is_main_event) wt = 'Main event · ' + wt;
-  else if (fight.is_title_fight) wt = 'Title · ' + wt;
   const bout = window.cflCard && _cardState ? cflCard.boutLabel(_cardState.ro, fight.id) : null;
-  if (bout) wt = bout + ' · ' + wt;
 
   const row   = _marketMap ? _marketMap[fight.id] : null;
   const opts  = { isFightDay: _fightDay };
@@ -1179,14 +1248,14 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   const absMove  = moveRead && moveRead.moveSinceBaseline != null ? Math.abs(moveRead.moveSinceBaseline) : null;
   const spread   = priced ? readA.spreadPts : null;
 
-  // ---- badges: each one labels a number already on the row
+  // ---- badges: each one labels a number already in the fight's panel
   const badges = [];
   if (!priced) {
     badges.push('<span class="cbadge nomkt">No line yet</span>');
   } else {
     if (absMove != null && absMove >= MOVE_BADGE_PTS) {
       const toward = moveRead.moveSinceBaseline > 0 ? a : b;
-      badges.push('<span class="cbadge move">Moved toward ' + cfl.escapeHtml(lastName(toward.name)) + '</span>');
+      badges.push('<span class="cbadge move">Moved toward ' + esc(lastName(toward.name)) + '</span>');
     }
     if (spread != null && spread >= SPREAD_BADGE_PTS) {
       badges.push('<span class="cbadge split">Books ' + spread.toFixed(1) + ' pts apart</span>');
@@ -1195,96 +1264,69 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   // Card facts, not market facts: a debut and a changed opponent.
   if (window.cflCard && _cardState) {
     const ch = cflCard.opponentChanges(_cardState.allBookings, fight);
-    if (ch.length) badges.push('<span class="cbadge info" title="' + cfl.escapeHtml(ch.map(c => c.fighterName + ' was booked against ' + c.formerOpponent).join('; ')) + '">Opponent change</span>');
-    [a, b].forEach(f => { if (cflCard.isDebut(f)) badges.push('<span class="cbadge info">' + cfl.escapeHtml(lastName(f.name)) + ' UFC debut</span>'); });
+    if (ch.length) badges.push('<span class="cbadge info" title="' + esc(ch.map(c => c.fighterName + ' was booked against ' + c.formerOpponent).join('; ')) + '">Opponent change</span>');
+    [a, b].forEach(f => { if (cflCard.isDebut(f)) badges.push('<span class="cbadge info">' + esc(lastName(f.name)) + ' UFC debut</span>'); });
   }
-  const badgesHtml = '<span class="badges">' + badges.join('') + '</span>';
 
   // The star. Drawn for everybody — a signed-out visitor who taps it is told
-  // that a watchlist needs an account, which is a truer thing to show than a
-  // control that is simply missing. Nothing on this card is gated. It sits
-  // outside the expand button: a button inside a button is not clickable.
+  // that a watchlist needs an account. It sits outside the expand button: a
+  // button inside a button is not clickable.
   const starHtml = window.cflWatchlist
     ? cflWatchlist.starButton(fight.id, { from: 'card' })
     : '';
 
-  // Everything below the preview. Built once, used by both views, so the
-  // full cards and the compact list can never disagree about a fight.
+  // Everything below the row, built once per render.
   const isOpen = _open.has(fight.id);
   const body = '<div class="fx-body" id="fxb-' + fight.id + '"' + (isOpen ? '' : ' hidden') + '>' +
     matchupBodyHtml(fight, a, b, readA, readB, row) + '</div>';
   const toggleAttrs = ' data-fx="' + fight.id + '" aria-expanded="' + isOpen + '" aria-controls="fxb-' + fight.id + '"';
 
-  // ---- the preview: both names, both flags, both prices. Clicking it opens
-  // the tale of the tape and the betting panel directly underneath.
-  const sideA = fighterSideHtml(a, readA, 'a');
-  const sideB = fighterSideHtml(b, readB, 'b');
-  const html = `
-    <article class="fight fx${fight.is_main_event ? ' is-main' : ''}${isOpen ? ' open' : ''}" data-fid="${fight.id}" id="fight-${fight.id}">
-      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}${starHtml}</div>
-      <button type="button" class="fx-toggle"${toggleAttrs}>
-        <span class="matchup">${sideA}<span class="vs">VS</span>${sideB}</span>
-        <span class="fx-cue"><span class="fx-cue-t">${isOpen ? 'Hide details' : 'Tale of the tape · every sportsbook · line movement'}</span><span class="fx-chev" aria-hidden="true">▾</span></span>
-      </button>
-      ${body}
-    </article>`;
+  // ---- the compact row: position, both flags and names, both best prices,
+  // both pro records. The main event is named; a co-main is not, because no
+  // source we hold says which bout it is.
+  const tag = fight.is_main_event ? '<b class="cl-tag main">Main event</b>'
+    : (fight.is_title_fight ? '<b class="cl-tag">Title fight</b>' : '');
+  const odds = (r, f) => {
+    if (r && r.bestAmerican != null) {
+      return '<span class="cl-ob" title="' + esc('Best price for ' + f.name + ': ' + M.fmtAmerican(r.bestAmerican) + ' at ' + (r.bestBook || 'a tracked book') +
+        ' · ' + Math.round(r.prob * 100) + '% market chance') + '">' + esc(M.fmtAmerican(r.bestAmerican)) + '</span>';
+    }
+    return '<span class="cl-ob none" title="' + esc(r ? 'No per-book quote for ' + f.name : 'No sportsbook line for this fight yet') + '">—</span>';
+  };
+  const sub = [esc(fight.weight_class || 'Bout')];
+  if (bout) sub.push(esc(bout));
+  if (priced && readA.bookCount) sub.push(readA.bookCount + ' book' + (readA.bookCount === 1 ? '' : 's') +
+    (readA.fresh ? ' · captured ' + esc(readA.fresh.when) : ''));
+  const html =
+    '<div class="cl-item' + (fight.is_main_event ? ' is-main' : '') + (isOpen ? ' open' : '') + '" id="fight-' + fight.id + '" data-fid="' + fight.id + '">' +
+      '<div class="cl-row">' +
+        '<button type="button" class="cl-toggle"' + toggleAttrs + '>' +
+          '<span class="cl-no">' + (idx + 1) + '</span>' +
+          '<span class="cl-fight">' +
+            '<span class="cl-names">' +
+              '<span class="cl-f a">' + miniFlag(a) + rowName(a) + '</span>' +
+              '<span class="vs">vs</span>' +
+              '<span class="cl-f b">' + rowName(b) + miniFlag(b) + '</span>' +
+            '</span>' +
+            '<span class="cl-sub">' + tag + '<span>' + sub.join(' · ') + '</span>' + badges.join('') + '</span>' +
+          '</span>' +
+          '<span class="cl-odds">' + odds(readA, a) + odds(readB, b) + '</span>' +
+          '<span class="cl-rec"><span>' + esc(rowRecord(a)) + '</span><span>' + esc(rowRecord(b)) + '</span></span>' +
+          '<span class="cl-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>' +
+        '</button>' + starHtml +
+      '</div>' + body +
+    '</div>';
 
-  // ---- the compact-list row: names, division, both prices, the move. It
-  // expands in place too; nothing on the card navigates away on a click.
-  const odds = (f, r) => '<span class="od ' + (f === a ? 'a' : 'b') + '">' + cfl.escapeHtml(lastName(f.name)) + ' ' +
-    (r && r.bestAmerican != null
-      ? cfl.escapeHtml(M.fmtAmerican(r.bestAmerican)) + ' <span>' + Math.round(r.prob * 100) + '%</span>'
-      : (r ? '<span>' + Math.round(r.prob * 100) + '%</span>' : '<span>no line</span>')) + '</span>';
-  let mvTxt = '<span class="mv flat"><b>—</b></span>';
-  if (moveRead && moveRead.moveSinceBaseline != null) {
-    const mv = moveRead.moveSinceBaseline;
-    mvTxt = Math.abs(mv) < 0.5 ? '<span class="mv flat"><b>' + Math.abs(mv).toFixed(1) + '</b> steady</span>'
-      : '<span class="mv"><b>' + Math.abs(mv).toFixed(1) + '</b> → ' + cfl.escapeHtml(lastName((mv > 0 ? a : b).name)) + '</span>';
-  }
-  const listRow = '<div class="clist-item' + (isOpen ? ' open' : '') + '" id="fight-' + fight.id + '">' +
-    '<button type="button" class="clist-row"' + toggleAttrs + '>' +
-    '<span class="no">' + (idx + 1) + '</span>' +
-    '<span class="mu"><span class="nms">' + cfl.escapeHtml(a.name) + '<span class="vs">vs</span>' + cfl.escapeHtml(b.name) + '</span>' +
-      '<span class="wc">' + (fight.is_main_event ? '<b>Main event</b> · ' : fight.is_title_fight ? '<b>Title</b> · ' : '') +
-      cfl.escapeHtml(fight.weight_class || 'Bout') + (bout ? ' · ' + cfl.escapeHtml(bout) : '') +
-      (priced && readA.bookCount ? ' · ' + readA.bookCount + ' books' + (readA.fresh ? ', ' + cfl.escapeHtml(readA.fresh.when) : '') : '') + '</span></span>' +
-    odds(a, readA) + odds(b, readB) + mvTxt +
-    '<span class="go" aria-hidden="true">▾</span></button>' + body + '</div>';
-
-  return { order: idx, absMove, spread, html, row: listRow };
-}
-
-// A corner of the preview: flag wash, name, record, and the best price anyone
-// is posting on that side. The price sits with the fighter it belongs to
-// rather than in a shared cell, because a bettor reading a two-sided market
-// reads it one side at a time. Spans, not divs: this lives inside a button.
-function fighterSideHtml(f, read, side) {
-  const M = MKT();
-  const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
-  const rec = (w + l + d) > 0 ? `${w}-${l}${d ? '-' + d : '-0'}` : '0-0';
-  const flagCls = cfl.flagClass ? cfl.flagClass(f.country_code) : '';
-  const flagVar = cfl.flagStyle ? cfl.flagStyle(f) : '';
-  const px = (read && read.bestAmerican != null)
-    ? `<span class="px">${cfl.escapeHtml(M.fmtAmerican(read.bestAmerican))}</span>` +
-      `<span class="pxb">best · ${cfl.escapeHtml(read.bestBook || 'tracked book')}</span>` +
-      `<span class="pp">${Math.round(read.prob * 100)}% market</span>`
-    : (read
-      ? `<span class="px none">—</span><span class="pxb">no per-book quote</span><span class="pp">${Math.round(read.prob * 100)}% market</span>`
-      : `<span class="px none">—</span><span class="pxb">no line yet</span>`);
-  return `
-    <span class="side side-${side}${flagCls}"${flagVar}>
-      <span class="who"><span class="nm">${cfl.escapeHtml(f.name)}</span>
-      <span class="rec">${rec}${f.country ? ' · ' + cfl.escapeHtml(f.country) : ''}</span></span>
-      <span class="price">${px}</span>
-    </span>`;
+  return { order: idx, absMove, spread, html };
 }
 
 // =============================================================================
-// THE EXPANDED MATCHUP — tale of the tape, betting, line movement, and the
-// collapsed Additional Analytics. Everything here is a number CFL already
-// holds; a value we do not have is a dash with its reason, never a guess.
+// THE EXPANDED MATCHUP — three panels (tale of the tape, betting odds, line
+// movement) and the collapsed Additional Analytics. Everything here is a
+// number CFL already holds; a value we do not have is a dash with its reason,
+// never a guess.
 // =============================================================================
-const _open     = new Set();   // fight ids expanded; survives sort, search and view changes
+const _open     = new Set();   // fight ids expanded; survives sort, search and reverse
 const _moreOpen = new Set();   // fight ids with Additional Analytics opened by the reader
 const _lazy     = {};          // fight id -> { books, first, chart } once loaded
 let _cardBooks  = null;        // one per-book read for the whole card, shared by every fight
@@ -1325,38 +1367,36 @@ function proRecText(f) {
 
 function matchupBodyHtml(fight, a, b, readA, readB, row) {
   const fid = fight.id;
-  return '<div class="fx-grid">' +
-      '<section class="fx-sec"><h3 class="fx-h">Tale of the tape</h3>' + tapeHtml(fight, a, b) + '</section>' +
-      '<section class="fx-sec"><h3 class="fx-h">Betting</h3>' + betHtml(fight, a, b, readA, readB) + '</section>' +
+  const priced = !!(readA && readB);
+  return '<div class="fx-3">' +
+      '<section class="fx-panel fx-p-tape"><h3 class="fx-ph">Tale of the Tape</h3>' + tapeHtml(fight, a, b) + '</section>' +
+      '<section class="fx-panel fx-p-odds"><h3 class="fx-ph">Betting Odds</h3>' + oddsPanelHtml(fight, a, b, readA, readB) + '</section>' +
+      '<section class="fx-panel fx-p-move"><h3 class="fx-ph">Line Movement</h3>' + movePanelHtml(fight, a, b, readA, readB) + '</section>' +
     '</div>' +
-    (readA && readB
-      ? '<section class="fx-sec"><h3 class="fx-h">Every sportsbook</h3><div id="fxbooks-' + fid + '" class="fx-lazy">Loading each sportsbook’s price…</div></section>' +
-        '<section class="fx-sec"><h3 class="fx-h">How the line has moved</h3><div id="fxchart-' + fid + '" class="fx-lazy">Loading the line…</div></section>'
-      : '') +
-    moreHtml(fight, a, b, readA) +
+    moreHtml(fight, a, b, readA, readB) +
     '<div class="fx-end">' +
       '<button type="button" class="fx-close" data-fx="' + fid + '" aria-controls="fxb-' + fid + '">Collapse this fight ▴</button>' +
       '<a class="fx-link" href="fight.html?id=' + fid + '">Every stat and chart in Fight Lab →</a>' +
     '</div>';
 }
 
-// UFC-style, side by side. The dot marks the bigger number (the younger
-// fighter for age) — a measurement, not a verdict, exactly as Fight Lab says.
+// UFC-style, side by side, with each fighter's flag washed in behind their
+// column. The dot marks the bigger number (the younger fighter for age) — a
+// measurement, not a verdict, exactly as Fight Lab says.
 function tapeHtml(fight, a, b) {
   const esc = cfl.escapeHtml;
   const dash = '<span class="v na" title="Not in our data">—</span>';
   const val = (html, lead) => html == null || html === '' ? dash : '<span class="v' + (lead ? ' lead' : '') + '">' + html + '</span>';
-  const country = f => f.country ? cfl.flagChip(f) : null;
   const wt = divisionWeight(fight.weight_class);
   const num = v => v == null || v === '' || !isFinite(+v) || +v === 0 ? null : +v;
 
   const rows = [
-    ['Country', country(a), country(b)],
     ['Age', num(a.age), num(b.age), 'low', v => String(v), (x, y) => Math.abs(x - y) + ' yr' + (Math.abs(x - y) === 1 ? '' : 's') + ' apart'],
     ['Height', num(a.height_in), num(b.height_in), 'high', cfl.formatHeight, (x, y) => Math.abs(x - y) + '" apart'],
-    ['Reach', num(a.reach_in), num(b.reach_in), 'high', cfl.formatReach, (x, y) => Math.abs(x - y) + '" apart'],
     ['Weight', wt ? esc(wt) : null, wt ? esc(wt) : null],
+    ['Reach', num(a.reach_in), num(b.reach_in), 'high', cfl.formatReach, (x, y) => Math.abs(x - y) + '" apart'],
     ['Stance', a.stance ? esc(a.stance) : null, b.stance ? esc(b.stance) : null],
+    ['Country', a.country ? esc(a.country) : null, b.country ? esc(b.country) : null],
     ['Pro record', proRecText(a) ? esc(proRecText(a)) : null, proRecText(b) ? esc(proRecText(b)) : null],
     ['UFC record', ufcRecText(a) ? esc(ufcRecText(a)) : null, ufcRecText(b) ? esc(ufcRecText(b)) : null],
   ];
@@ -1372,80 +1412,104 @@ function tapeHtml(fight, a, b) {
       '<div class="lbl">' + esc(label) + sub + '</div>' +
       '<div class="r">' + val(show(vb), lb) + '</div></div>';
   }).join('');
-  return '<div class="fx-tab">' +
-      '<div class="fx-row fx-names"><div class="l"><a href="' + cfl.fighterUrl(a.id) + '">' + esc(a.name) + '</a></div><div class="lbl"></div>' +
-      '<div class="r"><a href="' + cfl.fighterUrl(b.id) + '">' + esc(b.name) + '</a></div></div>' +
-      body + '</div>' +
+  // First name small, surname large — the way a fight poster reads.
+  const nameBlock = (f, side) => {
+    const full = String(f.name || '').trim();
+    const cut = full.lastIndexOf(lastName(full));
+    const first = cut > 0 ? full.slice(0, cut).trim() : '';
+    const last = cut > 0 ? full.slice(cut) : full;
+    return '<a class="fx-tn ' + side + '" href="' + cfl.fighterUrl(f.id) + '">' + miniFlag(f) +
+      '<span class="fx-tn-t"><span class="fn">' + esc(first) + '</span><span class="ln">' + esc(last) + '</span>' +
+      '<span class="rc">' + esc(proRecText(f) || '—') + '</span></span></a>';
+  };
+  // The wash: the real flag, faded toward the middle. cfl.flagStyle returns ''
+  // for a country we have no flag for, and the column stays plain.
+  const wash = (f, side) => cfl.hasFlag && cfl.hasFlag(f.country_code)
+    ? '<span class="fx-wash ' + side + '"' + cfl.flagStyle(f) + ' aria-hidden="true"></span>' : '';
+  return '<div class="fx-tape">' + wash(a, 'a') + wash(b, 'b') +
+      '<div class="fx-tape-hd">' + nameBlock(a, 'a') + '<span class="fx-vs">VS</span>' + nameBlock(b, 'b') + '</div>' +
+      '<div class="fx-tab">' + body + '</div>' +
+    '</div>' +
     '<p class="fx-note">The dot marks the bigger number — or the younger fighter for age. It marks a measurement, not an ' +
     'advantage. Weight is the division limit; weigh-in weights are not in our data. A dash means we do not hold that figure. ' +
     'The UFC record counts every completed UFC fight in our data.</p>';
 }
 
-// Both corners' prices, laid out like the tape so the eye reads across.
-function betHtml(fight, a, b, readA, readB) {
+// Centre panel: every sportsbook's latest price (filled in on open), then both
+// corners' best price and market chance underneath.
+function oddsPanelHtml(fight, a, b, readA, readB) {
   const M = MKT();
   const esc = cfl.escapeHtml;
-  if (!readA || !readB) {
-    return '<div class="fx-empty">' + (_marketLoadFailed
-      ? 'Prices didn’t load. This is on our side, not the market’s. Refresh in a moment.'
-      : 'No sportsbook has priced this fight in our capture window yet. Prices usually appear within a few days of the card, ' +
-        'and there is no line movement to show until they do.') + '</div>';
-  }
-  const nA = lastName(a.name), nB = lastName(b.name);
+  if (!readA || !readB) return noLineHtml();
   const best = r => r.bestAmerican == null ? null
     : esc(M.fmtAmerican(r.bestAmerican)) + '<small>' + esc(r.bestBook || 'a tracked book') + '</small>';
-  const range = r => r.bestAmerican == null || r.worstAmerican == null ? null
-    : (r.worstAmerican === r.bestAmerican ? esc(M.fmtAmerican(r.bestAmerican)) + '<small>every book</small>'
-      : esc(M.fmtAmerican(r.worstAmerican)) + ' to ' + esc(M.fmtAmerican(r.bestAmerican)));
   const dash = '<span class="v na">—</span>';
   const v = (html, cls) => html == null ? dash : '<span class="v' + (cls ? ' ' + cls : '') + '">' + html + '</span>';
   const line = (label, ha, hb, sub) => '<div class="fx-row"><div class="l">' + ha + '</div><div class="lbl">' + esc(label) +
     (sub ? '<span class="fx-diff">' + esc(sub) + '</span>' : '') + '</div><div class="r">' + hb + '</div></div>';
   const fresh = readA.fresh;
   const books = readA.bookCount;
-
-  const table = '<div class="fx-tab">' +
-    '<div class="fx-row fx-names"><div class="l">' + esc(nA) + '</div><div class="lbl"></div><div class="r">' + esc(nB) + '</div></div>' +
-    line('Best price', v(best(readA), 'mono'), v(best(readB), 'mono'), 'highest number in the data') +
-    line('Market chance', v(Math.round(readA.prob * 100) + '%'), v(Math.round(readB.prob * 100) + '%'), 'median, book’s cut removed') +
-    line('Fair price', v(esc(M.fmtAmerican(readA.fairAmerican)), 'mono dim'), v(esc(M.fmtAmerican(readB.fairAmerican)), 'mono dim'), 'not a bettable number') +
-    line('Across books', v(range(readA), 'mono dim'), v(range(readB), 'mono dim'), 'worst to best') +
-    '</div>' +
-    '<p class="fx-note' + (fresh && fresh.stale ? ' warn' : '') + '">' +
+  return '<div class="fx-psub' + (fresh && fresh.stale ? ' warn' : '') + '">' +
       esc((books == null ? 'Consensus' : books + ' sportsbook' + (books === 1 ? '' : 's')) +
-        (fresh ? ' · last captured ' + fresh.when + (fresh.stale ? ' (stale)' : '') : '') +
-        '. Prices are what the books were posting when we captured them, not live quotes — check the book before you act.') + '</p>';
+        (fresh ? ' · last captured ' + fresh.when + (fresh.stale ? ' (stale)' : '') : '')) + '</div>' +
+    '<div id="fxbooks-' + fight.id + '" class="fx-lazy">Loading each sportsbook’s price…</div>' +
+    '<div class="fx-tab fx-sum">' +
+      '<div class="fx-row fx-names"><div class="l">' + esc(lastName(a.name)) + '</div><div class="lbl"></div><div class="r">' + esc(lastName(b.name)) + '</div></div>' +
+      line('Best price', v(best(readA), 'mono'), v(best(readB), 'mono'), 'highest number in the data') +
+      line('Market chance', v(Math.round(readA.prob * 100) + '%'), v(Math.round(readB.prob * 100) + '%'), 'median, book’s cut removed') +
+    '</div>' +
+    '<p class="fx-note">Prices are what the books were posting when we captured them, not live quotes — check the book before you act.</p>';
+}
 
-  // Movement: where the same sportsbooks stood at our first broad capture,
-  // where they stand now, and the last 24 hours. Never "the open".
-  let mv;
+function noLineHtml() {
+  return '<div class="fx-empty">' + (_marketLoadFailed
+    ? 'Prices didn’t load. This is on our side, not the market’s. Refresh in a moment.'
+    : 'No sportsbook has priced this fight in our capture window yet. Prices usually appear within a few days of the card, ' +
+      'and there is no line movement to show until they do.') + '</div>';
+}
+
+// Right panel: the movement chart (filled in on open), then where the same
+// sportsbooks stood at our first broad capture against where they stand now,
+// and the last 24 hours. Never "the open": CFL has not seen a book's opener.
+function movePanelHtml(fight, a, b, readA, readB) {
+  const M = MKT();
+  const esc = cfl.escapeHtml;
+  if (!readA || !readB) return noLineHtml();
+  const nA = lastName(a.name), nB = lastName(b.name);
+  const chart = '<div id="fxchart-' + fight.id + '" class="fx-lazy">Loading the line…</div>';
   if (readA.moveSinceBaseline == null) {
-    mv = '<div class="fx-mv"><div class="fx-mv-h">Line movement</div><p>' + esc(M.baselineCaveat(readA)) + '</p></div>';
-  } else {
-    const towardWords = (pts) => pts == null ? 'not enough comparable books over this window'
-      : (Math.abs(pts) < 0.5 ? 'held steady' : Math.abs(pts).toFixed(1) + ' pts toward ' + (pts > 0 ? nA : nB));
-    const pct = p => p == null ? '—' : Math.round(p * 100) + '%';
-    const nowA = readA.matchedNowProb;
-    mv = '<div class="fx-mv"><div class="fx-mv-h">Line movement</div>' +
+    return chart + '<div class="fx-mv"><p>' + esc(M.baselineCaveat(readA)) + '</p></div>';
+  }
+  const towardWords = (pts) => pts == null ? 'not enough comparable books over this window'
+    : (Math.abs(pts) < 0.5 ? 'held steady' : Math.abs(pts).toFixed(1) + ' pts toward ' + (pts > 0 ? nA : nB));
+  const pct = p => p == null ? '—' : Math.round(p * 100) + '%';
+  const nowA = readA.matchedNowProb;
+  const baseA = readA.baselineProb;
+  const fresh = readA.fresh;
+  return chart +
+    '<div class="fx-mv">' +
+      '<table class="fx-mvt"><thead><tr><th></th>' +
+        '<th>First broad capture<span>' + esc(M.fmtStampUtc(readA.baselineAt)) + '</span></th><th aria-hidden="true"></th>' +
+        '<th>Now, same ' + readA.matchedBooks + ' books<span>' + esc(fresh ? fresh.when : '') + '</span></th></tr></thead><tbody>' +
+        '<tr><td class="who">' + miniFlag(a) + esc(nA) + '</td><td>' + pct(baseA) + '</td><td class="ar" aria-hidden="true">→</td><td>' + pct(nowA) + '</td></tr>' +
+        '<tr><td class="who">' + miniFlag(b) + esc(nB) + '</td><td>' + pct(baseA == null ? null : 1 - baseA) + '</td><td class="ar" aria-hidden="true">→</td><td>' + pct(nowA == null ? null : 1 - nowA) + '</td></tr>' +
+      '</tbody></table>' +
       '<div class="fx-mv-g">' +
-        '<div><span class="k">First broad capture</span><span class="t">' + esc(M.fmtStampUtc(readA.baselineAt)) + '</span>' +
-          '<b>' + esc(nA) + ' ' + pct(readA.baselineProb) + ' · ' + esc(nB) + ' ' + pct(readA.baselineProb == null ? null : 1 - readA.baselineProb) + '</b></div>' +
-        '<div><span class="k">Now, same ' + readA.matchedBooks + ' books</span><span class="t">' + esc(fresh ? fresh.when : '') + '</span>' +
-          '<b>' + esc(nA) + ' ' + pct(nowA) + ' · ' + esc(nB) + ' ' + pct(nowA == null ? null : 1 - nowA) + '</b></div>' +
         '<div><span class="k">Move since then</span><b class="mvb">' + esc(towardWords(readA.moveSinceBaseline)) + '</b></div>' +
         '<div><span class="k">Last 24 hours</span><b class="mvb">' + esc(towardWords(readA.move24h)) + '</b></div>' +
       '</div>' +
-      '<p>' + esc(M.baselineCaveat(readA)) + ' A line that moved is not a line that was wrong.</p></div>';
-  }
-  return table + mv;
+      '<p>' + esc(M.baselineCaveat(readA)) + ' A line that moved is not a line that was wrong.</p>' +
+    '</div>';
 }
 
 // Additional Analytics: collapsed until the reader asks. Every item here is
 // already computed elsewhere on the site — the matchup notes and caveats
-// (fight-insights.js), the career rates on the fighter profile, and the
-// late-round score (v_fighter_consistency). No new model, no score.
-function moreHtml(fight, a, b, readA) {
+// (fight-insights.js), the career rates on the fighter profile, the
+// late-round score (v_fighter_consistency) and the per-book detail behind the
+// betting panel. No new model, no score.
+function moreHtml(fight, a, b, readA, readB) {
   const esc = cfl.escapeHtml;
+  const M = MKT();
   const I = window.cflInsights;
   const ctx = insightCtx(fight.weight_class, readA ? readA.bookCount : null);
   const notes = I ? I.buildMatchupNotes(a, b, ctx) : [];
@@ -1476,8 +1540,8 @@ function moreHtml(fight, a, b, readA) {
   ];
   const cell = (v, fmt, has, lead) => !has ? '<span class="v na">no UFC data</span>'
     : (fmt(v) == null ? '<span class="v na">—</span>' : '<span class="v' + (lead ? ' lead' : '') + '">' + esc(fmt(v)) + '</span>');
-  const ratesHtml = '<div class="fx-tab">' +
-    '<div class="fx-row fx-names"><div class="l">' + esc(lastName(a.name)) + '</div><div class="lbl"></div><div class="r">' + esc(lastName(b.name)) + '</div></div>' +
+  const namesRow = '<div class="fx-row fx-names"><div class="l">' + esc(lastName(a.name)) + '</div><div class="lbl"></div><div class="r">' + esc(lastName(b.name)) + '</div></div>';
+  const ratesHtml = '<div class="fx-tab">' + namesRow +
     rates.map(([label, va, vb, fmt, better]) => {
       let la = false, lb = false;
       if (tA && tB && va != null && vb != null && +va !== +vb) { const aw = better === 'high' ? +va > +vb : +va < +vb; la = aw; lb = !aw; }
@@ -1495,8 +1559,28 @@ function moreHtml(fight, a, b, readA) {
   };
   const lateHtml = '<div class="fx-tab"><div class="fx-row"><div class="l">' + late(a) + '</div><div class="lbl">Rounds 3+ vs round 1</div><div class="r">' + late(b) + '</div></div></div>';
 
+  // Market detail: the de-vigged fair price and the worst-to-best range per
+  // corner, and each sportsbook's chance now against the earliest price we hold.
+  let marketHtml = '';
+  if (readA && readB && M) {
+    const range = r => r.bestAmerican == null || r.worstAmerican == null ? null
+      : (r.worstAmerican === r.bestAmerican ? esc(M.fmtAmerican(r.bestAmerican)) + '<small>every book</small>'
+        : esc(M.fmtAmerican(r.worstAmerican)) + ' to ' + esc(M.fmtAmerican(r.bestAmerican)));
+    const v = (html, cls) => html == null ? '<span class="v na">—</span>' : '<span class="v' + (cls ? ' ' + cls : '') + '">' + html + '</span>';
+    const line = (label, ha, hb, sub) => '<div class="fx-row"><div class="l">' + ha + '</div><div class="lbl">' + esc(label) +
+      (sub ? '<span class="fx-diff">' + esc(sub) + '</span>' : '') + '</div><div class="r">' + hb + '</div></div>';
+    marketHtml = '<section class="fx-sec"><h3 class="fx-h">Market detail</h3>' +
+      '<div class="fx-tab">' + namesRow +
+        line('Fair price', v(esc(M.fmtAmerican(readA.fairAmerican)), 'mono dim'), v(esc(M.fmtAmerican(readB.fairAmerican)), 'mono dim'), 'not a bettable number') +
+        line('Across books', v(range(readA), 'mono dim'), v(range(readB), 'mono dim'), 'worst to best') +
+      '</div>' +
+      '<div id="fxdet-' + fight.id + '" class="fx-lazy">Loading each sportsbook’s detail…</div></section>';
+  }
+
   return '<details class="fx-more" data-more="' + fight.id + '"' + (_moreOpen.has(fight.id) ? ' open' : '') + '>' +
-    '<summary>Additional Analytics</summary><div class="fx-more-b">' +
+    '<summary><span class="fx-more-ic" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg></span>' +
+      '<span class="fx-more-t">Additional Analytics<span class="fx-more-s">Striking, grappling, late rounds, matchup notes and sportsbook detail</span></span>' +
+      '<span class="fx-more-c" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span></summary><div class="fx-more-b">' +
       '<div class="fx-sec">' + notesHtml + caveatsHtml + '</div>' +
       '<div class="fx-grid">' +
         '<section class="fx-sec"><h3 class="fx-h">Striking and grappling rates</h3>' + ratesHtml +
@@ -1506,14 +1590,14 @@ function moreHtml(fight, a, b, readA) {
         '<section class="fx-sec"><h3 class="fx-h">Late rounds</h3>' + lateHtml +
           '<p class="fx-note">' + esc(window.cflFightLab ? cflFightLab.LATE_ROUND_NOTE : 'Output from round three on, against the same fighter’s round one. It does not predict a winner.') +
           '</p></section>' +
-      '</div>' +
+      '</div>' + marketHtml +
     '</div></details>';
 }
 
 // ---- open / close -----------------------------------------------------------
 // Opening a fight never closes another, and the set survives every re-render
-// (sort, search, reverse, view switch), so a reader working through a parlay
-// keeps every fight they have opened.
+// (sort, search, reverse), so a reader working through a card keeps every
+// fight they have opened.
 function setFightOpen(fid, open) {
   fid = Number(fid);
   if (open) _open.add(fid); else _open.delete(fid);
@@ -1525,8 +1609,6 @@ function setFightOpen(fid, open) {
     item.querySelectorAll('[data-fx="' + fid + '"]').forEach(btn => {
       if (!btn.classList.contains('fx-close')) btn.setAttribute('aria-expanded', String(open));
     });
-    const cue = item.querySelector('.fx-cue-t');
-    if (cue) cue.textContent = open ? 'Hide details' : 'Tale of the tape · every sportsbook · line movement';
   }
   if (open) hydrateFight(fid);
 }
@@ -1545,8 +1627,8 @@ function wireExpansion() {
       const r = _marketMap && _marketMap[fid];
       cfl.track('book_breakdown_expanded', { fight_id: fid, book_count: r && r.book_count != null ? +r.book_count : 0 });
     } else if (btn.classList.contains('fx-close')) {
-      // Collapsing from the bottom of a long panel: bring the preview back
-      // into view so the reader does not lose their place on the card.
+      // Collapsing from the bottom of a long panel: bring the row back into
+      // view so the reader does not lose their place on the card.
       const item = document.getElementById('fight-' + fid);
       if (item && item.getBoundingClientRect().top < 0) item.scrollIntoView({ block: 'start' });
     }
@@ -1559,7 +1641,7 @@ function wireExpansion() {
     const fid = Number(d.dataset.more);
     if (d.open) _moreOpen.add(fid); else _moreOpen.delete(fid);
   }, true);
-  // "Biggest moves" in the hero, and any #fight-N link, open the fight it names.
+  // "Biggest moves" in the glance panel, and any #fight-N link, open the fight it names.
   document.addEventListener('click', (e) => {
     const a = e.target.closest && e.target.closest('a[href^="#fight-"]');
     if (!a) return;
@@ -1599,10 +1681,14 @@ function paintLazy(fid) {
   const f = _cardState.fights.find(x => x.id === fid);
   const a = f && _cardState.fighterMap[f.fighter_a_id], b = f && _cardState.fighterMap[f.fighter_b_id];
   if (!a || !b) return;
+  // Loaded: drop the dashed "loading" frame.
   const bEl = document.getElementById('fxbooks-' + fid);
-  if (bEl) bEl.innerHTML = booksTableHtml(st.books, st.first, a, b);
+  if (bEl) { bEl.innerHTML = booksTableHtml(st.books, a, b); bEl.className = 'fx-done'; }
+  const dEl = document.getElementById('fxdet-' + fid);
+  if (dEl) { dEl.innerHTML = booksDetailHtml(st.books, st.first, a, b); dEl.className = 'fx-done'; }
   const cEl = document.getElementById('fxchart-' + fid);
   if (cEl && window.cflChart) {
+    cEl.className = 'fx-done';
     const ch = st.chart || {};
     cEl.innerHTML = '<div class="fx-plot"></div>';
     const res = cflChart.render(cEl.firstChild, { meta: ch.meta, series: ch.series || [], books: [], showBooks: false,
@@ -1616,40 +1702,62 @@ function paintLazy(fid) {
   }
 }
 
-function booksTableHtml(rows, first, a, b) {
+// Short capture age for a table cell: "1h", "2d".
+function shortAgo(ts) {
+  const t = Date.parse(ts);
+  if (!isFinite(t)) return '—';
+  const m = Math.max(0, Math.round((Date.now() - t) / 60000));
+  return m < 60 ? m + 'm' : (m < 2880 ? Math.round(m / 60) + 'h' : Math.round(m / 1440) + 'd');
+}
+
+// The betting panel's table: each sportsbook's latest price on both corners.
+function booksTableHtml(rows, a, b) {
   const M = MKT(), esc = cfl.escapeHtml;
   if (!rows || !rows.length) {
-    return '<div class="fx-empty">No per-sportsbook quote is on file for this fight right now. The consensus above is the latest we hold.</div>';
+    return '<div class="fx-empty">No per-sportsbook quote is on file for this fight right now. The consensus below is the latest we hold.</div>';
   }
-  // Earliest price CFL holds from each book on this fight (de-vigged).
+  const bestA = Math.max.apply(null, rows.map(r => +r.american_odds_a));
+  const bestB = Math.max.apply(null, rows.map(r => +r.american_odds_b));
+  const body = rows.map(r => {
+    const aBest = +r.american_odds_a === bestA, bBest = +r.american_odds_b === bestB;
+    const ts = M.freshness(r.captured_at, _fightDay);
+    return '<tr>' +
+      '<td class="bk">' + esc(r.book_name || 'Book') + '</td>' +
+      '<td class="px' + (aBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + '</td>' +
+      '<td class="px' + (bBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + '</td>' +
+      '<td class="ag' + (ts && ts.stale ? ' warn' : '') + '" title="' + esc(ts ? 'Captured ' + ts.when + ' · ' + M.fmtStampUtc(r.captured_at) : '') + '">' + esc(shortAgo(r.captured_at)) + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<div class="fx-tw"><table class="fx-bt fx-bt-c"><thead><tr><th>Sportsbook</th><th>' + esc(lastName(a.name)) + '</th><th>' + esc(lastName(b.name)) +
+    '</th><th title="How long ago we captured this price">Age</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+    '<p class="fx-note">Highlighted: the best price on each side — the highest American number in the data, nothing else. ' +
+    'Age: when we captured that book’s price. A book not listed has not been captured on this fight.</p>';
+}
+
+// Additional Analytics: each book's own chance now (its cut removed) and the
+// earliest price CFL holds from that book on this fight.
+function booksDetailHtml(rows, first, a, b) {
+  const esc = cfl.escapeHtml;
+  if (!rows || !rows.length) return '';
   const firstBy = {};
   (first || []).forEach(r => {
     const k = String(r.book_name || '');
     if (!firstBy[k] || Date.parse(r.at) < Date.parse(firstBy[k].at)) firstBy[k] = r;
   });
-  const bestA = Math.max.apply(null, rows.map(r => +r.american_odds_a));
-  const bestB = Math.max.apply(null, rows.map(r => +r.american_odds_b));
-  const nA = lastName(a.name), nB = lastName(b.name);
+  const nA = lastName(a.name);
   const day = ts => { const d = new Date(ts); return isNaN(d) ? '' : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] + ' ' + d.getUTCDate(); };
   const body = rows.map(r => {
-    const aBest = +r.american_odds_a === bestA, bBest = +r.american_odds_b === bestB;
     const fs = firstBy[String(r.book_name || '')];
-    const ts = M.freshness(r.captured_at, _fightDay);
     return '<tr>' +
       '<td class="bk">' + esc(r.book_name || 'Book') + '</td>' +
-      '<td class="px' + (aBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + (aBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
-      '<td class="px' + (bBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + (bBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
       '<td>' + (r.fair_prob_a != null ? (r.fair_prob_a * 100).toFixed(1) + '%' : '—') + '</td>' +
       '<td>' + (fs && fs.fair_a != null ? (fs.fair_a * 100).toFixed(1) + '% <span class="dim">' + esc(day(fs.at)) + '</span>' : '<span class="dim">—</span>') + '</td>' +
-      '<td class="dim">' + esc(ts ? ts.when : '—') + '</td>' +
       '</tr>';
   }).join('');
-  return '<div class="fx-tw"><table class="fx-bt"><thead><tr><th>Sportsbook</th><th>' + esc(nA) + '</th><th>' + esc(nB) + '</th>' +
-    '<th>' + esc(nA) + ' chance now</th><th>' + esc(nA) + ' at first capture</th><th>Captured</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
-    '<p class="fx-note">“Best” is the highest American number in the data, and nothing else decides it. Chance columns have each book’s own ' +
-    'cut removed so books compare on the same basis. “At first capture” is the earliest price CFL holds from that book on this fight, ' +
-    'with its date — the earliest we saw, which is not necessarily the first number the book posted. A book missing here has not been captured ' +
-    'on this fight, which is not the same as having no line.</p>';
+  return '<div class="fx-tw"><table class="fx-bt"><thead><tr><th>Sportsbook</th>' +
+    '<th>' + esc(nA) + ' chance now</th><th>' + esc(nA) + ' at first capture</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+    '<p class="fx-note">Chance columns have each book’s own cut removed so books compare on the same basis. “At first capture” is the earliest ' +
+    'price CFL holds from that book on this fight, with its date — the earliest we saw, which is not necessarily the first number the book posted.</p>';
 }
 
 // Surname for tight copy. Shared with fight-insights.js; a suffix ("Jr.",
@@ -1661,20 +1769,18 @@ function insightCtx(weightClass, bookCount) {
 }
 
 function wireControls() {
-  const seg = document.getElementById('sortSeg');
+  const sel = document.getElementById('sortSel');
   const hint = document.getElementById('sortHint');
-  if (seg && !seg._wired) {
-    seg._wired = true;
+  if (sel && !sel._wired) {
+    sel._wired = true;
     const hints = {
       order:  '',
       move:   'Furthest from our first broad capture, either direction, across the books quoting at both ends. A move is not a signal.',
       spread: 'Where the sportsbooks are furthest apart right now.',
     };
-    seg.addEventListener('click', (e) => {
-      const btn = e.target.closest('button'); if (!btn) return;
-      [].forEach.call(seg.querySelectorAll('button'), b => b.classList.toggle('active', b === btn));
-      if (btn.dataset.sort !== _hpSortKey) cfl.track('market_sort_changed', { sort: btn.dataset.sort, surface: 'card_lab' });
-      _hpSortKey = btn.dataset.sort;
+    sel.addEventListener('change', () => {
+      if (sel.value !== _hpSortKey) cfl.track('market_sort_changed', { sort: sel.value, surface: 'card_lab' });
+      _hpSortKey = hints.hasOwnProperty(sel.value) ? sel.value : 'order';
       renderCards();
       if (hint) hint.textContent = hints[_hpSortKey] || '';
     });
@@ -1689,21 +1795,8 @@ function wireControls() {
       if (e.target && (e.target.id === 'cardSearchClear' || e.target.id === 'cardSearchClear2')) { q.value = ''; apply(''); q.focus(); }
     });
   }
-  const view = document.getElementById('viewSeg');
-  if (view && !view._wired) {
-    view._wired = true;
-    const mark = () => [].forEach.call(view.querySelectorAll('button'), b => {
-      b.classList.toggle('active', b.dataset.view === _hpView); b.setAttribute('aria-pressed', String(b.dataset.view === _hpView));
-    });
-    mark();
-    view.addEventListener('click', (e) => {
-      const btn = e.target.closest('button'); if (!btn) return;
-      _hpView = btn.dataset.view === 'list' ? 'list' : 'cards';
-      try { localStorage.setItem('cfl.cardView', _hpView); } catch (err) {}
-      mark();
-      renderCards();
-    });
-  }
+  // Card order / reverse order. Picking either while a market sort is on goes
+  // back to card position, since "reverse" only means something there.
   const dir = document.getElementById('dirSeg');
   if (dir && !dir._wired) {
     dir._wired = true;
@@ -1713,6 +1806,7 @@ function wireControls() {
       [].forEach.call(dir.querySelectorAll('button'), b => {
         b.classList.toggle('active', b === btn); b.setAttribute('aria-pressed', String(b === btn));
       });
+      if (_hpSortKey !== 'order') { _hpSortKey = 'order'; if (sel) sel.value = 'order'; if (hint) hint.textContent = ''; }
       renderCards();
     });
   }

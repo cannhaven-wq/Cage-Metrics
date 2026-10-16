@@ -11,6 +11,45 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 (c) — Card Lab: Compact List redesign (T-100, PR open, awaiting owner approval)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- **Homepage opens on the card.** The card is now the compact list from the
+  approved mockup: position, flags, names, best price each side, pro records,
+  chevron. The main event is tagged; no co-main is named (no source says which
+  bout it is). Card order / Reverse order, search and the market sorts (now a
+  "Sort" menu) all work; "This card at a glance" moved below the list.
+- **Section filter is honest.** Full card is the only live option; Prelims and
+  Early prelims are drawn disabled, because the main card / prelims split is
+  not in our data (T-096).
+- **A row opens in place** into three panels — Tale of the Tape (flag wash,
+  age, height, weight limit, reach, stance, country, pro and UFC record),
+  Betting Odds (every sportsbook's latest price with its capture age; best
+  price and market chance), Line Movement (chart; first broad capture vs now
+  across the same books; last 24 h). Stacks on a phone in that order.
+  Additional Analytics stays collapsed and gained fair price, range and the
+  per-book first-capture detail.
+- **Verified** in Chromium against production rows for UFC Fight Night:
+  Buckley vs. Malott served through a local stub (the sandbox cannot reach
+  Supabase): 126 checks on desktop and a 390 px phone. All JS tests and the
+  Python suite pass; `card-lab-expand` and `card-lab-view` tests updated.
+- **Deviations from the mockup:** no tabs inside the tape panel (all three
+  panels are already visible); "Opening odds" is "First broad capture", in
+  percent, because CFL has never seen a sportsbook opener; the chart is the
+  existing single consensus line, not two American-odds lines; no sportsbook
+  logos; weight is the division limit.
+
+## Next action
+
+1. **Owner:** review the T-100 pull request and its screenshots; reply
+   "approved" to merge and deploy, or list changes.
+2. **Owner (unchanged):** decide the T-096 running-order migration — it is
+   what would make "Card order" the real running order and let the Prelims
+   filters switch on.
+
 ## 2026-10-16 (b) — Fighter flags: the country they represent, checked per card (T-099)
 
 **From:** Claude

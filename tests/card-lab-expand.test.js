@@ -1,8 +1,8 @@
 /* ==========================================================================
    tests/card-lab-expand.test.js — Card Lab's expandable matchups (T-098).
 
-   PLAIN ENGLISH: on the homepage, clicking a fight opens its tale of the tape
-   and betting panel directly underneath it. Several fights can be open at
+   PLAIN ENGLISH: on the homepage, clicking a fight opens three panels — tale
+   of the tape, betting odds, line movement — directly underneath it. Several fights can be open at
    once, nothing navigates away on that click, and "Additional Analytics"
    stays shut until the reader opens it.
 
@@ -22,27 +22,44 @@ function t(name, fn) { try { fn(); passed += 1; } catch (err) { failures.push(na
 function ok(c, what) { if (!c) throw new Error(what || 'expected truthy'); }
 const slice = (from, to) => PAGE.slice(PAGE.indexOf(from), PAGE.indexOf(to));
 
-const build = slice('function buildFightCard', 'function fighterSideHtml');
-const side  = slice('function fighterSideHtml', 'const _open');
-const tape  = slice('function tapeHtml', 'function betHtml');
-const bet   = slice('function betHtml', 'function moreHtml');
+const build = slice('function buildFightCard', 'const _open');
+const body  = slice('function matchupBodyHtml', 'function tapeHtml');
+const tape  = slice('function tapeHtml', 'function oddsPanelHtml');
+const bet   = slice('function oddsPanelHtml', 'function moreHtml');
 const more  = slice('function moreHtml', 'function setFightOpen');
 const open  = slice('function setFightOpen', 'function wireExpansion');
 const wire  = slice('function wireExpansion', 'async function hydrateFight');
 const books = slice('function booksTableHtml', '// Surname for tight copy.');
-const NEW_CODE = slice('function buildFightCard', '// Surname for tight copy.');
+const NEW_CODE = slice('function miniFlag', '// Surname for tight copy.');
 
-t('the preview is a real button that says what it controls', () => {
-  ok(/<button type="button" class="fx-toggle"' ?\$\{toggleAttrs\}|class="fx-toggle"\$\{toggleAttrs\}/.test(build), 'preview is not a button');
+t('the row is a real button that says what it controls', () => {
+  ok(/<button type="button" class="cl-toggle"' \+ toggleAttrs/.test(build), 'row is not a button');
   ok(/aria-expanded="' \+ isOpen \+ '" aria-controls="fxb-' \+ fight\.id/.test(build), 'aria-expanded / aria-controls missing');
   ok(/id="fxb-' \+ fight\.id \+ '"' \+ \(isOpen \? '' : ' hidden'\)/.test(build), 'panel is not hidden by default');
 });
 
-t('the preview carries both names, both flags and both prices, and never links out', () => {
-  ok(/fighterSideHtml\(a, readA, 'a'\)/.test(build) && /fighterSideHtml\(b, readB, 'b'\)/.test(build), 'both corners not drawn');
-  ok(/cfl\.flagClass/.test(side) && /cfl\.flagStyle/.test(side), 'flag wash dropped');
-  ok(/bestAmerican/.test(side) && /bestBook/.test(side), 'price or book missing from the preview');
-  ok(!/<a /.test(side), 'a link inside the preview button');
+t('the row carries position, both flags, names, prices and pro records, and never links out', () => {
+  ok(/'<span class="cl-no">' \+ \(idx \+ 1\)/.test(build), 'card position missing');
+  ok(/miniFlag\(a\)/.test(build) && /miniFlag\(b\)/.test(build), 'a flag is missing');
+  ok(/rowName\(a\)/.test(build) && /rowName\(b\)/.test(build), 'a name is missing');
+  ok(/odds\(readA, a\) \+ odds\(readB, b\)/.test(build), 'both corners are not priced');
+  ok(/rowRecord\(a\)/.test(build) && /rowRecord\(b\)/.test(build), 'a pro record is missing');
+  ok(/bestAmerican/.test(build) && /bestBook/.test(build), 'price or book missing from the row');
+  ok(/bookCount/.test(build) && /fresh\.when/.test(build), 'book count or capture age missing from the row');
+  const btn = build.slice(build.indexOf('class="cl-toggle"'), build.indexOf("'</button>' + starHtml"));
+  ok(!/<a /.test(btn), 'a link inside the row button');
+});
+
+t('the open fight has three panels in order: tape, odds, movement', () => {
+  const i = body.indexOf('Tale of the Tape'), j = body.indexOf('Betting Odds'), k = body.indexOf('Line Movement');
+  ok(i > 0 && j > i && k > j, 'panels missing or out of order');
+  ok(/cfl\.flagStyle\(f\)/.test(tape), 'flag wash dropped from the tape');
+});
+
+t('only the main event is named; nothing invents a co-main or a card section', () => {
+  ok(/fight\.is_main_event \? '<b class="cl-tag main">Main event<\/b>'/.test(build), 'main event not tagged');
+  ok(!/co-?main/i.test(NEW_CODE.replace(/^\s*\/\/.*$/gm, ' ').replace(/'[^']*not[^']*'/g, '')), 'a co-main label appears in page code');
+  ok(/id="sectionSeg"/.test(PAGE) && /disabled aria-disabled="true"[^>]*>Prelims</.test(PAGE), 'prelim filter is live without a source');
 });
 
 t('opening one fight never closes another', () => {
@@ -64,20 +81,23 @@ t('a second click collapses, and the click handler does not navigate', () => {
 
 t('Additional Analytics is a collapsed <details> unless the reader opened it', () => {
   ok(/<details class="fx-more" data-more="' \+ fight\.id \+ '"' \+ \(_moreOpen\.has\(fight\.id\) \? ' open' : ''\)/.test(more), 'details opens by itself');
-  ok(/<summary>Additional Analytics<\/summary>/.test(more), 'section is not labelled "Additional Analytics"');
+  ok(/<summary>[\s\S]*?Additional Analytics/.test(more), 'section is not labelled "Additional Analytics"');
   ok(!/_moreOpen\.add\(/.test(open), 'expanding a fight opens Additional Analytics');
 });
 
 t('the tale of the tape has every row the brief asks for, and a dash for a gap', () => {
-  ['Country', 'Age', 'Height', 'Reach', 'Weight', 'Stance', 'Pro record', 'UFC record'].forEach(r =>
+  ['Age', 'Height', 'Weight', 'Reach', 'Stance', 'Country', 'Pro record', 'UFC record'].forEach(r =>
     ok(tape.indexOf("['" + r + "'") !== -1, 'tape row missing: ' + r));
   ok(/title="Not in our data">—/.test(tape), 'missing data is not a labelled dash');
   ok(/weigh-in weights are not in our data/.test(tape), 'weight row claims a weigh-in figure');
 });
 
 t('the betting panel shows both corners, the books, the age and the movement working', () => {
-  ['Best price', 'Market chance', 'Fair price', 'Across books'].forEach(r =>
+  ['Best price', 'Market chance'].forEach(r =>
     ok(bet.indexOf("line('" + r + "'") !== -1, 'betting row missing: ' + r));
+  ['Fair price', 'Across books'].forEach(r =>
+    ok(more.indexOf("line('" + r + "'") !== -1, 'market detail row missing: ' + r));
+  ok(/fxbooks-/.test(bet) && /fxchart-/.test(bet), 'sportsbook table or chart missing from the panels');
   ok(/bookCount/.test(bet) && /fresh\.when/.test(bet), 'book count or capture age missing');
   ok(/M\.baselineCaveat\(readA\)/.test(bet), 'movement printed without its caveat');
   ok(/matchedNowProb/.test(bet), '"now" is not the matched cohort');
