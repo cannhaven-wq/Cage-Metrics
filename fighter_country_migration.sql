@@ -1,5 +1,10 @@
 -- Country of origin for fighters.
 --
+-- AMENDED 2026-10-16 (owner): `country` / `country_code` mean the country a
+-- fighter REPRESENTS, which is the flag the site shows. Birthplace is the
+-- starting point, and `birth_place` keeps it; where the two differ the
+-- represented country wins and the row is marked country_src = 'manual'.
+--
 -- Source of truth is the "Place of Birth" field on ufc.com athlete pages,
 -- with Wikidata (P27, country of citizenship) as the fallback for fighters
 -- whose ufc.com page is missing or has no birthplace listed.
