@@ -402,7 +402,7 @@
 #home .clist { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
 #home .clist-row { display: grid; grid-template-columns: 34px minmax(0, 1fr) 168px 168px 116px 22px; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--line); color: inherit; text-decoration: none; }
 #home .clist-row:first-child { border-top: none; }
-#home a.clist-row:hover { background: var(--bg-2); }
+#home button.clist-row:hover { background: var(--bg-2); }
 #home .clist-hd { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--text-3); font-weight: 700; background: var(--bg-2); padding-top: 8px; padding-bottom: 8px; }
 #home .clist-row .no { font: 700 12px var(--font-mono); color: var(--text-3); text-align: center; }
 #home .clist-row .mu { min-width: 0; }
@@ -423,6 +423,117 @@
   #home .clist-row .mu { grid-area: mu; } #home .clist-row .go { grid-area: go; }
   #home .clist-row .od.a { grid-area: oa; } #home .clist-row .od.b { grid-area: ob; }
   #home .clist-row .mv { grid-area: mv; text-align: right; align-self: end; }
+}
+
+/* ===== Expandable matchups ===========================================
+   The card is a list of previews. A click opens the tale of the tape and
+   the betting panel directly underneath; several can be open at once, and
+   none of them navigates away. Single column so card order reads top to
+   bottom and an open fight never leaves a hole in a grid. */
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+#home .fight, #home .clist-item { scroll-margin-top: 76px; }
+#home .fights.fx-list { grid-template-columns: minmax(0, 1fr); max-width: 1180px; gap: 10px; }
+#home .fight.fx { padding: 0; gap: 0; }
+#home .fight.fx:hover { border-color: var(--line-2); }
+#home .fight.fx.open { border-color: var(--line-2); }
+#home .fight.fx .fight-hd { padding: 12px 16px 0; }
+#home .fx-toggle { display: block; width: 100%; background: none; border: 0; margin: 0; color: inherit; font: inherit; text-align: inherit; cursor: pointer; padding: 10px 16px 12px; }
+#home .fx-toggle:focus-visible, #home .clist-row:focus-visible, #home .fx-close:focus-visible { outline: 2px solid var(--probe); outline-offset: -2px; border-radius: 12px; }
+#home .fx .matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
+#home .fx .vs { align-self: center; font-size: 13px; }
+#home .fx .side { flex-direction: row; justify-content: space-between; align-items: center; text-align: left; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--bg-2); }
+#home .fx .side.cfl-flagged::before { opacity: .22; }
+#home .fx .side-b { flex-direction: row-reverse; text-align: right; }
+#home .fx .side .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+#home .fx .side .nm { font-size: 15px; font-weight: 700; color: #fff; }
+#home .fight.fx.is-main .side .nm { font-size: 16px; }
+#home .fx .side .rec { font-size: 11.5px; color: var(--text-2); }
+#home .fx .side .price { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; flex-shrink: 0; }
+#home .fx .side-b .price { align-items: flex-start; }
+#home .fx .side .px { font-size: 17px; padding: 3px 10px; }
+#home .fx-cue { display: flex; justify-content: flex-end; align-items: center; gap: 8px; margin-top: 8px; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+#home .fx-toggle:hover .fx-cue { color: var(--text); }
+#home .fx-chev { display: inline-block; transition: transform .15s; }
+#home .open > .fx-toggle .fx-chev, #home .clist-item.open .go { transform: rotate(180deg); }
+#home .fx-body { border-top: 1px solid var(--line); padding: 16px; display: flex; flex-direction: column; gap: 16px; background: rgba(0,0,0,.12); }
+#home .fx-body[hidden] { display: none; }
+#home .fx-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+#home .fx-sec { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+#home .fx-h { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--red); font-weight: 700; margin: 0; }
+#home .fx-tab { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--bg-1); }
+#home .fx-row { display: grid; grid-template-columns: minmax(0, 1fr) 132px minmax(0, 1fr); gap: 8px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--line); }
+#home .fx-row:first-child { border-top: 0; }
+#home .fx-row .l { text-align: right; } #home .fx-row .r { text-align: left; }
+#home .fx-row .lbl { text-align: center; font-size: 10px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; line-height: 1.3; }
+#home .fx-diff { display: block; text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 10.5px; color: var(--text-3); margin-top: 1px; }
+#home .fx-names { background: var(--bg-2); }
+#home .fx-names .l, #home .fx-names .r { font: 700 13.5px var(--font-display); color: #fff; }
+#home .fx-names a { color: #fff; text-decoration: none; } #home .fx-names a:hover { text-decoration: underline; }
+#home .fx-row .v { font-family: var(--font-display); font-weight: 700; font-size: 16px; color: var(--text-2); font-variant-numeric: tabular-nums; }
+#home .fx-row .v.sm { font-size: 13px; }
+#home .fx-row .v.mono { font-family: var(--font-mono); font-size: 14px; color: var(--text); }
+#home .fx-row .v.mono.dim { color: var(--text-2); font-size: 13px; }
+#home .fx-row .v small { display: block; font: 500 10.5px var(--font-body); color: var(--text-3); margin-top: 1px; }
+#home .fx-row .v.na { color: var(--text-3); font-weight: 600; font-size: 13px; }
+#home .fx-row .v .cfl-flag { font-size: 13px; font-family: var(--font-body); }
+#home .fx-row .v.lead { color: #fff; }
+#home .fx-row .r .v.lead::after, #home .fx-row .l .v.lead::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); vertical-align: middle; }
+#home .fx-row .r .v.lead::after { margin: 0 0 3px 6px; } #home .fx-row .l .v.lead::before { margin: 0 6px 3px 0; }
+#home .fx-note { font-size: 11px; color: var(--text-3); line-height: 1.5; margin: 0; }
+#home .fx-note.warn { color: var(--amber); }
+#home .fx-empty, #home .fx-lazy { font-size: 12.5px; color: var(--text-2); background: var(--bg-1); border: 1px dashed var(--line-2); border-radius: 10px; padding: 12px 14px; line-height: 1.5; }
+#home .fx-lazy:empty { display: none; }
+#home .fx-mv { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); padding: 10px 12px; }
+#home .fx-mv-h { font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; margin-bottom: 6px; }
+#home .fx-mv-g { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 14px; margin-bottom: 8px; }
+#home .fx-mv-g > div { display: flex; flex-direction: column; gap: 1px; }
+#home .fx-mv-g .k { font-size: 10.5px; color: var(--text-3); font-weight: 600; }
+#home .fx-mv-g .t { font-size: 10.5px; color: var(--text-3); font-family: var(--font-mono); }
+#home .fx-mv-g b { font-size: 13px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+#home .fx-mv-g b.mvb { color: var(--probe); }
+#home .fx-mv p { font-size: 11px; color: var(--text-3); line-height: 1.5; margin: 0; }
+#home .fx-tw { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); }
+#home .fx-bt { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 560px; }
+#home .fx-bt th { text-align: left; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 8px 10px; background: var(--bg-2); white-space: nowrap; }
+#home .fx-bt td { padding: 7px 10px; border-top: 1px solid var(--line); color: var(--text-2); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#home .fx-bt td.bk { color: var(--text); font-weight: 600; }
+#home .fx-bt td.px { font-family: var(--font-mono); color: var(--text); }
+#home .fx-bt td.px.best { color: #fff; font-weight: 700; }
+#home .fx-bt .bestflag { margin-left: 6px; font: 700 9px var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--probe); }
+#home .fx-bt .dim, #home .fx-bt td.dim { color: var(--text-3); }
+#home .fx-plot { min-height: 60px; }
+#home .fx-more { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); }
+#home .fx-more > summary { list-style: none; cursor: pointer; padding: 11px 14px; font: 700 13px var(--font-display); color: var(--text); display: flex; align-items: center; gap: 8px; }
+#home .fx-more > summary::-webkit-details-marker { display: none; }
+#home .fx-more > summary::before { content: '▸'; color: var(--text-3); transition: transform .15s; }
+#home .fx-more[open] > summary::before { transform: rotate(90deg); }
+#home .fx-more > summary::after { content: 'collapsed — open for striking, grappling, late rounds and matchup notes'; font: 500 11.5px var(--font-body); color: var(--text-3); }
+#home .fx-more[open] > summary::after { content: ''; }
+#home .fx-more-b { padding: 4px 14px 14px; display: flex; flex-direction: column; gap: 14px; }
+#home .fx-end { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+#home .fx-close { background: var(--bg-2); border: 1px solid var(--line-2); color: var(--text-2); border-radius: 9px; padding: 8px 14px; font: 600 12.5px var(--font-display); cursor: pointer; }
+#home .fx-close:hover { color: #fff; }
+#home .fx-link { font-size: 12.5px; color: var(--text-2); font-weight: 600; text-decoration: none; }
+#home .fx-link:hover { color: #fff; }
+/* Compact list rows are buttons that expand in place too. */
+#home .clist-item { border-top: 1px solid var(--line); }
+#home .clist-item:first-of-type { border-top: 0; }
+#home .clist-item .clist-row { border-top: 0; }
+#home button.clist-row { width: 100%; background: none; border: 0; margin: 0; font: inherit; text-align: left; cursor: pointer; }
+#home .clist-row .mu .nms, #home .clist-row .mu .wc { display: block; }
+#home .clist-row .go { transition: transform .15s; }
+@media (max-width: 760px) {
+  #home .fx-grid { grid-template-columns: 1fr; }
+  #home .fx .side, #home .fx .side-b { flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 12px 8px; }
+  #home .fx .side .price, #home .fx .side-b .price { align-items: center; }
+  #home .fx .side .nm { font-size: 14px; }
+  #home .fx-cue { justify-content: center; }
+  #home .fx-body { padding: 12px; }
+  #home .fx-row { grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr); padding: 7px 8px; }
+}
+@media (max-width: 420px) {
+  #home .fx-mv-g { grid-template-columns: 1fr; }
+  #home .fx .side .pxb { font-size: 9.5px; }
 }
 
 /* Provenance line under the market cells. */
@@ -630,8 +741,10 @@
      about showing a price (book count, age, movement measured only across the
      books quoting at both ends, and never an "opening line") live in one file
      and cannot drift between surfaces. -->
-<script src="market.js?v=3"></script>
+<script src="market.js?v=4"></script>
+<script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
+<script src="fight-lab.js?v=1"></script>
 <script src="alerts.js"></script>
 <script src="watchlist-ui.js"></script>
 <script>
@@ -907,7 +1020,7 @@ async function loadFights(event) {
 
   const { data: fighters, error: fErr } = await sb
     .from('fighters')
-    .select('id, name, nickname, age, dob, height_in, reach_in, wins, losses, draws, slpm, sapm, td_avg, td_acc, td_def, country, country_code')
+    .select('id, name, nickname, age, dob, height_in, reach_in, stance, wins, losses, draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code, updated_at')
     .in('id', Array.from(fighterIds));
   if (fErr) { list.innerHTML = '<div class="load-err">Couldn\'t load fighter details. Try refreshing.</div>'; return; }
   // UFC record from v_fighter_ufc_record, never fighters.ufc_* (T-084).
@@ -944,6 +1057,13 @@ async function loadFights(event) {
   renderHeroGlance(event);
   renderSourceNote();
   wireControls();
+  wireExpansion();
+  // A shared or bookmarked #fight-N link lands on that fight, already open.
+  const m = /^#fight-(\d+)$/.exec(location.hash || '');
+  if (m && document.getElementById('fight-' + m[1])) {
+    setFightOpen(Number(m[1]), true);
+    document.getElementById('fight-' + m[1]).scrollIntoView({ block: 'start' });
+  }
 }
 
 // One line under the card list naming where the data came from. Third-party
@@ -989,10 +1109,14 @@ function renderCards() {
 
   const listHead = '<div class="clist-row clist-hd"><span class="no">#</span><span>Matchup</span><span>Odds · best price</span>' +
     '<span>Odds · best price</span><span>Market move</span><span></span></div>';
+  list.classList.add('fx-list');
   list.innerHTML = cards.length
     ? (_hpView === 'list' ? '<div class="clist">' + listHead + cards.map(c => c.row).join('') + '</div>' : cards.map(c => c.html).join(''))
     : '<div class="search-empty">No fight on this card matches “' + cfl.escapeHtml(_hpQuery) + '”. ' +
       '<button type="button" class="linkish" id="cardSearchClear2">Clear the search</button></div>';
+  // Re-rendering rebuilds the markup; every fight the reader had open comes
+  // back open, with its sportsbook table and chart repainted from cache.
+  _open.forEach(fid => { if (document.getElementById('fxb-' + fid)) hydrateFight(fid); });
 }
 
 // "3 of 13 fights" while a search is active; empty otherwise.
@@ -1040,10 +1164,6 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   const readB = M && row ? M.readSide(row, 'b', opts) : null;
   const priced = !!(readA && readB);
 
-  // Which corner the market currently favours — a statement about the price,
-  // not about the fight, and never styled as a pick.
-  const favRead  = priced ? (readA.prob >= readB.prob ? readA : readB) : null;
-  const favName  = priced ? (readA.prob >= readB.prob ? a.name : b.name) : null;
   const moveRead = priced ? readA : null;                    // movement is reported on corner A
   const absMove  = moveRead && moveRead.moveSinceBaseline != null ? Math.abs(moveRead.moveSinceBaseline) : null;
   const spread   = priced ? readA.spreadPts : null;
@@ -1069,121 +1189,37 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   }
   const badgesHtml = '<span class="badges">' + badges.join('') + '</span>';
 
-  // ---- the four market cells
-  let probsHtml = '';
-  let mktNote = '';
-  if (priced) {
-    const fresh = readA.fresh;
-    const books = readA.bookCount;
-    const booksTxt = books == null ? 'consensus' : books + (books === 1 ? ' book' : ' books');
-    const ageTxt = fresh ? (fresh.stale ? 'stale · ' + fresh.when : fresh.when) : '';
-
-    const consensus = `<div class="cell${fresh && fresh.stale ? ' stale' : ''}">
-        <div class="t">Consensus</div>
-        <div class="n">${Math.round(favRead.prob * 100)}%</div>
-        <div class="s">${cfl.escapeHtml(lastName(favName))} · ${cfl.escapeHtml(booksTxt)}, vig removed${ageTxt ? ' · ' + cfl.escapeHtml(ageTxt) : ''}</div>
-      </div>`;
-
-    const fairCell = `<div class="cell">
-        <div class="t">Fair price</div>
-        <div class="n mono">${cfl.escapeHtml(M.fmtAmerican(favRead.fairAmerican))}</div>
-        <div class="s">${cfl.escapeHtml(lastName(favName))} with the cut removed — not a bettable number</div>
-      </div>`;
-
-    let moveCell;
-    if (moveRead.moveSinceBaseline == null) {
-      // An honest empty state, and which empty state it is. Never a zero and
-      // never a number borrowed from a wider set of books.
-      const why = moveRead.movementStatus === 'no_broad_capture'
-        ? 'not yet priced by ' + M.MIN_MATCHED_BOOKS + ' books at once'
-        : 'not enough comparable books yet';
-      moveCell = `<div class="cell"><div class="t">Market move</div><div class="n flat">—</div><div class="s">${cfl.escapeHtml(why)}</div></div>`;
-    } else {
-      const mv = moveRead.moveSinceBaseline;
-      const cls = Math.abs(mv) < 0.5 ? 'flat' : (mv > 0 ? 'up' : 'down');
-      const toward = mv > 0 ? a : b;
-      const flat = Math.abs(mv) < 0.5;
-      const fromPct = Math.round((mv > 0 ? moveRead.baselineProb : 1 - moveRead.baselineProb) * 100);
-      const sub = flat
-        ? 'held steady · ' + moveRead.matchedBooks + ' comparable books'
-        : 'toward ' + cfl.escapeHtml(lastName(toward.name)) + ' · from ' + fromPct + '%';
-      moveCell = `<div class="cell">
-          <div class="t">Market move</div>
-          <div class="n ${cls}">${flat ? '0.0' : Math.abs(mv).toFixed(1)}</div>
-          <div class="s">${sub}</div>
-        </div>`;
-    }
-
-    const bestFor = favRead === readA ? readA : readB;
-    const bestCell = bestFor.bestAmerican == null
-      ? `<div class="cell"><div class="t">Best price</div><div class="n flat">—</div><div class="s">no per-book quote captured</div></div>`
-      : `<div class="cell">
-          <div class="t">Best price</div>
-          <div class="n mono">${cfl.escapeHtml(M.fmtAmerican(bestFor.bestAmerican))}</div>
-          <div class="s">${cfl.escapeHtml(lastName(favName))} at ${cfl.escapeHtml(bestFor.bestBook || 'a tracked book')}</div>
-        </div>`;
-
-    probsHtml = `<div class="probs">${consensus}${fairCell}${moveCell}${bestCell}</div>`;
-
-    // Provenance, always — including when there is no number, because "why is
-    // this a dash" is the question a sceptical reader asks first.
-    const parts = [];
-    parts.push(M.baselineCaveat(moveRead));
-    if (readA.captureCount != null) parts.push(readA.captureCount + ' capture' + (readA.captureCount === 1 ? '' : 's') + ' recorded.');
-    mktNote = parts.length
-      ? `<div class="mkt-note${fresh && fresh.stale ? ' warn' : ''}">${cfl.escapeHtml(parts.join(' '))}</div>`
-      : '';
-  } else {
-    probsHtml = `<div class="probs">
-      <div class="cell"><div class="t">Consensus</div><div class="n flat">—</div><div class="s">no sportsbook line captured yet</div></div>
-      <div class="cell"><div class="t">Fair price</div><div class="n flat">—</div><div class="s">needs a two-sided quote</div></div>
-      <div class="cell"><div class="t">Market move</div><div class="n flat">—</div><div class="s">nothing to compare</div></div>
-      <div class="cell"><div class="t">Best price</div><div class="n flat">—</div><div class="s">no book quoting</div></div>
-    </div>`;
-    mktNote = '<div class="mkt-note">Sportsbooks have not priced this fight in our capture window yet. It usually appears within a few days of the card.</div>';
-  }
-
-  // ---- matchup notes: measured differences, no pick attached
-  const ctx = insightCtx(fight.weight_class, priced ? readA.bookCount : null);
-  const notes = window.cflInsights ? window.cflInsights.buildMatchupNotes(a, b, ctx) : [];
-  const notesHtml = notes.length
-    ? '<div class="edges-hd">What stands out in this matchup</div><ul class="edges">' + notes.slice(0, 3).map(n =>
-        '<li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' + cfl.escapeHtml(n.text) + '</li>').join('') + '</ul>'
-    : '<div class="fight-note">No measurable separation between these two on the stats we track — that is itself worth knowing.</div>';
-
-  const caveats = window.cflInsights ? window.cflInsights.buildMatchupCaveats(a, b, ctx) : [];
-  const caveatsHtml = caveats.length
-    ? '<ul class="redflags"><span class="rf-hd">Read these with care</span>' +
-      caveats.slice(0, 2).map(t => '<li>' + cfl.escapeHtml(t) + '</li>').join('') + '</ul>'
-    : '';
-
-  const noteHtml = notes.length && window.cflInsights
-    ? '<div class="insight-note">' + cfl.escapeHtml(window.cflInsights.MATCHUP_NOTE) + '</div>'
-    : '';
-
-  const sideA = fighterSideHtml(a, readA, 'a');
-  const sideB = fighterSideHtml(b, readB, 'b');
-
   // The star. Drawn for everybody — a signed-out visitor who taps it is told
   // that a watchlist needs an account, which is a truer thing to show than a
-  // control that is simply missing. Nothing on this card is gated.
+  // control that is simply missing. Nothing on this card is gated. It sits
+  // outside the expand button: a button inside a button is not clickable.
   const starHtml = window.cflWatchlist
     ? cflWatchlist.starButton(fight.id, { from: 'card' })
     : '';
 
-  const html = `
-    <div class="fight${fight.is_main_event ? ' is-main' : ''}" data-fid="${fight.id}" id="fight-${fight.id}">
-      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}${starHtml}</div>
-      <div class="matchup">${sideA}<div class="vs">VS</div>${sideB}</div>
-      ${probsHtml}
-      ${mktNote}
-      ${notesHtml}
-      ${caveatsHtml}
-      ${noteHtml}
-      <a href="fight.html?id=${fight.id}" class="btn btn-ghost btn-block">Research this matchup in Fight Lab →</a>
-    </div>`;
+  // Everything below the preview. Built once, used by both views, so the
+  // full cards and the compact list can never disagree about a fight.
+  const isOpen = _open.has(fight.id);
+  const body = '<div class="fx-body" id="fxb-' + fight.id + '"' + (isOpen ? '' : ' hidden') + '>' +
+    matchupBodyHtml(fight, a, b, readA, readB, row) + '</div>';
+  const toggleAttrs = ' data-fx="' + fight.id + '" aria-expanded="' + isOpen + '" aria-controls="fxb-' + fight.id + '"';
 
-  // ---- the compact-list row: names, division, both prices, the move
+  // ---- the preview: both names, both flags, both prices. Clicking it opens
+  // the tale of the tape and the betting panel directly underneath.
+  const sideA = fighterSideHtml(a, readA, 'a');
+  const sideB = fighterSideHtml(b, readB, 'b');
+  const html = `
+    <article class="fight fx${fight.is_main_event ? ' is-main' : ''}${isOpen ? ' open' : ''}" data-fid="${fight.id}" id="fight-${fight.id}">
+      <div class="fight-hd"><span class="wt">${cfl.escapeHtml(wt)}</span>${badgesHtml}${starHtml}</div>
+      <button type="button" class="fx-toggle"${toggleAttrs}>
+        <span class="matchup">${sideA}<span class="vs">VS</span>${sideB}</span>
+        <span class="fx-cue"><span class="fx-cue-t">${isOpen ? 'Hide details' : 'Tale of the tape · every sportsbook · line movement'}</span><span class="fx-chev" aria-hidden="true">▾</span></span>
+      </button>
+      ${body}
+    </article>`;
+
+  // ---- the compact-list row: names, division, both prices, the move. It
+  // expands in place too; nothing on the card navigates away on a click.
   const odds = (f, r) => '<span class="od ' + (f === a ? 'a' : 'b') + '">' + cfl.escapeHtml(lastName(f.name)) + ' ' +
     (r && r.bestAmerican != null
       ? cfl.escapeHtml(M.fmtAmerican(r.bestAmerican)) + ' <span>' + Math.round(r.prob * 100) + '%</span>'
@@ -1194,21 +1230,23 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
     mvTxt = Math.abs(mv) < 0.5 ? '<span class="mv flat"><b>' + Math.abs(mv).toFixed(1) + '</b> steady</span>'
       : '<span class="mv"><b>' + Math.abs(mv).toFixed(1) + '</b> → ' + cfl.escapeHtml(lastName((mv > 0 ? a : b).name)) + '</span>';
   }
-  const listRow = '<a class="clist-row" href="fight.html?id=' + fight.id + '">' +
+  const listRow = '<div class="clist-item' + (isOpen ? ' open' : '') + '" id="fight-' + fight.id + '">' +
+    '<button type="button" class="clist-row"' + toggleAttrs + '>' +
     '<span class="no">' + (idx + 1) + '</span>' +
-    '<span class="mu"><div class="nms">' + cfl.escapeHtml(a.name) + '<span class="vs">vs</span>' + cfl.escapeHtml(b.name) + '</div>' +
-      '<div class="wc">' + (fight.is_main_event ? '<b>Main event</b> · ' : fight.is_title_fight ? '<b>Title</b> · ' : '') +
+    '<span class="mu"><span class="nms">' + cfl.escapeHtml(a.name) + '<span class="vs">vs</span>' + cfl.escapeHtml(b.name) + '</span>' +
+      '<span class="wc">' + (fight.is_main_event ? '<b>Main event</b> · ' : fight.is_title_fight ? '<b>Title</b> · ' : '') +
       cfl.escapeHtml(fight.weight_class || 'Bout') + (bout ? ' · ' + cfl.escapeHtml(bout) : '') +
-      (priced && readA.bookCount ? ' · ' + readA.bookCount + ' books' + (readA.fresh ? ', ' + cfl.escapeHtml(readA.fresh.when) : '') : '') + '</div></span>' +
+      (priced && readA.bookCount ? ' · ' + readA.bookCount + ' books' + (readA.fresh ? ', ' + cfl.escapeHtml(readA.fresh.when) : '') : '') + '</span></span>' +
     odds(a, readA) + odds(b, readB) + mvTxt +
-    '<span class="go" aria-hidden="true">›</span></a>';
+    '<span class="go" aria-hidden="true">▾</span></button>' + body + '</div>';
 
   return { order: idx, absMove, spread, html, row: listRow };
 }
 
-// A corner: name, record, and the best price anyone is posting on that side.
-// The price sits with the fighter it belongs to rather than in a shared cell,
-// because a bettor reading a two-sided market reads it one side at a time.
+// A corner of the preview: flag wash, name, record, and the best price anyone
+// is posting on that side. The price sits with the fighter it belongs to
+// rather than in a shared cell, because a bettor reading a two-sided market
+// reads it one side at a time. Spans, not divs: this lives inside a button.
 function fighterSideHtml(f, read, side) {
   const M = MKT();
   const w = f.wins ?? 0, l = f.losses ?? 0, d = f.draws ?? 0;
@@ -1216,17 +1254,391 @@ function fighterSideHtml(f, read, side) {
   const flagCls = cfl.flagClass ? cfl.flagClass(f.country_code) : '';
   const flagVar = cfl.flagStyle ? cfl.flagStyle(f) : '';
   const px = (read && read.bestAmerican != null)
-    ? `<div class="px">${cfl.escapeHtml(M.fmtAmerican(read.bestAmerican))}</div>` +
-      `<div class="pxb">best · ${cfl.escapeHtml(read.bestBook || 'tracked book')}</div>` +
-      `<div class="pp">${Math.round(read.prob * 100)}% market</div>`
-    : `<div class="px none">—</div><div class="pxb">no price</div>`;
+    ? `<span class="px">${cfl.escapeHtml(M.fmtAmerican(read.bestAmerican))}</span>` +
+      `<span class="pxb">best · ${cfl.escapeHtml(read.bestBook || 'tracked book')}</span>` +
+      `<span class="pp">${Math.round(read.prob * 100)}% market</span>`
+    : (read
+      ? `<span class="px none">—</span><span class="pxb">no per-book quote</span><span class="pp">${Math.round(read.prob * 100)}% market</span>`
+      : `<span class="px none">—</span><span class="pxb">no line yet</span>`);
   return `
-    <a class="side${flagCls}" href="${cfl.fighterUrl(f.id)}"${flagVar}>
-      <div class="ava">${cfl.escapeHtml(cfl.initials(f.name))}</div>
-      <div class="nm">${cfl.escapeHtml(f.name)}</div>
-      <div class="rec">${rec}</div>
-      ${px}
-    </a>`;
+    <span class="side side-${side}${flagCls}"${flagVar}>
+      <span class="who"><span class="nm">${cfl.escapeHtml(f.name)}</span>
+      <span class="rec">${rec}${f.country ? ' · ' + cfl.escapeHtml(f.country) : ''}</span></span>
+      <span class="price">${px}</span>
+    </span>`;
+}
+
+// =============================================================================
+// THE EXPANDED MATCHUP — tale of the tape, betting, line movement, and the
+// collapsed Additional Analytics. Everything here is a number CFL already
+// holds; a value we do not have is a dash with its reason, never a guess.
+// =============================================================================
+const _open     = new Set();   // fight ids expanded; survives sort, search and view changes
+const _moreOpen = new Set();   // fight ids with Additional Analytics opened by the reader
+const _lazy     = {};          // fight id -> { books, first, chart } once loaded
+let _cardBooks  = null;        // one per-book read for the whole card, shared by every fight
+
+// UFC division limits. A bout's weight on our data is its division; weigh-in
+// weights are not captured, so the tape says "limit", never a scale reading.
+const DIVISION_LIMIT_LB = {
+  strawweight: 115, flyweight: 125, bantamweight: 135, featherweight: 145, lightweight: 155,
+  welterweight: 170, middleweight: 185, 'light heavyweight': 205, heavyweight: 265,
+};
+function divisionWeight(wc) {
+  const s = String(wc || '').toLowerCase();
+  if (/catch/.test(s)) return 'Catch weight';
+  const k = s.replace(/^women'?s\s+/, '').replace(/\s+bout$/, '').trim();
+  return DIVISION_LIMIT_LB[k] ? DIVISION_LIMIT_LB[k] + ' lb limit' : null;
+}
+
+// The UFC record comes from v_fighter_ufc_record (ufc-record.js), the pro
+// record from `fighters`. When the UFC count already exceeds the pro one, the
+// pro total is provably out of date and is not shown (same rule as Fight Lab).
+function ufcRecObj(f) {
+  if (f.ufc_record_unavailable || f.ufc_wins == null) return null;
+  const w = +f.ufc_wins || 0, l = +f.ufc_losses || 0, d = +f.ufc_draws || 0, nc = +f.ufc_no_contests || 0;
+  return { w, l, d, nc, total: w + l + d + nc };
+}
+function ufcRecText(f) {
+  const r = ufcRecObj(f);
+  if (!r) return null;
+  if (window.cflFightLab) return cflFightLab.formatUfcRecord(r);
+  return r.total ? r.w + '-' + r.l + (r.d ? '-' + r.d : '') : 'No UFC fights';
+}
+function proRecText(f) {
+  const r = ufcRecObj(f);
+  if (r && window.cflFightLab && cflFightLab.proRecordIsBehind(f, r)) return 'not up to date';
+  if (f.wins == null && f.losses == null) return null;
+  return (f.wins ?? 0) + '-' + (f.losses ?? 0) + '-' + (f.draws ?? 0);
+}
+
+function matchupBodyHtml(fight, a, b, readA, readB, row) {
+  const fid = fight.id;
+  return '<div class="fx-grid">' +
+      '<section class="fx-sec"><h3 class="fx-h">Tale of the tape</h3>' + tapeHtml(fight, a, b) + '</section>' +
+      '<section class="fx-sec"><h3 class="fx-h">Betting</h3>' + betHtml(fight, a, b, readA, readB) + '</section>' +
+    '</div>' +
+    (readA && readB
+      ? '<section class="fx-sec"><h3 class="fx-h">Every sportsbook</h3><div id="fxbooks-' + fid + '" class="fx-lazy">Loading each sportsbook’s price…</div></section>' +
+        '<section class="fx-sec"><h3 class="fx-h">How the line has moved</h3><div id="fxchart-' + fid + '" class="fx-lazy">Loading the line…</div></section>'
+      : '') +
+    moreHtml(fight, a, b, readA) +
+    '<div class="fx-end">' +
+      '<button type="button" class="fx-close" data-fx="' + fid + '" aria-controls="fxb-' + fid + '">Collapse this fight ▴</button>' +
+      '<a class="fx-link" href="fight.html?id=' + fid + '">Every stat and chart in Fight Lab →</a>' +
+    '</div>';
+}
+
+// UFC-style, side by side. The dot marks the bigger number (the younger
+// fighter for age) — a measurement, not a verdict, exactly as Fight Lab says.
+function tapeHtml(fight, a, b) {
+  const esc = cfl.escapeHtml;
+  const dash = '<span class="v na" title="Not in our data">—</span>';
+  const val = (html, lead) => html == null || html === '' ? dash : '<span class="v' + (lead ? ' lead' : '') + '">' + html + '</span>';
+  const country = f => f.country ? cfl.flagChip(f) : null;
+  const wt = divisionWeight(fight.weight_class);
+  const num = v => v == null || v === '' || !isFinite(+v) || +v === 0 ? null : +v;
+
+  const rows = [
+    ['Country', country(a), country(b)],
+    ['Age', num(a.age), num(b.age), 'low', v => String(v), (x, y) => Math.abs(x - y) + ' yr' + (Math.abs(x - y) === 1 ? '' : 's') + ' apart'],
+    ['Height', num(a.height_in), num(b.height_in), 'high', cfl.formatHeight, (x, y) => Math.abs(x - y) + '" apart'],
+    ['Reach', num(a.reach_in), num(b.reach_in), 'high', cfl.formatReach, (x, y) => Math.abs(x - y) + '" apart'],
+    ['Weight', wt ? esc(wt) : null, wt ? esc(wt) : null],
+    ['Stance', a.stance ? esc(a.stance) : null, b.stance ? esc(b.stance) : null],
+    ['Pro record', proRecText(a) ? esc(proRecText(a)) : null, proRecText(b) ? esc(proRecText(b)) : null],
+    ['UFC record', ufcRecText(a) ? esc(ufcRecText(a)) : null, ufcRecText(b) ? esc(ufcRecText(b)) : null],
+  ];
+  const body = rows.map(([label, va, vb, better, fmt, diff]) => {
+    let la = false, lb = false, sub = '';
+    if (better && va != null && vb != null && va !== vb) {
+      const aWins = better === 'high' ? va > vb : va < vb;
+      la = aWins; lb = !aWins;
+      sub = diff ? '<span class="fx-diff">' + esc(diff(va, vb)) + '</span>' : '';
+    }
+    const show = v => v == null ? null : (fmt ? esc(fmt(v)) : v);
+    return '<div class="fx-row"><div class="l">' + val(show(va), la) + '</div>' +
+      '<div class="lbl">' + esc(label) + sub + '</div>' +
+      '<div class="r">' + val(show(vb), lb) + '</div></div>';
+  }).join('');
+  return '<div class="fx-tab">' +
+      '<div class="fx-row fx-names"><div class="l"><a href="' + cfl.fighterUrl(a.id) + '">' + esc(a.name) + '</a></div><div class="lbl"></div>' +
+      '<div class="r"><a href="' + cfl.fighterUrl(b.id) + '">' + esc(b.name) + '</a></div></div>' +
+      body + '</div>' +
+    '<p class="fx-note">The dot marks the bigger number — or the younger fighter for age. It marks a measurement, not an ' +
+    'advantage. Weight is the division limit; weigh-in weights are not in our data. A dash means we do not hold that figure. ' +
+    'The UFC record counts every completed UFC fight in our data.</p>';
+}
+
+// Both corners' prices, laid out like the tape so the eye reads across.
+function betHtml(fight, a, b, readA, readB) {
+  const M = MKT();
+  const esc = cfl.escapeHtml;
+  if (!readA || !readB) {
+    return '<div class="fx-empty">' + (_marketLoadFailed
+      ? 'Prices didn’t load. This is on our side, not the market’s. Refresh in a moment.'
+      : 'No sportsbook has priced this fight in our capture window yet. Prices usually appear within a few days of the card, ' +
+        'and there is no line movement to show until they do.') + '</div>';
+  }
+  const nA = lastName(a.name), nB = lastName(b.name);
+  const best = r => r.bestAmerican == null ? null
+    : esc(M.fmtAmerican(r.bestAmerican)) + '<small>' + esc(r.bestBook || 'a tracked book') + '</small>';
+  const range = r => r.bestAmerican == null || r.worstAmerican == null ? null
+    : (r.worstAmerican === r.bestAmerican ? esc(M.fmtAmerican(r.bestAmerican)) + '<small>every book</small>'
+      : esc(M.fmtAmerican(r.worstAmerican)) + ' to ' + esc(M.fmtAmerican(r.bestAmerican)));
+  const dash = '<span class="v na">—</span>';
+  const v = (html, cls) => html == null ? dash : '<span class="v' + (cls ? ' ' + cls : '') + '">' + html + '</span>';
+  const line = (label, ha, hb, sub) => '<div class="fx-row"><div class="l">' + ha + '</div><div class="lbl">' + esc(label) +
+    (sub ? '<span class="fx-diff">' + esc(sub) + '</span>' : '') + '</div><div class="r">' + hb + '</div></div>';
+  const fresh = readA.fresh;
+  const books = readA.bookCount;
+
+  const table = '<div class="fx-tab">' +
+    '<div class="fx-row fx-names"><div class="l">' + esc(nA) + '</div><div class="lbl"></div><div class="r">' + esc(nB) + '</div></div>' +
+    line('Best price', v(best(readA), 'mono'), v(best(readB), 'mono'), 'highest number in the data') +
+    line('Market chance', v(Math.round(readA.prob * 100) + '%'), v(Math.round(readB.prob * 100) + '%'), 'median, book’s cut removed') +
+    line('Fair price', v(esc(M.fmtAmerican(readA.fairAmerican)), 'mono dim'), v(esc(M.fmtAmerican(readB.fairAmerican)), 'mono dim'), 'not a bettable number') +
+    line('Across books', v(range(readA), 'mono dim'), v(range(readB), 'mono dim'), 'worst to best') +
+    '</div>' +
+    '<p class="fx-note' + (fresh && fresh.stale ? ' warn' : '') + '">' +
+      esc((books == null ? 'Consensus' : books + ' sportsbook' + (books === 1 ? '' : 's')) +
+        (fresh ? ' · last captured ' + fresh.when + (fresh.stale ? ' (stale)' : '') : '') +
+        '. Prices are what the books were posting when we captured them, not live quotes — check the book before you act.') + '</p>';
+
+  // Movement: where the same sportsbooks stood at our first broad capture,
+  // where they stand now, and the last 24 hours. Never "the open".
+  let mv;
+  if (readA.moveSinceBaseline == null) {
+    mv = '<div class="fx-mv"><div class="fx-mv-h">Line movement</div><p>' + esc(M.baselineCaveat(readA)) + '</p></div>';
+  } else {
+    const towardWords = (pts) => pts == null ? 'not enough comparable books over this window'
+      : (Math.abs(pts) < 0.5 ? 'held steady' : Math.abs(pts).toFixed(1) + ' pts toward ' + (pts > 0 ? nA : nB));
+    const pct = p => p == null ? '—' : Math.round(p * 100) + '%';
+    const nowA = readA.matchedNowProb;
+    mv = '<div class="fx-mv"><div class="fx-mv-h">Line movement</div>' +
+      '<div class="fx-mv-g">' +
+        '<div><span class="k">First broad capture</span><span class="t">' + esc(M.fmtStampUtc(readA.baselineAt)) + '</span>' +
+          '<b>' + esc(nA) + ' ' + pct(readA.baselineProb) + ' · ' + esc(nB) + ' ' + pct(readA.baselineProb == null ? null : 1 - readA.baselineProb) + '</b></div>' +
+        '<div><span class="k">Now, same ' + readA.matchedBooks + ' books</span><span class="t">' + esc(fresh ? fresh.when : '') + '</span>' +
+          '<b>' + esc(nA) + ' ' + pct(nowA) + ' · ' + esc(nB) + ' ' + pct(nowA == null ? null : 1 - nowA) + '</b></div>' +
+        '<div><span class="k">Move since then</span><b class="mvb">' + esc(towardWords(readA.moveSinceBaseline)) + '</b></div>' +
+        '<div><span class="k">Last 24 hours</span><b class="mvb">' + esc(towardWords(readA.move24h)) + '</b></div>' +
+      '</div>' +
+      '<p>' + esc(M.baselineCaveat(readA)) + ' A line that moved is not a line that was wrong.</p></div>';
+  }
+  return table + mv;
+}
+
+// Additional Analytics: collapsed until the reader asks. Every item here is
+// already computed elsewhere on the site — the matchup notes and caveats
+// (fight-insights.js), the career rates on the fighter profile, and the
+// late-round score (v_fighter_consistency). No new model, no score.
+function moreHtml(fight, a, b, readA) {
+  const esc = cfl.escapeHtml;
+  const I = window.cflInsights;
+  const ctx = insightCtx(fight.weight_class, readA ? readA.bookCount : null);
+  const notes = I ? I.buildMatchupNotes(a, b, ctx) : [];
+  const caveats = I ? I.buildMatchupCaveats(a, b, ctx) : [];
+  const notesHtml = notes.length
+    ? '<div class="edges-hd">What stands out in this matchup</div><ul class="edges">' + notes.map(n =>
+        '<li><svg viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>' + esc(n.text) + '</li>').join('') + '</ul>' +
+      (I ? '<div class="insight-note">' + esc(I.MATCHUP_NOTE) + '</div>' : '')
+    : '<div class="fight-note">No measurable separation between these two on the stats we track — that is itself worth knowing.</div>';
+  const caveatsHtml = caveats.length
+    ? '<ul class="redflags"><span class="rf-hd">Read these with care</span>' + caveats.map(t => '<li>' + esc(t) + '</li>').join('') + '</ul>'
+    : '';
+
+  // Career rates as UFCStats last published them on each profile. A fighter
+  // with no UFC fights has no rate, which is missing data, not a zero.
+  const tA = I ? I.hasTape(a) : true, tB = I ? I.hasTape(b) : true;
+  const n2 = v => v == null ? null : Number(v).toFixed(2);
+  const pc = v => v == null ? null : Math.round(+v) + '%';
+  const rates = [
+    ['Strikes landed per min', a.slpm, b.slpm, n2, 'high'],
+    ['Striking accuracy', a.str_acc, b.str_acc, pc, 'high'],
+    ['Strikes absorbed per min', a.sapm, b.sapm, n2, 'low'],
+    ['Striking defence', a.str_def, b.str_def, pc, 'high'],
+    ['Takedowns per 15 min', a.td_avg, b.td_avg, n2, 'high'],
+    ['Takedown accuracy', a.td_acc, b.td_acc, pc, 'high'],
+    ['Takedown defence', a.td_def, b.td_def, pc, 'high'],
+    ['Submission tries per 15 min', a.sub_avg, b.sub_avg, v => v == null ? null : Number(v).toFixed(1), 'high'],
+  ];
+  const cell = (v, fmt, has, lead) => !has ? '<span class="v na">no UFC data</span>'
+    : (fmt(v) == null ? '<span class="v na">—</span>' : '<span class="v' + (lead ? ' lead' : '') + '">' + esc(fmt(v)) + '</span>');
+  const ratesHtml = '<div class="fx-tab">' +
+    '<div class="fx-row fx-names"><div class="l">' + esc(lastName(a.name)) + '</div><div class="lbl"></div><div class="r">' + esc(lastName(b.name)) + '</div></div>' +
+    rates.map(([label, va, vb, fmt, better]) => {
+      let la = false, lb = false;
+      if (tA && tB && va != null && vb != null && +va !== +vb) { const aw = better === 'high' ? +va > +vb : +va < +vb; la = aw; lb = !aw; }
+      return '<div class="fx-row"><div class="l">' + cell(va, fmt, tA, la) + '</div><div class="lbl">' + esc(label) +
+        '</div><div class="r">' + cell(vb, fmt, tB, lb) + '</div></div>';
+    }).join('') + '</div>';
+  const asOf = [a, b].map(f => f.updated_at).filter(Boolean).sort()[0];
+
+  // Late rounds: the existing consistency tier, described, never called a pick.
+  const late = f => {
+    const c = I && I.cardioFor ? I.cardioFor(_cardioMap, f.id, fight.weight_class) : null;
+    const L = window.cflFightLab && c && cflFightLab.LATE[c.tier_word];
+    if (!c || !L) return '<span class="v na">not enough late-round fights</span>';
+    return '<span class="v sm">' + esc(L.label) + '</span>' + (c.confidence === 'limited' ? '<span class="fx-diff">small sample</span>' : '');
+  };
+  const lateHtml = '<div class="fx-tab"><div class="fx-row"><div class="l">' + late(a) + '</div><div class="lbl">Rounds 3+ vs round 1</div><div class="r">' + late(b) + '</div></div></div>';
+
+  return '<details class="fx-more" data-more="' + fight.id + '"' + (_moreOpen.has(fight.id) ? ' open' : '') + '>' +
+    '<summary>Additional Analytics</summary><div class="fx-more-b">' +
+      '<div class="fx-sec">' + notesHtml + caveatsHtml + '</div>' +
+      '<div class="fx-grid">' +
+        '<section class="fx-sec"><h3 class="fx-h">Striking and grappling rates</h3>' + ratesHtml +
+          '<p class="fx-note">Career UFC rates as published on each fighter’s UFCStats profile' +
+          (asOf ? ' (profiles last read ' + esc(cfl.formatDate(String(asOf).slice(0, 10))) + ')' : '') +
+          '. The dot marks the bigger number, or the lower one for strikes absorbed. Fight Lab rebuilds these from every fight record.</p></section>' +
+        '<section class="fx-sec"><h3 class="fx-h">Late rounds</h3>' + lateHtml +
+          '<p class="fx-note">' + esc(window.cflFightLab ? cflFightLab.LATE_ROUND_NOTE : 'Output from round three on, against the same fighter’s round one. It does not predict a winner.') +
+          '</p></section>' +
+      '</div>' +
+    '</div></details>';
+}
+
+// ---- open / close -----------------------------------------------------------
+// Opening a fight never closes another, and the set survives every re-render
+// (sort, search, reverse, view switch), so a reader working through a parlay
+// keeps every fight they have opened.
+function setFightOpen(fid, open) {
+  fid = Number(fid);
+  if (open) _open.add(fid); else _open.delete(fid);
+  const body = document.getElementById('fxb-' + fid);
+  if (body) body.hidden = !open;
+  const item = document.getElementById('fight-' + fid);
+  if (item) {
+    item.classList.toggle('open', open);
+    item.querySelectorAll('[data-fx="' + fid + '"]').forEach(btn => {
+      if (!btn.classList.contains('fx-close')) btn.setAttribute('aria-expanded', String(open));
+    });
+    const cue = item.querySelector('.fx-cue-t');
+    if (cue) cue.textContent = open ? 'Hide details' : 'Tale of the tape · every sportsbook · line movement';
+  }
+  if (open) hydrateFight(fid);
+}
+
+function wireExpansion() {
+  const list = document.getElementById('fightsList');
+  if (!list || list._fxWired) return;
+  list._fxWired = true;
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest && e.target.closest('[data-fx]');
+    if (!btn || !list.contains(btn)) return;
+    const fid = Number(btn.dataset.fx);
+    const open = !_open.has(fid);
+    setFightOpen(fid, open);
+    if (open) {
+      const r = _marketMap && _marketMap[fid];
+      cfl.track('book_breakdown_expanded', { fight_id: fid, book_count: r && r.book_count != null ? +r.book_count : 0 });
+    } else if (btn.classList.contains('fx-close')) {
+      // Collapsing from the bottom of a long panel: bring the preview back
+      // into view so the reader does not lose their place on the card.
+      const item = document.getElementById('fight-' + fid);
+      if (item && item.getBoundingClientRect().top < 0) item.scrollIntoView({ block: 'start' });
+    }
+  });
+  // <details> toggle does not bubble; capture it so "Additional Analytics"
+  // stays open across re-renders only when the reader opened it.
+  list.addEventListener('toggle', (e) => {
+    const d = e.target;
+    if (!d || !d.classList || !d.classList.contains('fx-more')) return;
+    const fid = Number(d.dataset.more);
+    if (d.open) _moreOpen.add(fid); else _moreOpen.delete(fid);
+  }, true);
+  // "Biggest moves" in the hero, and any #fight-N link, open the fight it names.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest && e.target.closest('a[href^="#fight-"]');
+    if (!a) return;
+    const fid = Number(a.getAttribute('href').slice(7));
+    if (fid) setFightOpen(fid, true);
+  });
+}
+
+// The per-book table and the chart are fetched only when a fight is opened,
+// and once: the per-book prices for the whole card in one read, the chart and
+// each book's first capture per fight (market-chart.js asks for that — a card
+// of twelve charts in one query is slow).
+async function hydrateFight(fid) {
+  if (!document.getElementById('fxbooks-' + fid) && !document.getElementById('fxchart-' + fid)) return;
+  const M = MKT(), CH = window.cflChart;
+  const st = _lazy[fid] || (_lazy[fid] = {});
+  if (!st.loading) {
+    st.loading = (async () => {
+      if (!_cardBooks && M && _cardState) _cardBooks = M.loadByBook('event_id', _cardState.eventId);
+      const [all, first, chart] = await Promise.all([
+        _cardBooks || Promise.resolve([]),
+        CH ? CH.loadBooks(fid) : Promise.resolve([]),
+        CH ? CH.load(fid) : Promise.resolve(null),
+      ]);
+      st.books = (all || []).filter(r => Number(r.fight_id) === fid);
+      st.first = first || [];
+      st.chart = chart;
+    })();
+  }
+  await st.loading;
+  paintLazy(fid);
+}
+
+function paintLazy(fid) {
+  const st = _lazy[fid];
+  if (!st || !st.books || !_cardState) return;
+  const f = _cardState.fights.find(x => x.id === fid);
+  const a = f && _cardState.fighterMap[f.fighter_a_id], b = f && _cardState.fighterMap[f.fighter_b_id];
+  if (!a || !b) return;
+  const bEl = document.getElementById('fxbooks-' + fid);
+  if (bEl) bEl.innerHTML = booksTableHtml(st.books, st.first, a, b);
+  const cEl = document.getElementById('fxchart-' + fid);
+  if (cEl && window.cflChart) {
+    const ch = st.chart || {};
+    cEl.innerHTML = '<div class="fx-plot"></div>';
+    const res = cflChart.render(cEl.firstChild, { meta: ch.meta, series: ch.series || [], books: [], showBooks: false,
+      nameA: lastName(a.name), nameB: lastName(b.name) });
+    cEl.insertAdjacentHTML('beforeend', '<p class="fx-note">' + cfl.escapeHtml(res && res.ok
+      ? 'The middle price of the same ' + res.cohortBooks + ' sportsbooks at every point, book’s cut removed, as a chance for ' +
+        lastName(a.name) + '. It steps rather than slopes because a price stands until the book posts another. ' +
+        'CFL does not see sportsbook openers: the line starts when we first had the fight from three or more books.'
+      : 'CFL only draws a line when at least three of the same sportsbooks quoted at both ends. Until then there is nothing comparable to plot.') +
+      '</p>');
+  }
+}
+
+function booksTableHtml(rows, first, a, b) {
+  const M = MKT(), esc = cfl.escapeHtml;
+  if (!rows || !rows.length) {
+    return '<div class="fx-empty">No per-sportsbook quote is on file for this fight right now. The consensus above is the latest we hold.</div>';
+  }
+  // Earliest price CFL holds from each book on this fight (de-vigged).
+  const firstBy = {};
+  (first || []).forEach(r => {
+    const k = String(r.book_name || '');
+    if (!firstBy[k] || Date.parse(r.at) < Date.parse(firstBy[k].at)) firstBy[k] = r;
+  });
+  const bestA = Math.max.apply(null, rows.map(r => +r.american_odds_a));
+  const bestB = Math.max.apply(null, rows.map(r => +r.american_odds_b));
+  const nA = lastName(a.name), nB = lastName(b.name);
+  const day = ts => { const d = new Date(ts); return isNaN(d) ? '' : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getUTCMonth()] + ' ' + d.getUTCDate(); };
+  const body = rows.map(r => {
+    const aBest = +r.american_odds_a === bestA, bBest = +r.american_odds_b === bestB;
+    const fs = firstBy[String(r.book_name || '')];
+    const ts = M.freshness(r.captured_at, _fightDay);
+    return '<tr>' +
+      '<td class="bk">' + esc(r.book_name || 'Book') + '</td>' +
+      '<td class="px' + (aBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + (aBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
+      '<td class="px' + (bBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + (bBest ? '<span class="bestflag">best</span>' : '') + '</td>' +
+      '<td>' + (r.fair_prob_a != null ? (r.fair_prob_a * 100).toFixed(1) + '%' : '—') + '</td>' +
+      '<td>' + (fs && fs.fair_a != null ? (fs.fair_a * 100).toFixed(1) + '% <span class="dim">' + esc(day(fs.at)) + '</span>' : '<span class="dim">—</span>') + '</td>' +
+      '<td class="dim">' + esc(ts ? ts.when : '—') + '</td>' +
+      '</tr>';
+  }).join('');
+  return '<div class="fx-tw"><table class="fx-bt"><thead><tr><th>Sportsbook</th><th>' + esc(nA) + '</th><th>' + esc(nB) + '</th>' +
+    '<th>' + esc(nA) + ' chance now</th><th>' + esc(nA) + ' at first capture</th><th>Captured</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
+    '<p class="fx-note">“Best” is the highest American number in the data, and nothing else decides it. Chance columns have each book’s own ' +
+    'cut removed so books compare on the same basis. “At first capture” is the earliest price CFL holds from that book on this fight, ' +
+    'with its date — the earliest we saw, which is not necessarily the first number the book posted. A book missing here has not been captured ' +
+    'on this fight, which is not the same as having no line.</p>';
 }
 
 // Surname for tight copy. Shared with fight-insights.js; a suffix ("Jr.",
