@@ -385,63 +385,85 @@
    open at once; nothing navigates away. Single column so card order reads top
    to bottom and an open fight never leaves a hole in a grid. */
 @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
-#home .card-top { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; }
+#home .card-top { margin-bottom: 14px; }
 #home .card-top .card-head { margin-bottom: 0; min-width: 0; }
-#home .card-head .ch-line { display: flex; align-items: baseline; gap: 6px 18px; flex-wrap: wrap; margin-top: 6px; }
-#home .card-head h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 2.4vw, 36px); line-height: 1.1; color: #fff; margin: 0; letter-spacing: -.2px; }
-#home .card-head .ch-line .meta { margin: 0; text-transform: uppercase; letter-spacing: .04em; font-size: 12.5px; font-weight: 600; }
-#home .card-head .meta .sep { color: var(--text-3); margin: 0 8px; }
+#home .card-head h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(26px, 2.4vw, 36px); line-height: 1.1; color: #fff; margin: 4px 0 0; letter-spacing: -.2px; }
+#home .card-head .ch-when { margin-top: 5px; text-transform: uppercase; letter-spacing: .05em; font-size: 12.5px; font-weight: 600; color: var(--text-2); }
+#home .card-head .meta .sep { color: var(--text-3); margin: 0 9px; }
 #home .seg-dir button { display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; }
 #home .seg-dir svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 #home .seg-dir.off button.active { background: transparent; color: var(--text-2); box-shadow: inset 0 0 0 1px var(--line-2); }
 #home .seg button:disabled { color: var(--text-3); opacity: .55; cursor: not-allowed; }
 #home .seg button:disabled:hover { color: var(--text-3); }
-#home .filters { display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap; margin-bottom: 8px; }
+#home .filters { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 #home .seg-sec button { padding: 8px 18px; }
-#home .sort-sel { display: inline-flex; align-items: center; gap: 8px; font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: .09em; font-weight: 600; }
-#home .sort-sel select { background: var(--bg-2); color: var(--text); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font: 600 12.5px var(--font-display); cursor: pointer; text-transform: none; letter-spacing: 0; }
-#home .filters .card-search { flex: 1 1 260px; margin: 0; max-width: 460px; }
+#home .sort-sel select { background: var(--bg-2); color: var(--text-2); border: 1px solid var(--line); border-radius: 10px; padding: 9px 10px; font: 600 12.5px var(--font-display); cursor: pointer; }
+#home .filters .card-search { flex: 1 1 240px; margin: 0; }
 #home .cs-wrap { position: relative; display: block; flex: 1; }
 #home .cs-ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; fill: none; stroke: var(--text-3); stroke-width: 2; stroke-linecap: round; pointer-events: none; }
 #home .filters .card-search input { padding-left: 34px; }
 #home p.fl-hint { margin: 0 0 6px; }
 #home p.fl-hint:empty { display: none; }
+#home .order-note { font-size: 11.5px; margin: 0 0 10px; }
 
+/* Rows. One line per fight: # · division · flag name record · vs · flag name
+   record · both best prices · chevron. The main event is a featured row. */
 #home .fights.fx-list { display: block; max-width: none; }
-#home .cl { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--bg-1); }
-#home .cl-head, #home .cl-toggle { display: grid; grid-template-columns: 44px minmax(0, 1fr) 176px 168px 34px; gap: 12px; align-items: center; }
-#home .cl-head { white-space: nowrap; padding: 9px 50px 9px 12px; background: var(--bg-2); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--text-3); font-weight: 700; }
-#home .cl-head .cl-odds, #home .cl-head .cl-rec { text-align: center; }
-#home .cl-item { border-top: 1px solid var(--line); scroll-margin-top: 76px; }
-#home .cl-head + .cl-item { border-top: 1px solid var(--line); }
-#home .cl-item.open { box-shadow: inset 0 0 0 1px rgba(255,59,71,.55); background: rgba(255,59,71,.025); }
-#home .cl-item.is-main .cl-no { color: var(--red); }
-#home .cl-row { display: flex; align-items: center; }
-#home .cl-row .cfl-star { flex-shrink: 0; margin-right: 12px; }
-#home .cl-toggle { flex: 1; min-width: 0; padding: 11px 0 11px 12px; background: none; border: 0; margin: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+#home .cl { display: flex; flex-direction: column; gap: 6px; }
+#home .cl-item { border: 1px solid var(--line); border-radius: 10px; background: var(--bg-1); overflow: hidden; scroll-margin-top: 76px; }
+#home .cl-item.open { border-color: rgba(255,59,71,.75); box-shadow: 0 0 0 1px rgba(255,59,71,.35); }
+#home .cl-row { display: flex; align-items: stretch; }
+#home .cl-row .cfl-star { flex-shrink: 0; align-self: center; margin-right: 10px; }
+#home .cl-toggle { position: relative; isolation: isolate; overflow: hidden; flex: 1; min-width: 0; padding: 9px 4px 9px 0; background: none; border: 0; margin: 0; color: inherit; font: inherit; text-align: left; cursor: pointer;
+  display: grid; align-items: center; column-gap: 12px;
+  grid-template-columns: 44px 128px minmax(0, 1fr) 24px minmax(0, 1fr) 92px 92px 30px;
+  grid-template-areas: "no lbl a vs b oa ob chev"; }
 #home .cl-toggle:hover { background: rgba(255,255,255,.025); }
 #home .cl-toggle:focus-visible, #home .fx-close:focus-visible, #home .fx-more > summary:focus-visible { outline: 2px solid var(--probe); outline-offset: -2px; border-radius: 10px; }
-#home .cl-no { font: 700 15px var(--font-display); color: var(--text-2); text-align: center; font-variant-numeric: tabular-nums; }
-#home .cl-fight { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-#home .cl-names { display: flex; align-items: center; gap: 10px; min-width: 0; }
-#home .cl-f { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
-#home .cl-f .nm { font: 700 16px var(--font-display); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: .1px; }
-#home .cl-names .vs { font-size: 12px; color: var(--text-3); font-weight: 600; flex-shrink: 0; }
-#home .cl-flag { width: 30px; height: 20px; object-fit: cover; border-radius: 3px; border: 1px solid rgba(255,255,255,.16); flex-shrink: 0; display: inline-block; }
+#home .cl-no { grid-area: no; align-self: stretch; display: flex; align-items: center; justify-content: center; font: 700 17px var(--font-display); color: var(--text-2); border-right: 1px solid var(--line); margin: -9px 0; font-variant-numeric: tabular-nums; }
+#home .cl-lbl { grid-area: lbl; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--text-3); font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#home .cl-c { display: flex; align-items: center; gap: 12px; min-width: 0; }
+#home .cl-c.a { grid-area: a; } #home .cl-c.b { grid-area: b; }
+#home .cl-nm { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+#home .cl-nm .nm { font: 700 16px var(--font-display); color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#home .cl-nm .rc { font: 600 12.5px var(--font-display); color: var(--text-3); white-space: nowrap; font-variant-numeric: tabular-nums; }
+#home .cl-toggle .vs { grid-area: vs; text-align: center; font-size: 12px; color: var(--text-3); font-weight: 600; }
+#home .cl-flag { width: 32px; height: 21px; object-fit: cover; border-radius: 2px; border: 1px solid rgba(255,255,255,.14); flex-shrink: 0; display: inline-block; }
 #home .cl-flag.none { background: var(--bg-3); }
-#home .cl-sub { display: flex; align-items: center; gap: 6px 8px; flex-wrap: wrap; font-size: 11.5px; color: var(--text-3); line-height: 1.3; }
-#home .cl-sub .cbadge { font-size: 10px; padding: 2px 7px; }
-#home .cl-tag { font: 700 10px var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--text-2); border: 1px solid var(--line-2); border-radius: 5px; padding: 2px 6px; }
-#home .cl-tag.main { color: #fff; background: var(--red); border-color: var(--red); }
-#home .cl-odds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-#home .cl-ob { display: flex; align-items: center; justify-content: center; height: 40px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-2);
-  font: 700 17px var(--font-display); color: #fff; font-variant-numeric: tabular-nums; }
-#home .cl-ob.none { color: var(--text-3); font-weight: 600; }
-#home .cl-rec { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: center; font: 600 14px var(--font-display); color: var(--text-2); font-variant-numeric: tabular-nums; }
-#home .cl-chev { display: flex; justify-content: center; color: var(--text-2); }
+#home .cl-ob { display: flex; align-items: center; justify-content: center; height: 34px; border: 1px solid var(--line-2); border-radius: 7px; background: rgba(0,0,0,.35); position: relative; }
+#home .cl-ob.oa { grid-area: oa; } #home .cl-ob.ob { grid-area: ob; }
+#home .cl-ob b { font: 700 17px var(--font-display); color: #fff; font-variant-numeric: tabular-nums; }
+#home .cl-ob.none b { color: var(--text-3); font-weight: 600; }
+#home .cl-crown { display: none; }
+#home .cl-chev { grid-area: chev; display: flex; justify-content: center; color: var(--text-2); }
 #home .cl-chev svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; transition: transform .18s; }
-#home .cl-item.open .cl-chev svg { transform: rotate(180deg); }
+#home .cl-item.open .cl-chev svg { transform: rotate(-90deg); }
 #home .cl-item.open .cl-chev { color: #fff; }
+#home .cl-wash { display: none; }
+
+/* The main event: a featured row, poster-style, with both flags washed in. */
+#home .cl-item.is-main .cl-toggle { padding: 12px 6px 12px 0; column-gap: 16px; background: linear-gradient(90deg, rgba(255,59,71,.16), rgba(255,59,71,.04) 45%, rgba(255,59,71,.16));
+  grid-template-columns: 44px minmax(0, 1fr) 84px 30px 84px minmax(0, 1fr) 46px;
+  grid-template-areas: "no lbl . . . . chev" "no a oa vs ob b chev"; row-gap: 2px; }
+#home .cl-item.is-main .cl-no { margin: -12px 0; color: #fff; font-size: 20px; }
+#home .cl-item.is-main .cl-lbl { color: var(--text-2); font-size: 10.5px; }
+#home .cl-item.is-main .cl-c.b { flex-direction: row-reverse; text-align: right; }
+#home .cl-item.is-main .cl-c .cl-flag { width: 62px; height: 41px; }
+#home .cl-item.is-main .cl-nm { flex-direction: column; align-items: flex-start; gap: 0; line-height: 1.05; }
+#home .cl-item.is-main .cl-c.b .cl-nm { align-items: flex-end; }
+#home .cl-item.is-main .cl-nm .nm { display: flex; flex-direction: column; white-space: normal; }
+#home .cl-item.is-main .cl-c.b .cl-nm .nm { align-items: flex-end; }
+#home .cl-item.is-main .cl-nm .fn { font: 600 14px var(--font-display); color: var(--text); }
+#home .cl-item.is-main .cl-nm .ln { font: 800 26px var(--font-display); text-transform: uppercase; letter-spacing: .3px; }
+#home .cl-item.is-main .cl-nm .rc { font-size: 15px; color: var(--text); margin-top: 2px; }
+#home .cl-item.is-main .cl-ob { height: 52px; border-color: rgba(255,255,255,.22); flex-direction: column; gap: 0; }
+#home .cl-item.is-main .cl-ob b { font-size: 22px; }
+#home .cl-item.is-main .cl-crown { display: block; width: 13px; height: 13px; fill: var(--amber); margin-bottom: 1px; }
+#home .cl-item.is-main .cl-toggle .vs { font: 800 20px var(--font-display); color: var(--text-2); }
+#home .cl-item.is-main .cl-chev { align-self: center; width: 38px; height: 38px; border: 1px solid var(--line-2); border-radius: 8px; align-items: center; }
+#home .cl-item.is-main .cl-wash { display: block; position: absolute; top: 0; bottom: 0; width: 42%; z-index: -1; background: var(--flag); background-size: cover; background-position: center; opacity: .14; pointer-events: none; }
+#home .cl-wash.a { left: 0; -webkit-mask-image: linear-gradient(90deg, #000 20%, transparent); mask-image: linear-gradient(90deg, #000 20%, transparent); }
+#home .cl-wash.b { right: 0; -webkit-mask-image: linear-gradient(270deg, #000 20%, transparent); mask-image: linear-gradient(270deg, #000 20%, transparent); }
 
 /* The expanded fight: three panels, then Additional Analytics. */
 #home .fx-body { border-top: 1px solid var(--line); padding: 14px; display: flex; flex-direction: column; gap: 14px; background: rgba(0,0,0,.16); }
@@ -478,7 +500,6 @@
 #home .fx-bt-c td.px.best { color: #fff; background: rgba(47,220,203,.1); box-shadow: inset 0 0 0 1px rgba(47,220,203,.35); }
 #home .fx-bt-c td.ag { color: var(--text-3); font-size: 11.5px; }
 #home .fx-bt-c td.ag.warn { color: var(--amber); }
-#home .fx-sum .fx-row { grid-template-columns: minmax(0, 1fr) 110px minmax(0, 1fr); }
 #home .fx-p-move .fx-plot { min-height: 60px; }
 #home .fx-p-move .mc-svg { height: 190px; }
 #home .fx-mvt { width: 100%; border-collapse: collapse; font-size: 12.5px; margin-bottom: 8px; }
@@ -549,49 +570,79 @@
 #home .fx-close:hover { color: #fff; }
 #home .fx-link { font-size: 12.5px; color: var(--text-2); font-weight: 600; text-decoration: none; }
 #home .fx-link:hover { color: #fff; }
+/* Panel headings, the flags line, and the movement chart. */
+#home .fx-ic { width: 20px; height: 20px; fill: none; stroke: var(--red); stroke-width: 2.4; stroke-linecap: round; flex-shrink: 0; }
+#home .fx-ph:has(.fx-ic)::before { display: none; }
+#home .fx-tabh::before { display: none; }
+#home .fx-tabh span { padding: 0 14px 8px; border-bottom: 3px solid var(--red); }
+#home .fx-tabh { border-bottom: 1px solid var(--line); margin: -2px -14px 0; padding: 0 14px; }
+#home .fx-flags { display: flex; flex-wrap: wrap; gap: 6px; }
+#home .fx-leg { display: flex; gap: 18px; font: 600 13px var(--font-display); color: var(--text); }
+#home .fx-leg span, #home .fx-mvt td.who { display: inline-flex; align-items: center; gap: 7px; }
+#home .fx-leg span::before, #home .fx-mvt td.who i { content: ''; width: 10px; height: 10px; border-radius: 50%; border: 2.5px solid var(--ca); box-sizing: border-box; display: inline-block; }
+#home .fx-leg .ka, #home .fx-mvt .ka { --ca: #ff4d57; } #home .fx-leg .kb, #home .fx-mvt .kb { --ca: #4f8dff; }
+#home .fx-mc { width: 100%; height: auto; display: block; }
+#home .fx-mc .g { stroke: var(--line); stroke-width: .6; }
+#home .fx-mc .yl { fill: var(--text-3); font: 600 8.5px var(--font-body); text-anchor: end; dominant-baseline: middle; }
+#home .fx-mc .xl { fill: var(--text-3); font: 600 8.5px var(--font-body); text-anchor: middle; }
+#home .fx-mc .la, #home .fx-mc .lb { fill: none; stroke-width: 1.8; stroke-linejoin: round; }
+#home .fx-mc .la { stroke: #ff4d57; } #home .fx-mc .lb { stroke: #4f8dff; }
+#home .fx-mc .da { fill: #ff4d57; stroke: #fff; stroke-width: 1; } #home .fx-mc .db { fill: #4f8dff; stroke: #fff; stroke-width: 1; }
+#home .fx-mvt td small { display: block; font: 500 10.5px var(--font-body); color: var(--text-3); }
+#home .fx-mvline { margin: 0; font-size: 12px; color: var(--text-2); }
+#home .fx-mvline b { color: var(--probe); font-weight: 600; }
+#home .fx-why > summary { cursor: pointer; font-size: 11.5px; color: var(--text-3); font-weight: 600; }
+#home .fx-why > summary:hover { color: var(--text); }
+#home .fx-why .fx-note { margin-top: 6px; }
+
 @media (max-width: 1180px) {
   #home .fx-3 { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   #home .fx-p-move { grid-column: 1 / -1; }
+  #home .cl-toggle { grid-template-columns: 40px 96px minmax(0, 1fr) 22px minmax(0, 1fr) 76px 76px 26px; column-gap: 10px; }
+  #home .cl-nm .rc { display: none; }
+  #home .cl-item.is-main .cl-nm .rc { display: block; }
 }
 @media (max-width: 900px) {
-  #home .card-top { align-items: stretch; }
-  #home .seg-dir { width: 100%; }
+  #home .seg-dir { width: 100%; order: 5; }
   #home .seg-dir button { flex: 1; justify-content: center; }
   #home .seg-sec { width: 100%; }
   #home .seg-sec button { flex: 1; padding: 8px 6px; }
-  #home .filters .card-search { max-width: none; }
-  #home .cl-head { display: none; }
-  /* Phone row: names on top, both prices and records underneath. */
-  #home .cl-toggle { grid-template-columns: 22px minmax(0, 1fr) 24px; grid-template-areas: "no fight chev" "no odds odds" "no rec rec"; gap: 8px 10px; padding: 12px 0 12px 10px; }
-  #home .cl-no { grid-area: no; align-self: start; padding-top: 2px; font-size: 14px; }
-  #home .cl-fight { grid-area: fight; }
-  #home .cl-chev { grid-area: chev; align-self: start; }
-  #home .cl-odds { grid-area: odds; }
-  #home .cl-rec { grid-area: rec; font-size: 12.5px; color: var(--text-3); margin-top: -4px; }
-  #home .cl-names { gap: 7px; }
-  #home .cl-f { gap: 7px; }
-  #home .cl-f .nm { font-size: 15px; }
-  #home .cl-f .nm .fn { display: none; }
   #home .filters { gap: 8px; }
-  #home .sort-sel > span { display: none; }
   #home .filters .card-search { flex: 1 1 0; min-width: 0; }
-  #home .order-note { font-size: 11.5px; }
-  #home .cl-flag { width: 24px; height: 16px; }
-  #home .cl-ob { height: 36px; font-size: 16px; }
-  #home .cl-row .cfl-star { align-self: flex-start; margin: 10px 8px 0 4px; }
+  /* Phone row: division on top, then each fighter on their own line with
+     their price beside them. */
+  #home .cl-toggle, #home .cl-item.is-main .cl-toggle { grid-template-columns: 28px minmax(0, 1fr) 62px 18px; column-gap: 8px; row-gap: 4px;
+    grid-template-areas: "no lbl lbl chev" "no a oa chev" "no b ob chev"; padding: 8px 2px 8px 0; }
+  #home .cl-no, #home .cl-item.is-main .cl-no { margin: -8px 0; font-size: 14px; }
+  #home .cl-toggle .vs { display: none; }
+  #home .cl-lbl { font-size: 10px; }
+  #home .cl-c { gap: 9px; }
+  #home .cl-item.is-main .cl-c.b { flex-direction: row; text-align: left; }
+  #home .cl-item.is-main .cl-c .cl-flag, #home .cl-flag { width: 24px; height: 16px; }
+  #home .cl-c { gap: 7px; }
+  #home .cl-nm { gap: 6px; }
+  #home .cl-nm .nm { font-size: 14.5px; }
+  #home .cl-nm .fn { display: none; }
+  #home .cl-nm .rc { display: inline; font-size: 11.5px; }
+  #home .cl-item.is-main .cl-nm, #home .cl-item.is-main .cl-c.b .cl-nm { flex-direction: row; align-items: baseline; gap: 8px; }
+  #home .cl-item.is-main .cl-nm .rc { display: inline; font-size: 11.5px; color: var(--text-3); margin: 0; }
+  #home .cl-item.is-main .cl-nm .ln { font-size: 16px; }
+  #home .cl-ob, #home .cl-item.is-main .cl-ob { height: 28px; flex-direction: row; gap: 3px; }
+  #home .cl-ob b, #home .cl-item.is-main .cl-ob b { font-size: 14.5px; }
+  #home .cl-item.is-main .cl-crown { width: 11px; height: 11px; margin: 0; }
+  #home .cl-item.is-main .cl-chev { width: 22px; height: 26px; border: 0; }
+  #home .cl-chev svg { width: 18px; height: 18px; }
+  #home .cl-row .cfl-star { align-self: flex-start; margin: 4px 6px 0 0; }
   #home .fx-3 { grid-template-columns: 1fr; }
   #home .fx-p-move { grid-column: auto; }
   #home .fx-grid { grid-template-columns: 1fr; }
   #home .fx-body { padding: 10px; }
   #home .fx-panel { padding: 12px; }
+  #home .fx-tabh { margin: -2px -12px 0; padding: 0 12px; }
   #home .fx-row { grid-template-columns: minmax(0, 1fr) 96px minmax(0, 1fr); padding: 7px 8px; }
   #home .fx-tn .ln { font-size: 17px; }
   #home .fx-tn .cl-flag { width: 34px; height: 23px; }
   #home .fx-more-s { display: none; }
-}
-@media (max-width: 420px) {
-  #home .fx-mv-g { grid-template-columns: 1fr; }
-  #home .cl-names { flex-wrap: wrap; row-gap: 3px; }
 }
 
 /* Provenance line under the market cells. */
@@ -662,34 +713,34 @@
         <div class="eyebrow-live"><span class="dot"></span> Loading…</div>
         <h1>Card Lab</h1>
       </div>
-      <div class="seg seg-dir" id="dirSeg" role="group" aria-label="Card direction">
-        <button data-dir="down" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Card order</button>
-        <button data-dir="up" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h9M4 17h6M18 9v11M15 17l3 3 3-3"/></svg>Reverse order</button>
-      </div>
     </div>
     <div class="filters">
       <!-- Card sections: only "Full card" until a source tells us which bouts
            are prelims (card-research.js — the split is not in our data). -->
       <div class="seg seg-sec" id="sectionSeg" role="group" aria-label="Card section">
-        <button type="button" class="active" aria-pressed="true">Full card</button>
+        <button type="button" class="active" aria-pressed="true">Full Card</button>
         <button type="button" disabled aria-disabled="true" title="The main card / prelims split is not in our data yet">Prelims</button>
-        <button type="button" disabled aria-disabled="true" title="The main card / prelims split is not in our data yet">Early prelims</button>
+        <button type="button" disabled aria-disabled="true" title="The main card / prelims split is not in our data yet">Early Prelims</button>
       </div>
-      <label class="sort-sel"><span>Sort</span>
-        <select id="sortSel">
-          <option value="order" selected>Card position</option>
-          <option value="move">Biggest move</option>
-          <option value="spread">Books disagree</option>
-        </select>
-      </label>
       <div class="card-search" role="search">
         <label class="sr-only" for="cardSearch">Search this card</label>
         <span class="cs-wrap">
           <svg class="cs-ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input id="cardSearch" type="text" enterkeyhint="search" placeholder="Search fighters or division" autocomplete="off" spellcheck="false">
+          <input id="cardSearch" type="text" enterkeyhint="search" placeholder="Search fighters…" autocomplete="off" spellcheck="false">
           <button type="button" id="cardSearchClear" class="card-search-clear" aria-label="Clear search" hidden>×</button>
         </span>
         <span class="card-search-status" id="cardSearchStatus" aria-live="polite"></span>
+      </div>
+      <label class="sort-sel"><span class="sr-only">Sort</span>
+        <select id="sortSel" aria-label="Sort the card">
+          <option value="order" selected>Sort: card position</option>
+          <option value="move">Sort: biggest move</option>
+          <option value="spread">Sort: books disagree</option>
+        </select>
+      </label>
+      <div class="seg seg-dir" id="dirSeg" role="group" aria-label="Card direction">
+        <button data-dir="down" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Card order</button>
+        <button data-dir="up" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h9M4 17h6M18 9v11M15 17l3 3 3-3"/></svg>Reverse order</button>
       </div>
     </div>
     <p class="fl-hint" id="sortHint"></p>
@@ -1042,8 +1093,8 @@ function renderCardHead(event, phase) {
   _fightDay = phase === 'happening' || days <= 1;
   el.innerHTML = `
     <div class="eyebrow-live"><span class="dot"></span> ${cfl.escapeHtml(live)}</div>
-    <div class="ch-line"><h1>${cfl.escapeHtml(event.name)}</h1>
-    <div class="meta">${cfl.escapeHtml(cfl.formatDate(event.event_date))}<span class="sep">|</span>${cfl.escapeHtml(event.location || 'Location TBD')}</div></div>
+    <h1>${cfl.escapeHtml(event.name)}</h1>
+    <div class="meta ch-when">${cfl.escapeHtml(cfl.formatDate(event.event_date))}<span class="sep">|</span>${cfl.escapeHtml(event.location || 'Location TBD')}</div>
     <div class="meta odds-status" id="oddsStatus"></div>
   `;
 }
@@ -1108,6 +1159,15 @@ async function loadFights(event) {
   // account wall is explained on tap rather than by hiding the button.
   if (window.cflWatchlist) { try { await cflWatchlist.loadStarred(); } catch (e) {} }
 
+  // The main event opens on arrival (owner, 2026-10-16), unless a shared
+  // #fight-N link names another fight. Once only: a reader who closes it
+  // keeps it closed.
+  if (!_autoOpened) {
+    _autoOpened = true;
+    const main = fights.find(f => f.is_main_event);
+    if (main && !/^#fight-\d+$/.test(location.hash || '')) _open.add(main.id);
+  }
+
   renderCards();
   renderOddsStatus();
   renderHeroGlance(event);
@@ -1164,12 +1224,10 @@ function renderCards() {
   renderSearchStatus(cards.length, ordered.length);
 
   // One layout: the compact list. Each row is the whole matchup at a glance
-  // and opens in place; the column heads only show where there is room.
-  const listHead = '<div class="cl-head" aria-hidden="true"><span class="cl-no">#</span><span>Fight</span>' +
-    '<span class="cl-odds">Best odds</span><span class="cl-rec">Pro record</span><span></span></div>';
+  // and opens in place.
   list.classList.add('fx-list');
   list.innerHTML = cards.length
-    ? '<div class="cl">' + listHead + cards.map(c => c.html).join('') + '</div>'
+    ? '<div class="cl">' + cards.map(c => c.html).join('') + '</div>'
     : '<div class="search-empty">No fight on this card matches “' + cfl.escapeHtml(_hpQuery) + '”. ' +
       '<button type="button" class="linkish" id="cardSearchClear2">Clear the search</button></div>';
   // Re-rendering rebuilds the markup; every fight the reader had open comes
@@ -1214,13 +1272,14 @@ function miniFlag(f) {
     (f.country ? ' title="' + cfl.escapeHtml(f.country) + '"' : '') + '>';
 }
 
-// Full name on a wide screen, surname on a phone (the first name hides in CSS).
+// First name and surname in separate spans: a normal row prints them on one
+// line, the main event stacks them poster-style, a phone shows the surname.
 function rowName(f) {
   const full = String(f.name || '').trim();
   const cut = full.lastIndexOf(lastName(full));
   return cut > 0
-    ? '<span class="nm"><span class="fn">' + cfl.escapeHtml(full.slice(0, cut)) + '</span>' + cfl.escapeHtml(full.slice(cut)) + '</span>'
-    : '<span class="nm">' + cfl.escapeHtml(full) + '</span>';
+    ? '<span class="nm"><span class="fn">' + cfl.escapeHtml(full.slice(0, cut).trim()) + '</span> <span class="ln">' + cfl.escapeHtml(full.slice(cut)) + '</span></span>'
+    : '<span class="nm"><span class="ln">' + cfl.escapeHtml(full) + '</span></span>';
 }
 
 // The pro record as stored on the fighter: W-L-D.
@@ -1278,41 +1337,40 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
   // Everything below the row, built once per render.
   const isOpen = _open.has(fight.id);
   const body = '<div class="fx-body" id="fxb-' + fight.id + '"' + (isOpen ? '' : ' hidden') + '>' +
-    matchupBodyHtml(fight, a, b, readA, readB, row) + '</div>';
+    matchupBodyHtml(fight, a, b, readA, readB, row, badges) + '</div>';
   const toggleAttrs = ' data-fx="' + fight.id + '" aria-expanded="' + isOpen + '" aria-controls="fxb-' + fight.id + '"';
 
-  // ---- the compact row: position, both flags and names, both best prices,
-  // both pro records. The main event is named; a co-main is not, because no
-  // source we hold says which bout it is.
-  const tag = fight.is_main_event ? '<b class="cl-tag main">Main event</b>'
-    : (fight.is_title_fight ? '<b class="cl-tag">Title fight</b>' : '');
-  const odds = (r, f) => {
+  // ---- the row: position, division, both flags, names and pro records, both
+  // best prices. The main event is drawn larger and named; a co-main is not,
+  // because no source we hold says which bout it is. Book count and capture
+  // age for these prices are in the card header (renderOddsStatus) and in
+  // the fight's Betting Odds panel.
+  const crown = '<svg class="cl-crown" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>';
+  const odds = (r, f, side) => {
     if (r && r.bestAmerican != null) {
-      return '<span class="cl-ob" title="' + esc('Best price for ' + f.name + ': ' + M.fmtAmerican(r.bestAmerican) + ' at ' + (r.bestBook || 'a tracked book') +
-        ' · ' + Math.round(r.prob * 100) + '% market chance') + '">' + esc(M.fmtAmerican(r.bestAmerican)) + '</span>';
+      return '<span class="cl-ob o' + side + '" title="' + esc('Best price for ' + f.name + ': ' + M.fmtAmerican(r.bestAmerican) + ' at ' + (r.bestBook || 'a tracked book') +
+        (r.bookCount ? ', best of ' + r.bookCount + ' sportsbooks' : '') + (r.fresh ? ', captured ' + r.fresh.when : '')) + '">' + crown +
+        '<b>' + esc(M.fmtAmerican(r.bestAmerican)) + '</b></span>';
     }
-    return '<span class="cl-ob none" title="' + esc(r ? 'No per-book quote for ' + f.name : 'No sportsbook line for this fight yet') + '">—</span>';
+    return '<span class="cl-ob none o' + side + '" title="' + esc(r ? 'No per-book quote for ' + f.name : 'No sportsbook line for this fight yet') + '"><b>—</b></span>';
   };
-  const sub = [esc(fight.weight_class || 'Bout')];
-  if (bout) sub.push(esc(bout));
-  if (priced && readA.bookCount) sub.push(readA.bookCount + ' book' + (readA.bookCount === 1 ? '' : 's') +
-    (readA.fresh ? ' · captured ' + esc(readA.fresh.when) : ''));
+  const corner = (f, side) => '<span class="cl-c ' + side + '">' + miniFlag(f) +
+    '<span class="cl-nm">' + rowName(f) + '<span class="rc">' + esc(rowRecord(f)) + '</span></span></span>';
+  const wc = fight.weight_class || 'Bout';
+  const label = (fight.is_main_event ? 'Main event · ' : (fight.is_title_fight ? 'Title fight · ' : '')) + wc + (bout ? ' · ' + bout : '');
+  // The main event's row carries both flags as a faded wash, like the tape.
+  const wash = (f, side) => fight.is_main_event && cfl.hasFlag && cfl.hasFlag(f.country_code)
+    ? '<span class="cl-wash ' + side + '"' + cfl.flagStyle(f) + ' aria-hidden="true"></span>' : '';
   const html =
     '<div class="cl-item' + (fight.is_main_event ? ' is-main' : '') + (isOpen ? ' open' : '') + '" id="fight-' + fight.id + '" data-fid="' + fight.id + '">' +
       '<div class="cl-row">' +
-        '<button type="button" class="cl-toggle"' + toggleAttrs + '>' +
+        '<button type="button" class="cl-toggle"' + toggleAttrs + '>' + wash(a, 'a') + wash(b, 'b') +
           '<span class="cl-no">' + (idx + 1) + '</span>' +
-          '<span class="cl-fight">' +
-            '<span class="cl-names">' +
-              '<span class="cl-f a">' + miniFlag(a) + rowName(a) + '</span>' +
-              '<span class="vs">vs</span>' +
-              '<span class="cl-f b">' + rowName(b) + miniFlag(b) + '</span>' +
-            '</span>' +
-            '<span class="cl-sub">' + tag + '<span>' + sub.join(' · ') + '</span>' + badges.join('') + '</span>' +
-          '</span>' +
-          '<span class="cl-odds">' + odds(readA, a) + odds(readB, b) + '</span>' +
-          '<span class="cl-rec"><span>' + esc(rowRecord(a)) + '</span><span>' + esc(rowRecord(b)) + '</span></span>' +
-          '<span class="cl-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg></span>' +
+          '<span class="cl-lbl">' + esc(label) + '</span>' +
+          corner(a, 'a') + odds(readA, a, 'a') +
+          '<span class="vs">vs</span>' +
+          odds(readB, b, 'b') + corner(b, 'b') +
+          '<span class="cl-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>' +
         '</button>' + starHtml +
       '</div>' + body +
     '</div>';
@@ -1329,6 +1387,7 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
 const _open     = new Set();   // fight ids expanded; survives sort, search and reverse
 const _moreOpen = new Set();   // fight ids with Additional Analytics opened by the reader
 const _lazy     = {};          // fight id -> { books, first, chart } once loaded
+let _autoOpened = false;       // the main event opens once, on arrival
 let _cardBooks  = null;        // one per-book read for the whole card, shared by every fight
 
 // UFC division limits. A bout's weight on our data is its division; weigh-in
@@ -1365,13 +1424,16 @@ function proRecText(f) {
   return (f.wins ?? 0) + '-' + (f.losses ?? 0) + '-' + (f.draws ?? 0);
 }
 
-function matchupBodyHtml(fight, a, b, readA, readB, row) {
+const PANEL_IC = '<svg class="fx-ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V13M9 20V9M14 20v-6M19 20V5M3 20h18"/></svg>';
+function matchupBodyHtml(fight, a, b, readA, readB, row, badges) {
   const fid = fight.id;
-  const priced = !!(readA && readB);
-  return '<div class="fx-3">' +
-      '<section class="fx-panel fx-p-tape"><h3 class="fx-ph">Tale of the Tape</h3>' + tapeHtml(fight, a, b) + '</section>' +
-      '<section class="fx-panel fx-p-odds"><h3 class="fx-ph">Betting Odds</h3>' + oddsPanelHtml(fight, a, b, readA, readB) + '</section>' +
-      '<section class="fx-panel fx-p-move"><h3 class="fx-ph">Line Movement</h3>' + movePanelHtml(fight, a, b, readA, readB) + '</section>' +
+  // The row's market and card flags (moved, books split, debut, opponent
+  // change) open with the fight rather than crowding every row.
+  const flags = badges && badges.length ? '<div class="fx-flags">' + badges.join('') + '</div>' : '';
+  return flags + '<div class="fx-3">' +
+      '<section class="fx-panel fx-p-tape"><h3 class="fx-ph fx-tabh"><span>Tale of the Tape</span></h3>' + tapeHtml(fight, a, b) + '</section>' +
+      '<section class="fx-panel fx-p-odds"><h3 class="fx-ph">' + PANEL_IC + 'Betting Odds</h3>' + oddsPanelHtml(fight, a, b, readA, readB) + '</section>' +
+      '<section class="fx-panel fx-p-move"><h3 class="fx-ph">' + PANEL_IC + 'Line Movement</h3>' + movePanelHtml(fight, a, b, readA, readB) + '</section>' +
     '</div>' +
     moreHtml(fight, a, b, readA, readB) +
     '<div class="fx-end">' +
@@ -1435,29 +1497,20 @@ function tapeHtml(fight, a, b) {
     'The UFC record counts every completed UFC fight in our data.</p>';
 }
 
-// Centre panel: every sportsbook's latest price (filled in on open), then both
-// corners' best price and market chance underneath.
+// Centre panel: every sportsbook's latest price (filled in on open), with
+// when it was captured. Best price and market chance are in Additional
+// Analytics, under Market detail.
 function oddsPanelHtml(fight, a, b, readA, readB) {
   const M = MKT();
   const esc = cfl.escapeHtml;
   if (!readA || !readB) return noLineHtml();
-  const best = r => r.bestAmerican == null ? null
-    : esc(M.fmtAmerican(r.bestAmerican)) + '<small>' + esc(r.bestBook || 'a tracked book') + '</small>';
-  const dash = '<span class="v na">—</span>';
-  const v = (html, cls) => html == null ? dash : '<span class="v' + (cls ? ' ' + cls : '') + '">' + html + '</span>';
-  const line = (label, ha, hb, sub) => '<div class="fx-row"><div class="l">' + ha + '</div><div class="lbl">' + esc(label) +
-    (sub ? '<span class="fx-diff">' + esc(sub) + '</span>' : '') + '</div><div class="r">' + hb + '</div></div>';
   const fresh = readA.fresh;
   const books = readA.bookCount;
+  const stamp = readA.lastUpdated ? M.fmtStampUtc(readA.lastUpdated) : '';
   return '<div class="fx-psub' + (fresh && fresh.stale ? ' warn' : '') + '">' +
-      esc((books == null ? 'Consensus' : books + ' sportsbook' + (books === 1 ? '' : 's')) +
-        (fresh ? ' · last captured ' + fresh.when + (fresh.stale ? ' (stale)' : '') : '')) + '</div>' +
+      esc('Last updated: ' + (stamp || (fresh ? fresh.when : 'unknown')) + (fresh ? ' (' + fresh.when + (fresh.stale ? ', stale' : '') + ')' : '') +
+        (books == null ? '' : ' · ' + books + ' sportsbook' + (books === 1 ? '' : 's'))) + '</div>' +
     '<div id="fxbooks-' + fight.id + '" class="fx-lazy">Loading each sportsbook’s price…</div>' +
-    '<div class="fx-tab fx-sum">' +
-      '<div class="fx-row fx-names"><div class="l">' + esc(lastName(a.name)) + '</div><div class="lbl"></div><div class="r">' + esc(lastName(b.name)) + '</div></div>' +
-      line('Best price', v(best(readA), 'mono'), v(best(readB), 'mono'), 'highest number in the data') +
-      line('Market chance', v(Math.round(readA.prob * 100) + '%'), v(Math.round(readB.prob * 100) + '%'), 'median, book’s cut removed') +
-    '</div>' +
     '<p class="fx-note">Prices are what the books were posting when we captured them, not live quotes — check the book before you act.</p>';
 }
 
@@ -1468,38 +1521,41 @@ function noLineHtml() {
       'and there is no line movement to show until they do.') + '</div>';
 }
 
-// Right panel: the movement chart (filled in on open), then where the same
-// sportsbooks stood at our first broad capture against where they stand now,
-// and the last 24 hours. Never "the open": CFL has not seen a book's opener.
+// Right panel: the movement chart for both fighters (filled in on open), then
+// where the same sportsbooks stood at our first broad capture against where
+// they stand now, as fair odds (the book's cut removed). Never "the open":
+// CFL has not seen a book's opener.
 function movePanelHtml(fight, a, b, readA, readB) {
   const M = MKT();
   const esc = cfl.escapeHtml;
   if (!readA || !readB) return noLineHtml();
   const nA = lastName(a.name), nB = lastName(b.name);
-  const chart = '<div id="fxchart-' + fight.id + '" class="fx-lazy">Loading the line…</div>';
+  const legend = '<div class="fx-leg"><span class="ka">' + esc(nA) + '</span><span class="kb">' + esc(nB) + '</span></div>';
+  const chart = legend + '<div id="fxchart-' + fight.id + '" class="fx-lazy">Loading the line…</div>';
   if (readA.moveSinceBaseline == null) {
-    return chart + '<div class="fx-mv"><p>' + esc(M.baselineCaveat(readA)) + '</p></div>';
+    return chart + '<p class="fx-note">' + esc(M.baselineCaveat(readA)) + '</p>';
   }
-  const towardWords = (pts) => pts == null ? 'not enough comparable books over this window'
+  const towardWords = (pts) => pts == null ? 'not enough comparable books'
     : (Math.abs(pts) < 0.5 ? 'held steady' : Math.abs(pts).toFixed(1) + ' pts toward ' + (pts > 0 ? nA : nB));
-  const pct = p => p == null ? '—' : Math.round(p * 100) + '%';
+  const fair = p => p == null || p <= 0 || p >= 1 ? '—' : esc(M.fmtAmerican(M.americanFromProb(p)));
+  const pct = p => p == null ? '' : '<small>' + Math.round(p * 100) + '%</small>';
   const nowA = readA.matchedNowProb;
   const baseA = readA.baselineProb;
+  const inv = p => p == null ? null : 1 - p;
   const fresh = readA.fresh;
+  const tr = (f, cls, p0, p1) => '<tr><td class="who ' + cls + '"><i aria-hidden="true"></i>' + esc(lastName(f.name)) + '</td>' +
+    '<td>' + fair(p0) + pct(p0) + '</td><td class="ar" aria-hidden="true">→</td><td>' + fair(p1) + pct(p1) + '</td></tr>';
   return chart +
-    '<div class="fx-mv">' +
-      '<table class="fx-mvt"><thead><tr><th></th>' +
-        '<th>First broad capture<span>' + esc(M.fmtStampUtc(readA.baselineAt)) + '</span></th><th aria-hidden="true"></th>' +
-        '<th>Now, same ' + readA.matchedBooks + ' books<span>' + esc(fresh ? fresh.when : '') + '</span></th></tr></thead><tbody>' +
-        '<tr><td class="who">' + miniFlag(a) + esc(nA) + '</td><td>' + pct(baseA) + '</td><td class="ar" aria-hidden="true">→</td><td>' + pct(nowA) + '</td></tr>' +
-        '<tr><td class="who">' + miniFlag(b) + esc(nB) + '</td><td>' + pct(baseA == null ? null : 1 - baseA) + '</td><td class="ar" aria-hidden="true">→</td><td>' + pct(nowA == null ? null : 1 - nowA) + '</td></tr>' +
-      '</tbody></table>' +
-      '<div class="fx-mv-g">' +
-        '<div><span class="k">Move since then</span><b class="mvb">' + esc(towardWords(readA.moveSinceBaseline)) + '</b></div>' +
-        '<div><span class="k">Last 24 hours</span><b class="mvb">' + esc(towardWords(readA.move24h)) + '</b></div>' +
-      '</div>' +
-      '<p>' + esc(M.baselineCaveat(readA)) + ' A line that moved is not a line that was wrong.</p>' +
-    '</div>';
+    '<table class="fx-mvt"><thead><tr><th></th>' +
+      '<th>First broad capture<span>' + esc(M.fmtStampUtc(readA.baselineAt)) + '</span></th><th aria-hidden="true"></th>' +
+      '<th>Current, same ' + readA.matchedBooks + ' books<span>' + esc(fresh ? fresh.when : '') + '</span></th></tr></thead><tbody>' +
+      tr(a, 'ka', baseA, nowA) + tr(b, 'kb', inv(baseA), inv(nowA)) +
+    '</tbody></table>' +
+    '<p class="fx-mvline">Since then <b>' + esc(towardWords(readA.moveSinceBaseline)) + '</b> · last 24 h <b>' + esc(towardWords(readA.move24h)) + '</b></p>' +
+    '<details class="fx-why"><summary>How this is measured</summary><p class="fx-note">Fair odds: the middle price of the same sportsbooks with their cut removed — not a price you can bet. ' +
+      'The chart steps rather than slopes because a price stands until the book posts another. CFL does not see sportsbook openers: ' +
+      'the line starts when we first had the fight from three or more books. ' +
+      esc(M.baselineCaveat(readA)) + ' A line that moved is not a line that was wrong.</p></details>';
 }
 
 // Additional Analytics: collapsed until the reader asks. Every item here is
@@ -1563,6 +1619,8 @@ function moreHtml(fight, a, b, readA, readB) {
   // corner, and each sportsbook's chance now against the earliest price we hold.
   let marketHtml = '';
   if (readA && readB && M) {
+    const best = r => r.bestAmerican == null ? null
+      : esc(M.fmtAmerican(r.bestAmerican)) + '<small>' + esc(r.bestBook || 'a tracked book') + '</small>';
     const range = r => r.bestAmerican == null || r.worstAmerican == null ? null
       : (r.worstAmerican === r.bestAmerican ? esc(M.fmtAmerican(r.bestAmerican)) + '<small>every book</small>'
         : esc(M.fmtAmerican(r.worstAmerican)) + ' to ' + esc(M.fmtAmerican(r.bestAmerican)));
@@ -1571,6 +1629,8 @@ function moreHtml(fight, a, b, readA, readB) {
       (sub ? '<span class="fx-diff">' + esc(sub) + '</span>' : '') + '</div><div class="r">' + hb + '</div></div>';
     marketHtml = '<section class="fx-sec"><h3 class="fx-h">Market detail</h3>' +
       '<div class="fx-tab">' + namesRow +
+        line('Best price', v(best(readA), 'mono'), v(best(readB), 'mono'), 'highest number in the data') +
+        line('Market chance', v(Math.round(readA.prob * 100) + '%'), v(Math.round(readB.prob * 100) + '%'), 'median, book’s cut removed') +
         line('Fair price', v(esc(M.fmtAmerican(readA.fairAmerican)), 'mono dim'), v(esc(M.fmtAmerican(readB.fairAmerican)), 'mono dim'), 'not a bettable number') +
         line('Across books', v(range(readA), 'mono dim'), v(range(readB), 'mono dim'), 'worst to best') +
       '</div>' +
@@ -1689,17 +1749,58 @@ function paintLazy(fid) {
   const cEl = document.getElementById('fxchart-' + fid);
   if (cEl && window.cflChart) {
     cEl.className = 'fx-done';
-    const ch = st.chart || {};
-    cEl.innerHTML = '<div class="fx-plot"></div>';
-    const res = cflChart.render(cEl.firstChild, { meta: ch.meta, series: ch.series || [], books: [], showBooks: false,
-      nameA: lastName(a.name), nameB: lastName(b.name) });
-    cEl.insertAdjacentHTML('beforeend', '<p class="fx-note">' + cfl.escapeHtml(res && res.ok
-      ? 'The middle price of the same ' + res.cohortBooks + ' sportsbooks at every point, book’s cut removed, as a chance for ' +
-        lastName(a.name) + '. It steps rather than slopes because a price stands until the book posts another. ' +
-        'CFL does not see sportsbook openers: the line starts when we first had the fight from three or more books.'
-      : 'CFL only draws a line when at least three of the same sportsbooks quoted at both ends. Until then there is nothing comparable to plot.') +
-      '</p>');
+    cEl.innerHTML = moveChartHtml(st.chart || {}, a, b);
   }
+}
+
+// Both fighters' chances over time, from the SAME sportsbooks at every point.
+// market-chart.js decides whether a line may be drawn at all (one fixed
+// cohort, three books or more, two captures); this draws it as two mirrored
+// step lines — corner B is 1 − corner A — so the reader sees both sides.
+// Steps, never slopes: a price stands until the book posts another.
+function moveChartHtml(ch, a, b) {
+  const C = window.cflChart, esc = cfl.escapeHtml;
+  const v = C.validateSeries(ch.series || [], ch.meta || {});
+  if (!v.ok) {
+    const c = C.refusalCopy(v.reason, v.cohortBooks, v.detail);
+    return '<div class="mc-empty"><div class="mc-empty-h">' + esc(c.head) + '</div><div class="mc-empty-b">' + esc(c.body) + '</div></div>';
+  }
+  const W = 320, H = 168, L = 34, R = 10, T = 8, B = 22;
+  const ps = v.points;
+  const all = ps.map(d => d.p).concat(ps.map(d => 1 - d.p));
+  let lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+  const pad = Math.max(0.03, (hi - lo) * 0.12);
+  lo = Math.max(0, lo - pad); hi = Math.min(1, hi + pad);
+  const t0 = ps[0].t, t1 = ps[ps.length - 1].t, span = Math.max(1, t1 - t0);
+  const x = t => L + (t - t0) / span * (W - L - R);
+  const y = p => T + (1 - (p - lo) / Math.max(1e-4, hi - lo)) * (H - T - B);
+  const step = f => ps.map((d, i) => (i ? ' H' + x(d.t).toFixed(1) + ' V' : 'M' + x(d.t).toFixed(1) + ' ') + y(f(d.p)).toFixed(1)).join('');
+  // y gridlines every 10 points inside the range; x labels at most five days.
+  let grid = '';
+  for (let g = Math.ceil(lo * 10) / 10; g <= hi + 1e-9; g += 0.1) {
+    const yy = y(g).toFixed(1);
+    grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" class="g"/>' +
+      '<text x="' + (L - 6) + '" y="' + yy + '" class="yl">' + Math.round(g * 100) + '%</text>';
+  }
+  const MON = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const days = [];
+  for (let d = new Date(t0); d.getTime() <= t1; d = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1))) {
+    const mid = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+    if (mid >= t0 && mid <= t1) days.push(mid);
+  }
+  const every = Math.max(1, Math.ceil(days.length / 5));
+  const xl = days.filter((_, i) => i % every === 0).map(t => '<text x="' + x(t).toFixed(1) + '" y="' + (H - 6) + '" class="xl">' +
+    MON[new Date(t).getUTCMonth()] + ' ' + new Date(t).getUTCDate() + '</text>').join('');
+  const last = ps[ps.length - 1];
+  const dot = (p, cls) => '<circle cx="' + x(last.t).toFixed(1) + '" cy="' + y(p).toFixed(1) + '" r="3.2" class="' + cls + '"/>';
+  const nA = lastName(a.name), nB = lastName(b.name);
+  return '<svg class="fx-mc" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' +
+      esc(nA + ' ' + Math.round(ps[0].p * 100) + '% to ' + Math.round(last.p * 100) + '%, ' + nB + ' ' + Math.round((1 - ps[0].p) * 100) + '% to ' + Math.round((1 - last.p) * 100) + '%') + '">' +
+      grid + xl +
+      '<path d="' + step(p => p) + '" class="la"/><path d="' + step(p => 1 - p) + '" class="lb"/>' +
+      dot(last.p, 'da') + dot(1 - last.p, 'db') +
+    '</svg>' +
+    '<p class="fx-note">Market chance, middle price of the same ' + v.cohortBooks + ' sportsbooks at every point, book’s cut removed.</p>';
 }
 
 // Short capture age for a table cell: "1h", "2d".

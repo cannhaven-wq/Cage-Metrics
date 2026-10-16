@@ -11,6 +11,40 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 (d) — Card Lab: the owner's annotated revision (T-101, merged)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- T-100 is live (#90, Pages deploy green 16:41 UTC).
+- From the owner's annotated screenshot: header is the event title with
+  date and venue under it; one control row with Full Card / Prelims / Early
+  Prelims, search, a compact sort menu, and Card order / Reverse order.
+- **The main event is a featured row** — flags washed in, first name over a
+  large surname, record, both best prices boxed either side of VS — and it
+  **opens on arrival** (once; a shared `#fight-N` link opens that fight
+  instead). Every other row is one line: #, division, flag, name, record,
+  vs, flag, name, record, both best prices, chevron. On a phone each fighter
+  gets a line with their price beside it.
+- Betting Odds heads with "Last updated" and its stamp; each book keeps its
+  capture age. Line Movement draws both fighters as two step lines from the
+  same books, with a legend, and shows first broad capture → current as fair
+  odds (and %). Best price + market chance moved to Additional Analytics →
+  Market detail; the row badges (moved, debut, opponent change) open with
+  the fight.
+- Deviations: "First broad capture", never "Opening odds" (CFL has not seen
+  an opener); the chart's axis is market chance, not American odds; no
+  sportsbook logos; the crowns mark the best price in the data.
+- Verified on production rows (Buckley vs. Malott) through the local stub:
+  134 browser checks, desktop and 390 px phone. All JS and Python tests pass.
+
+## Next action
+
+1. **Owner:** open cannonfightlab.com and check the main event opens on
+   arrival on a phone; list anything that reads wrong.
+2. **Owner (unchanged):** decide the T-096 running-order migration.
+
 ## 2026-10-16 (c) — Card Lab: Compact List redesign (T-100, owner-approved, merged)
 
 **From:** Claude
