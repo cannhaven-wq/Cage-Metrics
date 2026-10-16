@@ -5,6 +5,13 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
+**Card Lab Compact List redesign, 2026-10-16 (T-100): owner-approved, merged
+(#90).** The homepage opens on the card as a compact list
+(flags, names, best prices, records); a row opens tale of the tape, betting
+odds and line movement side by side, Additional Analytics collapsed. Prelims
+filters stay disabled until the card split has a source (T-096). No database
+change, no model.
+
 **Fighter flags, 2026-10-16 (T-099): live.** A flag is the country a fighter
 represents (owner rule). Wrong or missing flags fixed by hand for everyone on
 the upcoming cards; `flag-check.yml` now checks each new card daily against

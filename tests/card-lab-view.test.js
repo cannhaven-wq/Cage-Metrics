@@ -1,9 +1,10 @@
 /* ==========================================================================
    tests/card-lab-view.test.js — Card Lab's compact list.
 
-   The compact list is a second view of the SAME card: it must go through the
-   same order, sort and search as the full cards, show both corners' prices,
-   carry the book count and capture age, and link every row to Fight Lab.
+   Since the Compact List redesign (2026-10-16) the list is the ONLY layout
+   of the card: one row per fight, in card position, with the controls the
+   approved design asks for — card order / reverse order, a section filter
+   that is honest about what we do not hold, a sort and a search.
 
    Run:  node tests/card-lab-view.test.js
    ========================================================================== */
@@ -16,34 +17,30 @@ function t(name, fn) { try { fn(); passed += 1; } catch (err) { failures.push(na
 function ok(c, what) { if (!c) throw new Error(what || 'expected truthy'); }
 
 const render = PAGE.slice(PAGE.indexOf('function renderCards'), PAGE.indexOf('function renderSearchStatus'));
-const build = PAGE.slice(PAGE.indexOf('function buildFightCard'), PAGE.indexOf('function fighterSideHtml'));
+const wire = PAGE.slice(PAGE.indexOf('function wireControls'), PAGE.indexOf('function cardMarketRows'));
 
-t('the view toggle exists beside the sort, and the existing controls are kept', () => {
-  ['id="viewSeg"', 'data-view="list"', 'id="sortSeg"', 'id="dirSeg"', 'id="cardSearch"'].forEach(s => ok(PAGE.includes(s), 'missing ' + s));
+t('the controls exist: card order / reverse, section filter, sort, search', () => {
+  ['id="dirSeg"', 'data-dir="down"', 'data-dir="up"', '>Card order<', '>Reverse order<',
+   'id="sectionSeg"', 'id="sortSel"', 'value="move"', 'value="spread"', 'id="cardSearch"'].forEach(x => ok(PAGE.includes(x), 'missing ' + x));
 });
 
-t('both views are drawn from the one sorted, searched list', () => {
-  ok(/cards\.sort\(/.test(render) && render.indexOf('cards.sort(') < render.indexOf("_hpView === 'list'"), 'list view bypasses the sort');
-  ok(/c => c\.row/.test(render) && /c => c\.html/.test(render), 'views are not both read off the same cards array');
+t('the list is drawn from the one ordered, searched, sorted list', () => {
+  ok(/sortCard\(fights, ro, 'down'\)/.test(render), 'card position does not come from sortCard');
   ok(/fightMatches/.test(render), 'search no longer applies');
+  ok(/cards\.sort\(/.test(render) && render.indexOf('cards.sort(') < render.indexOf('cards.reverse()'), 'reverse is not applied after the sort');
+  ok(/_hpSortKey === 'order' && _hpDir === 'up'/.test(render), 'reverse applies outside card position');
+  ok(/c => c\.html/.test(render), 'rows are not read off the cards array');
+  ok(!/_hpView|viewSeg/.test(PAGE), 'a second card layout is back');
 });
 
-// Since T-098 a compact row expands in place, like the full cards, instead of
-// navigating to Fight Lab. Fight Lab stays one explicit link inside the panel.
-t('each compact row shows both prices, the division, the move, and expands in place', () => {
-  ok(/odds\(a, readA\) \+ odds\(b, readB\)/.test(build), 'both corners are not priced');
-  ok(/fight\.weight_class/.test(build), 'division missing');
-  ok(/<button type="button" class="clist-row"' \+ toggleAttrs/.test(build), 'compact row is not an expand button');
-  ok(!/class="clist-row" href=/.test(build), 'compact row still navigates away on a click');
-  ok(/\+ body \+ '<\/div>'/.test(build), 'compact row does not carry the expanded panel');
-  ok(/href="fight\.html\?id=' \+ fid/.test(PAGE), 'the Fight Lab link is gone from the expanded panel');
-  ok(/moveSinceBaseline/.test(build.slice(build.indexOf('compact-list row'))), 'move missing from the row');
-  ok(/bookCount/.test(build.slice(build.indexOf('compact-list row'))) && /fresh\.when/.test(build.slice(build.indexOf('compact-list row'))), 'book count or age missing');
+t('reverse order always means card position', () => {
+  ok(/if \(_hpSortKey !== 'order'\) \{ _hpSortKey = 'order'/.test(wire), 'reverse does not return to card position');
 });
 
-t('a remembered view never throws when storage is blocked', () => {
-  ok(/try \{ return localStorage\.getItem\('cfl\.cardView'\)/.test(PAGE), 'read is not guarded');
-  ok(/try \{ localStorage\.setItem\('cfl\.cardView'/.test(PAGE), 'write is not guarded');
+t('the card comes before the at-a-glance panel, and is the page heading', () => {
+  ok(PAGE.indexOf('id="next"') < PAGE.indexOf('id="hero"'), 'the card is not first');
+  ok((PAGE.match(/<h1[ >]/g) || []).length === 2, 'expected the card h1 in the markup and the one renderCardHead writes');
+  ok(/<h1>\$\{cfl\.escapeHtml\(event\.name\)\}<\/h1>/.test(PAGE), 'the event name is not the h1');
 });
 
 // A duplicate declaration inside an inline script kills the whole card with no
