@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-16 (d) — Card Lab: the owner's annotated revision (T-101, PR open)
+## 2026-10-16 (d) — Card Lab: the owner's annotated revision (T-101, merged)
 
 **From:** Claude
 **To:** Owner
@@ -41,8 +41,8 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ## Next action
 
-1. **Owner:** review the T-101 pull request and screenshots; reply "merge" or
-   list changes.
+1. **Owner:** open cannonfightlab.com and check the main event opens on
+   arrival on a phone; list anything that reads wrong.
 2. **Owner (unchanged):** decide the T-096 running-order migration.
 
 ## 2026-10-16 (c) — Card Lab: Compact List redesign (T-100, owner-approved, merged)
