@@ -96,8 +96,28 @@ t('the workflow cannot write to the repo, and the issue says nothing was changed
   ok(/Nothing here was changed automatically/.test(wf), 'issue does not say disagreements are untouched');
 });
 
+// A Wikidata outage is retried, a bad query is not.
+const asyncTests = [];
+asyncTests.push((async () => {
+  const name = 'a 502 from Wikidata is retried; a 400 is not';
+  try {
+    const real = global.fetch; let n = 0;
+    global.fetch = async () => { n++; return n < 3 ? { ok: false, status: 502, text: async () => 'bad gateway' }
+      : { ok: true, status: 200, json: async () => ({ results: { bindings: [] } }) }; };
+    await F.wikidata(['X'], 1);
+    if (n !== 3) throw new Error('expected 3 attempts, got ' + n);
+    n = 0; global.fetch = async () => { n++; return { ok: false, status: 400, text: async () => 'bad query' }; };
+    let threw = false; try { await F.wikidata(['X'], 1); } catch (e) { threw = true; }
+    global.fetch = real;
+    if (!threw || n !== 1) throw new Error('a 400 was retried or swallowed (' + n + ' attempts)');
+    passed += 1;
+  } catch (err) { failures.push(name + '\n      ' + err.message); }
+})());
+
+Promise.all(asyncTests).then(() => {
 if (failures.length) {
   console.error('flag-check: ' + failures.length + ' failed, ' + passed + ' passed');
   failures.forEach(f => console.error('  ✗ ' + f)); process.exit(1);
 }
 console.log('flag-check: ' + passed + ' passed');
+});
