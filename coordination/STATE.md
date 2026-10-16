@@ -5,7 +5,14 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
-**Card Lab expandable matchups, 2026-10-16 (T-098): in review.** Every fight
+**Fighter flags, 2026-10-16 (T-099): live.** A flag is the country a fighter
+represents (owner rule). Wrong or missing flags fixed by hand for everyone on
+the upcoming cards; `flag-check.yml` now checks each new card daily against
+Wikidata, fills gaps, and lists disagreements in one `flag-check` issue
+without overwriting anything. Owner-requested site fixes now ship in the same
+turn (CLAUDE.md, SHIPPING).
+
+**Card Lab expandable matchups, 2026-10-16 (T-098): live** (#84, #85). Every fight
 on the homepage is a compact preview that opens its tale of the tape, betting
 panel, per-sportsbook table and movement chart directly underneath, several at
 once, without leaving the page; "Additional Analytics" stays collapsed until
