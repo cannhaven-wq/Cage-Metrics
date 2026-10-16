@@ -11,6 +11,48 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 — Card Lab: every matchup expands in place (T-098, in review)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- **Homepage card.** Each fight is now a compact preview (both names, the
+  flag wash, both corners' best price, the book posting it and the market %).
+  A click opens the detail **directly underneath**; several fights can be open
+  at once, a second click (or "Collapse this fight") closes one, and nothing
+  on the card navigates away. Card order, reverse order, search, the three
+  sorts and the compact list all still work, and an opened fight stays open
+  through every one of them. The compact-list rows expand in place too.
+- **Opened fight shows, immediately:** a side-by-side tale of the tape
+  (country, age, height, reach, division weight limit, stance, pro record, UFC
+  record; a dot marks the bigger number, a dash means we do not hold it); both
+  corners' best price + book, market chance, fair price and worst-to-best
+  range; line movement from our first broad capture to now across the same
+  books, plus the last 24 h; the per-sportsbook table with each book's
+  earliest captured price and date; the existing movement chart.
+- **Additional Analytics** is a collapsed section: the matchup notes and
+  caveats that used to sit on every card, career striking and grappling rates
+  (with the profile date), and the late-round score. It opens only on a click.
+- Reuses `market.js`, `market-chart.js`, `fight-insights.js`, `fight-lab.js`.
+  One small addition to `market.js`: `matchedNowProb`, the matched books'
+  median now, so "from X% to Y%" never mixes two sets of books. No database
+  change, no model, no subscription change.
+- **Verified** in Chromium against production rows for UFC Fight Night:
+  Buckley vs. Malott (13 bouts) served through a local stub — the sandbox
+  cannot reach Supabase. 52 checks pass on desktop and a 390 px phone. All JS
+  tests and 303 Python tests pass; `tests/card-lab-expand.test.js` is new.
+- **Limits, stated on the page:** weigh-in weights are not in our data (the
+  tape shows the division limit); CFL has never seen a sportsbook opener, so
+  "earliest" means our first capture; the card order is still announcement
+  order until the T-096 migration is applied.
+
+## Next action
+
+1. **Owner:** review the PR for T-098 and merge if the homepage reads right.
+   After merge, check one fight opens on cannonfightlab.com.
+2. **Owner (unchanged):** decide the T-096 running-order migration.
+
 ## 2026-10-15 (i) — T-097 deployed and verified live
 
 **From:** Claude

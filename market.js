@@ -158,6 +158,12 @@
       baselineAt: row.baseline_at || null,
       baselineBooks: row.baseline_book_count == null ? null : +row.baseline_book_count,
       matchedBooks: matched,
+      // The same matched books' median now, so a surface can print "from X%
+      // to Y%" without mixing the matched cohort with the all-books median.
+      matchedNowProb: (function () {
+        const p = usable ? num(row.matched_current_p_a) : null;
+        return p == null ? null : (isA ? p : 1 - p);
+      })(),
       // signed for THIS corner: side B moves the opposite way to side A
       moveSinceBaseline: movePtsA == null ? null : (isA ? movePtsA : -movePtsA),
 

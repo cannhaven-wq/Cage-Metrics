@@ -28,9 +28,15 @@ t('both views are drawn from the one sorted, searched list', () => {
   ok(/fightMatches/.test(render), 'search no longer applies');
 });
 
-t('each compact row shows both prices, the division, the move, and links to Fight Lab', () => {
+// Since T-098 a compact row expands in place, like the full cards, instead of
+// navigating to Fight Lab. Fight Lab stays one explicit link inside the panel.
+t('each compact row shows both prices, the division, the move, and expands in place', () => {
   ok(/odds\(a, readA\) \+ odds\(b, readB\)/.test(build), 'both corners are not priced');
-  ok(/fight\.weight_class/.test(build) && /class="clist-row" href="fight\.html\?id=/.test(build), 'division or Fight Lab link missing');
+  ok(/fight\.weight_class/.test(build), 'division missing');
+  ok(/<button type="button" class="clist-row"' \+ toggleAttrs/.test(build), 'compact row is not an expand button');
+  ok(!/class="clist-row" href=/.test(build), 'compact row still navigates away on a click');
+  ok(/\+ body \+ '<\/div>'/.test(build), 'compact row does not carry the expanded panel');
+  ok(/href="fight\.html\?id=' \+ fid/.test(PAGE), 'the Fight Lab link is gone from the expanded panel');
   ok(/moveSinceBaseline/.test(build.slice(build.indexOf('compact-list row'))), 'move missing from the row');
   ok(/bookCount/.test(build.slice(build.indexOf('compact-list row'))) && /fresh\.when/.test(build.slice(build.indexOf('compact-list row'))), 'book count or age missing');
 });

@@ -3,7 +3,14 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-15
+Last updated: 2026-10-16
+
+**Card Lab expandable matchups, 2026-10-16 (T-098): in review.** Every fight
+on the homepage is a compact preview that opens its tale of the tape, betting
+panel, per-sportsbook table and movement chart directly underneath, several at
+once, without leaving the page; "Additional Analytics" stays collapsed until
+clicked. Verified on production rows for Buckley vs. Malott, desktop and phone.
+No database change, no model.
 
 **Customer research platform, 2026-10-15 (T-097): live on cannonfightlab.com.**
 Fight Lab opens with a one-screen matchup overview (profile, records, measured
