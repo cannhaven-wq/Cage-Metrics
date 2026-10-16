@@ -40,12 +40,11 @@ t('the row is a real button that says what it controls', () => {
 
 t('the row carries position, both flags, names, prices and pro records, and never links out', () => {
   ok(/'<span class="cl-no">' \+ \(idx \+ 1\)/.test(build), 'card position missing');
-  ok(/miniFlag\(a\)/.test(build) && /miniFlag\(b\)/.test(build), 'a flag is missing');
-  ok(/rowName\(a\)/.test(build) && /rowName\(b\)/.test(build), 'a name is missing');
-  ok(/odds\(readA, a\) \+ odds\(readB, b\)/.test(build), 'both corners are not priced');
-  ok(/rowRecord\(a\)/.test(build) && /rowRecord\(b\)/.test(build), 'a pro record is missing');
+  ok(/const corner = \(f, side\) => [^\n]*miniFlag\(f\)/.test(build), 'a flag is missing');
+  ok(/rowName\(f\)/.test(build) && /rowRecord\(f\)/.test(build), 'a name or pro record is missing');
+  ok(/corner\(a, 'a'\) \+ odds\(readA, a, 'a'\)/.test(build) && /odds\(readB, b, 'b'\) \+ corner\(b, 'b'\)/.test(build), 'both corners are not drawn and priced');
   ok(/bestAmerican/.test(build) && /bestBook/.test(build), 'price or book missing from the row');
-  ok(/bookCount/.test(build) && /fresh\.when/.test(build), 'book count or capture age missing from the row');
+  ok(/bookCount/.test(build) && /fresh\.when/.test(build), 'book count or capture age missing from the row price');
   const btn = build.slice(build.indexOf('class="cl-toggle"'), build.indexOf("'</button>' + starHtml"));
   ok(!/<a /.test(btn), 'a link inside the row button');
 });
@@ -57,7 +56,8 @@ t('the open fight has three panels in order: tape, odds, movement', () => {
 });
 
 t('only the main event is named; nothing invents a co-main or a card section', () => {
-  ok(/fight\.is_main_event \? '<b class="cl-tag main">Main event<\/b>'/.test(build), 'main event not tagged');
+  ok(/fight\.is_main_event \? 'Main event · '/.test(build), 'main event not labelled');
+  ok(/' is-main'/.test(build), 'main event is not the featured row');
   ok(!/co-?main/i.test(NEW_CODE.replace(/^\s*\/\/.*$/gm, ' ').replace(/'[^']*not[^']*'/g, '')), 'a co-main label appears in page code');
   ok(/id="sectionSeg"/.test(PAGE) && /disabled aria-disabled="true"[^>]*>Prelims</.test(PAGE), 'prelim filter is live without a source');
 });
@@ -93,9 +93,7 @@ t('the tale of the tape has every row the brief asks for, and a dash for a gap',
 });
 
 t('the betting panel shows both corners, the books, the age and the movement working', () => {
-  ['Best price', 'Market chance'].forEach(r =>
-    ok(bet.indexOf("line('" + r + "'") !== -1, 'betting row missing: ' + r));
-  ['Fair price', 'Across books'].forEach(r =>
+  ['Best price', 'Market chance', 'Fair price', 'Across books'].forEach(r =>
     ok(more.indexOf("line('" + r + "'") !== -1, 'market detail row missing: ' + r));
   ok(/fxbooks-/.test(bet) && /fxchart-/.test(bet), 'sportsbook table or chart missing from the panels');
   ok(/bookCount/.test(bet) && /fresh\.when/.test(bet), 'book count or capture age missing');
@@ -120,6 +118,15 @@ t('no model number reaches the expanded panel', () => {
   ['model_picks', 'model_predictions', 'pre_fight_snapshots', 'win_model_locks', 'predictions'].forEach(n =>
     ok(NEW_CODE.indexOf("from('" + n + "')") === -1, 'reads ' + n));
   ok(!/\bpick\b/i.test(NEW_CODE.replace(/^\s*\/\/.*$/gm, ' ').replace(/\/\*[\s\S]*?\*\//g, ' ')), 'the word "pick" reaches page code');
+});
+
+t('the main event opens on arrival, once, unless a #fight-N link names another', () => {
+  const load = slice('async function loadFights', 'function renderSourceNote');
+  ok(/if \(!_autoOpened\) \{\s*_autoOpened = true;/.test(load), 'auto-open is not once-only');
+  ok(/fights\.find\(f => f\.is_main_event\)/.test(load), 'auto-open is not the main event');
+  ok(/!\/\^#fight-\\d\+\$\/\.test\(location\.hash/.test(load), 'a shared link to another fight would also open the main event');
+  ok(load.indexOf('_open.add(main.id)') < load.indexOf('renderCards();'), 'opened after the first paint');
+  ok(!/_moreOpen\.add/.test(load), 'auto-open also opens Additional Analytics');
 });
 
 if (failures.length) {
