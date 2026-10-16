@@ -141,7 +141,21 @@ async function rest(key, path, init) {
   return res.status === 204 ? null : res.json();
 }
 
-async function wikidata(names) {
+// The public query service has short outages (a 502 on the first real run,
+// 2026-10-16). A server error or a rate limit is retried with a pause; anything
+// else, or a fourth failure, still fails the run and writes nothing.
+async function wikidata(names, waitMs) {
+  const pause = waitMs == null ? 15000 : waitMs;
+  let last;
+  for (let attempt = 0; attempt < 4; attempt++) {
+    if (attempt) await new Promise(r => setTimeout(r, pause * attempt));
+    try { return await wikidataOnce(names); }
+    catch (e) { last = e; if (!/HTTP (429|5\d\d)|fetch failed|ECONNRESET|ETIMEDOUT/.test(e.message)) throw e; }
+  }
+  throw last;
+}
+
+async function wikidataOnce(names) {
   const res = await fetch(WDQS, {
     method: 'POST',
     headers: {
@@ -226,7 +240,7 @@ function write(report) {
   if (process.env.FLAG_JSON_OUT) require('fs').writeFileSync(process.env.FLAG_JSON_OUT, JSON.stringify(report, null, 2));
 }
 
-module.exports = { representedCountry, decide, sparqlFor, groupBindings, SETTLED, HOME_NATIONS };
+module.exports = { representedCountry, decide, sparqlFor, groupBindings, wikidata, SETTLED, HOME_NATIONS };
 
 if (require.main === module) {
   main().catch(err => { console.error('Flag check could not finish: ' + err.message); process.exit(1); });
