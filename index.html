@@ -442,7 +442,17 @@
 #home .fx .matchup { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: stretch; gap: 10px; }
 #home .fx .vs { align-self: center; font-size: 13px; }
 #home .fx .side { flex-direction: row; justify-content: space-between; align-items: center; text-align: left; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--bg-2); }
-#home .fx .side.cfl-flagged::before { opacity: .22; }
+/* The flag keeps its own shape. The shared wash stretches the flag across
+   the whole element with background-size: cover, which is fine on a narrow
+   card but turns a wide preview into a thin strip through the middle of the
+   flag — Canada read as red-white-red bands with a sliver of maple leaf. Here
+   the flag sits at the fighter's end at a flag's proportions, full height,
+   centred, and fades toward the VS. */
+#home .fx .side.cfl-flagged::before { top: 0; bottom: 0; height: auto; width: auto; aspect-ratio: 3 / 2; max-width: 100%;
+  left: 0; right: auto; opacity: .3; background-size: cover; background-position: center;
+  -webkit-mask-image: linear-gradient(90deg, #000 35%, transparent); mask-image: linear-gradient(90deg, #000 35%, transparent); }
+#home .fx .side-b.cfl-flagged::before { left: auto; right: 0;
+  -webkit-mask-image: linear-gradient(270deg, #000 35%, transparent); mask-image: linear-gradient(270deg, #000 35%, transparent); }
 #home .fx .side-b { flex-direction: row-reverse; text-align: right; }
 #home .fx .side .who { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 #home .fx .side .nm { font-size: 15px; font-weight: 700; color: #fff; }
@@ -526,6 +536,7 @@
   #home .fx-grid { grid-template-columns: 1fr; }
   #home .fx .side, #home .fx .side-b { flex-direction: column; align-items: center; text-align: center; gap: 8px; padding: 12px 8px; }
   #home .fx .side .price, #home .fx .side-b .price { align-items: center; }
+  #home .fx .side.cfl-flagged::before, #home .fx .side-b.cfl-flagged::before { left: 0; right: 0; width: 100%; aspect-ratio: auto; -webkit-mask-image: linear-gradient(180deg, transparent, #000 70%); mask-image: linear-gradient(180deg, transparent, #000 70%); }
   #home .fx .side .nm { font-size: 14px; }
   #home .fx-cue { justify-content: center; }
   #home .fx-body { padding: 12px; }

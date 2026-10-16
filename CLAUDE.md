@@ -40,6 +40,15 @@
 > American number and by nothing else. If affiliate money ever enters this
 > product, it does not enter there.
 
+> **SHIPPING, owner rule 2026-10-16.** When Reed asks for a fix or change to the
+> website, it goes live in the same turn: make it, run the tests, open the pull
+> request, merge it once the checks pass, and confirm the Pages deploy. Do not
+> stop at "PR open, want me to merge?" — Reed does not want a two-step. This
+> covers site code and copy. It does **not** cover the L3 list in
+> `coordination/CRITICAL_GATES.md` (database migrations on append-only or
+> security tables, payments, published claims, spending money): those still
+> stop and ask.
+
 Wording reference: [`COPY_STYLE.md`](COPY_STYLE.md) governs every user-facing string.
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
