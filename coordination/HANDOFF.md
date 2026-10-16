@@ -11,6 +11,30 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 (b) — Fighter flags: the country they represent, checked per card (T-099)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- T-098 is live (#84) with the flag-shape fix (#85). Owner rule recorded:
+  site fixes the owner asks for ship in the same turn.
+- Owner rule: a flag is the country a fighter **represents**. Fixed by hand
+  (`country_src = 'manual'`): Malott → CA (UFC.com had a wrong US
+  birthplace), Mahjoub → CA, Milosevic → RS, Yakhyaev → TR, Chopurov → RU,
+  and 23 fighters who had no country. All 150 fighters on upcoming cards have
+  a flag.
+- New `flag-check.yml` (daily) + `build/check-fighter-flags.js`: Wikidata
+  "country for sport", citizenship fallback, fighters on the next 14 days of
+  cards only. Fills gaps, confirms matches, never overwrites; anything else
+  goes into one rolling `flag-check` issue. 15 tests.
+
+## Next action
+
+1. **Owner:** when a `flag-check` issue opens, settle each fighter by setting
+   their country by hand (`country_src = 'manual'`), or ask Claude to.
+2. **Owner (unchanged):** decide the T-096 running-order migration.
+
 ## 2026-10-16 — Card Lab: every matchup expands in place (T-098, in review)
 
 **From:** Claude
