@@ -41,6 +41,13 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
   percent, because CFL has never seen a sportsbook opener; the chart is the
   existing single consensus line, not two American-odds lines; no sportsbook
   logos; weight is the division limit.
+- **"UFC debut" badges, settled as out of scope (owner, 2026-10-16).**
+  Jourdain, Chovancek and Perez show the badge because `fights` holds no
+  official UFC bout for them, while their profiles carry career rates. The
+  owner's read: those rates come from Contender Series or Ultimate Fighter
+  bouts, which are not official UFC fights (DWCS was taken out of the UFC
+  tables in T-086), so the badge is likely correct. Not a scraper defect; no
+  work queued.
 
 ## Next action
 
