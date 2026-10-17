@@ -5,6 +5,11 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
+**Fighting style, 2026-10-16 (T-102, [D-030](DECISIONS.md)): PR open.** The
+calculated striker / grappler label is replaced everywhere by the discipline
+the UFC lists on each fighter's UFC.com page, copied by a daily job. Columns
+are applied; the first run fills them after merge.
+
 **Card Lab Compact List redesign, 2026-10-16 (T-100): owner-approved, merged
 (#90), live.** T-101 (the owner's annotated revision: featured main event
 that opens on arrival, one-line rows, two-line movement chart) is merged

@@ -2058,3 +2058,38 @@ function body contains one. Disguising it to get past that check would bypass
 a safeguard. The owner applies `fight_rounds_replace_rpc.sql` (PR #73, head
 `31b6733`) in the SQL editor. After that comes scraper PR #3, then PR #4.
 
+
+## D-030 — The fighting style is the UFC's listed discipline, not a calculation
+
+| field | value |
+|---|---|
+| date | 2026-10-16 |
+| decided by | Reed Cannon (owner), in session: "instead of calculating it … I want the discipline as it's told in the intro"; chose UFC.com as the source and "replace it everywhere" |
+| task | T-102 |
+| level | L2 |
+| reversible | yes — the pages switch back by reading `v_fighter_style` again (the view is untouched); the three new `fighters` columns are additive and can be dropped |
+
+**Plain version.** Fight Lab and the fighter page now show a fighter's
+discipline the way the UFC lists it — "Kickboxer", "Wrestling", "Brazilian
+Jiu-Jitsu" — copied from their UFC.com athlete page. The calculated striker /
+grappler / hybrid label is gone from every page.
+
+**Why.** The owner questioned Joaquin Buckley reading as a "grappler". The
+calculation used round one of his last five fights only: Brady and Usman held
+him down for most of those rounds, so his striking read near zero, and two
+takedown-heavy first rounds did the rest. Counting every round flips him to
+striker, but the owner does not want a calculated label at all.
+
+**What it is and is not.**
+- Bruce Buffer's intros are not published anywhere CFL can read, and most do
+  not name a discipline. UFC.com's "Fighting style" field is the published
+  source, so that is what is copied.
+- Copied, never calculated or guessed. A generic entry ("MMA", "Freestyle") or
+  a missing one shows nothing.
+- `fighting_style_src = 'manual'` marks a value a person set; the daily job
+  never touches it.
+- This narrows `fight-overview.js`'s "no background labels" rule rather than
+  removing it: a CALCULATED line still may not claim a background. The
+  discipline pill is a sourced fact with its source printed beside it.
+- `v_fighter_style` and `fight-lab.js::styleRead` are kept, unread, so the
+  change is a page switch to undo.

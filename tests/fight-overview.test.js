@@ -156,7 +156,7 @@ t('fight.html loads fight-overview.js after the rules it builds on', () => {
 
 t('the overview reuses the existing rate builders rather than its own', () => {
   const body = PAGE.slice(PAGE.indexOf('function renderOverview'), PAGE.indexOf('function monthsAgo'));
-  ['W.careerWindow', 'W.strikeMix', 'FL.styleRead', 'FL.lateRoundRead', 'M.readSide', 'O.tendencies'].forEach(s =>
+  ['W.careerWindow', 'W.strikeMix', 'FL.disciplineRead', 'FL.lateRoundRead', 'M.readSide', 'O.tendencies'].forEach(s =>
     ok(body.includes(s), 'renderOverview does not use ' + s));
   ok(/bookCount/.test(body) && /fresh\.when/.test(body), 'a price is shown without its book count or age');
 });
