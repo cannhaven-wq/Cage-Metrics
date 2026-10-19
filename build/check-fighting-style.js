@@ -26,6 +26,11 @@
 //   - "I could not look" is a failure: missing key, failed database read,
 //     UFC.com blocking every request — non-zero exit. One fighter's 404 is
 //     just a miss.
+//   - A page with NO bio section is not "no style listed" — it is a page we
+//     could not read (UFC.com served the run on 2026-10-19 00:30 exactly that,
+//     for every fighter, five minutes after the same pages read fine). Such a
+//     fighter is not stamped as checked, and a run where most pages come back
+//     like that stops and fails rather than carrying on.
 //
 // Env:
 //   SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)  required
@@ -71,6 +76,12 @@ function parseFightingStyle(html) {
   return null;
 }
 
+// Does the page carry UFC.com's bio block at all? Without it, "no style" would
+// be a guess about a page we did not see.
+function hasBio(html) {
+  return /c-bio__label/i.test(String(html || ''));
+}
+
 // The fighter's name as the page heads it, or null.
 function parsePageName(html) {
   const h = /class="[^"]*hero-profile__name[^"]*"[^>]*>([\s\S]*?)<\//i.exec(String(html || ''));
@@ -86,6 +97,7 @@ function decide(fighter, page) {
   if (fighter.fighting_style_src === 'manual') return { action: 'skip' };
   if (!page || page.status === 'not_found') return { action: 'not_found' };
   if (page.name && !sameName(page.name, fighter.name)) return { action: 'wrong_person', pageName: page.name };
+  if (!page.style && page.bio === false) return { action: 'unreadable' };
   if (!page.style) return { action: 'no_style' };
   return { action: 'fill', style: page.style };
 }
@@ -113,12 +125,15 @@ async function fetchPage(name) {
   const url = UFC + ufcSlug(name);
   for (let attempt = 0; attempt < 3; attempt++) {
     if (attempt) await new Promise(r => setTimeout(r, 5000 * attempt));
-    const res = await fetch(url, { headers: { 'User-Agent': 'CannonFightLab-style-check/1.0 (https://cannonfightlab.com)', Accept: 'text/html' }, redirect: 'follow' });
+    const res = await fetch(url, { headers: {
+      'User-Agent': 'Mozilla/5.0 (compatible; CannonFightLab-style-check/1.1; +https://cannonfightlab.com)',
+      Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }, redirect: 'follow' });
     if (res.status === 404) return { status: 'not_found', url };
     if (res.status === 429 || res.status >= 500) continue;
     if (!res.ok) throw new Error(`UFC.com ${url} -> HTTP ${res.status}`);
     const html = await res.text();
-    return { status: 'ok', url, name: parsePageName(html), style: parseFightingStyle(html) };
+    return { status: 'ok', url, name: parsePageName(html), style: parseFightingStyle(html), bio: hasBio(html),
+      bytes: html.length, mentionsStyle: /fighting style/i.test(html) };
   }
   throw new Error(`UFC.com ${url} kept failing`);
 }
@@ -150,22 +165,46 @@ async function main() {
   const todo = onCard.concat(extra).filter(f => !seen.has(f.id) && seen.add(f.id) && needsLookup(f, now));
 
   const results = [];
-  let failures = 0;
+  let failures = 0, unreadable = 0;
+  const writes = [];
   for (const f of todo) {
     let page;
     try { page = await fetchPage(f.name); }
     catch (e) { failures += 1; console.log(`  error     ${f.name} — ${e.message}`); continue; }
     const d = decide(f, page);
     results.push(Object.assign({ id: f.id, name: f.name, url: page.url }, d));
-    if (!dry) {
-      const body = d.action === 'fill'
-        ? { fighting_style: d.style, fighting_style_src: 'ufc.com', fighting_style_checked_at: new Date().toISOString() }
-        : { fighting_style_checked_at: new Date().toISOString() };
-      // Never over a person's value, even if one landed while this ran.
-      await rest(key, `fighters?id=eq.${f.id}&or=(fighting_style_src.is.null,fighting_style_src.neq.manual)`,
-        { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(body) });
+    if (d.action === 'unreadable') {
+      unreadable += 1;
+      if (unreadable === 1) console.log(`  first unreadable page: ${page.url} — ${page.bytes} bytes, heading "${page.name || ''}", ` +
+        `mentions "Fighting style": ${page.mentionsStyle}`);
+      // Mostly unreadable means the site is serving us something else: stop.
+      if (unreadable >= 10 && unreadable > results.length / 2) {
+        console.error(`${unreadable} of ${results.length} pages came back without a bio section. Stopping; nothing more written.`);
+        process.exit(1);
+      }
+      continue;   // not stamped: we did not see the page
     }
+    // Written at the end, after the run has passed its own sanity checks.
+    writes.push({ id: f.id, body: d.action === 'fill'
+      ? { fighting_style: d.style, fighting_style_src: 'ufc.com', fighting_style_checked_at: new Date().toISOString() }
+      : { fighting_style_checked_at: new Date().toISOString() } });
     await new Promise(r => setTimeout(r, PAUSE_MS));
+  }
+
+  // A run that read many pages and found not one style is far likelier to be
+  // UFC.com serving a different page than every fighter having none (the
+  // 2026-10-19 00:30 run: 0 of 342, after 39 of 50 five minutes earlier).
+  const fills = results.filter(r => r.action === 'fill').length;
+  if (results.length >= 20 && fills === 0) {
+    console.error(`${results.length} pages read and not one fighting style found — treating this as a page we could not read. Nothing written.`);
+    process.exit(1);
+  }
+  if (!dry) {
+    for (const w of writes) {
+      // Never over a person's value, even if one landed while this ran.
+      await rest(key, `fighters?id=eq.${w.id}&or=(fighting_style_src.is.null,fighting_style_src.neq.manual)`,
+        { method: 'PATCH', headers: { Prefer: 'return=minimal' }, body: JSON.stringify(w.body) });
+    }
   }
 
   // Every request failing means UFC.com is blocking or down: that is "could
@@ -177,11 +216,11 @@ async function main() {
   const count = a => results.filter(r => r.action === a).length;
   console.log(`${onCard.length} fighters on ${events.length} card(s), ${extra.length} backfill candidates; looked up ${todo.length}.` +
     ` filled ${count('fill')}, no style listed ${count('no_style')}, page not found ${count('not_found')},` +
-    ` different person ${count('wrong_person')}, errors ${failures}${dry ? ' (dry run — nothing written)' : ''}.`);
+    ` different person ${count('wrong_person')}, unreadable ${unreadable}, errors ${failures}${dry ? ' (dry run — nothing written)' : ''}.`);
   results.forEach(r => console.log(`  ${r.action.padEnd(12)} ${r.name}${r.style ? ' — ' + r.style : ''}${r.pageName ? ' — page is ' + r.pageName : ''}`));
 }
 
-module.exports = { ufcSlug, parseFightingStyle, parsePageName, decide, needsLookup, RETRY_DAYS };
+module.exports = { ufcSlug, parseFightingStyle, parsePageName, hasBio, decide, needsLookup, RETRY_DAYS };
 
 if (require.main === module) {
   main().catch(err => { console.error('Fighting-style check could not finish: ' + err.message); process.exit(1); });
