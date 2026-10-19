@@ -5,14 +5,15 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
-**Fighters and Head-to-Head retired from the public site, 2026-10-16 (T-103):**
-out of the nav and redirected to the card; data stays in the database, back
-end only. Same PR as T-102.
+**Fighters and Head-to-Head retired from the public site, 2026-10-16 (T-103): live.**
+Out of the nav and redirected to the card; data stays in the database, back
+end only.
 
-**Fighting style, 2026-10-16 (T-102, [D-030](DECISIONS.md)): PR open.** The
+**Fighting style, 2026-10-16 (T-102, [D-030](DECISIONS.md)): live, filling.** The
 calculated striker / grappler label is replaced everywhere by the discipline
-the UFC lists on each fighter's UFC.com page, copied by a daily job. Columns
-are applied; the first run fills them after merge.
+the UFC lists on each fighter's UFC.com page, copied by a daily job (13:35
+UTC). First real batch 2026-10-19 saved 139 styles; a run that cannot read
+the pages now saves nothing and fails (#94).
 
 **Card Lab Compact List redesign, 2026-10-16 (T-100): owner-approved, merged
 (#90), live.** T-101 (the owner's annotated revision: featured main event

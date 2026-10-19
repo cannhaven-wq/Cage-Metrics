@@ -11,6 +11,29 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-19 (b) — Fighting styles filling; T-102 and T-103 done
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-19
+
+- #94 merged (`2b7d1bc`). Dry run after it: 89 looked up, 72 styles, 0
+  unreadable. Most likely cause of the empty run was the request headers,
+  which #94 changed.
+- Real run (backfill 120): 139 styles saved, all `fighting_style_src =
+  'ufc.com'`; 29 checked with none listed / no page. A larger run (backfill
+  500) was dispatched to reach the rest of the active roster, including
+  Buckley and Malott, whose Oct 17 bout is not yet in `last_fight_date`.
+- Generic UFC.com entries ("MMA", "Freestyle") are stored as listed and show
+  nothing on the page (owner's choice, D-030).
+
+## Next action
+
+1. **Claude/next session:** confirm the backfill-500 run, and Buckley's and
+   Malott's rows; the daily 13:35 UTC run covers upcoming cards from here.
+2. **Owner:** any style that reads wrong — set it by hand with
+   `fighting_style_src = 'manual'`, or ask Claude to.
+
 ## 2026-10-19 — Fighting-style job: first real run read nothing; guarded (T-102)
 
 **From:** Claude
