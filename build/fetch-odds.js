@@ -994,6 +994,27 @@ function feedAlias(normalized) {
   return FEED_NAME_ALIASES[normalized] || normalized;
 }
 
+// Which corner of an already-identified bout a feed outcome name belongs to:
+// 'A', 'B' or null. The full-name tiers come first. The surname is the LAST
+// resort and only once lookupFight has already pinned the bout, because the
+// feed's first name drifts (Alex/Alexander, Joe/Joseph, Sergei/Sergey) — and
+// until 2026-10-19 that drift found the bout and then dropped one corner, so
+// fight_odds held seven one-sided fights, UFC 333's main event among them, and
+// every page read "No line yet". It refuses when both corners share a surname
+// or it is too short to mean anything; the caller refuses a book whose two
+// outcomes land on the same corner.
+function cornerFor(feedName, fighterAName, fighterBName) {
+  const n = feedAlias(normalizeName(feedName));
+  const nA = normalizeName(fighterAName), nB = normalizeName(fighterBName);
+  if (n === nA || firstLast(n) === firstLast(nA) || squash(n) === squash(nA)) return 'A';
+  if (n === nB || firstLast(n) === firstLast(nB) || squash(n) === squash(nB)) return 'B';
+  const l = lastName(n), lA = lastName(nA), lB = lastName(nB);
+  if (l.length < 3 || lA === lB) return null;
+  if (l === lA) return 'A';
+  if (l === lB) return 'B';
+  return null;
+}
+
 function lookupFight(index, homeName, awayName) {
   const a = feedAlias(normalizeName(homeName));
   const b = feedAlias(normalizeName(awayName));
@@ -1302,9 +1323,6 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
   const proxy_cutoff_at = proxyCutoffAt(
     fight, fight.prev_completed_at, fight.bout_order === 1 ? commence : null);
 
-  const nA = normalizeName(fight.fighter_a_name), flA = firstLast(nA);
-  const nB = normalizeName(fight.fighter_b_name), flB = firstLast(nB);
-
   for (const bm of e.bookmakers || []) {
     const h2h = (bm.markets || []).find(m => m.key === 'h2h');
     if (!h2h || !Array.isArray(h2h.outcomes)) continue;
@@ -1312,20 +1330,17 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
     if (!bid) continue;
 
     // Map each outcome to our canonical A/B by NAME, not by the provider's
-    // home/away order, tolerating middle-name drift via the first+last fallback.
-    for (const o of h2h.outcomes) {
-      if (o.price == null) continue;
-      // feedAlias here too, not only in lookupFight: an alias that finds the
-      // bout but not the corner writes one-sided rows into append-only fight_odds.
-      const n = feedAlias(normalizeName(o.name));
-      let side, fighter_id, opponent_fighter_id;
-      if (n === nA || firstLast(n) === flA || squash(n) === squash(nA)) {
-        side = 'A'; fighter_id = fight.fighter_a_id; opponent_fighter_id = fight.fighter_b_id;
-      } else if (n === nB || firstLast(n) === flB || squash(n) === squash(nB)) {
-        side = 'B'; fighter_id = fight.fighter_b_id; opponent_fighter_id = fight.fighter_a_id;
-      } else {
-        continue; // draw / unexpected label
-      }
+    // home/away order — see cornerFor. Two outcomes on one corner means the
+    // names cannot be told apart, and fight_odds is append-only: skip the book.
+    const sides = h2h.outcomes.map(o => o.price == null ? null
+      : cornerFor(o.name, fight.fighter_a_name, fight.fighter_b_name));
+    const named = sides.filter(Boolean);
+    if (new Set(named).size !== named.length) continue;
+    h2h.outcomes.forEach((o, i) => {
+      const side = sides[i];
+      if (!side) return; // draw / unexpected label
+      const fighter_id = side === 'A' ? fight.fighter_a_id : fight.fighter_b_id;
+      const opponent_fighter_id = side === 'A' ? fight.fighter_b_id : fight.fighter_a_id;
       rows.push({
         fight_id: fight.id,
         fighter_id,
@@ -1362,7 +1377,7 @@ function buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at) {
           outcome_name: o.name,
         },
       });
-    }
+    });
   }
   return rows;
 }
@@ -1655,5 +1670,5 @@ module.exports = {
   FREE_TIER_CREDIT_CAP, APPROVED_CREDIT_RESERVE,
   resolveMonthlyCap, resolveReserve, clampToFreeAllowance,
   LIVE_CADENCE_LADDER, WAKE_INTERVAL_MIN, TOTALS_MIN_INTERVAL_MIN,
-  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight, feedAlias,
+  normalizeName, firstLast, squash, lastName, americanToImplied, buildFightIndex, lookupFight, feedAlias, cornerFor,
 };

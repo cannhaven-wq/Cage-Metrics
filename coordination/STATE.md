@@ -3,7 +3,12 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-16
+Last updated: 2026-10-19
+
+**Odds corner matcher, 2026-10-19: fixed.** Seven fights (UFC 333's main
+event among them) were captured with one corner only, because the feed's
+first name differs from ours (Alex/Alexander). The next capture records both
+corners; see HANDOFF (c).
 
 **Fighters and Head-to-Head retired from the public site, 2026-10-16 (T-103): live.**
 Out of the nav and redirected to the card; data stays in the database, back
