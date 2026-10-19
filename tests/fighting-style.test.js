@@ -52,6 +52,13 @@ t('never writes over a person, never takes another fighter\'s style', () => {
   eq(S.decide({ name: 'Joaquin Buckley' }, { status: 'not_found' }).action, 'not_found');
 });
 
+t('a page without a bio section is unreadable, not "no style" — and never stamped', () => {
+  eq(S.hasBio(PAGE), true);
+  eq(S.hasBio('<h1 class="hero-profile__name">Joaquin Buckley</h1><p>Loading…</p>'), false);
+  eq(S.decide({ name: 'Joaquin Buckley' }, { status: 'ok', name: 'Joaquin Buckley', style: null, bio: false }).action, 'unreadable');
+  eq(S.decide({ name: 'Joaquin Buckley' }, { status: 'ok', name: 'Joaquin Buckley', style: null, bio: true }).action, 'no_style');
+});
+
 t('a found or manual value is settled; a miss is retried after a month', () => {
   const now = Date.parse('2026-10-16T00:00:00Z');
   eq(S.needsLookup({ fighting_style: 'Boxer', fighting_style_src: 'ufc.com' }, now), false);

@@ -11,6 +11,30 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-19 — Fighting-style job: first real run read nothing; guarded (T-102)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-19
+
+- #92 merged (`22a60ad`) and live: Fighters / Head-to-Head gone, styles shown.
+- Dry run 00:25 UTC: 50 looked up, 39 styles read (Petr Yan Boxer, Moicano
+  Jiu-Jitsu, Prochazka Karate…), 9 none listed, 2 search pages skipped.
+- Real run 00:30 UTC: 342 looked up, **0 styles** — the same fighters that
+  read five minutes earlier came back with none. UFC.com served that runner
+  something different. Nothing was written except "checked" stamps, which
+  were reset by hand (342 rows `fighting_style_checked_at = NULL`).
+- Fix: a page without UFC.com's bio section is "unreadable", never stamped;
+  a run that is mostly unreadable stops; writes now happen only at the end,
+  and a run of 20+ lookups with zero styles writes nothing and fails. The
+  first unreadable page's size and heading are logged for diagnosis.
+
+## Next action
+
+1. **Claude:** dry-run again; if styles read, run for real in small batches
+   (backfill 60) and confirm Buckley/Malott rows; if not, read the logged
+   diagnosis and fix the reader.
+
 ## 2026-10-16 (f) — Fighters and Head-to-Head off the public site (T-103, PR #92)
 
 **From:** Claude
