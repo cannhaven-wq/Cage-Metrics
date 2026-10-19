@@ -52,7 +52,7 @@ const strip = src => src
 // The forward-facing product. Everything a visitor reaches from the nav or
 // from search that is about an upcoming card.
 const PRODUCT = ['index.html', 'market.html', 'fight.html', 'event.html',
-                 'fighter.html', 'fighters.html', 'h2h.html', 'parlay.html',
+                 'fighter.html', 'parlay.html',
                  'cardio.html', 'stats.html', 'pricing.html',
                  'about.html', 'signup.html', 'account.html', 'mybook.html',
                  // Added 2026-10-12: legal and account pages are public too, and

@@ -510,12 +510,6 @@
   // --------- URL helpers ---------
   cfl.fighterUrl = function (id) { return `fighter.html?id=${id}`; };
   cfl.eventUrl = function (id) { return `event.html?id=${id}`; };
-  cfl.h2hUrl = function (aId, bId) {
-    const params = new URLSearchParams();
-    if (aId) params.set('a', aId);
-    if (bId) params.set('b', bId);
-    return `h2h.html?${params.toString()}`;
-  };
 
   cfl.getQueryParam = function (key) {
     return new URLSearchParams(window.location.search).get(key);
@@ -545,10 +539,8 @@
           <span class="full">Proof Center</span><span class="short">Proof</span>
         </a>
         <div class="cfl-nav-menu">
-          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','props','fighters','h2h','track','fight','watchlist'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">More</button>
+          <button type="button" class="cfl-nav-menu-btn ${['parlay','cardio','props','track','fight','watchlist'].indexOf(active) !== -1 ? 'active' : ''}" aria-haspopup="true">More</button>
           <div class="cfl-nav-menu-panel">
-            <a href="fighters.html" ${active === 'fighters' ? 'class="active"' : ''}>Fighters</a>
-            <a href="h2h.html" ${active === 'h2h' ? 'class="active"' : ''}>Head-to-Head</a>
             <a href="cardio.html" ${active === 'cardio' ? 'class="active"' : ''}>Cardio Scores</a>
             <a href="parlay.html" ${active === 'parlay' ? 'class="active"' : ''}>Parlay Builder</a>
             <a href="watchlist.html" ${active === 'watchlist' ? 'class="active"' : ''}>My Watchlist</a>

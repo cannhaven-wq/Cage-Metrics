@@ -11,6 +11,31 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 (f) — Fighters and Head-to-Head off the public site (T-103, PR #92)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- Owner: "The fighter and head to head tab need to be deleted … back end
+  information only."
+- Both nav entries removed; `fighters.html` and `h2h.html` replaced with
+  noindex redirect stubs to `/` (the `card-lab.html` pattern), so old links,
+  bookmarks and the 30-odd generated preview pages that link to Head-to-Head
+  land on the card. Out of `sitemap.xml` and `build/prerender.js`; the preview
+  template no longer links to it; the fighter page breadcrumb and "back"
+  links point at the card. Previews regenerate on the prerender cron.
+- Nothing in the database changed. Fighter profile pages (`fighter.html`)
+  stay public — they are where every fighter name on the card links.
+- Fixed in passing: `verify-live-stabilization.js` still looked for the
+  pre-redesign `.fight` class on the homepage, so it would have reported the
+  live card as empty.
+
+## Next action
+
+1. **Owner:** say "merge" on PR #92 (T-102 + T-103).
+2. **Claude, after merge:** fighting-style dry run as in (e).
+
 ## 2026-10-16 (e) — Fighting style from UFC.com replaces the calculated label (T-102, PR open)
 
 **From:** Claude

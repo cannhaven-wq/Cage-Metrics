@@ -100,7 +100,7 @@ const ROWS = [
 
   // ------------------------------------------------------------ the surfaces
   // Every page that shows a UFC record, or decides "no UFC fights" from it.
-  const PAGES = ['fighters.html', 'event.html', 'h2h.html', 'cardio.html',
+  const PAGES = ['event.html', 'cardio.html',
                  'index.html', 'fighter.html', 'fight.html'];
 
   await t('every record-showing page loads ufc-record.js after _auth.js', () => {

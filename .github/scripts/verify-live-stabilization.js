@@ -67,9 +67,8 @@ async function open(browser, url, waitFor) {
 
   // --- pages load ----------------------------------------------------------
   const pages = [
-    ['/', () => document.querySelectorAll('#fightsList .fight').length > 0],
+    ['/', () => document.querySelectorAll('#fightsList .cl-item').length > 0],
     ['/market.html', () => document.body.innerText.length > 500],
-    ['/fighters.html', () => document.body.innerText.length > 500],
     ['/stats.html', () => document.body.innerText.length > 500],
     ['/login.html', null],
     ['/signup.html', null],

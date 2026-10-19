@@ -70,7 +70,7 @@ function fighterStub(f) {
     '@type': 'BreadcrumbList',
     'itemListElement': [
       { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': SITE + '/' },
-      { '@type': 'ListItem', 'position': 2, 'name': 'Fighters', 'item': SITE + '/fighters.html' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Card Lab', 'item': SITE + '/' },
       { '@type': 'ListItem', 'position': 3, 'name': f.name, 'item': stubUrl }
     ]
   };

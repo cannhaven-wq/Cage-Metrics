@@ -5,6 +5,10 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-16
 
+**Fighters and Head-to-Head retired from the public site, 2026-10-16 (T-103):**
+out of the nav and redirected to the card; data stays in the database, back
+end only. Same PR as T-102.
+
 **Fighting style, 2026-10-16 (T-102, [D-030](DECISIONS.md)): PR open.** The
 calculated striker / grappler label is replaced everywhere by the discipline
 the UFC lists on each fighter's UFC.com page, copied by a daily job. Columns

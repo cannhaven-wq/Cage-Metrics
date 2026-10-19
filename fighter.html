@@ -276,7 +276,7 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl6"></script>
+<script src="_shared.js?v=rl7"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=3"></script>
@@ -349,7 +349,7 @@ function updateFighterSEO(f) {
     '@type': 'BreadcrumbList',
     'itemListElement': [
       { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://cannonfightlab.com/' },
-      { '@type': 'ListItem', 'position': 2, 'name': 'Fighters', 'item': 'https://cannonfightlab.com/fighters.html' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Card Lab', 'item': 'https://cannonfightlab.com/' },
       { '@type': 'ListItem', 'position': 3, 'name': f.name, 'item': url }
     ]
   });
@@ -357,7 +357,7 @@ function updateFighterSEO(f) {
 
 async function load() {
   if (!fighterId) {
-    document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="index.html" style="color:var(--red)">Back to the card</a>');
     return;
   }
 
@@ -370,7 +370,7 @@ async function load() {
     .single();
 
   if (error || !f) {
-    document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="index.html" style="color:var(--red)">Back to the card</a>');
     return;
   }
   // The UFC record shown anywhere on this page comes from v_fighter_ufc_record,
