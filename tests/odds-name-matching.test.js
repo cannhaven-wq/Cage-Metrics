@@ -60,9 +60,9 @@ const sandbox = {};
 vm.createContext(sandbox);
 vm.runInContext(
   ['normalizeName', 'firstLast', 'squash', 'lastName', 'pairKey',
-   'buildFightIndex', 'feedAlias', 'lookupFight'].map(extract).join('\n'),
+   'buildFightIndex', 'feedAlias', 'lookupFight', 'cornerFor'].map(extract).join('\n'),
   sandbox);
-const { buildFightIndex, lookupFight, lastName, normalizeName } = sandbox;
+const { buildFightIndex, lookupFight, lastName, normalizeName, cornerFor } = sandbox;
 
 let passed = 0;
 const failures = [];
@@ -176,6 +176,50 @@ t('lastName handles a multi-word surname the way the feed writes it', () => {
   eq(lastName(normalizeName('Rafael Dos Anjos')), 'anjos', 'ours');
   eq(lastName(normalizeName('Rafael dos Anjos')), 'anjos', 'the feed');
   eq(lastName(normalizeName('Cris')), 'cris', 'a single-token name must not throw');
+});
+
+/* ------------------------------------- the corner, not just the bout (2026-10-19)
+
+   Finding the bout was half the fix. Each price is then put on a corner by
+   name, and that step still keyed on the full given name — so the feed's
+   "Alex Volkanovski" found UFC 333's main event and was then thrown away,
+   leaving Evloev's side priced and Volkanovski's empty. A one-sided fight
+   has no vig-free market at all, and the page read "No line yet" for seven
+   fights the books had priced. */
+
+t('every one-sided fight found on 2026-10-19 now gets both corners', () => {
+  [['Alexander Volkanovski', 'Movsar Evloev',  'Alex Volkanovski'],
+   ['Sergei Pavlovich',      'Alex Pereira',   'Sergey Pavlovich'],
+   ['Joe Pyfer',             'Bo Nickal',      'Joseph Pyfer'],
+   ['Loopy Godinez',         'Ketlen Souza',   'Lupita Godinez'],
+   ['Abus Magomedov',        'Cam Rowston',    'Abusupiyan Magomedov']].forEach(([a, b, feed]) => {
+    eq(cornerFor(feed, a, b), 'A', `"${feed}" was not put on ${a}'s corner`);
+    eq(cornerFor(b, a, b), 'B', `${b} lost their corner`);
+  });
+  eq(cornerFor('Timothy Cuamba', 'Louis Jourdain', 'Timmy Cuamba'), 'B', 'Cuamba');
+  eq(cornerFor('Ramazan Temirov', "Lone'er Kavanagh", 'Ramazan Temirov'), 'B', 'Temirov');
+});
+
+t('a corner surname is refused when both fighters share it', () => {
+  eq(cornerFor('Tony Silva', 'Jean Silva', 'Bruno Silva'), null,
+     'a shared surname picked a corner — fight_odds is append-only');
+});
+
+t('a draw or unknown outcome gets no corner', () => {
+  eq(cornerFor('Draw', 'Alexander Volkanovski', 'Movsar Evloev'), null, 'Draw');
+  eq(cornerFor('Ilia Topuria', 'Alexander Volkanovski', 'Movsar Evloev'), null, 'a stranger');
+});
+
+t('a full-name match still outranks the surname fallback', () => {
+  eq(cornerFor('Alex Pereira', 'Alex Pereira', 'Sergei Pavlovich'), 'A', 'exact');
+  eq(cornerFor('Alex Pereira', 'Sergei Pavlovich', 'Alex Pereira'), 'B', 'exact, other corner');
+});
+
+t('the moneyline builder refuses a book whose two outcomes land on one corner', () => {
+  const body = extract('buildMoneylineRows');
+  ok(/cornerFor\(/.test(body), 'buildMoneylineRows no longer uses cornerFor');
+  ok(/new Set\(named\)\.size !== named\.length/.test(body),
+     'the same-corner refusal is gone from buildMoneylineRows');
 });
 
 // ------------------------------------------------------------------ report

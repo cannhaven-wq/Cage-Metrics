@@ -11,6 +11,36 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-19 (c) — Seven fights captured one-sided: the corner matcher
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-19
+
+- Owner report: UFC 333's main event (Volkanovski vs. Evloev) showed no
+  betting odds. The books had it priced and the capture job had it: 151
+  sportsbook rows, **all on Evloev's side**. The feed says "Alex
+  Volkanovski"; the 2026-10-02 surname tier found the bout, but each price is
+  then put on a corner by full name, so every Volkanovski price was dropped.
+  A one-sided fight has no vig-free market, so every page read "No line yet".
+- Same cause on six more: Godinez/Souza (10-10), Jourdain/Cuamba (10-17),
+  Kavanagh/Temirov and Magomedov/Rowston (UFC 333), Pavlovich/Pereira and
+  Pyfer/Nickal (UFC 335).
+- Fix: `build/fetch-odds.js::cornerFor` — full-name tiers first, then the
+  surname, only inside a bout already identified and only when the two
+  corners' surnames differ. A book whose two outcomes land on one corner is
+  skipped (`fight_odds` is append-only). Tests in
+  `tests/odds-name-matching.test.js`.
+- Past one-sided captures stay one-sided (append-only); the next capture
+  fills the missing corner and the pages show the fights from then on.
+
+## Next action
+
+1. **Claude/next session:** after the next odds run, confirm fight 48438 has
+   side-A sportsbook rows and a row in `v_fight_market_vigfree`.
+
+---
+
 ## 2026-10-19 (b) — Fighting styles filling; T-102 and T-103 done
 
 **From:** Claude
