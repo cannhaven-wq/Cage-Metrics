@@ -11,6 +11,62 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-16 (f) — Fighters and Head-to-Head off the public site (T-103, PR #92)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- Owner: "The fighter and head to head tab need to be deleted … back end
+  information only."
+- Both nav entries removed; `fighters.html` and `h2h.html` replaced with
+  noindex redirect stubs to `/` (the `card-lab.html` pattern), so old links,
+  bookmarks and the 30-odd generated preview pages that link to Head-to-Head
+  land on the card. Out of `sitemap.xml` and `build/prerender.js`; the preview
+  template no longer links to it; the fighter page breadcrumb and "back"
+  links point at the card. Previews regenerate on the prerender cron.
+- Nothing in the database changed. Fighter profile pages (`fighter.html`)
+  stay public — they are where every fighter name on the card links.
+- Fixed in passing: `verify-live-stabilization.js` still looked for the
+  pre-redesign `.fight` class on the homepage, so it would have reported the
+  live card as empty.
+
+## Next action
+
+1. **Owner:** say "merge" on PR #92 (T-102 + T-103).
+2. **Claude, after merge:** fighting-style dry run as in (e).
+
+## 2026-10-16 (e) — Fighting style from UFC.com replaces the calculated label (T-102, PR open)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-16
+
+- Owner questioned Buckley reading "grappler". Cause: the label used round
+  one of his last five fights; Brady and Usman held him down, so his striking
+  read near zero. Owner decision (D-030): show the discipline as the UFC lists
+  it, not a calculation, everywhere.
+- Applied: `fighters.fighting_style`, `fighting_style_src`,
+  `fighting_style_checked_at` (`fighting_style_migration.sql`; read-only to
+  `anon`/`authenticated`, verified).
+- New `build/check-fighting-style.js` + `fighting-style.yml` (daily 13:35
+  UTC, manual dispatch with dry run): fighters on the next 14 days of cards
+  plus 60 other active fighters a run. Copies the UFC.com "Fighting style"
+  field; checks the page heading is the same fighter; never touches
+  `manual`; retries a miss after 30 days.
+- Fight Lab (both style spots) and the fighter page show it with its source;
+  "MMA"/"Freestyle"/missing shows nothing. `v_fighter_style` no longer read.
+- Not verified against a live UFC.com page from here (the sandbox cannot
+  reach ufc.com). The parser matches UFC.com's bio markup as known; the first
+  dry run in Actions is the check.
+
+## Next action
+
+1. **Claude, after merge:** dispatch `fighting-style.yml` with dry run, read
+   the log; if styles parse, dispatch for real and confirm Buckley's row.
+2. **Owner:** any style that reads wrong — set it by hand with
+   `fighting_style_src = 'manual'`, or ask Claude to.
+
 ## 2026-10-16 (d) — Card Lab: the owner's annotated revision (T-101, merged)
 
 **From:** Claude

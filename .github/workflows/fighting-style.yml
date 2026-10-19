@@ -1,0 +1,58 @@
+name: Fighting style — each fighter's discipline from UFC.com
+
+# PLAIN ENGLISH: once a day, copy the "Fighting style" field (Boxer,
+# Kickboxer, Wrestling, Brazilian Jiu-Jitsu...) from the UFC.com athlete page
+# of every fighter on the next two weeks of cards, plus a batch of other
+# active fighters not looked up yet. Fight Lab and the fighter page show it.
+# Nothing is calculated or guessed; a value set by hand is never touched.
+# Full reasoning at the top of build/check-fighting-style.js (T-102).
+#
+# Permissions: contents read only — this job commits nothing.
+
+on:
+  schedule:
+    - cron: '35 13 * * *'
+  workflow_dispatch:
+    inputs:
+      lookahead_days:
+        description: 'How many days of cards to check'
+        required: false
+        default: '14'
+      backfill:
+        description: 'How many other active fighters to look up this run'
+        required: false
+        default: '60'
+      dry_run:
+        description: 'Look and report only — write nothing to the database'
+        required: false
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fighting-style
+  cancel-in-progress: false
+
+jobs:
+  check:
+    name: Fighting style from UFC.com
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Look up fighting styles
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          STYLE_LOOKAHEAD_DAYS: ${{ github.event.inputs.lookahead_days || '14' }}
+          STYLE_BACKFILL: ${{ github.event.inputs.backfill || '60' }}
+          STYLE_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
+        run: node build/check-fighting-style.js

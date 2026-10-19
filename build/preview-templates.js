@@ -7,7 +7,7 @@
 // sees real, opinionated content immediately — and a Create-account CTA
 // at the top of the page.
 //
-// Canonical URL points at the preview itself (not at h2h.html or event.html)
+// Canonical URL points at the preview itself (not at event.html)
 // since the content is unique to the preview.
 
 const { slugify } = require('./slug');
@@ -153,7 +153,6 @@ function matchupPreview({
     ]
   };
 
-  const h2hUrl = `${SITE}/h2h.html?a=${fighterA.id}&b=${fighterB.id}`;
   const eventUrl = event ? `${SITE}/event.html?id=${event.id}` : `${SITE}/`;
   const signupUrl = `${SITE}/signup.html?next=${encodeURIComponent('/preview/' + slug + '.html')}`;
 
@@ -278,7 +277,6 @@ ${jsonLdBlobs.map(j => `<script type="application/ld+json">${JSON.stringify(j)}<
 
   <div class="cfl-prev-deeper">
     <h3>Go deeper</h3>
-    <a href="${h2hUrl}">Head-to-head: ${escapeHtml(fighterA.name)} vs ${escapeHtml(fighterB.name)} →</a>
     <a href="${SITE}/fight.html?id=${fight.id}">Fight Lab: odds, movement &amp; matchup data →</a>
     <a href="${eventUrl}">Full card: ${escapeHtml(eventName)} →</a>
     <a href="${SITE}/cardio.html">How the cardio score works →</a>

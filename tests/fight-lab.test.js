@@ -311,6 +311,26 @@ t('the late-round panel shows its sample and its caveat', () => {
 });
 
 // -------------------------------------------------------------- report
+// ------------------------------------------------------------- discipline
+// T-102 (owner, 2026-10-16): pages show the discipline the UFC lists, copied
+// from UFC.com into fighters.fighting_style — never the calculated label.
+t('discipline is the UFC.com value as stored', () => {
+  const r = FL.disciplineRead({ fighting_style: 'Kickboxer', fighting_style_src: 'ufc.com' });
+  eq(r.label, 'Kickboxer'); eq(r.source, 'ufc.com');
+  eq(FL.disciplineRead({ fighting_style: ' Wrestling ', fighting_style_src: 'manual' }).source, 'manual');
+});
+t('no discipline, or a generic one, shows nothing — never a calculated stand-in', () => {
+  [null, '', 'MMA', 'Mixed Martial Arts', 'Freestyle', 'N/A'].forEach(v => eq(FL.disciplineRead({ fighting_style: v }), null));
+  eq(FL.disciplineRead(null), null);
+});
+t('no page renders the calculated style any more', () => {
+  const fs = require('fs'), path = require('path');
+  ['fight.html', 'fighter.html', 'index.html'].forEach(f => {
+    const src = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    ok(!/FL\.styleRead\(|from\('v_fighter_style'\)/.test(src), f + ' still reads the calculated style');
+  });
+});
+
 if (failures.length) {
   console.error(`fight-lab: ${failures.length} failed, ${passed} passed`);
   failures.forEach(f => console.error('  ✗ ' + f));

@@ -118,7 +118,7 @@ t('new tables, views and sequences are private by default (D-T088-2)', () => {
 const LEGACY_READS_GRANTED_ONLY_IN_PRODUCTION = new Set([
   'email_subscribers', 'events', 'fight_odds', 'fighters', 'fights', 'funnel_events',
   'model_predictions', 'model_versions', 'odds_books', 'prediction_indicators',
-  'premium_waitlist', 'profiles', 'user_bankrolls', 'user_bets', 'v_fighter_style',
+  'premium_waitlist', 'profiles', 'user_bankrolls', 'user_bets',
   'v_predictions_with_results',
 ]);
 t('every object a page reads is granted SELECT in repo SQL (or is a named legacy read)', () => {

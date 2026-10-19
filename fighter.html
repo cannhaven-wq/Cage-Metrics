@@ -105,6 +105,7 @@
   .fh-style.grappler { color: var(--blue, #378ADD); border-color: rgba(55,138,221,0.4); }
   .fh-style.striker  { color: #ff8a92; border-color: rgba(230,57,70,0.4); }
   .fh-style.hybrid   { color: var(--amber, #d4af37); border-color: rgba(212,175,55,0.4); }
+  .fh-style.discipline { color: #fff; border-color: rgba(255,255,255,0.3); }
   .fh-records {
     margin-left: auto;
     display: flex;
@@ -275,11 +276,12 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl6"></script>
+<script src="_shared.js?v=rl7"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=3"></script>
 <script src="fight-insights.js?v=9"></script>
+<script src="fight-lab.js?v=2"></script>
 <script>
 cfl.renderNav('fighters');
 cfl.renderFooter();
@@ -347,7 +349,7 @@ function updateFighterSEO(f) {
     '@type': 'BreadcrumbList',
     'itemListElement': [
       { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://cannonfightlab.com/' },
-      { '@type': 'ListItem', 'position': 2, 'name': 'Fighters', 'item': 'https://cannonfightlab.com/fighters.html' },
+      { '@type': 'ListItem', 'position': 2, 'name': 'Card Lab', 'item': 'https://cannonfightlab.com/' },
       { '@type': 'ListItem', 'position': 3, 'name': f.name, 'item': url }
     ]
   });
@@ -355,7 +357,7 @@ function updateFighterSEO(f) {
 
 async function load() {
   if (!fighterId) {
-    document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    document.getElementById('content').innerHTML = cfl.errorHtml('No fighter id provided. <a href="index.html" style="color:var(--red)">Back to the card</a>');
     return;
   }
 
@@ -368,7 +370,7 @@ async function load() {
     .single();
 
   if (error || !f) {
-    document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="fighters.html" style="color:var(--red)">Back to fighter list</a>');
+    document.getElementById('content').innerHTML = cfl.errorHtml('Fighter not found. <a href="index.html" style="color:var(--red)">Back to the card</a>');
     return;
   }
   // The UFC record shown anywhere on this page comes from v_fighter_ufc_record,
@@ -613,37 +615,17 @@ async function loadFinisher(f) {
   sec.hidden = false;
 }
 
-async function loadStyle(f) {
-  const sb = window.cflSupabase;
+// The fighter's discipline as the UFC lists it on their UFC.com athlete page
+// (fighters.fighting_style, T-102). Never calculated: a generic or missing
+// entry leaves the pill hidden.
+function loadStyle(f) {
   const pill = document.getElementById('fhStyle');
   if (!pill) return;
-
-  // Try the fighter's primary division first; fall back to CAREER row.
-  // The view returns 'grappler' / 'striker' / 'hybrid'.
-  let style = null;
-  if (f.division) {
-    const { data } = await sb
-      .from('v_fighter_style')
-      .select('style, sample_fights')
-      .eq('fighter_id', f.id)
-      .eq('weight_class', f.division)
-      .maybeSingle();
-    if (data && data.style) style = data.style;
-  }
-  if (!style) {
-    const { data } = await sb
-      .from('v_fighter_style')
-      .select('style, sample_fights')
-      .eq('fighter_id', f.id)
-      .eq('weight_class', 'CAREER')
-      .maybeSingle();
-    if (data && data.style) style = data.style;
-  }
-
-  if (!style) return;  // not enough data — leave pill hidden
-
-  pill.textContent = style;
-  pill.classList.add(style);
+  const st = window.cflFightLab ? cflFightLab.disciplineRead(f) : null;
+  if (!st) return;
+  pill.textContent = st.label;
+  pill.title = st.source === 'manual' ? 'Fighting style, set by CFL' : 'Fighting style as listed on UFC.com';
+  pill.classList.add('discipline');
   pill.style.display = 'inline-block';
 }
 

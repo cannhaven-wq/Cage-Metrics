@@ -129,7 +129,7 @@ Not to be confused with the legacy `predictions` table, written by `cfl-snapshot
 
 Every page is its own standalone HTML file at the repo root. Shared chrome (nav, footer) is rendered by JS into `<nav class="cfl-nav">` and `<footer class="cfl-footer">` placeholders.
 
-**Product surfaces**: `index.html` (**Card Lab**), `market.html` (**Market Lab**), `fight.html` (**Fight Lab**), `stats.html` (**Factor Lab**), `props.html`, `parlay.html`, `cardio.html`, `event.html`, `fighter.html`, `fighters.html`, `h2h.html`, `mybook.html`.
+**Product surfaces**: `index.html` (**Card Lab**), `market.html` (**Market Lab**), `fight.html` (**Fight Lab**), `stats.html` (**Factor Lab**), `props.html`, `parlay.html`, `cardio.html`, `event.html`, `fighter.html`, `mybook.html`. **Retired from the public site 2026-10-16 (owner, T-103):** the Fighters directory (`fighters.html`) and Head-to-Head (`h2h.html`) — their data is back-end only; both files are now noindex redirect stubs to `/`.
 **Archive** (documents the retired forecast; each carries `.cfl-archive-note`): `track-record.html`, `proof.html`, `predictor.html`, `edges.html`, `methodology.html`.
 **Explainers**: `about.html`.
 **Account / legal / misc**: `pricing.html`, `account.html`, `login.html`, `signup.html`, `reset.html`, `contact.html`, `disclaimer.html`, `privacy.html`, `unsubscribe.html`.

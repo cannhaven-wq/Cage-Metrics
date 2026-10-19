@@ -125,6 +125,7 @@
 #fl .pill.striker  { color: #ff8a92; border-color: rgba(230,57,70,.4); }
 #fl .pill.grappler { color: #74b6f0; border-color: rgba(55,138,221,.4); }
 #fl .pill.hybrid   { color: #e8c35c; border-color: rgba(212,175,55,.4); }
+#fl .pill.discipline { color: #fff; border-color: rgba(255,255,255,.28); }
 #fl .pill.thin     { color: var(--amber); border-color: rgba(255,181,71,.35); font-weight: 600; text-transform: none; letter-spacing: 0; }
 #fl .who-line { font-size: 12.5px; color: var(--text-2); line-height: 1.45; margin-top: 6px; }
 #fl .who-line .muted { color: var(--text-3); }
@@ -556,13 +557,13 @@
 
 <footer class="cfl-footer"></footer>
 
-<script src="_shared.js?v=rl6"></script>
+<script src="_shared.js?v=rl7"></script>
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=3"></script>
 <script src="market-chart.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
-<script src="fight-lab.js?v=1"></script>
+<script src="fight-lab.js?v=2"></script>
 <script src="card-research.js?v=2"></script>
 <script src="fight-workspace.js?v=3"></script>
 <script src="fight-workspace-ui.js?v=3"></script>
@@ -724,7 +725,7 @@ async function load() {
   const [evR, ftR, mvt, books] = await Promise.all([
     sb.from('events').select('id, name, event_date, location').eq('id', fight.event_id).limit(1),
     sb.from('fighters')
-      .select('id, name, nickname, age, dob, height_in, reach_in, stance, wins, losses, draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code, updated_at')
+      .select('id, name, nickname, age, dob, height_in, reach_in, stance, wins, losses, draws, slpm, str_acc, sapm, str_def, td_avg, td_acc, td_def, sub_avg, country, country_code, updated_at, fighting_style, fighting_style_src')
       .in('id', [fight.fighter_a_id, fight.fighter_b_id].filter(x => x != null))
       // ufc_* comes from v_fighter_ufc_record (T-084); it feeds hasTape.
       .then(async r => r.error ? r : { data: await cflUfcRecord.attach(sb, r.data || []) }),
@@ -747,7 +748,7 @@ async function load() {
 
   const ids = [a.id, b.id].filter(x => x != null);
   const [consRows, styleRows, form, baseRates, factorRates] = await Promise.all([
-    loadConsistency(ids), loadStyles(ids), loadForm(ids), loadBaseRates(), loadFactorRates()]);
+    loadConsistency(ids), Promise.resolve([]), loadForm(ids), loadBaseRates(), loadFactorRates()]);
   const cardioMap = cardioMapFrom(consRows);
   const FL = window.cflFightLab;
   const today = localToday();
@@ -950,15 +951,6 @@ function cardioMapFrom(rows) {
   return out;
 }
 
-async function loadStyles(ids) {
-  try {
-    const { data, error } = await window.cflSupabase.from('v_fighter_style')
-      .select('fighter_id, weight_class, style, sample_fights, confidence')
-      .in('fighter_id', ids);
-    return error ? [] : (data || []);
-  } catch (e) { return []; }
-}
-
 // Every UFC fight either corner has been booked in, plus the cards they sat
 // on. fight-lab.js decides which of them count as completed; a fighter has a
 // few dozen at most, so one read each is cheaper than a view.
@@ -1106,7 +1098,7 @@ async function mountWorkspace(x) {
       name: p.name, last: lastName(p.name), age: p.age, reach: W.n(p.reach_in), height: W.n(p.height_in), stance: p.stance,
       debut: x.form.ok && !ctx['facts' + side].ufcFights, career: ctx['career' + side], recent: ctx['recent' + side],
       facts: ctx['facts' + side], methods: ctx['methods' + side], rank: ctx['rank' + side],
-      style: FL.styleRead(x.styleRows, p.id, x.fight.weight_class || null),
+      style: FL.disciplineRead(p),
       late: FL.lateRoundRead(x.consRows, p.id, x.fight.weight_class || null),
     });
     ctx.keyPoints = W.keyPoints(corner(x.a, 'A'), corner(x.b, 'B'), { fight: x.fight, changes: ctx.changes, divisionLabel: divLabel, windowLabel });
@@ -1301,7 +1293,7 @@ function renderWho(a, b, fight, styleRows, formA, formB, formOk) {
   const wc = fight.weight_class || null;
 
   const card = (f, form) => {
-    const st = FL.styleRead(styleRows, f.id, wc);
+    const st = FL.disciplineRead(f);
     const facts = [];
     facts.push('<span>Pro record <b>' + esc(recOf(f)) + '</b></span>');
     if (f.ufcRec && !f.ufcRec.total) facts.push('<span><b>No UFC fights yet</b></span>');
@@ -1310,17 +1302,13 @@ function renderWho(a, b, fight, styleRows, formA, formB, formOk) {
     if (f.stance) facts.push('<span>Stance <b>' + esc(f.stance) + '</b></span>');
     if (f.country) facts.push('<span>' + esc(f.country) + '</span>');
 
+    // The discipline as the UFC lists it (T-102), never calculated.
     const styleHtml = st
       ? '<div><div class="who-k">Fighting style</div>' +
-          '<span class="pill ' + esc(st.key) + '">' + esc(st.label) + '</span>' +
-          (st.thin ? ' <span class="pill thin">small sample</span>' : '') +
-          '<div class="who-line">' + esc(st.line) + ' <span class="muted">' +
-            'Read from round one of their last ' + (st.fights != null ? st.fights + ' ' : '') +
-            'UFC fight' + (st.fights === 1 ? '' : 's') +
-            (st.scope === 'division' ? ' at ' + esc(st.weightClass) : ' across all divisions') +
-          '.</span></div></div>'
+          '<span class="pill discipline">' + esc(st.label) + '</span>' +
+          '<div class="who-line muted">' + (st.source === 'manual' ? 'Set by CFL.' : 'As listed on their UFC.com athlete page.') + '</div></div>'
       : '<div><div class="who-k">Fighting style</div><div class="who-line muted">' +
-          'Not enough UFC fights on record to label a style.</div></div>';
+          'Not listed on their UFC.com athlete page.</div></div>';
 
     const formHtml = form.length
       ? '<div><div class="who-k">Last ' + form.length + ' · newest first</div><div class="chips">' +
@@ -1519,7 +1507,7 @@ function renderOverview(x) {
       f, form, key, comp, career, stats, methods, facts,
       mix: career && career.totals ? W.strikeMix(career.totals) : null,
       dist: x.form.ok ? O.distance(comp, f.id) : null,
-      style: FL.styleRead(x.styleRows, f.id, wc),
+      style: FL.disciplineRead(f),
       late: FL.lateRoundRead(x.consRows, f.id, wc),
       read: key === 'a' ? rA : rB,
     };
@@ -1651,10 +1639,9 @@ function renderOverview(x) {
   const col = S => {
     const st = S.style;
     const styleHtml = st
-      ? '<span class="pill ' + esc(st.key) + '">' + esc(st.label) + '</span>' + (st.thin ? ' <span class="pill thin">small sample</span>' : '') +
-        '<div class="ov-muted">' + esc(st.line) + ' Measured from round one of ' + (st.fights != null ? st.fights + ' ' : '') +
-        'UFC fight' + (st.fights === 1 ? '' : 's') + (st.scope === 'division' ? ' at ' + esc(st.weightClass) : '') + ' — not a training background.</div>'
-      : '<div class="ov-muted">Not enough UFC fights on record to measure a style.</div>';
+      ? '<span class="pill discipline">' + esc(st.label) + '</span>' +
+        '<div class="ov-muted">' + (st.source === 'manual' ? 'Fighting style set by CFL.' : 'Fighting style as listed on their UFC.com athlete page.') + '</div>'
+      : '<div class="ov-muted">No fighting style listed on their UFC.com athlete page.</div>';
     const t = S.tend;
     const tendHtml = t.lines.length
       ? '<ul class="ov-tend">' + t.lines.map(l => '<li>' + esc(l.text) + '<span class="b">' + esc(l.basis) + '</span></li>').join('') + '</ul>' +
