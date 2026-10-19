@@ -22,7 +22,12 @@
 //               - a card dated 60+ hours ago still has most fights
 //                 with no result (the Railway event scraper writes results);
 //               - no UFC card on the calendar in the next 14 days (the same
-//                 scraper adds upcoming cards).
+//                 scraper adds upcoming cards);
+//               - a fight on an upcoming card whose latest sportsbook capture
+//                 priced ONE corner only. Added 2026-10-19: the feed's "Alex
+//                 Volkanovski" was dropped for two weeks while Evloev's side
+//                 was saved, so UFC 333's main event read "No line yet" and
+//                 nothing alarmed — the capture job itself was succeeding.
 //             Data checks catch the Railway jobs, which GitHub cannot see.
 //
 // "I COULD NOT LOOK" IS A FAILURE, as in the dead man: a missing key, a failed
@@ -81,6 +86,7 @@ const CALENDAR_LOOKAHEAD_DAYS = 14;
 //   lastOddsCapture: ISO | null,
 //   completedCards: [{ id, name, event_date, fights, withResult }],
 //   upcomingCards: [{ id, name, event_date }],
+//   oneSidedFights: [{ id, card, matchup, side }],  // side = the corner that HAS prices
 // }
 function assess(facts, now, workflows = WORKFLOWS) {
   const t = +new Date(now);
@@ -130,6 +136,12 @@ function assess(facts, now, workflows = WORKFLOWS) {
   if (!(facts.upcomingCards || []).length) {
     add('data:calendar:empty', `Calendar: no UFC card in the next ${CALENDAR_LOOKAHEAD_DAYS} days. The Railway event scraper adds upcoming cards; the UFC almost never goes two weeks dark.`);
   } else ok.push(`Calendar: ${facts.upcomingCards.length} card(s) in the next ${CALENDAR_LOOKAHEAD_DAYS} days.`);
+
+  const oneSided = facts.oneSidedFights || [];
+  for (const f of oneSided) {
+    add(`data:odds:one-sided:${f.id}`, `Odds: ${f.matchup} (${f.card}) — the latest sportsbook capture priced only one fighter (corner ${f.side}), so the site shows "No line yet". Almost always the feed spells the other fighter's name differently; check the odds job log for "[corner]".`);
+  }
+  if (!oneSided.length) ok.push('Odds: every priced upcoming fight has both corners.');
 
   return { now: new Date(t).toISOString(), breaches, ok };
 }
@@ -185,6 +197,21 @@ async function load({ key, token, repo, now }) {
 
   const ahead = isoDay(t + CALENDAR_LOOKAHEAD_DAYS * 24 * H);
   facts.upcomingCards = await rest(`events?select=id,name,event_date&event_date=gte.${to}&event_date=lte.${ahead}`, key);
+
+  // One-sided capture: for each upcoming fight, the corners present at its
+  // latest Odds API capture instant. A fight nobody prices yet is not an alarm.
+  facts.oneSidedFights = [];
+  for (const e of facts.upcomingCards) {
+    const fights = await rest(`fights?select=id,fighter_a_name,fighter_b_name,is_active&event_id=eq.${e.id}`, key);
+    for (const f of fights.filter(x => x.is_active !== false)) {
+      const q = await rest(`fight_odds?select=side,captured_at&fight_id=eq.${f.id}&feed_version=not.is.null&order=captured_at.desc&limit=40`, key);
+      if (!q.length) continue;
+      const sides = new Set(q.filter(r => r.captured_at === q[0].captured_at).map(r => r.side));
+      if (sides.size === 1) {
+        facts.oneSidedFights.push({ id: f.id, card: `${e.name}, ${e.event_date}`, matchup: `${f.fighter_a_name} vs. ${f.fighter_b_name}`, side: [...sides][0] });
+      }
+    }
+  }
   return facts;
 }
 
