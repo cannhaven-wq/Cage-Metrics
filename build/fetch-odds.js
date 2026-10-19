@@ -1485,6 +1485,14 @@ async function main() {
 
       const mlRows = buildMoneylineRows(e, fight, bookId, captured_at, retrieved_at);
       rows.push(...mlRows);
+      // A bout priced on one corner only is a name the matcher could not place
+      // (2026-10-19: "Alex Volkanovski", two weeks, nobody told). Say so here;
+      // build/check-pipeline-health.js turns the same fact into an issue.
+      const mlSides = new Set(mlRows.map(r => r.side));
+      if (mlSides.size === 1) {
+        console.warn(`[corner] fight ${fight.id} (${fight.fighter_a_name} vs ${fight.fighter_b_name}): ` +
+          `priced corner ${[...mlSides][0]} only — feed names "${e.home_team}" / "${e.away_team}"`);
+      }
       const wrote = mlRows.length;
       // Fight totals (DUR-001) — independent of whether h2h matched a price.
       if (totals.yes) totalsRows.push(...buildTotalsRows(e, fight, bookId, captured_at));

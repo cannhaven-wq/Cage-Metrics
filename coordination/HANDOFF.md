@@ -34,10 +34,19 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 - Past one-sided captures stay one-sided (append-only); the next capture
   fills the missing corner and the pages show the fights from then on.
 
+- **Verified 15:28 UTC:** both corners captured; 48438 priced by 6 books.
+- **Guard against a repeat:** `check-pipeline-health.js` (twice daily) opens
+  an issue for any upcoming fight whose latest capture priced one corner
+  only; `fetch-odds.js` logs `[corner]` with the feed's names when it happens.
+  Run against production data before this fix, it flags all three UFC 333
+  fights; after the fix, none.
+- Earlier history for the one-sided fights is not recoverable from our data;
+  the Odds API historical endpoint would cost money (L3). Owner declined.
+
 ## Next action
 
-1. **Claude/next session:** after the next odds run, confirm fight 48438 has
-   side-A sportsbook rows and a row in `v_fight_market_vigfree`.
+1. **Claude/next session:** if a `cfl-health` issue names a one-sided fight,
+   read the `[corner]` line in the odds job log and fix the name match.
 
 ---
 

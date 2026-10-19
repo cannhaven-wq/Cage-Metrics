@@ -80,6 +80,19 @@ t('an empty calendar is caught', () => {
   ok(/data:calendar:empty/.test(markers(assess(f, NOW))), 'empty calendar not reported');
 });
 
+t('a fight priced on one corner only is caught, by name (2026-10-19)', () => {
+  const f = healthy();
+  f.oneSidedFights = [{ id: 48438, card: 'UFC 333, 2026-10-24', matchup: 'Alexander Volkanovski vs. Movsar Evloev', side: 'B' }];
+  const r = assess(f, NOW);
+  ok(/data:odds:one-sided:48438/.test(markers(r)), 'a one-sided fight was not reported');
+  ok(/Volkanovski/.test(r.breaches[0].message), 'the breach does not name the fight');
+});
+
+t('no one-sided fights, or the field absent, raises nothing', () => {
+  const f = healthy(); f.oneSidedFights = [];
+  ok(assess(f, NOW).breaches.length === 0, 'an empty list raised a breach');
+});
+
 t('markers are stable so one issue tracks one problem', () => {
   const f = healthy(); f.lastOddsCapture = hoursAgo(40);
   const a = markers(assess(f, NOW)), b = markers(assess(f, hoursAgo(-3)));
