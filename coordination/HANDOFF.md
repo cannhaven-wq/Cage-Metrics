@@ -27,10 +27,17 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 - Generic UFC.com entries ("MMA", "Freestyle") are stored as listed and show
   nothing on the page (owner's choice, D-030).
 
+- Backfill-500 run: **578 styles saved**. Buckley and Malott still missed:
+  `fighters.last_fight_date` is NULL for both (the profile scraper has not
+  refreshed since July), and backfill only took fighters with that date. The
+  job now also covers everyone on a card in the last 120 days, read from
+  `fights`; the zero-styles guard counts only first-time lookups, so a
+  month of no-style retries cannot trip it.
+
 ## Next action
 
-1. **Claude/next session:** confirm the backfill-500 run, and Buckley's and
-   Malott's rows; the daily 13:35 UTC run covers upcoming cards from here.
+1. **Claude/next session:** confirm the run after this change reached
+   Buckley and Malott; the daily 13:35 UTC run covers new cards from here.
 2. **Owner:** any style that reads wrong — set it by hand with
    `fighting_style_src = 'manual'`, or ask Claude to.
 

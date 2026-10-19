@@ -39,7 +39,7 @@ jobs:
   check:
     name: Fighting style from UFC.com
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 40
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -54,5 +54,6 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
           STYLE_LOOKAHEAD_DAYS: ${{ github.event.inputs.lookahead_days || '14' }}
           STYLE_BACKFILL: ${{ github.event.inputs.backfill || '60' }}
+          STYLE_RECENT_DAYS: '120'
           STYLE_DRY_RUN: ${{ github.event.inputs.dry_run == 'true' && '1' || '0' }}
         run: node build/check-fighting-style.js
