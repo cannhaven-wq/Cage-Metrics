@@ -35,6 +35,10 @@
 // Env:
 //   SUPABASE_SERVICE_ROLE_KEY (or SUPABASE_SECRET_KEY)  required
 //   STYLE_LOOKAHEAD_DAYS  default 14
+//   STYLE_RECENT_DAYS     also everyone who fought on a card in this many past days, default 120
+//                         (read from `fights`, because fighters.last_fight_date
+//                         is NULL for many active fighters: Buckley and Malott
+//                         were missed on 2026-10-19 for exactly that reason)
 //   STYLE_BACKFILL        how many other recently active fighters to try per run, default 60
 //   STYLE_DRY_RUN         '1' = look and report, write nothing
 // =============================================================================
@@ -142,19 +146,24 @@ async function main() {
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
   if (!key) { console.error('SUPABASE_SERVICE_ROLE_KEY is not set: could not look, so this run says nothing.'); process.exit(2); }
   const days = Math.max(1, +process.env.STYLE_LOOKAHEAD_DAYS || 14);
+  const recent = Math.max(0, process.env.STYLE_RECENT_DAYS == null ? 120 : +process.env.STYLE_RECENT_DAYS || 0);
   const backfill = Math.max(0, process.env.STYLE_BACKFILL == null ? 60 : +process.env.STYLE_BACKFILL || 0);
   const dry = process.env.STYLE_DRY_RUN === '1';
   const now = Date.now();
   const iso = d => new Date(d).toISOString().slice(0, 10);
   const cols = 'id,name,fighting_style,fighting_style_src,fighting_style_checked_at';
 
-  // 1. Everyone on the next cards.
-  const events = await rest(key, `events?select=id&event_date=gte.${iso(now - 86400000)}&event_date=lte.${iso(now + days * 86400000)}`);
+  // 1. Everyone on the next cards, and everyone on the cards of the last
+  //    `recent` days.
+  const events = await rest(key, `events?select=id&event_date=gte.${iso(now - Math.max(1, recent) * 86400000)}&event_date=lte.${iso(now + days * 86400000)}`);
   const fights = events.length
     ? await rest(key, `fights?select=fighter_a_id,fighter_b_id&event_id=in.(${events.map(e => e.id).join(',')})&is_active=not.is.false`)
     : [];
   const ids = [...new Set(fights.flatMap(f => [f.fighter_a_id, f.fighter_b_id]).filter(x => x != null))];
-  const onCard = ids.length ? await rest(key, `fighters?select=${cols}&id=in.(${ids.join(',')})`) : [];
+  const onCard = [];
+  for (let i = 0; i < ids.length; i += 150) {   // keep the URL short
+    onCard.push(...await rest(key, `fighters?select=${cols}&id=in.(${ids.slice(i, i + 150).join(',')})`));
+  }
 
   // 2. A batch of other recently active fighters nobody has looked up yet.
   const extra = backfill
@@ -194,9 +203,13 @@ async function main() {
   // A run that read many pages and found not one style is far likelier to be
   // UFC.com serving a different page than every fighter having none (the
   // 2026-10-19 00:30 run: 0 of 342, after 39 of 50 five minutes earlier).
-  const fills = results.filter(r => r.action === 'fill').length;
-  if (results.length >= 20 && fills === 0) {
-    console.error(`${results.length} pages read and not one fighting style found — treating this as a page we could not read. Nothing written.`);
+  // Counted over first-time lookups only: a month's retries of fighters whose
+  // page lists no style can legitimately all come back empty.
+  const fresh = new Set(todo.filter(f => !f.fighting_style_checked_at).map(f => f.id));
+  const firstTime = results.filter(r => fresh.has(r.id));
+  const fills = firstTime.filter(r => r.action === 'fill').length;
+  if (firstTime.length >= 20 && fills === 0) {
+    console.error(`${firstTime.length} first-time pages read and not one fighting style found — treating this as a page we could not read. Nothing written.`);
     process.exit(1);
   }
   if (!dry) {
