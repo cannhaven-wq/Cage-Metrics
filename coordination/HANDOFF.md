@@ -11,6 +11,48 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 (e) — Historical test of M1: the data cannot answer it yet (T-107)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Pinned `strategy_draft.json` (sha256 `4eaf5c3e…1368555`) before any return;
+  replayed M1 only, unchanged, point-in-time from `fight_odds` per-book rows.
+  Full write-up: `paper/HISTORICAL_TEST_2026-10-20.md`.
+- **No settled bet exists, so there is no ROI.** 9 of 14 past cards cannot
+  lock (no provider start recorded before the instant — `fight_start_estimates`
+  begins 2026-09-15); the settled 2026-10-17 card and 3 sealed cards had every
+  quote 53–1,667 min old at the instant; the one eligible card (2026-10-10,
+  1 selection at +3.1% vs the reference, 9 passes) is sealed, so it is not
+  settled. Exploratory; the 10-17 results were also seen earlier today.
+- Arbitrage (outcome-free, pre-fight instants only): 8 sportsbook quoted
+  pairs on 5 bouts, $0.28–$1.20 per $100 at quoted prices, limits and void
+  rules unknown → none established; Polymarket + sportsbook 150 checked, 0
+  favourable. The raw scan's +600/−115 "arbitrages" were in-fight prices.
+- Polymarket fees: `feeSchedule` (0.05 Sports, exponent 1) governs; the CLOB
+  `base_fee`/`takerBaseFee` 1000 is the legacy v1 signed ceiling the
+  FeeModule refunds down. Fee in shares = fee_usdc / price, checked at 0.25 /
+  0.50 / 0.75 against the documented table; 5-dp rounding; a capture is
+  "verified" only if its rate matches the documented category rate.
+- **Sealed data, disclosed:** this task read sealed-period prices (no
+  outcomes) and refuses sealed outcome files. Earlier today's investigation
+  did read RESERVE outcomes (realised results 2026-09-19 → 10-10), and the
+  private MMA-001 history holds 2025–26 results; neither was used here.
+- Raw prices, review sample and worked trace: private package sent to the
+  owner; nothing raw is committed.
+
+## Next action
+
+Owner decides whether to buy one month of The Odds API historical access
+(about 2,200 credits for ~200 DEV-period cards at one snapshot each, us
+region; plan price to be confirmed on the live page). With it, `replay.py`
+runs unchanged on 2020-06 → 2024-12, where outcomes may be scored. Separately,
+going forward: a sportsbook capture must land inside the hour before each
+lock, or every card abstains.
+
+---
+
 ## 2026-10-20 (d) — Fee conversion corrected; live Polymarket capture carried to a decision (T-106)
 
 **From:** Claude

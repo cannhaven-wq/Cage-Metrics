@@ -90,6 +90,11 @@ class Offer:
     def to_dict(self) -> dict:
         d = asdict(self)
         d["equivalent_american"] = round(self.equivalent_american, 1)
+        # expected_return() prices only the two winner states. No draw / no-contest /
+        # cancellation probability is invented; what a void would pay is stated instead.
+        d["ev_assumes_decided_fight"] = True
+        d["void_settlement"] = ("0.50 per net share (Polymarket 50-50 resolution)" if self.venue_kind == "polymarket"
+                                else "stake refunded (assumed: book rules are not in the data)")
         return d
 
 
@@ -110,7 +115,27 @@ def sportsbook_offer(*, venue_id: int, fight_id: int, side: str, fighter_id: int
 #: rate * (p * (1 - p)) ** exponent, with exponent 1 on every market seen so far
 #: (docs.polymarket.com/trading/fees). Makers pay 0. The RATE and EXPONENT are never
 #: hard-coded: they come from the market's own feeSchedule at capture time.
-FEE_FORMULAS = {"p_times_1_minus_p": lambda rate, p, exponent=1.0: rate * (p * (1.0 - p)) ** exponent}
+FEE_FORMULAS = {
+    "p_times_1_minus_p": lambda rate, p, exponent=1.0: rate * (p * (1.0 - p)) ** exponent,
+    # SENSITIVITY ONLY, never used for a decision: the legacy CTFExchange (market version
+    # 'v1') charges baseRate x min(p, 1 - p) per share from the fee rate SIGNED INTO THE
+    # ORDER (the CLOB's base_fee / takerBaseFee, 1000 bps on UFC markets), and the
+    # FeeModule then refunds anything above the operator's intended fee (the
+    # feeSchedule fee above). This form is the ceiling a v1 taker could be charged
+    # before that refund. Sources: github.com/Polymarket/ctf-exchange
+    # src/exchange/libraries/CalculatorHelper.sol, github.com/Polymarket/exchange-fee-module.
+    "v1_signed_ceiling_min": lambda rate, p, exponent=1.0: rate * min(p, 1.0 - p),
+}
+
+#: "Fees are rounded to 5 decimal places. The smallest fee charged is 0.00001 USDC."
+#: (docs.polymarket.com/trading/fees). Applied per price level (per match). The
+#: rounding mode is not documented; half-up is used and stated.
+FEE_DECIMALS = 5
+
+
+def round_fee(x: float) -> float:
+    from decimal import Decimal, ROUND_HALF_UP
+    return float(Decimal(repr(x)).quantize(Decimal(1).scaleb(-FEE_DECIMALS), rounding=ROUND_HALF_UP))
 
 #: Where a BUY's fee is collected: in the outcome shares received, valued at the
 #: execution price. fee_shares = fee_usdc / p.
@@ -168,8 +193,8 @@ def polymarket_fill(*, asks: list[dict], budget: float, fee_rate_bps: Optional[f
             break
         take = min(s, remaining / p)            # gross shares bought at this level
         cash = take * p
-        f_usd = take * fee_of(rate, p)          # the fee in collateral
-        f_sh = f_usd / p                        # collected in shares at the execution price
+        f_usd = round_fee(take * fee_of(rate, p))   # the fee in collateral, rounded to 5 dp
+        f_sh = f_usd / p                            # collected in shares at the execution price
         gross += take
         fee_usdc += f_usd
         fee_shares += f_sh
@@ -211,6 +236,8 @@ def polymarket_offer(*, venue_id: int, fight_id: int, side: str, fighter_id: int
         raise OfferRejected(f"polymarket: fighter mapping is {book.get('mapping_confidence')!r}, not exact")
     if unit_notional <= 0:
         raise OfferRejected("polymarket: unit notional must be positive")
+    if book.get("fee_formula", "p_times_1_minus_p") != "p_times_1_minus_p":
+        raise OfferRejected(f"polymarket: fee formula {book.get('fee_formula')!r} is a sensitivity, not a decision basis")
     fill = polymarket_fill(asks=book.get("asks") or [], budget=stake * unit_notional, fee_rate_bps=book.get("fee_rate_bps"),
                            fee_formula=book.get("fee_formula", "p_times_1_minus_p"),
                            min_fill_fraction=min_fill_fraction, tick_size=book.get("tick_size"),

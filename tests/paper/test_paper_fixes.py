@@ -50,7 +50,8 @@ def test_buy_fee_is_collected_in_shares_not_added_to_cash():
     assert os_.source["fill"]["fee_usdc"] == pytest.approx(2.5) and os_.source["fill"]["shares"] == pytest.approx(195.0)
     # an exponent of 2 shrinks the fee away from 0.50: at 0.25, (0.1875)^2 vs 0.1875
     e2 = polymarket_fill(asks=[{"price": "0.25", "size": "1000"}], budget=100.0, fee_rate_bps=500, fee_exponent=2)
-    assert e2["fee_usdc"] == pytest.approx(400 * 0.05 * (0.25 * 0.75) ** 2)
+    from pricing import round_fee
+    assert e2["fee_usdc"] == pytest.approx(round_fee(400 * 0.05 * (0.25 * 0.75) ** 2))
     # zero fee: a 0.50 ask is exactly even money
     book0 = pm_book(1, "a", 100, [{"price": "0.50", "size": "1000"}], fee_bps=0)
     o0 = polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book=book0, stake=1.0, retrieved_at=iso(T0), provider_ts=None, unit_notional=100.0)

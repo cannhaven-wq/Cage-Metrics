@@ -5,6 +5,17 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-20
 
+**M1 historical test, 2026-10-20 (T-107): data gap, no ROI.** The pinned M1
+rules were replayed point-in-time over every past card with per-book prices
+(`paper/HISTORICAL_TEST_2026-10-20.md`). 9 of 14 cards cannot lock (no start
+time recorded before the decision instant); on the one unsealed settled card
+and 3 sealed cards every quote was 53–1,667 min old at the instant, over the
+60-minute rule; the only eligible card (2026-10-10, 1 selection) is sealed and
+not settled. **Zero settled bets: price shopping is untested, not refuted.**
+Arbitrage: 8 quoted sportsbook pairs worth $0.28–$1.20 per $100, limits and
+void rules unknown; 0 with Polymarket. The missing data is per-book
+historical prices for 2020–2024 (The Odds API, paid; not bought).
+
 **Paper-trading system, 2026-10-20 (T-106): built and tested, NOT running.**
 `paper/` holds a draft, config-driven paper-betting pipeline: MMA-001 (the
 Doc's model, artifact verified by an independent refit, kept private) plus the
