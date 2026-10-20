@@ -852,7 +852,7 @@
      books quoting at both ends, and never an "opening line") live in one file
      and cannot drift between surfaces. -->
 <script src="market.js?v=4"></script>
-<script src="market-chart.js?v=1"></script>
+<script src="market-chart.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=2"></script>
 <script src="alerts.js"></script>
@@ -1433,7 +1433,8 @@ function matchupBodyHtml(fight, a, b, readA, readB, row, badges) {
   return flags + '<div class="fx-3">' +
       '<section class="fx-panel fx-p-tape"><h3 class="fx-ph fx-tabh"><span>Tale of the Tape</span></h3>' + tapeHtml(fight, a, b) + '</section>' +
       '<section class="fx-panel fx-p-odds"><h3 class="fx-ph">' + PANEL_IC + 'Betting Odds</h3>' + oddsPanelHtml(fight, a, b, readA, readB) + '</section>' +
-      '<section class="fx-panel fx-p-move"><h3 class="fx-ph">' + PANEL_IC + 'Line Movement</h3>' + movePanelHtml(fight, a, b, readA, readB) + '</section>' +
+      '<section class="fx-panel fx-p-move"><h3 class="fx-ph">' + PANEL_IC + 'Line Movement</h3>' + movePanelHtml(fight, a, b, readA, readB) +
+        (window.cflChart && cflChart.polymarketToggleHtml ? cflChart.polymarketToggleHtml(fight.id, lastName(a.name), lastName(b.name)) : '') + '</section>' +
     '</div>' +
     moreHtml(fight, a, b, readA, readB) +
     '<div class="fx-end">' +

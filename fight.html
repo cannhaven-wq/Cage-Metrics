@@ -561,7 +561,7 @@
 <script src="_auth.js"></script>
 <script src="ufc-record.js?v=1"></script>
 <script src="market.js?v=3"></script>
-<script src="market-chart.js?v=1"></script>
+<script src="market-chart.js?v=2"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=2"></script>
 <script src="card-research.js?v=2"></script>
@@ -622,7 +622,9 @@ async function renderChart(fightId, a, b) {
     '<div id="mcPlot"></div>' +
     '<div id="mcTableWrap" class="mc-scroll" hidden></div>' +
     '<details class="mc-method"><summary>How this line is calculated</summary>' +
-      '<div class="mc-method-body" id="mcMethod"></div></details>';
+      '<div class="mc-method-body" id="mcMethod"></div></details>' +
+    // Polymarket: its own chart, off by default, never part of the line above.
+    (CH.polymarketToggleHtml ? CH.polymarketToggleHtml(fightId, nameA, nameB) : '');
 
   const plot = document.getElementById('mcPlot');
   let showBooks = false, books = null;

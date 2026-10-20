@@ -11,6 +11,35 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 — Polymarket switch on the fight chart (Card Lab + Fight Lab)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner question: four UFC 333 fights (Thicknesse/Chopurov, Oki/Santos,
+  Steele/Gugnon, Lucindo/Caliari) have no sportsbook odds. Confirmed: The Odds
+  API sends no sportsbook line for them (nothing in `unmatched_odds`); only
+  Polymarket has them, and the site showed nothing because every market view
+  excludes Polymarket by name.
+- Owner asked for a toggle. Built: a "Show Polymarket" switch, **off by
+  default**, under the line-movement panel on Card Lab and the chart on Fight
+  Lab. It draws Polymarket on its own small dashed chart, labelled as a
+  prediction market every time. One capture shows the number; none says so.
+- New view `v_fight_polymarket_series` (`polymarket_chart_view.sql`, applied
+  2026-10-20; anon/authenticated SELECT only, verified). Refuses live, closed,
+  post-bell and settled-looking (<=1% / >=99%) prices. Nothing that computes
+  consensus, best price, movement or alerts reads it — tests in
+  `tests/market-chart.test.js` pin that.
+
+## Next action
+
+Check Saturday morning (2026-10-24) whether sportsbooks have posted the four
+fights; if they still have not, say so to the owner rather than widening any
+sportsbook view to include Polymarket.
+
+---
+
 ## 2026-10-19 (c) — Seven fights captured one-sided: the corner matcher
 
 **From:** Claude
