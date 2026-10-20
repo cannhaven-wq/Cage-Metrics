@@ -50,6 +50,7 @@ Last updated: 2026-09-16.
 | **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **collecting** since 2026-09-16 | none |
 | **PRED-001** | the rules any win-probability model is judged by against the betting market: sealed holdout from 2025-01-01, log loss, pre-set accept/reject. A protocol, not an experiment — see [`research/protocol/`](research/protocol/PREDICTION_RESEARCH_PROTOCOL.md) | frozen 2026-10-12 | n/a |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
+| **WIN-001** | after the closing line is known, does a sixteen-feature stats-plus-Elo blend still add information about who wins? Under PRED-001 — see [`research/experiments/WIN-001/`](research/experiments/WIN-001/PREREGISTRATION.md) | **draft**, 2026-10-20, awaiting the owner | none |
 
 ---
 
@@ -332,6 +333,42 @@ The calibration layer used in live PROP-0001 forecasts was not validated by that
 historical artifact.
 
 ---
+
+## WIN-001 — does a stats-plus-rating formula beat the closing line? (draft)
+
+Built 2026-10-20 on the owner's request for a win formula, under PRED-001.
+**Draft:** `research/registry.json` carries the entry with `status: "draft"`,
+no `freeze_timestamp` and no frozen files, so it sits outside the tripwire by
+design until the owner approves the plain version. Nothing from it appears on
+any surface.
+
+- **What it is.** The closing line plus sixteen point-in-time A − B
+  differences (Elo, UFC win-loss gap, experience, layoff, age, reach, height,
+  striking pace, strikes absorbed, takedowns landed and allowed, knockdowns,
+  submission attempts, finish rate, finished rate, win rate), a logistic
+  blend with no intercept so corner symmetry holds to 1e-16. Weights frozen
+  in `artifact.json` (sha256 `3f071791…120c`), fitted on DEV only.
+- **Data.** A DEV-only export (every statement carries
+  `event_date < '2025-01-01'`); its eligible-fight id and outcome fingerprints
+  equal `holdout_manifest.json → partitions.DEV`. `DATA.md` has the statements
+  and the hashes.
+- **DEV walk-forward 2019–2024, 2,826 fights:** +0.0046 log loss per fight
+  over the closing line, 95% event-bootstrap range +0.0000 … +0.0093.
+  **0.0022 of that is a de-vig correction** (`market_only`: the market logit
+  re-scaled by 1.1, no fighter information); the stats add about 0.0024. Elo
+  alone adds nothing. Standalone, the same features lose to the market by
+  0.046. Seven variants compared; `full_c1` chosen for the highest Δ.
+- **Declared contamination.** Age and the UFC gap were included on the Factor
+  Lab's all-years verdicts, so any H1 result is non-confirmatory (PRED-001
+  §2). No H1 look is requested; at SD 0.119 H1 could only detect 0.015, the
+  leak tripwire.
+- **What confirming it would take.** Target 0.005, SD 0.119 →
+  n_required **5,685** prospective fights, about twelve years at 480 priced
+  fights a year. Written in the preregistration so the timescale is a
+  finding and not a surprise.
+- **Next.** Owner approves or declines the plain version (L3). Approval means:
+  freeze (status, `frozen_files`, timestamp, the commit), then a lock writer
+  into `win_model_locks` for every priced bout from the first locked card.
 
 ## Frozen files
 

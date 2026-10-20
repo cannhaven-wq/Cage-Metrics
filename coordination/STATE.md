@@ -5,6 +5,19 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-20
 
+**WIN-001 win formula, 2026-10-20 (T-105): built, DRAFT, waiting on the
+owner.** The owner asked for a win formula. It exists under PRED-001 at
+`research/experiments/WIN-001/`: a market-plus-stats blend (sixteen
+point-in-time features plus the closing line), fitted on DEV only, artifact
+frozen by hash, DEV export fingerprint-matched to the sealed manifest. On
+2019–2024 walk-forward it beats the closing line by **0.0046 per fight**, and
+about half of that is a de-vig correction, not the stats. Its per-fight spread
+(SD 0.119) means confirming it prospectively needs **5,685 fights, about twelve
+years**. No H1 look is requested (non-confirmatory by declaration, and
+underpowered). Nothing is on the site and nothing changes until the owner
+approves the plain version in `PREREGISTRATION.md` (L3: freeze, then the lock
+schedule). See HANDOFF 2026-10-20 (WIN-001).
+
 **Charts / Numbers switch, 2026-10-20 (T-104): live.** Card Lab, Market Lab
 and Factor Lab draw their figures as bars by default (tale of the tape, a
 market split under every fight, one bar per sportsbook, movement and

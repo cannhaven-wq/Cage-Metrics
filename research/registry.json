@@ -350,6 +350,68 @@
         },
         "note": "Complete provenance chain, which is what v1 lacks: code_version on every row is the clean merge commit (no -dirty), and every row carries the lock script's own sha256 prefix 92d28d8638c15016, matching the file on main."
       }
+    },
+    {
+      "experiment_id": "WIN-001",
+      "protocol": "PRED-001",
+      "status": "draft",
+      "hypothesis": "Conditional on the vig-free closing consensus, a sixteen-feature point-in-time stats-plus-Elo logistic blend (weights frozen on DEV) carries additional information about which fighter wins. H0: delta <= 0. H1: delta > 0 on priced, decided UFC fights.",
+      "economic_rationale": "The moneyline is the deepest MMA market; if a stats formula holds anything it has not absorbed, it is small. DEV walk-forward gain 0.0046 per fight, of which 0.0022 is a de-vig correction with no fighter information. Stated so the finding is the size, not a claim.",
+      "population": "UFC fights with both fighters set, a decided winner, is_active not false, both corners priced by the benchmark, excluding fights 43, 46 and 8780. No division, round or title restriction.",
+      "market": "moneyline (fight winner)",
+      "challenger_model": "WIN-001 full_c1 (research/experiments/WIN-001/artifact.json)",
+      "model_class": "incremental",
+      "market_benchmark": "H1: BFO closing consensus, proportional de-vig (power and Shin reported). Prospective: eligible-book consensus frozen on the lock, CLV-001 closing proxy reported beside it.",
+      "prediction_time_rule": "Every feature from fights dated strictly before event_date, state advanced per event date (features.py). Prospectively a lock in win_model_locks written before the card's earliest start, one row per priced bout, abstention locks for bouts priced too late to forecast.",
+      "primary_endpoint": "delta = mean over scored fights of (LL_market - LL_model), natural log, probabilities clipped to [1e-4, 1-1e-4]",
+      "minimum_useful_effect": 0.003,
+      "observation_unit": "one fight, scored from corner A",
+      "cluster_unit": "UFC event",
+      "eligibility_rules": [
+        "PRED-001 holdout_manifest.json eligibility, nothing added",
+        "confirmatory prospective look on exactly the first n_required eligible locks, whole cards",
+        "every priced bout on a locked card carries a forecast or an abstention lock"
+      ],
+      "preregistration_path": "research/experiments/WIN-001/PREREGISTRATION.md",
+      "preregistration_sha256": "8bf5719e2a1e8a742c01946f1dd36c2ee94527ce504a222fa62cf3338421ff26",
+      "model_artifact_sha256": "3f07179193c3a8ffb9237f81b2a35256c7bb2f43fe352d6af8af9e12e970120c",
+      "data_artifact_sha256": "891ec74d7bd09b951172de8d7a217e1fecf19c44636ecd0ec3ba06dd4082d9be",
+      "target_effect": 0.005,
+      "sd_used": 0.119,
+      "n_required": 5685,
+      "author_sessions": [
+        "session_017sMsVkbvovsKrTqJSLafJi"
+      ],
+      "code_paths": [
+        "research/experiments/WIN-001/features.py",
+        "research/experiments/WIN-001/model.py"
+      ],
+      "features_selected_on_all_years": "yes: age and ufc_gap were included on the Factor Lab's all-years verdicts, so any H1 result is non-confirmatory (PRED-001 section 2). No H1 look is requested.",
+      "freeze_timestamp": null,
+      "formal_analysis_points": [
+        "no H1 look",
+        "one confirmatory prospective analysis at n_required = 5685 eligible locks, whole cards, in lock order",
+        "interim looks from half of n_required are logged, never a pass; futility is the only early stop"
+      ],
+      "kill_rule": "futility: at an interim look at or after half of n_required, the upper end of the 95% range below 0.003 ends the experiment as REJECT",
+      "allowed_sensitivities": [
+        "market_only decomposition: the re-scaled market with no stats, scored beside the challenger and reported, never decisive",
+        "de-vig sensitivity: power and Shin beside proportional",
+        "standalone form of the same features, reported never decisive",
+        "Brier, accuracy, calibration intercept and slope, reliability table, the fixed-rule simulated bet with its disclaimer"
+      ],
+      "forbidden_changes": [
+        "retraining, re-featuring, re-calibrating or re-weighting the artifact while locks accumulate",
+        "any change to features.py or model.py after the freeze other than by amendment",
+        "choosing a variant, a de-vig method or a subgroup after a result is visible",
+        "an H1 look under this registration",
+        "backfilling any lock"
+      ],
+      "results_artifact": null,
+      "verdict": null,
+      "verdict_timestamp": null,
+      "frozen_files": [],
+      "draft_note": "Built 2026-10-20 on the owner's request for a win formula. Draft until the owner approves the plain version; freezing (status frozen, frozen_files filled, freeze_timestamp set) and the prospective lock schedule are L3."
     }
   ],
   "experiment_lifecycle": {

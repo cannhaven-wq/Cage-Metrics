@@ -1,0 +1,73 @@
+{
+ "C": 1.0,
+ "benchmark": "BFO closing consensus, proportional de-vig",
+ "coef": {
+  "d_age": -0.13631986153964096,
+  "d_elo": 0.009203854776172967,
+  "d_finish_rate": 0.044584244527105236,
+  "d_finished_rate": 0.01438590978056822,
+  "d_height": 0.0032714595736796255,
+  "d_kd_p15": -0.07003069805646552,
+  "d_log_layoff": 0.013826504164673752,
+  "d_n_fights": 0.03701665280625924,
+  "d_reach": 0.025383758795097376,
+  "d_sa_pm": -0.18299020104396715,
+  "d_sl_pm": 0.07645426641561016,
+  "d_sub_p15": -0.0053705333656648615,
+  "d_td_p15": 0.05007664285204536,
+  "d_tdd_p15": 0.012819615984357088,
+  "d_ufc_gap": -0.002216602555631361,
+  "d_win_rate": -0.1091358120940123,
+  "logit_market": 1.1050347705199346
+ },
+ "dev_data_sha256": {
+  "closing_dev.csv": "64405e9279687d706e0e0f20f209324ede97c3b04233b1f0df0711d0d6d3762d",
+  "fighters_dev.csv": "de6ba769a9140e465dc1c33dc1daec8054f0b1cafbd181e6cbb79df168c8c6ad",
+  "fights_dev.csv": "891ec74d7bd09b951172de8d7a217e1fecf19c44636ecd0ec3ba06dd4082d9be"
+ },
+ "dev_window": [
+  "2007-07-07",
+  "2024-12-14"
+ ],
+ "experiment_id": "WIN-001",
+ "features": [
+  "elo",
+  "ufc_gap",
+  "n_fights",
+  "log_layoff",
+  "age",
+  "reach",
+  "height",
+  "sl_pm",
+  "sa_pm",
+  "td_p15",
+  "tdd_p15",
+  "kd_p15",
+  "sub_p15",
+  "finish_rate",
+  "finished_rate",
+  "win_rate"
+ ],
+ "model_class": "incremental",
+ "n_fit": 6824,
+ "scale": {
+  "d_age": 5.16070375382677,
+  "d_elo": 33.80567159925723,
+  "d_finish_rate": 0.2127361909851395,
+  "d_finished_rate": 0.1814859643091685,
+  "d_height": 2.5139892352178577,
+  "d_kd_p15": 0.4244800625625848,
+  "d_log_layoff": 0.800699523761546,
+  "d_n_fights": 6.361087511036969,
+  "d_reach": 3.129836724177355,
+  "d_sa_pm": 1.0417300860536531,
+  "d_sl_pm": 1.0799786098732982,
+  "d_sub_p15": 0.6970843359918517,
+  "d_td_p15": 1.2007243185564258,
+  "d_tdd_p15": 1.0074801971096419,
+  "d_ufc_gap": 2.6265571431046206,
+  "d_win_rate": 0.14867961043453984
+ },
+ "standalone": false,
+ "variant": "full_c1"
+}

@@ -11,6 +11,48 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 — WIN-001: a win formula, built and registered as a draft (T-105)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner: "give me a win formula first." Built under PRED-001 at
+  `research/experiments/WIN-001/`. Sixteen point-in-time features plus the
+  closing line, logistic blend, no intercept (corner symmetry exact), fitted
+  on DEV only. The DEV export was pulled with `event_date < '2025-01-01'` in
+  every statement and its eligible-fight fingerprints equal the sealed
+  manifest's DEV hashes — the data the model saw is the data the protocol
+  says it may see. No 2025+ row was read.
+- **Result on 2019–2024 walk-forward (2,826 fights): +0.0046 log loss per
+  fight over the closing line, range +0.0000 … +0.0093.** Half of it
+  (0.0022) is a de-vig correction with no fighter information in it; the
+  stats add about 0.0024. Elo on its own adds nothing to the market.
+  Standalone, the formula loses to the market by 0.046 — the market is the
+  opponent and it is strong.
+- **The honest cost:** the blend's per-fight spread is 0.119, nearly twice the
+  protocol floor, so confirming a true 0.005 prospectively needs **5,685
+  fights, about twelve years**. An H1 look is not requested: it is
+  non-confirmatory by declaration (age and UFC record were chosen on the
+  Factor Lab's all-years verdicts) and could only detect 0.015 anyway.
+- Registered in `research/registry.json` as a **draft** (no freeze timestamp,
+  no frozen files), `CFL_RESEARCH_STATE.md` row and section added. Nothing on
+  the site; D-011 untouched. `artifact.json` sha256
+  `3f07179193c3a8ffb9237f81b2a35256c7bb2f43fe352d6af8af9e12e970120c`.
+
+## Next action
+
+Owner reads the **Plain version** at the top of
+`research/experiments/WIN-001/PREREGISTRATION.md` and says one of: **freeze
+it** (Claude sets status `frozen`, fills `frozen_files`, records the
+timestamp and commit, then proposes the `win_model_locks` writer for the next
+card — both L3, both stop for the owner), **change the target or scope** (an
+edit before freezing costs nothing), or **shelve it** (the folder stays as the
+record; the registry row goes to `withdrawn`). Twelve years is the number to
+decide on.
+
+---
+
 ## 2026-10-20 — Charts / Numbers switch (Card Lab, Market Lab, Factor Lab)
 
 **From:** Claude
