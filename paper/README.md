@@ -57,21 +57,32 @@ history in `private/history_all.json` is the fingerprint-matched export plus
 - Fee form applied: the published taker fee `fee = C × rate × p × (1 − p)`
   with C the shares traded, makers 0. **On a BUY the fee is collected in the
   outcome shares received** (Polymarket Help Center, "Trading fees"; the
-  owner confirmed this reading on 2026-10-20), so `polymarket_fill` spends
-  the cash at the ask, receives gross shares, and withholds
-  `gross × rate × p × (1 − p)` shares; the payout is the net shares. The
-  first draft added the fee to the cash cost instead, which is a different
-  instrument. The **rate is read per market from the exchange** (`/fee-rate`,
+  owner confirmed this reading on 2026-10-20), **valued at the execution
+  price**: `polymarket_fill` spends the cash at the ask, receives gross
+  shares, computes `fee_usdc = gross × rate × p × (1 − p)` and withholds
+  `fee_usdc / p` shares; the payout is the net shares. Worked example from
+  docs.polymarket.com/trading/fees: $100 at 0.50 with a 10% rate buys 200
+  shares, the fee is $5 = 10 shares, 190 are kept. The first draft added
+  the fee to the cash cost; the second withheld `gross × rate × p(1 − p)`
+  shares (195 kept), which overstated the payout; both are gone. The **rate is read per market from the exchange** (`/fee-rate`,
   then the market's own fee field) and never hard-coded. A book whose rate
   could not be read is stored with `fee_rule_verified = false` and the
   evaluator rejects it; `fee_rule_must_be_verified: true` in the draft
   config keeps that guard on.
-- **Not verified from this environment:** polymarket.com, docs.polymarket.com
-  and help.polymarket.com are unreachable here (proxy 403 / DNS). The
-  `/book` and `/fee-rate` endpoint shapes come from the official
-  documentation as indexed by search and from the API's documented response
-  fields. The per-category rate for UFC markets is whatever the exchange
-  reports for the market at capture time.
+- **Verified 2026-10-20 against the live exchange and the official page**
+  (the owner allowed the two API hosts for this environment; the docs page
+  was reachable too). docs.polymarket.com/trading/fees: `fee = C × feeRate ×
+  p × (1 − p)`, takers only, "taker fees are calculated in USDC", and
+  "see Market Details to read the fee parameters for a market"; the Sports
+  taker rate in its table is **0.05**. The Gamma market object for every
+  UFC 333 bout carries `feeSchedule {rate 0.05, exponent 1, takerOnly true,
+  rebateRate 0.15}`, `feeType sports_fees_v3`, `feesEnabled true`. The
+  CLOB's `/fee-rate` returns `base_fee 1000` and the market's `takerBaseFee`
+  is 1000: **those are not the rate** (read as basis points they would
+  double it) and are stored only for the audit trail. The capture takes the
+  rate and exponent from `feeSchedule`, and `fee_rule_verified` is true only
+  when a schedule with `takerOnly` and exponent 1 was read. Taker rebates
+  are not assumed.
 - Settlement: only markets whose resolution text reads as a plain
   fight-winner market with no draw/NC-to-one-side clause are `settlement_ok`.
   A 50-50 resolution on a draw is *not* comparable with a sportsbook push and
@@ -107,6 +118,24 @@ manual capture workflow cannot be dispatched until it exists on the scraper
 repo's default branch (GitHub registers workflows from there). The live
 capture → decision run is therefore still owed; see the handoff for the
 three ways to get it.
+
+## Live capture → decision, 2026-10-20 19:15 UTC (read-only, nothing recorded)
+
+With the two Polymarket API hosts allowed for this environment:
+`capture_book.py --fights-json` captured **28 fighter order books for all 14
+active UFC 333 bouts** (all markets open, `sports_fees_v3`, rate 0.05,
+exponent 1, resolution text classified `fifty_fifty_on_void`, 12 bouts
+mapped `exact`, Krylov–Yakhyaev `fuzzy(98)`), 8 minutes after a hand-fired
+run of the project's own odds workflow refreshed the six sportsbooks
+(19:06:42 UTC, 160 rows, one API credit). Evaluated at 19:15 UTC with the
+60-minute rule intact: 14 bouts, 14 forecasts, 28 Polymarket books
+considered, **14 passes on M1 and on S1**. Polymarket after the 5% taker
+fee at a 100-USD notional was never the better price: its expected return
+at the sportsbook reference ran from −1.9% to −6.4% on every side
+(`compare_venues.py`, `private/venue_comparison.json`); the two Krylov
+books were rejected for a fuzzy name match and the two Thicknesse books
+for the −400/+400 band. The best sportsbook side reached +1.0% (Oki at
++110, BetMGM), under the 2% rule. No selection; nothing written.
 
 ## Review fixes (2026-10-20, on 8549c9c)
 

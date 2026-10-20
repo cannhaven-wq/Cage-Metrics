@@ -5,8 +5,12 @@ Settlement of one selection, given the fight's current row:
 - no result yet                           -> left open
 - no-contest / overturned / could-not-continue / draw
                                           -> sportsbook: push (stake returned);
-                                             polymarket: 'unresolved' (its rules are
-                                             not assumed; left open until a person records them)
+                                             polymarket with settlement_rule
+                                             'fifty_fifty_on_void': every net share
+                                             pays 0.50 (Polymarket's standard UFC
+                                             clause), so pnl = (0.5 x net shares - cash)
+                                             per unit; any other rule is left open for
+                                             a person (never assumed)
 - winner is the selected fighter          -> win: +net_if_win
 - winner is the other corner              -> loss: -stake_cost
 
@@ -42,7 +46,11 @@ def settle_one(sel: dict, fight: dict) -> Optional[dict]:
     if any(method.startswith(p) for p in NC_PREFIXES) or (winner is None and method.startswith("decision")) or "draw" in method:
         if off["venue_kind"] == "sportsbook":
             return {"type": "settlement", "result": "push", "pnl": 0.0, "method": fight.get("method")}
-        return None  # polymarket: resolution of a draw/NC is market-specific; left open for a person
+        if off.get("source", {}).get("settlement_rule") == "fifty_fifty_on_void":
+            fill = off["source"]["fill"]
+            pnl = (0.5 * float(fill["shares"]) - float(fill["spent"])) / float(fill["unit_notional"])
+            return {"type": "settlement", "result": "void_fifty_fifty", "pnl": pnl, "method": fight.get("method")}
+        return None  # polymarket with any other no-winner rule: left open for a person, never assumed
     if winner is None:
         return None
     if int(winner) == int(sel["fighter_id"]):
@@ -71,7 +79,7 @@ def metrics(ledger, cfg: dict, clv_reference: Optional[dict] = None) -> dict:
                 open_exp += float(s["stake"]); continue
             turnover += float(s["stake"]); profit += float(st["pnl"])
             running += float(st["pnl"]); peak = max(peak, running); dd = max(dd, peak - running)
-            wins += st["result"] == "win"; losses += st["result"] == "loss"; pushes += st["result"] == "push"
+            wins += st["result"] == "win"; losses += st["result"] == "loss"; pushes += st["result"] in ("push", "void_fifty_fifty")
         cards_with_bets = {s["card_id"] for s in sels if s["event_id"] not in cancelled}
         out["strategies"][strat] = {
             "bets": wins + losses + pushes, "open": len([s for s in sels if s["event_id"] not in settled_by_sel and s["event_id"] not in cancelled]),

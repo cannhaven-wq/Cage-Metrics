@@ -49,7 +49,7 @@ def fight(fid, a=100 + 0, b=200):
 def pm_book(fight_id, side, fighter_id, asks, fee_bps=300, **over):
     b = {"fight_id": fight_id, "side": side, "fighter_id": fighter_id, "token_id": "t1", "condition_id": "c1",
          "asks": asks, "bids": [], "fee_rate_bps": fee_bps, "fee_rule_verified": True, "market_status": "open",
-         "settlement_ok": True, "mapping_confidence": "exact", "retrieved_at": iso(T0 - timedelta(minutes=3)),
+         "settlement_ok": True, "settlement_rule": "fifty_fifty_on_void", "mapping_confidence": "exact", "retrieved_at": iso(T0 - timedelta(minutes=3)),
          "book_timestamp": iso(T0 - timedelta(minutes=3)), "tick_size": 0.01, "min_order_size": 5}
     b.update(over); return b
 
@@ -71,7 +71,8 @@ def test_polymarket_fill_walks_depth_and_charges_fee():
     # cheapest first: 0.55 then 0.60 then 0.70; fee = rate * p * (1-p) per share
     assert [round(l["price"], 2) for l in fill["levels_used"]] == [0.55, 0.60, 0.70]
     assert fill["spent"] == pytest.approx(2.0)
-    assert fill["fee"] == pytest.approx(0.1 * (0.55 * 0.45 + 0.60 * 0.40) + 0.1 * 0.70 * 0.30 * fill["levels_used"][2]["taken"])
+    assert fill["fee_usdc"] == pytest.approx(0.1 * (0.55 * 0.45 + 0.60 * 0.40) + 0.1 * 0.70 * 0.30 * fill["levels_used"][2]["taken"])
+    assert fill["fee_shares"] == pytest.approx(0.1 * (0.45 + 0.40) + 0.1 * 0.30 * fill["levels_used"][2]["taken"]), "fee_usdc / price at each level"
     assert fill["fee"] > 0 and fill["fill_fraction"] == pytest.approx(1.0)
 
 
@@ -83,7 +84,7 @@ def test_polymarket_rejects_missing_fee_insufficient_depth_and_bad_status():
     with pytest.raises(OfferRejected, match="no executable asks"):
         polymarket_fill(asks=[], budget=1.0, fee_rate_bps=0)
     good = pm_book(1, "a", 100, [{"price": "0.50", "size": "1000"}])
-    for bad, msg in (({"market_status": "closed"}, "not open"), ({"settlement_ok": False}, "settlement rules"), ({"mapping_confidence": "fuzzy(90)"}, "mapping")):
+    for bad, msg in (({"market_status": "closed"}, "not open"), ({"settlement_ok": False}, "settlement rule"), ({"settlement_rule": "unspecified"}, "settlement rule"), ({"mapping_confidence": "fuzzy(90)"}, "mapping")):
         with pytest.raises(OfferRejected, match=msg):
             polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book={**good, **bad}, stake=1.0, retrieved_at=iso(T0), provider_ts=None)
 
@@ -247,8 +248,11 @@ def test_settlement_outcomes_including_corner_change_and_push():
     assert S.settle_one(sel, {**f, "winner_id": None, "method": None}) is None, "unsettled stays open"
     assert S.settle_one(sel, {**f, "winner_id": None, "method": "No Contest"})["result"] == "push"
     assert S.settle_one(sel, {**f, "fighter_b_id": 300})["type"] == "cancel", "opponent changed after the lock"
-    pm_sel = {**sel, "offer": {**sel["offer"], "venue_kind": "polymarket"}}
-    assert S.settle_one(pm_sel, {**f, "winner_id": None, "method": "No Contest"}) is None, "polymarket NC resolution is not assumed"
+    pm_sel = {**sel, "offer": {**sel["offer"], "venue_kind": "polymarket", "source": {"settlement_rule": "unspecified"}}}
+    assert S.settle_one(pm_sel, {**f, "winner_id": None, "method": "No Contest"}) is None, "an unpriced polymarket rule is never assumed"
+    ff = {**sel, "offer": {**sel["offer"], "venue_kind": "polymarket", "source": {"settlement_rule": "fifty_fifty_on_void", "fill": {"shares": 190.0, "spent": 100.0, "unit_notional": 100.0}}}}
+    nc = S.settle_one(ff, {**f, "winner_id": None, "method": "No Contest"})
+    assert nc["result"] == "void_fifty_fifty" and nc["pnl"] == pytest.approx((0.5 * 190 - 100) / 100), "50-50: every net share pays 0.50"
 
 
 def test_metrics_compare_strategies_over_the_same_cards_and_clv_unavailable(tmp_path):

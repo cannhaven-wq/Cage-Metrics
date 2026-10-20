@@ -30,14 +30,27 @@ from test_paper_system import CFG, EVEN, T0, fight, full_snapshot, iso, pm_book,
 # ----------------------------------------------------------------------------- 2. fee in shares
 
 def test_buy_fee_is_collected_in_shares_not_added_to_cash():
+    # docs.polymarket.com/trading/fees worked example: $100 at 0.50 with a 10% rate buys 200 shares;
+    # the fee is 200 x 0.10 x 0.5 x 0.5 = $5, collected in shares at 0.50 = 10 shares; 190 are kept.
     fill = polymarket_fill(asks=[{"price": "0.50", "size": "1000"}], budget=100.0, fee_rate_bps=1000)
     assert fill["spent"] == pytest.approx(100.0), "the cash risked is the cash spent at the ask"
     assert fill["shares_gross"] == pytest.approx(200.0)
-    assert fill["fee_shares"] == pytest.approx(200 * 0.10 * 0.5 * 0.5) and fill["fee_denomination"] == "shares"
-    assert fill["shares"] == pytest.approx(195.0), "net shares = gross minus the fee taken in shares"
+    assert fill["fee_usdc"] == pytest.approx(5.0) and fill["fee_shares"] == pytest.approx(10.0) and fill["fee_denomination"] == "shares"
+    assert fill["shares"] == pytest.approx(190.0), "net shares = gross minus fee_usdc / price"
     book = pm_book(1, "a", 100, [{"price": "0.50", "size": "1000"}], fee_bps=1000)
     o = polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book=book, stake=1.0, retrieved_at=iso(T0), provider_ts=None, unit_notional=100.0)
-    assert o.stake_cost == pytest.approx(1.0) and o.net_if_win == pytest.approx(0.95)
+    assert o.stake_cost == pytest.approx(1.0) and o.net_if_win == pytest.approx(0.90)
+    # a 0.25 ask with the same rate: 400 shares, fee $7.50 = 30 shares, 370 kept -> net 2.70 per unit
+    book25 = pm_book(1, "a", 100, [{"price": "0.25", "size": "5000"}], fee_bps=1000)
+    o25 = polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book=book25, stake=1.0, retrieved_at=iso(T0), provider_ts=None, unit_notional=100.0)
+    assert o25.source["fill"]["fee_shares"] == pytest.approx(30.0) and o25.net_if_win == pytest.approx(2.70)
+    # the documented sports schedule: rate 0.05, exponent 1 -> $100 at 0.50 pays $2.50 = 5 shares, 195 kept
+    sports = pm_book(1, "a", 100, [{"price": "0.50", "size": "1000"}], fee_bps=500, fee_exponent=1)
+    os_ = polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book=sports, stake=1.0, retrieved_at=iso(T0), provider_ts=None, unit_notional=100.0)
+    assert os_.source["fill"]["fee_usdc"] == pytest.approx(2.5) and os_.source["fill"]["shares"] == pytest.approx(195.0)
+    # an exponent of 2 shrinks the fee away from 0.50: at 0.25, (0.1875)^2 vs 0.1875
+    e2 = polymarket_fill(asks=[{"price": "0.25", "size": "1000"}], budget=100.0, fee_rate_bps=500, fee_exponent=2)
+    assert e2["fee_usdc"] == pytest.approx(400 * 0.05 * (0.25 * 0.75) ** 2)
     # zero fee: a 0.50 ask is exactly even money
     book0 = pm_book(1, "a", 100, [{"price": "0.50", "size": "1000"}], fee_bps=0)
     o0 = polymarket_offer(venue_id=7, fight_id=1, side="a", fighter_id=100, book=book0, stake=1.0, retrieved_at=iso(T0), provider_ts=None, unit_notional=100.0)

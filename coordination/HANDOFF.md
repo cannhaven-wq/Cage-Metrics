@@ -11,6 +11,53 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 (d) — Fee conversion corrected; live Polymarket capture carried to a decision (T-106)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner: the fee example was still wrong (200 shares at 0.50, 10%: $5 fee
+  = 10 shares, 190 kept, not 195). Fixed: `fee_usdc = gross × rate × p(1−p)`,
+  withheld as `fee_usdc / p` shares; the schedule's exponent is honoured.
+  Tests carry the documented worked example.
+- **The rate itself was wrong too, and the live exchange showed it.** The
+  CLOB `/fee-rate` returns `base_fee 1000` and the market's `takerBaseFee`
+  is 1000; read as basis points that is 10%. The Gamma market object's
+  `feeSchedule` says `rate 0.05, exponent 1, takerOnly` (`sports_fees_v3`),
+  and docs.polymarket.com/trading/fees lists Sports at 0.05. The capture
+  now takes rate and exponent from `feeSchedule`, records the CLOB value
+  for the audit trail only, and marks the fee rule verified only when a
+  takerOnly schedule with exponent 1 was read.
+- Polymarket's UFC markets all resolve **50-50 on a draw / no contest /
+  cancellation**; that is not a sportsbook push, so the capture classifies
+  the no-winner rule and `settle.py` prices `fifty_fifty_on_void` (every
+  net share pays 0.50). A market that sends a void to one side, or says
+  nothing, is rejected.
+- **Live run, read-only:** owner allowed the two API hosts; the odds
+  workflow was hand-fired (its manual path, FORCE, one credit, 160 ordinary
+  rows at 19:06:42 UTC); `capture_book.py` captured 28 books for 14 bouts at
+  19:14 UTC; evaluation at 19:15 UTC with the 60-minute rule: **14 passes on
+  M1 and S1, 0 selections, 28 Polymarket books considered.** Polymarket
+  after fees was never the better price (−1.9% to −6.4% at the reference on
+  every side). `paper/compare_venues.py` prints the per-venue table.
+- `capture_book.py --fights-json` lets the capture run without database
+  credentials (the card is handed to it as a file); `--write` still needs
+  the database.
+- Commits: Cage-Metrics `claude/focused-maxwell-yru5a1`, scraper
+  `claude/focused-maxwell-yru5a1`. Paper tests 28, capture tests 6, full
+  suites green. Nothing scheduled, no lock, no migration, no paper bet.
+
+## Next action
+
+Owner re-checks the fee arithmetic against the live `feeSchedule` (now in
+every captured row) and, if satisfied, decides the approval bundle in
+`paper/README.md`. The next informative read is UFC 333 card day
+(2026-10-24): lock instant 08:00 UTC, hourly sportsbook captures from the
+23rd, and a Polymarket capture inside the same hour.
+
+---
+
 ## 2026-10-20 (c) — Paper system: five review findings fixed; live Polymarket capture still owed (T-106)
 
 **From:** Claude
