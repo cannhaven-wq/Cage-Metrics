@@ -284,6 +284,61 @@ t('every multiply-referenced CTE in the chart views is NOT MATERIALIZED', () => 
      'v_fight_chart_series lost NOT MATERIALIZED on its cohort CTE');
 });
 
+// ------------------------------------------------------------------ Polymarket
+// An opt-in line, off by default, on its own chart. A prediction market is not
+// a sportsbook, so it must never reach the consensus, best price or movement.
+const PM_SQL = read('polymarket_chart_view.sql');
+const INDEX = read('index.html');
+const pmRows = ps => ps.map((p, i) => ({ at: new Date(Date.parse('2026-10-15T08:00:00Z') + i * 86400000).toISOString(), p_a: p }));
+
+t('Polymarket: the switch starts OFF and fetches nothing until pressed', () => {
+  const h = CH.polymarketToggleHtml(72704, 'Oki', 'Santos');
+  ok(/aria-pressed="false"/.test(h), 'switch does not start off');
+  ok(/>Show Polymarket</.test(h), 'switch label wrong');
+  ok(/data-pm-body hidden/.test(h), 'Polymarket body is visible before the switch is pressed');
+});
+
+t('Polymarket: both pages carry the switch', () => {
+  ok(/polymarketToggleHtml\(/.test(INDEX), 'Card Lab has no Polymarket switch');
+  ok(/polymarketToggleHtml\(/.test(FIGHT), 'Fight Lab has no Polymarket switch');
+});
+
+t('Polymarket: the line is stepped, dashed and always labelled as not a sportsbook', () => {
+  const h = CH.polymarketHtml(pmRows([0.24, 0.22, 0.23]), 'Thicknesse', 'Chopurov');
+  const d = (h.match(/ d="([^"]+)"/) || [])[1] || '';
+  ok(d && !/[LlCcSsQqTtAa]/.test(d.replace(/^M/, '')), 'Polymarket path is not a pure step');
+  ok(/stroke-dasharray/.test(h), 'Polymarket line is not dashed');
+  ok(/prediction market, not a sportsbook/.test(h), 'note missing');
+  ok(/3 Polymarket captures/.test(h), 'capture count missing');
+});
+
+t('Polymarket: one capture is a number, not a line; none is a named refusal', () => {
+  const one = CH.polymarketHtml(pmRows([0.465]), 'Oki', 'Santos');
+  ok(!/<svg/.test(one) && /47%/.test(one) && /One capture so far/.test(one), 'single capture mishandled');
+  const none = CH.polymarketHtml([], 'Oki', 'Santos');
+  ok(/No Polymarket price/.test(none), 'empty state does not explain itself');
+  const failed = CH.polymarketHtml(null, 'Oki', 'Santos');
+  ok(/could not be loaded/.test(failed), 'a failed read reads as "no market"');
+});
+
+t('Polymarket: settled-looking prices are refused in SQL and in JS', () => {
+  ok(/> 0\.01[\s\S]{0,120}< 0\.99/.test(PM_SQL), 'view does not refuse settled prices');
+  ok(/is_live IS NOT TRUE/.test(PM_SQL) && /bell_at/.test(PM_SQL), 'view keeps live or post-bell prices');
+  eq(CH.polymarketPoints([{ at: '2026-10-20T00:00:00Z', p_a: 1 }, { at: '2026-10-20T01:00:00Z', p_a: 0 }]).length, 0,
+     'a 0/100 price became a point');
+});
+
+t('Polymarket: never feeds a sportsbook number', () => {
+  ok(/lower\(ob\.name\) = 'polymarket'/.test(PM_SQL), 'view is not restricted to Polymarket');
+  ok(!/v_fight_polymarket_series/.test(CHART_SQL), 'the sportsbook chart views read Polymarket');
+  for (const f of ['market.js', 'market-movement.js', 'alerts.js']) {
+    ok(!/polymarket/i.test(stripComments(read(f))), f + ' reads Polymarket');
+  }
+  ok(/GRANT SELECT ON TABLE public\.v_fight_polymarket_series TO anon, authenticated/.test(PM_SQL) &&
+     /REVOKE ALL ON TABLE public\.v_fight_polymarket_series FROM PUBLIC, anon, authenticated/.test(PM_SQL),
+     'browser roles get more than SELECT on the Polymarket view');
+});
+
 // ------------------------------------------------------------------ report
 if (failures.length) {
   console.log(`\n  ${passed} passed, ${failures.length} FAILED\n`);

@@ -370,6 +370,136 @@
     } catch (e) { return []; }
   };
 
+  /* ----------------------------------------------------------------------
+     Polymarket — an opt-in line, OFF by default, on its own small chart.
+
+     Polymarket is a prediction market, not a sportsbook: its price is what
+     traders last paid, not a number a book is offering. So it never joins the
+     sportsbook line above, the best price, or any movement figure — those all
+     read v_odds_books_sportsbooks, which excludes it by name. It is drawn
+     separately, dashed, and labelled every time. Its main use is a fight no
+     sportsbook has priced yet, which otherwise shows nothing.
+
+     Source: v_fight_polymarket_series (polymarket_chart_view.sql), which
+     already refuses live, closed, post-bell and settled-looking prices.
+     ---------------------------------------------------------------------- */
+  C.PM_INK = { a: '#ff4d57', b: '#4f8dff', grid: '#1a1f27', label: '#6b7480' };
+  C.PM_NOTE = 'Polymarket is a prediction market, not a sportsbook. Its price is what ' +
+    'traders last paid, not an offer from a book, and it is not part of any sportsbook number on this page.';
+
+  const _pmCache = {};
+  C.loadPolymarket = function (fightId) {
+    const sb = window.cflSupabase;
+    if (!sb || !fightId) return Promise.resolve([]);
+    if (!_pmCache[fightId]) {
+      _pmCache[fightId] = Promise.resolve(sb.from('v_fight_polymarket_series')
+        .select('at, p_a').eq('fight_id', fightId).order('at', { ascending: true }))
+        .then(r => (r && r.data) || [])
+        .catch(e => { delete _pmCache[fightId]; console.warn('[market-chart] polymarket unavailable:', e.message); return null; });
+    }
+    return _pmCache[fightId];
+  };
+
+  C.polymarketPoints = function (rows) {
+    return (Array.isArray(rows) ? rows : [])
+      .map(r => ({ t: Date.parse(r.at), p: num(r.p_a) }))
+      .filter(d => isFinite(d.t) && d.p !== null && d.p > 0 && d.p < 1)
+      .sort((x, y) => x.t - y.t);
+  };
+
+  // rows === null means the read failed, which is not the same as "no market".
+  C.polymarketHtml = function (rows, nameA, nameB) {
+    const nA = nameA || 'corner A', nB = nameB || 'corner B';
+    const note = '<p class="mc-empty-b" style="margin:8px 0 0;font-size:12px">' + esc(C.PM_NOTE) + '</p>';
+    if (rows === null) {
+      return '<div class="mc-empty"><div class="mc-empty-h">Polymarket price unavailable</div>' +
+        '<div class="mc-empty-b">The Polymarket history could not be loaded. Nothing else on this page is affected.</div></div>';
+    }
+    const ps = C.polymarketPoints(rows);
+    const stamp = t => window.cflMarket ? cflMarket.fmtStampUtc(new Date(t).toISOString()) : new Date(t).toUTCString();
+    const pct = p => Math.round(p * 100) + '%';
+    // Corner B is 100 minus corner A as shown, so the pair always sums to 100.
+    const pctB = p => (100 - Math.round(p * 100)) + '%';
+    if (!ps.length) {
+      return '<div class="mc-empty"><div class="mc-empty-h">No Polymarket price</div>' +
+        '<div class="mc-empty-b">CFL has not captured an open Polymarket market on this fight.</div></div>';
+    }
+    if (ps.length === 1) {
+      const p = ps[0];
+      return '<div class="mc-empty"><div class="mc-empty-h">Polymarket: ' + esc(nA) + ' ' + pct(p.p) +
+        ', ' + esc(nB) + ' ' + pctB(p.p) + '</div>' +
+        '<div class="mc-empty-b">One capture so far (' + esc(stamp(p.t)) + '). A line appears once there is a second one to move to.</div>' +
+        note + '</div>';
+    }
+    const W = 320, H = 120, L = 34, R = 10, T = 8, B = 10;
+    const all = ps.map(d => d.p).concat(ps.map(d => 1 - d.p));
+    let lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+    const pad = Math.max(0.03, (hi - lo) * 0.12);
+    lo = Math.max(0, lo - pad); hi = Math.min(1, hi + pad);
+    const t0 = ps[0].t, t1 = ps[ps.length - 1].t, span = Math.max(1, t1 - t0);
+    const x = t => L + (t - t0) / span * (W - L - R);
+    const y = p => T + (1 - (p - lo) / Math.max(1e-4, hi - lo)) * (H - T - B);
+    // Stepped, like every other line here: a price stands until the next capture.
+    const step = f => ps.map((d, i) => (i ? ' H' + x(d.t).toFixed(1) + ' V' : 'M' + x(d.t).toFixed(1) + ' ') + y(f(d.p)).toFixed(1)).join('');
+    let grid = '';
+    for (let g = Math.ceil(lo * 10) / 10; g <= hi + 1e-9; g += 0.1) {
+      const yy = y(g).toFixed(1);
+      grid += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" stroke="' + C.PM_INK.grid + '" stroke-width=".6"/>' +
+        '<text x="' + (L - 6) + '" y="' + yy + '" fill="' + C.PM_INK.label + '" font-size="8.5" text-anchor="end" dominant-baseline="middle">' + Math.round(g * 100) + '%</text>';
+    }
+    const first = ps[0], last = ps[ps.length - 1];
+    const line = (f, c) => '<path d="' + step(f) + '" fill="none" stroke="' + c + '" stroke-width="1.6" stroke-dasharray="5 3"/>';
+    return '<div class="mc-pm-chart">' +
+      '<div class="mc-foot" style="margin:0 0 6px">' +
+        '<span class="mc-key"><i style="background:' + C.PM_INK.a + '"></i>' + esc(nA) + ' ' + pct(last.p) + '</span>' +
+        '<span class="mc-key"><i style="background:' + C.PM_INK.b + '"></i>' + esc(nB) + ' ' + pctB(last.p) + '</span>' +
+        '<span class="mc-span">' + esc(fmtRange(t0, t1)) + '</span>' +
+      '</div>' +
+      '<svg viewBox="0 0 ' + W + ' ' + H + '" style="width:100%;height:auto;display:block" role="img" aria-label="' +
+        esc('Polymarket price: ' + nA + ' ' + pct(first.p) + ' to ' + pct(last.p) + ', ' + nB + ' ' +
+            pctB(first.p) + ' to ' + pctB(last.p) + ', ' + ps.length + ' captures') + '">' +
+        grid + line(p => p, C.PM_INK.a) + line(p => 1 - p, C.PM_INK.b) +
+      '</svg>' +
+      '<p class="mc-empty-b" style="margin:6px 0 0;font-size:12px">' + ps.length + ' Polymarket captures, ' +
+        esc(stamp(first.t)) + ' to ' + esc(stamp(last.t)) + '.</p>' +
+      note + '</div>';
+  };
+
+  // The switch. Off by default; nothing is fetched until it is turned on.
+  C.polymarketToggleHtml = function (fightId, nameA, nameB) {
+    const id = esc(String(fightId));
+    return '<div class="mc-pm" data-pm-fight="' + id + '" data-pm-a="' + esc(nameA || '') + '" data-pm-b="' + esc(nameB || '') + '" style="margin-top:10px">' +
+      '<div class="mc-controls" style="margin-bottom:8px"><button type="button" data-pm-toggle aria-pressed="false" ' +
+        'aria-controls="mcpm-' + id + '">Show Polymarket</button></div>' +
+      '<div id="mcpm-' + id + '" data-pm-body hidden></div></div>';
+  };
+
+  // One delegated listener for every switch on the page, so a re-rendered
+  // card needs no re-wiring.
+  C.wirePolymarket = function (root) {
+    const r = root || (typeof document !== 'undefined' ? document : null);
+    if (!r || r.__cflPmWired) return;
+    r.__cflPmWired = true;
+    r.addEventListener('click', async (ev) => {
+      const btn = ev.target && ev.target.closest && ev.target.closest('[data-pm-toggle]');
+      if (!btn) return;
+      const box = btn.closest('[data-pm-fight]');
+      const body = box && box.querySelector('[data-pm-body]');
+      if (!body) return;
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+      btn.textContent = on ? 'Hide Polymarket' : 'Show Polymarket';
+      if (!on) { body.setAttribute('hidden', ''); return; }
+      body.removeAttribute('hidden');
+      body.innerHTML = '<div class="mc-empty-b">Loading Polymarket…</div>';
+      btn.disabled = true;
+      const rows = await C.loadPolymarket(box.getAttribute('data-pm-fight'));
+      btn.disabled = false;
+      body.innerHTML = C.polymarketHtml(rows, box.getAttribute('data-pm-a'), box.getAttribute('data-pm-b'));
+    });
+  };
+  if (typeof document !== 'undefined' && typeof window !== 'undefined') C.wirePolymarket(document);
+
   const api = { INK, ...C };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else window.cflChart = api;

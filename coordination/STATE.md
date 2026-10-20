@@ -3,7 +3,12 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-19
+Last updated: 2026-10-20
+
+**Polymarket switch, 2026-10-20: live.** Card Lab and Fight Lab charts carry a
+"Show Polymarket" switch, off by default, drawn on its own chart and never part
+of any sportsbook number. New read-only view `v_fight_polymarket_series`. See
+HANDOFF 2026-10-20.
 
 **Odds corner matcher, 2026-10-19: fixed.** Seven fights (UFC 333's main
 event among them) were captured with one corner only, because the feed's
