@@ -17,7 +17,12 @@ be run here (the exchange is unreachable from this environment) and its fee
 rule is unverified against the live documentation, so Polymarket offers are
 excluded until it is. The read-only UFC 333 dry run selected nothing: no
 price beat the other books' consensus by 2%. No schedule, no lock, no
-migration, no paper bet. Approval bundle in `paper/README.md`.
+migration, no paper bet. Approval bundle in `paper/README.md`. **Owner's
+review of the first commit found five bugs; all fixed with tests the same
+day** (HANDOFF (c)). The live Polymarket capture carried through to a
+decision is still owed: the exchange is unreachable from the build
+environment and a manual workflow cannot be dispatched until it is on the
+scraper repo's default branch.
 
 **WIN-001 win formula, 2026-10-20 (T-105): built, DRAFT, waiting on the
 owner.** The owner asked for a win formula. It exists under PRED-001 at

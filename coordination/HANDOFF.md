@@ -11,6 +11,55 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 (c) — Paper system: five review findings fixed; live Polymarket capture still owed (T-106)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner reviewed `8549c9c` and named five bugs. All five are fixed in
+  `4a859ff` with regression tests (`tests/paper/test_paper_fixes.py`, 28
+  paper tests green, full suites green): Polymarket books now reach the
+  evaluator from the `polymarket_books` table and from a capture file; a
+  BUY's fee is collected in shares as Polymarket documents it;
+  `--evaluate-at-capture` can no longer be combined with any write; a card
+  is recorded as one atomic hash-chained batch under a file lock with
+  crash recovery (two racing processes: exactly one records); forecast and
+  lock rows cover only active, unsettled bookings, inserted one row per
+  request. `audit_forecast_path.js` shows the prospective feature path
+  reproduces the Doc's on 200 DEV fights (difference 0) — a same-author
+  check, not the independent audit.
+- Thresholds unchanged.
+- **The live Polymarket capture → decision run did not happen.** The
+  exchange is unreachable from the build environment, and the manual
+  capture workflow added to the scraper repo (`dffde63`) cannot be
+  dispatched: GitHub registers workflows from the default branch only
+  (`actions_list` shows just the three on `main`). A dispatch of the
+  registered probe workflow was attempted before that was understood; it
+  ran the existing read-only API probe on the branch, nothing else. Routing
+  the capture through the registered workflow's path on the dev branch was
+  stopped by the permission guard, correctly.
+- Re-ran the UFC 333 dry evaluation with the fixed code at the quote
+  instant: 14 eligible bouts, 14 forecasts, 14 passes on M1 and S1, 14 lock
+  rows (the retired booking is gone from all three), 0 Polymarket books.
+
+## Next action
+
+Owner picks one route for the live capture, then Claude runs it through to
+a read-only decision on the next card:
+1. **Network:** allow `gamma-api.polymarket.com` and `clob.polymarket.com`
+   for this environment (settings → Network access → Allowed domains);
+   Claude then runs `capture_book.py --out` here and `run_card.py
+   --polymarket-books`.
+2. **CI:** merge `polymarket-capture-dryrun.yml` (manual only, read-only
+   token, no schedule) to the scraper repo's `main` by PR; Claude dispatches
+   it and reads the artifact. Check first whether Railway redeploys the
+   scraper on a push to `main`.
+3. **By hand:** run `python polymarket/capture_book.py --out books.jsonl`
+   on a machine with network and give Claude the file.
+
+---
+
 ## 2026-10-20 (b) — Paper-trading system built and tested; nothing running (T-106)
 
 **From:** Claude

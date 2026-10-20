@@ -98,10 +98,41 @@ dry run.
 
 Evaluated at the snapshot's capture instant (18:36 UTC) every fight
 **abstained**: the newest quotes were 75 minutes old. Evaluated at the quote
-instant (17:22 UTC) — a demonstration of the evaluator, not a lock — see
-`private/dryrun_ufc333_at_quotes.json`; the summary is in the handoff. No
-Polymarket books were available (the exchange is unreachable from here), so
-no Polymarket offer was considered.
+instant (17:22 UTC) — a demonstration of the evaluator, not a lock — 14
+eligible bouts (the retired Allen–Pico booking is excluded from forecasts,
+decisions and lock rows), 14 forecasts, **14 passes on M1 and on S1**; see
+`private/dryrun_ufc333_at_quotes_v2.json`. No Polymarket books were
+available: the exchange is unreachable from the build environment, and the
+manual capture workflow cannot be dispatched until it exists on the scraper
+repo's default branch (GitHub registers workflows from there). The live
+capture → decision run is therefore still owed; see the handoff for the
+three ways to get it.
+
+## Review fixes (2026-10-20, on 8549c9c)
+
+1. Polymarket books reach the evaluator: `fetch_snapshot` reads the
+   `polymarket_books` table when it exists; `--polymarket-books FILE` merges
+   a `capture_book.py --out` JSONL; the newest capture at or before the lock
+   represents each token (`data.latest_polymarket_books`).
+2. A BUY's fee is collected in shares (see Fees); the first draft added it to
+   the cash cost.
+3. `--evaluate-at-capture` is refused with `--write` or `--execute-locks`,
+   and `--execute-locks` is refused without `--write`.
+4. `Ledger.record_card` writes lock → events → `card_commit` as one
+   hash-chained batch with a single write and fsync, under an exclusive file
+   lock after re-reading the file, so two processes cannot both record a
+   card (tested with two racing processes). An incomplete batch found on
+   disk is retired with a `card_abort` marker and the card recorded again;
+   nothing is removed. A truncated last line is kept and skipped only while
+   the chain is intact across it.
+5. Forecast rows and `win_model_locks` rows cover only active, unsettled
+   bookings; lock inserts go one row per request so a guard rejection fails
+   alone and every row's outcome is reported.
+
+`mma001/audit_forecast_path.js` checks that `forecast.js` reproduces the
+Doc's `buildExamples` features on 200 DEV fights (max difference 0). That is
+a same-author consistency check of the prospective path, **not** the
+independent point-in-time audit PRED-001 requires.
 
 ## Commands
 
