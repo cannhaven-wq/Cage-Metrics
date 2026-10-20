@@ -11,11 +11,14 @@ Expected net return against a probability p is then  p * net_if_win - (1 - p) * 
 divided by stake_cost. For a sportsbook that is the familiar p * D - 1.
 
 Polymarket purchases are priced by WALKING THE ASK LADDER: shares are bought
-from the best ask upward until the budget is spent, each level paying the
-taker fee the market reports. A displayed price, a midpoint or the Gamma
-`outcomePrices` number is never used; an offer with no executable asks, no
-fee rate, or not enough depth to place the whole stake is rejected with a
-named reason rather than filled hypothetically.
+from the best ask upward until the cash budget is spent. The taker fee on a
+BUY is collected in the outcome shares received (Polymarket Help Center,
+"Trading fees": fee = C x rate x p x (1 - p) with C the shares traded, taken
+from the shares on a buy and from the USDC on a sell). So the cash risked is
+the cash spent, and the payout is the NET shares after the fee. A displayed
+price, a midpoint or the Gamma `outcomePrices` number is never used; an offer
+with no executable asks, no fee rate, or not enough depth to place the whole
+stake is rejected with a named reason rather than filled hypothetically.
 
 Nothing here reads a clock, a database or the network.
 """
@@ -106,15 +109,23 @@ def sportsbook_offer(*, venue_id: int, fight_id: int, side: str, fighter_id: int
 #: time, in basis points. See paper/README.md "Fees" for what was and was not verified.
 FEE_FORMULAS = {"p_times_1_minus_p": lambda rate, p: rate * p * (1.0 - p)}
 
+#: Where a BUY's fee is collected. Polymarket: in the outcome shares received.
+FEE_DENOMINATION_BUY = "shares"
+
 
 def polymarket_fill(*, asks: list[dict], budget: float, fee_rate_bps: Optional[float],
                     fee_formula: str = "p_times_1_minus_p", min_fill_fraction: float = 1.0,
                     tick_size: Optional[float] = None, min_order_size: Optional[float] = None) -> dict:
-    """Walk the executable asks and spend `budget` units (fees included) on YES shares.
+    """Walk the executable asks and spend `budget` collateral on YES shares.
 
     asks: [{"price": "0.57", "size": "120.5"}, ...] in any order; price is the
     cost per share in collateral, size is shares available at that price.
-    Returns {shares, cost, fee, avg_price, levels_used, fill_fraction}.
+
+    At each level the buyer pays cash = shares x price and receives
+    gross shares minus the fee, which is collected IN SHARES:
+        fee_shares = gross x rate x p x (1 - p)
+    Returns {shares (net), shares_gross, fee_shares, cost (= spent cash),
+    spent, avg_price, levels_used, fill_fraction, ...}.
     Raises OfferRejected when the fill would be hypothetical.
     """
     if fee_rate_bps is None:
@@ -139,25 +150,27 @@ def polymarket_fill(*, asks: list[dict], budget: float, fee_rate_bps: Optional[f
     if not ladder:
         raise OfferRejected("polymarket: no executable asks")
     ladder.sort()                       # cheapest first; a BUY lifts the lowest ask
-    remaining, shares, cost, fee, used = float(budget), 0.0, 0.0, 0.0, []
+    remaining, gross, net, fee_shares, spent, used = float(budget), 0.0, 0.0, 0.0, 0.0, []
     for p, s in ladder:
         if remaining <= 1e-12:
             break
-        per_share = p + fee_of(rate, p)             # collateral per share, fee included
-        take = min(s, remaining / per_share)
-        shares += take
-        cost += take * p
-        fee += take * fee_of(rate, p)
-        remaining -= take * per_share
-        used.append({"price": p, "size": s, "taken": take})
-    spent = cost + fee
+        take = min(s, remaining / p)            # gross shares bought at this level
+        cash = take * p
+        f = take * fee_of(rate, p)              # shares withheld as the taker fee
+        gross += take
+        fee_shares += f
+        net += take - f
+        spent += cash
+        remaining -= cash
+        used.append({"price": p, "size": s, "taken": take, "fee_shares": f})
     fill_fraction = spent / float(budget) if budget else 0.0
     if fill_fraction + 1e-9 < min_fill_fraction:
         raise OfferRejected(f"polymarket: insufficient depth, {fill_fraction:.0%} of the stake fillable")
-    if min_order_size is not None and shares < float(min_order_size):
-        raise OfferRejected(f"polymarket: fill of {shares:.2f} shares is under the market minimum {min_order_size}")
-    return {"shares": shares, "cost": cost, "fee": fee, "spent": spent,
-            "avg_price": cost / shares if shares else None, "levels_used": used,
+    if min_order_size is not None and gross < float(min_order_size):
+        raise OfferRejected(f"polymarket: order of {gross:.2f} shares is under the market minimum {min_order_size}")
+    return {"shares": net, "shares_gross": gross, "fee_shares": fee_shares, "fee": fee_shares,
+            "fee_denomination": FEE_DENOMINATION_BUY, "cost": spent, "spent": spent,
+            "avg_price": spent / gross if gross else None, "levels_used": used,
             "fill_fraction": fill_fraction, "fee_rate_bps": float(fee_rate_bps),
             "fee_formula": fee_formula, "tick_size": tick_size}
 
@@ -169,8 +182,8 @@ def polymarket_offer(*, venue_id: int, fight_id: int, side: str, fighter_id: int
 
     Required keys: asks, fee_rate_bps, market_status, settlement_ok (bool set by
     the capture after reading the market's resolution text), mapping_confidence.
-    Each share pays 1 collateral if the side wins, 0 otherwise; the stake is
-    lost in full on a loss. The fee is charged on the purchase.
+    Each net share pays 1 collateral if the side wins, 0 otherwise; the cash is
+    lost in full on a loss.
 
     Order books are in collateral and shares, so one paper unit is sized as
     `unit_notional` collateral for the fill (depth and the market's minimum
@@ -196,4 +209,4 @@ def polymarket_offer(*, venue_id: int, fight_id: int, side: str, fighter_id: int
                  fighter_id=fighter_id, stake_cost=fill["spent"] / unit_notional, net_if_win=net_if_win,
                  retrieved_at=retrieved_at, provider_ts=provider_ts,
                  source={"token_id": book.get("token_id"), "condition_id": book.get("condition_id"),
-                         "asks": book.get("asks"), "fill": fill, "book_hash": book.get("hash")})
+                         "asks": book.get("asks"), "fill": fill, "book_hash": book.get("book_hash") or book.get("hash")})

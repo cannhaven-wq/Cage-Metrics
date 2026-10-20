@@ -6,10 +6,18 @@
 
 Without --write nothing is appended to the ledger and nothing is sent anywhere:
 the decisions, the would-be win_model_locks rows and the would-be ledger events
-are printed. With --write the ledger file is appended (private, git-ignored).
-Writing to win_model_locks is a separate, explicit --execute-locks flag that is
-refused unless PAPER_ALLOW_LOCK_WRITE=1 is also set: starting prospective
-collection is an owner decision (L3), not a command-line default.
+are printed. With --write the whole card is recorded in one atomic batch to
+the ledger file (private, git-ignored). Writing to win_model_locks is a
+separate, explicit --execute-locks flag that is refused unless
+PAPER_ALLOW_LOCK_WRITE=1 is also set: starting prospective collection is an
+owner decision (L3), not a command-line default.
+
+--evaluate-at-capture is a read-only look at the captured market before the
+lock. It cannot be combined with --write or --execute-locks.
+
+Polymarket order books reach the evaluator from the polymarket_books table
+(when --live and the table exists) and/or from a JSONL file written by
+capture_book.py --out, given as --polymarket-books FILE.
 """
 from __future__ import annotations
 
@@ -20,7 +28,7 @@ import os
 import pathlib
 import subprocess
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
@@ -39,12 +47,21 @@ def load_cfg(path) -> tuple[dict, str]:
     return json.loads(b), hashlib.sha256(b).hexdigest()
 
 
-def forecast(snap: dict, cfg: dict, references: dict, artifact_path: str, tmpdir: pathlib.Path) -> dict:
-    """Run MMA-001 for every fight on the card. Abstains (p_a None) where there is no reference."""
+def eligible_fights(snap: dict) -> list[dict]:
+    """The bouts the evaluator, the forecast and the lock rows all use: active and unsettled.
+
+    win_model_locks' insert guard rejects retired and settled bookings; a row
+    for one would fail, so none is produced.
+    """
+    return [f for f in snap["card"]["fights"] if f.get("is_active") is not False and f.get("winner_id") is None]
+
+
+def forecast(snap: dict, fights: list[dict], references: dict, artifact_path: str, tmpdir: pathlib.Path) -> dict:
+    """Run MMA-001 for the eligible fights. Abstains (p_a None) where there is no reference."""
     if not snap.get("history"):
         return {"model_version": None, "artifact_sha256": None, "forecasts": [], "skipped": "no history in snapshot"}
     targets = []
-    for f in snap["card"]["fights"]:
+    for f in fights:
         fa = snap.get("fighters", {}).get(str(f["fighter_a_id"]), {}); fb = snap.get("fighters", {}).get(str(f["fighter_b_id"]), {})
         ref = references.get(int(f["id"]))
         targets.append({"fight_id": f["id"], "event_id": snap["card"]["event_id"], "event_date": snap["card"]["event_date"],
@@ -58,11 +75,11 @@ def forecast(snap: dict, cfg: dict, references: dict, artifact_path: str, tmpdir
     return json.loads(out.stdout)
 
 
-def lock_rows(snap: dict, cfg: dict, fc: dict, references: dict, lock_at: datetime, code_commit: str) -> list[dict]:
-    """The win_model_locks rows this run would write (one per fight, p_a NULL = abstention)."""
+def lock_rows(snap: dict, fights: list[dict], cfg: dict, fc: dict, references: dict, lock_at: datetime, code_commit: str) -> list[dict]:
+    """The win_model_locks rows this run would write: one per ELIGIBLE fight, p_a NULL = abstention."""
     rows = []
     by_id = {f["fight_id"]: f for f in fc.get("forecasts", [])}
-    for f in snap["card"]["fights"]:
+    for f in fights:
         fid = int(f["id"]); r = by_id.get(fid, {}); ref = references.get(fid)
         rows.append({
             "fight_id": fid, "event_id": snap["card"]["event_id"], "fighter_a_id": f["fighter_a_id"], "fighter_b_id": f["fighter_b_id"],
@@ -83,7 +100,8 @@ def run(args) -> dict:
     now = parse_ts(args.now) if args.now else datetime.now(timezone.utc)
     lock_at, why = D.lock_instant(snap, cfg)
     report = {"card": {k: v for k, v in snap["card"].items() if k != "fights"}, "n_fights": len(snap["card"]["fights"]),
-              "config_sha256": cfg_sha, "strategy_version": cfg["strategy_version"], "now": now.isoformat()}
+              "config_sha256": cfg_sha, "strategy_version": cfg["strategy_version"], "now": now.isoformat(),
+              "polymarket_books_source": snap.get("polymarket_books_source")}
     if lock_at is None:
         report.update(status="no_lock", reason=why); return report
     report["lock_at"] = lock_at.isoformat()
@@ -93,53 +111,58 @@ def run(args) -> dict:
         report.update(mode="dry_evaluation_at_capture", note=f"evaluated at {now.isoformat()}, not at the lock; nothing is recorded")
     elif now < lock_at:
         report.update(status="before_lock", reason=f"lock instant {lock_at.isoformat()} not reached"); return report
-    if now - lock_at > __import__("datetime").timedelta(minutes=float(cfg["offer"]["max_quote_age_minutes"])):
+    elif now - lock_at > timedelta(minutes=float(cfg["offer"]["max_quote_age_minutes"])):
         report.update(status="late", reason=f"now is {int((now - lock_at).total_seconds() // 60)} min after the lock instant; a late lock is refused, the card is recorded as missed"); return report
-    fights = [f for f in snap["card"]["fights"] if f.get("is_active") is not False and f.get("winner_id") is None]
+    fights = eligible_fights(snap)
+    fight_ids = {int(f["id"]) for f in fights}
     card = {"event_id": snap["card"]["event_id"], "fights": fights}
     quotes = {}
     for q in snap["quotes"]:
         quotes.setdefault(int(q["fight_id"]), []).append(q)
+    pm_rows = list(snap.get("polymarket_books") or [])
+    if args.polymarket_books:
+        pm_rows += D.load_polymarket_jsonl(args.polymarket_books)
+        report["polymarket_books_source"] = f"{report.get('polymarket_books_source') or 'no table rows'} + file {args.polymarket_books}"
     pm = {}
-    for b in snap.get("polymarket_books", []):
+    for b in D.latest_polymarket_books(pm_rows, now=lock_at, fight_ids=fight_ids):
         pm.setdefault(int(b["fight_id"]), []).append(b)
+    report["polymarket_books_considered"] = sum(len(v) for v in pm.values())
     references = {}
     for f in fights:
         ref, _ = build_reference(int(f["id"]), quotes.get(int(f["id"]), []), now=lock_at, cfg=cfg)
         if ref:
             references[int(f["id"])] = ref
     artifact = args.artifact or os.environ.get(cfg["model"]["artifact_env"], "")
-    fc = forecast(snap, cfg, references, artifact, HERE / "private" / "tmp") if artifact and pathlib.Path(artifact).exists() else \
+    fc = forecast(snap, fights, references, artifact, HERE / "private" / "tmp") if artifact and pathlib.Path(artifact).exists() else \
         {"model_version": None, "artifact_sha256": None, "forecasts": [], "skipped": "no model artifact available (PAPER_MODEL_ARTIFACT)"}
     p_model = {f["fight_id"]: f.get("p_a") for f in fc.get("forecasts", [])}
     ledger = Ledger(args.ledger)
     bankroll = {s: S.metrics(ledger, cfg)["strategies"][s]["bankroll_settled"] for s in cfg["strategies"]}
-    decisions = evaluate_card(card={"event_id": card["event_id"], "fights": fights}, quotes_by_fight=quotes, pm_books_by_fight=pm,
+    decisions = evaluate_card(card=card, quotes_by_fight=quotes, pm_books_by_fight=pm,
                               p_model_by_fight=p_model, cfg=cfg, now=lock_at, bankroll=bankroll)
     code_commit = subprocess.run(["git", "rev-parse", "--short", "HEAD"], capture_output=True, text=True, cwd=HERE.parent).stdout.strip() or "unknown"
-    rows = lock_rows(snap, cfg, fc, references, lock_at, code_commit)
+    rows = lock_rows(snap, fights, cfg, fc, references, lock_at, code_commit)
     report.update(status="evaluated", model=fc.get("model_version"), artifact_sha256=fc.get("artifact_sha256"), model_skipped=fc.get("skipped"),
                   bankroll=bankroll, decisions=[d.to_dict() for d in decisions], win_model_locks_rows=rows,
-                  forecasts_abstained=sum(1 for r in rows if r["p_a"] is None))
-    if args.write and args.evaluate_at_capture:
-        report["ledger_appended"] = False; report["write_refused"] = "a pre-lock dry evaluation is never recorded"
-    elif args.write:
-        try:
-            lock = ledger.record_lock(card_id=card["event_id"], strategy_version=cfg["strategy_version"], ts=now.isoformat(), lock_at=lock_at.isoformat(),
-                                      config_sha256=cfg_sha, model_version=fc.get("model_version"), artifact_sha256=fc.get("artifact_sha256"),
-                                      fight_ids=[int(f["id"]) for f in fights], corners={str(f["id"]): [f["fighter_a_id"], f["fighter_b_id"]] for f in fights},
-                                      snapshot_captured_at=snap["captured_at"], code_commit=code_commit)
-        except DuplicateRun as e:
-            report.update(status="duplicate_run", reason=str(e)); return report
-        for r in rows:
-            ledger.append("forecast", card_id=card["event_id"], strategy_version=cfg["strategy_version"], ts=now.isoformat(), lock_event_id=lock["event_id"], **r)
+                  forecasts_abstained=sum(1 for r in rows if r["p_a"] is None), n_eligible=len(fights))
+    if args.write:
         corners = {int(f["id"]): (f["fighter_a_id"], f["fighter_b_id"]) for f in fights}
+        events: list[tuple[str, dict]] = [("forecast", r) for r in rows]
         for d in decisions:
             kind = "selection" if d.decision == "bet" else d.decision
             payload = d.to_dict(); payload.pop("decision", None)
             if kind == "selection":
                 payload.update(fighter_id=d.offer["fighter_id"], fighter_a_id=corners[d.fight_id][0], fighter_b_id=corners[d.fight_id][1], model_version=fc.get("model_version"))
-            ledger.append(kind, card_id=card["event_id"], strategy_version=cfg["strategy_version"], ts=now.isoformat(), lock_event_id=lock["event_id"], **payload)
+            events.append((kind, payload))
+        try:
+            ledger.record_card(card_id=card["event_id"], strategy_version=cfg["strategy_version"], ts=now.isoformat(),
+                               lock={"lock_at": lock_at.isoformat(), "config_sha256": cfg_sha, "model_version": fc.get("model_version"),
+                                     "artifact_sha256": fc.get("artifact_sha256"), "fight_ids": sorted(fight_ids),
+                                     "corners": {str(k): list(v) for k, v in corners.items()}, "snapshot_captured_at": snap["captured_at"],
+                                     "code_commit": code_commit},
+                               events=events)
+        except DuplicateRun as e:
+            report.update(status="duplicate_run", reason=str(e)); return report
         report["ledger_appended"] = True
     if args.execute_locks:
         if os.environ.get("PAPER_ALLOW_LOCK_WRITE") != "1":
@@ -149,17 +172,25 @@ def run(args) -> dict:
     return report
 
 
-def write_locks(rows: list[dict]) -> str:
-    """Insert into win_model_locks over PostgREST. The table's own triggers decide the lock time and refuse late or settled rows."""
+def write_locks(rows: list[dict]) -> list[dict]:
+    """Insert into win_model_locks over PostgREST, ONE ROW PER REQUEST, so a row the
+    table's guard rejects (late, settled, retired, corner mismatch) fails alone
+    and the outcome of every row is recorded. The guard sets the lock time."""
+    import urllib.error
     import urllib.request
     base = os.environ.get("SUPABASE_URL", "").rstrip("/"); key = D._env_key()
     if not base or not key:
-        return "refused: no database credentials"
-    body = json.dumps([{k: v for k, v in r.items() if k not in ("fighter_a_id", "fighter_b_id")} | {"fighter_a_id": r["fighter_a_id"], "fighter_b_id": r["fighter_b_id"]} for r in rows]).encode()
-    req = urllib.request.Request(f"{base}/rest/v1/win_model_locks", data=body, method="POST", headers={
-        "apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "return=minimal,resolution=ignore-duplicates"})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        return f"inserted (HTTP {r.status})"
+        return [{"fight_id": r["fight_id"], "result": "refused: no database credentials"} for r in rows]
+    out = []
+    for r in rows:
+        req = urllib.request.Request(f"{base}/rest/v1/win_model_locks", data=json.dumps(r).encode(), method="POST", headers={
+            "apikey": key, "Authorization": f"Bearer {key}", "Content-Type": "application/json", "Prefer": "return=minimal,resolution=ignore-duplicates"})
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp:
+                out.append({"fight_id": r["fight_id"], "result": f"inserted (HTTP {resp.status})"})
+        except urllib.error.HTTPError as e:
+            out.append({"fight_id": r["fight_id"], "result": f"rejected (HTTP {e.code}): {e.read().decode(errors='replace')[:300]}"})
+    return out
 
 
 def settle(args) -> dict:
@@ -186,19 +217,29 @@ def settle(args) -> dict:
     return {"applied": applied, "metrics": m}
 
 
-def main(argv=None):
+def parse_args(argv=None):
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--snapshot"); ap.add_argument("--live", action="store_true"); ap.add_argument("--event-id", type=int)
     ap.add_argument("--config", default=str(DEFAULT_CFG)); ap.add_argument("--ledger", default=str(DEFAULT_LEDGER))
     ap.add_argument("--artifact", help="MMA-001 artifact path (default: $PAPER_MODEL_ARTIFACT)")
+    ap.add_argument("--polymarket-books", help="JSONL from capture_book.py --out; merged with table rows")
     ap.add_argument("--now", help="ISO instant to evaluate at (tests and dry runs)")
-    ap.add_argument("--evaluate-at-capture", action="store_true", help="read-only look at the captured market before the lock; never recorded")
-    ap.add_argument("--write", action="store_true", help="append to the ledger (default: print only)")
+    ap.add_argument("--write", action="store_true", help="record the card to the ledger (default: print only)")
     ap.add_argument("--execute-locks", action="store_true", help="also insert win_model_locks rows (needs PAPER_ALLOW_LOCK_WRITE=1)")
+    ap.add_argument("--evaluate-at-capture", action="store_true", help="read-only look at the captured market before the lock; never recorded")
     ap.add_argument("--settle", action="store_true", help="settle open selections from the snapshot's fight rows")
     args = ap.parse_args(argv)
     if not args.snapshot and not args.live:
         ap.error("give --snapshot FILE or --live")
+    if args.evaluate_at_capture and (args.write or args.execute_locks):
+        ap.error("--evaluate-at-capture is read-only: it cannot be combined with --write or --execute-locks")
+    if args.execute_locks and not args.write:
+        ap.error("--execute-locks requires --write: a database lock without a ledger record is not allowed")
+    return args
+
+
+def main(argv=None):
+    args = parse_args(argv)
     out = settle(args) if args.settle else run(args)
     print(json.dumps(out, indent=1, default=str))
     return out

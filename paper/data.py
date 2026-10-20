@@ -9,7 +9,7 @@ or before the lock instant:
                "fighter_a_name","fighter_b_name","is_active","winner_id","method","bout_order"}]},
       "starts": [{"fight_id","start_at","start_basis"}],              # v_fight_start_best
       "quotes": [{"fight_id","book_id","american_a","american_b","captured_at","provider_last_update"}],
-      "polymarket_books": [{...capture_book rows...}],                 # may be empty
+      "polymarket_books": [{...capture_book rows...}],                 # table rows and/or a JSONL file
       "history": {"fights": [25-column rows]},                        # for MMA-001 (private)
       "fighters": {"<id>": {"dob","reach_in"}}
     }
@@ -17,14 +17,17 @@ or before the lock instant:
 `load_snapshot(path)` reads one from disk (fixtures, dry runs). `fetch_snapshot()`
 builds one from Supabase over PostgREST with the service key from the
 environment; it is the only function here that touches the network and it is
-read-only. Both are validated by `check_snapshot`.
+read-only. It also reads `polymarket_books` when that table exists, so a
+captured order book reaches the evaluator by the same path as a sportsbook
+quote. `load_polymarket_jsonl` adds books captured to a file by
+capture_book.py --out. Both are validated by `check_snapshot`.
 """
 from __future__ import annotations
 
 import json
 import os
 import pathlib
-import urllib.parse
+import urllib.error
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -66,12 +69,60 @@ def check_snapshot(snap: dict) -> None:
         for k in ("id", "fighter_a_id", "fighter_b_id"):
             if f.get(k) is None:
                 raise ValueError(f"fight row lacks {k}: {f}")
+    snap.setdefault("polymarket_books", [])
+
+
+# --------------------------------------------------------------------------- polymarket books
+
+def load_polymarket_jsonl(path) -> list[dict]:
+    """Rows written by capture_book.py --out (one JSON object per line)."""
+    rows = []
+    for line in pathlib.Path(path).read_text().splitlines():
+        if line.strip():
+            rows.append(json.loads(line))
+    return rows
+
+
+def _ts(v) -> datetime:
+    t = datetime.fromisoformat(str(v).replace("Z", "+00:00").replace(" ", "T"))
+    if t.tzinfo is None:
+        raise ValueError(f"timestamp without a time zone: {v!r}")
+    return t.astimezone(timezone.utc)
+
+
+def latest_polymarket_books(rows: list[dict], *, now: datetime, fight_ids: set[int]) -> list[dict]:
+    """The newest capture per (fight, token) retrieved at or before `now`, for the card's fights.
+
+    The evaluator applies freshness, fee, status, settlement and mapping rules
+    itself; this only picks which capture represents each token at the lock.
+    """
+    best: dict[tuple, dict] = {}
+    for r in rows:
+        try:
+            fid = int(r["fight_id"]); tok = str(r["token_id"]); t = _ts(r["retrieved_at"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if fid not in fight_ids or t > now:
+            continue
+        k = (fid, tok)
+        if k not in best or _ts(best[k]["retrieved_at"]) < t:
+            best[k] = r
+    return [dict(r) for r in best.values()]
+
+
+# --------------------------------------------------------------------------- the lock instant
+
+def _active(snap: dict) -> set[int]:
+    return {int(f["id"]) for f in snap["card"]["fights"] if f.get("is_active") is not False}
 
 
 def earliest_verified_start(snap: dict, cfg: dict) -> tuple[Optional[datetime], str]:
-    """The card's earliest start among bases the config calls verified, or None with the reason."""
+    """The card's earliest start among bases the config calls verified, or None with the reason.
+
+    Retired bookings (is_active = false) do not set the lock.
+    """
     bases = set(cfg["lock"]["verified_start_bases"])
-    fights = {int(f["id"]) for f in snap["card"]["fights"] if f.get("is_active") is not False}
+    fights = _active(snap)
     verified, unverified = [], []
     for s in snap["starts"]:
         if int(s["fight_id"]) not in fights:
@@ -87,9 +138,9 @@ def lock_instant(snap: dict, cfg: dict) -> tuple[Optional[datetime], str]:
     """One predetermined lock per card: earliest verified start minus the configured lead.
 
     win_model_locks' own deadline is the earliest start over the whole card
-    with a date-only start counting from 00:00 UTC; if any fight on the card
-    only has an event_date_fallback start, that 00:00 UTC bound is the earlier
-    one and wins.
+    with a date-only start counting from 00:00 UTC; if any active fight on the
+    card only has an event_date_fallback start, that 00:00 UTC bound is the
+    earlier one and wins.
     """
     start, why = earliest_verified_start(snap, cfg)
     if start is None:
@@ -99,7 +150,7 @@ def lock_instant(snap: dict, cfg: dict) -> tuple[Optional[datetime], str]:
     candidates = []
     if start is not None:
         candidates.append(start - lead)
-    fights = {int(f["id"]) for f in snap["card"]["fights"] if f.get("is_active") is not False}
+    fights = _active(snap)
     for s in snap["starts"]:
         if int(s["fight_id"]) in fights and s.get("start_basis") == "event_date_fallback":
             d = datetime.fromisoformat(str(s["start_at"]).replace("Z", "+00:00")).astimezone(timezone.utc)
@@ -108,6 +159,8 @@ def lock_instant(snap: dict, cfg: dict) -> tuple[Optional[datetime], str]:
         return None, "no start of any kind on file"
     return min(candidates), "ok"
 
+
+# --------------------------------------------------------------------------- live, read-only
 
 def fetch_snapshot(event_id: Optional[int] = None, *, history: bool = True) -> dict:
     """Read-only pull of the next (or given) card from Supabase. Needs SUPABASE_URL and a service key."""
@@ -137,7 +190,13 @@ def fetch_snapshot(event_id: Optional[int] = None, *, history: bool = True) -> d
     fighter_ids = sorted({f["fighter_a_id"] for f in fights} | {f["fighter_b_id"] for f in fights})
     fr = _get(base, key, "fighters", f"select=id,dob,reach_in&id=in.({','.join(map(str, fighter_ids))})")
     snap = {"captured_at": now.isoformat(), "card": {"event_id": ev["id"], "name": ev["name"], "event_date": ev["event_date"], "fights": fights},
-            "starts": starts, "quotes": q_rows, "polymarket_books": [], "fighters": {str(f["id"]): {"dob": f["dob"], "reach_in": f["reach_in"]} for f in fr}}
+            "starts": starts, "quotes": q_rows, "polymarket_books": [],
+            "fighters": {str(f["id"]): {"dob": f["dob"], "reach_in": f["reach_in"]} for f in fr}}
+    try:
+        snap["polymarket_books"] = _get(base, key, "polymarket_books", f"select=*&fight_id=in.({ids})&order=retrieved_at.desc")
+        snap["polymarket_books_source"] = "table polymarket_books"
+    except urllib.error.HTTPError as e:
+        snap["polymarket_books_source"] = f"table polymarket_books not readable (HTTP {e.code}); no books from the database"
     if history:
         snap["history"] = {"fights": fetch_history_rows(base, key)}
     check_snapshot(snap)

@@ -229,10 +229,9 @@ def test_lock_instant_is_earliest_verified_start_minus_lead_and_honours_the_date
 
 def test_ledger_refuses_duplicate_run_and_detects_tampering(tmp_path):
     led = Ledger(tmp_path / "l.jsonl")
-    led.record_lock(card_id=9, strategy_version="v", lock_at=iso(T0))
+    led.record_card(card_id=9, strategy_version="v", lock={"lock_at": iso(T0)}, events=[("selection", {"strategy": "M1", "fight_id": 1, "stake": 1.0})])
     with pytest.raises(DuplicateRun):
-        led.record_lock(card_id=9, strategy_version="v", lock_at=iso(T0))
-    led.append("selection", card_id=9, strategy_version="v", strategy="M1", fight_id=1, stake=1.0)
+        led.record_card(card_id=9, strategy_version="v", lock={"lock_at": iso(T0)}, events=[])
     lines = (tmp_path / "l.jsonl").read_text().splitlines()
     lines[1] = lines[1].replace('"stake":1.0', '"stake":2.0')
     (tmp_path / "l.jsonl").write_text("\n".join(lines) + "\n")
@@ -254,7 +253,7 @@ def test_settlement_outcomes_including_corner_change_and_push():
 
 def test_metrics_compare_strategies_over_the_same_cards_and_clv_unavailable(tmp_path):
     led = Ledger(tmp_path / "l.jsonl")
-    led.record_lock(card_id=1, strategy_version="v", fight_ids=[1, 2]); led.record_lock(card_id=2, strategy_version="v", fight_ids=[3])
+    led.record_card(card_id=1, strategy_version="v", lock={"fight_ids": [1, 2]}, events=[]); led.record_card(card_id=2, strategy_version="v", lock={"fight_ids": [3]}, events=[])
     s = led.append("selection", card_id=1, strategy_version="v", strategy="M1", fight_id=1, stake=1.0)
     led.append("pass", card_id=1, strategy_version="v", strategy="M1", fight_id=2)
     led.append("pass", card_id=1, strategy_version="v", strategy="S1", fight_id=1); led.append("pass", card_id=1, strategy_version="v", strategy="S1", fight_id=2)

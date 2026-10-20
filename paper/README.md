@@ -54,21 +54,24 @@ history in `private/history_all.json` is the fingerprint-matched export plus
 
 - The feed is **Polymarket's global exchange** (`gamma-api.polymarket.com`,
   `clob.polymarket.com` — polymarket.com, not polymarket.us).
-- Fee form applied: the published taker fee `fee = shares × rate × p × (1 − p)`,
-  makers 0, with the **rate read per market from the exchange** (`/fee-rate`,
+- Fee form applied: the published taker fee `fee = C × rate × p × (1 − p)`
+  with C the shares traded, makers 0. **On a BUY the fee is collected in the
+  outcome shares received** (Polymarket Help Center, "Trading fees"; the
+  owner confirmed this reading on 2026-10-20), so `polymarket_fill` spends
+  the cash at the ask, receives gross shares, and withholds
+  `gross × rate × p × (1 − p)` shares; the payout is the net shares. The
+  first draft added the fee to the cash cost instead, which is a different
+  instrument. The **rate is read per market from the exchange** (`/fee-rate`,
   then the market's own fee field) and never hard-coded. A book whose rate
   could not be read is stored with `fee_rule_verified = false` and the
-  evaluator rejects it.
+  evaluator rejects it; `fee_rule_must_be_verified: true` in the draft
+  config keeps that guard on.
 - **Not verified from this environment:** polymarket.com, docs.polymarket.com
-  and help.polymarket.com are unreachable here (proxy 403 / DNS). The formula
-  above and the `/book` and `/fee-rate` endpoint shapes come from the official
+  and help.polymarket.com are unreachable here (proxy 403 / DNS). The
+  `/book` and `/fee-rate` endpoint shapes come from the official
   documentation as indexed by search and from the API's documented response
-  fields, not from a page fetched here. Whether a BUY's fee is deducted in
-  collateral (as modelled, the conservative side) or in shares, and the
-  per-category rate for UFC markets, must be confirmed against the live
-  documentation before the first Polymarket paper fill. Until then the
-  draft config's `fee_rule_must_be_verified: true` keeps Polymarket offers
-  out of selections.
+  fields. The per-category rate for UFC markets is whatever the exchange
+  reports for the market at capture time.
 - Settlement: only markets whose resolution text reads as a plain
   fight-winner market with no draw/NC-to-one-side clause are `settlement_ok`.
   A 50-50 resolution on a draw is *not* comparable with a sportsbook push and
