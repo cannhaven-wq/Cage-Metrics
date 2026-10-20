@@ -529,6 +529,20 @@
 #home .fx-row .v.na { color: var(--text-3); font-weight: 600; font-size: 13px; }
 #home .fx-row .v .cfl-flag { font-size: 13px; font-family: var(--font-body); }
 #home .fx-row .v.lead { color: #fff; }
+/* Charts view (data-view.js): bars under the tape's figures, a thin market
+   split under each row, and one bar per sportsbook. */
+#home .fx-row .dv-mirror { grid-column: 1 / -1; margin-top: -2px; }
+#home .fx-recbar .dv-rec { max-width: 120px; }
+#home .fx-row .l .fx-recbar .dv-rec { margin-left: auto; }
+#home .cl-split { padding: 0 12px 9px 44px; }
+#home .fx-bc { padding: 7px 0; border-top: 1px solid var(--line); }
+#home .fx-bc:first-of-type { border-top: 0; }
+#home .fx-bc-hd { display: grid; grid-template-columns: minmax(0, 1fr) 56px 56px 34px; gap: 6px; align-items: baseline; margin-bottom: 5px; font-size: 13px; }
+#home .fx-bc-hd .bk { color: var(--text); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#home .fx-bc-hd .px { font-family: var(--font-mono); text-align: right; color: var(--text-2); }
+#home .fx-bc-hd .px.best { color: #2fdccb; font-weight: 700; }
+#home .fx-bc-hd .ag { text-align: right; color: var(--text-3); font-size: 11.5px; }
+#home .fx-bc-na { font-size: 12px; color: var(--text-3); }
 #home .fx-row .r .v.lead::after, #home .fx-row .l .v.lead::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--probe); vertical-align: middle; }
 #home .fx-row .r .v.lead::after { margin: 0 0 3px 6px; } #home .fx-row .l .v.lead::before { margin: 0 6px 3px 0; }
 #home .fx-note { font-size: 11px; color: var(--text-3); line-height: 1.5; margin: 0; }
@@ -738,6 +752,7 @@
           <option value="spread">Sort: books disagree</option>
         </select>
       </label>
+      <div class="dv-toggle" role="group" aria-label="Show data as charts or numbers"><button type="button" data-dv="charts" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V13M10 20V8M16 20v-5M22 20H2"/></svg>Charts</button><button type="button" data-dv="numbers" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Numbers</button></div>
       <div class="seg seg-dir" id="dirSeg" role="group" aria-label="Card direction">
         <button data-dir="down" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v16M3 16l4 4 4-4M17 20V4M13 8l4-4 4 4"/></svg>Card order</button>
         <button data-dir="up" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h12M4 12h9M4 17h6M18 9v11M15 17l3 3 3-3"/></svg>Reverse order</button>
@@ -853,6 +868,7 @@
      and cannot drift between surfaces. -->
 <script src="market.js?v=4"></script>
 <script src="market-chart.js?v=2"></script>
+<script src="data-view.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script src="fight-lab.js?v=2"></script>
 <script src="alerts.js"></script>
@@ -1372,7 +1388,10 @@ function buildFightCard(fight, idx, fmap, eventId, event) {
           odds(readB, b, 'b') + corner(b, 'b') +
           '<span class="cl-chev" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></span>' +
         '</button>' + starHtml +
-      '</div>' + body +
+      '</div>' +
+      (priced && window.cflDataView
+        ? '<div class="cl-split dv-c">' + cflDataView.split(readA.prob, lastName(a.name), lastName(b.name), { thin: true, aria: 'Market chance' }) + '</div>' : '') +
+      body +
     '</div>';
 
   return { order: idx, absMove, spread, html };
@@ -1471,9 +1490,19 @@ function tapeHtml(fight, a, b) {
       sub = diff ? '<span class="fx-diff">' + esc(diff(va, vb)) + '</span>' : '';
     }
     const show = v => v == null ? null : (fmt ? esc(fmt(v)) : v);
-    return '<div class="fx-row"><div class="l">' + val(show(va), la) + '</div>' +
+    // Charts view: measurements as mirrored bars, records as win/loss bars.
+    // Neither is a verdict; the colour only says whose bar is whose.
+    const DV = window.cflDataView;
+    const bars = DV && better ? DV.mirror(va, vb, label + ': ' + lastName(a.name) + ' ' + (show(va) || '—') + ', ' + lastName(b.name) + ' ' + (show(vb) || '—')) : '';
+    const recBar = (f, side) => {
+      if (!DV) return '';
+      const r = label === 'UFC record' ? ufcRecObj(f) : (label === 'Pro record' && proRecText(f) && proRecText(f) !== 'not up to date' ? { w: f.wins, l: f.losses, d: f.draws } : null);
+      const bar = r ? DV.record(r.w, r.l, r.d, side) : '';
+      return bar ? '<div class="dv-c fx-recbar">' + bar + '</div>' : '';
+    };
+    return '<div class="fx-row"><div class="l">' + val(show(va), la) + recBar(a, 'a') + '</div>' +
       '<div class="lbl">' + esc(label) + sub + '</div>' +
-      '<div class="r">' + val(show(vb), lb) + '</div></div>';
+      '<div class="r">' + val(show(vb), lb) + recBar(b, 'b') + '</div>' + bars + '</div>';
   }).join('');
   // First name small, surname large — the way a fight poster reads.
   const nameBlock = (f, side) => {
@@ -1830,10 +1859,23 @@ function booksTableHtml(rows, a, b) {
       '<td class="ag' + (ts && ts.stale ? ' warn' : '') + '" title="' + esc(ts ? 'Captured ' + ts.when + ' · ' + M.fmtStampUtc(r.captured_at) : '') + '">' + esc(shortAgo(r.captured_at)) + '</td>' +
       '</tr>';
   }).join('');
-  return '<div class="fx-tw"><table class="fx-bt fx-bt-c"><thead><tr><th>Sportsbook</th><th>' + esc(lastName(a.name)) + '</th><th>' + esc(lastName(b.name)) +
+  const DV = window.cflDataView;
+  const chart = DV ? '<div class="dv-c fx-bchart">' +
+    '<div class="dv-key"><span class="a">' + esc(lastName(a.name)) + '</span><span class="b">' + esc(lastName(b.name)) + '</span></div>' +
+    rows.map(r => {
+      const aBest = +r.american_odds_a === bestA, bBest = +r.american_odds_b === bestB;
+      const bar = r.fair_prob_a != null ? DV.split(+r.fair_prob_a, lastName(a.name), lastName(b.name), { aria: r.book_name || 'Book' }) : '<div class="fx-bc-na">No chance figure for this book</div>';
+      return '<div class="fx-bc">' +
+        '<div class="fx-bc-hd"><span class="bk">' + esc(r.book_name || 'Book') + '</span>' +
+          '<span class="px' + (aBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + '</span>' +
+          '<span class="px' + (bBest ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + '</span>' +
+          '<span class="ag">' + esc(shortAgo(r.captured_at)) + '</span></div>' + bar + '</div>';
+    }).join('') +
+    '<p class="fx-note">Each bar is that sportsbook’s chance for each fighter, its cut removed. Highlighted prices are the best on each side — the highest American number in the data, nothing else.</p></div>' : '';
+  return chart + '<div class="' + (DV ? 'dv-n' : '') + '"><div class="fx-tw"><table class="fx-bt fx-bt-c"><thead><tr><th>Sportsbook</th><th>' + esc(lastName(a.name)) + '</th><th>' + esc(lastName(b.name)) +
     '</th><th title="How long ago we captured this price">Age</th></tr></thead><tbody>' + body + '</tbody></table></div>' +
     '<p class="fx-note">Highlighted: the best price on each side — the highest American number in the data, nothing else. ' +
-    'Age: when we captured that book’s price. A book not listed has not been captured on this fight.</p>';
+    'Age: when we captured that book’s price. A book not listed has not been captured on this fight.</p></div>';
 }
 
 // Additional Analytics: each book's own chance now (its cut removed) and the

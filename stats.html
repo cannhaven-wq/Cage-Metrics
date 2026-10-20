@@ -344,6 +344,14 @@
   .fl-proof-row em { font-style: normal; color: var(--text-2); font-variant-numeric: tabular-nums; text-align: right; }
   .fl-proof-mid { position: absolute; top: 0; height: 10px; width: 1px; background: var(--text-3); opacity: .5; }
 
+  /* Numbers view (data-view.js): the same stored values as one table. */
+  .fl-dv { display: flex; justify-content: flex-end; margin: 0 0 12px; }
+  .fl-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .fl-table table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+  .fl-table th { text-align: left; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--text-3); font-weight: 700; padding: 8px 10px; border-bottom: 1px solid var(--line-2); }
+  .fl-table td { padding: 10px; border-bottom: 1px solid var(--line); color: var(--text-2); font-variant-numeric: tabular-nums; vertical-align: top; }
+  .fl-table td:first-child { color: var(--text); font-weight: 600; }
+  .fl-table td.n { text-align: right; } .fl-table th.n { text-align: right; }
   .lab-foot { font-size: 11.5px; color: var(--text-3); margin-top: 18px; line-height: 1.6; max-width: 780px; }
 
   @media (max-width: 640px) {
@@ -386,7 +394,9 @@
 
   <div class="fl-finding" id="fl-finding" hidden></div>
 
-  <div class="fl-list" id="labBody"><div class="lab-loading">Loading…</div></div>
+  <div class="fl-dv"><div class="dv-toggle" role="group" aria-label="Show data as charts or numbers"><button type="button" data-dv="charts" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V13M10 20V8M16 20v-5M22 20H2"/></svg>Charts</button><button type="button" data-dv="numbers" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Numbers</button></div></div>
+  <div class="fl-list dv-c" id="labBody"><div class="lab-loading">Loading…</div></div>
+  <div class="fl-table dv-n" id="labTable"><div class="lab-loading">Loading…</div></div>
   <p class="lab-foot" id="lab-foot"></p>
 
   <h2 class="section-h">Headline edges</h2>
@@ -469,6 +479,7 @@
 
 <script src="_shared.js?v=rl7"></script>
 <script src="_auth.js"></script>
+<script src="data-view.js?v=1"></script>
 <script>
 cfl.renderNav('stats');
 cfl.renderFooter();
@@ -603,6 +614,7 @@ async function loadFactorLab() {
     d = await res.json();
   } catch (e) {
     body.innerHTML = '<div class="lab-loading">Factor rates unavailable right now.</div>';
+    document.getElementById('labTable').innerHTML = body.innerHTML;
     return;
   }
 
@@ -680,6 +692,23 @@ async function loadFactorLab() {
         ${proof}
       </article>`;
   }).join('');
+
+  // Numbers view: the same stored values, one row per stat. A dash is a
+  // figure we will not print (too few fights to trust), never a zero.
+  const td = (v) => `<td class="n">${v}</td>`;
+  document.getElementById('labTable').innerHTML = '<table><thead><tr>'
+    + '<th>Stat</th><th>Does it help?</th><th class="n">Wins per 100, all fights</th>'
+    + '<th class="n">Wins per 100, odds even</th><th class="n">Likely range</th><th class="n">Even-odds fights</th>'
+    + '</tr></thead><tbody>'
+    + factors.map((f, i) => {
+      const h = heads[i];
+      const shown = h.even && h.even.n >= floor;
+      return `<tr><td>${cfl.escapeHtml(displayLabel(f))}</td><td>${ANSWER[h.verdict]}</td>`
+        + td(h.all && h.all.n >= floor ? outOf100(h.all.pct) : '—')
+        + td(shown ? outOf100(h.even.pct) : '—')
+        + td(shown ? `${h.even.ci_lo.toFixed(0)}–${h.even.ci_hi.toFixed(0)}` : '—')
+        + td(h.even ? h.even.n.toLocaleString() : '0') + '</tr>';
+    }).join('') + '</tbody></table>';
 
   body.querySelectorAll('[data-toggle]').forEach((btn) => {
     btn.addEventListener('click', () => {

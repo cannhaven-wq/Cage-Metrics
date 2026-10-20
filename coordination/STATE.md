@@ -5,6 +5,13 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-20
 
+**Charts / Numbers switch, 2026-10-20 (T-104): live.** Card Lab, Market Lab
+and Factor Lab draw their figures as bars by default (tale of the tape, a
+market split under every fight, one bar per sportsbook, movement and
+books-apart bars on the board); a Charts / Numbers switch brings the plain
+figures back and is remembered per browser (`data-view.js`). No new data, no
+model number, no database change.
+
 **Polymarket switch, 2026-10-20: live.** Card Lab and Fight Lab charts carry a
 "Show Polymarket" switch, off by default, drawn on its own chart and never part
 of any sportsbook number. New read-only view `v_fight_polymarket_series`. See
