@@ -87,6 +87,16 @@
 #ml .board .mv.up { color: var(--probe); } #ml .board .mv.down { color: var(--amber); } #ml .board .mv.flat { color: var(--text-3); }
 #ml .board .mv .who { display: block; font-size: 10px; color: var(--text-3); font-family: var(--font-body); font-weight: 500; }
 #ml .board .sp.wide { color: var(--probe); font-weight: 700; }
+/* Charts view (data-view.js): a market split per fight, a bar for each move
+   (red toward the first-named fighter, blue toward the second), a meter for
+   how far apart the books are. */
+#ml .ml-bhd { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+#ml .board td.cs { min-width: 150px; }
+#ml .board td.cs .dv-split { margin-bottom: 3px; }
+#ml .board .mu .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 5px; vertical-align: 0; }
+#ml .board .mu .sw.a { background: #ff4d57; } #ml .board .mu .sw.b { background: #4f8dff; }
+#ml .board td .dv-c, #ml .books td .dv-c { display: block; }
+#ml .books .dv-split { min-width: 110px; margin-top: 4px; }
 #ml .board td.age.stale { color: var(--amber); }
 #ml .board .exp { background: transparent; border: 1px solid var(--line-2); color: var(--text-2); border-radius: 7px;
   font: 600 11px var(--font-display); padding: 5px 9px; cursor: pointer; }
@@ -135,7 +145,7 @@
   </section>
 
   <section class="sec">
-    <h2>The board</h2>
+    <div class="ml-bhd"><h2>The board</h2><div class="dv-toggle" role="group" aria-label="Show data as charts or numbers"><button type="button" data-dv="charts" class="active" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20V13M10 20V8M16 20v-5M22 20H2"/></svg>Charts</button><button type="button" data-dv="numbers" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M3 12h18M3 18h18"/></svg>Numbers</button></div></div>
     <div class="sec-sub">Open a row to see every book's current quote on that fight. Best price is the best American number in the data, and nothing else decides that ordering — CFL takes no sportsbook money to move a book up this board.</div>
     <div id="mlBoard"></div>
     <div class="foot-note">
@@ -164,6 +174,7 @@
 <script src="_shared.js?v=rl7"></script>
 <script src="_auth.js"></script>
 <script src="market.js?v=3"></script>
+<script src="data-view.js?v=1"></script>
 <script src="fight-insights.js?v=9"></script>
 <script>
 cfl.renderNav('market');
@@ -326,6 +337,7 @@ function renderChanged(rows) {
 
 function renderBoard(rows) {
   const el = document.getElementById('mlBoard');
+  const DV = window.cflDataView;
   const body = rows.map(r => {
     const f = r.fight;
     let pos = f.weight_class || 'Bout';
@@ -333,7 +345,7 @@ function renderBoard(rows) {
     else if (f.is_title_fight) pos = 'Title · ' + pos;
 
     const matchup =
-      `<td><a class="mu" href="fight.html?id=${f.id}">${esc(r.nameA)} <span style="color:var(--text-3)">vs</span> ${esc(r.nameB)}` +
+      `<td><a class="mu" href="fight.html?id=${f.id}"><span class="sw a dv-c"></span>${esc(r.nameA)} <span style="color:var(--text-3)">vs</span> <span class="sw b dv-c"></span>${esc(r.nameB)}` +
       `<span class="wt">${esc(pos)}</span></a></td>`;
 
     if (!r.read || !r.readB) {
@@ -345,13 +357,15 @@ function renderBoard(rows) {
       const flat = Math.abs(pts) < 0.5;
       const cls = flat ? 'flat' : (pts > 0 ? 'up' : 'down');
       const who = flat ? 'unchanged' : 'to ' + lastName(pts > 0 ? r.nameA : r.nameB);
-      return `<td class="mv ${cls}">${flat ? '0.0' : Math.abs(pts).toFixed(1)}<span class="who">${esc(who)}</span></td>`;
+      return `<td class="mv ${cls}">${flat ? '0.0' : Math.abs(pts).toFixed(1)}<span class="who">${esc(who)}</span>` +
+        (DV ? `<span class="dv-c">${DV.move(pts, 10)}</span>` : '') + `</td>`;
     };
 
     const fresh = r.read.fresh;
+    const consensus = `${Math.round(r.read.prob * 100)}% / ${Math.round(r.readB.prob * 100)}%`;
     return `<tr class="fightrow" data-fid="${f.id}">
       ${matchup}
-      <td class="px">${Math.round(r.read.prob * 100)}% / ${Math.round(r.readB.prob * 100)}%<span class="bk">${r.read.bookCount} books, vig removed</span></td>
+      <td class="px cs">${DV ? `<span class="dv-c">${DV.split(r.read.prob, lastName(r.nameA), lastName(r.nameB), { aria: 'Market chance' })}</span><span class="dv-n">${consensus}</span>` : consensus}<span class="bk">${r.read.bookCount} books, vig removed</span></td>
       <td class="px">${esc(M.fmtAmerican(r.read.bestAmerican))}<span class="bk">${esc(r.read.bestBook || '—')}</span></td>
       <td class="px">${esc(M.fmtAmerican(r.readB.bestAmerican))}<span class="bk">${esc(r.readB.bestBook || '—')}</span></td>
       ${mvCell(r.read.moveSinceBaseline,
@@ -360,7 +374,7 @@ function renderBoard(rows) {
       ${mvCell(r.read.move24h,
                r.read.movementStatus24h === 'insufficient_matched_books'
                  ? 'not comparable' : 'under 24h old')}
-      <td class="sp${r.read.spreadPts >= M.SPREAD_WIDE_PTS ? ' wide' : ''}">${r.read.spreadPts == null ? '—' : r.read.spreadPts.toFixed(1)}</td>
+      <td class="sp${r.read.spreadPts >= M.SPREAD_WIDE_PTS ? ' wide' : ''}">${r.read.spreadPts == null ? '—' : r.read.spreadPts.toFixed(1)}${DV ? `<span class="dv-c">${DV.meter(r.read.spreadPts, M.SPREAD_WIDE_PTS)}</span>` : ''}</td>
       <td class="age${fresh && fresh.stale ? ' stale' : ''}">${esc(fresh ? fresh.when : '—')}
         <button class="exp" type="button" data-fid="${f.id}" aria-expanded="false">Books</button></td>
     </tr>`;
@@ -407,7 +421,8 @@ function toggleBooks(btn, rows) {
         return '<tr><td style="color:#fff;font-weight:600">' + esc(r.book_name || 'Book') + '</td>' +
           '<td class="px' + (+r.american_odds_a === bestA ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_a)) + '</td>' +
           '<td class="px' + (+r.american_odds_b === bestB ? ' best' : '') + '">' + esc(M.fmtAmerican(r.american_odds_b)) + '</td>' +
-          '<td>' + (r.fair_prob_a != null ? (r.fair_prob_a * 100).toFixed(1) + '%' : '—') + '</td>' +
+          '<td>' + (r.fair_prob_a != null ? (r.fair_prob_a * 100).toFixed(1) + '%' +
+            (window.cflDataView ? '<span class="dv-c">' + cflDataView.split(+r.fair_prob_a, lastName(row.nameA), lastName(row.nameB), { thin: true, aria: r.book_name || 'Book' }) + '</span>' : '') : '—') + '</td>' +
           '<td' + (fa && fa.stale ? ' class="age stale"' : '') + '>' + esc(fa ? fa.when : '—') + '</td></tr>';
       }).join('') + '</tbody></table>' +
       (row.read

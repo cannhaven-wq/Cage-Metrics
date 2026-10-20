@@ -11,6 +11,34 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 — Charts / Numbers switch (Card Lab, Market Lab, Factor Lab)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner: "use graphs and tables when able — people can get lost in the
+  numbers — at least a toggle." Built `data-view.js`: one switch, **Charts by
+  default**, remembered in this browser, same choice on every page. Each page
+  renders both versions and one attribute on `<html>` decides which shows, so
+  switching never refetches.
+- Card Lab: mirrored bars under age / height / reach, win-loss bars under both
+  records, a thin market split under every fight row, and one split bar per
+  sportsbook (Numbers = the old table). Market Lab: consensus as a split bar,
+  a bar per move and a books-apart meter, split bars in the per-book rows.
+  Factor Lab: Numbers adds one table of the same stored values.
+- Colours say whose bar is whose and nothing else; no pick, no "better" side.
+  `tests/data-view.test.js` pins the default, the wrapped storage and the
+  switch on all three pages. Checked in a browser against UFC 333 rows,
+  desktop and 390 px.
+
+## Next action
+
+Owner to look at the three pages and say which charts to extend next — Fight
+Lab's per-sportsbook table is the obvious candidate for the same switch.
+
+---
+
 ## 2026-10-20 — Polymarket switch on the fight chart (Card Lab + Fight Lab)
 
 **From:** Claude
