@@ -11,6 +11,77 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-20 (b) — Paper-trading system built and tested; nothing running (T-106)
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-20
+
+- Owner: build the private paper-trading system from the investigation.
+  Built under `paper/` (this repo) and `polymarket/capture_book.py` (scraper
+  repo). Every rule is data in `paper/config/strategy_draft.json`, marked
+  DRAFT; nothing was tuned on observed results.
+- **Model:** MMA-001 exactly as the Doc saved it. Its `artifact.json` is
+  stored privately (git-ignored); an independent refit from the
+  fingerprint-matched DEV export reproduces every coefficient to 8e-16. The
+  Doc's own 753 checks pass against the transcribed `model.js`. Prospective
+  inference (`forecast.js`) replays all history, fits nothing, asserts corner
+  symmetry on every forecast.
+- **Prices:** a sportsbook price and a Polymarket purchase both become "risk
+  1 unit, net if win". Polymarket fills walk the ask ladder at a 100-USD
+  notional per unit with the market's own fee rate; displayed prices are
+  stored for the record and never used as fills; missing fee, thin depth,
+  non-exact fighter mapping, non-open status or a draw-to-one-side
+  resolution each reject the offer with the reason.
+- **Reference:** median proportional de-vig of ≥3 *other* eligible
+  sportsbooks, fresh on both `captured_at` and the provider's `last_update`
+  (60 min). BFO placeholder, synthetic consensus, Polymarket and Kalshi
+  never count.
+- **Lock:** one per card, earliest verified start − 6 h; an
+  `event_date_fallback` bout makes `win_model_locks`' 00:00 UTC bound the
+  earlier one and it wins. Before the instant → `before_lock`; more than 60
+  min after → `late`, the card is recorded as missed. Reruns are refused by
+  the ledger (one lock per card per strategy version).
+- **Ledger / settlement / metrics:** append-only hash-chained JSONL in
+  `paper/private/`; bet / pass / abstain per fight per strategy with the
+  exact offer; forecast rows (the would-be `win_model_locks` inserts, p_a
+  NULL = abstention); cancel on corner change; push on NC/draw for a
+  sportsbook, left open for Polymarket; profit, ROI, turnover, drawdown,
+  exposure, coverage, cards with no bets, M1 and S1 over the same cards; CLV
+  `unavailable` (CLV-001 prerequisites not applied) and no substitute.
+- **Tests:** 19 in `tests/paper/` (swapped corners, stale quotes on either
+  timestamp, missing fee, insufficient depth, settlement rules, changed
+  opponent, duplicate run, card cap and ranking, late lock, bankroll stop,
+  price band, reference exclusions, forecast symmetry, end to end) and 5 in
+  the scraper repo on recorded CLOB fixtures. Full suites green.
+- **Dry run (read-only snapshot of UFC 333, 2026-10-20 18:36 UTC):** at the
+  capture instant every fight abstained — the newest quotes were 75 min old,
+  which is the hourly/throttled capture meeting a 60-min rule. At the quote
+  instant (17:22 UTC), 14 bouts evaluated, **14 passes on M1 and S1**: the
+  best price beat the other books' consensus by at most +0.7%
+  (Oki–Santos, Krylov–Yakhyaev, Steele–Gugnon), under the 2% rule. 14 model
+  forecasts, 1 abstention (the retired Allen–Pico booking has no quotes).
+  No Polymarket books: the exchange is unreachable from this environment.
+- **Unverified:** the Polymarket fee formula and per-category rate (the
+  official pages could not be fetched here; the form `shares × rate × p(1−p)`,
+  takers only, rate read per market from the exchange, is applied and
+  `fee_rule_must_be_verified` keeps Polymarket out of selections until a
+  person confirms it); `capture_book.py` against the live API; a live
+  `--live` pull (no service key in this environment).
+- **Not done, deliberately:** no schedule, no `win_model_locks` row, no
+  migration applied, MMA-001 not frozen under PRED-001, no paper bet on a
+  real card. **Nothing is running.**
+
+## Next action
+
+Owner reads `paper/README.md` → "Approval bundle" and approves or declines
+each of its four items. Item 1 (freeze MMA-001 under PRED-001) is the
+prerequisite for the first lock; item 3 (apply `polymarket_books`, confirm
+the fee rule) is the prerequisite for any Polymarket offer. Until item 1,
+`run_card.py --live` may be run by hand as a read-only dry run on each card.
+
+---
+
 ## 2026-10-20 — WIN-001: a win formula, built and registered as a draft (T-105)
 
 **From:** Claude

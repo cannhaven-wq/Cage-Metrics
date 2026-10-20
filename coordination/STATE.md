@@ -5,6 +5,20 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-20
 
+**Paper-trading system, 2026-10-20 (T-106): built and tested, NOT running.**
+`paper/` holds a draft, config-driven paper-betting pipeline: MMA-001 (the
+Doc's model, artifact verified by an independent refit, kept private) plus the
+best executable price across the seven live sportsbooks and Polymarket, two
+strategies (M1 price-only baseline, S1 price-plus-model), one predetermined
+lock per card, an append-only hash-chained ledger, settlement and
+per-strategy metrics; 19 + 5 tests and the Doc's 753 checks pass. The
+Polymarket order-book capture is written in the scraper repo but could not
+be run here (the exchange is unreachable from this environment) and its fee
+rule is unverified against the live documentation, so Polymarket offers are
+excluded until it is. The read-only UFC 333 dry run selected nothing: no
+price beat the other books' consensus by 2%. No schedule, no lock, no
+migration, no paper bet. Approval bundle in `paper/README.md`.
+
 **WIN-001 win formula, 2026-10-20 (T-105): built, DRAFT, waiting on the
 owner.** The owner asked for a win formula. It exists under PRED-001 at
 `research/experiments/WIN-001/`: a market-plus-stats blend (sixteen

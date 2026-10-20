@@ -1,0 +1,45 @@
+{
+  "_status": "DRAFT configuration. Nothing here is validated or frozen. Thresholds are starting assumptions (see research/paper/README.md) and must not be tuned against observed results.",
+  "strategy_version": "paper-draft-2026-10-20",
+  "model": {"name": "MMA-001", "artifact_env": "PAPER_MODEL_ARTIFACT", "experiment_id": "PRED-001"},
+  "venues": {
+    "sportsbooks": [1, 3, 9, 10, 11, 12, 13],
+    "sportsbook_names": {"1": "FanDuel", "3": "BetRivers", "9": "BetOnline.ag", "10": "Bovada", "11": "DraftKings", "12": "BetMGM", "13": "BetUS"},
+    "polymarket": {"enabled": true, "venue_id": 7, "fee_rule_must_be_verified": true}
+  },
+  "reference": {
+    "min_other_books": 3,
+    "excluded_book_ids": [6, 7, 8, 14],
+    "excluded_note": "6 BFO placeholder consensus, 14 synthetic CFL consensus, 7 Polymarket, 8 Kalshi: never a reference",
+    "devig": "proportional",
+    "max_quote_age_minutes": 60
+  },
+  "offer": {
+    "max_quote_age_minutes": 60,
+    "check_provider_timestamp": true,
+    "min_american": -400,
+    "max_american": 400,
+    "polymarket_min_fill_fraction": 1.0
+  },
+  "strategies": {
+    "M1": {"min_ev_reference": 0.02, "require_model": false},
+    "S1": {"min_ev_reference": 0.02, "require_model": true, "min_ev_model": 0.03}
+  },
+  "staking": {
+    "unit": 1.0,
+    "unit_notional_usd": 100.0,
+    "unit_notional_note": "Polymarket books are in collateral and shares; one paper unit is sized as this much collateral for the fill (depth, minimum order size) and converted back to units. Sportsbook stakes need no notional.",
+    "stake_includes_fees": true,
+    "bankroll_start": 100.0,
+    "max_units_per_card": 4.0,
+    "max_selections_per_fight": 1,
+    "stop_new_selections_at_bankroll": 70.0
+  },
+  "ranking": ["ev_reference desc", "fight_id asc", "venue_id asc"],
+  "lock": {
+    "lead_minutes_before_earliest_start": 360,
+    "require_verified_start": true,
+    "verified_start_bases": ["bell_at", "provider_commence"],
+    "note": "One lock per card at earliest_verified_start minus lead. win_model_locks' own deadline (earliest start over the whole card, date-only start = 00:00 UTC) is always the earlier bound."
+  }
+}

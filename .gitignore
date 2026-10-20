@@ -15,3 +15,6 @@ __pycache__/
 # Cardio model intermediate — 2.6MB, regenerable via build_features.py
 cfl_engine/cardio/round_observations.csv
 logs/
+
+# paper-trading research: private model parameters, raw captures and ledgers never enter the public repo
+paper/private/
