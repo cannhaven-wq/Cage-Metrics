@@ -92,12 +92,15 @@
     { key: 'card_brief',      tier: 'free', enforced: false, what: 'signup and delivery' },
     { key: 'movement_headline', tier: 'free', enforced: false, what: 'the move since first broad capture, with its cohort' },
     { key: 'best_price',      tier: 'free', enforced: false, what: 'best observed price, its book and its age' },
+    { key: 'book_by_book_current', tier: 'free', enforced: false, what: 'every sportsbook’s current price (owner decision A5, 2026-10-21)' },
+    { key: 'movement_recent', tier: 'free', enforced: false, what: 'line movement for the last 14 days, chart included (owner decision A5)' },
 
     // pro: depth, history, monitoring, personalisation — never facts
-    { key: 'movement_chart_history', tier: 'pro', enforced: false, what: 'the full plotted series rather than the headline' },
-    { key: 'book_by_book_history',   tier: 'pro', enforced: false, what: 'every sportsbook’s own history, not just its current price' },
+    { key: 'movement_chart_history', tier: 'pro', enforced: false, what: 'line-movement history older than 14 days (owner decision A5)' },
+    { key: 'book_by_book_history',   tier: 'pro', enforced: false, what: 'each sportsbook’s historical prices; current prices stay free (owner decision A5)' },
     { key: 'historical_lookback',    tier: 'pro', enforced: false, what: 'past cards beyond the current window' },
     { key: 'watchlists',             tier: 'pro', enforced: false, what: 'fights and fighters a reader follows' },
+    // Alert limits for Free and Pro: DEFERRED by the owner (A5, 2026-10-21).
     { key: 'price_alerts',           tier: 'pro', enforced: false, what: '“tell me if anyone posts +150”' },
     { key: 'movement_alerts',        tier: 'pro', enforced: false, what: '“tell me if this moves 3+ points”' },
     { key: 'since_last_visit',       tier: 'pro', enforced: false, what: 'what changed since the reader was last here' },
