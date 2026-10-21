@@ -214,6 +214,23 @@ t('edges.js is untouched by the publication', () => {
     'edges.js recordEdge no longer looks smoothed — the copy describes a rule that changed');
 });
 
+t('edges.html carries the T-025 correction and keeps the claims it corrects', () => {
+  // FE-001 measured the factor table on market-even fights. The correction
+  // sits beside the claimed ranges; it never replaces them, because a failed
+  // result is not deleted from an archive page.
+  const html = read('edges.html');
+  ok(/Corrected 21 October 2026/.test(html), 'the dated T-025 correction is missing');
+  for (const claimed of ['60–72%', '52–56%', '52–70%']) {
+    ok(html.includes(`<span class="factor-range">${claimed}</span>`),
+      `the claimed range ${claimed} was removed from the factor table`);
+  }
+  ok(/50\.2%/.test(html) && /48\.6–52\.2%/.test(html) && /56\.8%/.test(html),
+    'the measured market-even results are not printed beside the claims');
+  ok(/Age stays retired/.test(html), 'the correction must say age stays retired');
+  ok(/not the UFC-only record in the Factor Lab/i.test(html),
+    'the Record correction must keep it apart from the Factor Lab UFC-only record');
+});
+
 // ------------------------------------------------- the published cohort
 
 t('the published artifact is the corrected 1,220-fight cohort', () => {

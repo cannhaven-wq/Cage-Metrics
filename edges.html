@@ -331,6 +331,69 @@
     color: var(--text-3);
     border: 1px solid var(--border);
   }
+  /* T-025 — dated correction to the factor table (FE-001, measured
+     18 September 2026). The claimed range stays printed; the measured result
+     sits beside it at the same size. A failed result is never removed. */
+  .factor-status.unsupported {
+    background: rgba(230, 57, 70, 0.10);
+    color: var(--red);
+    border: 1px solid rgba(230, 57, 70, 0.35);
+    margin-top: 6px;
+  }
+  .factor-status.partly {
+    background: rgba(255, 167, 38, 0.12);
+    color: #ffa726;
+    border: 1px solid rgba(255, 167, 38, 0.3);
+    margin-top: 6px;
+  }
+  .factor-measured {
+    display: block;
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.45;
+  }
+  .factor-correction {
+    display: block;
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--text-2);
+    line-height: 1.5;
+  }
+  .correction-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid #ffa726;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin: 18px 0;
+  }
+  .correction-box .correction-title {
+    font-size: 11px;
+    color: #ffa726;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .correction-box ul { margin: 6px 0 12px 18px; padding: 0; }
+  .correction-box li {
+    color: var(--text-2);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 8px;
+  }
+  .correction-box li strong { color: #fff; }
+  .correction-box details { margin-top: 10px; }
+  .correction-box summary {
+    cursor: pointer;
+    font-size: 12px;
+    color: var(--text-3);
+    font-weight: 600;
+  }
+  .correction-box .calib-table { margin: 12px 0 6px; }
+  .correction-box .calib-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .correction-box .calib-wrap .calib-table { min-width: 460px; }
   /* Fade retired rows so the active three read first. */
   .factors-table tr.retired td:nth-child(1),
   .factors-table tr.retired td:nth-child(2),
@@ -425,6 +488,47 @@
     <div class="section-eyebrow"><span class="dot"></span>The toolkit</div>
     <h2>The factors we measure</h2>
     <p>Every factor below is implemented in the public <code>edges.js</code> file. Active factors drive the current verdict. Retired factors are kept documented for transparency — they were dropped May 17, 2026 after the subset audit showed they were diluting the verdict more than informing it.</p>
+
+    <div class="correction-box" id="october-2026-correction">
+      <div class="correction-title">Corrected 21 October 2026 — what the ranges below are worth once the price is level</div>
+      <p><strong>Short version: the two factors still marked Active don't hold up. Age, which we retired, partly does.</strong> The Range column is what each factor claimed to be worth. We left those numbers up, because a claim that failed stays on the page. We then checked each one on the only fights where it could show something of its own: fights the market priced as roughly even, both fighters inside ±140 at close. If a factor only "works" when the betting favourite also has it, it was repeating the favourite, not reading the fight.</p>
+      <ul>
+        <li><strong>Record — not supported.</strong> Claimed 60–72%. On evenly-priced fights the fighter with the better record won <strong>50.2%</strong> of the time — a coin flip. The 60% and 65% tiers sit above the whole range we measured for them. The 70% and 72% tiers come up too rarely on even fights to test at all. This is the record this page's engine uses: each fighter's whole professional career, smoothed. <strong>It is not the UFC-only record in the Factor Lab</strong>, which is a different measurement and does clear a coin flip. That result says nothing about this one, which remains unsupported.</li>
+        <li><strong>TD defense — not supported.</strong> Claimed 52–56%. Every band landed between <strong>48.6% and 52.2%</strong> on evenly-priced fights, and none clears a coin flip. The top band, the one claiming 56%, came in lowest of the three. The "when grappling is in play" check made no measurable difference.</li>
+        <li><strong>Age — supported, partly.</strong> Claimed 52–70%, retired May 17. The younger fighter won <strong>56.8% of 1,018</strong> evenly-priced fights, and the range around that clears a coin flip. The 3–4 and 7–9 year gaps clear it on their own; 1–2 and 5–6 lean that way but can't be told apart from a coin flip yet; the 10+ year tier, which claimed 65.2%, has too few even fights to test. The discount for newer fighters isn't backed by anything we measured.</li>
+      </ul>
+      <p><strong>Age stays retired anyway.</strong> This test asks whether age tells you something on its own. It does not ask whether age adds anything the engine doesn't already see — the engine already reads each fighter's age. Putting it back would need its own test, written down before it is run. Nothing on this page is a pick, and nothing here says otherwise.</p>
+      <p style="font-size:12.5px;color:var(--text-3);margin-bottom:0;">Numbers in this note are a fixed snapshot from a study run on 18 September 2026 against 8,739 past fights, 1,220 of them evenly priced. They will not move when the data refreshes. Live factor results are in the <a href="stats.html" style="color:var(--red)">Factor Lab</a>.</p>
+      <details>
+        <summary>Show the band-by-band numbers</summary>
+        <div class="calib-wrap">
+        <table class="calib-table">
+          <thead>
+            <tr><th>Factor · band</th><th>Claimed</th><th>Evenly-priced fights</th><th>Won</th><th>95% range</th></tr>
+          </thead>
+          <tbody>
+            <tr><td class="band">Record · gap 8–15 pts</td><td>60.0%</td><td>339</td><td>49.9%</td><td>44.6–55.1%</td></tr>
+            <tr><td class="band">Record · gap 15–25 pts</td><td>65.0%</td><td>105</td><td>47.6%</td><td>38.3–57.1%</td></tr>
+            <tr><td class="band">Record · gap 25–40 pts</td><td>70.0%</td><td>20</td><td>70.0%</td><td>too few to test</td></tr>
+            <tr><td class="band">Record · gap 40+ pts</td><td>72.0%</td><td>0</td><td>—</td><td>never fired on an even fight</td></tr>
+            <tr><td class="band">Record · any gap</td><td>60–72%</td><td>464</td><td>50.2%</td><td>45.7–54.7%</td></tr>
+            <tr><td class="band">TD defense · gap 10–20</td><td>52.5%</td><td>164</td><td>50.6%</td><td>43.0–58.2%</td></tr>
+            <tr><td class="band">TD defense · gap 20–30</td><td>54.0%</td><td>115</td><td>52.2%</td><td>43.1–61.1%</td></tr>
+            <tr><td class="band">TD defense · gap 30+</td><td>56.0%</td><td>139</td><td>48.9%</td><td>40.8–57.1%</td></tr>
+            <tr><td class="band">TD defense · any gap</td><td>52–56%</td><td>418</td><td>50.5%</td><td>45.7–55.2%</td></tr>
+            <tr><td class="band">Age · 1–2 yrs</td><td>52.0%</td><td>357</td><td>55.2%</td><td>50.0–60.3%</td></tr>
+            <tr><td class="band">Age · 3–4 yrs</td><td>55.9%</td><td>275</td><td>57.5%</td><td>51.5–63.2%</td></tr>
+            <tr><td class="band">Age · 5–6 yrs</td><td>58.2%</td><td>197</td><td>56.3%</td><td>49.4–63.1%</td></tr>
+            <tr><td class="band">Age · 7–9 yrs</td><td>63.3%</td><td>142</td><td>60.6%</td><td>52.3–68.2%</td></tr>
+            <tr><td class="band">Age · 10+ yrs</td><td>65.2%</td><td>47</td><td>55.3%</td><td>too few to test</td></tr>
+            <tr><td class="band">Age · any gap</td><td>52–70%</td><td>1,018</td><td>56.8%</td><td>53.7–59.8%</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p style="font-size:12px;color:var(--text-3);margin:8px 0 0;">"Evenly priced" means both fighters closed inside ±140. Every fighter's stats are taken as they stood before each fight, never from career totals that include the result. A band needs 100 evenly-priced fights before we call it tested either way. The takedown rows use the "grappling is in play" check; dropping the check moves every band by less than a point, which is where the 48.6% low comes from (top band, no check). The age claims shown are the original tiers; the page's two surviving records disagree about which age tiers shipped last, and every band where they differ is in the too-few-to-test rows. Full study: <code>research/factors/FACTOR_EVIDENCE_2026-09-18.md</code>.</p>
+      </details>
+    </div>
+
     <div class="factors-table-wrap">
     <table class="factors-table">
       <thead>
@@ -433,9 +537,9 @@
       <tbody>
         <tr>
           <td><span class="factor-name">Record</span><br><span style="font-size:12px;color:var(--text-3)">Pro W-L gap (Laplace-smoothed)</span></td>
-          <td>Adjusted win-rate gap of at least 8 percentage points between the two fighters</td>
-          <td><span class="factor-range">60–72%</span></td>
-          <td><span class="factor-status active">Active</span></td>
+          <td>Adjusted win-rate gap of at least 8 percentage points between the two fighters<span class="factor-correction"><em>Corrected 21 October 2026:</em> on evenly-priced fights it is a coin flip. Whole-career professional record, smoothed — not the Factor Lab's UFC-only record. <a href="#october-2026-correction" style="color:var(--red)">See the correction above.</a></span></td>
+          <td><span class="factor-range">60–72%</span><span class="factor-measured">Claimed. Measured on even fights: 50.2%</span></td>
+          <td><span class="factor-status active">Active</span><br><span class="factor-status unsupported">Not supported</span></td>
         </tr>
         <tr class="retired">
           <td><span class="factor-name">Cardio</span><br><span style="font-size:12px;color:var(--text-3)">Late-round output sustain</span></td>
@@ -445,15 +549,15 @@
         </tr>
         <tr>
           <td><span class="factor-name">TD defense</span><br><span style="font-size:12px;color:var(--text-3)">Takedown defense %</span></td>
-          <td>10+ percentage-point gap in takedown defense, when grappling is in play</td>
-          <td><span class="factor-range">52–56%</span></td>
-          <td><span class="factor-status active">Active</span></td>
+          <td>10+ percentage-point gap in takedown defense, when grappling is in play<span class="factor-correction"><em>Corrected 21 October 2026:</em> no band clears a coin flip on evenly-priced fights. <a href="#october-2026-correction" style="color:var(--red)">See the correction above.</a></span></td>
+          <td><span class="factor-range">52–56%</span><span class="factor-measured">Claimed. Measured on even fights: 48.6–52.2%</span></td>
+          <td><span class="factor-status active">Active</span><br><span class="factor-status unsupported">Not supported</span></td>
         </tr>
         <tr class="retired">
           <td><span class="factor-name">Age</span><br><span style="font-size:12px;color:var(--text-3)">Years younger</span></td>
-          <td>1+ year age gap. Newcomer-discounted at gap &lt; 9 when either fighter has &lt;5 UFC fights.</td>
-          <td><span class="factor-range">52–70%</span></td>
-          <td><span class="factor-status retired">Retired May 17</span></td>
+          <td>1+ year age gap. Newcomer-discounted at gap &lt; 9 when either fighter has &lt;5 UFC fights.<span class="factor-correction"><em>Corrected 21 October 2026:</em> the younger fighter wins more than half of evenly-priced fights, so this one partly holds up. It stays retired — that is a different question. <a href="#october-2026-correction" style="color:var(--red)">See the correction above.</a></span></td>
+          <td><span class="factor-range">52–70%</span><span class="factor-measured">Claimed. Measured on even fights: 56.8% of 1,018</span></td>
+          <td><span class="factor-status retired">Retired May 17</span><br><span class="factor-status partly">Supported, partly</span></td>
         </tr>
         <tr class="retired">
           <td><span class="factor-name">Win streak</span><br><span style="font-size:12px;color:var(--text-3)">Current consecutive wins</span></td>
@@ -560,6 +664,7 @@
       <div class="formula-note">Source: research/validate.js. Veterans-only because newcomer fights are noisier (older newcomers often have more regional experience and outperform their age gap).</div>
     </div>
     <p>We shipped new tiers that match the measured rates. The newcomer discount used to apply uniformly; it now only fires at gap &lt; 9 years because the data shows newcomer fights with 9+ year age gaps actually have <em>higher</em> win rates for the younger fighter, not lower. The age edge function is open in <code>edges.js</code> — every line of the recalibration is reviewable.</p>
+    <p><em>Corrected 21 October 2026:</em> the last sentence above is no longer true. Age was retired from the verdict on May 17, 2026 and its function has since been removed from <code>edges.js</code>; we could not recover the exact version that last shipped. Two records survive and they disagree: one lists the original tiers (52 / 55.9 / 58.2 / 63.3 / 65.2%), and this section describes recalibrated ones. We are saying so rather than picking one. On evenly-priced fights the bands where the two versions differ most — the 10+ year gaps — come up too rarely to test either way. See <a href="#october-2026-correction" style="color:var(--red)">the correction in the factor table</a>.</p>
     <p>This is what "open methodology" means in practice. Factors aren't tuned to vibes; they're tuned to the database, the tuning process is documented in code, and the validation rerun confirms the change improved calibration.</p>
   </div>
 
