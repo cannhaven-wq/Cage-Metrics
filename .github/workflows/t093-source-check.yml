@@ -1,18 +1,30 @@
 name: T-093 source check (read-only)
 
-# Fetches the public UFCStats fight-details pages for the 21 early fights that
-# have no rows in fight_rounds, plus two control fights that do, and records
-# whether the source page publishes per-round stats. READ-ONLY: no secrets,
-# contents: read, no database access, commits nothing. The result is printed
-# to the log and uploaded as an artifact; a person commits it on purpose.
+# Checks the 21 early fights that have no rows in fight_rounds against sources
+# outside CFL. READ-ONLY: no secrets, contents: read, no database access,
+# commits nothing. Results go to the log and an artifact; a person commits them.
+#
+# 1. Wikipedia (MediaWiki API): confirms each bout, its round and time, and any
+#    "alternate bout" note. It carries no strike statistics, so it can never
+#    settle whether per-round statistics exist.
+# 2. UFCStats: manual only. Runs 39620094556 and 39620705070 got HTTP 200 with
+#    a "Checking your browser..." JavaScript page for every URL, controls
+#    included. A 200 is not a verification. The checker now classifies such a
+#    page as source_unreachable and stops at the first one rather than
+#    retrying a blocked endpoint.
 
 on:
   push:
     branches: ['claude/gallant-cannon-sefkcs-t093-source-check']
     paths:
       - '.github/workflows/t093-source-check.yml'
-      - 'research/data-integrity/t093_source_check.py'
+      - 'research/data-integrity/t093_*.py'
   workflow_dispatch:
+    inputs:
+      try_ufcstats:
+        description: 'Also try UFCStats once (stops at the first challenge page)'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -26,7 +38,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Fetch and inspect UFCStats pages
+      - name: Wikipedia check (MediaWiki API)
+        run: |
+          mkdir -p t093-out
+          python -I research/data-integrity/t093_wikipedia_check.py t093-out/t093_wikipedia_check.json
+      - name: UFCStats check (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.try_ufcstats
+        continue-on-error: true
         run: python -I research/data-integrity/t093_source_check.py t093-out
       - name: Upload result
         if: always()

@@ -141,10 +141,36 @@ def analyse(html):
     return out
 
 
-def verdict(status, a):
+# Anti-bot / challenge markers. Runs 1 and 2 (39620094556, 39620705070) got
+# HTTP 200 with a ~3 KB "Checking your browser..." JavaScript page for all 23
+# URLs, controls included. A 200 is NOT a verification. Such a page says
+# nothing about the fight and is classified "source_unreachable", never "no".
+CHALLENGE_MARKERS = ("checking your browser", "just a moment", "cf-chl",
+                     "challenge-platform", "captcha", "requires javascript",
+                     "attention required", "ddos protection")
+MIN_REAL_PAGE_BYTES = 10000  # a real fight-details page is tens of KB
+
+
+def challenge_reason(html, a):
+    low = html.lower()
+    hits = [m for m in CHALLENGE_MARKERS if m in low]
+    if hits:
+        return "challenge markers: " + ", ".join(hits)
+    if not a.get("has_fight_details_block"):
+        return "expected fight-details markup absent"
+    if len(html) < MIN_REAL_PAGE_BYTES:
+        return f"tiny body ({len(html)} bytes)"
+    return None
+
+
+def verdict(status, a, html=""):
     if status is None:
-        return "fetch_failed"
-    if status == 404 or not a.get("names_on_page"):
+        return "source_unreachable"
+    if status == 404:
+        return "page_missing"
+    if challenge_reason(html, a):
+        return "source_unreachable"
+    if not a.get("names_on_page"):
         return "page_missing"
     return "yes" if a["per_round_have_data"] else "no"
 
@@ -177,14 +203,21 @@ def main():
         if a.get("names_on_page"):
             on = " ".join(a["names_on_page"]).lower()
             rec["names_match"] = all(n.split()[-1].lower() in on for n in (fa, fb))
-        rec["source_has_rounds"] = verdict(status, a)
-        rec["source_has_totals"] = (a.get("totals_have_data") if html else None)
+        rec["unreachable_reason"] = (challenge_reason(html, a) if html else err) if status != 404 else None
+        rec["source_has_rounds"] = verdict(status, a, html)
+        rec["source_has_totals"] = (a.get("totals_have_data")
+                                    if rec["source_has_rounds"] in ("yes", "no") else None)
         results.append(rec)
+        blocked = rec["source_has_rounds"] == "source_unreachable"
         print(f"{fid:>5} {role:<7} status={status} rounds={rec['source_has_rounds']:<12} "
               f"totals={rec['source_has_totals']} round_labels={a.get('round_labels_found')} "
               f"tables={a.get('stat_table_count')} digit_cells={a.get('table_cells_with_digits')} "
               f"names={a.get('names_on_page')} notes={a.get('not_available_notes')} err={err}",
               flush=True)
+        if blocked:
+            print(f"STOP: source unreachable ({rec['unreachable_reason']}). Not retrying "
+                  "a blocked endpoint; remaining fights are left unchecked.", flush=True)
+            break
 
     controls = [r for r in results if r["role"] == "control"]
     parser_ok = bool(controls) and all(r["source_has_rounds"] == "yes" for r in controls)
