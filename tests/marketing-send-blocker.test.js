@@ -30,5 +30,22 @@ t('a blocked run says why', () => {
   ok(/sending is blocked by: ' \+ MARKETING_SEND_BLOCKERS\.join/.test(src), 'a blocked run does not print its blockers');
 });
 
+// T-090 is now BUILT (card_brief_double_optin_migration.sql, confirm.html,
+// build/card-brief-confirm.js). Building it does not clear the blocker: the
+// migration is unapplied and no address has confirmed. These keep the two
+// halves honest while both exist.
+t('the blocker still stands now that double opt-in is built', () => {
+  const fs2 = require('fs');
+  ok(fs2.existsSync(path.join(__dirname, '..', 'card_brief_double_optin_migration.sql')), 'the double opt-in migration is gone');
+  const m = src.match(/const MARKETING_SEND_BLOCKERS = \[([\s\S]*?)\];/);
+  ok(m && m[1].trim().length > 0, 'MARKETING_SEND_BLOCKERS is empty — clearing it is an owner decision (D-027), in its own reviewed PR');
+});
+
+t('even with the blocker cleared, only confirmed addresses would be read', () => {
+  const body = src.slice(src.indexOf('async function fetchActiveSubscribers'), src.indexOf('async function sendOne'));
+  ok(/\.not\('confirmed_at', 'is', null\)/.test(body), 'the subscriber query does not require confirmed_at');
+  ok(/return sendableBriefRecipients\(all\);/.test(body), 'the fetched rows are not filtered to confirmed addresses');
+});
+
 if (failed) { console.error(`\n  ${failed} failed, ${n} passed`); process.exit(1); }
 console.log(`\n  ${n} passed — no Card Brief is sent until addresses confirm themselves (T-090).`);

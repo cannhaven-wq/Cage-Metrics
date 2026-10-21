@@ -1,0 +1,25 @@
+event_date,event_id,pred001_partition,fights_on_card,fights_any_sportsbook_quote,bell_basis,fights_two_sided_prebell,of_which_w3_provenance,median_min_last_two_sided_before_bell,fights_within_60min,fights_within_180min,avg_books_two_sided
+2026-05-02,105,H1,13,0,event_date_fallback,0,0,,0,0,
+2026-05-09,111,H1,13,0,event_date_fallback,0,0,,0,0,
+2026-05-16,112,H1,16,0,event_date_fallback,0,0,,0,0,
+2026-05-30,113,H1,13,10,event_date_fallback,10,0,28,10,10,4.9
+2026-06-06,114,H1,16,12,event_date_fallback,12,0,8759,0,0,4.9
+2026-06-14,115,H1,7,0,event_date_fallback,0,0,,0,0,
+2026-06-20,116,H1,14,0,event_date_fallback,0,0,,0,0,
+2026-06-27,2510,H1,15,0,event_date_fallback,0,0,,0,0,
+2026-07-11,117,H1,16,11,event_date_fallback,11,0,13234,0,0,4.9
+2026-07-18,2563,RESERVE,16,1,event_date_fallback,1,0,23314,0,0,4.0
+2026-07-25,2619,RESERVE,17,1,event_date_fallback,1,0,33394,0,0,4.0
+2026-08-01,2620,RESERVE,18,0,event_date_fallback,0,0,,0,0,
+2026-08-08,4221,RESERVE,13,0,event_date_fallback,0,0,,0,0,
+2026-08-15,118,RESERVE,15,2,event_date_fallback,2,0,63634,0,0,3.0
+2026-08-22,2626,RESERVE,14,10,event_date_fallback,10,0,9109,0,0,5.8
+2026-08-29,4224,RESERVE,14,1,event_date_fallback,1,0,19189,0,0,5.0
+2026-09-05,4225,RESERVE,15,0,event_date_fallback,0,0,,0,0,
+2026-09-12,4282,RESERVE,16,1,event_date_fallback,1,0,39349,0,0,4.0
+2026-09-19,4433,RESERVE,12,12,provider_commence,12,12,20,12,12,5.8
+2026-09-26,4550,RESERVE,13,11,"event_date_fallback,provider_commence",11,11,113,4,8,5.9
+2026-10-03,4551,RESERVE,15,13,"event_date_fallback,provider_commence",13,13,65,5,12,6.0
+2026-10-10,4713,RESERVE,12,11,"event_date_fallback,provider_commence",10,10,101,2,9,6.9
+2026-10-17,4368,PROSPECTIVE,13,13,provider_commence,12,12,82,4,12,6.7
+2026-10-24,4542,PROSPECTIVE (not yet fought),14,14,provider_commence,14,14,5453,0,0,5.7

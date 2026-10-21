@@ -65,6 +65,16 @@ name: Dead man — is the pre-fight record there?
 # so a run that DOES land reports the hole; genuinely closing it needs an
 # observer outside GitHub. Named as an owner item rather than pretended away.
 #
+# T-076 builds that observer (Supabase pg_cron, which is not GitHub's
+# scheduler) and it is NOT LIVE until the owner applies
+# research/ops/proposed_2026-10-21_t076_dead_man_observer.sql and stores a
+# GitHub token in Vault — runbook in research/ops/T076_DEAD_MAN_OBSERVER_RUNBOOK.md.
+# The check step already writes a heartbeat on every run (GITHUB_EVENT_NAME
+# tells it whether this run came from the schedule; only those count) and its
+# summary says under "Who watches the watchdog" whether the observer is
+# installed, running and armed. Until then, this file's silence is still
+# unwatched.
+#
 # ---------------------------------------------------------------------------
 # PERMISSIONS
 # ---------------------------------------------------------------------------

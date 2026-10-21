@@ -34,7 +34,8 @@
 // request, or an unreadable answer exits non-zero rather than reporting health.
 //
 // WHAT THIS CANNOT SEE
-//   - Its own silence (same limit as the dead man; T-076).
+//   - Its own silence (same limit as the dead man; T-076 builds an outside
+//     observer for the dead man only, pending an owner step).
 //   - The fighter scraper: fighters.updated_at has no trigger behind it, so it
 //     is not a freshness signal, and no other column records a profile refresh.
 //     Watching that needs a trigger or a scrape-log table first.
