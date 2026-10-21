@@ -470,7 +470,7 @@
        how do they compare, and what does the betting market say. -->
   <section class="sec" id="secWho">
     <h2>Who are these fighters?</h2>
-    <div class="sec-sub">Record, fighting style and the last five results for each corner. Style is read from what they actually did in their recent fights, not from their reputation.</div>
+    <div class="sec-sub">Record, fighting style and the last five results for each corner. The fighting style is the discipline the UFC lists for each fighter; CFL does not work it out.</div>
     <div id="flWho"><div class="empty">Loading the fighters…</div></div>
   </section>
 
@@ -1329,9 +1329,10 @@ function renderWho(a, b, fight, styleRows, formA, formB, formOk) {
   };
 
   el.innerHTML = '<div class="who">' + card(a, formA) + card(b, formB) + '</div>' +
-    '<div class="foot-note">Style compares what a fighter does in round one — strikes landed against takedowns and ' +
-    'control time. "Mixes both" means they are busy at both and neither dominates. Three labels is deliberately ' +
-    'coarse; a label describes their recent fights, not what they will do in this one.</div>';
+    '<div class="foot-note">Fighting style is the discipline listed on each fighter\'s UFC.com athlete page, or a correction ' +
+    'marked "Set by CFL" — never worked out from their numbers. ' +
+    'A general entry such as "MMA" or a missing one shows nothing. What a fighter actually does in the cage is in ' +
+    'the measured tendencies in the overview above, each with the number behind it.</div>';
 }
 
 // ---- tale of the tape ------------------------------------------------------
