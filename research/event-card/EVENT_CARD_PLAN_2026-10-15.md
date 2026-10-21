@@ -55,6 +55,24 @@ script.
 
 No source in the stack has them. Options, none started:
 
+**Finding, later on 2026-10-15 — UFC.com is not a permitted source** (merged
+from PR #81). The owner asked for UFC.com first. Its
+[Terms of Use](https://www.ufc.com/terms) prohibit using any "deep-link,
+page-scrape, robot, spider or other automatic device, program, algorithm or
+methodology" to access, copy or monitor the site, and separately bar automated
+systems that send more requests than a person could in a browser. (Read via
+search; `ufc.com` does not resolve from this container, so the live page could
+not be fetched — verify the wording on the site.) Option A below therefore needs
+**UFC's written permission** before any scraper is built; without it, A is off
+the table and the choice is B or C.
+
+**2026-10-21:** step 1a's file is now
+[`apply_2026-10-21_running_order.sql`](apply_2026-10-21_running_order.sql)
+(procedure: [`RUNNING_ORDER_APPLY.md`](RUNNING_ORDER_APPLY.md)); 1b is blocked
+because UFCStats serves GitHub's runners an anti-bot page, and the alternative
+sources are assessed in
+[`SOURCE_EVALUATION_2026-10-21.md`](SOURCE_EVALUATION_2026-10-21.md).
+
 - **A. UFC.com event pages.** They list the sections and their start times.
   Would need an addition to the event scraper on Railway plus columns or a
   ledger for section and start time, and a check of UFC.com's terms of use for
