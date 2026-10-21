@@ -49,6 +49,7 @@ import re
 import sys
 import unicodedata
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -59,6 +60,7 @@ from cfl_engine.event_flow.ufcstats_card import (  # noqa: E402
     CardParseError,
     parse_event_page,
 )
+from cfl_engine.event_flow import sources as src  # noqa: E402
 
 BASE = "http://www.ufcstats.com"
 EVENT_URL = BASE + "/event-details/{ufc_event_id}"
@@ -289,6 +291,7 @@ def build_report(entries: list[dict], run: dict) -> dict:
         and CONFIRMED in verdicts
     report = {
         "check": "T-030 real-page check: UFCStats running-order parser against live pages",
+        "source": src.UFCSTATS,
         "result": "pass" if passed else "fail",
         "checked_by": run.get("checked_by"),
         "checked_at": run.get("checked_at"),
@@ -311,6 +314,154 @@ def build_report(entries: list[dict], run: dict) -> dict:
     return report
 
 
+# ---------------------------------------------------------------------------
+# ESPN (with a Wikipedia cross-check) — the source a GitHub runner can read
+# ---------------------------------------------------------------------------
+ESPN_BASE = "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard"
+WIKI_API = "https://en.wikipedia.org/w/api.php"
+
+
+def check_espn_card(card, wiki_card, kind: str, url: str) -> dict:
+    """One ESPN card -> one report entry, cross-checked against Wikipedia."""
+    verdict, why = src.direction(card)
+    entry = {
+        "kind": kind, "url": url, "status": "parsed",
+        "source_event_id": card.source_event_id, "title": card.event_name,
+        "event_date": card.event_date, "n_bouts": len(card.bouts),
+        "main_event_bout_order": card.main_event.walkout,
+        "main_event_matchup": card.main_event.matchup,
+        "first_walkout_matchup": card.first_walkout.matchup,
+        "direction": verdict, "direction_reason": why,
+        "sections": sorted({b.section_start for b in card.bouts if b.section_start}),
+        "bouts": [{"bout_order": b.walkout, "matchup": b.matchup,
+                   "section_start": b.section_start, "espn_competition_id": b.source_bout_id}
+                  for b in card.bouts],
+    }
+    if wiki_card is None:
+        entry["cross_check"] = {"wikipedia": "unavailable"}
+    else:
+        cmp = src.compare_orders(card, wiki_card)
+        cmp["wikipedia_direction"] = src.direction(
+            src.SourceCard(wiki_card.source, None, card.event_name, None, wiki_card.bouts))[0]
+        entry["cross_check"] = {"wikipedia": cmp}
+    return entry
+
+
+def espn_cross_check_ok(entry: dict) -> bool:
+    cc = (entry.get("cross_check") or {}).get("wikipedia")
+    return (isinstance(cc, dict) and cc["shared"] == entry["n_bouts"]
+            and not cc["disagreements"] and cc["same_relative_order"]
+            and cc["wikipedia_direction"] == CONFIRMED)
+
+
+def build_espn_report(entries: list[dict], run: dict) -> dict:
+    """Pass only if every card reads, every direction is confirmed by the card's
+    own name, and the COMPLETED card agrees bout for bout with Wikipedia (an
+    independent source). The upcoming card's cross-check is reported, not
+    required: a card in fight week can change between two sources' updates."""
+    ok = [e for e in entries if e.get("status") == "parsed"]
+    completed = next((e for e in ok if e["kind"] == "completed"), None)
+    passed = (bool(ok) and len(ok) == len(entries) and completed is not None
+              and all(e["direction"] == CONFIRMED for e in ok)
+              and espn_cross_check_ok(completed))
+    report = {
+        "check": "T-030 real-page check: running order from ESPN's public MMA scoreboard, "
+                 "cross-checked against Wikipedia",
+        "source": src.ESPN,
+        "result": "pass" if passed else "fail",
+        "checked_by": run.get("checked_by"),
+        "checked_at": run.get("checked_at"),
+        "source_event_id": completed["source_event_id"] if completed else None,
+        "ufc_event_id": None,
+        "cfl_event_id": None,
+        "event": completed["title"] if completed else None,
+        "main_event_bout_order": completed["main_event_bout_order"] if completed else None,
+        "first_walkout_matchup": completed["first_walkout_matchup"] if completed else None,
+        "main_event_matchup": completed["main_event_matchup"] if completed else None,
+        "direction_check": (
+            "automated, two ways: (1) each card is named after its main event, and ESPN "
+            "must list that bout LAST (bout N of N) and not first; (2) the completed "
+            "card must match Wikipedia's results table bout for bout, position for "
+            "position. Section start times must never decrease along the order."),
+        "run": run,
+        "events": entries,
+    }
+    if not passed:
+        for k in ("checked_by", "source_event_id", "main_event_bout_order",
+                  "first_walkout_matchup"):
+            report[k] = None
+    return report
+
+
+def fetch_json(url: str) -> tuple[int, dict | None, str]:
+    status, body = fetch(url)
+    try:
+        return status, json.loads(body), body
+    except json.JSONDecodeError:
+        return status, None, body
+
+
+def wiki_card_for(title: str | None, run_notes: list) -> "src.SourceCard | None":
+    if not title:
+        return None
+    # Numbered cards are titled "UFC 333" on Wikipedia, not "UFC 333: A vs. B".
+    candidates = [title] + ([title.split(":", 1)[0]] if re.match(r"UFC \d+:", title) else [])
+    for page in candidates:
+        q = urllib.parse.urlencode({"action": "parse", "page": page, "prop": "wikitext|revid",
+                                    "format": "json", "formatversion": 2, "redirects": 1})
+        status, data, _ = fetch_json(f"{WIKI_API}?{q}")
+        parse = (data or {}).get("parse") or {}
+        run_notes.append({"wikipedia": page, "http_status": status, "revid": parse.get("revid")})
+        try:
+            return src.parse_wikipedia_results(parse.get("wikitext", ""), title)
+        except src.SourceError as e:
+            run_notes[-1]["error"] = str(e)
+    return None
+
+
+def run_espn(now: dt.datetime, run: dict, save_dir: Path | None) -> list[dict]:
+    entries, notes = [], []
+    run["fetches"] = notes
+    status, current, body = fetch_json(ESPN_BASE)
+    notes.append({"url": ESPN_BASE, "http_status": status, "bytes": len(body.encode())})
+    save(save_dir, "espn_scoreboard_current.json", body)
+    if current is None:
+        return [{"status": SOURCE_BLOCKED, "kind": "upcoming",
+                 "reason": f"ESPN scoreboard answered HTTP {status} without JSON"}]
+    latest = src.espn_latest_completed(current, now.strftime("%Y-%m-%dT%H:%MZ"))
+    targets = []
+    if latest:
+        label, dates = latest
+        url = f"{ESPN_BASE}?dates={dates}"
+        status, past, body = fetch_json(url)
+        notes.append({"url": url, "http_status": status, "bytes": len(body.encode())})
+        save(save_dir, f"espn_scoreboard_{dates}.json", body)
+        if past is None:
+            entries.append({"status": SOURCE_BLOCKED, "kind": "completed",
+                            "reason": f"HTTP {status} without JSON"})
+        else:
+            targets.append(("completed", url, past, label))
+    else:
+        entries.append({"status": "parse_error", "kind": "completed",
+                        "reason": "the ESPN calendar lists no completed UFC event"})
+    targets.append(("upcoming", ESPN_BASE, current, None))
+    for kind, url, data, label in targets:
+        try:
+            cards = src.parse_espn_scoreboard(data)
+        except src.SourceError as e:
+            entries.append({"status": "parse_error", "kind": kind, "reason": str(e)})
+            continue
+        if label is not None:
+            cards = [c for c in cards if c.event_name == label]
+        if not cards:
+            entries.append({"status": "parse_error", "kind": kind, "url": url,
+                            "reason": f"no ESPN card named {label!r} on this scoreboard"})
+            continue
+        card = cards[0]
+        entries.append(check_espn_card(card, wiki_card_for(card.event_name, notes), kind, url))
+    return entries
+
+
 def save(directory: Path | None, name: str, body: str) -> None:
     if directory:
         directory.mkdir(parents=True, exist_ok=True)
@@ -321,6 +472,8 @@ def save(directory: Path | None, name: str, body: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--source", choices=["ufcstats", "espn"], default="ufcstats",
+                    help="ufcstats (blocked from GitHub runners) or espn (+ Wikipedia cross-check)")
     ap.add_argument("--event", action="append", default=[],
                     help="UFCStats event id; default = latest completed + next upcoming")
     ap.add_argument("--fallback-event", action="append", default=[],
@@ -338,6 +491,15 @@ def main() -> int:
            "checked_at_utc": now.isoformat(timespec="seconds"),
            "user_agent": USER_AGENT}
     entries: list[dict] = []
+
+    if args.source == "espn":
+        run["user_agent"] = USER_AGENT
+        entries = run_espn(now, run, args.save_dir)
+        report = build_espn_report(entries, run)
+        text = json.dumps(report, indent=2, ensure_ascii=False)
+        args.out.write_text(text + "\n", encoding="utf-8")
+        print(text)
+        return 0 if report["result"] == "pass" else 1
 
     if args.from_file:
         if len(args.event) != 1:

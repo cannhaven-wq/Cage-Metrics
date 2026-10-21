@@ -1,0 +1,38 @@
+{
+  "espn_scoreboard_20261017.json": {
+    "byte_exact": true,
+    "canonical_sha256": "864e78c188d93c3b0d67501b74177b04983a71090a12f080608407469862c4f5",
+    "fixture_sha256": "74d9333b0790bf742b5384004404343bd44c1a501d316f879b86cfde1dd221f6",
+    "raw_bytes": 43390,
+    "raw_sha256": "9c48d5ce2698ee79b067b4c24483b40790453b86d0df1b20478c8dfe4f80d2a4",
+    "run_id": 39623017331,
+    "run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39623017331"
+  },
+  "espn_scoreboard_current.json": {
+    "byte_exact": true,
+    "canonical_sha256": "a3e0f8a163b5648f1df337d4c6101fa82c38013112782623708d233821285334",
+    "fixture_sha256": "06f03bfb18531738814d3ffbb7b79ec0a6e75e99d13bcbecc11ea0837c0a8887",
+    "raw_bytes": 37580,
+    "raw_sha256": "8fcf45c3d3f8cffc3b1271c0f3e505acc5939eebf318f3f6f1af397be1bbc017",
+    "run_id": 39623017331,
+    "run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39623017331"
+  },
+  "wikipedia_UFC_333_rev1381287088.wikitext": {
+    "byte_exact": true,
+    "canonical_sha256": "63811854041a6d2789ff0211df1e91e8e059d0f79cbe965d665146718fe22906",
+    "fixture_sha256": "b21d9d8682b9da5550fdf46f02923d469ac270d313f12f4c0adcfb08d5b8629b",
+    "raw_bytes": 7125,
+    "raw_sha256": "91e3a71ba1d3747031b114366bc24a0ebc232a13ea27f07ab83156ddc21eb0e9",
+    "run_id": 39623017331,
+    "run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39623017331"
+  },
+  "wikipedia_UFC_Fight_Night__Buckley_vs__Malott_rev1380903599.wikitext": {
+    "byte_exact": true,
+    "canonical_sha256": "a78db6b4139c7f49c0cd6e4a127f0202455277c4413010e1d89e2a9f1427f55b",
+    "fixture_sha256": "6bc6df1986c4cae20c1c146a6618d6cd9a450f5f0ad0ccdaa24c2c3adb7e2cf6",
+    "raw_bytes": 9175,
+    "raw_sha256": "b18103dba853d800b42169769ec6fc32244a5ec5a6c7b5420d8baa6c95af461b",
+    "run_id": 39623017331,
+    "run_url": "https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39623017331"
+  }
+}

@@ -180,15 +180,25 @@ def parse_espn_scoreboard(data: dict) -> list[SourceCard]:
     return cards
 
 
-def espn_completed_dates(data: dict, before_iso: str) -> list[str]:
-    """Event dates (YYYYMMDD) in the scoreboard's league calendar before an instant."""
+def espn_latest_completed(data: dict, before_iso: str) -> tuple[str, str] | None:
+    """(event label, ESPN `dates=` range) of the newest UFC card before an instant.
+
+    The calendar's startDate is the MAIN CARD's start in UTC — after midnight
+    for most US cards — while `dates=` is ESPN's own day, so the range covers
+    the day before as well. Dana White's Contender Series is not a UFC event
+    (T-086) and is skipped.
+    """
+    import datetime as _dt
     cal = ((data.get("leagues") or [{}])[0].get("calendar")) or []
-    out = []
-    for c in cal:
-        start = c.get("startDate") if isinstance(c, dict) else c
-        if start and start < before_iso:
-            out.append(start[:10].replace("-", ""))
-    return sorted(set(out))
+    done = [(c.get("startDate"), c.get("label")) for c in cal
+            if isinstance(c, dict) and c.get("startDate") and c.get("label")
+            and c["startDate"] < before_iso and "contender series" not in c["label"].lower()]
+    if not done:
+        return None
+    start, label = max(done)
+    day = _dt.date.fromisoformat(start[:10])
+    lo = (day - _dt.timedelta(days=1)).strftime("%Y%m%d")
+    return label, f"{lo}-{day.strftime('%Y%m%d')}"
 
 
 # ---------------------------------------------------------------------------
@@ -196,7 +206,7 @@ def espn_completed_dates(data: dict, before_iso: str) -> list[str]:
 # ---------------------------------------------------------------------------
 RESULTS_HEADING = re.compile(r"^==\s*(Results|Fight card)\s*==\s*$", re.M | re.I)
 NEXT_HEADING = re.compile(r"^==[^=].*==\s*$", re.M)
-BOUT_TEMPLATE = re.compile(r"\{\{\s*MMAevent bout\s*\|(.*?)\}\}", re.S | re.I)
+BOUT_START = re.compile(r"\{\{\s*MMAevent bout\s*\|", re.I)
 LINK = re.compile(r"\[\[(?:[^\]|]*\|)?([^\]]*)\]\]")
 
 
@@ -218,17 +228,65 @@ def _plain(cell: str) -> str:
     return " ".join(cell.replace("'''", "").split())
 
 
+def _template_body(text: str, start: int) -> str:
+    """Body of the template whose '{{' is at `start`, honouring nested {{ }}."""
+    depth, i = 0, start
+    while i < len(text) - 1:
+        two = text[i:i + 2]
+        if two == "{{":
+            depth += 1
+            i += 2
+            continue
+        if two == "}}":
+            depth -= 1
+            i += 2
+            if depth == 0:
+                return text[start + 2:i - 2]
+            continue
+        i += 1
+    raise SourceError("an MMAevent bout template never closes — truncated wikitext")
+
+
+def _split_params(body: str) -> list[str]:
+    """Split on '|' at nesting depth 0 only: '[[A (fighter)|A]]' is one cell."""
+    cells, cur, depth, i = [], [], 0, 0
+    while i < len(body):
+        two = body[i:i + 2]
+        if two in ("{{", "[["):
+            depth += 1
+            cur.append(two)
+            i += 2
+            continue
+        if two in ("}}", "]]"):
+            depth -= 1
+            cur.append(two)
+            i += 2
+            continue
+        if body[i] == "|" and depth == 0:
+            cells.append("".join(cur))
+            cur = []
+        else:
+            cur.append(body[i])
+        i += 1
+    cells.append("".join(cur))
+    return [c.strip() for c in cells]
+
+
 def parse_wikipedia_results(wikitext: str, event_name: str | None = None) -> SourceCard:
-    """Wikipedia lists the main event first (main card, then prelims); reversed here."""
+    """Wikipedia lists the main event first (main card, then prelims); reversed here.
+
+    Each bout is `{{MMAevent bout|weight|fighter|def. or vs.|fighter|...}}`.
+    """
     section = wikipedia_results_section(wikitext)
     rows = []
-    for m in BOUT_TEMPLATE.finditer(section):
-        cells = [c.strip() for c in m.group(1).split("|")]
+    for m in BOUT_START.finditer(section):
+        body = _template_body(section, m.start())
+        cells = _split_params(body)[1:]          # [0] is the template name
         if len(cells) < 4:
-            raise SourceError(f"a bout row has {len(cells)} cells: {m.group(0)[:80]!r}")
+            raise SourceError(f"a bout row has {len(cells)} cells: {body[:80]!r}")
         weight, a, _verb, b = cells[0], _plain(cells[1]), cells[2], _plain(cells[3])
         if not a or not b:
-            raise SourceError(f"a bout row does not name two fighters: {m.group(0)[:80]!r}")
+            raise SourceError(f"a bout row does not name two fighters: {body[:80]!r}")
         rows.append((weight, a, b))
     if not rows:
         raise SourceError("the Results section lists no bouts")
@@ -283,26 +341,40 @@ def direction(card: SourceCard) -> tuple[str, str]:
     return "unconfirmable", "the titled matchup is neither first nor last"
 
 
+def _tokens(name: str) -> set[str]:
+    return set(fold(name.replace("-", " ")).split()) | {compact(name)}
+
+
+def _loosely_same(x: tuple[str, str], y: tuple[str, str]) -> bool:
+    """Each fighter shares a name token with one fighter of the other bout.
+
+    For CROSS-CHECKING two sources only, never for linking: Wikipedia writes
+    'You Su-young' and 'Abusupiyan Magomedov' where ESPN writes 'SuYoung You'
+    and 'Abus Magomedov'.
+    """
+    a, b = (_tokens(n) for n in x)
+    c, d = (_tokens(n) for n in y)
+    return bool((a & c) and (b & d)) or bool((a & d) and (b & c))
+
+
 def compare_orders(a: SourceCard, b: SourceCard) -> dict:
-    """Bout-by-bout agreement between two sources, matched by fighter pair."""
-    b_pos = {}
-    for bout in b.bouts:
-        b_pos[tuple(sorted(compact(n) for n in bout.fighter_names))] = bout.walkout
+    """Bout-by-bout agreement between two sources: same bouts, same walkout positions?"""
+    remaining = list(b.bouts)
     rows, only_a = [], []
     for bout in a.bouts:
-        key = tuple(sorted(compact(n) for n in bout.fighter_names))
-        if key in b_pos:
-            rows.append((bout.walkout, b_pos.pop(key), bout.matchup))
+        hits = [y for y in remaining if _loosely_same(bout.fighter_names, y.fighter_names)]
+        if len(hits) == 1:
+            rows.append((bout.walkout, hits[0].walkout, bout.matchup))
+            remaining.remove(hits[0])
         else:
             only_a.append(bout.matchup)
-    only_b = [x.matchup for x in b.bouts
-              if tuple(sorted(compact(n) for n in x.fighter_names)) in b_pos]
-    # Same relative order over the shared bouts?
     shared_b = [r[1] for r in rows]
-    same_order = shared_b == sorted(shared_b)
-    return {"shared": len(rows), "only_in_" + a.source: only_a, "only_in_" + b.source: only_b,
-            "same_relative_order": same_order,
-            "disagreements": [r[2] for r in rows if r[0] != r[1]]}
+    return {"shared": len(rows),
+            "only_in_" + a.source: only_a,
+            "only_in_" + b.source: [y.matchup for y in remaining],
+            "same_relative_order": shared_b == sorted(shared_b),
+            "disagreements": [f"{r[2]}: {a.source} bout {r[0]}, {b.source} bout {r[1]}"
+                              for r in rows if r[0] != r[1]]}
 
 
 # ---------------------------------------------------------------------------

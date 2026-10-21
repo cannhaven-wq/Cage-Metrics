@@ -1,34 +1,42 @@
-# T-030 — check the running-order parser against REAL UFCStats pages.
+# T-030 — the real-page check for the running-order reader.
 #
-# The agent environment cannot reach ufcstats.com, so this runs where it can.
-# It reads the latest completed and the next upcoming UFCStats event pages with
-# the repo's own parser, cross-checks the walkout direction against each page's
-# title (the event is named after its main event), and uploads
+# The agent environment cannot reach any of the sources, so this runs where it
+# can. It reads the latest completed and the next upcoming card from a REAL
+# source with the repo's own adapters, checks the walkout direction against
+# each card's name (an event is named after its main event), and uploads
 # REAL_PAGE_CHECK.json as an artifact. It also prints the JSON to the log.
+#
+#   source=espn      (default; what a push runs) ESPN's public MMA scoreboard
+#                    JSON, cross-checked bout for bout against the event's
+#                    Wikipedia results table.
+#   source=ufcstats  UFCStats event pages. Manual only: on 2026-10-21 UFCStats
+#                    answered GitHub's runners with an HTTP 200 anti-bot page
+#                    (runs 39620237572, 39620364912), which the check records
+#                    as source_blocked and fails. It never gets past such a page.
 #
 # No secrets. No database. Read-only token. It writes nothing to the repo:
 # committing the JSON to cfl_engine/event_flow/REAL_PAGE_CHECK.json is a
-# deliberate, reviewed commit by a person (or by Claude, citing this run).
-#
-# If the listings cannot be read, it still reads UFC Fight Night: Buckley vs.
-# Malott (55e94a9b525dcf45, CFL event 4368, 2026-10-17) so the failure is
-# recorded against a real event page too. Every body fetched is attached to the
-# artifact under fetched/ — never committed.
-#
-# It does not get past a bot wall. An interstitial instead of the card is
-# reported as page_unreadable and the run fails.
+# deliberate, reviewed commit citing this run.
 name: Event flow — real-page check
 
 on:
   workflow_dispatch:
     inputs:
+      source:
+        description: "espn (default) or ufcstats"
+        required: false
+        default: "espn"
       events:
-        description: "UFCStats event ids, space-separated (blank = latest completed + next upcoming)"
+        description: "ufcstats only: UFCStats event ids, space-separated"
         required: false
         default: ""
-  # Manual only. Runs 39620237572 and 39620364912 (2026-10-21) showed UFCStats
-  # answers GitHub runners with an HTTP 200 anti-bot page; re-running on every
-  # push would only hit the same wall.
+  push:
+    branches:
+      - claude/gallant-cannon-sefkcs-running-order
+    paths:
+      - cfl_engine/event_flow/real_page_check.py
+      - cfl_engine/event_flow/sources.py
+      - .github/workflows/event-flow-page-check.yml
 
 permissions:
   contents: read
@@ -44,20 +52,25 @@ jobs:
           python-version: "3.11"
 
       - name: Parser unit tests
-        run: python -m unittest cfl_engine.event_flow.test_event_flow cfl_engine.event_flow.test_real_page_check
+        run: >-
+          python -m unittest cfl_engine.event_flow.test_event_flow
+          cfl_engine.event_flow.test_real_page_check cfl_engine.event_flow.test_sources
 
-      - name: Read real UFCStats pages
+      - name: Read real pages
         env:
+          SOURCE: ${{ github.event.inputs.source || 'espn' }}
           EVENTS: ${{ github.event.inputs.events }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
-          args=""
-          for e in $EVENTS; do args="$args --event $e"; done
+          args="--source $SOURCE"
+          if [ "$SOURCE" = "ufcstats" ]; then
+            args="$args --fallback-event 55e94a9b525dcf45"
+            for e in $EVENTS; do args="$args --event $e"; done
+          fi
           python cfl_engine/event_flow/real_page_check.py \
             --out REAL_PAGE_CHECK.json \
             --save-dir fetched \
-            --fallback-event 55e94a9b525dcf45 \
-            --checked-by "GitHub Actions run ${{ github.run_id }} (real_page_check.py; $RUN_URL)" \
+            --checked-by "GitHub Actions run ${{ github.run_id }} (real_page_check.py --source $SOURCE; $RUN_URL)" \
             $args
 
       - name: Upload REAL_PAGE_CHECK.json

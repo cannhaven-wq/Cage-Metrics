@@ -165,6 +165,30 @@ class TestBehaviour(RunningOrderCase):
                                 "order by bout_order) from public.v_card_running_order "
                                 "where event_id = 77"), "2:1,1:2")
 
+    def test_view_ignores_manual_rows_and_follows_a_newer_espn_card(self):
+        self.q("insert into public.fight_bout_order (fight_id, event_id, bout_order, source, observed_at) "
+               "values (1, 77, 1, 'manual', '2026-10-16 07:20+00')")
+        self.assertEqual(self.q("select string_agg(fight_id || ':' || bout_order, ',' "
+                                "order by bout_order) from public.v_card_running_order "
+                                "where event_id = 77"), "2:1,1:2")
+        self.q("insert into public.fight_bout_order (fight_id, event_id, bout_order, source, observed_at) "
+               "values (1, 77, 1, 'espn_scoreboard', '2026-10-16 08:00+00'), "
+               "(2, 77, 2, 'espn_scoreboard', '2026-10-16 08:00+00')")
+        self.assertEqual(self.q("select string_agg(fight_id || ':' || bout_order, ',' "
+                                "order by bout_order) from public.v_card_running_order "
+                                "where event_id = 77"), "1:1,2:2")
+
+    def test_the_log_checks_evidence_within_its_own_source(self):
+        self.q("insert into public.fight_bout_order (fight_id, event_id, bout_order, source, observed_at) "
+               "values (1, 77, 1, 'espn_scoreboard', '2026-10-16 08:00+00')")
+        # Evidence from the UFCStats ledger cannot be claimed under the ESPN source.
+        self.q(self.RETIRE.format(fid=3, at="2026-10-15 19:20+00", n=2,
+                                  ev="'2026-10-15 19:20+00','2026-10-15 07:20+00'")
+               .replace("'ufcstats_card')", "'espn_scoreboard')"), expect_error=True)
+        self.q(self.RETIRE.format(fid=3, at="2026-10-15 19:20+00", n=2,
+                                  ev="'2026-10-15 19:20+00','2026-10-15 07:20+00'")
+               .replace("'ufcstats_card')", "'provider')"), expect_error=True)
+
     def test_view_drops_a_retired_booking(self):
         self.q("update public.fights set is_active = false where id = 2")
         self.assertEqual(self.q("select string_agg(fight_id::text, ',') from "

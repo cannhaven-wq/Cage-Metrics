@@ -193,7 +193,7 @@ class TestRealSamples(unittest.TestCase):
     def test_wikipedia_agrees_with_espn_on_the_completed_card(self):
         [e] = self.espn("espn_scoreboard_20261017.json")
         name = next(n for n in json.loads((FIX / "SOURCES.json").read_text("utf-8"))
-                    if n.startswith("wikipedia_UFC_Fight_Night_Buckley"))
+                    if n.startswith("wikipedia_UFC_Fight_Night__Buckley"))
         text, _ = _fixture(name)
         w = parse_wikipedia_results(text, e.event_name)
         self.assertEqual(direction(SourceCard(w.source, None, e.event_name, None, w.bouts))[0],
@@ -202,6 +202,140 @@ class TestRealSamples(unittest.TestCase):
         self.assertEqual(r["shared"], 13, r)
         self.assertTrue(r["same_relative_order"], r)
         self.assertEqual(r["disagreements"], [], r)
+
+    def test_wikipedia_agrees_with_espn_on_the_upcoming_card(self):
+        """UFC 333: three sections (early prelims, prelims, main card) and two
+        sources that spell four fighters differently still agree on all 14."""
+        [e] = self.espn("espn_scoreboard_current.json")
+        text, _ = _fixture("wikipedia_UFC_333_rev1381287088.wikitext")
+        w = parse_wikipedia_results(text, e.event_name)
+        self.assertEqual(len(w.bouts), 14)
+        r = compare_orders(e, w)
+        self.assertEqual((r["shared"], r["disagreements"]), (14, []), r)
+        # Section starts never go backwards along the walkout order, and there
+        # are three sections.
+        starts = [b.section_start for b in e.bouts]
+        self.assertEqual(starts, sorted(starts))
+        self.assertEqual(len(set(starts)), 3)
+
+    def test_wikipedia_piped_links_and_champion_marks(self):
+        text, _ = _fixture("wikipedia_UFC_333_rev1381287088.wikitext")
+        w = parse_wikipedia_results(text)
+        names = {n for b in w.bouts for n in b.fighter_names}
+        self.assertIn("Alexander Volkov", names)       # [[Alexander Volkov (fighter)|...]]
+        self.assertIn("Alexander Volkanovski", names)  # "(c)" dropped
+        self.assertIn("Daniel Santos", names)
+        self.assertEqual(w.main_event.fighter_names, ("Alexander Volkanovski", "Movsar Evloev"))
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class _EspnRest:
+    """`fights` + `fighters` + an append-only ledger, for the ESPN path end to end."""
+
+    INACTIVE = {47881, 48644, 50990}
+
+    def __init__(self, event_id, rows):
+        import datetime as dt
+        self.event_id = event_id
+        self.fighters, self.fights = {}, []
+        for fid, a, b in rows:
+            ia, ib = len(self.fighters) + 1, len(self.fighters) + 2
+            self.fighters[ia], self.fighters[ib] = a, b
+            self.fights.append({"id": fid, "ufc_fight_id": f"{fid:016x}", "event_id": event_id,
+                                "is_active": fid not in self.INACTIVE,
+                                "fighter_a_id": ia, "fighter_b_id": ib})
+        self.ledger, self.clock = [], dt.datetime(2026, 10, 15, tzinfo=dt.timezone.utc)
+
+    def rest_get(self, base_url, key, path, params):
+        if path == "fights":
+            return [dict(f) for f in self.fights]
+        if path == "fighters":
+            ids = [int(x) for x in params["id"][4:-1].split(",")]
+            return [{"id": i, "name": self.fighters[i]} for i in ids]
+        if path == "fight_bout_order":
+            src = params["source"][3:]
+            return sorted((r for r in self.ledger if r["source"] == src),
+                          key=lambda r: (r["observed_at"], r["id"]), reverse=True)
+        raise AssertionError(path)
+
+    def rest_append(self, base_url, key, path, rows):
+        import datetime as dt
+        assert path == "fight_bout_order", path
+        self.clock += dt.timedelta(hours=12)
+        for r in rows:
+            self.ledger.append({**r, "id": len(self.ledger) + 1,
+                                "observed_at": self.clock.isoformat()})
+        return len(rows)
+
+
+@unittest.skipUnless((FIX / "SOURCES.json").is_file(), "real samples not recorded")
+class TestIngestFromEspn(unittest.TestCase):
+    """The ingester's --source espn path on the real 2026-10-17 scoreboard."""
+
+    EVENT = {"id": 4368, "name": "UFC Fight Night: Buckley vs. Malott",
+             "event_date": "2026-10-17", "ufc_event_id": "55e94a9b525dcf45"}
+
+    def run_once(self, rest, execute=True, page=None, event=None):
+        import cfl_engine.event_flow.ingest_bout_order as ing
+        page = page or _fixture("espn_scoreboard_20261017.json")[0]
+        lines = []
+        get, append = ing.rest_get, ing.rest_append
+        ing.rest_get, ing.rest_append = rest.rest_get, rest.rest_append
+        try:
+            out = ing.ingest_event(event or self.EVENT, "https://x", "k", execute,
+                                   page_html=page, log=lines.append, source="espn")
+        finally:
+            ing.rest_get, ing.rest_append = get, append
+        return out, "\n".join(lines)
+
+    def test_writes_the_whole_card_first_walkout_first(self):
+        rest = _EspnRest(4368, CFL_4368)
+        out, log = self.run_once(rest)
+        self.assertEqual(out, "written", log)
+        self.assertEqual(len(rest.ledger), 13)
+        self.assertEqual({r["source"] for r in rest.ledger}, {"espn_scoreboard"})
+        order = {r["fight_id"]: r["bout_order"] for r in rest.ledger}
+        self.assertEqual(order[46774], 13)                     # Buckley vs Malott
+        self.assertEqual(order[47879], 12)                     # Blanchfield vs Jasudavicius
+        self.assertEqual(order[51091], 1)                      # You vs Chovancek
+        self.assertEqual(sorted(order.values()), list(range(1, 14)))
+        self.assertFalse(set(order) & _EspnRest.INACTIVE)
+        self.assertIn("3 fight row(s) on this event are not on the page", log)
+        # unchanged on the second read
+        self.assertEqual(self.run_once(rest)[0], "unchanged")
+        self.assertEqual(len(rest.ledger), 13)
+
+    def test_a_dry_run_writes_nothing(self):
+        rest = _EspnRest(4368, CFL_4368)
+        self.assertEqual(self.run_once(rest, execute=False)[0], "dry-run")
+        self.assertEqual(rest.ledger, [])
+
+    def test_refuses_when_no_espn_event_matches_the_cfl_event(self):
+        rest = _EspnRest(4368, CFL_4368)
+        event = {**self.EVENT, "name": "UFC Fight Night: Somebody vs. Else"}
+        out, log = self.run_once(rest, event=event)
+        self.assertEqual(out, "refused")
+        self.assertEqual(rest.ledger, [])
+
+    def test_refuses_a_card_that_does_not_link_completely(self):
+        rest = _EspnRest(4368, [r for r in CFL_4368 if r[0] != 47884])   # drop Jourdain
+        out, log = self.run_once(rest)
+        self.assertEqual(out, "refused", log)
+        self.assertIn("Louis Jourdain", log)
+        self.assertEqual(rest.ledger, [])
+
+    def test_refuses_an_inverted_card(self):
+        data = json.loads(_fixture("espn_scoreboard_20261017.json")[0])
+        comps = data["events"][0]["competitions"]
+        data["events"][0]["competitions"] = list(reversed(comps))
+        for c in data["events"][0]["competitions"]:       # keep start times monotone
+            c["startDate"] = c["date"] = "2026-10-17T21:00Z"
+        out, log = self.run_once(_EspnRest(4368, CFL_4368), page=json.dumps(data))
+        self.assertEqual(out, "refused", log)
+        self.assertIn("backwards", log)
 
 
 if __name__ == "__main__":

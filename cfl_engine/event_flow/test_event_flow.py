@@ -761,7 +761,7 @@ class TestProductionWriteGate(unittest.TestCase):
         import inspect
         import cfl_engine.event_flow.ingest_bout_order as ing
         src = inspect.getsource(ing.main)
-        self.assertIn("if args.execute:\n        require_real_page_verified()", src)
+        self.assertIn("if args.execute:\n        require_real_page_verified(", src)
 
 
 class TestUniqueIndexDiagnosis(unittest.TestCase):

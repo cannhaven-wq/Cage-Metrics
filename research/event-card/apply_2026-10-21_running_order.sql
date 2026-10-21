@@ -137,7 +137,7 @@ create table if not exists public.fight_booking_status_log (
   observed_at          timestamptz not null,      -- newest observation it rests on
   evidence_observed_at timestamptz[] not null,    -- every observation it rests on
   confirmations        integer     not null default 0,
-  source               text        not null,      -- 'ufcstats_card' | 'manual'
+  source               text        not null,      -- the ledger source it rests on, or 'manual'
   decided_at           timestamptz not null default now(),
   constraint fight_booking_status_log_reason check
     (reason in ('retired_absent_from_card', 'reactivated_back_on_card', 'manual')),
@@ -172,7 +172,7 @@ begin
   if new.reason = 'manual' then
     return new;
   end if;
-  if new.source <> 'ufcstats_card' then
+  if new.source not in ('ufcstats_card', 'espn_scoreboard') then
     raise exception 'fight_booking_status_log: source % cannot carry an observed decision', new.source;
   end if;
   if coalesce(cardinality(new.evidence_observed_at), 0) = 0
@@ -246,17 +246,22 @@ grant usage on sequence public.fight_booking_status_log_id_seq to service_role;
 revoke all on sequence public.fight_bout_order_id_seq from anon, authenticated;
 revoke all on sequence public.fight_booking_status_log_id_seq from anon, authenticated;
 
--- 4. The public read path (unchanged from proposed_2026-10-15) ------------------
+-- 4. The public read path ---------------------------------------------------
 -- The latest COMPLETE card observation per event: every row sharing that
 -- card's newest observed_at (the ingester appends a whole card in one
--- statement, so one instant = one coherent card). Only active bookings. The
--- browser reads this view; the ledger itself stays revoked from both roles.
+-- statement, so one instant = one coherent card, from one source). Only active
+-- bookings. The browser reads this view; the ledger itself stays revoked from
+-- both roles.
+-- Two automated sources are accepted (T-030, 2026-10-21): 'ufcstats_card' (the
+-- UFCStats page; blocked from GitHub's runners) and 'espn_scoreboard' (ESPN's
+-- public scoreboard JSON; adopting it is the owner's call). Whichever wrote the
+-- newest whole card wins; 'manual' and 'provider' rows are never shown.
 -- Owner-rights view (no security_invoker), the same pattern as the market views.
 create or replace view public.v_card_running_order as
 with latest as (
   select distinct on (event_id) event_id, source, observed_at
   from public.fight_bout_order
-  where source = 'ufcstats_card'
+  where source in ('ufcstats_card', 'espn_scoreboard')
   order by event_id, observed_at desc, id desc
 )
 select o.event_id, o.fight_id, o.bout_order, o.observed_at
