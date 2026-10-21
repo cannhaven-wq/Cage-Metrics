@@ -74,11 +74,8 @@ only you can settle:
 - *If approved:* new sign-ups get one confirmation link, and the Brief only
   ever goes to confirmed addresses.
 
-**B3. Social posting — T-105.** The generator now uses research data only
-(#104), and posting is hard-blocked.
-- *Recommendation:* approve manual posting only. Preview a dispatch run first.
-  Leave the schedule off for two weeks.
-- *If approved:* one PR deletes the `POSTING_BLOCKERS` line.
+**B3. Social posting — T-105. DECIDED 2026-10-21: paused** ([D-032](DECISIONS.md)).
+Nothing posts; the generator stays ready. Restarting needs a new decision.
 
 **B4. Two-minute email pop-up — T-035.**
 - *Recommendation:* decline. It works against COPY_STYLE's anti-tout rule, and
