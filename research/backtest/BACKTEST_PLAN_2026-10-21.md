@@ -155,3 +155,41 @@ No threshold, band, strategy, price or date range changes after results are
 seen. No subgroup is promoted to a headline. If a bug is found after results
 are seen, the fix and its effect are reported as a dated correction beside the
 original number, not in place of it.
+
+## Amendment A1 — 2026-10-21, before any result was computed
+
+**Source:** owner instruction relayed by the lead session, mid-task: *"before
+ANY profitability conclusion, establish and document the exact historical date
+coverage of our actionable odds data … restrict every strategy evaluation to
+the window where prices are genuinely actionable; if that window is too small
+for a conclusion, say so instead of concluding."*
+
+`motivated_by_observed_results: false`. No strategy, ROI, hit rate or CLV had
+been computed. Disclosed for completeness: before the instruction arrived, one
+of eight DEV extraction chunks (853 fights, ids 757–1665, pre-2025, prices +
+outcomes) had been pulled into the session's scratch space to be saved as CSV.
+Nothing was computed from it; it was deleted and never committed.
+
+**Changes:**
+
+1. **Coverage first.** RESULTS opens with a per-card / per-month table of
+   fights holding an *executable* two-sided price: a real sportsbook
+   (`v_odds_books_sportsbooks`; not BFO consensus, not the CFL consensus row,
+   not Polymarket or Kalshi), `is_live` not true, both sides quoted by the
+   same book at the same capture instant, captured strictly before
+   `v_fight_start_best.start_at`. Rows are split by writer (provenance fields
+   present or not). Counts and timings only — no price values and no outcomes —
+   so the table may span sealed months without reading anything PRED-001
+   protects.
+2. **Every strategy evaluation is restricted to the actionable window.** The
+   BFO consensus opener/closer (DEV, 1994–2024) is not an executable price and
+   is therefore **no longer evaluated** under §3–§6. The DEV analysis is
+   withdrawn, not run.
+3. **§1 is unchanged.** No outcome dated on or after 2025-01-01 is read. If the
+   actionable window lies entirely inside that range, the evaluable sample is
+   zero, and RESULTS says so and concludes nothing about profitability.
+4. **§4's cost measurement stands** (outcome-free, cards ≥ 2026-10-12), and is
+   reported as the cost any strategy would have to overcome.
+5. Added: the sample size the pass bar (§6) would need, so the owner can see
+   how far the data is from supporting a conclusion, and a specification of a
+   historical per-book dataset that would make a DEV-era test actionable.
