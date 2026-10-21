@@ -1,7 +1,8 @@
 name: Generate social content batches
 
 # Regenerates /social/<event>/batch.md + schedule.csv + finished post images
-# (/social/<event>/img/*.png) for every upcoming card from the live model state.
+# (/social/<event>/img/*.png) for every upcoming card from public market and
+# fight data (no picks, T-038).
 # This is a GENERATOR — it never posts to any account and needs no secrets. A
 # human reviews each batch before scheduling.
 #
@@ -12,7 +13,7 @@ name: Generate social content batches
 # Manual-only on purpose (workflow_dispatch, no cron): the batches are drafts
 # meant to be reviewed/edited, so we only regenerate on explicit request to
 # avoid clobbering hand-tuned copy. Run it from the Actions tab when a new card
-# lands or the model updates.
+# lands or the market moves.
 
 on:
   workflow_dispatch:

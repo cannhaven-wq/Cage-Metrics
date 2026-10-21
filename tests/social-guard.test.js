@@ -3,8 +3,8 @@
 // For three weeks after D-011 the Mon/Wed/Fri poster sent the retired model's
 // win percentages to X, because the generator stamped its own model copy
 // positioning:'research' and that stamp was the poster's only check. This pins
-// the three things that now stop it: no schedule, no self-stamp, and a guard
-// that reads the words.
+// the three things that now stop it: no schedule, a stamp only the guard can
+// grant, and a guard that reads the words.
 'use strict';
 const fs = require('fs');
 const path = require('path');
@@ -42,9 +42,37 @@ t('the poster has no schedule', () => {
   ok(!/^\s*schedule\s*:/m.test(live) && !/cron\s*:/.test(live), 'social-post.yml carries an active schedule');
 });
 
-t('the generator does not stamp its own copy research-era', () => {
+// THE STAMP RULE (rewritten 2026-10-21, T-038). Until then this test said the
+// generator must never stamp its own copy 'research', because a self-applied
+// label was exactly how model copy reached X. The research-era generator now
+// does stamp — and the rule is what makes that safe: the stamp may be applied
+// ONLY by code that has just run the word guard on the exact text being
+// stamped, and a stamped piece that reads as a forecast fails here. A stamp
+// with no guard in front of it is the old defect and still fails.
+t('the generator stamps research only on pieces its own guard has just passed', () => {
   const s = read('build/social-engine.js');
-  ok(!/positioning\s*:\s*['"]research['"]/.test(s), "social-engine.js stamps positioning:'research' again");
+  const code = s.replace(/^\s*\/\/.*$/gm, '');
+  const stamps = code.match(/positioning\s*:\s*['"]research['"]/g) || [];
+  if (!stamps.length) return; // not stamping at all is always safe
+  ok(stamps.length === 1, `social-engine.js stamps 'research' in ${stamps.length} places — keep it to buildQueue`);
+  ok(/require\(['"]\.\/social-copy-guard['"]\)/.test(code), 'social-engine.js stamps research without loading the guard');
+  const fn = code.slice(code.indexOf('function buildQueue'));
+  const body = fn.slice(0, fn.indexOf('\n}\n'));
+  ok(/positioning\s*:\s*['"]research['"]/.test(body), "the 'research' stamp is applied outside buildQueue");
+  const guardAt = body.search(/forecastClaim\(|refusalOf\(/);
+  const stampAt = body.search(/positioning\s*:\s*['"]research['"]/);
+  ok(guardAt > -1 && guardAt < stampAt, 'buildQueue stamps research before (or without) running the guard');
+
+  // And on what it actually produces: real data in, every stamped entry clean;
+  // a forecast in, nothing stamped.
+  const E = require('../build/social-engine');
+  const fx = require('./fixtures/social-engine-ufc333.json');
+  const b = E.buildBatch(fx);
+  const q = E.buildQueue([{ event: b.event, pieces: b.pieces }]);
+  ok(q.length > 0, 'the real-data fixture produced an empty queue');
+  q.forEach(e => ok(e.positioning !== 'research' || !forecastClaim(e.tweet), `stamped research but reads as a forecast: ${e.tweet}`));
+  const poisoned = [{ id: 'x', platform: 'X', pillar: 'x', image: { layout: 'verdict' }, copy: SHIPPED[0], tweet: SHIPPED[0], hashtags: '', cta: '', question: '' }];
+  ok(E.buildQueue([{ event: b.event, pieces: poisoned }]).length === 0, 'a shipped forecast was stamped research');
 });
 
 t('the poster checks the words, on both paths', () => {
