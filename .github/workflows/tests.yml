@@ -76,6 +76,11 @@ on:
     branches: ['**']
   pull_request:
   workflow_dispatch:
+    inputs:
+      print_supabase_umd:
+        description: 'Browser job only: print the SRI-verified supabase-js bytes (gzip+base64) so an offline sandbox can run the browser test on the exact file'
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -204,3 +209,60 @@ jobs:
         run: |
           npm install --no-audit --no-fund
           node test-fetch-odds.js
+
+  # T-089: the Cannon Card Brief signup, driven in real Chromium against a
+  # MOCKED database (page.route answers every *.supabase.co request). It proves
+  # the browser sends a plain insert and shows the right message for success,
+  # duplicate and failure, and sends nothing for an invalid address. It does
+  # NOT touch production: the production proof is the separate anon
+  # rolled-back insert, and a genuine live-site submission has not been done.
+  #
+  # Unlike the jobs above this one uses the network, read-only: npm, the
+  # Playwright browser download, and cdn.jsdelivr.net for the pinned
+  # supabase-js, which the browser then checks against the page's integrity=
+  # hash. No secret is passed.
+  browser:
+    name: Browser test (Card Brief signup, mocked DB)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      # The pinned supabase-js must hash to the integrity= every page carries;
+      # a mismatch means every page silently refuses the script.
+      - name: Verify the pinned supabase-js against its SRI hash
+        run: |
+          node -e '
+            const fs = require("fs"), crypto = require("crypto");
+            const m = fs.readFileSync("index.html", "utf8").match(/<script src="(https:\/\/cdn\.jsdelivr\.net\/npm\/@supabase\/supabase-js@[^"]+)" integrity="(sha384-[^"]+)"/);
+            if (!m) { console.error("pinned supabase-js tag not found"); process.exit(1); }
+            fetch(m[1]).then(r => { if (!r.ok) throw new Error("HTTP " + r.status); return r.arrayBuffer(); }).then(b => {
+              const buf = Buffer.from(b);
+              const got = "sha384-" + crypto.createHash("sha384").update(buf).digest("base64");
+              console.log("url:  " + m[1]); console.log("want: " + m[2]); console.log("got:  " + got);
+              fs.writeFileSync("/tmp/supabase.min.js", buf);
+              process.exit(got === m[2] ? 0 : 1);
+            }).catch(e => { console.error(e); process.exit(1); });
+          '
+
+      - name: Print the verified supabase-js bytes (manual runs only)
+        if: github.event_name == 'workflow_dispatch' && inputs.print_supabase_umd
+        run: |
+          echo "UMD_GZ_B64_BEGIN"
+          gzip -9 -n -c /tmp/supabase.min.js | base64 -w 0
+          echo
+          echo "UMD_GZ_B64_END"
+
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund --prefix tests/browser playwright@1.56.1
+          npx --prefix tests/browser playwright install --with-deps chromium
+
+      - name: Run browser test
+        run: node tests/browser/card-brief-signup.browser.js
