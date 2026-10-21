@@ -269,7 +269,7 @@
   <!-- Settled bets -->
   <div class="sec">
     <h2>Settled bets</h2>
-    <p class="desc">Your real history with running bankroll, how your price compared to the earliest price we captured, and ROI on dollars at risk.</p>
+    <p class="desc">Your real history with running bankroll, how your price compared to the earliest CFL-observed price, and ROI on dollars at risk.</p>
     <div class="tbl-wrap" id="settledTblWrap"></div>
   </div>
 
@@ -821,7 +821,7 @@
             <th>Settled</th><th>Pick</th><th>Book</th>
             <th class="num">Price</th><th class="num">Stake</th>
             <th>Status</th><th class="num">PnL</th>
-            <th class="num">vs first</th><th class="num">Running</th>
+            <th class="num" title="Your price compared with the earliest CFL-observed price for that side">vs earliest CFL-observed</th><th class="num">Running</th>
           </tr>
         </thead>
         <tbody>${rows.reverse().join('')}</tbody>
@@ -852,12 +852,12 @@
       <div class="perf-card">
         <div class="lbl">ROI on $ at risk</div>
         <div class="val ${roi > 0 ? 'pos' : roi < 0 ? 'neg' : ''}">${n > 0 ? (roi >= 0 ? '+' : '') + roi.toFixed(1) + '%' : '—'}</div>
-        <div class="sub">our simulated value flags: roughly break-even at flat stakes</div>
+        <div class="sub">your own bets at your own stakes</div>
       </div>
       <div class="perf-card">
-        <div class="lbl">Avg vs earliest price seen</div>
+        <div class="lbl">Avg vs earliest CFL-observed price</div>
         <div class="val ${avgClv > 0 ? 'pos' : avgClv < 0 ? 'neg' : ''}">${avgClv == null ? '—' : (avgClv >= 0 ? '+' : '') + avgClv.toFixed(1) + '%'}</div>
-        <div class="sub">positive = you beat the opener</div>
+        <div class="sub">positive = your price paid more than the earliest price CFL observed. Not a measure of value or profit</div>
       </div>
       <div class="perf-card">
         <div class="lbl">Total staked</div>

@@ -43,10 +43,10 @@
   E.CHECKOUT_BLOCKERS = [
     {
       id: 'T-054',
-      what: 'privacy.html does not name Plausible',
-      why: 'A third-party analytics processor runs on every page and the ' +
-           'privacy policy does not disclose it. Taking payment while that is ' +
-           'true is a worse problem than it is today.',
+      what: 'the privacy policy has not had legal review',
+      why: 'Corrected 2026-10-21 (owner-approved A1): it now names Plausible ' +
+           'and drops the false cookie, affiliate and IP claims. The owner ' +
+           'kept payments blocked until a lawyer has reviewed it.',
       owner: 'Owner + lawyer',
       draft: 'legal-review/PROPOSED_WORDING.md'
     },
