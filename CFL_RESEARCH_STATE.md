@@ -50,6 +50,7 @@ Last updated: 2026-09-16.
 | **DUR-002** | the same question for `PROP-0001@v2` — the uncalibrated hazard | **collecting** since 2026-09-16 | none |
 | **PRED-001** | the rules any win-probability model is judged by against the betting market: sealed holdout from 2025-01-01, log loss, pre-set accept/reject. A protocol, not an experiment — see [`research/protocol/`](research/protocol/PREDICTION_RESEARCH_PROTOCOL.md) | frozen 2026-10-12 | n/a |
 | **DISC-001** | do 20 pre-fight factors (KO history, layoffs, activity, opponent quality, rematches, common opponents…) add anything to the BFO closing odds? DEV only (before 2025), exploratory, ranks hypotheses and confirms nothing — see [`research/experiments/DISC-001/`](research/experiments/DISC-001/REPORT.md) | done 2026-10-21 | **none passed**; no candidate for a sealed-set look |
+| **DISC-P1** | Discovery Engine Phase 1 (`config_id` DISC-P1-v1): do any of 660 generated factors and factor-by-situation ideas add anything to the BFO closing odds? DEV only, exploratory; the primary research framework after the 2026-10-21 consolidation, with DISC-001 as its independent cross-check — see [`research/discovery/`](research/discovery/REPORT_PHASE1.md) and [`research/consolidation/AUDIT_2026-10-21.md`](research/consolidation/AUDIT_2026-10-21.md) | done 2026-10-21 | **none passed** (585 rejected, 75 too sparse); reproduced exactly; fix engine defects E1–E3 before the next run |
 | **PROP-0001** | the frozen fight-duration model. Not itself an experiment — the artifact under test | frozen, serving locks | n/a |
 
 ---

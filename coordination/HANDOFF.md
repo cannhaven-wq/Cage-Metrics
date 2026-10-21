@@ -11,6 +11,35 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (e) — Research consolidation: audited, reconciled, integrated (T-111)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Audited DISC-001 (d2) and the Discovery Engine (d1) from a session that
+  wrote neither. Both are sound, use the same pre-2025 data, read nothing
+  sealed, and reproduce exactly. They agree on every factor they share.
+- Their one disagreement is settled: the engine's "market under-confident in
+  2019-24" depends on the de-vig method and is mostly an artefact of it.
+- Integrated on `claude/wizardly-albattani-dwoze0` by merge (both projects'
+  commits and session trailers kept, nothing in either edited). Draft PR, not
+  merged. Python 845 passed / 0 failed; Node 42 of 42.
+- Found: two engine defects that would matter only once something passes
+  (E1, E2); the raw exports are already public on both branches; `out_real/`
+  on `main` has published 793 sealed-period results since August.
+
+## Next action
+
+1. **CFL Owner:** answer T-112 — six items, each with a recommendation, in
+   `research/consolidation/AUDIT_2026-10-21.md` §8. The two that block the
+   merge are the consolidation itself and option A/B/C for the data exports.
+2. **Claude, once T-112 item 3 is answered:** T-113 (engine v1.1), then
+   MKT-001 from `research/consolidation/PHASE2_RESEARCH_DESIGN_2026-10-21.md`.
+3. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
+
+---
+
 ## 2026-10-21 (d1) — Discovery Engine Phase 1 (T-109)
 
 **From:** Claude

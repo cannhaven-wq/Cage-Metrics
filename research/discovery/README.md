@@ -100,3 +100,20 @@ Reused, not rebuilt: `research/protocol/pred_protocol.py` (de-vig, log loss,
 card bootstrap, calibration, sample size, symmetry checker, DEV guard),
 `cfl_engine/engine.py` (point-in-time career features and Elo),
 `cfl_engine/clv/devig.py` (power and Shin de-vig). None of them is modified.
+
+## Status after the 2026-10-21 consolidation
+
+This engine is the primary research framework; DISC-001
+(`research/experiments/DISC-001/`) is kept as its independent cross-check.
+An audit by a session that wrote neither reproduced ledger entry 1 exactly and
+found three defects that did not affect Phase 1 (nothing reached the code they
+live in) but must be fixed, as a new `config_id`, before the next real run —
+see [`../consolidation/AUDIT_2026-10-21.md`](../consolidation/AUDIT_2026-10-21.md) §5:
+
+- **E1** — the power/Shin stability check is skipped when any fight lacks a
+  power or Shin price (7 DEV fights do), so it passes without being run.
+- **E2** — the screen is judged against the re-weighted market, the 0.003 size
+  test against the raw one, which already carries a de-vig gain of up to
+  +0.0023. Which reference to use is an owner decision (T-112).
+- **E3** — age, UFC record, win rate and takedown defence carry no
+  H1-contamination flag (PRED-001 §2).
