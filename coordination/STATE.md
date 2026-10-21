@@ -3,7 +3,20 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-20
+Last updated: 2026-10-21
+
+**Backlog reconciliation, 2026-10-21.** All 41 open rows were checked against
+code and production (40 listed plus T-091, which had an open PR and no row).
+Closed with evidence: T-089 (Card Brief signup verified on production), T-093
+(round records), T-006 (two-sided capture), T-011 (CI pins), T-029 (empty
+credit ledger now reads as tight), T-039 (draft post), T-055 (first funnel
+read), and T-003 / T-007 / T-024, which were finished long ago but never
+marked. Dropped as superseded: T-033, T-034, T-058, T-062. **28 remain open,
+and almost all of them wait on an owner decision** (payments, legal wording,
+Resend keys, running order, outbound marketing). See HANDOFF 2026-10-21.
+**Funnel finding for the owner:** Head-to-Head was the largest entry point
+for real visitors before T-103 retired it
+([read](../research/traffic/FUNNEL_READ_2026-10-21.md)).
 
 **Charts / Numbers switch, 2026-10-20 (T-104): live.** Card Lab, Market Lab
 and Factor Lab draw their figures as bars by default (tale of the tape, a

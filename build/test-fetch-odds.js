@@ -821,6 +821,14 @@ test('with no provider reading our own count still governs', () => {
   assert.strictEqual(remainingCredits(ledger, undefined), MONTHLY_CREDIT_CAP - 4);
 });
 
+test('an empty ledger with no provider reading is unknown, never the full allowance (T-029)', () => {
+  assert.strictEqual(remainingCredits([], undefined), undefined,
+    'a fresh odds_api_usage table must read as tight, not as 500 credits left');
+  assert.strictEqual(remainingCredits(null, undefined), undefined);
+  assert.strictEqual(remainingCredits([], 120), 120,
+    'once the provider has reported a balance, it is believed');
+});
+
 test('a spent-out month reaches the STOP condition through our own count alone', () => {
   const ledger = Array.from({ length: MONTHLY_CREDIT_CAP }, () => ({ credits_charged: 1 }));
   const remaining = remainingCredits(ledger, 19500);

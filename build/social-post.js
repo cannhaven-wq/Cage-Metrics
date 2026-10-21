@@ -321,7 +321,11 @@ async function postToReddit(title, selftext) {
 }
 
 // -------------------- main --------------------
-(async () => {
+// build/draft-post.js requires this file for buildPost, so the manual draft and
+// the auto-post can never describe the same card two ways. Posting only runs
+// when this file is executed directly.
+module.exports = { buildPost };
+if (require.main === module) (async () => {
   try {
     fs.mkdirSync(STATE_DIR, { recursive: true });
 

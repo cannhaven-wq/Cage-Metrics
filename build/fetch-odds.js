@@ -520,10 +520,19 @@ function spentThisMonth(rows) {
 
 // The budget the governor plans against: whichever of the two accounts is
 // tighter.
+//
+// An EMPTY ledger with no provider reading is unknown, not "nothing spent"
+// (T-029). A freshly created odds_api_usage table — or one we have never
+// written to this month — would otherwise read as the full allowance and send
+// the governor to its finest rung on a false premise. Unknown reads as tight;
+// the first capture records the provider's own balance, and from then on the
+// ledger seeds itself.
 function remainingCredits(ledgerRows, providerRemaining) {
   const byOurCount = MONTHLY_CREDIT_CAP - spentThisMonth(ledgerRows);
   const clamped = clampToFreeAllowance(providerRemaining);
-  if (!Number.isFinite(clamped)) return byOurCount;
+  if (!Number.isFinite(clamped)) {
+    return (ledgerRows || []).length ? byOurCount : undefined;
+  }
   return Math.min(byOurCount, clamped);
 }
 
