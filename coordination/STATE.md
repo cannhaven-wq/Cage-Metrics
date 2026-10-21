@@ -3,7 +3,7 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-21 (closeout, second pass)
+Last updated: 2026-10-21
 
 **Closeout, second pass, 2026-10-21.** Merged and live: #104 social generator
 (research data only, posting hard-blocked), #105 dead-man outside observer
