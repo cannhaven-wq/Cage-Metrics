@@ -10,6 +10,11 @@
 # committing the JSON to cfl_engine/event_flow/REAL_PAGE_CHECK.json is a
 # deliberate, reviewed commit by a person (or by Claude, citing this run).
 #
+# If the listings cannot be read, it still reads UFC Fight Night: Buckley vs.
+# Malott (55e94a9b525dcf45, CFL event 4368, 2026-10-17) so the failure is
+# recorded against a real event page too. Every body fetched is attached to the
+# artifact under fetched/ — never committed.
+#
 # It does not get past a bot wall. An interstitial instead of the card is
 # reported as page_unreadable and the run fails.
 name: Event flow — real-page check
@@ -53,6 +58,8 @@ jobs:
           for e in $EVENTS; do args="$args --event $e"; done
           python cfl_engine/event_flow/real_page_check.py \
             --out REAL_PAGE_CHECK.json \
+            --save-dir fetched \
+            --fallback-event 55e94a9b525dcf45 \
             --checked-by "GitHub Actions run ${{ github.run_id }} (real_page_check.py; $RUN_URL)" \
             $args
 
@@ -61,5 +68,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: REAL_PAGE_CHECK
-          path: REAL_PAGE_CHECK.json
+          path: |
+            REAL_PAGE_CHECK.json
+            fetched/
           if-no-files-found: warn

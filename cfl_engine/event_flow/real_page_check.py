@@ -41,6 +41,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import hashlib
 import html as htmlmod
 import json
 import re
@@ -142,6 +143,16 @@ def looks_like_challenge(page_html: str) -> bool:
     return "fight-details" not in low and any(m in low for m in CHALLENGE_MARKERS)
 
 
+def evidence(page_html: str) -> dict:
+    """What came back, without storing a third party's page in the repo."""
+    m = re.search(r"<title[^>]*>(.*?)</title>", page_html, re.S | re.I)
+    return {
+        "sha256": hashlib.sha256(page_html.encode("utf-8")).hexdigest(),
+        "html_title": " ".join(htmlmod.unescape(m.group(1)).split()) if m else None,
+        "has_fight_rows": "fight-details" in page_html,
+    }
+
+
 def check_page(ufc_event_id: str, page_html: str, http_status: int | None = None) -> dict:
     """One page -> one report entry. Never raises; an unreadable page is a verdict."""
     entry: dict = {
@@ -149,6 +160,7 @@ def check_page(ufc_event_id: str, page_html: str, http_status: int | None = None
         "url": EVENT_URL.format(ufc_event_id=ufc_event_id),
         "http_status": http_status,
         "bytes": len(page_html.encode("utf-8")),
+        **evidence(page_html),
     }
     if http_status is not None and http_status != 200:
         entry.update(status="page_unreadable",
@@ -282,12 +294,22 @@ def build_report(entries: list[dict], run: dict) -> dict:
     return report
 
 
+def save(directory: Path | None, name: str, body: str) -> None:
+    if directory:
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / name).write_text(body, encoding="utf-8")
+
+
 # ---------------------------------------------------------------------------
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--event", action="append", default=[],
                     help="UFCStats event id; default = latest completed + next upcoming")
+    ap.add_argument("--fallback-event", action="append", default=[],
+                    help="UFCStats event id to read anyway when the listings yield nothing")
+    ap.add_argument("--save-dir", type=Path,
+                    help="save every fetched body here (for the run's artifact, never the repo)")
     ap.add_argument("--from-file", type=Path, help="read one page from disk (needs one --event)")
     ap.add_argument("--out", type=Path, default=Path("REAL_PAGE_CHECK.json"))
     ap.add_argument("--checked-by", default="automated (real_page_check.py)")
@@ -313,17 +335,21 @@ def main() -> int:
             listings = {}
             for kind, url in (("completed", COMPLETED_URL), ("upcoming", UPCOMING_URL)):
                 status, body = fetch(url)
+                save(args.save_dir, f"listing_{kind}.html", body)
                 rows = parse_listing(body) if status == 200 else []
                 listings[kind] = rows
                 run[f"{kind}_listing"] = {"url": url, "http_status": status,
                                           "events_found": len(rows),
-                                          "challenge": looks_like_challenge(body)}
+                                          "challenge": looks_like_challenge(body),
+                                          **evidence(body)}
             targets = pick_events(listings["completed"], listings["upcoming"], now.date())
             if not targets:
-                entries.append({"status": "page_unreadable",
+                entries.append({"status": "page_unreadable", "kind": "listing",
                                 "reason": "no events found on the UFCStats listings"})
+                targets = [{"ufc_event_id": e, "kind": "fallback"} for e in args.fallback_event]
         for t in targets:
             status, body = fetch(EVENT_URL.format(ufc_event_id=t["ufc_event_id"]))
+            save(args.save_dir, f"event_{t['ufc_event_id']}.html", body)
             entry = check_page(t["ufc_event_id"], body, status)
             entries.append({**entry, "kind": t["kind"],
                             **({"listing_name": t["name"], "listing_date": t["date"]}
