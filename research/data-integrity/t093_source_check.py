@@ -23,6 +23,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from http.cookiejar import CookieJar
 from html import unescape
 
 UA = ("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -60,6 +61,15 @@ FIGHTS = [
 ]
 
 
+# One cookie jar for the whole run, like a browser session. The first run
+# (2026-10-21, run 39620094556) got HTTP 200 with a ~3 KB page holding no fight
+# markup for all 23 URLs, controls included, so the response is now described
+# (final URL, server, cookies set, a text snippet) rather than guessed at.
+JAR = CookieJar()
+OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(JAR))
+META = {}
+
+
 def fetch(url):
     """Return (status, body_text, error). Never raises."""
     last_err = None
@@ -70,8 +80,13 @@ def fetch(url):
             "Accept-Language": "en-US,en;q=0.8",
         })
         try:
-            with urllib.request.urlopen(req, timeout=30) as r:
-                return r.status, r.read().decode("utf-8", "replace"), None
+            with OPENER.open(req, timeout=30) as r:
+                body = r.read().decode("utf-8", "replace")
+                META[url] = {"final_url": r.geturl(),
+                             "server": r.headers.get("Server"),
+                             "content_type": r.headers.get("Content-Type"),
+                             "cookies_set": sorted({c.name for c in JAR})}
+                return r.status, body, None
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 return 404, "", "HTTP 404"
@@ -149,8 +164,16 @@ def main():
             rec["sha256"] = hashlib.sha256(html.encode()).hexdigest()
             with open(os.path.join(outdir, "pages", f"{fid}.html"), "w") as fh:
                 fh.write(html)
+        rec.update(META.get(url, {}))
         a = analyse(html) if html else {}
         rec.update(a)
+        if html and not a.get("names_on_page"):
+            rec["title"] = text((re.search(r"<title[^>]*>(.*?)</title>", html, re.S) or [None, ""])[1])
+            rec["body_snippet"] = text(html)[:400]
+            if i < 2 or role == "control":
+                print(f"--- {fid}: no fight markup. final_url={rec.get('final_url')} "
+                      f"server={rec.get('server')} cookies={rec.get('cookies_set')} "
+                      f"title={rec['title']!r}\n    raw head: {html[:1500]!r}", flush=True)
         if a.get("names_on_page"):
             on = " ".join(a["names_on_page"]).lower()
             rec["names_match"] = all(n.split()[-1].lower() in on for n in (fa, fb))
