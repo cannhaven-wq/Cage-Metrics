@@ -2093,3 +2093,28 @@ striker, but the owner does not want a calculated label at all.
   discipline pill is a sourced fact with its source printed beside it.
 - `v_fighter_style` and `fight-lab.js::styleRead` are kept, unread, so the
   change is a page switch to undo.
+
+---
+
+## D-031 — A historical betting evaluation is authorized, budget up to $30
+
+| field | value |
+|---|---|
+| date | 2026-10-20 |
+| decided by | Reed Cannon (owner); recorded 2026-10-21 from the owner's instruction in session: "Create a tracked task for the detailed historical UFC betting evaluation authorized on October 20. The budget is up to $30. Preserve PRED-001 and sealed holdout integrity." |
+| task | T-106 |
+| level | L3 |
+| reversible | the evaluation is; money spent is not |
+
+**Plain version.** The owner authorized a detailed test of whether any betting
+strategy beat the market historically after realistic costs, with up to $30 to
+spend on data. The test must not read sealed PRED-001 outcomes and must not be
+tuned toward a positive result.
+
+**What was done under it.** BT-001 ran on 2026-10-21 (T-106) and found no
+scorable window: CFL's executable-price history begins 2026-09-19 and every
+settled fight since then is sealed or still collecting. **Nothing has been
+spent.** Whether to spend the $30 on pre-2025 historical odds is T-107 — this
+entry authorizes the budget, it does not make the purchase decision, and an
+agent session cannot make a purchase.
+

@@ -11,6 +11,30 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (b) — Closeout second pass: eight workstreams, seven PRs merged
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-21
+
+- Merged and deployed: #104, #105, #106, #107, #108, #109, #110 (see STATE).
+  Each was green on its own; main's combined run and a live-site check on
+  main were in flight at this commit.
+- Draft PRs for the owner: #102 (Terms + Privacy, 33 questions answered with
+  recommendations), #103 (edges.html dated correction).
+- Corrected an earlier count: 27 open after the first pass, not 28.
+- T-093 is reopened as unverified; it was closed too early.
+
+## Next action
+
+1. **Owner:** answer `coordination/DECISION_PACKET_2026-10-21.md` by item
+   number.
+2. **Claude:** merge #111 (T-093 evidence) and #112 (signup browser test) when
+   green; fold the running-order workstream (T-096/T-030/T-032) into the
+   packet's section F.
+
+---
+
 ## 2026-10-21 — Backlog reconciliation and closeout
 
 **From:** Claude
