@@ -5,6 +5,20 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-21
 
+**Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
+matches what the site does (no cookies, no affiliate links, named
+processors), the disclaimer's model sentence is a market example, My Book
+says "earliest CFL-observed price", `about.html` no longer names the owner,
+and the dated Edge Factors correction is published (#103, #116). Removed as
+declined or deferred: the running-order work (#113 reverted; the owner
+confirmed the live order is correct) and the dead-man heartbeat (#117).
+Prepared but **not executed**: the `fight_odds` lock plus a correction
+ledger, all writers checked compatible, target Sunday 2026-10-25 on explicit
+go-ahead. Deferred: price, Stripe, Resend, double-opt-in activation, the
+email pop-up, the outside watcher. Public records say "CFL Owner"; existing
+name exposure is in `PRIVACY_NAME_EXPOSURE_2026-10-21.md`. Open: 18.
+
+
 **Closeout, second pass, 2026-10-21.** Merged and live: #104 social generator
 (research data only, posting hard-blocked), #105 dead-man outside observer
 (built, needs owner steps) + Fight Lab style copy fix, #106 double opt-in

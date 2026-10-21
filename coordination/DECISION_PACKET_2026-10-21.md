@@ -1,5 +1,9 @@
 # Owner decision packet — 2026-10-21
 
+> **ANSWERED 2026-10-21 — see [D-033](DECISIONS.md).** The owner's answers supersede the
+> recommendations below wherever they differ (A3, A4, B1, B4, C3, C4, D4, F1, F2 and
+> the alert limits in A5 went another way). Kept as the record of what was asked.
+
 Everything Claude could build without you is built, tested and merged, or
 waiting in a draft PR. What is left here is only what CRITICAL_GATES.md
 reserves for you: legal wording, money, published claims, migrations on

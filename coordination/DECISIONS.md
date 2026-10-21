@@ -2136,3 +2136,44 @@ agent session cannot make a purchase.
 has a schedule, and a manual dispatch defaults to dry run. Restarting is a
 new owner decision, not a config change.
 
+---
+
+## D-033 — The CFL Owner's answers to the 2026-10-21 decision packet
+
+| field | value |
+|---|---|
+| date | 2026-10-21 |
+| decided by | CFL Owner, in session ("Owner decisions: final execution prompt"). From this entry on, public records name the owner as "CFL Owner" (E2) |
+| task | T-054, T-048, T-067, T-068, T-066, T-061, T-074, T-073, T-090, T-105, T-035, T-031, T-091, T-076, T-025, T-050, T-041, T-049, T-002, T-009, T-107, T-093, T-096, T-030, T-032 |
+| level | L3 |
+| reversible | each item is, except anything spent or published; nothing was spent and no migration was executed |
+
+**Plain version.** The owner answered every item in
+`DECISION_PACKET_2026-10-21.md`. Where these answers conflict with the
+packet's recommendations, the answers win.
+
+| item | decision |
+|---|---|
+| A1 privacy policy | **Approved:** correct the live policy to what the site actually does, removing the cookie, cookie-banner, affiliate and IP claims. Terms and payments stay blocked pending legal review |
+| A2 disclaimer | **Approved:** "A fighter the betting market prices as a 62% favorite still loses roughly 38% of the time, if that price is accurate." Remove the test exemption |
+| A3 price | **Deferred:** no $9.99 / $89 yet; finish evaluating the Pro offering first |
+| A4 Stripe | **Deferred:** no products, no checkout, no charges |
+| A5 Free/Pro | **Approved:** current line movement free; movement history older than 14 days Pro; current per-book odds free; historical per-book odds Pro. **Deferred:** alert limits. Nothing enforced while billing is off |
+| B1 Resend | **Deferred** |
+| B2 double opt-in | **Approved as a requirement;** activation and the migration deferred; no email sent |
+| B3 social | **Remains paused** (D-032) |
+| B4 email pop-up | **Deferred** until there is meaningful real-visitor data |
+| C2 lock stored odds | **Conditionally approved:** verify every writer, add an auditable correction mechanism, target Sunday 2026-10-25; **execute only on explicit authorization** |
+| C3 rounds-replace RPC | **Declined** (PR #73 closed) |
+| C4 outside watcher | **Deferred:** evaluate existing monitoring first; add no watcher, token, database object or service |
+| D1 Edge Factors correction | **Approved** after independent verification |
+| D2 Parlay and My Book | **Approved:** keep both, no expansion |
+| D3 My Book comparison | **Approved:** label it "Earliest CFL-observed price"; never value, profit or edge |
+| D4 jurisdiction labels | **Declined:** listings stay neutral |
+| E1 DUR-001 clauses | **Approved** (f), (g), (j), (k). **Rejected** (a)–(e): they would change scoring after outcomes were visible. New methods are exploratory and tested prospectively |
+| E2 owner identity | **Approved, private only.** No personal name on the public site or in new public GitHub records; existing exposure reported, not silently rewritten |
+| E3 historical odds | **Approved for later:** budget up to $30, nothing bought now; requirements prepared |
+| E4 fight 8566 | **Conditionally approved:** correct to KO/TKO only once sources agree; otherwise document the conflict |
+| F1 ESPN | **Declined** |
+| F2 running-order migration | **Declined.** The owner inspected the live site: fights already display in the correct order. Running order closes as **no action required; current behaviour accepted by the owner** |
+

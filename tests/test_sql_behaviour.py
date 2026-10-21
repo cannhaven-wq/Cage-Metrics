@@ -644,3 +644,63 @@ class TestProposedMigrationsApply(PostgresCase):
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+
+
+class TestFightOddsCorrectionLedger(PostgresCase):
+    """Decision packet C2: corrections are recorded, never made by editing a
+    quote. Applied on top of the immutability migration, as it would be."""
+
+    def setUp(self):
+        self.db = self.fresh_db("clv_corrections")
+        for f in ("proposed_2026-09-16_fight_odds_immutability.sql",
+                  "proposed_2026-10-21_fight_odds_corrections.sql"):
+            self.psql_file(os.path.join(CLV, f), db=self.db)
+        self.psql("""
+          insert into public.fight_odds (id, fight_id, fighter_id, book_id,
+                american_odds, implied_prob, captured_at)
+            overriding system value
+            values (1, 1, 101, 11, 150, 0.40, '2026-09-12T21:50:00+00');
+        """, db=self.db)
+
+    def test_a_correction_is_recorded_and_the_quote_is_untouched(self):
+        self.psql("insert into public.fight_odds_corrections "
+                  "(fight_odds_id, action, reason) values "
+                  "(1, 'exclude', 'book posted a stale line for a cancelled bout')",
+                  db=self.db)
+        out = self.psql("select american_odds from public.fight_odds where id = 1",
+                        db=self.db)
+        self.assertIn("150", out)
+        out = self.psql("select count(*) from public.fight_odds_corrections", db=self.db)
+        self.assertIn("1", out)
+
+    def test_a_correction_cannot_be_edited_or_deleted(self):
+        self.psql("insert into public.fight_odds_corrections "
+                  "(fight_odds_id, action, reason) values "
+                  "(1, 'exclude', 'book posted a stale line for a cancelled bout')",
+                  db=self.db)
+        for sql in ("update public.fight_odds_corrections set reason = 'changed my mind!!'",
+                    "delete from public.fight_odds_corrections",
+                    "truncate public.fight_odds_corrections"):
+            err = self.psql(sql, db=self.db, expect_error=True)
+            self.assertIn("append-only", err)
+
+    def test_a_reassignment_needs_a_target_and_a_reason(self):
+        err = self.psql("insert into public.fight_odds_corrections "
+                        "(fight_odds_id, action, reason) values "
+                        "(1, 'reassign_fight', 'moved to the canonical booking')",
+                        db=self.db, expect_error=True)
+        self.assertIn("reassign_needs_target", err)
+        err = self.psql("insert into public.fight_odds_corrections "
+                        "(fight_odds_id, action, reason) values (1, 'exclude', 'bad')",
+                        db=self.db, expect_error=True)
+        self.assertIn("check", err.lower())
+
+    def test_browser_roles_cannot_reach_it(self):
+        out = self.psql("select has_table_privilege('anon','public.fight_odds_corrections','select')::text"
+                        " || has_table_privilege('authenticated','public.fight_odds_corrections','insert')::text",
+                        db=self.db)
+        self.assertIn("falsefalse", out)
+
+    def test_the_migration_is_rerunnable(self):
+        self.psql_file(os.path.join(CLV, "proposed_2026-10-21_fight_odds_corrections.sql"),
+                       db=self.db)
