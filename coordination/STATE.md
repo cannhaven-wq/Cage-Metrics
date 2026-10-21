@@ -3,7 +3,20 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-21
+Last updated: 2026-10-21 (closeout, second pass)
+
+**Closeout, second pass, 2026-10-21.** Merged and live: #104 social generator
+(research data only, posting hard-blocked), #105 dead-man outside observer
+(built, needs owner steps) + Fight Lab style copy fix, #106 double opt-in
+(built, migration not applied, sending blocked), #107 BT-001 backtest (no
+scorable window: 0 fights), #108 old Head-to-Head links → Fight Lab, #109
+billing readiness (Stripe period-end fail-closed fix; no charges), #110
+live-site check fixed (it was testing pre-redesign markup; production was
+fine). Drafts for the owner: #102 legal, #103 edges correction. T-093 is
+reopened as **unverified** (UFCStats blocks GitHub runners). Open: 27. Every
+owner decision, with a recommendation, is in
+[`DECISION_PACKET_2026-10-21.md`](DECISION_PACKET_2026-10-21.md).
+
 
 **Backlog reconciliation, 2026-10-21.** All 41 open rows were checked against
 code and production (40 listed plus T-091, which had an open PR and no row).
@@ -11,7 +24,7 @@ Closed with evidence: T-089 (Card Brief signup verified on production), T-093
 (round records), T-006 (two-sided capture), T-011 (CI pins), T-029 (empty
 credit ledger now reads as tight), T-039 (draft post), T-055 (first funnel
 read), and T-003 / T-007 / T-024, which were finished long ago but never
-marked. Dropped as superseded: T-033, T-034, T-058, T-062. **28 remain open,
+marked. Dropped as superseded: T-033, T-034, T-058, T-062. **27 remain open,
 and almost all of them wait on an owner decision** (payments, legal wording,
 Resend keys, running order, outbound marketing). See HANDOFF 2026-10-21.
 **Funnel finding for the owner:** Head-to-Head was the largest entry point
