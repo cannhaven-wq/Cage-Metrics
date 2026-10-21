@@ -51,10 +51,11 @@ observed, twice, on cards we actually read.
 
 What this module does NOT do
 ----------------------------
-It writes nothing. It returns a verdict. Applying that verdict — setting
-`fights.is_active = false`, with the observation that justified it — is a
-separate step that does not exist yet, and deliberately: the column is not on the
-table today.
+It writes nothing. It returns a verdict, and `decision_evidence` returns the
+observations that verdict rests on. Applying it is `ingest_bout_order.py`'s job,
+under `--execute` only: it first appends the decision, with that evidence, to
+`fight_booking_status_log` (append-only), then sets `fights.is_active` and no
+other column. No decision log, no flag change.
 """
 from __future__ import annotations
 
@@ -224,3 +225,49 @@ def plan_retirements(
         pending=tuple(pending),
         awaiting_confirmation=bool(pending),
     )
+
+
+# ---------------------------------------------------------------------------
+# The evidence a decision is recorded against
+# ---------------------------------------------------------------------------
+RETIRE = "retired_absent_from_card"
+REACTIVATE = "reactivated_back_on_card"
+
+
+def decision_evidence(rows: list[dict], fight_id: int, is_active: bool,
+                      required: int = REQUIRED_CONFIRMATIONS) -> dict:
+    """The observations that justify setting `is_active` on one booking.
+
+    STALE_BOOKING_LIFECYCLE.md §1: retirement is "a decision recorded against
+    that observation, never a silent side effect of one page load". This is the
+    record: which complete-card observations, by instant, the decision rests on.
+
+    * retiring (`is_active=False`): the consecutive latest observations that lack
+      the fight — at least `required` of them, or this raises, because a caller
+      asking for a retirement the rule did not confirm has a bug;
+    * reactivating (`is_active=True`): the latest observation, which must
+      contain the fight.
+
+    `observed_at` (the newest instant in the evidence) is what makes a decision
+    unique: the same decision against the same observation is one decision, so
+    a retried run cannot record it twice.
+    """
+    observations = card_observations(rows)
+    if not observations:
+        raise ValueError("no observation on record; nothing can be decided")
+    if is_active:
+        latest = observations[0]
+        if fight_id not in latest.fight_ids:
+            raise ValueError(f"fight {fight_id} is not on the latest observation; "
+                             f"it cannot be reactivated from it")
+        return {"fight_id": fight_id, "is_active": True, "reason": REACTIVATE,
+                "observed_at": latest.observed_at,
+                "evidence_observed_at": [latest.observed_at],
+                "confirmations": 0, "required": required}
+    v = verdict_for(rows, fight_id, required=required)
+    if v.state != CONFIRMED:
+        raise ValueError(f"fight {fight_id} is {v.state}, not confirmed: {v.reason}")
+    absent = [o.observed_at for o in observations[: v.confirmations]]
+    return {"fight_id": fight_id, "is_active": False, "reason": RETIRE,
+            "observed_at": absent[0], "evidence_observed_at": absent,
+            "confirmations": v.confirmations, "required": required}
