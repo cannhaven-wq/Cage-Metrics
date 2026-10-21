@@ -11,6 +11,31 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (c) — Owner decisions applied (D-033)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Recorded every packet answer as D-033; the queue is reconciled (18 open,
+  all blocked on a deferred decision except T-077 and T-108).
+- Shipped: #103 (Edge Factors correction), #116 (privacy, disclaimer, My Book
+  label, owner's name off the about page), #117 (running-order work and the
+  dead-man heartbeat removed). PR #73 closed as declined.
+- Prepared, not executed: the C2 lock and correction ledger
+  (`research/clv/C2_FIGHT_ODDS_LOCK_READINESS_2026-10-21.md`).
+- Fight 8566 stays unchanged; the conflict is documented.
+
+## Next action
+
+1. **CFL Owner:** say "execute C2" on or after Sunday 2026-10-25 if UFC 333
+   is over and no card is in progress; Claude then applies both files with
+   `psql` and runs the checks in the readiness note.
+2. **CFL Owner:** choose a remediation option in
+   `coordination/PRIVACY_NAME_EXPOSURE_2026-10-21.md`, or keep option 1.
+
+---
+
 ## 2026-10-21 (b) — Closeout second pass: eight workstreams, seven PRs merged
 
 **From:** Claude
