@@ -118,12 +118,9 @@ const BANNED_READS = [
 // names the one pattern — anything else on that page still fails.
 const EXEMPT = {
   'cardio.html': [/\b(High|Medium|Low) confidence\b/i],
-  // Legal text, not product copy: section 2 of the disclaimer illustrates
-  // variance with "a 62% favorite under our model". Legal wording belongs to
-  // the owner and the lawyer (CRITICAL_GATES.md L3 item 9), so it is listed for
-  // them in research/commercial/COMMERCIAL_VALIDATION_2026-10-12.md rather than
-  // rewritten here. Remove this exemption when the sentence changes.
-  'disclaimer.html': [/\bour model\b/i],
+  // disclaimer.html's "62% favorite under our model" sentence was rewritten to
+  // a market example on 2026-10-21 (owner-approved, packet A2); its exemption
+  // is gone, so the page is held to every rule above.
 };
 
 PRODUCT.forEach(file => {
