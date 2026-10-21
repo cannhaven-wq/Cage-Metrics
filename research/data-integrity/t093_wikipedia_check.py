@@ -220,6 +220,17 @@ def find_row(page, fa, fb):
     return best
 
 
+def _method_family(m):
+    m = (m or "").lower()
+    if "decision" in m:
+        return "decision"
+    if "submission" in m and "submission to" not in m:
+        return "submission"
+    if re.search(r"\bt?ko\b|tko|knockout|strikes|punches|cut|doctor", m):
+        return "ko_tko"
+    return m.strip() or None
+
+
 def round_time(cells):
     for i, c in enumerate(cells):
         if re.fullmatch(r"\d{1,2}:\d{2}", c):
@@ -257,7 +268,21 @@ def main():
         page_log[ev] = {"tried": tried, "chosen": chosen and chosen["title"],
                         "revid": chosen and chosen["revid"],
                         "rules_text": rules_sentences(chosen["wikitext"]) if chosen else []}
-        print(f"EVENT {ev!r}: page={page_log[ev]['chosen']!r} revid={page_log[ev]['revid']} tried={[t['title'] for t in tried]}", flush=True)
+        # Context for reading a blank round cell: is it blank for every bout on
+        # the page (the page's convention), or only for some?
+        if chosen:
+            allrows = [r for r in rows_of(chosen["wikitext"]) if r.get("template")]
+            secs = {}
+            for r in allrows:
+                s_ = secs.setdefault(r["heading"] or "(none)", {"bouts": 0, "blank_round": 0})
+                s_["bouts"] += 1
+                s_["blank_round"] += r["round"] == ""
+            page_log[ev]["bouts_on_page"] = len(allrows)
+            page_log[ev]["bouts_with_blank_round_cell"] = sum(r["round"] == "" for r in allrows)
+            page_log[ev]["sections"] = secs
+        print(f"EVENT {ev!r}: page={page_log[ev]['chosen']!r} revid={page_log[ev]['revid']} "
+              f"bouts={page_log[ev].get('bouts_on_page')} blank_round={page_log[ev].get('bouts_with_blank_round_cell')} "
+              f"sections={page_log[ev].get('sections')} tried={[t['title'] for t in tried]}", flush=True)
         for s in page_log[ev]["rules_text"]:
             print(f"    rules: {s}", flush=True)
 
@@ -290,9 +315,11 @@ def main():
                         " ".join(row["cells"]) + " " + row["heading"], re.I)),
                     "time_agrees_with_cfl": (w_time == tm) if w_time else None,
                     "round_agrees_with_cfl": (str(rnd) == w_rnd) if w_rnd and w_rnd.isdigit() else None,
-                    # An empty round cell on these pages means the bout was not
-                    # fought in rounds (one continuous period).
-                    "wiki_says_no_rounds": (w_rnd in ("", "N/A", "\u2014", "-")) if w_rnd is not None else None,
+                    # A blank round cell is only that: Wikipedia records no
+                    # round number. Read it with the event's rules_text and
+                    # bouts_with_blank_round_cell, not as proof of no rounds.
+                    "wiki_round_cell_blank": (w_rnd == "") if w_rnd is not None else None,
+                    "method_agrees_with_cfl_family": _method_family(row["cells"][4]) == _method_family(meth),
                 })
         # Wikipedia never carries strike/takedown statistics; this cannot move.
         rec["per_round_statistics_at_source"] = "unverified"
