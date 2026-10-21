@@ -2,30 +2,44 @@
 """Probe candidate running-order sources from a GitHub runner (T-030).
 
 UFCStats answers GitHub's runners with an HTTP 200 anti-bot page, so the
-ingester cannot read it from Actions. This asks the alternatives, once each,
-and reports what actually came back — status, size, whether it is a challenge
-page, and the fields a running order would need (bout order, card segment,
-start time). It writes nothing anywhere except stdout and --out-dir.
+ingester cannot read it from Actions. This asks the alternatives and reports
+what actually came back. It writes nothing anywhere except stdout and --out-dir.
 
-Not probed: UFC.com. Its Terms of Use prohibit automated access
-(research/event-card/EVENT_CARD_PLAN_2026-10-15.md), so it is not a source this
-repo may use without UFC's written permission.
+Findings so far (2026-10-21), each from a run of this probe:
+  * site.api.espn.com            -> HTTP 403 Access Denied (run 39621346144)
+  * site.web.api.espn.com        -> HTTP 200, scoreboard JSON with every bout
+                                    in walkout order and section start times
+                                    (run 39622101981); /summary -> 404
+  * sports.core.api.espn.com     -> HTTP 200 (index only)
+  * en.wikipedia.org/w/api.php   -> HTTP 200, the event article's wikitext
+Not probed: UFC.com — its Terms of Use prohibit automated access.
 
-Every sample is also printed raw between markers with its sha256, so it can be
-recovered from the job log (the artifact store is out of this sandbox's reach)
-and checked byte for byte.
+For each source it prints a FIXTURE: the raw response cut down by the same
+helpers the adapters use (`sources.espn_fixture`,
+`sources.wikipedia_results_section`), no value changed, with the sha256 of both
+the raw response and the fixture. That is how the real samples in
+`fixtures/` were recovered from the job log (the artifact store is out of the
+agent sandbox's reach) and checked byte for byte.
 """
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-import re
 import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from cfl_engine.event_flow.sources import (  # noqa: E402
+    SourceError,
+    espn_fixture,
+    parse_espn_scoreboard,
+    wikipedia_results_section,
+)
 
 UA = "CannonFightLab-source-probe/1.0 (+https://cannonfightlab.com; research use)"
 # site.api.espn.com answered runners 403 (run 39621346144); site.web.api answered 200.
@@ -44,46 +58,31 @@ def fetch(url: str) -> tuple[int, str, str]:
         return 0, "", f"{type(e).__name__}: {e}"
 
 
-def dump(name: str, body: str, out_dir: Path | None) -> None:
+def sha(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def emit(name: str, raw: str, fixture: str, out_dir: Path | None) -> None:
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
-        (out_dir / name).write_text(body, encoding="utf-8")
-    # Raw, with its sha256, so a copy recovered from the job log can be checked
-    # byte for byte. Very large bodies are only hashed.
-    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
-    print(f"-----BEGIN RAW {name} sha256={digest} bytes={len(body.encode())}-----")
-    print(body if len(body) < 120_000 else "(too large to print; hash only)")
-    print(f"-----END RAW {name}-----")
-
-
-def describe_espn_event(ev: dict) -> list[str]:
-    lines = [f"  event {ev.get('id')} {ev.get('name')!r} date={ev.get('date')}"]
-    comps = ev.get("competitions") or []
-    lines.append(f"  competitions: {len(comps)}; keys of first: "
-                 f"{sorted((comps[0] if comps else {}).keys())}")
-    for i, c in enumerate(comps):
-        names = [((x.get("athlete") or {}).get("displayName")) for x in c.get("competitors", [])]
-        seg = c.get("cardSegment")
-        seg = seg.get("name") if isinstance(seg, dict) else seg
-        lines.append(f"   [{i}] date={c.get('date')} startDate={c.get('startDate')} "
-                     f"segment={seg!r} matchNumber={c.get('matchNumber')} "
-                     f"type={(c.get('type') or {}).get('abbreviation')} "
-                     f"status={((c.get('status') or {}).get('type') or {}).get('name')} "
-                     f"{' vs '.join(n or '?' for n in names)}")
-    return lines
+        (out_dir / name).write_text(fixture, encoding="utf-8")
+        (out_dir / ("raw_" + name)).write_text(raw, encoding="utf-8")
+    print(f"-----BEGIN FIXTURE {name} raw_sha256={sha(raw)} raw_bytes={len(raw.encode())} "
+          f"fixture_sha256={sha(fixture)} fixture_bytes={len(fixture.encode())}-----")
+    print(fixture)
+    print(f"-----END FIXTURE {name}-----")
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--dates", nargs="*", default=["20261017"],
                     help="ESPN scoreboard dates (YYYYMMDD) besides the current one")
-    ap.add_argument("--wiki-title", default="UFC Fight Night: Buckley vs. Malott")
+    ap.add_argument("--wiki-titles", nargs="*",
+                    default=["UFC Fight Night: Buckley vs. Malott", "UFC 333"])
     ap.add_argument("--out-dir", type=Path)
     args = ap.parse_args()
     report: list[str] = []
 
-    # ESPN: the current scoreboard, then dated ones, then each event's summary.
-    seen_events: dict[str, dict] = {}
     for label, url in [("espn_scoreboard_current.json", f"{ESPN}/scoreboard")] + [
             (f"espn_scoreboard_{d}.json", f"{ESPN}/scoreboard?dates={d}") for d in args.dates]:
         status, ctype, body = fetch(url)
@@ -93,75 +92,37 @@ def main() -> int:
         except json.JSONDecodeError:
             report.append(f"  not JSON: {body[:200]!r}")
             continue
-        dump(label, body, args.out_dir)
-        for ev in data.get("events", []):
-            seen_events[str(ev.get("id"))] = ev
-            report.extend(describe_espn_event(ev))
-    for eid in list(seen_events)[:3]:
-        url = f"{ESPN}/summary?event={eid}"
-        status, ctype, body = fetch(url)
-        report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes")
+        fixture = json.dumps(espn_fixture(data), ensure_ascii=False, indent=1)
+        emit(label, body, fixture, args.out_dir)
         try:
-            data = json.loads(body)
-            report.append(f"  top-level keys: {sorted(data.keys())}")
-            dump(f"espn_summary_{eid}.json", body, args.out_dir)
-        except json.JSONDecodeError:
-            report.append(f"  not JSON: {body[:200]!r}")
+            for card in parse_espn_scoreboard(data):
+                report.append(f"  {card.event_name!r} {card.event_date}: {len(card.bouts)} bouts; "
+                              f"first {card.first_walkout.matchup!r}, last "
+                              f"{card.main_event.matchup!r}")
+        except SourceError as e:
+            report.append(f"  REFUSED: {e}")
 
-    # Other ESPN hosts, once each: is the 403 host-wide or path-specific?
-    for url in ("https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
-                "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events"):
-        status, ctype, body = fetch(url)
-        report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes "
-                      f"{body[:120]!r}")
-
-    # Wikipedia (MediaWiki API — documented, permitted with an identifying UA).
-    titles = [args.wiki_title]
-    # The next scheduled event, from the list article's "Scheduled events" section.
-    try:
-        q = urllib.parse.urlencode({"action": "parse", "page": "List of UFC events",
-                                    "prop": "sections", "format": "json", "formatversion": 2})
-        status, _, body = fetch(f"{WIKI}?{q}")
-        sections = json.loads(body)["parse"]["sections"]
-        idx = next(x["index"] for x in sections if "cheduled" in x["line"])
-        q = urllib.parse.urlencode({"action": "parse", "page": "List of UFC events",
-                                    "prop": "wikitext", "section": idx, "format": "json",
-                                    "formatversion": 2})
-        status, _, body = fetch(f"{WIKI}?{q}")
-        text = json.loads(body)["parse"]["wikitext"]
-        links = re.findall(r"\[\[(UFC[^\]|]+)", text)
-        report.append(f"List of UFC events / scheduled: HTTP {status}, {len(links)} UFC links; "
-                      f"first three: {links[:3]}; last three: {links[-3:]}")
-        titles += links[-1:] + links[:1]
-    except Exception as e:  # noqa: BLE001
-        report.append(f"List of UFC events: could not read the scheduled section: {e}")
-    for title in dict.fromkeys(titles):
+    for title in args.wiki_titles:
         q = urllib.parse.urlencode({"action": "parse", "page": title, "prop": "wikitext|revid",
                                     "format": "json", "formatversion": 2, "redirects": 1})
         url = f"{WIKI}?{q}"
         status, ctype, body = fetch(url)
         report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes")
         try:
-            data = json.loads(body)
+            parse = json.loads(body).get("parse") or {}
         except json.JSONDecodeError:
             report.append(f"  not JSON: {body[:200]!r}")
             continue
-        parse = data.get("parse") or {}
         text = parse.get("wikitext", "")
-        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-        name = "wikipedia_" + re.sub(r"[^A-Za-z0-9]+", "_", title).strip("_") + ".wikitext"
         report.append(f"  title={parse.get('title')!r} revid={parse.get('revid')} "
-                      f"error={data.get('error', {}).get('code')} wikitext={len(text)} chars "
-                      f"sha256={digest}; 'Main card': {'Main card' in text}; "
-                      f"'Preliminary card': {'Preliminary card' in text}")
-        if text:
-            if args.out_dir:
-                args.out_dir.mkdir(parents=True, exist_ok=True)
-                (args.out_dir / name).write_text(text, encoding="utf-8")
-            # Raw, so it can be recovered from the job log and checked by sha256.
-            print(f"-----BEGIN RAW {name} sha256={digest}-----")
-            print(text)
-            print(f"-----END RAW {name}-----")
+                      f"wikitext={len(text)} chars sha256={sha(text)}")
+        try:
+            section = wikipedia_results_section(text)
+        except SourceError as e:
+            report.append(f"  {e}")
+            continue
+        name = "wikipedia_" + "".join(c if c.isalnum() else "_" for c in title).strip("_")
+        emit(name + f"_rev{parse.get('revid')}.wikitext", text, section, args.out_dir)
 
     print("\n=== SOURCE PROBE REPORT ===")
     print("\n".join(report))

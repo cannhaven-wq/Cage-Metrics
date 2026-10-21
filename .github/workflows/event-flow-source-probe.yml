@@ -16,6 +16,7 @@ on:
       - claude/gallant-cannon-sefkcs-running-order
     paths:
       - cfl_engine/event_flow/source_probe.py
+      - cfl_engine/event_flow/sources.py
       - .github/workflows/event-flow-source-probe.yml
 
 permissions:
