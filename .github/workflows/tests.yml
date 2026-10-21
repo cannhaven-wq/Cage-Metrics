@@ -97,7 +97,9 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-          cache-dependency-path: cfl_engine/requirements.txt
+          cache-dependency-path: |
+            cfl_engine/requirements.txt
+            cfl_engine/ci-constraints.txt
 
       # pytest is a runner only, not a repo dependency: `unittest discover`
       # cannot walk tests/ (it has no __init__.py), and naming each module by
@@ -123,7 +125,9 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --disable-pip-version-check --quiet pytest==9.1.1
-          python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt
+          # ci-constraints.txt pins the engine's >= ranges for CI only (T-011),
+          # so the suite cannot go red on an upstream release.
+          python -m pip install --disable-pip-version-check --quiet -r cfl_engine/requirements.txt -c cfl_engine/ci-constraints.txt
 
       # PRED-001: the ledger, the freeze history and registered experiments
       # may only grow relative to the base. On a pull request the base is

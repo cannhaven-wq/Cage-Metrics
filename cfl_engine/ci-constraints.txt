@@ -1,0 +1,17 @@
+# CI-only pins for the Python test suite (T-011).
+#
+# cfl_engine/requirements.txt is the engine's own manifest and keeps its >=
+# ranges; the jobs that run the model install it as written. This file is
+# passed to pip with -c by .github/workflows/tests.yml only, so the suite runs
+# against one known set and cannot go red on somebody else's release.
+#
+# Resolved for Python 3.11 on 2026-10-21 and run green against the whole suite
+# before being committed. To move a pin: change it here, run the suite, commit.
+pandas==3.0.6
+numpy==2.4.6
+scikit-learn==1.9.1
+scipy==1.17.1
+statsmodels==0.15.0
+pyarrow==26.0.0
+xgboost==3.2.0
+tabulate==0.10.0

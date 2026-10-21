@@ -11,6 +11,40 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 — Backlog reconciliation and closeout
+
+**From:** Claude
+**To:** Owner
+**Date:** 2026-10-21
+
+- Every open row was checked against code and the production database. 41
+  rows: the 40 listed plus **T-091**, which had an open PR (#73) and no queue
+  row. It is added as an owner decision.
+- **Closed with evidence:** T-089, T-093, T-006, T-011, T-029, T-039, T-055,
+  plus T-003, T-007 and T-024, which were finished in September and never
+  marked. **Dropped as superseded:** T-033, T-034, T-058, T-062. Each row
+  carries its evidence.
+- **Code shipped in this change:** CI pins (`cfl_engine/ci-constraints.txt`);
+  the drafter reuses the auto-poster's market post; an empty odds-credit
+  ledger reads as unknown (tight), not "500 left". Python 756 pass / 4 skip
+  with the pins on 3.11; every Node suite passes; odds tests 75 pass.
+- **For the owner:** Head-to-Head was the biggest entry point for real visitors
+  (20 of 49 engaged landings, week of 10-12) before it was retired. That
+  decision stands. If search arrivals matter, old matchup links could
+  redirect to the fight's Fight Lab page instead of `/`.
+- Not reachable from the agent network: cannonfightlab.com, UFCStats, the
+  Supabase REST host. Production checks ran through the Supabase tool.
+
+## Next action
+
+1. **Owner:** the quickest unlocks, in order: T-048 + T-054 (legal wording) →
+   T-067 (price) for payments; T-074 (Resend keys) for email; T-096 (apply the
+   running-order ledger, which also unblocks T-030 and T-032); T-038 (approve
+   restarting social posts).
+2. **Claude:** after T-074, run the controlled alert delivery test (T-073).
+
+---
+
 ## 2026-10-20 — Charts / Numbers switch (Card Lab, Market Lab, Factor Lab)
 
 **From:** Claude

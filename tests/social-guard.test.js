@@ -54,5 +54,15 @@ t('the poster checks the words, on both paths', () => {
   ok(!/our model/i.test(s.replace(/\/\/.*$/gm, '')), 'social-post.js still carries "our model" in code');
 });
 
+t('the manual drafter prints the market post, not a pick table (T-039)', () => {
+  const s = read('build/draft-post.js');
+  const code = s.replace(/\/\/.*$/gm, '');
+  ok(/require\(['"]\.\/social-post['"]\)/.test(code), 'draft-post.js no longer reuses social-post.js::buildPost');
+  ok(/forecastClaim\(/.test(code), 'draft-post.js does not run the forecast guard');
+  ok(!/model_picks|Model pick|Confidence/i.test(code), 'draft-post.js reads or prints the retired model again');
+  const p = read('build/social-post.js');
+  ok(/if \(require\.main === module\)/.test(p), 'requiring social-post.js would post — the drafter must never post');
+});
+
 if (failed) { console.error(`\n  ${failed} failed, ${n} passed`); process.exit(1); }
 console.log(`\n  ${n} passed — the social channel cannot publish a forecast.`);
