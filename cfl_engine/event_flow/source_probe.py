@@ -19,7 +19,9 @@ from __future__ import annotations
 import argparse
 import base64
 import gzip
+import hashlib
 import json
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -105,22 +107,60 @@ def main() -> int:
         except json.JSONDecodeError:
             report.append(f"  not JSON: {body[:200]!r}")
 
+    # Other ESPN hosts, once each: is the 403 host-wide or path-specific?
+    for url in ("https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/scoreboard",
+                "https://sports.core.api.espn.com/v2/sports/mma/leagues/ufc/events"):
+        status, ctype, body = fetch(url)
+        report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes "
+                      f"{body[:120]!r}")
+
     # Wikipedia (MediaWiki API — documented, permitted with an identifying UA).
-    q = urllib.parse.urlencode({"action": "parse", "page": args.wiki_title, "prop": "wikitext",
-                                "format": "json", "formatversion": 2, "redirects": 1})
-    url = f"{WIKI}?{q}"
-    status, ctype, body = fetch(url)
-    report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes")
+    titles = [args.wiki_title]
+    # The next scheduled event, from the list article's "Scheduled events" section.
     try:
-        data = json.loads(body)
-        text = (data.get("parse") or {}).get("wikitext", "")
-        report.append(f"  title={(data.get('parse') or {}).get('title')!r} "
-                      f"error={data.get('error', {}).get('code')} wikitext={len(text)} chars; "
-                      f"'Main card' in text: {'Main card' in text}; "
-                      f"'Preliminary card' in text: {'Preliminary card' in text}")
-        dump("wikipedia_parse.json", body, args.out_dir)
-    except json.JSONDecodeError:
-        report.append(f"  not JSON: {body[:200]!r}")
+        q = urllib.parse.urlencode({"action": "parse", "page": "List of UFC events",
+                                    "prop": "sections", "format": "json", "formatversion": 2})
+        status, _, body = fetch(f"{WIKI}?{q}")
+        sections = json.loads(body)["parse"]["sections"]
+        idx = next(x["index"] for x in sections if "cheduled" in x["line"])
+        q = urllib.parse.urlencode({"action": "parse", "page": "List of UFC events",
+                                    "prop": "wikitext", "section": idx, "format": "json",
+                                    "formatversion": 2})
+        status, _, body = fetch(f"{WIKI}?{q}")
+        text = json.loads(body)["parse"]["wikitext"]
+        links = re.findall(r"\[\[(UFC[^\]|]+)", text)
+        report.append(f"List of UFC events / scheduled: HTTP {status}, {len(links)} UFC links; "
+                      f"first three: {links[:3]}; last three: {links[-3:]}")
+        titles += links[-1:] + links[:1]
+    except Exception as e:  # noqa: BLE001
+        report.append(f"List of UFC events: could not read the scheduled section: {e}")
+    for title in dict.fromkeys(titles):
+        q = urllib.parse.urlencode({"action": "parse", "page": title, "prop": "wikitext|revid",
+                                    "format": "json", "formatversion": 2, "redirects": 1})
+        url = f"{WIKI}?{q}"
+        status, ctype, body = fetch(url)
+        report.append(f"{url}\n  HTTP {status} {ctype} {len(body.encode())} bytes")
+        try:
+            data = json.loads(body)
+        except json.JSONDecodeError:
+            report.append(f"  not JSON: {body[:200]!r}")
+            continue
+        parse = data.get("parse") or {}
+        text = parse.get("wikitext", "")
+        digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        name = "wikipedia_" + re.sub(r"[^A-Za-z0-9]+", "_", title).strip("_") + ".wikitext"
+        report.append(f"  title={parse.get('title')!r} revid={parse.get('revid')} "
+                      f"error={data.get('error', {}).get('code')} wikitext={len(text)} chars "
+                      f"sha256={digest}; 'Main card': {'Main card' in text}; "
+                      f"'Preliminary card': {'Preliminary card' in text}")
+        if text:
+            if args.out_dir:
+                args.out_dir.mkdir(parents=True, exist_ok=True)
+                (args.out_dir / name).write_text(text, encoding="utf-8")
+            # Raw, so it can be recovered from the job log and checked by sha256.
+            print(f"-----BEGIN RAW {name} sha256={digest}-----")
+            print(text)
+            print(f"-----END RAW {name}-----")
 
     print("\n=== SOURCE PROBE REPORT ===")
     print("\n".join(report))
