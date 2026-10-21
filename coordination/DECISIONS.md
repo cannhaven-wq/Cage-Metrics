@@ -2118,3 +2118,21 @@ spent.** Whether to spend the $30 on pre-2025 historical odds is T-107 — this
 entry authorizes the budget, it does not make the purchase decision, and an
 agent session cannot make a purchase.
 
+---
+
+## D-032 — Outbound social posting stays paused
+
+| field | value |
+|---|---|
+| date | 2026-10-21 |
+| decided by | Reed Cannon (owner), in session: "Pause social media for now" |
+| task | T-105 |
+| level | L3 |
+| reversible | yes — restarting is one PR that deletes the `POSTING_BLOCKERS` line |
+
+**Plain version.** Nothing posts to X or Reddit. The research-only generator
+(T-038) stays built and tested, but every run of the poster is a dry run while
+`build/social-post.js::POSTING_BLOCKERS` names T-038, neither social workflow
+has a schedule, and a manual dispatch defaults to dry run. Restarting is a
+new owner decision, not a config change.
+
