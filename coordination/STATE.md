@@ -5,6 +5,16 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-21
 
+**Discovery Engine Phase 1, 2026-10-21 (T-109): built; first real run found nothing.**
+`research/discovery/` tests 660 candidate factors and factor-by-situation
+interactions against the de-vigged BFO close on PRED-001 DEV data only (6,824
+priced fights, export fingerprints match the frozen manifest), walk-forward,
+card-clustered, multiple-testing corrected, with leakage audits and a
+hash-chained ledger of every run. **Zero passed the screen**; the best real
+idea scored below the best of 660 shuffled ones, and age / UFC record add
+nothing measurable to the price. No H1 look, no production or site change,
+nothing promoted. Report: `research/discovery/REPORT_PHASE1.md`.
+
 **Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
 matches what the site does (no cookies, no affiliate links, named
 processors), the disclaimer's model sentence is a market example, My Book
