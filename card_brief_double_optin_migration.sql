@@ -33,17 +33,31 @@
 --   Re-clicking a used link returns TRUE again and changes nothing.
 --
 -- PRIVILEGES — revoke everything from both browser roles, then grant back
--- exactly the signup (owner, D-T088-2: private by default):
+-- exactly what exists today (owner, D-027: existing reads stay unchanged;
+-- D-T088-2: new objects private by default):
 --   anon, authenticated : INSERT (email, source) only — the Card Brief form,
 --                         unchanged (_auth.js::subscribeEmail, plain insert,
 --                         23505 = already subscribed = success);
 --                         USAGE on the id sequence (the serial id);
 --                         EXECUTE confirm_email_subscription;
 --                         EXECUTE unsubscribe_email (unchanged, not touched).
---   Removed from both browser roles: SELECT (the list is private; no page reads
---   it, and the insert needs no SELECT — funnel_events works the same way). An
---   admin reading the list from a browser session therefore stops working;
---   nothing in the repo does that. The service role is not touched.
+--   authenticated       : SELECT on the columns that existed before this file,
+--                         so the existing RLS policy email_subscribers_admin_read
+--                         keeps letting an ADMIN read the list exactly as today
+--                         (a non-admin member still sees zero rows), plus
+--                         confirmed_at, confirm_sent_at and confirm_send_count.
+--                         NOT confirm_token_hash or confirm_token_expires_at:
+--                         nobody reading from a browser needs them. The hash is
+--                         not a working link (the function hashes what it is
+--                         given, so a hash fed back confirms nothing), but it is
+--                         left out anyway. Because the grant is per column, an
+--                         admin query must name its columns: `select *` is
+--                         refused. unsubscribe_token stays readable to admins,
+--                         as it is today (D-027), even though it IS a working
+--                         unsubscribe link.
+--   anon                : no SELECT at all (as today: no policy lets a visitor
+--                         read a row; now the privilege is gone as well).
+--   The service role is not touched.
 --   A browser insert also can never arrive confirmed: the column grant covers
 --   only (email, source), and a SECURITY INVOKER trigger blanks every
 --   confirmation column on any insert made as anon or authenticated, in case a
@@ -211,6 +225,11 @@ COMMENT ON FUNCTION public.confirm_email_subscription(text) IS
 -- 5. Privileges ---------------------------------------------------------------
 REVOKE ALL ON TABLE public.email_subscribers FROM PUBLIC, anon, authenticated;
 GRANT INSERT (email, source) ON public.email_subscribers TO anon, authenticated;
+-- The admin read (D-027: existing reads unchanged). RLS still decides the rows:
+-- email_subscribers_admin_read lets an admin see them and nobody else.
+GRANT SELECT (id, email, source, created_at, last_sent_at, unsubscribed_at, unsubscribe_token,
+              confirmed_at, confirm_sent_at, confirm_send_count)
+  ON public.email_subscribers TO authenticated;
 
 REVOKE ALL ON SEQUENCE public.email_subscribers_id_seq FROM PUBLIC, anon, authenticated;
 GRANT USAGE ON SEQUENCE public.email_subscribers_id_seq TO anon, authenticated;
@@ -229,14 +248,19 @@ DECLARE
   c text;
 BEGIN
   FOREACH r IN ARRAY ARRAY['anon', 'authenticated'] LOOP
+    -- Table-level SELECT would include the token columns, so it is refused
+    -- for both roles; the admin read is column-level (checked below).
     FOREACH p IN ARRAY ARRAY['SELECT', 'UPDATE', 'DELETE', 'TRUNCATE', 'REFERENCES', 'TRIGGER'] LOOP
       IF has_table_privilege(r, 'public.email_subscribers', p) THEN
         bad := bad || format(' %s holds %s;', r, p);
       END IF;
     END LOOP;
-    FOREACH p IN ARRAY ARRAY['SELECT', 'UPDATE'] LOOP
-      IF has_any_column_privilege(r, 'public.email_subscribers', p) THEN
-        bad := bad || format(' %s holds column %s;', r, p);
+    IF has_any_column_privilege(r, 'public.email_subscribers', 'UPDATE') THEN
+      bad := bad || format(' %s holds column UPDATE;', r);
+    END IF;
+    FOREACH c IN ARRAY ARRAY['confirm_token_hash', 'confirm_token_expires_at'] LOOP
+      IF has_column_privilege(r, 'public.email_subscribers', c, 'SELECT') THEN
+        bad := bad || format(' %s may SELECT %s;', r, c);
       END IF;
     END LOOP;
     FOREACH c IN ARRAY ARRAY['email', 'source'] LOOP
@@ -260,6 +284,17 @@ BEGIN
     END IF;
     IF NOT has_function_privilege(r, 'public.confirm_email_subscription(text)', 'EXECUTE') THEN
       bad := bad || format(' %s cannot EXECUTE confirm_email_subscription;', r);
+    END IF;
+  END LOOP;
+
+  IF has_any_column_privilege('anon', 'public.email_subscribers', 'SELECT') THEN
+    bad := bad || ' anon holds SELECT;';
+  END IF;
+  -- D-027: the admin read keeps every column it had before this file.
+  FOREACH c IN ARRAY ARRAY['id', 'email', 'source', 'created_at', 'last_sent_at', 'unsubscribed_at',
+                           'unsubscribe_token', 'confirmed_at', 'confirm_sent_at', 'confirm_send_count'] LOOP
+    IF NOT has_column_privilege('authenticated', 'public.email_subscribers', c, 'SELECT') THEN
+      bad := bad || format(' authenticated lost SELECT (%s) — the admin read would break;', c);
     END IF;
   END LOOP;
 

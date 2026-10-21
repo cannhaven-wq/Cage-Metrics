@@ -46,6 +46,8 @@ EXPIRED = "b" * 64
 UNSUB = "c" * 64
 AUTH = "d" * 64
 NEVER_ISSUED = "e" * 64
+ADMIN = "00000000-0000-0000-0000-00000000a0a0"
+MEMBER = "00000000-0000-0000-0000-00000000b0b0"
 HASHED = "f" * 64
 
 
@@ -94,9 +96,12 @@ class CardBriefOptIn(unittest.TestCase):
                      "proposed_2026-10-13_t088_least_privilege.sql",
                      "proposed_2026-10-13_t088_pre_fight_truncate_guard.sql"):
             cls.sql(read(os.path.join(SEC, name)))
-        # The one address already on the list before the migration.
+        # The one address already on the list before the migration, and one
+        # admin and one ordinary member for the admin-read policy.
         cls.sql("insert into public.email_subscribers (email, source) "
-                "values ('existing@example.invalid', 'footer');")
+                "values ('existing@example.invalid', 'footer');"
+                f"insert into public.profiles (id, email, is_admin) values "
+                f"('{ADMIN}', 'admin@example.invalid', true), ('{MEMBER}', 'member@example.invalid', false);")
 
         # The migration runs as postgres, the way psql "$SUPABASE_DB_URL" does.
         cls.first_run = cls.sql("set role postgres;\n" + read(MIGRATION))
@@ -229,12 +234,33 @@ class CardBriefOptIn(unittest.TestCase):
 
     # -- privileges ------------------------------------------------------------
     def test_visitors_cannot_read_the_list_or_any_token(self):
-        for role in ("anon", "authenticated"):
-            with self.subTest(role=role):
-                self.denied(role, "select count(*) from public.email_subscribers")
-                self.denied(role, "select confirm_token_hash from public.email_subscribers")
-                self.denied(role, "select unsubscribe_token from public.email_subscribers")
-                self.denied(role, "select email from public.email_subscribers")
+        self.denied("anon", "select count(*) from public.email_subscribers")
+        self.denied("anon", "select confirm_token_hash from public.email_subscribers")
+        self.denied("anon", "select unsubscribe_token from public.email_subscribers")
+        self.denied("anon", "select email from public.email_subscribers")
+
+    def as_member(self, uid, stmt, check=True):
+        return self.sql(f"set request.jwt.claim.sub = '{uid}'; set role authenticated;\n{stmt};", check=check)
+
+    def test_admin_read_is_unchanged_and_a_member_sees_nothing(self):
+        # D-027: existing reads stay. The RLS policy decides the rows.
+        cols = ("id, email, source, created_at, last_sent_at, unsubscribed_at, unsubscribe_token, "
+                "confirmed_at, confirm_sent_at, confirm_send_count")
+        admin = self.as_member(ADMIN, f"select count(*) from (select {cols} from public.email_subscribers) s")
+        self.assertGreaterEqual(int(admin.strip().splitlines()[-1]), 5)
+        member = self.as_member(MEMBER, f"select count(*) from (select {cols} from public.email_subscribers) s")
+        self.assertEqual(member.strip().splitlines()[-1], "0")
+        nobody = self.sql(f"set role authenticated; select count(email) from public.email_subscribers;")
+        self.assertEqual(nobody.strip().splitlines()[-1], "0")
+
+    def test_nobody_reads_the_token_columns_from_a_browser_role_not_even_an_admin(self):
+        for uid in (ADMIN, MEMBER):
+            for stmt in ("select confirm_token_hash from public.email_subscribers",
+                         "select confirm_token_expires_at from public.email_subscribers",
+                         "select * from public.email_subscribers"):
+                with self.subTest(uid=uid, stmt=stmt):
+                    out = self.as_member(uid, stmt, check=False)
+                    self.assertIn("permission denied", out)
 
     def test_visitors_cannot_change_or_empty_the_list(self):
         for role in ("anon", "authenticated"):
@@ -307,8 +333,19 @@ class CardBriefOptIn(unittest.TestCase):
         out = self.sql("set role postgres;\n" + leaked, check=False)
         self.assertIn("T-090 double opt-in check failed", out)
         self.assertIn("anon holds SELECT", out)
-        # and the whole transaction rolled back
+        hash_leak = mig.replace(anchor, "GRANT SELECT (confirm_token_hash) ON public.email_subscribers "
+                                        "TO authenticated;\n" + anchor)
+        out = self.sql("set role postgres;\n" + hash_leak, check=False)
+        self.assertIn("authenticated may SELECT confirm_token_hash", out)
+        lost = mig.replace("              confirmed_at, confirm_sent_at, confirm_send_count)\n",
+                           "              confirmed_at, confirm_sent_at)\n")
+        self.assertNotEqual(lost, mig)
+        out = self.sql("set role postgres;\n" + lost, check=False)
+        self.assertIn("authenticated lost SELECT (confirm_send_count)", out)
+        # and every transaction rolled back
         self.denied("anon", "select 1 from public.email_subscribers")
+        self.assertIn("permission denied", self.as_member(
+            ADMIN, "select confirm_token_hash from public.email_subscribers", check=False))
 
 
 if __name__ == "__main__":

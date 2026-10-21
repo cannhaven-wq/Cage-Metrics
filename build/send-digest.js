@@ -88,7 +88,7 @@ async function findNextEvent() {
 }
 
 // One line per priced fight: where the market sits, how far it has moved
-// since our first capture and over the last 24 hours, and how far apart the
+// since our first broad capture and over the last 24 hours, and how far apart the
 // books are. Sorted by absolute movement, because "what changed" is the
 // point of the email.
 //
@@ -155,6 +155,14 @@ function lastName(n) {
   return parts[parts.length - 1] || n;
 }
 
+// The movement baseline, in market.js's words (rule 2 and baselineCaveat). It
+// is mirrored here, not required: market.js is a browser IIFE on `window`.
+// CFL has never seen a sportsbook opener, so this email never says otherwise
+// (tests/card-brief.test.js and tests/card-brief-confirm.test.js check it).
+const BASELINE_NOTE = 'Movement is measured from our first broad capture — the first time at least 3 ' +
+  'sportsbooks had this fight priced — and only across the books quoting both then and now. ' +
+  'That is when CFL started watching properly, not when the market opened. We do not see openers.';
+
 function fmtAmerican(n) {
   if (n == null || !isFinite(+n)) return '—';
   n = Math.round(+n);
@@ -173,7 +181,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
   const unsubUrl = `${SITE}/unsubscribe.html?token=${encodeURIComponent(unsubscribeToken || '')}`;
 
   const moveCell = (pts, toward) => {
-    if (pts == null) return '<span style="color:#777;">no history</span>';
+    if (pts == null) return '<span style="color:#777;">not enough books</span>';
     if (Math.abs(pts) < 0.5) return '<span style="color:#777;">unchanged</span>';
     const col = pts > 0 ? '#2fdccb' : '#ffb547';
     return `<span style="color:${col};font-weight:600;">${Math.abs(pts).toFixed(1)} pts</span>` +
@@ -213,7 +221,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
         <h1 style="margin:6px 0 4px;font-size:24px;color:#fff;line-height:1.25;">${escHtml(event.name)}</h1>
         <div style="color:#999;font-size:14px;">${escHtml(formatLongDate(event.event_date))}${event.location ? ' &middot; ' + escHtml(event.location) : ''}</div>
         <div style="color:#777;font-size:13px;margin-top:10px;line-height:1.55;">
-          What the sportsbooks have done to this card. Sorted by how far each line has moved since we first captured it.
+          What the sportsbooks have done to this card. Sorted by how far each line has moved since our first broad capture.
           Last price captured ${escHtml(freshest)} — these are captures, not live quotes.
         </div>
       </td></tr>
@@ -222,14 +230,13 @@ function renderHtml({ event, lines, unsubscribeToken }) {
         <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#111;border:1px solid #222;border-radius:8px;">
           <tr>
             <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Fight &amp; market</th>
-            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Since open</th>
+            <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">Since first broad capture</th>
             <th align="left" style="padding:10px 8px;border-bottom:1px solid #2a2a2a;color:#999;font-size:11px;letter-spacing:1px;text-transform:uppercase;font-weight:600;">24 h</th>
           </tr>
           ${rows || '<tr><td colspan="3" style="padding:14px;color:#999;">No sportsbook prices captured on this card yet.</td></tr>'}
         </table>
         <div style="color:#666;font-size:11.5px;line-height:1.5;margin-top:10px;">
-          "Since open" compares to <em>our first capture</em> of the fight, which is when CFL started watching — not when the
-          market opened. A line that moved is not a line that was wrong, and nothing in this email is a recommendation.
+          ${escHtml(BASELINE_NOTE)} A line that moved is not a line that was wrong, and nothing in this email is a recommendation.
         </div>
       </td></tr>
 
@@ -264,7 +271,7 @@ function renderHtml({ event, lines, unsubscribeToken }) {
 function renderText({ event, lines, unsubscribeToken }) {
   const unsubUrl = `${SITE}/unsubscribe.html?token=${unsubscribeToken || ''}`;
   const moveTxt = (pts, toward) => {
-    if (pts == null) return 'no history';
+    if (pts == null) return 'not enough books';
     if (Math.abs(pts) < 0.5) return 'unchanged';
     return `${Math.abs(pts).toFixed(1)} pts to ${lastName(toward)}`;
   };
@@ -281,15 +288,15 @@ function renderText({ event, lines, unsubscribeToken }) {
     out.push(`    market: ${l.favName} ${l.favPct}% · best ${fmtAmerican(l.bestAmerican)}` +
              `${l.bestBook ? ' at ' + l.bestBook : ''} · ${l.books || '?'} books` +
              `${l.spread != null ? ', ' + l.spread.toFixed(1) + ' pts apart' : ''}`);
-    out.push(`    since our first capture: ${moveTxt(l.move, l.moveToward)} · last 24h: ${moveTxt(l.move24, l.move24Toward)}`);
+    out.push(`    since our first broad capture: ${moveTxt(l.move, l.moveToward)} · last 24h: ${moveTxt(l.move24, l.move24Toward)}`);
     out.push('');
   }
   if (!lines.length) out.push('  No sportsbook prices captured on this card yet.\n');
   out.push(`Full board: ${SITE}/market.html?event=${event.id}`);
   out.push(`The card: ${SITE}/index.html#next`);
   out.push('');
-  out.push('"Since our first capture" is measured from when CFL started watching the fight,');
-  out.push('not from when the market opened. A line that moved is not a line that was wrong.');
+  out.push(BASELINE_NOTE);
+  out.push('A line that moved is not a line that was wrong.');
   out.push('');
   out.push('---');
   out.push(`Unsubscribe: ${unsubUrl}`);
