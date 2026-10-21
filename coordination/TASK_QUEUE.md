@@ -42,6 +42,7 @@ it died is usually worth more than the task was.
 
 | id | task | level | owner | status |
 |---|---|---|---|---|
+| T-109 | **Done 2026-10-21: DISC-001 factor discovery, internal** — [`research/experiments/DISC-001/REPORT.md`](../research/experiments/DISC-001/REPORT.md). Preregistered before any export. 20 factors, 3 interactions and 2 combinations tested against the closing odds on 5,792 pre-2025 fights, walk-forward. Nothing passed and nothing reached uncorrected p < 0.05. Positive control and de-vig check included. Nothing public changed and no sealed data was read. Follow-up (DISC-002, rare factors as subgroup questions) waits on the owner | L1 | Claude | done |
 | T-002 | **Done 2026-10-21 ([D-033](DECISIONS.md), E1): DUR-001 clauses voted.** Approved (f), (g), (j), (k); rejected (a)–(e), because they would change scoring after outcomes were visible. Writing the approved clauses into the preregistration is T-108 | L3 | Owner | done |
 | T-009 | **Done 2026-10-21 ([D-033](DECISIONS.md), E2):** the owner's name stays private. Public records say "CFL Owner". The name was removed from `about.html` (#116); remaining exposure in historical records is reported in `coordination/PRIVACY_NAME_EXPOSURE_2026-10-21.md` for a separate decision | L3 | Owner | done |
 | T-025 | **Done 2026-10-21 ([D-033](DECISIONS.md), D1; PR #103):** dated correction on `edges.html`. Every figure was checked against the FE-001 evidence before merge | L3 | Owner | done |

@@ -11,6 +11,34 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (d) — DISC-001 factor discovery: no factor adds to the odds
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Preregistered first (`d4aedbc6`), then exported pre-2025 data only. A
+  one-off branch-only Actions job did the export; it was deleted on the
+  branch straight after, so no write-capable workflow reaches `main`.
+  Both files match a hash computed in the database byte for byte.
+- 20 factors, 3 interactions, 2 combinations, judged against the closing
+  odds, walk-forward 2012–24. Every verdict is "adds nothing measurable" or
+  "not enough fights". Positive control, de-vig check and point-in-time
+  audit are all in the report.
+- Nothing public changed. No sealed-set look spent. No database write.
+
+## Next action
+
+1. **CFL Owner:** read the plain verdict and "What this means for the plan"
+   in `research/experiments/DISC-001/REPORT.md`. Then say whether to
+   preregister **DISC-002**: the rare factors (coming off a KO loss, long
+   layoff, quick turnaround) asked as their own questions, on the fights
+   where they apply, pre-2025 only, with power stated before the run.
+   Otherwise drop historical factor work and wait for prospective odds.
+2. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude
