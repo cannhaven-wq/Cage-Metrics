@@ -1,0 +1,1216 @@
+{
+ "task": "T-093",
+ "date": "2026-10-21",
+ "question": "Does the original source publish per-round statistics for the 21 completed 1994-1998 fights that have no rows in fight_rounds?",
+ "answer": "UNVERIFIED. UFCStats could not be read from GitHub Actions (HTTP 200 browser-check page for every URL). Wikipedia confirms every bout and agrees with CFL's result rows in most fields, but carries no statistics, so it cannot settle the question.",
+ "ufcstats": {
+  "status": "source_unreachable",
+  "runs": [
+   {
+    "run_id": 39620094556,
+    "sha": "817d0f4aa64eb6e9d5f22b29ddbb15425a9b8aa9",
+    "conclusion": "failure"
+   },
+   {
+    "run_id": 39620705070,
+    "sha": "576b3b31f088dd3a7fa2187714b39c04398823b6",
+    "conclusion": "failure"
+   }
+  ],
+  "observed": "All 23 URLs (21 targets + 2 controls that DO have rounds in CFL: 8559, 8560) returned HTTP 200, ~2,994 bytes, server nginx/1.10.1, title 'Loading…', body 'Checking your browser… This site requires JavaScript.' plus a JavaScript sha256 proof-of-work script. No fight-details markup on any page, controls included.",
+  "reading": "A challenge page says nothing about the fight. It is not 'no rounds' and not 'page missing'. Nothing about any fight's statistics was learned from UFCStats.",
+  "not_done": "The challenge was not worked around (no headless-browser bypass). The UFCStats step in the workflow is now manual-only and stops at the first challenge page.",
+  "per_fight": {
+   "8708": "source_unreachable",
+   "8709": "source_unreachable",
+   "8688": "source_unreachable",
+   "8689": "source_unreachable",
+   "8678": "source_unreachable",
+   "8679": "source_unreachable",
+   "8667": "source_unreachable",
+   "8668": "source_unreachable",
+   "8659": "source_unreachable",
+   "8642": "source_unreachable",
+   "8633": "source_unreachable",
+   "8634": "source_unreachable",
+   "8624": "source_unreachable",
+   "8625": "source_unreachable",
+   "8626": "source_unreachable",
+   "8615": "source_unreachable",
+   "8616": "source_unreachable",
+   "8574": "source_unreachable",
+   "8575": "source_unreachable",
+   "8566": "source_unreachable",
+   "8558": "source_unreachable"
+  }
+ },
+ "wikipedia": {
+  "task": "T-093",
+  "source": "Wikipedia via the MediaWiki API (action=parse, prop=wikitext)",
+  "checked_at_utc": "2026-10-21T15:10:53Z",
+  "what_this_cannot_show": "per-round strike/takedown/control statistics; stays unverified",
+  "counts": {
+   "bout_found": 21
+  },
+  "events": {
+   "UFC 4: Revenge of the Warriors": {
+    "tried": [
+     {
+      "title": "UFC 4",
+      "resolved": "UFC 4",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 4",
+    "revid": 1352699841,
+    "rules_text": [
+     "The event also featured three alternate fights.",
+     "Guy Mezger alternate fight.",
+     "Each match had no time limit or rounds, therefore no judges were used for the night.",
+     "| Anthony Macias | Submission (rear-naked choke) | | 1:45 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Joe Charles | def."
+    ],
+    "bouts_on_page": 10,
+    "bouts_with_blank_round_cell": 10,
+    "sections": {
+     "Final": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 3,
+      "blank_round": 3
+     }
+    }
+   },
+   "UFC 6: Clash of the Titans": {
+    "tried": [
+     {
+      "title": "UFC 6",
+      "resolved": "UFC 6",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 6",
+    "revid": 1361291359,
+    "rules_text": [
+     "UFC 6 also featured an eight-man tournament, and two alternate fights which were not shown on the live pay-per-view broadcast.",
+     "Each match had no rounds; therefore no judges were used for the night.",
+     "A 20-minute time limit was imposed for the quarterfinal and semi-final round matches in the tournament.",
+     "The finals of the tournament and the Superfight had a 30-minute time limit and, if necessary, a five-minute overtime.",
+     "| Dave Beneteau | Submission (guillotine) | | 0:57 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Joel Sutton | def."
+    ],
+    "bouts_on_page": 10,
+    "bouts_with_blank_round_cell": 10,
+    "sections": {
+     "Superfight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC 7: The Brawl in Buffalo": {
+    "tried": [
+     {
+      "title": "UFC 7",
+      "resolved": "UFC 7",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 7",
+    "revid": 1334994895,
+    "rules_text": [
+     "==History== {{unsourced-section|date=January 2020}} UFC 7 featured an eight-man tournament, a UFC Superfight Championship match between reigning UFC champion Ken Shamrock and UFC 6 tournament winner Oleg Taktarov, and three alternate fights, which were not shown on the live pay-per-view broadcast.",
+     "Each match had no rounds, but a 20-minute time limit was imposed for the quarterfinal and semi-final round matches in the tournament.",
+     "The finals of the tournament and the Superfight had a 30-minute time limit and, if necessary, a five-minute overtime.",
+     "| Larry Cureton | Submission (heel hook) | | 3:23 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Joel Sutton | def."
+    ],
+    "bouts_on_page": 11,
+    "bouts_with_blank_round_cell": 11,
+    "sections": {
+     "Superfight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 3,
+      "blank_round": 3
+     }
+    }
+   },
+   "UFC - Ultimate Ultimate '95": {
+    "tried": [
+     {
+      "title": "Ultimate Ultimate 1995",
+      "resolved": "Ultimate Ultimate 1995",
+      "error": null
+     }
+    ],
+    "chosen": "Ultimate Ultimate 1995",
+    "revid": 1374050596,
+    "rules_text": [
+     "The event also featured two alternate fights, which were not shown on the live pay-per-view broadcast.",
+     "Each match had no rounds, but a 15-minute time limit was imposed for the quarterfinal and an 18-minute time limit for semi-final round matches in the tournament.",
+     "The finals of the tournament had a 27-minute time limit and, if necessary, a three-minute overtime.",
+     "| Dave Beneteau | Submission (achilles hold) | | 1:15 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Joe Charles | def."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Final": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC 8: David vs Goliath": {
+    "tried": [
+     {
+      "title": "UFC 8",
+      "resolved": "UFC 8",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 8",
+    "revid": 1376436910,
+    "rules_text": [
+     "The event also featured one alternate fight, which was not shown on the live pay-per-view broadcast.",
+     "A 10-minute time limit was imposed for all matches in the tournament except Superfight and final (15 minutes).",
+     "| Paul Herrera | KO (elbows) | | 0:13 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Sam Adkins | def."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Superfight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 1,
+      "blank_round": 1
+     }
+    }
+   },
+   "UFC 10: The Tournament": {
+    "tried": [
+     {
+      "title": "UFC 10",
+      "resolved": "UFC 10",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 10",
+    "revid": 1334997691,
+    "rules_text": [
+     "The card featured an eight man tournament, as well as two alternate bouts in case of an injury, and to fill time for the pay-per-view broadcast.",
+     "| John Campetella | TKO (punches) | | 1:28 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Geza Kalman | def."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC 11: The Proving Ground": {
+    "tried": [
+     {
+      "title": "UFC 11",
+      "resolved": "UFC 11",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 11",
+    "revid": 1334997314,
+    "rules_text": [
+     "==History== The card featured an eight-man tournament, as well as two alternate bouts in case of an injury, and to fill time for the pay-per-view broadcast.",
+     "Roberto Traven had a broken hand after his alternate match and the championship was won by forfeit.",
+     "|Fábio Gurgel |Decision (unanimous) | |15:00 | }} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout |N/A |Scott Ferrozzo |def.",
+     "|Dave Berry |TKO (submission to strikes) | |1:23 |Traven was injured, and unable to continue as an alternate for the tournament."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC - Ultimate Ultimate '96": {
+    "tried": [
+     {
+      "title": "Ultimate Ultimate 1996",
+      "resolved": "Ultimate Ultimate 1996",
+      "error": null
+     }
+    ],
+    "chosen": "Ultimate Ultimate 1996",
+    "revid": 1371897169,
+    "rules_text": [
+     "==History== The card featured an eight-man tournament with two alternate bouts, and was the UFC's second \"Ultimate Ultimate\" tournament, held to find the best of the winners and runners up from past UFC events.",
+     "| Steve Nelmark | KO (punch) | | 1:03 | Nelmark was an alternate for Ken Shamrock, who could not continue due to an injured hand.",
+     "| Mark Hall | Submission (achilles lock) | | 0:20 | Hall was an alternate for Kimo Leopoldo, who could not continue due to fatigue.",
+     "}} {{MMAevent card|Alternate bouts|header=no}} {{MMAevent bout | N/A | Mark Hall | def.",
+     "| Jack Nilson | Submission (headbutts) | | 4:46 | }} {{MMAevent end|notes = yes}} ==Ultimate Ultimate 96 bracket== {{8TeamBracket | RD1=Quarterfinals| RD2=Semifinals| RD3=Finals | RD1-seed1= | RD1-seed2= | RD1-team1= Ken Shamrock | RD1-team2= Brian Johnston | RD1-score1=SUB | RD1-score2=5:48 | RD1-s",
+     "<sup>2</sup>Kimo Leopoldo withdrew due to fatigue, and was replaced by alternate Mark Hall."
+    ],
+    "bouts_on_page": 10,
+    "bouts_with_blank_round_cell": 10,
+    "sections": {
+     "Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Quarterfinals": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Alternate bouts": {
+      "bouts": 3,
+      "blank_round": 3
+     }
+    }
+   },
+   "UFC 12: Judgement Day": {
+    "tried": [
+     {
+      "title": "UFC 12",
+      "resolved": "UFC 12",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 12",
+    "revid": 1380737447,
+    "rules_text": [
+     "\"Judgement Day\" also featured two alternate bouts in case of tournament injury.",
+     "}} {{MMAevent card|Lightweight Alternate bout|header=no}} {{MMAevent bout | Lightweight | Nick Sanzo | def.",
+     "| Tra Telligman | TKO (cut) | | 1:17 | }} {{MMAevent card|Heavyweight Alternate bout|header=no}} {{MMAevent bout | Heavyweight | Justin Martin | def."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Lightweight Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Lightweight Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Lightweight Alternate bout": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "UFC Heavyweight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Heavyweight Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Heavyweight Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Heavyweight Alternate bout": {
+      "bouts": 1,
+      "blank_round": 1
+     }
+    }
+   },
+   "UFC 16: Battle in the Bayou": {
+    "tried": [
+     {
+      "title": "UFC 16",
+      "resolved": "UFC 16",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 16",
+    "revid": 1338045069,
+    "rules_text": [
+     "==History== UFC 16 featured the first ever UFC Welterweight tournament in the USA (for fighters under 170 lb), as well as a Light Heavyweight Championship bout, a Heavyweight and a Light Heavyweight Superfight, and two alternate bouts in case of tournament injury.",
+     "| Townsend Saunders | Decision (split) | | 15:00 | }} {{MMAevent card|Welterweight Tournament Alternate bouts|header=no}} {{MMAevent bout | Welterweight | LaVerne Clark | def."
+    ],
+    "bouts_on_page": 8,
+    "bouts_with_blank_round_cell": 8,
+    "sections": {
+     "UFC Light Heavyweight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Heavyweight bout": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Light Heavyweight bout": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Welterweight Tournament Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Welterweight Tournament Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     },
+     "Welterweight Tournament Alternate bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC 17: Redemption": {
+    "tried": [
+     {
+      "title": "UFC 17",
+      "resolved": "UFC 17",
+      "error": null
+     }
+    ],
+    "chosen": "UFC 17",
+    "revid": 1338046299,
+    "rules_text": [
+     "==History== The event featured a four-man Middleweight Tournament, three Heavyweight Superfights, an alternate bout in case of tournament injury, and a Heavyweight \"exhibition\" bout.",
+     "Similar to his fight with Maurice, Coleman looked good early on in the fight, but when the fight went into an overtime round, Coleman appeared to be drained of energy, breathing heavily and keeping his arms low—even turning his back to Williams occasionally while standing."
+    ],
+    "bouts_on_page": 9,
+    "bouts_with_blank_round_cell": 9,
+    "sections": {
+     "Light Heavyweight Championship": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Heavyweight bouts": {
+      "bouts": 4,
+      "blank_round": 4
+     },
+     "Light Heavyweight bout": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Middleweight Tournament Finals": {
+      "bouts": 1,
+      "blank_round": 1
+     },
+     "Middleweight Tournament Semifinals": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   },
+   "UFC - Ultimate Brazil": {
+    "tried": [
+     {
+      "title": "UFC Brazil",
+      "resolved": "UFC Brazil",
+      "error": null
+     }
+    ],
+    "chosen": "UFC Brazil",
+    "revid": 1377642578,
+    "rules_text": [
+     "| Jeremy Horn | Submission (guillotine choke) | | 3:27 | }} {{MMAevent card|Alternate Bouts|header=no}} {{MMAevent bout | Lightweight | Cesar Marscucci | def."
+    ],
+    "bouts_on_page": 8,
+    "bouts_with_blank_round_cell": 8,
+    "sections": {
+     "Main Card": {
+      "bouts": 6,
+      "blank_round": 6
+     },
+     "Alternate Bouts": {
+      "bouts": 2,
+      "blank_round": 2
+     }
+    }
+   }
+  },
+  "results": [
+   {
+    "cfl_fight_id": 8708,
+    "fighter_a": "Marcus Bossett",
+    "fighter_b": "Eldo Xavier Dias",
+    "event": "UFC 4: Revenge of the Warriors",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "4:55",
+    "wiki_page": "UFC 4",
+    "wiki_revid": 1352699841,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Marcus Bossett",
+     "def.",
+     "Eldo Dias Xavier",
+     "KO (strikes)",
+     "",
+     "4:55",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "4:55",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8709,
+    "fighter_a": "Joe Charles",
+    "fighter_b": "Kevin Rosier",
+    "event": "UFC 4: Revenge of the Warriors",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "0:14",
+    "wiki_page": "UFC 4",
+    "wiki_revid": 1352699841,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Joe Charles",
+     "def.",
+     "Kevin Rosier",
+     "Submission (armbar)",
+     "",
+     "0:14",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "0:14",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8688,
+    "fighter_a": "Anthony Macias",
+    "fighter_b": "He-Man Gipson",
+    "event": "UFC 6: Clash of the Titans",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "3:06",
+    "wiki_page": "UFC 6",
+    "wiki_revid": 1361291359,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Anthony Macias",
+     "def.",
+     "He-Man Ali Gipson",
+     "TKO (submission to punches)",
+     "",
+     "3:06",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "3:06",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8689,
+    "fighter_a": "Joel Sutton",
+    "fighter_b": "Jack McGlaughlin",
+    "event": "UFC 6: Clash of the Titans",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "2:01",
+    "wiki_page": "UFC 6",
+    "wiki_revid": 1361291359,
+    "wiki_status": "bout_found",
+    "match_score": 0.95,
+    "wiki_row_cells": [
+     "N/A",
+     "Joel Sutton",
+     "def.",
+     "Jack McLaughlin",
+     "TKO (submission to punches)",
+     "",
+     "2:01",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "2:01",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8678,
+    "fighter_a": "Onassis Parungao",
+    "fighter_b": "Francesco Maturi",
+    "event": "UFC 7: The Brawl in Buffalo",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "5:26",
+    "wiki_page": "UFC 7",
+    "wiki_revid": 1334994895,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Onassis Parungao",
+     "def.",
+     "Francesco Maturi",
+     "TKO (submission to strikes)",
+     "",
+     "5:26",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "5:26",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8679,
+    "fighter_a": "Joel Sutton",
+    "fighter_b": "Geza Kalman",
+    "event": "UFC 7: The Brawl in Buffalo",
+    "cfl_method": "TKO - Doctor's Stoppage",
+    "cfl_end_round": 1,
+    "cfl_end_time": "0:48",
+    "wiki_page": "UFC 7",
+    "wiki_revid": 1334994895,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Joel Sutton",
+     "def.",
+     "Geza Kalman",
+     "TKO (cut)",
+     "",
+     "0:48",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "0:48",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8667,
+    "fighter_a": "Mark Hall",
+    "fighter_b": "Trent Jenkins",
+    "event": "UFC - Ultimate Ultimate '95",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "5:29",
+    "wiki_page": "Ultimate Ultimate 1995",
+    "wiki_revid": 1374050596,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Mark Hall",
+     "def.",
+     "Trent Jenkins",
+     "Submission (armlock)",
+     "",
+     "5:29",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "5:29",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8668,
+    "fighter_a": "Joe Charles",
+    "fighter_b": "Scott Bessac",
+    "event": "UFC - Ultimate Ultimate '95",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "4:38",
+    "wiki_page": "Ultimate Ultimate 1995",
+    "wiki_revid": 1374050596,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Joe Charles",
+     "def.",
+     "Scott Bessac",
+     "Submission (armlock)",
+     "",
+     "4:38",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "4:38",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8659,
+    "fighter_a": "Sam Adkins",
+    "fighter_b": "Keith Mielke",
+    "event": "UFC 8: David vs Goliath",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "0:50",
+    "wiki_page": "UFC 8",
+    "wiki_revid": 1376436910,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Sam Adkins",
+     "def.",
+     "Keith Mielke",
+     "TKO (submission to punches)",
+     "",
+     "0:50",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "0:50",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8642,
+    "fighter_a": "Sam Adkins",
+    "fighter_b": "Felix Lee Mitchell",
+    "event": "UFC 10: The Tournament",
+    "cfl_method": "Decision - Unanimous",
+    "cfl_end_round": 2,
+    "cfl_end_time": "3:00",
+    "wiki_page": "UFC 10",
+    "wiki_revid": 1334997691,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Sam Adkins",
+     "def.",
+     "Felix Mitchell",
+     "Decision (unanimous)",
+     "",
+     "",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": null,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8633,
+    "fighter_a": "Roberto Traven",
+    "fighter_b": "Dave Berry",
+    "event": "UFC 11: The Proving Ground",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:33",
+    "wiki_page": "UFC 11",
+    "wiki_revid": 1334997314,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Roberto Traven",
+     "def.",
+     "Dave Berry",
+     "TKO (submission to strikes)",
+     "",
+     "1:23",
+     "Traven was injured, and unable to continue as an alternate for the tournament."
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:23",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": false,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8634,
+    "fighter_a": "Scott Ferrozzo",
+    "fighter_b": "Sam Fulton",
+    "event": "UFC 11: The Proving Ground",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:45",
+    "wiki_page": "UFC 11",
+    "wiki_revid": 1334997314,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Scott Ferrozzo",
+     "def.",
+     "Sam Fulton",
+     "TKO (submission to strikes)",
+     "",
+     "1:45",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:45",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": false,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8624,
+    "fighter_a": "Tai Bowden",
+    "fighter_b": "Jack Nilson",
+    "event": "UFC - Ultimate Ultimate '96",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "4:46",
+    "wiki_page": "Ultimate Ultimate 1996",
+    "wiki_revid": 1371897169,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Tai Bowden",
+     "def.",
+     "Jack Nilson",
+     "Submission (headbutts)",
+     "",
+     "4:46",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "4:46",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": false,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8625,
+    "fighter_a": "Steve Nelmark",
+    "fighter_b": "Marcus Bossett",
+    "event": "UFC - Ultimate Ultimate '96",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:37",
+    "wiki_page": "Ultimate Ultimate 1996",
+    "wiki_revid": 1371897169,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Steve Nelmark",
+     "def.",
+     "Marcus Bossett",
+     "Submission (choke)",
+     "",
+     "1:37",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:37",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8626,
+    "fighter_a": "Mark Hall",
+    "fighter_b": "Felix Lee Mitchell",
+    "event": "UFC - Ultimate Ultimate '96",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:45",
+    "wiki_page": "Ultimate Ultimate 1996",
+    "wiki_revid": 1371897169,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "N/A",
+     "Mark Hall",
+     "def.",
+     "Felix Mitchell",
+     "TKO (punches)",
+     "",
+     "1:45",
+     ""
+    ],
+    "wiki_section": "Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:45",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8615,
+    "fighter_a": "Justin Martin",
+    "fighter_b": "Eric Martin",
+    "event": "UFC 12: Judgement Day",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "0:14",
+    "wiki_page": "UFC 12",
+    "wiki_revid": 1380737447,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Heavyweight",
+     "Justin Martin",
+     "def.",
+     "Eric Martin",
+     "Submission (heel hook)",
+     "",
+     "0:14",
+     ""
+    ],
+    "wiki_section": "Heavyweight Alternate bout",
+    "wiki_round": "",
+    "wiki_time": "0:14",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8616,
+    "fighter_a": "Nick Sanzo",
+    "fighter_b": "Jackie Lee",
+    "event": "UFC 12: Judgement Day",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "0:48",
+    "wiki_page": "UFC 12",
+    "wiki_revid": 1380737447,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Lightweight",
+     "Nick Sanzo",
+     "def.",
+     "Jackie Lee",
+     "TKO (strikes)",
+     "",
+     "0:48",
+     ""
+    ],
+    "wiki_section": "Lightweight Alternate bout",
+    "wiki_round": "",
+    "wiki_time": "0:48",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8574,
+    "fighter_a": "Chris Brennan",
+    "fighter_b": "Courtney Turner",
+    "event": "UFC 16: Battle in the Bayou",
+    "cfl_method": "Submission",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:20",
+    "wiki_page": "UFC 16",
+    "wiki_revid": 1338045069,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Welterweight",
+     "Chris Brennan",
+     "def.",
+     "Courtney Turner",
+     "Submission (armbar)",
+     "",
+     "1:20",
+     ""
+    ],
+    "wiki_section": "Welterweight Tournament Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:20",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8575,
+    "fighter_a": "Laverne Clark",
+    "fighter_b": "Josh Stuart",
+    "event": "UFC 16: Battle in the Bayou",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "1:15",
+    "wiki_page": "UFC 16",
+    "wiki_revid": 1338045069,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Welterweight",
+     "LaVerne Clark",
+     "def.",
+     "Josh Stuart",
+     "TKO (punches)",
+     "",
+     "1:15",
+     ""
+    ],
+    "wiki_section": "Welterweight Tournament Alternate bouts",
+    "wiki_round": "",
+    "wiki_time": "1:15",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8566,
+    "fighter_a": "Andre Roberts",
+    "fighter_b": "Harry Moskowitz",
+    "event": "UFC 17: Redemption",
+    "cfl_method": "Decision - Unanimous",
+    "cfl_end_round": 2,
+    "cfl_end_time": "3:00",
+    "wiki_page": "UFC 17",
+    "wiki_revid": 1338046299,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Heavyweight",
+     "Andre Roberts",
+     "def.",
+     "Harry Moskowitz",
+     "KO (elbow)",
+     "",
+     "3:15",
+     ""
+    ],
+    "wiki_section": "Heavyweight bouts",
+    "wiki_round": "",
+    "wiki_time": "3:15",
+    "wiki_marks_alternate_or_prelim": false,
+    "time_agrees_with_cfl": false,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": false,
+    "per_round_statistics_at_source": "unverified"
+   },
+   {
+    "cfl_fight_id": 8558,
+    "fighter_a": "Cesar Marscucci",
+    "fighter_b": "Paulo Santos",
+    "event": "UFC - Ultimate Brazil",
+    "cfl_method": "KO/TKO",
+    "cfl_end_round": 1,
+    "cfl_end_time": "10:27",
+    "wiki_page": "UFC Brazil",
+    "wiki_revid": 1377642578,
+    "wiki_status": "bout_found",
+    "match_score": 1.0,
+    "wiki_row_cells": [
+     "Lightweight",
+     "Cesar Marscucci",
+     "def.",
+     "Paulo Santos",
+     "TKO",
+     "",
+     "10:27",
+     ""
+    ],
+    "wiki_section": "Alternate Bouts",
+    "wiki_round": "",
+    "wiki_time": "10:27",
+    "wiki_marks_alternate_or_prelim": true,
+    "time_agrees_with_cfl": true,
+    "round_agrees_with_cfl": null,
+    "wiki_round_cell_blank": true,
+    "method_agrees_with_cfl_family": true,
+    "per_round_statistics_at_source": "unverified"
+   }
+  ]
+ },
+ "cfl_context_2026_10_21": {
+  "note": "Read-only SELECTs against production. Alternate bouts that DO have rounds and totals in CFL on the same cards, found while checking whether 'alternate bout' explains the gap.",
+  "alternate_bouts_with_stats_in_cfl": [
+   {
+    "cfl_fight_id": 8707,
+    "bout": "Guy Mezger vs Jason Fairn",
+    "event": "UFC 4",
+    "rounds_rows": 1,
+    "sig_str": "19 vs 9"
+   },
+   {
+    "cfl_fight_id": 8643,
+    "bout": "Geza Kalman vs Dieusel Berto",
+    "event": "UFC 10",
+    "rounds_rows": 1,
+    "sig_str": "21 vs 3"
+   }
+  ],
+  "alternate_bout_counts": "Wikipedia lists 3/2/3/2/1/2/2/3/2/2 alternate bouts on UFC 4/6/7/UU95/8/10/11/UU96/12/16 and 2 on UFC Brazil; CFL is missing rounds for 2/2/2/2/1/1/2/3/2/2 and 1 of them."
+ }
+}
