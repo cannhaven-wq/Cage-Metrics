@@ -42,7 +42,7 @@ function stripTypes(ts) {
   // file actually uses, and nothing cleverer.
   return ts
     .replace(/\)\s*:\s*(string|number|boolean|unknown)(\s*\|\s*null)?\s*\{/g, ') {')
-    .replace(/(\w+)\s*:\s*(string|number|boolean|unknown|any)(\s*\|\s*null)?(?=[,)=])/g, '$1')
+    .replace(/(\w+)\s*:\s*(string|number|boolean|unknown|any)(\s*\|\s*null)?(?=\s*[,)=])/g, '$1')
     .replace(/\s+as\s+Record<string,\s*string>/g, '')
     .replace(/\s+as\s+any/g, '');
 }
@@ -53,7 +53,7 @@ if (start < 0 || end < 0 || end < start) throw new Error('could not find the pur
 const pure = stripTypes(SRC.slice(start, end));
 const W = new Function('crypto', 'TextEncoder',
   pure + '\nreturn { PRO_TIER, FREE_TIER, STATUS_KEEPS_PERIOD, STATUS_ENDS_NOW, HANDLED, iso, idOf, ' +
-  'entitlementFor, userIdFrom, TOLERANCE_SECONDS, timingSafeEqual, verifyStripeSignature };'
+  'entitlementFor, userIdFrom, periodEndOf, TOLERANCE_SECONDS, timingSafeEqual, verifyStripeSignature };'
 )(globalThis.crypto, TextEncoder);
 
 // ------------------------------------------------------------ harness
@@ -179,6 +179,39 @@ t('the member is found the same way, and never from an email', () => {
   eq(W.userIdFrom({ customer_email: 'a@b.com' }), null, 'an email resolved to a member');
 });
 
+t('the period end is found the same way in both copies, for both Stripe shapes', () => {
+  const F = NOW_SEC + 86400, L = NOW_SEC + 2 * 86400;
+  const shapes = [
+    { current_period_end: F },                                                  // legacy
+    { items: { data: [{ current_period_end: F }] } },                           // basil
+    { items: { data: [{ current_period_end: F }, { current_period_end: L }] } },// basil, several items
+    { current_period_end: F, items: { data: [{ current_period_end: L }] } },    // both: top level wins
+    { items: { data: [{ current_period_end: null }, { current_period_end: 'x' }] } },
+    { items: { data: [] } }, { items: null }, { current_period_end: 0 }, { current_period_end: '' }, {}, null,
+  ];
+  const want = [F, F, L, F, null, null, null, null, null, null, null];
+  shapes.forEach((o, i) => {
+    eq(W.periodEndOf(o), B.periodEndOf(o), 'copies disagree on ' + JSON.stringify(o));
+    eq(W.periodEndOf(o), want[i], 'periodEndOf(' + JSON.stringify(o) + ')');
+  });
+});
+
+t('a basil payload through the webhook path grants to the item period end; no end fails closed', () => {
+  const F = NOW_SEC + 86400;
+  const basilEv = { type: 'customer.subscription.updated',
+    data: { object: { id: 'sub_b', status: 'active', items: { data: [{ current_period_end: F }] } } } };
+  const w = webhookWrites(basilEv, NOW_MS);
+  eq(w.entitlement, 'pro', 'basil active');
+  eq(w.ent.expiresAt, new Date(F * 1000).toISOString(), 'basil expiry');
+  ['active', 'trialing', 'past_due'].forEach(status => {
+    const none = { type: 'customer.subscription.updated', data: { object: { id: 'sub_n', status } } };
+    const r = webhookWrites(none, NOW_MS);
+    eq(r.entitlement, 'free', status + ' with no period end granted access');
+    eq(r.ent.reason, 'status_' + status + '_no_period_end_fails_closed', status + ' reason');
+    eq(r.ent.reason, B.decide(none, NOW_MS).reason, status + ' reason vs decide()');
+  });
+});
+
 t('Stripe timestamps convert the same way', () => {
   [NOW_SEC, 0, -1, null, undefined, 'x'].forEach(v => {
     const w = W.iso(v);
@@ -196,14 +229,17 @@ t('Stripe timestamps convert the same way', () => {
 function webhookWrites(event, nowMs) {
   const o = event.data.object;
   const status = event.type === 'customer.subscription.deleted' ? 'canceled' : String(o.status || '');
-  const ent = W.entitlementFor(status, W.iso(o.current_period_end), nowMs);
+  const ent = W.entitlementFor(status, W.iso(W.periodEndOf(o)), nowMs);
   const pro = (ent.tier === 'premium' || ent.tier === 'pro') &&
               (ent.expiresAt === null || Date.parse(ent.expiresAt) > nowMs);
   return { ent, status, entitlement: pro ? 'pro' : 'free', cancel: !!o.cancel_at_period_end };
 }
 
-t('every replay step signs, verifies, and maps to the state the harness expects', async () => {
-  const steps = H.buildFixtures({ runId: 'offline', userId: 'user-1', customerId: 'cus_offline', nowSec: NOW_SEC });
+for (const shape of ['legacy', 'items']) t('every replay step (' + shape + ' payload) signs, verifies, and maps to the state the harness expects', async () => {
+  const steps = H.buildFixtures({ runId: 'offline', userId: 'user-1', customerId: 'cus_offline', nowSec: NOW_SEC, shape });
+  const sample = steps[0].event.data.object;
+  ok(shape === 'items' ? (!('current_period_end' in sample) && sample.items.data.length === 1)
+                       : ('current_period_end' in sample && !sample.items), 'fixture is not the ' + shape + ' shape');
   ok(steps.length >= 7, 'the replay lost a step');
   let lastApplied = null;
   const seen = new Set();

@@ -233,6 +233,74 @@ t('a member id is never guessed from an email', () => {
 });
 
 /* ======================================================================
+   6b. WHERE THE PERIOD END LIVES — both Stripe payload shapes, and neither
+   Stripe API 2025-03-31 ("basil") moved current_period_end from the
+   subscription onto its items. Reading only the top level turned a basil
+   payload into "active, no period end", which used to grant open-ended Pro.
+   ====================================================================== */
+
+const basil = (over, ends) => {
+  const s = sub(over);
+  delete s.current_period_end;
+  s.items = { object: 'list', data: ends.map((e, i) => ({ id: 'si_' + i, current_period_end: e })) };
+  return s;
+};
+
+t('legacy shape: the top-level period end is used', () => {
+  const d = B.decide(ev('customer.subscription.updated', sub()), NOW);
+  eq(d.expiresAt, new Date(FUTURE * 1000).toISOString(), 'legacy period end');
+  eq(B.periodEndOf(sub()), FUTURE, 'periodEndOf legacy');
+});
+
+t('basil shape: the period end is read off the subscription items', () => {
+  const d = B.decide(ev('customer.subscription.updated', basil({}, [FUTURE])), NOW);
+  eq(d.tier, 'premium', 'a basil-shaped active subscription lost access');
+  eq(d.expiresAt, new Date(FUTURE * 1000).toISOString(), 'basil period end');
+});
+
+t('basil shape with several items: the latest end wins', () => {
+  const later = unix('2026-12-01T12:00:00Z');
+  eq(B.periodEndOf(basil({}, [FUTURE, later, null, 'x'])), later, 'latest item end');
+  const d = B.decide(ev('customer.subscription.updated', basil({ status: 'past_due' }, [FUTURE, later])), NOW);
+  eq(d.expiresAt, new Date(later * 1000).toISOString(), 'past_due on basil keeps the latest period');
+});
+
+t('the top level wins when both shapes are present', () => {
+  const later = unix('2026-12-01T12:00:00Z');
+  const s = basil({}, [later]);
+  s.current_period_end = FUTURE;
+  eq(B.periodEndOf(s), FUTURE, 'top level ignored');
+});
+
+t('a basil cancellation still keeps the paid period, and ends after it', () => {
+  eq(B.decide(ev('customer.subscription.deleted', basil({ status: 'canceled' }, [FUTURE])), NOW).tier,
+     'premium', 'a cancelled basil member lost the period they paid for');
+  eq(B.decide(ev('customer.subscription.deleted', basil({ status: 'canceled' }, [PAST])), NOW).tier,
+     'free', 'an expired basil cancellation kept access');
+});
+
+t('NO period end anywhere FAILS CLOSED for every paying status', () => {
+  const noEnd = over => { const s = sub(over); delete s.current_period_end; return s; };
+  ['active', 'trialing', 'past_due', 'canceled'].forEach(status => {
+    [noEnd({ status }), Object.assign(noEnd({ status }), { items: { data: [] } }),
+     Object.assign(noEnd({ status }), { items: { data: [{ current_period_end: null }, { current_period_end: 0 }] } }),
+     sub({ status, current_period_end: 'garbage' })].forEach((o, i) => {
+      const d = B.decide(ev('customer.subscription.updated', o), NOW);
+      eq(d.tier, 'free', status + ' with no readable period end (case ' + i + ') granted access');
+      eq(d.expiresAt, null, status + ' expiry');
+      eq(d.action, 'apply', status + ' action — the write must still happen so the reason is recorded');
+    });
+  });
+  ok(/no_period_end_fails_closed/.test(B.entitlementFor('active', null, NOW).reason), 'the reason does not say it failed closed');
+});
+
+t('a member whose period end could not be read is not told they are Pro', () => {
+  const d = B.describe({ subscription_status: 'active', current_period_end: null, entitlement: 'free' });
+  ok(!/^Pro$/.test(d.head) && !/renews/i.test(d.body), 'told they are Pro: ' + JSON.stringify(d));
+  ok(/contact/i.test(d.body), 'no way forward is offered');
+});
+
+/* ======================================================================
    7. THE WEBHOOK WRAPPER'S OWN GUARANTEES
    ====================================================================== */
 
@@ -278,6 +346,10 @@ t('the webhook and the pure module agree on the rules', () => {
   B.HANDLED.forEach(e => ok(WEBHOOK.indexOf("'" + e + "'") !== -1,
     'the webhook does not handle ' + e));
   ok(/canceled_but_period_paid/.test(WEBHOOK), 'the webhook lost the paid-period rule');
+  ok(/function periodEndOf\(/.test(WEBHOOK) && /iso\(periodEndOf\(o\)\)/.test(WEBHOOK),
+     'the webhook does not read the period end through periodEndOf — basil payloads would lose it');
+  ok(/no_period_end_fails_closed/.test(WEBHOOK) && !/expiresAt: null, reason: 'status_' \+ status \+ '_no_period_end' \}/.test(WEBHOOK),
+     'the webhook still grants open-ended access with no period end');
   ok(/const PRO_TIER = 'premium'/.test(WEBHOOK), 'the webhook writes a different tier value');
 });
 

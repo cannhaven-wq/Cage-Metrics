@@ -73,30 +73,26 @@ with `stripe_price_secret: null` for exactly this reason.
   - `invoice.paid`
   - `invoice.payment_succeeded`
   - `invoice.payment_failed`
-- **API version: read §current_period_end below before choosing.**
+- **API version:** either is handled — see §current_period_end below.
 - After saving, **reveal the signing secret** (`whsec_...`). This becomes
   `STRIPE_WEBHOOK_SECRET`.
 
-### §current_period_end — the one setting that can break access silently
+### §current_period_end — handled in code, fails closed
 
-The webhook reads `current_period_end` **off the subscription object**. Stripe
-API version **2025-03-31 ("basil") and later** moved that field onto the
-subscription's *items*. On such a version the webhook would see no period end,
-and `billing-lifecycle.js` grants an `active` or `past_due` subscription with
-no period end **open-ended access**. A member could keep Pro after their card
-stopped working, until Stripe finally marks the subscription `unpaid`.
+Stripe API version **2025-03-31 ("basil") and later** moved
+`current_period_end` from the subscription onto its *items*. Both copies of the
+lifecycle rules (`billing-lifecycle.js::periodEndOf` and the webhook's own copy)
+read the top-level field first, then the latest end across
+`items.data[]`. If neither is present, an `active`, `trialing` or `past_due`
+subscription **does not** get open-ended access: it is written as Free with the
+reason `status_<status>_no_period_end_fails_closed` in `billing_events`, and
+the account page says the membership is not confirmed rather than "Pro".
 
-So, either:
-
-- create the endpoint on an API version **before 2025-03-31**, or
-- before go-live, change `billing-lifecycle.js` **and** the webhook's copy
-  (the test fails if only one changes) to fall back to
-  `items.data[0].current_period_end`.
-
-The T-069 harness checks the endpoint's version and **fails** on a version at
-or after 2025-03-31, so this cannot pass unnoticed. *Unverified here:* the
-exact field move is from Stripe's changelog as known to the author, not from a
-live account — confirm it in the dashboard's API version notes.
+The T-069 harness reads the endpoint's API version and replays events in the
+shape that endpoint will actually receive (items-level on 2025-03-31+).
+*Unverified here:* the exact field move is from Stripe's changelog as known to
+the author, not from a live account — the harness run in step 7 is what
+confirms it against a real endpoint.
 
 ### §Rolling the signing secret
 
@@ -175,7 +171,7 @@ node build/stripe-test-e2e.js
 It refuses (exit 2) unless the key starts with `sk_test_`, and if any live key
 is anywhere in its environment. Then it checks the price is a test-mode
 recurring price, checks the endpoint from step 3 exists and sends the right
-events on a safe API version, signs in as the test member, asks for a
+events, notes which payload shape its API version uses, signs in as the test member, asks for a
 checkout, and replays signed subscription events against the **deployed**
 webhook, reading `v_my_billing` after each:
 
@@ -225,8 +221,6 @@ owner's own words. One pull request, and all of it in the diff:
    unsigned → `400` and forged → `400` (no more `503`). Renaming it to
    "Verify billing gates" is part of the same diff.
 6. If yearly is sold: the function change from step 2.
-7. If the endpoint is on API version 2025-03-31 or later: the
-   `current_period_end` fallback, in both copies.
 
 Then, in order:
 

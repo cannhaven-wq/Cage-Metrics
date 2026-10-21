@@ -42,7 +42,9 @@
 //                  given) is test-mode, recurring and active; the Stripe
 //                  webhook endpoint for this project exists, is enabled and
 //                  sends the events the function handles, and its API version
-//                  is reported (see the current_period_end note in the runbook)
+//                  decides the payload shape the replay uses: on 2025-03-31+
+//                  the period end is sent on subscription ITEMS, as Stripe
+//                  would send it to that endpoint
 //   1. sign in     the test member, through Supabase Auth, like the site does
 //   2. checkout    POST stripe-checkout as that member. 200 + a cs_test_ URL
 //                  passes. 503 checkout_disabled is reported as BLOCKED, which
@@ -85,7 +87,8 @@ const WEBHOOK_EVENTS = [
   'customer.subscription.deleted',
 ];
 // The Stripe API version that moved current_period_end off the Subscription
-// object and onto its items. The webhook reads o.current_period_end.
+// object and onto its items. The webhook reads both shapes (periodEndOf);
+// the replay sends whichever one the endpoint will actually receive.
 const PERIOD_END_MOVED_IN = '2025-03-31';
 
 // --------------------------------------------------------------- pure parts
@@ -133,18 +136,25 @@ function periodEndMovedOff(apiVersion) {
   return typeof apiVersion === 'string' && apiVersion.slice(0, 10) >= PERIOD_END_MOVED_IN;
 }
 
-function subscription({ subId, customerId, userId, status, periodEndSec, cancelAtPeriodEnd }) {
-  return {
+function subscription({ subId, customerId, userId, status, periodEndSec, cancelAtPeriodEnd, shape }) {
+  const o = {
     id: subId, object: 'subscription', customer: customerId, status,
-    current_period_end: periodEndSec, cancel_at_period_end: !!cancelAtPeriodEnd,
+    cancel_at_period_end: !!cancelAtPeriodEnd,
     livemode: false, metadata: { cfl_user_id: userId },
   };
+  if (shape === 'items') {
+    // API 2025-03-31+: the period lives on the subscription items.
+    o.items = { object: 'list', data: [{ id: subId + '_item', object: 'subscription_item', current_period_end: periodEndSec }] };
+  } else {
+    o.current_period_end = periodEndSec;
+  }
+  return o;
 }
 
 // The replay script. Each step names the event, the expected HTTP answer and
 // the v_my_billing state the member should then see. `expect.entitlement` is
 // what current_user_entitlement() returns for a non-beta member.
-function buildFixtures({ runId, userId, customerId, nowSec }) {
+function buildFixtures({ runId, userId, customerId, nowSec, shape }) {
   const subId = `sub_cfl_e2e_${runId}`;
   const future = nowSec + 30 * 86400;
   const past = nowSec - 3600;
@@ -153,35 +163,35 @@ function buildFixtures({ runId, userId, customerId, nowSec }) {
     api_version: null, created: nowSec, data: { object },
   });
   const created = ev(1, 'customer.subscription.created',
-    subscription({ subId, customerId, userId, status: 'active', periodEndSec: future }));
+    subscription({ shape, subId, customerId, userId, status: 'active', periodEndSec: future }));
   return [
     { name: 'subscription created (active) switches Pro on', event: created,
       http: 200, body: 'applied',
       expect: { entitlement: 'pro', subscription_status: 'active', cancel_at_period_end: false, period_end: future } },
     { name: 'one failed payment (past_due) keeps Pro to the period end',
       event: ev(2, 'customer.subscription.updated',
-        subscription({ subId, customerId, userId, status: 'past_due', periodEndSec: future })),
+        subscription({ shape, subId, customerId, userId, status: 'past_due', periodEndSec: future })),
       http: 200, body: 'applied',
       expect: { entitlement: 'pro', subscription_status: 'past_due', cancel_at_period_end: false, period_end: future } },
     { name: 'cancelling at period end keeps Pro and flags it as ending',
       event: ev(3, 'customer.subscription.updated',
-        subscription({ subId, customerId, userId, status: 'active', periodEndSec: future, cancelAtPeriodEnd: true })),
+        subscription({ shape, subId, customerId, userId, status: 'active', periodEndSec: future, cancelAtPeriodEnd: true })),
       http: 200, body: 'applied',
       expect: { entitlement: 'pro', subscription_status: 'active', cancel_at_period_end: true, period_end: future } },
     { name: 'deletion after the period ends switches Pro off',
       event: ev(4, 'customer.subscription.deleted',
-        subscription({ subId, customerId, userId, status: 'canceled', periodEndSec: past })),
+        subscription({ shape, subId, customerId, userId, status: 'canceled', periodEndSec: past })),
       http: 200, body: 'applied',
       expect: { entitlement: 'free', subscription_status: 'canceled', cancel_at_period_end: false, period_end: null } },
     { name: 'a redelivered old event is ignored and does not switch Pro back on',
       event: created, http: 200, body: 'duplicate_ignored',
       expect: { entitlement: 'free', subscription_status: 'canceled', cancel_at_period_end: false, period_end: null } },
     { name: 'a forged signature is refused', event: ev(6, 'customer.subscription.created',
-        subscription({ subId, customerId, userId, status: 'active', periodEndSec: future })),
+        subscription({ shape, subId, customerId, userId, status: 'active', periodEndSec: future })),
       forge: 'signature', http: 400, body: 'signature_mismatch',
       expect: { entitlement: 'free', subscription_status: 'canceled', cancel_at_period_end: false, period_end: null } },
     { name: 'a stale timestamp is refused', event: ev(7, 'customer.subscription.created',
-        subscription({ subId, customerId, userId, status: 'active', periodEndSec: future })),
+        subscription({ shape, subId, customerId, userId, status: 'active', periodEndSec: future })),
       forge: 'stale', http: 400, body: 'timestamp_outside_tolerance',
       expect: { entitlement: 'free', subscription_status: 'canceled', cancel_at_period_end: false, period_end: null } },
   ];
@@ -283,6 +293,7 @@ async function main() {
   console.log(`\nT-069 Stripe test-mode end-to-end against ${SUPA_URL}\n`);
 
   // ---- 0. preflight ------------------------------------------------------
+  let payloadShape = env.CFL_E2E_PAYLOAD_SHAPE === 'items' ? 'items' : 'legacy';
   if (env.STRIPE_PRICE_ID) {
     try {
       const p = await stripeGet(SK, `/prices/${encodeURIComponent(env.STRIPE_PRICE_ID)}`);
@@ -312,12 +323,12 @@ async function main() {
       record('preflight: webhook endpoint', problems.length ? 'FAIL' : 'PASS',
         problems.join('; ') || `${ep.id}, api_version ${ep.api_version || '(account default)'}`);
       if (periodEndMovedOff(ep.api_version)) {
-        record('preflight: api version', 'FAIL',
-          `${ep.api_version} puts current_period_end on subscription ITEMS; the webhook reads it off the ` +
-          'subscription and would grant open-ended access. Recreate the endpoint on an earlier version ' +
-          'or change the webhook first (runbook §current_period_end).');
+        payloadShape = 'items';
+        record('preflight: api version', 'PASS',
+          `${ep.api_version}: period end arrives on subscription items; the replay sends that shape`);
       } else if (!ep.api_version) {
-        record('preflight: api version', 'WARN', 'endpoint uses the account default version — check it in the dashboard');
+        record('preflight: api version', 'WARN',
+          'endpoint uses the account default version — the replay sends the legacy shape; check it in the dashboard');
       }
     }
   } catch (e) { record('preflight: webhook endpoint', 'FAIL', e.message); }
@@ -401,7 +412,8 @@ async function main() {
       return finish(results, args);
     }
     const runId = Date.now().toString(36);
-    const steps = buildFixtures({ runId, userId, customerId, nowSec: Math.floor(Date.now() / 1000) });
+    const steps = buildFixtures({ runId, userId, customerId, nowSec: Math.floor(Date.now() / 1000), shape: payloadShape });
+    console.log(`  replay payload shape: ${payloadShape}`);
     for (const step of steps) {
       const payload = JSON.stringify(step.event);
       const nowSec = Math.floor(Date.now() / 1000);
