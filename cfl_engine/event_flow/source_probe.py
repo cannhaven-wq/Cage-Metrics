@@ -11,14 +11,13 @@ Not probed: UFC.com. Its Terms of Use prohibit automated access
 (research/event-card/EVENT_CARD_PLAN_2026-10-15.md), so it is not a source this
 repo may use without UFC's written permission.
 
-Every sample is also printed as gzip+base64 between markers, so it can be
-recovered from the job log when the artifact store is out of reach.
+Every sample is also printed raw between markers with its sha256, so it can be
+recovered from the job log (the artifact store is out of this sandbox's reach)
+and checked byte for byte.
 """
 from __future__ import annotations
 
 import argparse
-import base64
-import gzip
 import hashlib
 import json
 import re
@@ -29,7 +28,8 @@ import urllib.request
 from pathlib import Path
 
 UA = "CannonFightLab-source-probe/1.0 (+https://cannonfightlab.com; research use)"
-ESPN = "https://site.api.espn.com/apis/site/v2/sports/mma/ufc"
+# site.api.espn.com answered runners 403 (run 39621346144); site.web.api answered 200.
+ESPN = "https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc"
 WIKI = "https://en.wikipedia.org/w/api.php"
 
 
@@ -48,11 +48,12 @@ def dump(name: str, body: str, out_dir: Path | None) -> None:
     if out_dir:
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / name).write_text(body, encoding="utf-8")
-    blob = base64.b64encode(gzip.compress(body.encode("utf-8"), 9)).decode()
-    print(f"-----BEGIN SAMPLE {name}-----")
-    for i in range(0, len(blob), 76):
-        print(blob[i:i + 76])
-    print(f"-----END SAMPLE {name}-----")
+    # Raw, with its sha256, so a copy recovered from the job log can be checked
+    # byte for byte. Very large bodies are only hashed.
+    digest = hashlib.sha256(body.encode("utf-8")).hexdigest()
+    print(f"-----BEGIN RAW {name} sha256={digest} bytes={len(body.encode())}-----")
+    print(body if len(body) < 120_000 else "(too large to print; hash only)")
+    print(f"-----END RAW {name}-----")
 
 
 def describe_espn_event(ev: dict) -> list[str]:
