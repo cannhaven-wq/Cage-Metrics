@@ -71,11 +71,15 @@ from cfl_engine.event_flow.ufcstats_card import (  # noqa: E402
 )
 from cfl_engine.event_flow.retirement import (  # noqa: E402
     REQUIRED_CONFIRMATIONS,
+    decision_evidence,
     plan_retirements,
 )
 
 LEDGER = "fight_bout_order"
-MIGRATION = "research/clv/proposed_2026-09-16_event_flow.sql"
+# Every is_active change is appended here BEFORE the flag is set: the reason,
+# and the card observations it rests on (STALE_BOOKING_LIFECYCLE.md §1-§2).
+DECISION_LOG = "fight_booking_status_log"
+MIGRATION = "research/event-card/apply_2026-10-21_running_order.sql"
 MIGRATION_FIX = "cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md"
 # A record that a human read one REAL UFCStats page and confirmed the printed
 # running order against the card. Writing is refused until it exists — see
@@ -257,6 +261,13 @@ def require_real_page_verified() -> None:
         missing = [k for k in ("ufc_event_id", "checked_by", "checked_at",
                                "main_event_bout_order", "first_walkout_matchup")
                    if not record.get(k)]
+        if record.get("result", "pass") != "pass":
+            # real_page_check.py writes "result": "fail" when it could not read
+            # the card (bot wall) or the direction was contradicted. A recorded
+            # failure is not a verification, whatever else the file carries.
+            die(EXIT_CONFIG,
+                f"{VERIFICATION.name} records a FAILED check "
+                f"(result={record.get('result')!r}). Refusing to write.")
         if missing:
             die(EXIT_CONFIG,
                 f"{VERIFICATION.name} is missing {missing}. The record has to say "
@@ -373,9 +384,38 @@ def _report_retirements(retire, active_column: bool, log=print) -> None:
             f"either way.")
 
 
+RECORDED, ALREADY_RECORDED, NO_LOG = "recorded", "already_recorded", "no_log"
+
+
+def _record_decision(base_url: str, key: str, row: dict) -> str:
+    """Append one decision to the log. Returns RECORDED / ALREADY_RECORDED / NO_LOG.
+
+    The log has a unique key on (fight_id, observed_at, is_active): the same
+    decision against the same observation is one decision. A 23505 therefore
+    means an earlier run recorded it and then did not finish setting the flag —
+    which is exactly the case a retry exists for, so it is not an error.
+    """
+    try:
+        rest_append(base_url, key, DECISION_LOG, [row])
+        return RECORDED
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace") if e.fp else ""
+        if "23505" in detail:
+            return ALREADY_RECORDED
+        if e.code == 404 or "42P01" in detail or "PGRST205" in detail:
+            return NO_LOG
+        raise
+
+
 def _apply_retirements(base_url: str, key: str, retire, active_column: bool,
-                       log=print) -> None:
-    """Flip `is_active`, and nothing else, ever.
+                       ledger_rows: list[dict], event_id: int, log=print) -> None:
+    """Record each decision, then flip `is_active` — and nothing else, ever.
+
+    Order matters, the same way it does for alert deliveries: the decision row
+    is appended FIRST. A crash between the two leaves a recorded decision whose
+    flag a later run sets (the unique key makes the re-record a no-op), never a
+    flag that changed with no record of why. If the log table is missing, no
+    flag is set at all.
 
     This is the only write in this module that touches `fights`, and it writes
     exactly one boolean. The fight row is never deleted, its history in
@@ -387,12 +427,21 @@ def _apply_retirements(base_url: str, key: str, retire, active_column: bool,
     if not active_column:
         log("   is_active not applied: the column does not exist yet")
         return
-    for fight_id in retire.deactivate:
-        _patch_fight(base_url, key, fight_id, False)
-        log(f"   set is_active=false on fight {fight_id}")
-    for fight_id in retire.reactivate:
-        _patch_fight(base_url, key, fight_id, True)
-        log(f"   set is_active=true on fight {fight_id}")
+    for fight_id, is_active in ([(f, False) for f in retire.deactivate]
+                                + [(f, True) for f in retire.reactivate]):
+        evidence = decision_evidence(ledger_rows, fight_id, is_active)
+        row = {**evidence, "event_id": event_id, "source": SOURCE}
+        row.pop("required", None)
+        outcome = _record_decision(base_url, key, row)
+        if outcome == NO_LOG:
+            log(f"   is_active not applied to fight {fight_id}: `{DECISION_LOG}` "
+                f"does not exist, and a flag is never set without its record. "
+                f"Apply {MIGRATION}.")
+            continue
+        _patch_fight(base_url, key, fight_id, is_active)
+        log(f"   set is_active={'true' if is_active else 'false'} on fight {fight_id} "
+            f"({evidence['reason']}; evidence {evidence['evidence_observed_at']}"
+            f"{'; decision was already on record' if outcome == ALREADY_RECORDED else ''})")
 
 
 def _patch_fight(base_url: str, key: str, fight_id: int, is_active: bool) -> None:
@@ -502,6 +551,20 @@ def ingest_event(
 
     if not should_append:
         log("   nothing to append.")
+        if retire.deactivate or retire.reactivate:
+            # Already justified by observations ON RECORD — no new append is
+            # needed for them. Without this, a flag change that failed once
+            # (or a column added after confirmation, or a booking retired by
+            # hand that is back on the card) would never be applied, because an
+            # unchanged card never reaches the post-append step below.
+            if not execute:
+                if retire.deactivate:
+                    log(f"   DRY RUN — would set is_active=false on {list(retire.deactivate)}")
+                if retire.reactivate:
+                    log(f"   DRY RUN — would set is_active=true on {list(retire.reactivate)}")
+                return "dry-run"
+            _apply_retirements(base_url, key, retire, active_column,
+                               _ledger_rows(ledger), eid, log)
         return "unchanged"
 
     if not execute:
@@ -535,12 +598,9 @@ def ingest_event(
     # second one exists, not before it — planning only beforehand would leave
     # every retirement a run late, and on a card that then stops changing it
     # would never arrive at all.
-    retire = plan_retirements(
-        _ledger_rows(read_ledger(base_url, key, eid)),
-        {r.fight_id for r in rows},
-        active_by_fight,
-    )
-    _apply_retirements(base_url, key, retire, active_column, log)
+    persisted = _ledger_rows(read_ledger(base_url, key, eid))
+    retire = plan_retirements(persisted, {r.fight_id for r in rows}, active_by_fight)
+    _apply_retirements(base_url, key, retire, active_column, persisted, eid, log)
     return "written"
 
 

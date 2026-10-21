@@ -29,7 +29,8 @@ as a pass.
 What it refuses
 ---------------
 It does not get past any bot wall. If UFCStats answers with an interstitial or
-an error instead of the card, the report says so (`status: "page_unreadable"`)
+an error instead of the card — and it does, with HTTP 200, to GitHub runners — the
+report says so (`status: "source_blocked"`)
 and the run fails. A check that quietly passed on a challenge page would be the
 exact silent failure this file exists to prevent.
 
@@ -80,8 +81,12 @@ LISTING_ROW_RE = re.compile(
     r'\s*(.*?)\s*</a>.*?<span class="b-statistics__date">\s*(.*?)\s*</span>',
     re.S | re.I,
 )
-CHALLENGE_MARKERS = ("checking your browser", "challenge", "captcha", "cf-chl",
-                     "just a moment")
+CHALLENGE_MARKERS = ("checking your browser", "challenge-platform", "challenge", "captcha",
+                     "cf-chl", "just a moment", "<title>loading")
+# A real UFCStats event page is tens of kilobytes; the interstitial GitHub's
+# runners received on 2026-10-21 was 2,998 bytes titled "Loading…".
+MIN_REAL_PAGE_BYTES = 8000
+SOURCE_BLOCKED = "source_blocked"
 
 
 def fetch(url: str) -> tuple[int, str]:
@@ -139,8 +144,18 @@ def bout_matches_title(fighter_names: tuple[str, ...], matchup: tuple[str, str])
 
 
 def looks_like_challenge(page_html: str) -> bool:
+    """An anti-bot response, whatever its HTTP status.
+
+    UFCStats answers GitHub's runners with HTTP 200 and an interstitial, so a
+    200 proves nothing. The page is treated as blocked when it lacks the markup
+    a real event page always has (fight-details links) AND either carries a
+    known challenge marker or is too small to be a card.
+    """
     low = page_html[:20000].lower()
-    return "fight-details" not in low and any(m in low for m in CHALLENGE_MARKERS)
+    if "fight-details" in low or "event-details" in low and "b-statistics__date" in low:
+        return False
+    return (any(m in low for m in CHALLENGE_MARKERS)
+            or len(page_html.encode("utf-8")) < MIN_REAL_PAGE_BYTES)
 
 
 def evidence(page_html: str) -> dict:
@@ -168,9 +183,11 @@ def check_page(ufc_event_id: str, page_html: str, http_status: int | None = None
                             + (" (bot-wall interstitial)" if looks_like_challenge(page_html) else ""))
         return entry
     if looks_like_challenge(page_html):
-        entry.update(status="page_unreadable",
-                     reason="UFCStats served a bot-wall interstitial, not the card. "
-                            "Not bypassed; no order read.")
+        entry.update(status=SOURCE_BLOCKED,
+                     reason="source blocked: UFCStats answered HTTP "
+                            f"{http_status} with an anti-bot page (no fight rows, "
+                            "challenge marker or a body too small to be a card). "
+                            "A 200 here is not a page. Not bypassed; no order read.")
         return entry
     try:
         card = parse_event_page(page_html)

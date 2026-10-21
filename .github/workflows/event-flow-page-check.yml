@@ -26,12 +26,9 @@ on:
         description: "UFCStats event ids, space-separated (blank = latest completed + next upcoming)"
         required: false
         default: ""
-  push:
-    branches:
-      - claude/gallant-cannon-sefkcs-running-order
-    paths:
-      - cfl_engine/event_flow/**
-      - .github/workflows/event-flow-page-check.yml
+  # Manual only. Runs 39620237572 and 39620364912 (2026-10-21) showed UFCStats
+  # answers GitHub runners with an HTTP 200 anti-bot page; re-running on every
+  # push would only hit the same wall.
 
 permissions:
   contents: read

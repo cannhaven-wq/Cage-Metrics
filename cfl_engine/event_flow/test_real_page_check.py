@@ -80,10 +80,31 @@ class TestDirection(unittest.TestCase):
 
 
 class TestRefusals(unittest.TestCase):
-    def test_bot_wall_is_unreadable_never_a_pass(self):
+    def test_bot_wall_is_source_blocked_never_a_pass(self):
         html = "<html><title>Checking your browser</title><script>pow()</script></html>"
         e = check_page(EID, html, 200)
-        self.assertEqual(e["status"], "page_unreadable")
+        self.assertEqual(e["status"], "source_blocked")
+        self.assertIn("source blocked", e["reason"])
+
+    def test_the_interstitial_github_runners_actually_get(self):
+        """Run 39620364912, 2026-10-21: HTTP 200, 2,998 bytes, <title>Loading…</title>,
+        no fight rows and none of the classic marker words. A 200 is not a page."""
+        html = ("<!DOCTYPE html><html><head><meta charset='utf-8'><title>Loading…</title>"
+                "</head><body><noscript>enable JavaScript</noscript>"
+                + "<script>/* work */</script>" * 100 + "</body></html>")
+        e = check_page(EID, html, 200)
+        self.assertEqual(e["status"], "source_blocked")
+        r = build_report([{**e, "kind": "completed"}], {"checked_by": "x", "checked_at": "d"})
+        self.assertEqual(r["result"], "fail")
+
+    def test_a_small_page_without_markers_is_still_blocked(self):
+        self.assertEqual(check_page(EID, "<html><body>hello</body></html>", 200)["status"],
+                         "source_blocked")
+
+    def test_bot_wall_report_fails_and_names_nothing(self):
+        html = "<html><title>Just a moment...</title><div id='cf-chl-widget'></div></html>"
+        e = check_page(EID, html, 200)
+        self.assertEqual(e["status"], "source_blocked")
         r = build_report([e], {"checked_by": "x", "checked_at": "d"})
         self.assertEqual(r["result"], "fail")
         self.assertIsNone(r["ufc_event_id"])
