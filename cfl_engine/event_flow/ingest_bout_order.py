@@ -16,6 +16,22 @@ reads. This writes it down: one row per bout, first walkout is 1.
   python cfl_engine/event_flow/ingest_bout_order.py --execute
   python cfl_engine/event_flow/ingest_bout_order.py --event-id 4433 --execute
   python cfl_engine/event_flow/ingest_bout_order.py --event-id 4433 --from-file page.html
+  python cfl_engine/event_flow/ingest_bout_order.py --source espn --event-id 4542   # see below
+
+Sources (T-030, 2026-10-21)
+---------------------------
+`--source ufcstats` (default) reads the UFCStats event page and links bouts by
+UFCStats fight id. UFCStats answers GitHub's runners with an anti-bot page, so
+from Actions this path ends PAGE UNREADABLE.
+
+`--source espn` reads ESPN's public MMA scoreboard JSON (site.web.api.espn.com),
+which a runner CAN read, and which lists bouts first walkout first. It carries
+no UFCStats id, so bouts are linked by BOTH fighters' names among the fights
+already on that event, exactly one match each, or the card is refused
+(`sources.link_by_pair`). Its rows are written with source='espn_scoreboard',
+so the two sources never mix inside one change-detection or retirement count.
+Using ESPN on a schedule is the owner's decision: see
+research/event-card/SOURCE_EVALUATION_2026-10-21.md (terms of use).
 
 Costs nothing. UFCStats is public HTML on the same host the scraper already
 polls; no API key, no credits, no paid tier.
@@ -61,6 +77,7 @@ from cfl_engine.event_flow.bout_order import (  # noqa: E402
     BoutOrderRefused,
     FightRow,
     Observation,
+    LedgerRow,
     build_rows,
     describe,
     plan_append,
@@ -69,13 +86,27 @@ from cfl_engine.event_flow.ufcstats_card import (  # noqa: E402
     CardParseError,
     parse_event_page,
 )
+from cfl_engine.event_flow.sources import (  # noqa: E402
+    ESPN as ESPN_SOURCE,
+    LinkRefused,
+    NamedFight,
+    SourceError,
+    direction,
+    link_by_pair,
+    parse_espn_scoreboard,
+    title_matchup,
+)
 from cfl_engine.event_flow.retirement import (  # noqa: E402
     REQUIRED_CONFIRMATIONS,
+    decision_evidence,
     plan_retirements,
 )
 
 LEDGER = "fight_bout_order"
-MIGRATION = "research/clv/proposed_2026-09-16_event_flow.sql"
+# Every is_active change is appended here BEFORE the flag is set: the reason,
+# and the card observations it rests on (STALE_BOOKING_LIFECYCLE.md §1-§2).
+DECISION_LOG = "fight_booking_status_log"
+MIGRATION = "research/event-card/apply_2026-10-21_running_order.sql"
 MIGRATION_FIX = "cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md"
 # A record that a human read one REAL UFCStats page and confirmed the printed
 # running order against the card. Writing is refused until it exists — see
@@ -86,6 +117,10 @@ VERIFICATION = Path(__file__).parent / "REAL_PAGE_CHECK.json"
 # "the latest observation" from a set that might be truncated.
 MAX_LEDGER_ROWS = 1000
 UFCSTATS_EVENT = "http://www.ufcstats.com/event-details/{ufc_event_id}"
+ESPN_SCOREBOARD = ("https://site.web.api.espn.com/apis/site/v2/sports/mma/ufc/"
+                   "scoreboard?dates={yyyymmdd}")
+# CLI name -> the `source` value its ledger rows carry.
+LEDGER_SOURCE = {"ufcstats": SOURCE, "espn": ESPN_SOURCE}
 TIMEOUT = 60
 DEFAULT_WITHIN_DAYS = 45
 
@@ -167,7 +202,8 @@ def rest_append(base_url: str, key: str, path: str, rows: list[dict]) -> int:
         return len(json.loads(resp.read().decode("utf-8")))
 
 
-def read_ledger(base_url: str, key: str, event_id: int) -> list[Observation]:
+def read_ledger(base_url: str, key: str, event_id: int,
+                source: str = SOURCE) -> list[Observation]:
     """Every observation on record for this event, newest first.
 
     Newest first matters: it means a truncated read still contains the latest
@@ -178,7 +214,7 @@ def read_ledger(base_url: str, key: str, event_id: int) -> list[Observation]:
         base_url, key, LEDGER,
         {"select": "id,fight_id,bout_order,observed_at,source",
          "event_id": f"eq.{event_id}",
-         "source": f"eq.{SOURCE}",
+         "source": f"eq.{source}",
          "order": "observed_at.desc,id.desc",
          "limit": MAX_LEDGER_ROWS},
     )
@@ -232,7 +268,7 @@ def unique_index_still_present(error_body: str) -> bool:
     return "23505" in error_body or "fight_bout_order_unique_idx" in error_body
 
 
-def require_real_page_verified() -> None:
+def require_real_page_verified(source: str = SOURCE) -> None:
     """Refuse to write until somebody has read a real UFCStats page.
 
     The parser is tested against a fixture that was written by hand to the
@@ -254,9 +290,25 @@ def require_real_page_verified() -> None:
             record = json.loads(VERIFICATION.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             die(EXIT_CONFIG, f"{VERIFICATION.name} is not valid JSON: {e}")
+        recorded = record.get("source", SOURCE)
+        if recorded != source:
+            # A check of one source's parser says nothing about another's.
+            die(EXIT_CONFIG,
+                f"{VERIFICATION.name} verifies source {recorded!r}, not {source!r}. "
+                f"Run the real-page check for {source!r} first.")
+        # A source other than UFCStats names its own event id.
+        if not record.get("ufc_event_id") and record.get("source_event_id"):
+            record["ufc_event_id"] = record["source_event_id"]
         missing = [k for k in ("ufc_event_id", "checked_by", "checked_at",
                                "main_event_bout_order", "first_walkout_matchup")
                    if not record.get(k)]
+        if record.get("result", "pass") != "pass":
+            # real_page_check.py writes "result": "fail" when it could not read
+            # the card (bot wall) or the direction was contradicted. A recorded
+            # failure is not a verification, whatever else the file carries.
+            die(EXIT_CONFIG,
+                f"{VERIFICATION.name} records a FAILED check "
+                f"(result={record.get('result')!r}). Refusing to write.")
         if missing:
             die(EXIT_CONFIG,
                 f"{VERIFICATION.name} is missing {missing}. The record has to say "
@@ -373,9 +425,39 @@ def _report_retirements(retire, active_column: bool, log=print) -> None:
             f"either way.")
 
 
+RECORDED, ALREADY_RECORDED, NO_LOG = "recorded", "already_recorded", "no_log"
+
+
+def _record_decision(base_url: str, key: str, row: dict) -> str:
+    """Append one decision to the log. Returns RECORDED / ALREADY_RECORDED / NO_LOG.
+
+    The log has a unique key on (fight_id, observed_at, is_active): the same
+    decision against the same observation is one decision. A 23505 therefore
+    means an earlier run recorded it and then did not finish setting the flag —
+    which is exactly the case a retry exists for, so it is not an error.
+    """
+    try:
+        rest_append(base_url, key, DECISION_LOG, [row])
+        return RECORDED
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode("utf-8", "replace") if e.fp else ""
+        if "23505" in detail:
+            return ALREADY_RECORDED
+        if e.code == 404 or "42P01" in detail or "PGRST205" in detail:
+            return NO_LOG
+        raise
+
+
 def _apply_retirements(base_url: str, key: str, retire, active_column: bool,
-                       log=print) -> None:
-    """Flip `is_active`, and nothing else, ever.
+                       ledger_rows: list[dict], event_id: int, log=print,
+                       source: str = SOURCE) -> None:
+    """Record each decision, then flip `is_active` — and nothing else, ever.
+
+    Order matters, the same way it does for alert deliveries: the decision row
+    is appended FIRST. A crash between the two leaves a recorded decision whose
+    flag a later run sets (the unique key makes the re-record a no-op), never a
+    flag that changed with no record of why. If the log table is missing, no
+    flag is set at all.
 
     This is the only write in this module that touches `fights`, and it writes
     exactly one boolean. The fight row is never deleted, its history in
@@ -387,12 +469,21 @@ def _apply_retirements(base_url: str, key: str, retire, active_column: bool,
     if not active_column:
         log("   is_active not applied: the column does not exist yet")
         return
-    for fight_id in retire.deactivate:
-        _patch_fight(base_url, key, fight_id, False)
-        log(f"   set is_active=false on fight {fight_id}")
-    for fight_id in retire.reactivate:
-        _patch_fight(base_url, key, fight_id, True)
-        log(f"   set is_active=true on fight {fight_id}")
+    for fight_id, is_active in ([(f, False) for f in retire.deactivate]
+                                + [(f, True) for f in retire.reactivate]):
+        evidence = decision_evidence(ledger_rows, fight_id, is_active)
+        row = {**evidence, "event_id": event_id, "source": source}
+        row.pop("required", None)
+        outcome = _record_decision(base_url, key, row)
+        if outcome == NO_LOG:
+            log(f"   is_active not applied to fight {fight_id}: `{DECISION_LOG}` "
+                f"does not exist, and a flag is never set without its record. "
+                f"Apply {MIGRATION}.")
+            continue
+        _patch_fight(base_url, key, fight_id, is_active)
+        log(f"   set is_active={'true' if is_active else 'false'} on fight {fight_id} "
+            f"({evidence['reason']}; evidence {evidence['evidence_observed_at']}"
+            f"{'; decision was already on record' if outcome == ALREADY_RECORDED else ''})")
 
 
 def _patch_fight(base_url: str, key: str, fight_id: int, is_active: bool) -> None:
@@ -406,19 +497,9 @@ def _patch_fight(base_url: str, key: str, fight_id: int, is_active: bool) -> Non
         pass
 
 
-def ingest_event(
-    event: dict,
-    base_url: str,
-    key: str,
-    execute: bool,
-    page_html: str | None = None,
-    log=print,
-) -> str:
-    """Returns one of: 'written', 'dry-run', 'refused', 'fetch-failed'."""
+def _ufcstats_rows(event, base_url, key, page_html, log):
+    """UFCStats page -> (rows, active_column, active_by_fight), or an outcome string."""
     eid = event["id"]
-    label = f"{event['name']} ({event['event_date']}) [event_id={eid}]"
-    log(f"\n== {label}")
-
     if page_html is None:
         try:
             page_html = fetch_page(event["ufc_event_id"])
@@ -441,10 +522,9 @@ def ingest_event(
         )
         return "refused"
 
-    # `is_active` may not be on the table yet (add_bout_order_migration.sql is
-    # unapplied). Ask for it, fall back without it, and carry "unknown" rather
-    # than guessing — the plan then reports what it WOULD do instead of going
-    # quiet, which is the useful behaviour before the column lands.
+    # `is_active` may not be on the table yet. Ask for it, fall back without
+    # it, and carry "unknown" rather than guessing — the plan then reports what
+    # it WOULD do instead of going quiet.
     raw, active_column = _read_fights(base_url, key, eid)
     fights = [
         FightRow(id=f["id"], ufc_fight_id=f["ufc_fight_id"], event_id=f["event_id"])
@@ -460,19 +540,127 @@ def ingest_event(
 
     log(f"   {len(rows)} bouts, first walkout first:")
     log(describe(rows, card))
+    _note_unlisted(len(fights) - len(rows), log)
+    return rows, active_column, active_by_fight
 
-    unlisted = len(fights) - len(rows)
+
+def _note_unlisted(unlisted: int, log) -> None:
     if unlisted > 0:
         # Expected and not an error: bookings that fell off the card stay in
         # `fights` forever. They get no order row, which is the point.
         log(f"   note: {unlisted} fight row(s) on this event are not on the page "
             f"(dead bookings) — no order written for them")
 
+
+def fetch_espn(event_date: str) -> str:
+    url = ESPN_SCOREBOARD.format(yyyymmdd=event_date.replace("-", "")[:8])
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "CannonFightLab/1.0 (+https://cannonfightlab.com)",
+        "Accept": "application/json"})
+    with urllib.request.urlopen(req, timeout=TIMEOUT) as resp:
+        return resp.read().decode("utf-8", "replace")
+
+
+def _read_named_fights(base_url: str, key: str, event_id: int) -> list[dict]:
+    """This event's fights with both fighters' names (two plain reads)."""
+    fights = rest_get(base_url, key, "fights", {
+        "select": "id,ufc_fight_id,event_id,is_active,fighter_a_id,fighter_b_id",
+        "event_id": f"eq.{event_id}", "limit": 200})
+    ids = sorted({i for f in fights for i in (f.get("fighter_a_id"), f.get("fighter_b_id"))
+                  if i is not None})
+    names = {}
+    if ids:
+        names = {r["id"]: r["name"] for r in rest_get(base_url, key, "fighters", {
+            "select": "id,name", "id": f"in.({','.join(str(i) for i in ids)})",
+            "limit": 400})}
+    for f in fights:
+        f["names"] = (names.get(f.get("fighter_a_id")) or "", names.get(f.get("fighter_b_id")) or "")
+    return fights
+
+
+def _espn_rows(event, base_url, key, scoreboard_json, log):
+    """ESPN scoreboard -> (rows, active_column, active_by_fight), or an outcome string."""
+    eid = event["id"]
+    if scoreboard_json is None:
+        try:
+            scoreboard_json = fetch_espn(event["event_date"])
+        except (urllib.error.URLError, urllib.error.HTTPError, OSError) as e:
+            log(f"   FETCH FAILED (ESPN): {e}")
+            return "fetch-failed"
+    try:
+        cards = parse_espn_scoreboard(json.loads(scoreboard_json))
+    except (json.JSONDecodeError, SourceError) as e:
+        log(f"   ESPN UNREADABLE: {e}")
+        return "fetch-failed"
+
+    # Which ESPN event is this CFL event? The titled matchup must agree; a date
+    # alone is not enough (two cards can share a weekend).
+    want = title_matchup(event.get("name"))
+    matches = [c for c in cards
+               if want is not None and title_matchup(c.event_name) is not None
+               and sorted(title_matchup(c.event_name)) == sorted(want)]
+    if len(matches) != 1:
+        log(f"   REFUSED: {len(matches)} ESPN events match {event.get('name')!r} "
+            f"(on the scoreboard: {[c.event_name for c in cards]})")
+        return "refused"
+    card = matches[0]
+    verdict, why = direction(card)
+    if verdict == "contradicted":
+        log(f"   REFUSED: {why}")
+        return "refused"
+
+    raw = _read_named_fights(base_url, key, eid)
+    named = [NamedFight(id=f["id"], event_id=f["event_id"], fighter_names=f["names"])
+             for f in raw]
+    try:
+        links = link_by_pair(card, named, eid)
+    except LinkRefused as e:
+        log(f"   REFUSED: {e}")
+        return "refused"
+    rows = [LedgerRow(fight_id=fid, event_id=eid, bout_order=walkout, source=ESPN_SOURCE)
+            for fid, walkout in links]
+    by_walkout = {b.walkout: b for b in card.bouts}
+    log(f"   {len(rows)} bouts from ESPN event {card.source_event_id} "
+        f"({card.event_name!r}), first walkout first [{verdict}: {why}]:")
+    for fid, walkout in sorted(links, key=lambda x: x[1]):
+        b = by_walkout[walkout]
+        log(f"     {walkout:>2}  {b.matchup}  [fight {fid}; section starts {b.section_start}]")
+    _note_unlisted(len(raw) - len(rows), log)
+    active_by_fight = {f["id"]: f.get("is_active") for f in raw}
+    return rows, True, active_by_fight
+
+
+def ingest_event(
+    event: dict,
+    base_url: str,
+    key: str,
+    execute: bool,
+    page_html: str | None = None,
+    log=print,
+    source: str = "ufcstats",
+) -> str:
+    """Returns one of: 'written', 'unchanged', 'dry-run', 'refused', 'fetch-failed'.
+
+    `page_html` is the UFCStats page, or for `source="espn"` the scoreboard JSON.
+    """
+    eid = event["id"]
+    label = f"{event['name']} ({event['event_date']}) [event_id={eid}]"
+    log(f"\n== {label}")
+
+    if source == "espn":
+        got = _espn_rows(event, base_url, key, page_html, log)
+    else:
+        got = _ufcstats_rows(event, base_url, key, page_html, log)
+    if isinstance(got, str):
+        return got
+    rows, active_column, active_by_fight = got
+    ledger_source = LEDGER_SOURCE[source]
+
     # What does the ledger currently say, and does the page disagree with it?
     # This is the whole change-detection rule, and it compares against the
     # LATEST observation only. A position the card held at some point in the
     # past never blocks a later observation of the same position.
-    ledger = read_ledger(base_url, key, eid)
+    ledger = read_ledger(base_url, key, eid, ledger_source)
     plan = plan_append(rows, ledger)
     log(f"   {plan.reason}")
     for line in plan.changes:
@@ -502,6 +690,20 @@ def ingest_event(
 
     if not should_append:
         log("   nothing to append.")
+        if retire.deactivate or retire.reactivate:
+            # Already justified by observations ON RECORD — no new append is
+            # needed for them. Without this, a flag change that failed once
+            # (or a column added after confirmation, or a booking retired by
+            # hand that is back on the card) would never be applied, because an
+            # unchanged card never reaches the post-append step below.
+            if not execute:
+                if retire.deactivate:
+                    log(f"   DRY RUN — would set is_active=false on {list(retire.deactivate)}")
+                if retire.reactivate:
+                    log(f"   DRY RUN — would set is_active=true on {list(retire.reactivate)}")
+                return "dry-run"
+            _apply_retirements(base_url, key, retire, active_column,
+                               _ledger_rows(ledger), eid, log, ledger_source)
         return "unchanged"
 
     if not execute:
@@ -535,12 +737,10 @@ def ingest_event(
     # second one exists, not before it — planning only beforehand would leave
     # every retirement a run late, and on a card that then stops changing it
     # would never arrive at all.
-    retire = plan_retirements(
-        _ledger_rows(read_ledger(base_url, key, eid)),
-        {r.fight_id for r in rows},
-        active_by_fight,
-    )
-    _apply_retirements(base_url, key, retire, active_column, log)
+    persisted = _ledger_rows(read_ledger(base_url, key, eid, ledger_source))
+    retire = plan_retirements(persisted, {r.fight_id for r in rows}, active_by_fight)
+    _apply_retirements(base_url, key, retire, active_column, persisted, eid, log,
+                       ledger_source)
     return "written"
 
 
@@ -554,6 +754,8 @@ def main() -> int:
     ap.add_argument("--from-file", type=Path,
                     help="read the page from disk instead of fetching; requires --event-id")
     ap.add_argument("--execute", action="store_true", help="write rows (default is a dry run)")
+    ap.add_argument("--source", choices=sorted(LEDGER_SOURCE), default="ufcstats",
+                    help="where the running order is read from (default ufcstats)")
     args = ap.parse_args()
 
     if args.from_file and args.event_id is None:
@@ -565,7 +767,7 @@ def main() -> int:
         die(EXIT_CONFIG, "SUPABASE_URL not set.")
     key = env_key()
     if args.execute:
-        require_real_page_verified()
+        require_real_page_verified(LEDGER_SOURCE[args.source])
     require_ledger(base_url, key)
 
     if args.event_id is not None:
@@ -590,10 +792,11 @@ def main() -> int:
 
     page_html = args.from_file.read_text(encoding="utf-8") if args.from_file else None
 
-    print(f"{len(events)} event(s) in scope; source='{SOURCE}'; "
+    print(f"{len(events)} event(s) in scope; source='{LEDGER_SOURCE[args.source]}'; "
           f"{'EXECUTE' if args.execute else 'DRY RUN'}")
     outcomes = [
-        ingest_event(e, base_url, key, args.execute, page_html=page_html)
+        ingest_event(e, base_url, key, args.execute, page_html=page_html,
+                     source=args.source)
         for e in events
     ]
 

@@ -79,6 +79,17 @@ t('the Brief reports the market, not a forecast', () => {
      'send-digest.js reads the forecast tables again');
 });
 
+// market.js rule 2 (D-012): CFL has never seen a sportsbook opener. The Brief
+// shipped a "Since open" column until 2026-10-21.
+t('the Brief never calls the baseline an opener', () => {
+  const body = stripComments(DIGEST);
+  const m = body.match(/since open|opening line|\bopener\b|opened at/i);
+  ok(!m, 'send-digest.js says "' + (m && m[0]) + '" — the baseline is our first broad capture');
+  ok(/first broad capture/.test(body), 'the Brief no longer names the first broad capture');
+  ok(/const BASELINE_NOTE = /.test(body) && (body.match(/BASELINE_NOTE/g) || []).length >= 3,
+     'the HTML and text versions no longer share BASELINE_NOTE');
+});
+
 t('an empty card is skipped, never filled with something else', () => {
   ok(/if \(!lines\.length\)[\s\S]{0,200}return;/.test(DIGEST),
      'the Brief no longer bails out when there is nothing to report');

@@ -79,6 +79,31 @@ server-side gate must already exist.
 Stripe wiring may all be built and tested meanwhile — only taking real money is
 blocked.
 
+### Drafted, not applied (2026-10-21)
+
+The per-surface gates are written out in
+[`research/commercial/t061_pro_gates.DRAFT.sql`](research/commercial/t061_pro_gates.DRAFT.sql)
+and run against a throwaway Postgres by `tests/test_t061_pro_gates_sql.py`.
+`entitlements.js::PRO_GATES_DRAFT` points each Pro surface at its gate, and
+`tests/subscription-boundary.test.js` keeps the two in step. The file refuses to
+run unless the session sets `cfl.t061_apply = 'yes'`, and applying it is T-061
+(L3). Every gate calls `current_user_is_pro()`.
+
+Three things the draft surfaced that the owner settles at T-061, not this file:
+
+- **The movement chart is drawn for everybody today.** Card Lab and Fight Lab
+  read `v_fight_chart_series` / `v_fight_chart_books`. This document puts the
+  full series in Pro, so applying the gate removes the chart for free readers
+  unless the boundary moves.
+- **"Book-by-book table" means two things.** The Pro table above sells "every
+  sportsbook's current price side by side"; `entitlements.js` sells
+  `book_by_book_history`, each book's *history*, and Fight Lab shows every
+  book's current price for free today. The draft follows the code: the current
+  per-book table stays free and only the per-book history is gated.
+- **Alerts are metered, not walled, in the written SQL spec** (3 for Free, 50
+  for Pro, `alerts_migration.sql` §0), while the table above lists alerts as
+  Pro. The draft follows the SQL spec.
+
 ## What the architecture already supports
 
 - `profiles.tier` and `profiles.beta_premium` exist; `cflAuth.getTier()` /

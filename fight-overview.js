@@ -7,8 +7,9 @@
 
    It builds on what already exists and recomputes nothing a second way:
    career rates come from fight-workspace.js::careerWindow (rebuilt from every
-   completed UFC fight in `fights`), the style label from fight-lab.js::styleRead
-   (v_fighter_style), the late-round score from fight-lab.js::lateRoundRead
+   completed UFC fight in `fights`), the fighting style from
+   fight-lab.js::disciplineRead (the UFC-listed discipline, copied, never
+   calculated — D-030), the late-round score from fight-lab.js::lateRoundRead
    (v_fighter_consistency), the market from market.js::readSide.
 
    Three rules this file holds:
@@ -18,6 +19,15 @@
       Muay Thai or submission specialist; each says what the fight records
       show, with the number and the sample beside it. tests/fight-overview.test.js
       fails if a background label appears in this file's output.
+
+      Nor does any line here name a STYLE. T-082 proposed calculated sub-labels
+      (boxing-led, kick-heavy, clinch-heavy, offensive / defensive wrestling,
+      submission threat) and was retired 2026-10-21 under D-030: the style a
+      page shows is the UFC's listed discipline, and a calculated label beside
+      it would compete with it. The measurements those labels would have been
+      built from are already here as numbered lines (distance / clinch / ground,
+      legs / body / head, takedown attempts, takedown defence, submission
+      attempts). See research/backlog/T076_T081_T082_DISPOSITION_2026-10-21.md.
 
    2. NO TENDENCY FROM A THIN SAMPLE. Under MIN_FIGHTS UFC fights with totals,
       or MIN_MINUTES minutes of fighting, there are no tendency lines at all —
@@ -34,9 +44,10 @@
   const MIN_FIGHTS = 3;
   const MIN_MINUTES = 25;
 
-  // Labels the overview must never print about a fighter. The measured style
-  // buckets (striker / grappler / mixes both) are exempt: they are read from
-  // round-one output and the page says so.
+  // Labels the overview must never print about a fighter. The UFC-listed
+  // discipline (D-030) is shown by the page as a sourced fact, never by this
+  // file; the old calculated striker / grappler / mixes-both read is no longer
+  // rendered anywhere.
   const BACKGROUND_WORDS = /\b(boxer|boxing|kickboxer|kickboxing|wrestler|wrestling background|muay thai|jiu[- ]jitsu|bjj|judoka|judo|sambo|karate|taekwondo|submission specialist|black belt)\b/i;
 
   const r1 = v => Math.round(v * 10) / 10;

@@ -657,24 +657,52 @@ class TestIngestEventEndToEnd(unittest.TestCase):
 class TestProductionWriteGate(unittest.TestCase):
     """Writing is gated on somebody having read one real UFCStats page."""
 
-    def test_the_gate_is_currently_shut(self):
+    def test_the_gate_is_shut_for_ufcstats(self):
+        """No real UFCStats page has been read (it serves GitHub's runners an
+        anti-bot page), so writing UFCStats-sourced rows stays refused."""
+        import contextlib
+        import io
+
         import cfl_engine.event_flow.ingest_bout_order as ing
-        self.assertFalse(
-            ing.VERIFICATION.is_file(),
-            "a verification record exists — if a real page really was checked, "
-            "say so in the handoff; this test guards against the file being "
-            "added without that happening",
-        )
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            ing.require_real_page_verified("ufcstats_card")
+
+    def test_a_committed_record_names_a_real_run_and_passed(self):
+        """The record in the repo must be a PASSED check produced by a GitHub
+        Actions run, with that run linked — never one written by hand."""
+        import json
+        import re
+
+        import cfl_engine.event_flow.ingest_bout_order as ing
+        if not ing.VERIFICATION.is_file():
+            self.skipTest("no record committed")
+        rec = json.loads(ing.VERIFICATION.read_text("utf-8"))
+        self.assertEqual(rec["result"], "pass")
+        self.assertRegex(rec["checked_by"],
+                         r"GitHub Actions run \d+ .*https://github\.com/cannhaven-wq/"
+                         r"Cage-Metrics/actions/runs/\d+")
+        run_id = re.search(r"run (\d+)", rec["checked_by"]).group(1)
+        self.assertIn(run_id, rec["run"]["checked_by"])
+        ing.require_real_page_verified(rec["source"])     # opens for its own source only
 
     def test_missing_verification_refuses_to_write(self):
         import contextlib
         import io
 
+        import tempfile
+        from pathlib import Path
+
         import cfl_engine.event_flow.ingest_bout_order as ing
 
         err = io.StringIO()
-        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
-            ing.require_real_page_verified()
+        original = ing.VERIFICATION
+        with tempfile.TemporaryDirectory() as tmp:
+            ing.VERIFICATION = Path(tmp) / "REAL_PAGE_CHECK.json"     # absent
+            try:
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                    ing.require_real_page_verified()
+            finally:
+                ing.VERIFICATION = original
         self.assertEqual(cm.exception.code, ing.EXIT_CONFIG)
         msg = err.getvalue()
         self.assertIn("no real UFCStats page has been checked", msg)
@@ -727,13 +755,41 @@ class TestProductionWriteGate(unittest.TestCase):
             finally:
                 ing.VERIFICATION = original
 
+    def test_a_recorded_failure_does_not_open_the_gate(self):
+        """real_page_check.py writes result=fail on a bot wall or an inverted
+        card. Even with every other field filled in, that must stay shut."""
+        import contextlib
+        import io
+        import json
+        import tempfile
+        from pathlib import Path
+
+        import cfl_engine.event_flow.ingest_bout_order as ing
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "REAL_PAGE_CHECK.json"
+            path.write_text(json.dumps({
+                "result": "fail", "ufc_event_id": "55e94a9b525dcf45",
+                "checked_by": "x", "checked_at": "2026-10-21",
+                "main_event_bout_order": 13, "first_walkout_matchup": "A vs B",
+            }), encoding="utf-8")
+            original, err = ing.VERIFICATION, io.StringIO()
+            ing.VERIFICATION = path
+            try:
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                    ing.require_real_page_verified()
+                self.assertEqual(cm.exception.code, ing.EXIT_CONFIG)
+                self.assertIn("FAILED", err.getvalue())
+            finally:
+                ing.VERIFICATION = original
+
     def test_a_dry_run_is_never_gated(self):
         """The dry run is how you produce the confirmation, so gating it would
         make the gate impossible to open."""
         import inspect
         import cfl_engine.event_flow.ingest_bout_order as ing
         src = inspect.getsource(ing.main)
-        self.assertIn("if args.execute:\n        require_real_page_verified()", src)
+        self.assertIn("if args.execute:\n        require_real_page_verified(", src)
 
 
 class TestUniqueIndexDiagnosis(unittest.TestCase):
@@ -859,11 +915,34 @@ class ActiveFlagLedger(FakeLedger):
     prove the rest of the row is left alone.
     """
 
-    def __init__(self, fights, active_column: bool = True, **kw):
+    def __init__(self, fights, active_column: bool = True, log_table: bool = True, **kw):
         super().__init__(fights, **kw)
         self.active_column = active_column
+        self.log_table = log_table
         self.is_active = {f.id: True for f in fights}
         self.patches: list[tuple[int, bool]] = []
+        self.decisions: list[dict] = []
+        # (kind, fight_id) in the order they happened, so a test can prove the
+        # decision is on record BEFORE the flag moves.
+        self.events: list[tuple[str, int]] = []
+
+    def rest_append(self, base_url, key, path, payloads):
+        if path != "fight_booking_status_log":
+            return super().rest_append(base_url, key, path, payloads)
+        import urllib.error
+        if not self.log_table:
+            raise urllib.error.HTTPError("u", 404, "Not Found", {}, io.BytesIO(
+                b'{"code":"PGRST205","message":"Could not find the table"}'))
+        for p in payloads:
+            # The unique key the migration declares.
+            if any((d["fight_id"], d["observed_at"], d["is_active"])
+                   == (p["fight_id"], p["observed_at"], p["is_active"])
+                   for d in self.decisions):
+                raise urllib.error.HTTPError("u", 409, "Conflict", {}, io.BytesIO(
+                    b'{"code":"23505","message":"duplicate key value"}'))
+        self.decisions.extend(dict(p) for p in payloads)
+        self.events.extend(("decision", p["fight_id"]) for p in payloads)
+        return payloads
 
     def rest_get(self, base_url, key, path, params):
         if path == "fights":
@@ -880,6 +959,7 @@ class ActiveFlagLedger(FakeLedger):
 
     def patch_fight(self, base_url, key, fight_id, is_active):
         self.patches.append((fight_id, is_active))
+        self.events.append(("flag", fight_id))
         self.is_active[fight_id] = is_active
 
 
@@ -1025,3 +1105,123 @@ class TestStaleBookingLifecycle(unittest.TestCase):
         self.assertTrue(ledger.is_active[self.main_id])
         self.assertEqual([p for p in ledger.patches if p[1] is False],
                          [(self.withdrawn_id, False)])
+
+
+class TestRetirementIsARecordedDecision(unittest.TestCase):
+    """T-032: STALE_BOOKING_LIFECYCLE.md §1-§2 — every flag change is a decision
+    appended to `fight_booking_status_log`, with the observations it rests on,
+    BEFORE the flag moves."""
+
+    MAIN = TestStaleBookingLifecycle.MAIN
+    SECOND = TestStaleBookingLifecycle.SECOND
+    WITHDRAWN = TestStaleBookingLifecycle.WITHDRAWN
+    REPLACEMENT = TestStaleBookingLifecycle.REPLACEMENT
+    EVENT = TestStaleBookingLifecycle.EVENT
+    setUp = TestStaleBookingLifecycle.setUp
+    run_page = TestStaleBookingLifecycle.run_page
+
+    def lifecycle_to_retirement(self, ledger):
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+        self.run_page(ledger, full)
+        self.run_page(ledger, without)
+        self.run_page(ledger, without)
+
+    def test_the_decision_is_recorded_before_the_flag_and_names_its_evidence(self):
+        ledger = ActiveFlagLedger(self.fights)
+        self.lifecycle_to_retirement(ledger)
+        self.assertEqual(len(ledger.decisions), 1)
+        d = ledger.decisions[0]
+        self.assertEqual((d["fight_id"], d["is_active"], d["reason"]),
+                         (self.withdrawn_id, False, "retired_absent_from_card"))
+        self.assertEqual(d["event_id"], CFL_EVENT_ID)
+        self.assertEqual(d["source"], "ufcstats_card")
+        self.assertEqual(d["confirmations"], 2)
+        self.assertNotIn("required", d)
+        # The evidence is the two observations that lacked it, newest first,
+        # and on the ledger neither of them holds the withdrawn booking.
+        self.assertEqual(len(d["evidence_observed_at"]), 2)
+        self.assertEqual(d["observed_at"], d["evidence_observed_at"][0])
+        instants = sorted({r["observed_at"] for r in ledger.rows}, reverse=True)
+        self.assertEqual(d["evidence_observed_at"], instants[:2])
+        for at in d["evidence_observed_at"]:
+            self.assertFalse(any(r["observed_at"] == at and r["fight_id"] == self.withdrawn_id
+                                 for r in ledger.rows))
+        self.assertEqual(ledger.events, [("decision", self.withdrawn_id),
+                                         ("flag", self.withdrawn_id)],
+                         "the flag moved before its decision was on record")
+
+    def test_no_decision_log_means_no_flag_change(self):
+        ledger = ActiveFlagLedger(self.fights, log_table=False)
+        self.lifecycle_to_retirement(ledger)
+        self.assertEqual(ledger.patches, [], "a flag changed with nowhere to record why")
+        self.assertTrue(ledger.is_active[self.withdrawn_id])
+
+    def test_a_crash_between_record_and_flag_is_finished_by_the_next_run(self):
+        ledger = ActiveFlagLedger(self.fights)
+        real_patch = ledger.patch_fight
+        calls = {"n": 0}
+
+        def flaky(b, k, fid, act):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                raise OSError("connection reset")
+            real_patch(b, k, fid, act)
+        ledger.patch_fight = flaky
+
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        without = [self.MAIN, self.SECOND]
+        self.run_page(ledger, full)
+        self.run_page(ledger, without)
+        with self.assertRaises(OSError):
+            self.run_page(ledger, without)
+        self.assertEqual(len(ledger.decisions), 1)
+        self.assertTrue(ledger.is_active[self.withdrawn_id])
+        rows_before = len(ledger.rows)
+
+        # Next run: the card is unchanged and nothing is pending, so nothing is
+        # appended — and the confirmed retirement must still be finished.
+        self.assertEqual(self.run_page(ledger, without), "unchanged")
+        self.assertEqual(len(ledger.rows), rows_before, "an unneeded observation was appended")
+        self.assertFalse(ledger.is_active[self.withdrawn_id])
+        self.assertEqual(len(ledger.decisions), 1, "the same decision was recorded twice")
+
+    def test_a_hand_retired_booking_back_on_an_unchanged_card_is_reactivated(self):
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        self.run_page(ledger, full)
+        ledger.is_active[self.withdrawn_id] = False          # retired by hand
+        self.assertEqual(self.run_page(ledger, full), "unchanged")
+        self.assertTrue(ledger.is_active[self.withdrawn_id])
+        self.assertEqual(ledger.decisions[-1]["reason"], "reactivated_back_on_card")
+        self.assertEqual(ledger.decisions[-1]["evidence_observed_at"],
+                         [ledger.rows[-1]["observed_at"]])
+
+    def test_a_dry_run_on_an_unchanged_card_reports_and_writes_nothing(self):
+        import cfl_engine.event_flow.ingest_bout_order as ing
+        ledger = ActiveFlagLedger(self.fights)
+        full = [self.MAIN, self.SECOND, self.WITHDRAWN]
+        self.run_page(ledger, full)
+        ledger.is_active[self.withdrawn_id] = False
+        lines: list[str] = []
+        get, append, patch = ing.rest_get, ing.rest_append, ing._patch_fight
+        ing.rest_get, ing.rest_append = ledger.rest_get, ledger.rest_append
+        ing._patch_fight = lambda b, k, fid, act: ledger.patch_fight(b, k, fid, act)
+        try:
+            out = ing.ingest_event(self.EVENT, "https://x.supabase.co", "k", execute=False,
+                                   page_html=build_page(full), log=lines.append)
+        finally:
+            ing.rest_get, ing.rest_append, ing._patch_fight = get, append, patch
+        self.assertEqual(out, "dry-run")
+        self.assertIn(f"would set is_active=true on [{self.withdrawn_id}]", "\n".join(lines))
+        self.assertEqual(ledger.decisions, [])
+        self.assertFalse(ledger.is_active[self.withdrawn_id])
+
+    def test_only_the_departed_booking_ever_gets_a_decision(self):
+        ledger = ActiveFlagLedger(self.fights)
+        self.lifecycle_to_retirement(ledger)
+        self.assertEqual({d["fight_id"] for d in ledger.decisions}, {self.withdrawn_id})
+
+
+if __name__ == "__main__":
+    unittest.main()

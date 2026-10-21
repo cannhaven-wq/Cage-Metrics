@@ -1,27 +1,32 @@
-# Capture the running order of upcoming cards from UFCStats.
+# Capture the running order of upcoming cards.
 #
 # MANUAL ONLY, deliberately, and it cannot write yet even when dispatched.
 #
-# Two things have to happen before the schedule below is uncommented:
+# Before the schedule below is uncommented:
 #
-#   1. research/clv/proposed_2026-09-16_event_flow.sql is applied — WITH the one
-#      index change in cfl_engine/event_flow/MIGRATION_ADJUSTMENT.md. Without
-#      that change a bout cannot return to a position it held before, and the
-#      ingester halts on such a card rather than recording the wrong order.
-#   2. somebody reads one real UFCStats page and records the check in
-#      cfl_engine/event_flow/REAL_PAGE_CHECK.json. Until that file exists,
-#      `--execute` refuses; dry runs work fine and are how you produce it.
+#   1. research/event-card/apply_2026-10-21_running_order.sql is applied (L3,
+#      owner; procedure in research/event-card/RUNNING_ORDER_APPLY.md). Until
+#      then every run stops with exit 2: the ingester never creates tables.
+#   2. cfl_engine/event_flow/REAL_PAGE_CHECK.json records a PASSED real-page
+#      check for the source being written (.github/workflows/event-flow-page-check.yml).
+#      `--execute` refuses otherwise; dry runs are never gated.
+#   3. The source is chosen. UFCStats (the default) answers GitHub's runners
+#      with an HTTP 200 anti-bot page, so `source=ufcstats` ends PAGE
+#      UNREADABLE here. `source=espn` reads ESPN's public scoreboard JSON,
+#      which runners can read — using it on a schedule is the owner's call
+#      (research/event-card/SOURCE_EVALUATION_2026-10-21.md).
 #
-# Both are enforced in code, so a scheduled run before either would stop rather
-# than write — and a cron that is red on every run is a cron people learn to
-# ignore. Hence: manual only for now.
+# Enabling the schedule is then a two-line change: replace
+#     # schedule:
+#     #   - cron: "20 7,19 * * *"
+# with
+#     schedule:
+#       - cron: "20 7,19 * * *"
+# and, for ESPN, change the `SOURCE` default below from ufcstats to espn.
+# Twice a day is enough: an unchanged card writes nothing, and every
+# observation is appended rather than overwritten.
 #
-# Once both are done, uncomment the schedule. Twice a day is enough: a card's
-# order is announced days out and moves rarely, an unchanged card writes nothing
-# at all, and every observation is appended rather than overwritten, so a missed
-# pass costs nothing a later one cannot record.
-#
-# Cost: none. UFCStats is public HTML; no API key and no credits are involved.
+# Cost: none. No API key and no credits are involved.
 name: Event flow — bout order
 
 on:
@@ -36,6 +41,10 @@ on:
         type: boolean
         required: false
         default: false
+      source:
+        description: "ufcstats (blocked from GitHub runners) or espn"
+        required: false
+        default: "ufcstats"
   # schedule:
   #   - cron: "20 7,19 * * *"
 
@@ -52,16 +61,19 @@ jobs:
           python-version: "3.11"
 
       - name: Unit tests
-        run: python -m unittest cfl_engine.event_flow.test_event_flow
+        run: >-
+          python -m unittest cfl_engine.event_flow.test_event_flow
+          cfl_engine.event_flow.test_retirement cfl_engine.event_flow.test_sources
 
       - name: Ingest running order
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SOURCE: ${{ github.event.inputs.source || 'ufcstats' }}
         run: |
-          args=""
+          args="--source $SOURCE"
           if [ -n "${{ github.event.inputs.event_id }}" ]; then
-            args="--event-id ${{ github.event.inputs.event_id }}"
+            args="$args --event-id ${{ github.event.inputs.event_id }}"
           fi
           if [ "${{ github.event.inputs.execute }}" = "true" ]; then
             args="$args --execute"

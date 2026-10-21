@@ -1,28 +1,54 @@
-// Content engine: turns the live model state for every upcoming UFC card into
-// a ready-to-post social batch (X, TikTok/IG Reels, Reddit) + a dated
+// Content engine: turns the public research data for every upcoming UFC card
+// into a ready-to-review social batch (X, Instagram/TikTok, Reddit) plus a dated
 // scheduling CSV, written to /social/<event-slug>-<id>/.
 //
-// It is a GENERATOR, not a poster — it never touches an account and needs no
-// secrets (same publishable anon key as the rest of the site; RLS protects
-// everything). A human reviews the batch, then schedules it.
+// It is a GENERATOR, not a poster: it never touches an account and needs no
+// secrets (the same publishable key as the rest of the site; RLS protects
+// everything). A human reviews the batch before anything is scheduled.
 //
-// Brand rules enforced in every template:
-//   - value-first, curious-insider tone; NO hype/guarantees/"best picks"/betting language
-//   - every piece ends with a soft CTA + a genuine engagement question
-//   - links carry ?src=<platform> so Plausible can attribute signups
-//   - real model data only; "camp intel" is never fabricated — pieces that
-//     need news carry an explicit [verify + insert real intel] slot.
+// RESEARCH POSITIONING (T-038, D-011). Until 2026-10-21 every piece here was
+// built around the retired engine's pick and its win percentage, and three of
+// them went out to X under CFL's name after D-011. This version is built ONLY
+// from what the public product already shows:
+//
+//   - the sportsbook market: vig-free consensus, best observed price and the
+//     book posting it, book count, capture time, the spread between books,
+//     and movement over the matched book cohort since the first broad capture
+//     (v_fight_market_movement, D-012; wording via market-movement.js);
+//   - the tale of the tape (fighters: age, height, reach, stance, record);
+//   - the discipline as the UFC lists it (fighters.fighting_style, D-030) —
+//     never a calculated striker/grappler label, and nothing for "MMA";
+//   - how a fighter's past fights ended (v_fighter_finish_rate) and how their
+//     output held up late (v_fighter_consistency) — as DESCRIPTION only. Cardio
+//     does not tell you who wins, and the copy never implies it does.
+//
+// It reads no forecast table of any kind. tests/social-engine.test.js greps
+// this file for every private or forecast table name and fails on a hit.
+//
+// Every piece passes through guardPieces() before it can be written anywhere:
+// build/social-copy-guard.js::forecastClaim over every string the piece
+// carries, plus the opener/baseline wording market-movement.js forbids, plus
+// the research-era vocabulary list below. A piece that trips any of them is
+// DROPPED and named in the log — never reworded, never posted. Only pieces
+// that survived the guard reach the queue, and only those carry
+// positioning:'research' (see buildQueue, which runs the guard a second time).
 //
 // Usage:
-//   cd build && node social-engine.js            # all upcoming cards
-//   cd build && node social-engine.js --event=117  # one event id
+//   cd build && node social-engine.js              # all upcoming cards
+//   cd build && node social-engine.js --event=4542 # one event id
+//
+// The piece-building is pure (buildBatch over plain row objects) so it can be
+// tested against a real-data fixture without a network: see
+// tests/social-engine.test.js and tests/fixtures/social-engine-ufc333.json.
+
+'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const { createClient } = require('@supabase/supabase-js');
 const { slugify } = require('./slug');
-const { consensusPick, cardOrder, cardSlug } = require('./event-preview-templates');
-const { findChrome, renderPieceImages } = require('./post-cards');
+const { cardOrder, cardSlug } = require('./event-preview-templates');
+const { forecastClaim } = require('./social-copy-guard');
+const MOVEMENT = require('../market-movement');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -31,65 +57,115 @@ const SITE = 'https://cannonfightlab.com';
 const ROOT = path.resolve(__dirname, '..');
 const SOCIAL_DIR = path.join(ROOT, 'social');
 
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+// The public tables and views this generator may read. Nothing else.
+const SOURCES = Object.freeze([
+  'events', 'fights', 'fighters',
+  'v_fight_market_movement', 'v_fighter_finish_rate', 'v_fighter_consistency',
+]);
 
 // ---------------------------------------------------------------- helpers ---
 
+// Description of each cardio tier: how late-round output compares with the
+// fighter's own round one in past fights. Never a statement about who wins.
 const CARDIO_LABEL = {
-  tireless:  'tireless (output holds R3+)',
-  steady:    'steady (no real late dropoff)',
-  tapers:    'tapers (measurable late fade)',
-  fades:     'fades (real trouble in deep water)',
-  collapses: 'collapses (output falls off a cliff R3+)'
+  tireless:  'output holds or rises after round 2',
+  steady:    'no real late drop-off',
+  tapers:    'measurable late drop-off',
+  fades:     'clear late drop-off',
+  collapses: 'output falls away sharply late',
 };
-const CARDIO_FLAGGED = new Set(['tapers', 'fades', 'collapses']);
 const CARDIO_BADGE = { tireless: '🟢', steady: '🟢', tapers: '🟡', fades: '🟠', collapses: '🔴' };
 
-const HASHTAG_CORE = ['#MMA', '#UFC', '#MMATwitter', '#FightIQ', '#MMAanalytics'];
+// A listed discipline that says nothing about a discipline shows nothing
+// (same rule as fight-lab.js::disciplineRead, D-030).
+const GENERIC_STYLE = /^(mma|mixed martial arts?|freestyle|n\/?a|none|-+)$/i;
+
+const HASHTAG_CORE = ['#MMA', '#UFC', '#MMATwitter', '#UFCOdds'];
+
+// Minimum sample before a fighter's finish history is quoted.
+const MIN_FINISH_SAMPLE = 5;
 
 function eventHashtag(name) {
-  // "UFC 329: ..." -> #UFC329 ; "UFC Fight Night: ..." -> #UFCFightNight
   const m = String(name).match(/UFC\s+(\d+)/i);
   if (m) return `#UFC${m[1]}`;
   if (/fight night/i.test(name)) return '#UFCFightNight';
   return '#UFC';
 }
 
-// Short, sentence-friendly event label. Numbered cards collapse to "UFC 329"
-// (the subtitle is redundant mid-copy); Fight Nights keep their subtitle since
-// that's what identifies them.
+// "UFC 333: ..." -> "UFC 333"; Fight Nights keep their subtitle.
 function shortName(name) {
   const m = String(name).match(/^UFC\s+\d+/i);
   return m ? m[0].toUpperCase().replace(/\s+/g, ' ') : String(name);
 }
 
+function compactEvent(name) {
+  const m = String(name).match(/^UFC\s+\d+/i);
+  if (m) return m[0].toUpperCase().replace(/\s+/g, ' ');
+  if (/fight night/i.test(name)) return 'UFC Fight Night';
+  return String(name);
+}
+
+function surname(n) {
+  const parts = String(n || '').trim().split(/\s+/);
+  while (parts.length > 1 && /^(jr\.?|sr\.?|ii|iii|iv|v)$/i.test(parts[parts.length - 1])) parts.pop();
+  return parts[parts.length - 1] || String(n || '');
+}
+const upper = n => surname(n).toUpperCase();
+
 function lastNameTag(fullName) {
-  const parts = String(fullName).trim().split(/\s+/);
-  const last = parts[parts.length - 1] || '';
-  const clean = last.replace(/[^A-Za-z]/g, '');
+  const clean = surname(fullName).replace(/[^A-Za-z]/g, '');
   return clean.length >= 3 ? '#' + clean : null;
 }
 
 function hashtags(eventName, ...names) {
   const tags = [eventHashtag(eventName), ...HASHTAG_CORE];
   names.forEach(n => { const t = lastNameTag(n); if (t && !tags.includes(t)) tags.push(t); });
-  return tags.slice(0, 8).join(' ');
+  return tags.slice(0, 7).join(' ');
 }
 
-function link(page, src) { return `${SITE}/${page}?src=${src}`; }
+function num(v) {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return isFinite(n) ? n : null;
+}
 
-function finishPct(rec) {
-  if (!rec || !rec.total_fights) return null;
-  return { pct: Math.round(((rec.ko_tko_rate || 0) + (rec.sub_rate || 0)) * 100), n: rec.total_fights };
+// American price, always signed.
+function am(n) {
+  const v = num(n);
+  if (v === null) return '—';
+  return (v > 0 ? '+' : '') + Math.round(v);
+}
+const pct = p => Math.round(p * 100) + '%';
+
+function fmtHeight(inches) {
+  const v = num(inches);
+  if (v === null) return null;
+  return `${Math.floor(v / 12)}'${Math.round(v % 12)}"`;
+}
+function fmtRecord(f) {
+  if (num(f.wins) === null || num(f.losses) === null) return null;
+  return `${f.wins}-${f.losses}${num(f.draws) ? '-' + f.draws : ''}`;
+}
+
+// "Oct 20, 19:06 UTC" — a social post is read hours later, so its prices carry
+// the capture time itself, not a relative age.
+function stampUtc(iso) {
+  const t = Date.parse(iso);
+  if (!isFinite(t)) return null;
+  const d = new Date(t);
+  const mon = d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' });
+  const hh = String(d.getUTCHours()).padStart(2, '0');
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  return `${mon} ${d.getUTCDate()}, ${hh}:${mm} UTC`;
 }
 
 function formatLongDate(isoDate) {
-  const d = new Date(isoDate + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const d = new Date(isoDate + 'T00:00:00Z');
+  return d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 }
 function shortDate(isoDate) {
-  const d = new Date(isoDate + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const d = new Date(isoDate + 'T00:00:00Z');
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' });
 }
 function isoOffset(isoDate, days) {
   const d = new Date(isoDate + 'T12:00:00Z');
@@ -104,435 +180,574 @@ function writeIfChanged(filepath, content) {
   return true;
 }
 
+function cardUrl(event, src) {
+  return `${SITE}/card/${cardSlug(event.name, event.id)}.html${src ? `?src=${src}` : ''}`;
+}
+
 // ---------------------------------------------------------- data assembly ---
 
-// Returns { event, rows } where each row is
-//   { fight, a, b, pick, cardioA, cardioB, finA, finB }
-// pick = consensusPick(...) | null, cardio* = tier string | null, fin* = {pct,n} | null
-async function loadCard(event) {
-  const { data: fights } = await sb.from('fights')
-    .select('id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, is_main_event, is_title_fight, weight_class')
-    .eq('event_id', event.id);
-  const list = (fights || []).filter(f => f.id && f.fighter_a_id && f.fighter_b_id);
-  if (!list.length) return { event, rows: [] };
+// Pure: plain row objects in, card rows out. Shape of `data`:
+//   { event, fights, market, fighters, finish_rates, cardio }
+// each an array of rows exactly as the public tables/views return them.
+// Returns rows sorted in card order:
+//   { fight, a, b, mkt, finA, finB, cardioA, cardioB }
+function assembleRows(data) {
+  const fmap = {}; (data.fighters || []).forEach(f => { fmap[f.id] = f; });
+  const mkt = {}; (data.market || []).forEach(r => { mkt[r.fight_id] = r; });
+  const fin = {}; (data.finish_rates || []).forEach(r => { fin[r.fighter_id] = r; });
+  const cardio = {};
+  (data.cardio || []).forEach(r => { if (r.weight_class === 'CAREER') cardio[r.fighter_id] = r; });
 
-  const fighterIds = [...new Set(list.flatMap(f => [f.fighter_a_id, f.fighter_b_id]))];
-  const fightIds = list.map(f => f.id);
-
-  const [fR, pR, cR, finR] = await Promise.all([
-    sb.from('fighters').select('id, name, nickname').in('id', fighterIds),
-    // Engine picks (model_picks) — the one current model. Retired v1-v6 rows
-    // never publish here; blending them into posted copy would resurface
-    // numbers the site no longer stands behind.
-    sb.from('model_picks').select('fight_id, pick_fighter_id, p_cal, source').in('fight_id', fightIds),
-    sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier').in('fighter_id', fighterIds),
-    sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, ko_tko_rate, sub_rate').in('fighter_id', fighterIds),
-  ]);
-
-  const fmap = {}; (fR.data || []).forEach(f => { fmap[f.id] = f; });
-  const engineByFight = {};
-  (pR.data || []).forEach(p => {
-    const prev = engineByFight[p.fight_id];
-    if (prev && prev.source === 'live' && p.source !== 'live') return;
-    engineByFight[p.fight_id] = p;
-  });
-  const picksByFight = {};
-  Object.values(engineByFight).forEach(p => {
-    (picksByFight[p.fight_id] = picksByFight[p.fight_id] || []).push(
-      { fighter_id: p.pick_fighter_id, model_p: p.p_cal == null ? null : +p.p_cal });
-  });
-  const cardio = {}; (cR.data || []).forEach(r => { if (r.weight_class === 'CAREER') cardio[r.fighter_id] = r.cardio_tier; });
-  const finish = {}; (finR.data || []).forEach(r => { finish[r.fighter_id] = r; });
-
-  const rows = list.map(fight => {
-    const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name };
-    const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name };
-    return {
-      fight, a, b,
-      pick: consensusPick(picksByFight[fight.id] || [], a, b),
-      cardioA: cardio[a.id] || null,
-      cardioB: cardio[b.id] || null,
-      finA: finishPct(finish[a.id]),
-      finB: finishPct(finish[b.id]),
-    };
-  }).filter(r => r.a.name && r.b.name);
-
+  const rows = (data.fights || [])
+    .filter(f => f.id && f.fighter_a_id && f.fighter_b_id && f.is_active !== false)
+    .map(fight => {
+      const a = fmap[fight.fighter_a_id] || { id: fight.fighter_a_id, name: fight.fighter_a_name };
+      const b = fmap[fight.fighter_b_id] || { id: fight.fighter_b_id, name: fight.fighter_b_name };
+      return {
+        fight, a, b,
+        mkt: mkt[fight.id] || null,
+        finA: finishHistory(fin[a.id]), finB: finishHistory(fin[b.id]),
+        cardioA: cardioRead(cardio[a.id]), cardioB: cardioRead(cardio[b.id]),
+      };
+    })
+    .filter(r => r.a.name && r.b.name);
   rows.sort((x, y) => cardOrder(x.fight, y.fight));
-  return { event, rows };
+  return rows;
 }
 
-// For a row, resolve the picked ("winner") and non-picked ("other") sides with
-// their cardio/finish, so pillar templates can talk about "the pick" naturally.
-function sides(row) {
-  if (!row.pick) return null;
-  const winIsA = row.pick.winnerId === row.a.id;
+// How a fighter's past fights ended, as counts (not a rate dressed up as a
+// skill). Below the sample floor it is not quoted at all.
+function finishHistory(r) {
+  if (!r) return null;
+  const total = num(r.total_fights);
+  if (total === null || total < MIN_FINISH_SAMPLE) return null;
+  const ko = Math.round(total * (num(r.ko_tko_rate) || 0));
+  const sub = Math.round(total * (num(r.sub_rate) || 0));
+  return { total, early: ko + sub, ko, sub };
+}
+
+// Cardio tier, only where the view rates the read 'high' (enough late-round
+// tape). A limited read is a guess and is not published.
+function cardioRead(r) {
+  if (!r || !r.cardio_tier || r.confidence_tier !== 'high' || !CARDIO_LABEL[r.cardio_tier]) return null;
+  return r.cardio_tier;
+}
+
+function style(f) {
+  const raw = f && f.fighting_style ? String(f.fighting_style).trim() : '';
+  return raw && !GENERIC_STYLE.test(raw) ? raw : null;
+}
+
+// The market for one fight, read through market-movement.js so the movement
+// refusals and wording are the site's, not this file's.
+function marketRead(row) {
+  const m = row.mkt;
+  if (!m || num(m.market_p_a) === null || num(m.book_count) === null) return null;
+  const pA = num(m.market_p_a);
+  const pB = num(m.market_p_b) !== null ? num(m.market_p_b) : 1 - pA;
+  const mv = MOVEMENT.describeMovement(m, { fighterA: row.a.name, fighterB: row.b.name });
+  const move = mv.ok ? mv.value.pts : null;
   return {
-    win:   winIsA ? row.a : row.b,
-    other: winIsA ? row.b : row.a,
-    winCardio:   winIsA ? row.cardioA : row.cardioB,
-    otherCardio: winIsA ? row.cardioB : row.cardioA,
-    winFin:   winIsA ? row.finA : row.finB,
-    otherFin: winIsA ? row.finB : row.finA,
-    pct: row.pick.pct, agree: row.pick.agree, total: row.pick.total,
+    pA, pB,
+    books: num(m.book_count),
+    asOf: stampUtc(m.last_updated),
+    bestA: num(m.best_american_a), bookA: m.best_book_a || null,
+    bestB: num(m.best_american_b), bookB: m.best_book_b || null,
+    spread: num(m.book_spread_pts),
+    moveOk: mv.ok && move !== null,
+    move,
+    matched: mv.books.matched,
+    moveStatus: mv.status,
   };
 }
 
-// --------------------------------------------------------- image specs ---
-// Structured data → the post-card renderer turns these into finished PNGs sized
-// per platform. Punchy display names (surname only) keep headlines tight.
-function lastName(n) {
-  const p = String(n).trim().split(/\s+/);
-  return (p[p.length - 1] || String(n)).toUpperCase();
-}
-function cap(t) { return t ? t.charAt(0).toUpperCase() + t.slice(1) : t; }
-
-// Compact event label for image eyebrows — one clean line. Numbered cards keep
-// their number; Fight Nights drop the subtitle (the headline names the fight).
-function compactEvent(name) {
-  const m = String(name).match(/^UFC\s+\d+/i);
-  if (m) return m[0].toUpperCase().replace(/\s+/g, ' ');
-  if (/fight night/i.test(name)) return 'UFC Fight Night';
-  return String(name);
+// "3.8 pts toward Pico" / "unchanged" — the market.js::moveWords phrasing.
+function moveText(mr, row) {
+  if (!mr || !mr.moveOk) return null;
+  const mag = Math.abs(mr.move);
+  if (mag < 0.5) return 'unchanged';
+  return `${mag.toFixed(1)} pts toward ${surname(mr.move > 0 ? row.a.name : row.b.name)}`;
 }
 
-function baseVerdictImage(event, s, pillarLabel) {
-  return {
-    layout: 'verdict',
-    eyebrow: `${pillarLabel} · ${compactEvent(event.name)}`,
-    fa: lastName(s.win.name),
-    fb: lastName(s.other.name),
-    big: `${s.pct}%`,
-    bigCap: `Model leans ${lastName(s.win.name)}`,
-    chips: [
-      { k: 'Confidence', v: `${s.pct}%` },
-      { k: 'Models agree', v: `${s.agree}/${s.total}` },
-    ],
-    cta: 'Full card breakdown → cannonfightlab.com',
-  };
+function bestLine(mr, row) {
+  const parts = [];
+  if (mr.bestA !== null && mr.bookA) parts.push(`${surname(row.a.name)} ${am(mr.bestA)} (${mr.bookA})`);
+  if (mr.bestB !== null && mr.bookB) parts.push(`${surname(row.b.name)} ${am(mr.bestB)} (${mr.bookB})`);
+  return parts.length ? parts.join(', ') : null;
 }
 
 // ------------------------------------------------------------- generators ---
-// Each returns an array of piece objects (or []). A piece:
-//   { tag, id, platform, pillar, copy, hashtags, cta, question, visual?, image? }
-// `image` (optional) is a spec rendered to PNGs by post-cards.js.
+// Each returns an array of raw piece objects (or []). A piece:
+//   { tag, id, platform, pillar, copy, tweetBody?, hashtags, cta, question,
+//     visual?, image? }
+// finalizePiece() adds `tweet` and `caption`; guardPieces() decides whether it
+// survives. `image` is a spec rendered to PNGs by post-cards.js.
 
-function pieceCardLink(event, src) {
-  return `${SITE}/card/${cardSlug(event.name, event.id)}.html?src=${src}`;
-}
+const BASELINE_NOTE = `Movement is measured only across books quoting both at our first broad capture (when ${MOVEMENT.MIN_MATCHED_BOOKS}+ sportsbooks first had the fight priced) and now. That is when CFL started watching properly, not the first price any book posted.`;
 
-// Pillar 1 — Sensor Read (main event, cardio-vs-pick tension when present)
-function genSensorRead(event, rows) {
-  const main = rows.find(r => r.fight.is_main_event) || rows[0];
-  if (!main || !main.pick) return [];
-  const s = sides(main);
-  const ehash = eventHashtag(event.name);
-  const url = pieceCardLink(event, 'x');
-
-  let tensionLines;
-  if (s.winCardio && CARDIO_FLAGGED.has(s.winCardio) && s.winFin && s.winFin.pct >= 55) {
-    // Model likes the pick BUT flags their cardio → timeline bet.
-    tensionLines =
-`2/ But our cardio sensor tags ${s.win.name} "${s.winCardio}"${s.otherCardio ? `, ${s.other.name} "${s.otherCardio}"` : ''}.
-
-3/ So the model finish-weights ${s.win.name} (${s.winFin.pct}% of wins are finishes over ${s.winFin.n}) — but the longer it goes, the more that edge thins.
-
-4/ Read it as a timeline bet: end it early, ${s.win.name}. Deep water? The number drifts the other way.`;
-  } else if (s.otherCardio && CARDIO_FLAGGED.has(s.otherCardio)) {
-    tensionLines =
-`2/ The lever our sensor leans on: ${s.other.name} tags "${s.otherCardio}" late${s.winFin ? `, and ${s.win.name} finishes ${s.winFin.pct}% of wins (${s.winFin.n})` : ''}.
-
-3/ Translation — the danger window is the championship rounds, not the opening exchanges.`;
-  } else {
-    tensionLines =
-`2/ What's driving it: ${s.winFin ? `${s.win.name} finishes ${s.winFin.pct}% of wins over ${s.winFin.n} graded fights` : 'a stack of small edges rather than one headline stat'}.
-
-3/ Not a lock — a lean the models happen to share, and we'll show you every factor behind it.`;
-  }
+// Market — the main event as the books have it.
+function genMarketMain(event, rows) {
+  const row = rows.find(r => r.fight.is_main_event) || rows[0];
+  const mr = row && marketRead(row);
+  if (!mr || !mr.asOf) return [];
+  const A = surname(row.a.name), B = surname(row.b.name);
+  const best = bestLine(mr, row);
+  const mv = moveText(mr, row);
+  const S = shortName(event.name);
 
   const copy =
-`Our model locked ${shortName(event.name)} — and the ${s.win.name}–${s.other.name} read is more interesting than the pick itself. 🧵
+`${S} main event: ${A} vs ${B}.
 
-1/ The verdict: ${s.win.name}, ${s.pct}% (${s.agree} of ${s.total} models agree).
+Books' consensus, each book's margin removed: ${A} ${pct(mr.pA)}, ${B} ${pct(mr.pB)}. ${mr.books} sportsbooks, as of ${mr.asOf}.
+${best ? `Best observed price: ${best}.` : 'No best price captured yet.'}
+${mv ? `Since our first broad capture (${mr.matched} matched books): ${mv}.` : 'Movement: not enough comparable books yet, so no figure.'}
 
-${tensionLines}
+That is what the books are saying, not what we think. Every book, side by side, on the card page.`;
 
-5/ Every factor is on the card page. Curious where you land.`;
+  // Longest first; finalizePiece takes the first that fits in a tweet.
+  const head = `${S} main event: books have ${A} ${pct(mr.pA)}, ${B} ${pct(mr.pB)} (${mr.books} books, margin removed, ${mr.asOf}).`;
+  const tweetBody = [
+    best ? `${head}\nBest observed: ${best}.` : head,
+    head,
+  ];
 
-  const img = baseVerdictImage(event, s, 'Sensor Read');
-  if (s.winCardio && CARDIO_FLAGGED.has(s.winCardio)) img.chips.push({ k: 'Cardio', v: cap(s.winCardio), tone: 'warn' });
-  else if (s.winFin) img.chips.push({ k: 'Finish rate', v: `${s.winFin.pct}%`, tone: 'win' });
+  const chips = [];
+  if (mr.bestA !== null) chips.push({ k: `Best · ${upper(row.a.name)}`, v: `${am(mr.bestA)} ${mr.bookA || ''}`.trim() });
+  if (mr.bestB !== null) chips.push({ k: `Best · ${upper(row.b.name)}`, v: `${am(mr.bestB)} ${mr.bookB || ''}`.trim() });
+  if (mv) chips.push({ k: 'Since first broad capture', v: mv });
 
   return [{
-    tag: 'X-POST', id: 'sensor-main', platform: 'X', pillar: 'P1-SensorRead',
-    copy, image: img,
-    hashtags: hashtags(event.name, s.win.name, s.other.name),
-    cta: `Full model + factors on site (${url}) — what do you think?`,
-    question: `Round 1 ${s.win.name} or deep-water ${s.other.name}?`,
-  }, {
-    tag: 'TIKTOK-REEL', id: 'sensor-main-reel', platform: 'TikTok', pillar: 'P1-SensorRead', image: img,
-    copy:
-`HOOK (0-3s): "Our model picked ${s.win.name}. Then our OWN data started arguing with it."
-BODY (3-22s): "${s.pct}% ${s.win.name} — ${s.winFin ? `they finish ${s.winFin.pct}% of their wins` : 'the models agree'}. ${s.winCardio && CARDIO_FLAGGED.has(s.winCardio) ? `But we tag them "${s.winCardio}." ${s.other.name}? "${s.otherCardio || 'steadier'}." Same fight, two timelines.` : `The edge is real but thin — here's what tips it.`}"
-CTA (22-30s): "We show you the whole disagreement — link in bio. What's your call?"`,
-    hashtags: hashtags(event.name, s.win.name, s.other.name) + ' #FightTok #fyp',
-    cta: 'Full read → link in bio',
-    question: `${s.win.name} early or ${s.other.name} late — where's your line?`,
-    visual: `Creator to camera / green-screen over the card page; animated % counter reading ${s.pct}%; split "${(s.winCardio||'').toUpperCase()} / ${(s.otherCardio||'').toUpperCase()}" badges; crimson-on-black captions, fast cuts.`,
+    tag: 'X-POST', id: 'market-main', platform: 'X', pillar: 'Market',
+    copy, tweetBody,
+    image: {
+      layout: 'verdict', eyebrow: `Market · ${compactEvent(event.name)}`,
+      fa: upper(row.a.name), fb: upper(row.b.name),
+      big: `${pct(mr.pA)} · ${pct(mr.pB)}`,
+      bigCap: `Books' consensus · ${mr.books} books · margin removed`,
+      chips, cta: 'Every book, side by side → cannonfightlab.com',
+    },
+    hashtags: hashtags(event.name, row.a.name, row.b.name),
+    cta: `Every book on the card page (${cardUrl(event, 'x')})`,
+    question: `Where would you shop this one?`,
   }];
 }
 
-// Pillar 2 — Cardio & Collapse (favorites carrying a flagged tier)
+// Movement — the biggest matched-cohort moves on the card.
+function genMovers(event, rows) {
+  const S = shortName(event.name);
+  const reads = rows.map(r => ({ r, mr: marketRead(r) })).filter(x => x.mr && x.mr.moveOk);
+  if (!reads.length) return [];
+  const movers = reads.filter(x => Math.abs(x.mr.move) >= MOVEMENT.FLAT_PTS)
+    .sort((x, y) => Math.abs(y.mr.move) - Math.abs(x.mr.move)).slice(0, 4);
+  const hashtagsFor = movers.length ? movers.flatMap(x => [x.r.a.name, x.r.b.name]).slice(0, 2) : [];
+
+  if (!movers.length) {
+    return [{
+      tag: 'X-POST', id: 'movers', platform: 'X', pillar: 'Movement',
+      copy:
+`${S}: nothing on the card has moved a full point since our first broad capture.
+
+${BASELINE_NOTE}
+
+A quiet market is a finding too. Every fight, every book, on the card page.`,
+      tweetBody: `${S}: nothing on the card has moved a full point since our first broad capture (matched books only). A quiet market is a finding too.`,
+      hashtags: hashtags(event.name),
+      cta: `Every fight on the card page (${cardUrl(event, 'x')})`,
+      question: `Expecting anything to move before the walkouts?`,
+    }];
+  }
+
+  const line = x => `${surname(x.r.a.name)} vs ${surname(x.r.b.name)}: ${moveText(x.mr, x.r)} (${x.mr.matched} matched books)`;
+  const lead = movers[0];
+  const copy =
+`${S}: where the books have moved since our first broad capture.
+
+${movers.map(line).join('\n')}
+
+${BASELINE_NOTE} A move is the books changing their price — it says nothing about who wins.`;
+
+  let tweetBody = `${S}, biggest moves since our first broad capture (matched books only):`;
+  for (const x of movers) {
+    const next = `\n${surname(x.r.a.name)} vs ${surname(x.r.b.name)}: ${moveText(x.mr, x.r)}`;
+    if ((tweetBody + next).length > 200) break;
+    tweetBody += next;
+  }
+
+  const leadToward = lead.mr.move > 0 ? lead.r.a : lead.r.b;
+  const leadBest = lead.mr.move > 0 ? { p: lead.mr.bestA, b: lead.mr.bookA } : { p: lead.mr.bestB, b: lead.mr.bookB };
+  const chips = [{ k: 'Matched books', v: String(lead.mr.matched) }];
+  if (leadBest.p !== null) chips.push({ k: `Best · ${upper(leadToward.name)}`, v: `${am(leadBest.p)} ${leadBest.b || ''}`.trim() });
+
+  return [{
+    tag: 'X-POST', id: 'movers', platform: 'X', pillar: 'Movement',
+    copy, tweetBody,
+    image: {
+      layout: 'verdict', eyebrow: `Line movement · ${compactEvent(event.name)}`,
+      fa: upper(lead.r.a.name), fb: upper(lead.r.b.name),
+      big: `${Math.abs(lead.mr.move).toFixed(1)} pts`,
+      bigCap: `Toward ${surname(leadToward.name)} since first broad capture`,
+      chips, cta: 'Every move, every book → cannonfightlab.com',
+    },
+    hashtags: hashtags(event.name, ...hashtagsFor),
+    cta: `Every move on the card page (${cardUrl(event, 'x')})`,
+    question: `Which of these moves surprised you?`,
+  }];
+}
+
+// Tale of the tape — the main event, measured differences only.
+function genTape(event, rows) {
+  const row = rows.find(r => r.fight.is_main_event) || rows[0];
+  if (!row) return [];
+  const { a, b } = row;
+  const S = shortName(event.name);
+  const tapeLine = f => {
+    const bits = [];
+    if (num(f.age) !== null) bits.push(`${f.age} yrs`);
+    if (fmtHeight(f.height_in)) bits.push(fmtHeight(f.height_in));
+    if (num(f.reach_in) !== null) bits.push(`${f.reach_in}" reach`);
+    if (f.stance) bits.push(f.stance);
+    if (fmtRecord(f)) bits.push(`${fmtRecord(f)} pro`);
+    if (style(f)) bits.push(`listed by the UFC as ${style(f)}`);
+    return `${surname(f.name)}: ${bits.join(' · ')}`;
+  };
+  const diffs = [];
+  const ageGap = num(a.age) !== null && num(b.age) !== null ? Math.abs(a.age - b.age) : null;
+  const reachGap = num(a.reach_in) !== null && num(b.reach_in) !== null ? Math.abs(a.reach_in - b.reach_in) : null;
+  if (ageGap) diffs.push(`${surname(a.age < b.age ? a.name : b.name)} is ${ageGap} year${ageGap === 1 ? '' : 's'} younger`);
+  if (reachGap) diffs.push(`${surname(a.reach_in > b.reach_in ? a.name : b.name)} has ${reachGap}" more reach`);
+  if (a.stance && b.stance && a.stance !== b.stance) diffs.push(`${a.stance} meets ${b.stance}`);
+  if (!diffs.length && !ageGap && !reachGap) return [];
+
+  const copy =
+`${S} main event, tale of the tape.
+
+${tapeLine(a)}
+${tapeLine(b)}
+
+${diffs.length ? diffs.join('. ') + '.' : 'Close to identical on paper.'} Measured differences, not a read on who wins.`;
+
+  const tweetBody = `${S} main event, tale of the tape: ${surname(a.name)} vs ${surname(b.name)}. ${diffs.join('. ')}${diffs.length ? '.' : ''}`;
+
+  const both = (x, y) => `${x} · ${y}`;
+  const chips = [];
+  if (num(a.age) !== null && num(b.age) !== null) chips.push({ k: 'Age', v: both(a.age, b.age) });
+  if (num(a.reach_in) !== null && num(b.reach_in) !== null) chips.push({ k: 'Reach', v: both(`${a.reach_in}"`, `${b.reach_in}"`) });
+  if (fmtHeight(a.height_in) && fmtHeight(b.height_in)) chips.push({ k: 'Height', v: both(fmtHeight(a.height_in), fmtHeight(b.height_in)) });
+  if (fmtRecord(a) && fmtRecord(b)) chips.push({ k: 'Pro record', v: both(fmtRecord(a), fmtRecord(b)) });
+
+  const bigIsAge = ageGap && ageGap >= (reachGap || 0);
+  return [{
+    tag: 'X-POST', id: 'tape-main', platform: 'X', pillar: 'Tale of the Tape',
+    copy, tweetBody,
+    image: {
+      layout: 'verdict', eyebrow: `Tale of the tape · ${compactEvent(event.name)}`,
+      fa: upper(a.name), fb: upper(b.name),
+      big: bigIsAge ? `${ageGap} yrs` : `${reachGap || 0}"`,
+      bigCap: bigIsAge
+        ? `Age gap · ${surname(a.age < b.age ? a.name : b.name)} younger`
+        : `Reach gap · ${surname(a.reach_in > b.reach_in ? a.name : b.name)} longer`,
+      chips, cta: 'Full matchup research → cannonfightlab.com',
+    },
+    hashtags: hashtags(event.name, a.name, b.name),
+    cta: `Full matchup research (${cardUrl(event, 'x')})`,
+    question: `Which of these differences matters most to you, and why?`,
+  }];
+}
+
+// Book spread — the fight the sportsbooks disagree on most.
+function genBookSpread(event, rows) {
+  const S = shortName(event.name);
+  const cands = rows.map(r => ({ r, mr: marketRead(r) }))
+    .filter(x => x.mr && x.mr.spread !== null && x.mr.books >= 2 && x.mr.asOf)
+    .sort((x, y) => y.mr.spread - x.mr.spread);
+  if (!cands.length) return [];
+  const { r, mr } = cands[0];
+  const sp = MOVEMENT.describeBookSpread(r.mkt);
+  if (!sp.ok) return [];
+  const A = surname(r.a.name), B = surname(r.b.name);
+  const best = bestLine(mr, r);
+  const spreadTxt = mr.spread.toFixed(1);
+
+  const copy =
+`${S}: the books are furthest apart on ${A} vs ${B} — ${spreadTxt} pts between the highest and lowest of ${mr.books} sportsbooks, after each book's margin is removed.
+
+${best ? `Best observed price: ${best}. ` : ''}As of ${mr.asOf}.
+
+Same fight, different numbers depending on the book. Best price here means the best number in our data, ranked on the price alone.`;
+
+  const tweetBody = `${S}: books are furthest apart on ${A} vs ${B}, ${spreadTxt} pts across ${mr.books} sportsbooks (margin removed, ${mr.asOf}).${best ? `\nBest observed: ${best}.` : ''}`;
+
+  const chips = [{ k: 'Sportsbooks', v: String(mr.books) }];
+  if (mr.bestA !== null) chips.push({ k: `Best · ${upper(r.a.name)}`, v: `${am(mr.bestA)} ${mr.bookA || ''}`.trim() });
+  if (mr.bestB !== null) chips.push({ k: `Best · ${upper(r.b.name)}`, v: `${am(mr.bestB)} ${mr.bookB || ''}`.trim() });
+
+  return [{
+    tag: 'X-POST', id: 'books-apart', platform: 'X', pillar: 'Book spread',
+    copy, tweetBody,
+    image: {
+      layout: 'verdict', eyebrow: `Book spread · ${compactEvent(event.name)}`,
+      fa: upper(r.a.name), fb: upper(r.b.name),
+      big: `${spreadTxt} pts`,
+      bigCap: `${sp.plain} · margin removed`,
+      chips, cta: 'Every book, side by side → cannonfightlab.com',
+    },
+    hashtags: hashtags(event.name, r.a.name, r.b.name),
+    cta: `Every book on the card page (${cardUrl(event, 'x')})`,
+    question: `Do you check more than one book before you bet?`,
+  }];
+}
+
+// Finish history — how both fighters' past fights ended. History, not a read.
+function genFinishHistory(event, rows) {
+  const S = shortName(event.name);
+  const cands = rows.filter(r => r.finA && r.finB)
+    .map(r => ({ r, share: (r.finA.early / r.finA.total) + (r.finB.early / r.finB.total) }))
+    .sort((x, y) => y.share - x.share);
+  if (!cands.length) return [];
+  const { r } = cands[0];
+  const A = surname(r.a.name), B = surname(r.b.name);
+  const share = f => Math.round((f.early / f.total) * 100);
+
+  const copy =
+`${S}, how their past fights ended: ${A} vs ${B}.
+
+${A}: ${r.finA.early} of ${r.finA.total} fights on record ended inside the distance (${r.finA.ko} by KO/TKO, ${r.finA.sub} by submission).
+${B}: ${r.finB.early} of ${r.finB.total} (${r.finB.ko} by KO/TKO, ${r.finB.sub} by submission).
+
+That counts fights they lost as well as won. It is history — it describes how their past fights went, not how this one goes.`;
+
+  const tweetBody = `${S}, how their past fights ended: ${r.finA.early} of ${A}'s ${r.finA.total} fights on record ended inside the distance, ${r.finB.early} of ${B}'s ${r.finB.total}. Wins and losses both count.`;
+
+  return [{
+    tag: 'X-POST', id: 'finish-history', platform: 'X', pillar: 'Finish history',
+    copy, tweetBody,
+    image: {
+      layout: 'verdict', eyebrow: `Finish history · ${compactEvent(event.name)}`,
+      fa: upper(r.a.name), fb: upper(r.b.name),
+      big: `${share(r.finA)}% · ${share(r.finB)}%`,
+      bigCap: 'Past fights ended inside the distance',
+      chips: [
+        { k: upper(r.a.name), v: `${r.finA.early} of ${r.finA.total}` },
+        { k: upper(r.b.name), v: `${r.finB.early} of ${r.finB.total}` },
+      ],
+      cta: 'Full matchup research → cannonfightlab.com',
+    },
+    hashtags: hashtags(event.name, r.a.name, r.b.name),
+    cta: `Full matchup research (${cardUrl(event, 'x')})`,
+    question: `Does a finisher's record change how you watch the fight?`,
+  }];
+}
+
+// Cardio — description of late-round output, never a statement about who wins.
 function genCardio(event, rows) {
-  const flagged = [];
+  const S = shortName(event.name);
+  const list = [];
   for (const r of rows) {
-    const s = sides(r);
-    if (s && s.winCardio && CARDIO_FLAGGED.has(s.winCardio)) {
-      flagged.push({ name: s.win.name, tier: s.winCardio, note: `favored (${s.pct}%) but flagged` });
-    }
+    if (r.cardioA) list.push({ name: r.a.name, tier: r.cardioA });
+    if (r.cardioB) list.push({ name: r.b.name, tier: r.cardioB });
+    if (list.length >= 6) break;
   }
-  if (flagged.length < 2) return []; // need at least a couple to make the point
-  const top = flagged.slice(0, 4);
-  const ehash = eventHashtag(event.name);
-  const url = pieceCardLink(event, 'x');
+  if (list.length < 4) return [];
+  const top = list.slice(0, 6);
+  const NOTE = 'Built from round-by-round output in past fights: how much a fighter throws and lands in round 3 and later against their own round 1. It describes past fights. It does not tell you who wins, and we do not use it that way.';
 
-  const boardImg = {
+  const board = {
     layout: 'board',
-    eyebrow: `Cardio Sensor · ${compactEvent(event.name)}`,
-    title: 'The Gas Tank Board',
-    rows: top.map(f => ({ name: lastName(f.name), tier: f.tier })),
-    cta: 'Full card graded → cannonfightlab.com',
+    eyebrow: `Cardio · ${compactEvent(event.name)}`,
+    title: 'Late-round output',
+    rows: top.map(f => ({ name: upper(f.name), tier: f.tier })),
+    cta: 'How it is measured → cannonfightlab.com',
   };
 
-  const listX = top.map(f => `• ${f.name} — ${CARDIO_BADGE[f.tier]} ${f.tier}`).join('\n');
-  const xThread = {
-    tag: 'X-POST', id: 'cardio-flagged', platform: 'X', pillar: 'P2-Cardio', image: boardImg,
+  return [{
+    tag: 'X-POST', id: 'cardio-board', platform: 'X', pillar: 'Cardio', image: board,
     copy:
-`Cardio sensor, ${shortName(event.name)}: ${top.length} model favorites are quietly flagged as late-faders. 🫁
+`${S} cardio check — how late-round output compares with round 1, from past fights.
 
-${listX}
+${top.map(f => `• ${surname(f.name)} — ${CARDIO_BADGE[f.tier]} ${f.tier} (${CARDIO_LABEL[f.tier]})`).join('\n')}
 
-Built from round-by-round output rates, not vibes. Favorites ≠ finishers when the tank's empty — round 3 is where box scores get exposed.`,
-    hashtags: hashtags(event.name, ...top.map(f => f.name)) + ' #Cardio',
-    cta: `Full card graded on site (${url}) — what do you think?`,
-    question: `Which of these do you think holds up fine, and why?`,
-  };
-
-  const carousel = {
-    tag: 'IG-REEL', id: 'cardio-carousel', platform: 'Instagram', pillar: 'P2-Cardio', image: boardImg,
-    copy:
-`CAROUSEL — "The Gas Tank Board"
-Slide 1: "${top.length} ${shortName(event.name)} favorites our cardio data is side-eyeing. 🫁"
-${top.map((f, i) => `Slide ${i + 2}: ${f.name} — ${CARDIO_BADGE[f.tier]} ${f.tier.toUpperCase()} — ${CARDIO_LABEL[f.tier]}`).join('\n')}
-Slide ${top.length + 2}: "Full card, every factor → link in bio."
-CAPTION: Cardio doesn't lie in round 3. Here's who our model says quietly fades at ${shortName(event.name)}. Not hype — just the rate data.`,
-    hashtags: hashtags(event.name, ...top.map(f => f.name)) + ' #Cardio #UFCReels',
-    cta: 'Full breakdown + how it\'s built → link in bio',
-    question: `Who's gassing that we\'ve got wrong?`,
-    visual: `Dark charcoal (#0a0a0a) background, crimson (#e63946) accent, bold condensed white type, one large tier badge (🟢🟡🟠🔴) per slide, a small round-by-round line chart declining. Clinical "lab report" aesthetic.`,
-  };
-
-  const reddit = {
-    tag: 'REDDIT-POST', id: 'cardio-reddit', platform: 'Reddit (r/MMA)', pillar: 'P2-Cardio',
-    copy:
-`TITLE: I graded every ${shortName(event.name)} fighter's round-3+ cardio from rate data. ${top.length} favorites came back flagged as late-faders — curious if the eye test agrees.
-
-Been scoring deep-water cardio on 5 tiers (tireless → collapses) off round-by-round output rather than gut feel. On this card the model favors these fighters, but tags their gas tank:
-
-${top.map(f => `- ${f.name} — ${f.tier}`).join('\n')}
-
-Not saying they lose — saying the model thinks the danger window is late, which is the opposite of where casual reads put it. Which of these holds up fine in round 3 to you, and where's the data lying to me?
-
-(Happy to share the full graded card + method — will DM to respect self-promo rules.)`,
-    hashtags: '(Reddit — no hashtags; follow the sub\'s self-promo ratio, link only if asked)',
-    cta: 'Link only on request / in a comment if allowed',
-    question: `Which flagged favorite do the tape-watchers think is fine?`,
-  };
-
-  return [xThread, carousel, reddit];
-}
-
-// Pillar 3 — Coin-Flip Corner (genuine 53–57% near-toss-ups)
-function genCoinFlip(event, rows) {
-  const flips = rows
-    .map(r => ({ r, s: sides(r) }))
-    .filter(x => x.s && x.s.pct >= 53 && x.s.pct <= 57);
-  if (!flips.length) return [];
-  const url = pieceCardLink(event, 'x');
-  const lead = flips[0];
-
-  const coinImg = baseVerdictImage(event, lead.s, 'Coin-Flip Corner');
-  coinImg.bigCap = `Razor-thin edge, ${lastName(lead.s.win.name)}`;
-  coinImg.chips[1].k = 'Models';
-  if (lead.s.winFin) coinImg.chips.push({ k: 'Finish rate', v: `${lead.s.winFin.pct}%`, tone: 'win' });
-
-  const pieces = [{
-    tag: 'X-POST', id: 'coinflip-lead', platform: 'X', pillar: 'P3-CoinFlip', image: coinImg,
-    copy:
-`Coin-Flip Corner 🪙
-
-${lead.s.win.name} vs ${lead.s.other.name}. Our model: ${lead.s.win.name} ${lead.s.pct}%.
-
-That's not a lean — that's a shrug with a lab coat on.${lead.s.winCardio && lead.s.otherCardio ? ` The wrinkle: ${lead.s.win.name} "${lead.s.winCardio}", ${lead.s.other.name} "${lead.s.otherCardio}."` : ''}
-
-We'll tell you when we're barely off 50/50 — because a model you can only trust when it's confident isn't much of a model.`,
-    hashtags: hashtags(event.name, lead.s.win.name, lead.s.other.name),
-    cta: `Full factor breakdown on site (${url}) — what do you think?`,
-    question: `Who cracks first?`,
+${NOTE}`,
+    tweetBody: `${S} cardio check: how each fighter's output in round 3+ compares with their own round 1, from past fights. A description of the tape, not a read on who wins.`,
+    hashtags: hashtags(event.name, ...top.slice(0, 2).map(f => f.name)) + ' #Cardio',
+    cta: `How it is measured (${cardUrl(event, 'x')})`,
+    question: `Whose gas tank would you most like to see tested?`,
   }, {
-    tag: 'TIKTOK-REEL', id: 'coinflip-reel', platform: 'TikTok', pillar: 'P3-CoinFlip', image: coinImg,
+    tag: 'IG-REEL', id: 'cardio-carousel', platform: 'Instagram', pillar: 'Cardio', image: board,
     copy:
-`HOOK: "Every picks account swears they KNOW this fight. We don't — here's the truth."
-BODY: "${lead.s.win.name} vs ${lead.s.other.name}. Our model: ${lead.s.pct}%. That's a coin flip wearing a lab coat. Anyone selling you a lock is selling you something."
-CTA: "We publish the coin flips as coin flips — link in bio. Who cracks first?"`,
-    hashtags: hashtags(event.name, lead.s.win.name, lead.s.other.name) + ' #FightTok #fyp',
-    cta: 'Link in bio',
-    question: `Pass, or is the close call where the value hides?`,
-    visual: `A spinning coin morphing into a ${lead.s.pct}% dial; deadpan tone; "COIN-FLIP CORNER" crimson stamp on black.`,
+`CAROUSEL — "Late-round output"
+Slide 1: "${S}: how output holds up after round 2, from past fights."
+${top.map((f, i) => `Slide ${i + 2}: ${surname(f.name)} — ${CARDIO_BADGE[f.tier]} ${f.tier.toUpperCase()} — ${CARDIO_LABEL[f.tier]}`).join('\n')}
+Last slide: "Description of past fights, not a read on who wins. Full card → link in bio."`,
+    hashtags: hashtags(event.name, ...top.slice(0, 2).map(f => f.name)) + ' #Cardio',
+    cta: 'Full card → link in bio',
+    question: `Who do you think this undersells?`,
+    visual: `Dark charcoal background, crimson accent, one tier badge per slide. Clinical "lab report" look, no hype.`,
   }];
-
-  if (flips.length >= 2) {
-    pieces.push({
-      tag: 'REDDIT-POST', id: 'coinflip-reddit', platform: 'Reddit (r/ufc)', pillar: 'P3-CoinFlip',
-      copy:
-`TITLE: Which ${shortName(event.name)} fights are genuine coin-flips? My model spat out ${flips.length} inside 53–57% and I think being honest about that matters.
-
-Everyone posts locks. Nobody posts "I don't know." These came back near 50/50:
-${flips.map(f => `- ${f.s.win.name} ${f.s.pct}% / ${f.s.other.name}`).join('\n')}
-
-I'd rather flag these as toss-ups than fake conviction. When a fight is legitimately even, what's your process — pass, or is that exactly where the value is? Not selling anything, just comparing how people handle real uncertainty.`,
-      hashtags: '(Reddit — genuine discussion post, no link unless asked)',
-      cta: 'No link unless requested',
-      question: `Pass or play the true toss-ups?`,
-    });
-  }
-  return pieces;
 }
 
-// Pillar 4 — What If the Sim Saw… (top finisher + an intel slot)
-function genWhatIf(event, rows) {
-  let best = null;
-  for (const r of rows) {
-    const s = sides(r);
-    if (!s || !s.winFin || s.winFin.n < 5) continue;
-    if (!best || s.winFin.pct > best.s.winFin.pct) best = { r, s };
-  }
-  const pieces = [];
-  const url = pieceCardLink(event, 'x');
-
-  if (best && best.s.winFin.pct >= 70) {
-    const s = best.s;
-    const whatifImg = baseVerdictImage(event, s, 'What-If the Sim Saw');
-    whatifImg.chips.push({ k: 'Finish rate', v: `${s.winFin.pct}%`, tone: 'win' });
-    pieces.push({
-      tag: 'X-POST', id: 'whatif-finisher', platform: 'X', pillar: 'P4-WhatIf', image: whatifImg,
-      copy:
-`"What if the sim saw it?" 🔧
-
-${s.win.name} over ${s.other.name} — model has it ${s.pct}%.
-
-The input we keep chewing on: ${s.win.name} finishes ${s.winFin.pct}% of their wins over ${s.winFin.n} fights. Should "rarely needs the judges" weigh heavier than it does? Genuinely asking — it moves the number.`,
-      hashtags: hashtags(event.name, s.win.name, s.other.name),
-      cta: `Play with the factors yourself on site (${url}) — what do you think?`,
-      question: `Where would you set the dial?`,
-    });
-  }
-
-  // Intel-slot piece — deliberately a template with a verify placeholder. We do
-  // NOT fabricate news; the operator fills this only with sourced, real intel.
-  pieces.push({
-    tag: 'BONUS', id: 'whatif-intel-slot', platform: 'X / Reel', pillar: 'P4-WhatIf',
-    copy:
-`⚠️ INTEL SLOT — post ONLY after you verify the news. Do not invent.
-
-"Public models run on stats. We watch the stuff the stats can't see yet.
-
-[verify + insert real intel — e.g. camp change / short-notice replacement / weight-cut note for a ${shortName(event.name)} fighter].
-
-So the question we're chewing on: does the sim need to adjust — and what flips if it does?"`,
-    hashtags: hashtags(event.name) + ' #UFCNews',
-    cta: `Before/after on the site (${link('card-lab.html', 'x')}) — would you make the adjustment?`,
-    question: `Adjust the model, or trust the base rates?`,
+// Reddit — the market table, the same shape social-post.js::buildPost uses.
+function genRedditMarket(event, rows) {
+  const lines = rows.map(r => ({ r, mr: marketRead(r) })).filter(x => x.mr && x.mr.asOf);
+  if (!lines.length) return [];
+  const S = shortName(event.name);
+  const asOf = lines[0].mr.asOf;
+  const table = lines.slice(0, 10).map(({ r, mr }) => {
+    const favIsA = mr.pA >= mr.pB;
+    const fav = favIsA ? r.a : r.b;
+    const tag = r.fight.is_title_fight ? ' **[TITLE]**' : (r.fight.is_main_event ? ' **[MAIN]**' : '');
+    const best = favIsA ? `${am(mr.bestA)}${mr.bookA ? ' (' + mr.bookA + ')' : ''}` : `${am(mr.bestB)}${mr.bookB ? ' (' + mr.bookB + ')' : ''}`;
+    const mv = moveText(mr, r) || 'not enough comparable books';
+    const sp = mr.spread === null ? '—' : `${mr.spread.toFixed(1)} pts`;
+    return `| ${r.a.name} vs ${r.b.name}${tag} | ${surname(fav.name)} ${pct(favIsA ? mr.pA : mr.pB)} | ${best} | ${mv} | ${sp} | ${mr.books} |`;
   });
-  return pieces;
+  return [{
+    tag: 'REDDIT-POST', id: 'market-reddit', platform: 'Reddit (r/MMA)', pillar: 'Market',
+    copy:
+`TITLE: [Odds movement] ${event.name} — what the books have done so far
+
+Nothing here says who wins. This is only what the sportsbooks are posting, as of ${asOf}.
+
+| Fight | Books' consensus (favourite) | Best observed price | Moved since first broad capture | Books apart | Books |
+|---|---|---|---|---|---|
+${table.join('\n')}
+
+Consensus is the middle book with each book's margin removed. ${BASELINE_NOTE}
+
+(Happy to share the full board — will link in a comment if the sub allows it.)`,
+    hashtags: '(Reddit — no hashtags; follow the sub\'s self-promo rules, link only if allowed)',
+    cta: 'Link only on request / in a comment if allowed',
+    question: `Anyone shopping more than two books for ${S}?`,
+  }];
 }
 
-// A couple of always-on format pieces (poll + teaser) for reach.
-function genReach(event, rows) {
-  const main = rows.find(r => r.fight.is_main_event) || rows[0];
-  const withVerdict = rows.filter(r => r.pick).length;
-  const url = pieceCardLink(event, 'x');
-  const pieces = [];
+// ------------------------------------------------------------------ guard ---
 
-  if (main && main.pick) {
-    const s = sides(main);
-    const pollImg = baseVerdictImage(event, s, 'Main Event');
-    if (s.winFin) pollImg.chips.push({ k: 'Finish rate', v: `${s.winFin.pct}%`, tone: 'win' });
-    pieces.push({
-      tag: 'X-POST', id: 'poll-main', platform: 'X', pillar: 'P1-SensorRead', image: pollImg,
-      copy:
-`${shortName(event.name)} main event. Our model: ${s.win.name} ${s.pct}% (${s.agree}/${s.total} models).
+// Vocabulary a research-era piece never uses, on top of forecastClaim. Each is
+// a word the retired copy leaned on; none is needed to describe the market or
+// the tape.
+const RESEARCH_BANNED = [
+  { name: 'model',      re: /\bmodels?\b/i },
+  { name: 'predict',    re: /\bpredict/i },
+  { name: 'forecast',   re: /\bforecast/i },
+  { name: 'sim',        re: /\bsim(ulation)?s?\b/i },
+  { name: 'confidence', re: /\bconfiden(ce|t)\b/i },
+  { name: 'pick',       re: /\bpick(s|ed)?\b/i },
+  { name: 'lock',       re: /\blocks?\b/i },
+  { name: 'edge',       re: /\bedges?\b/i },
+  { name: 'value',      re: /\bvalue\b/i },
+  { name: 'verdict',    re: /\bverdicts?\b/i },
+  { name: 'favoured/favorite by us', re: /\b(we|cfl)\s+(like|favou?r|back)s?\b/i },
+  { name: 'fade',       re: /\bfade\s+(candidate|him|her|them|this)\b/i },
+];
 
-Where does this fight actually get decided? 👇`,
-      hashtags: hashtags(event.name, s.win.name, s.other.name),
-      cta: `See how the sim weighs it (${url})`,
-      question: `Poll: R1 finish / grind-it-out / late TKO / decision`,
-    });
+// The baseline wording market-movement.js forbids, plus its short forms.
+const BASELINE_BANNED = MOVEMENT.FORBIDDEN_BASELINE_WORDS
+  .map(w => ({ name: `baseline: ${w}`, re: new RegExp('\\b' + w.replace(/\s+/g, '\\s+') + '\\b', 'i') }))
+  .concat([
+    { name: 'baseline: opener', re: /\bopeners?\b/i },
+    { name: 'baseline: since open', re: /\bsince\s+(the\s+)?open(ing)?\b/i },
+  ]);
+
+// Every string a piece carries, including the image text that gets rendered.
+function pieceText(p) {
+  const img = p.image || {};
+  return [
+    p.copy, p.tweet, p.caption, p.hashtags, p.cta, p.question, p.visual,
+    img.eyebrow, img.title, img.big, img.bigCap, img.cta, img.fa, img.fb,
+    ...(img.chips || []).flatMap(c => [c.k, c.v]),
+    ...(img.rows || []).flatMap(r => [r.name, r.tier]),
+  ].filter(s => s !== undefined && s !== null).join('\n');
+}
+
+// Returns the reason a piece must not ship, or null.
+function refusalOf(p) {
+  const text = pieceText(p);
+  const fc = forecastClaim(text);
+  if (fc) return `forecast: ${fc}`;
+  for (const b of RESEARCH_BANNED) if (b.re.test(text)) return `research vocabulary: ${b.name}`;
+  for (const b of BASELINE_BANNED) if (b.re.test(text)) return b.name;
+  if (/\bundefined\b|\bNaN\b|\bnull\b/.test(text)) return 'unfilled value';
+  if (p.platform === 'X' && p.image && !p.tweet) return 'tweet would exceed 280 characters';
+  return null;
+}
+
+// Splits pieces into those that may ship and those that may not. Nothing is
+// reworded: a refused piece is dropped whole and named.
+function guardPieces(pieces) {
+  const kept = [], refused = [];
+  for (const p of pieces) {
+    const why = refusalOf(p);
+    if (why) refused.push({ id: p.id, reason: why });
+    else kept.push(p);
   }
+  return { kept, refused };
+}
 
-  pieces.push({
-    tag: 'BONUS', id: 'teaser-loop', platform: 'TikTok / Reel', pillar: 'Awareness',
-    copy:
-`10s TEASER LOOP — "${rows.length} fights. ${withVerdict} model verdicts. 1 card. Here's where our engines disagree 👀 (link in bio)"`,
-    hashtags: hashtags(event.name) + ' #FightTok #fyp',
-    cta: 'Link in bio',
-    question: `Which call surprises you?`,
-    visual: `Fast montage of the card page / sensor board; crimson-on-black; loops seamlessly.`,
-  });
-  return pieces;
+// ----------------------------------------------------------- finalising ---
+
+// A ≤280-char tweet. Never truncated: a cut can leave half a number, so a body
+// that does not fit returns null and the guard refuses the piece.
+function tweetify(body, url, tag) {
+  const t = `${body}\n\n${url}${tag ? '\n' + tag : ''}`;
+  return t.length <= 280 ? t : null;
+}
+
+function finalizePiece(p, event) {
+  const out = Object.assign({}, p);
+  // tweetBody may be one string or a list of candidates, longest first.
+  const bodies = [].concat(p.tweetBody || []);
+  if (bodies.length) {
+    let body = bodies[bodies.length - 1];
+    out.tweet = null;
+    for (const b of bodies) {
+      const t = tweetify(b, cardUrl(event, 'x'), eventHashtag(event.name));
+      if (t) { out.tweet = t; body = b; break; }
+    }
+    out.caption = `${body}\n\nFull card, every book — link in bio 🔗\n\n${p.hashtags}`;
+  }
+  delete out.tweetBody;
+  return out;
+}
+
+// ------------------------------------------------------------- assembly ---
+
+function rawPieces(event, rows) {
+  return [
+    ...genMarketMain(event, rows),
+    ...genMovers(event, rows),
+    ...genTape(event, rows),
+    ...genBookSpread(event, rows),
+    ...genFinishHistory(event, rows),
+    ...genCardio(event, rows),
+    ...genRedditMarket(event, rows),
+  ].map(p => finalizePiece(p, event));
+}
+
+function buildPieces(event, rows) {
+  return guardPieces(rawPieces(event, rows));
+}
+
+// Pure entry point: plain rows in, a guarded batch out.
+function buildBatch(data) {
+  const event = data.event;
+  const rows = assembleRows(data);
+  const { kept, refused } = buildPieces(event, rows);
+  return { event, rows, pieces: kept, refused };
 }
 
 // ----------------------------------------------------------- auto-post ---
-// A concise (≤280-char) single tweet for the auto-poster, built from a piece's
-// structured image spec + a ?src=x link to the card page. Drives traffic; the
-// long thread copy stays for manual/dashboard use.
-function tweetify(body, url, tag) {
-  const tail = `\n\n${url}${tag ? '\n' + tag : ''}`;
-  const room = 278 - tail.length;
-  const b = body.length > room ? body.slice(0, room - 1).trimEnd() + '…' : body;
-  return b + tail;
-}
 
-function tweetFor(piece, event) {
-  const img = piece.image || {};
-  const url = pieceCardLink(event, 'x');
-  const tag = eventHashtag(event.name);
-  const S = shortName(event.name);
-  let body;
-  switch (piece.id) {
-    case 'sensor-main':
-      body = `${S}: our model reads ${img.fa} ${img.big} over ${img.fb} — but the matchup has a wrinkle worth seeing. Full breakdown 🧵`; break;
-    case 'poll-main':
-      body = `${S} main event — our model: ${img.fa} ${img.big}. Where does this one actually get decided? 👇`; break;
-    case 'cardio-flagged':
-      body = `Cardio check, ${S}: several model favorites our data quietly flags as late-faders 🫁 Who still holds up in round 3?`; break;
-    case 'coinflip-lead':
-      body = `Coin-Flip Corner 🪙 ${img.fa} vs ${img.fb} — our model has it just ${img.big}. A coin flip in a lab coat. Who cracks first?`; break;
-    case 'whatif-finisher':
-      body = `${img.fa} ${img.big} over ${img.fb}, and they finish at an elite clip. Should "rarely needs the judges" weigh heavier? Genuinely asking.`; break;
-    default:
-      body = `${S}: ${img.fa} ${img.big}${img.fb ? ` over ${img.fb}` : ''} — our model's read, every factor shown.`;
-  }
-  return tweetify(body, url, tag);
-}
-
-// The X auto-post queue: one entry per X-eligible piece (has an image), newest
-// card first, with a ready tweet + the image + the card link. social-post.js
-// posts the next un-posted entry each run.
+// The X queue: one entry per X piece with an image. The guard runs AGAIN here,
+// on the exact tweet that would be posted, and only an entry that passes is
+// stamped positioning:'research' — the stamp build/social-post.js requires.
+// The stamp is therefore a statement this function has just checked, not a
+// label the generator hands itself (which is how model copy reached X before).
 function buildQueue(batches) {
   const queue = [];
   for (const { event, pieces } of batches) {
     for (const p of pieces) {
-      if (p.platform !== 'X' || !p.image) continue;
+      if (p.platform !== 'X' || !p.image || !p.tweet) continue;
+      if (refusalOf(p) || forecastClaim(p.tweet)) continue;
       const ims = p.images || [];
       const im = ims.find(i => i.key === 'x_land') || ims.find(i => i.key === 'square') || ims[0];
       queue.push({
@@ -541,17 +756,10 @@ function buildQueue(batches) {
         eventDate: event.event_date,
         pieceId: p.id,
         pillar: p.pillar,
-        tweet: tweetFor(p, event),
+        tweet: p.tweet,
         image: im ? 'social/' + im.rel : null,
-        cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
-        // NOT stamped 'research' (2026-10-12). This stamp is what
-        // build/social-post.js checks before posting, and the templates in
-        // tweetFor() still quote model probabilities ("our model reads A 62%
-        // over B"), so stamping them 'research' sent the retired forecast to X
-        // three times a week. Pieces stay 'model-era' until the templates are
-        // rewritten as market-only copy; the poster also refuses any piece
-        // whose words read as a forecast (build/social-copy-guard.js).
-        positioning: 'model-era',
+        cardUrl: cardUrl(event),
+        positioning: 'research',
       });
     }
   }
@@ -560,24 +768,8 @@ function buildQueue(batches) {
 }
 
 // -------------------------------------------------------- Metricool export ---
-// One-file bulk import for Instagram + TikTok (which can't be auto-posted). Each
-// row = date/time/platform + a clean caption + a PUBLIC image URL (images are
-// deployed on the site) + the card link. Import into Metricool's planner, review,
-// and it auto-publishes on the times you set.
-function metricoolCaption(piece, event) {
-  const img = piece.image || {};
-  const S = shortName(event.name);
-  let hook;
-  switch (piece.id) {
-    case 'sensor-main': hook = `${S}: our model reads ${img.fa} ${img.big} over ${img.fb} — but the matchup has a wrinkle worth seeing.`; break;
-    case 'poll-main': hook = `${S} main event — our model: ${img.fa} ${img.big}. Where does this one actually get decided?`; break;
-    case 'cardio-flagged': hook = `Cardio check, ${S}: several model favorites our data quietly flags as late-faders. Who still holds up in round 3?`; break;
-    case 'coinflip-lead': hook = `Coin-Flip Corner 🪙 ${img.fa} vs ${img.fb} — our model has it just ${img.big}. A coin flip in a lab coat.`; break;
-    case 'whatif-finisher': hook = `${img.fa} ${img.big} over ${img.fb}, and they finish at an elite clip. Should "rarely needs the judges" weigh heavier?`; break;
-    default: hook = `${S}: ${img.fa} ${img.big}${img.fb ? ` over ${img.fb}` : ''} — our model's read.`;
-  }
-  return `${hook}\n\nFull card breakdown — link in bio 🔗\n\n${hashtags(event.name, ...[img.fa, img.fb].filter(Boolean))}`;
-}
+// One-file bulk import for Instagram + TikTok. Captions are the guarded
+// `caption` field — nothing here writes new words.
 
 function bestImage(piece, keys) {
   const ims = piece.images || [];
@@ -585,18 +777,19 @@ function bestImage(piece, keys) {
   return ims[0] || null;
 }
 
+function visualPieces(pieces) {
+  return pieces.filter(p => p.platform === 'X' && p.image && p.caption && (p.images || []).length);
+}
+
 function buildMetricoolRows(batches) {
   const rows = [];
   for (const { event, pieces } of batches) {
-    const cardUrl = `${SITE}/card/${cardSlug(event.name, event.id)}.html`;
-    const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
     let day = 0;
-    for (const p of picks) {
-      const cap = metricoolCaption(p, event);
+    for (const p of visualPieces(pieces)) {
       const ig = bestImage(p, ['ig_portrait', 'square']);
       const tt = bestImage(p, ['story', 'square']);
-      if (ig) rows.push({ date: isoOffset(event.event_date, -6 + day), time: '18:00', platform: 'Instagram', caption: cap, image: `${SITE}/social/${ig.rel}`, card: cardUrl });
-      if (tt) rows.push({ date: isoOffset(event.event_date, -5 + day), time: '12:00', platform: 'TikTok', caption: cap, image: `${SITE}/social/${tt.rel}`, card: cardUrl });
+      if (ig) rows.push({ date: isoOffset(event.event_date, -6 + day), time: '18:00', platform: 'Instagram', caption: p.caption, image: `${SITE}/social/${ig.rel}`, card: cardUrl(event) });
+      if (tt) rows.push({ date: isoOffset(event.event_date, -5 + day), time: '12:00', platform: 'TikTok', caption: p.caption, image: `${SITE}/social/${tt.rel}`, card: cardUrl(event) });
       day = (day + 1) % 5;
     }
   }
@@ -611,45 +804,34 @@ function renderMetricoolCsv(rows) {
 }
 
 // Structured post data for the local Desktop posting app (build/make-posting-app.js).
-// Per card: an X item (auto-posted) + an Instagram+TikTok item per visual piece,
-// each with its caption and image path.
 function buildPostsData(batches) {
   return batches.map(({ event, pieces }) => {
-    const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
     const posts = [];
-    picks.forEach((p, i) => {
+    visualPieces(pieces).forEach((p, i) => {
       const xImg = bestImage(p, ['x_land', 'square']);
       const sqImg = bestImage(p, ['square', 'ig_portrait', 'story']);
       const when = `${shortDate(isoOffset(event.event_date, -6 + i))}, 6:00 PM`;
-      posts.push({ platform: 'X', pillar: p.pillar, caption: tweetFor(p, event), image: xImg ? 'social/' + xImg.rel : null, when: 'auto — posts itself' });
-      posts.push({ platform: 'Instagram + TikTok', pillar: p.pillar, caption: metricoolCaption(p, event), image: sqImg ? 'social/' + sqImg.rel : null, when });
+      if (p.tweet) posts.push({ platform: 'X', pillar: p.pillar, caption: p.tweet, image: xImg ? 'social/' + xImg.rel : null, when: 'manual — review first' });
+      posts.push({ platform: 'Instagram + TikTok', pillar: p.pillar, caption: p.caption, image: sqImg ? 'social/' + sqImg.rel : null, when });
     });
-    return {
-      card: event.name,
-      dateLabel: formatLongDate(event.event_date),
-      cardUrl: `${SITE}/card/${cardSlug(event.name, event.id)}.html`,
-      posts,
-    };
+    return { card: event.name, dateLabel: formatLongDate(event.event_date), cardUrl: cardUrl(event), posts };
   }).filter(c => c.posts.length);
 }
 
-// The dead-simple weekly load sheet: the SOONEST upcoming card's IG/TikTok posts
-// in posting order — open it, copy each caption top-to-bottom into Metricool.
-function buildNextPostsMd(batches) {
-  const today = new Date().toISOString().slice(0, 10);
-  const b = batches.filter(x => x.event.event_date >= today)[0] || batches[0];
+// The weekly load sheet: the soonest upcoming card's IG/TikTok posts in order.
+function buildNextPostsMd(batches, today) {
+  const t = today || new Date().toISOString().slice(0, 10);
+  const b = batches.filter(x => x.event.event_date >= t)[0] || batches[0];
   if (!b) return '# No upcoming cards.\n';
   const { event, pieces } = b;
   const slug = `${slugify(event.name)}-${event.id}`;
-  const picks = pieces.filter(p => p.platform === 'X' && p.image && (p.images || []).length);
+  const picks = visualPieces(pieces);
   const out = [];
-  out.push(`# 📲 Post these to Instagram + TikTok`);
+  out.push(`# 📲 Instagram + TikTok drafts`);
   out.push('');
   out.push(`## ${event.name} — ${formatLongDate(event.event_date)}`);
   out.push('');
-  out.push(`**${picks.length} posts.** Images are in \`social/${slug}/img/\`.`);
-  out.push('');
-  out.push(`For each one: Metricool → **+ Create post** → tick **Instagram + TikTok** → paste the caption → attach the image → set the time → **Schedule**. Then do the next.`);
+  out.push(`**${picks.length} posts.** Images are in \`social/${slug}/img/\`. Review each one before scheduling — market numbers go stale, so check the capture time in the caption.`);
   out.push('');
   picks.forEach((p, i) => {
     const im = bestImage(p, ['square', 'ig_portrait', 'story']);
@@ -662,49 +844,32 @@ function buildNextPostsMd(batches) {
     out.push('');
     out.push('**Caption (copy everything in the box):**');
     out.push('```');
-    out.push(metricoolCaption(p, event));
+    out.push(p.caption);
     out.push('```');
     out.push('');
   });
   out.push('---');
   out.push('');
-  out.push(`_That's the whole card. X posts itself — this is only for Instagram + TikTok._`);
-  out.push('');
   return out.join('\n');
 }
 
-// --------------------------------------------------------------- assembly ---
-
-function buildPieces(event, rows) {
-  return [
-    ...genSensorRead(event, rows),
-    ...genCardio(event, rows),
-    ...genCoinFlip(event, rows),
-    ...genWhatIf(event, rows),
-    ...genReach(event, rows),
-  ];
-}
-
-function renderBatchMd(event, rows, pieces) {
-  const withVerdict = rows.filter(r => r.pick).length;
+function renderBatchMd(event, rows, pieces, refused) {
+  const priced = rows.filter(r => marketRead(r)).length;
   const out = [];
   out.push(`# Social batch — ${event.name}`);
   out.push('');
-  out.push(`**${formatLongDate(event.event_date)}**${event.location ? ` · ${event.location}` : ''} · ${rows.length} fights · ${withVerdict} model verdicts`);
-  out.push(`Landing page: ${SITE}/card/${cardSlug(event.name, event.id)}.html`);
+  out.push(`**${formatLongDate(event.event_date)}**${event.location ? ` · ${event.location}` : ''} · ${rows.length} fights · ${priced} with a sportsbook price`);
+  out.push(`Landing page: ${cardUrl(event)}`);
   out.push('');
-  out.push(`_Generated by \`build/social-engine.js\` from live model data. Review before posting. Betting-free, hype-free; links carry \`?src=\` for Plausible attribution._`);
+  out.push(`_Generated by \`build/social-engine.js\` from public market and fight data only — no picks. Review before posting; prices carry their capture time. Links carry \`?src=\` for Plausible attribution._`);
   out.push('');
-
-  const byPillar = {};
-  pieces.forEach(p => { (byPillar[p.pillar] || (byPillar[p.pillar] = [])).push(p); });
-
   pieces.forEach((p, i) => {
     out.push(`## ${i + 1}. <${p.tag}> · ${p.pillar} · ${p.platform}`);
     out.push('');
     out.push('```');
     out.push(p.copy);
     out.push('```');
+    if (p.tweet) { out.push('**Tweet:**'); out.push('```'); out.push(p.tweet); out.push('```'); }
     if (p.images && p.images.length) out.push(`**Images:** ${p.images.map(im => `\`${im.rel}\` (${im.label})`).join(' · ')}`);
     if (p.visual) out.push(`**Visual:** ${p.visual}`);
     out.push(`**Hashtags:** ${p.hashtags}`);
@@ -713,7 +878,7 @@ function renderBatchMd(event, rows, pieces) {
     out.push('');
   });
   out.push('---');
-  out.push(`_${pieces.length} pieces. Next batch: rerun the engine, or feed verified intel to unlock the Pillar-4 slots._`);
+  out.push(`_${pieces.length} pieces.${refused && refused.length ? ` ${refused.length} refused by the copy guard: ${refused.map(r => `${r.id} (${r.reason})`).join('; ')}.` : ''}_`);
   out.push('');
   return out.join('\n');
 }
@@ -721,17 +886,15 @@ function renderBatchMd(event, rows, pieces) {
 // Dated posting plan: spreads pieces across the 6 days before the card + day
 // after, morning/evening slots, one landing link per piece with ?src=.
 function scheduleRows(event, pieces) {
-  const offsets = [-6, -5, -4, -3, -2, -1, 0, 1]; // T-6 .. T-1, event day, T+1
+  const offsets = [-6, -5, -4, -3, -2, -1, 0, 1];
   const times = ['09:00', '18:30'];
   return pieces.map((p, i) => {
     const off = offsets[Math.floor(i / times.length) % offsets.length];
     const time = times[i % times.length];
     const date = isoOffset(event.event_date, off);
-    const src = p.platform.toLowerCase().includes('tiktok') ? 'tiktok'
-      : p.platform.toLowerCase().includes('instagram') ? 'ig'
-      : p.platform.toLowerCase().includes('reddit') ? 'reddit' : 'x';
-    const srcLink = p.platform.toLowerCase().includes('reddit') ? 'value-post-no-link'
-      : `${SITE}/card/${cardSlug(event.name, event.id)}.html?src=${src}`;
+    const pl = p.platform.toLowerCase();
+    const src = pl.includes('tiktok') ? 'tiktok' : pl.includes('instagram') ? 'ig' : pl.includes('reddit') ? 'reddit' : 'x';
+    const srcLink = pl.includes('reddit') ? 'value-post-no-link' : cardUrl(event, src);
     return { date, time, platform: p.platform, pillar: p.pillar, id: p.id, tag: p.tag, srcLink, status: 'draft' };
   });
 }
@@ -837,7 +1000,7 @@ function renderDashboard(batches, generatedISO) {
 <header>
   <div class="wrap" style="padding-bottom:0">
     <h1>Cannon Fight <span class="r">Lab</span> — Content Engine</h1>
-    <div class="sub">${totalPieces} ready-to-post pieces · ${totalImages} branded images across ${data.length} cards · generated ${generatedISO.slice(0,10)} · betting-free, real model data</div>
+    <div class="sub">${totalPieces} ready-to-post pieces · ${totalImages} branded images across ${data.length} cards · generated ${generatedISO.slice(0,10)} · no picks, public market and fight data only</div>
     <div class="controls">
       <button class="tabbtn active" data-view="content" onclick="setView('content')">📋 Content</button>
       <button class="tabbtn" data-view="schedule" onclick="setView('schedule')">🗓️ Schedule</button>
@@ -955,9 +1118,38 @@ init();
 `;
 }
 
-// ------------------------------------------------------------------- main ---
+// ------------------------------------------------------------------- I/O ---
+// Everything above is pure. Below is the only code that touches the network
+// or the file system, and it reads exactly the SOURCES listed at the top.
+
+async function loadCard(sb, event) {
+  const { data: fights, error: fErr } = await sb.from('fights')
+    .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, is_main_event, is_title_fight, weight_class, bout_order, is_active')
+    .eq('event_id', event.id);
+  if (fErr) throw new Error(`fights: ${fErr.message}`);
+  const list = (fights || []).filter(f => f.id && f.fighter_a_id && f.fighter_b_id);
+  if (!list.length) return { event, fights: [], market: [], fighters: [], finish_rates: [], cardio: [] };
+  const ids = [...new Set(list.flatMap(f => [f.fighter_a_id, f.fighter_b_id]))];
+
+  const [mR, fR, finR, cR] = await Promise.all([
+    sb.from('v_fight_market_movement').select('*').eq('event_id', event.id),
+    sb.from('fighters').select('id, name, age, height_in, reach_in, stance, wins, losses, draws, fighting_style, fighting_style_src, country').in('id', ids),
+    sb.from('v_fighter_finish_rate').select('fighter_id, total_fights, decision_rate, ko_tko_rate, sub_rate').in('fighter_id', ids),
+    sb.from('v_fighter_consistency').select('fighter_id, weight_class, cardio_tier, confidence_tier, recent_fights').eq('weight_class', 'CAREER').in('fighter_id', ids),
+  ]);
+  // A market view that cannot be read must not become a card with no prices
+  // on it: say so and skip the card.
+  if (mR.error) throw new Error(`v_fight_market_movement: ${mR.error.message}`);
+  return {
+    event, fights: list, market: mR.data || [], fighters: fR.data || [],
+    finish_rates: finR.data || [], cardio: cR.data || [],
+  };
+}
 
 async function main() {
+  const { createClient } = require('@supabase/supabase-js');
+  const { findChrome, renderPieceImages } = require('./post-cards');
+  const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
   const arg = (process.argv.find(a => a.startsWith('--event=')) || '').split('=')[1];
 
   let events;
@@ -971,26 +1163,25 @@ async function main() {
   }
   if (!events.length) { console.log('No matching events.'); return; }
 
-  const index = ['# Social batches', '', '_Auto-generated by `build/social-engine.js`. Open `dashboard.html` to browse + copy. One folder per upcoming card._', ''];
+  const index = ['# Social batches', '', '_Auto-generated by `build/social-engine.js` from public market and fight data. Open `dashboard.html` to browse + copy. One folder per upcoming card._', ''];
   const batches = [];
-  let totalPieces = 0;
-  let totalImages = 0;
+  let totalPieces = 0, totalImages = 0;
 
   const chrome = findChrome();
   if (chrome) console.log(`Rendering images with: ${chrome}`);
   else console.warn('[social-engine] No Chrome/Chromium found — generating copy only (no images). Set CFL_CHROME=<path> to enable image rendering.');
 
   for (const event of events) {
-    const { rows } = await loadCard(event);
+    let data;
+    try { data = await loadCard(sb, event); }
+    catch (e) { console.warn(`skip ${event.name} — ${e.message}`); continue; }
+    const { rows, pieces, refused } = buildBatch(data);
+    refused.forEach(r => console.warn(`[social-engine] ${event.name}: refused ${r.id} — ${r.reason}`));
     if (!rows.length) { console.log(`skip ${event.name} — no fights`); continue; }
-    const pieces = buildPieces(event, rows);
-    if (!pieces.length) { console.log(`skip ${event.name} — no model data to ground content`); continue; }
+    if (!pieces.length) { console.log(`skip ${event.name} — no market or fight data to ground content`); continue; }
 
     const slug = `${slugify(event.name)}-${event.id}`;
     const dir = path.join(SOCIAL_DIR, slug);
-
-    // Render finished, on-brand post images (per-platform sizes) for every
-    // piece that carries an image spec. Copy still generates if this is skipped.
     let imgCount = 0;
     if (chrome) {
       const imgDir = path.join(dir, 'img');
@@ -1000,7 +1191,7 @@ async function main() {
       }
     }
 
-    const wroteMd = writeIfChanged(path.join(dir, 'batch.md'), renderBatchMd(event, rows, pieces));
+    const wroteMd = writeIfChanged(path.join(dir, 'batch.md'), renderBatchMd(event, rows, pieces, refused));
     const wroteCsv = writeIfChanged(path.join(dir, 'schedule.csv'), renderScheduleCsv(event, pieces));
     batches.push({ event, pieces });
     totalPieces += pieces.length;
@@ -1009,31 +1200,31 @@ async function main() {
     console.log(`${event.name}: ${pieces.length} pieces, ${imgCount} images ${wroteMd || wroteCsv ? '(written)' : '(unchanged)'}`);
   }
 
-  index.push('', `_${totalPieces} pieces + ${totalImages} images across ${batches.length} cards. Betting-free, hype-free, real model data only._`, '');
+  index.push('', `_${totalPieces} pieces + ${totalImages} images across ${batches.length} cards. Public market and fight data only._`, '');
   writeIfChanged(path.join(SOCIAL_DIR, 'index.md'), index.join('\n'));
 
-  // Auto-post queue for social-post.js: X-eligible pieces (tweet + image + link).
   const queue = buildQueue(batches);
   writeIfChanged(path.join(SOCIAL_DIR, 'queue.json'), JSON.stringify(queue, null, 2) + '\n');
   console.log(`Queue: ${queue.length} X posts → social/queue.json`);
 
-  // Metricool bulk-import CSV for Instagram + TikTok (public image URLs).
   const mrows = buildMetricoolRows(batches);
   writeIfChanged(path.join(SOCIAL_DIR, 'metricool.csv'), renderMetricoolCsv(mrows));
   console.log(`Metricool: ${mrows.length} IG/TikTok rows → social/metricool.csv`);
 
-  // The simple weekly load sheet for the soonest card.
   writeIfChanged(path.join(SOCIAL_DIR, 'NEXT-POSTS.md'), buildNextPostsMd(batches));
-  console.log('Load sheet → social/NEXT-POSTS.md');
-
-  // Structured data for the local Desktop posting app.
   writeIfChanged(path.join(SOCIAL_DIR, 'posts-data.json'), JSON.stringify(buildPostsData(batches), null, 2) + '\n');
-  console.log('Posting-app data → social/posts-data.json');
 
-  // The access layer: one self-contained page to browse + copy everything.
   const generatedISO = new Date().toISOString();
   writeIfChanged(path.join(SOCIAL_DIR, 'dashboard.html'), renderDashboard(batches, generatedISO));
   console.log(`Done. ${totalPieces} pieces + ${totalImages} images total. Dashboard: social/dashboard.html`);
 }
 
-main().catch(err => { console.error('[social-engine] failed:', err); process.exit(1); });
+module.exports = {
+  SOURCES, assembleRows, buildBatch, buildPieces, rawPieces, guardPieces, refusalOf,
+  pieceText, buildQueue, buildMetricoolRows, buildPostsData, buildNextPostsMd,
+  renderBatchMd, tweetify, finishHistory,
+};
+
+if (require.main === module) {
+  main().catch(err => { console.error('[social-engine] failed:', err); process.exit(1); });
+}

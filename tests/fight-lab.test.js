@@ -330,6 +330,20 @@ t('no page renders the calculated style any more', () => {
     ok(!/FL\.styleRead\(|from\('v_fighter_style'\)/.test(src), f + ' still reads the calculated style');
   });
 });
+t('no page copy still describes the retired calculated style (D-030)', () => {
+  // The calculated label was replaced by the UFC-listed discipline on
+  // 2026-10-16, but fight.html kept explaining the old round-one calculation
+  // under the new pill until 2026-10-21 — the page said the style was "read
+  // from what they actually did" while showing UFC.com's listing.
+  const fs = require('fs'), path = require('path');
+  const stale = /Style compares what a fighter does in round one|Style is read from what they actually did|"Mixes both" means|Three labels is deliberately/;
+  ['fight.html', 'fighter.html', 'index.html', 'event.html'].forEach(f => {
+    const src = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
+    ok(!stale.test(src), f + ' still explains the retired calculated style');
+  });
+  const page = fs.readFileSync(path.join(__dirname, '..', 'fight.html'), 'utf8');
+  ok(/UFC\.com athlete page/.test(page), 'fight.html no longer names where the fighting style comes from');
+});
 
 if (failures.length) {
   console.error(`fight-lab: ${failures.length} failed, ${passed} passed`);

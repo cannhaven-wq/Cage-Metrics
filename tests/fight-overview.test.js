@@ -50,6 +50,31 @@ function world(bouts) {
   };
 }
 
+// ---- T-082, retired under D-030: no calculated style sub-label --------------
+// The style a page shows is the UFC's listed discipline. A calculated label
+// beside it would compete with it — UFC.com itself lists "Striker" and
+// "Grappler" as disciplines — so the overview names no style at all, and the
+// measurements T-082 would have turned into labels stay numbered lines.
+const STYLE_SUBLABEL = /\b(boxing[- ]led|kick[- ]heavy|clinch[- ]heavy|clinch fighter|offensive wrestl\w*|defensive wrestl\w*|submission threat|pressure fighter|counter[- ]?striker|striker|grappler|mixes both|hybrid)\b/i;
+t('T-082: no tendency or result line carries a style label, across a range of profiles', () => {
+  const profiles = [
+    world([bout(), bout(), bout(), bout()]),
+    world([bout({ a_leg_landed: 40, a_distance_landed: 70, a_clinch_landed: 0, a_ground_landed: 0 }), bout(), bout(), bout()]),
+    world([bout({ a_clinch_landed: 40, a_td_attempted: 12, a_td_landed: 6, a_ctrl_seconds: 600 }), bout(), bout()]),
+    world([bout({ method: 'Submission', a_sub_attempts: 4 }), bout({ method: 'Submission', a_sub_attempts: 3 }), bout({ method: 'Submission' })]),
+  ];
+  profiles.forEach(p => { const r = O.tendencies(p); r.lines.concat(r.results).forEach(l =>
+    ok(!STYLE_SUBLABEL.test(l.text), 'style label in a measured line: ' + l.text)); });
+});
+t('T-082: each proposed sub-label already has a numbered measurement instead', () => {
+  const src = read('fight-overview.js');
+  // boxing-led vs kick-heavy -> where and what they land; clinch-heavy -> clinch
+  // share; offensive / defensive wrestling -> attempts and defence; submission
+  // threat -> attempts per 15 and submission wins.
+  ['distance', 'legs', 'head', 'clinch', 'shoots', 'control', 'tddef', 'tdweak', 'subtries', 'subwins'].forEach(k =>
+    ok(new RegExp("(push|record)\\('" + k + "'").test(src), 'missing measured line: ' + k));
+});
+
 // ---- rule 1: measurements, never backgrounds --------------------------------
 t('no background label in any tendency line, across a range of profiles', () => {
   const profiles = [
