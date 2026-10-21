@@ -6,11 +6,23 @@
 <title>Page retired | Cannon Fight Lab</title>
 <!-- The Head-to-Head comparison was taken off the public site.
      Owner, 2026-10-16 (T-103): the data behind it stays in the database for
-     back-end use only. Keep this stub so old links, shares and bookmarks land
-     on the card. noindex so crawlers drop the URL. -->
+     back-end use only. This stub ONLY redirects; it renders no comparison.
+
+     Old links carried two fighter ids, h2h.html?a=<id>&b=<id> (written by
+     event.html's "Compare" link, the /preview/ pages and the page itself).
+     When both are present this looks up the two fighters' bout and sends the
+     reader to that fight's Fight Lab page: the next upcoming booking if there
+     is one, otherwise their most recent. Anything else, or any failure, lands
+     on the card at /, as before.
+
+     A meta refresh cannot be conditional, so the immediate one only applies
+     when scripts are off (inside <noscript>). The 5-second one outside it is a
+     backstop for a script that errors or a lookup that hangs. noindex so
+     crawlers drop the URL. -->
 <meta name="robots" content="noindex, follow">
 <link rel="canonical" href="https://cannonfightlab.com/">
-<meta http-equiv="refresh" content="0; url=/">
+<noscript><meta http-equiv="refresh" content="0; url=/"></noscript>
+<meta http-equiv="refresh" content="5; url=/">
 <style>
   html,body{height:100%}
   body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:#08090b;color:#e6e9ee;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
@@ -19,6 +31,64 @@
 </head>
 <body>
 <p>This page has been retired. The next UFC card is on the <a href="/">homepage</a>. Taking you there…</p>
-<script>setTimeout(function(){location.replace("/");},120);</script>
+<script>
+(function () {
+  'use strict';
+  // The project URL and publishable key, as committed in _shared.js. Public by
+  // design: `fights` and `events` are readable by anon under RLS.
+  var SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
+  var SUPABASE_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
+  var HOME = '/';
+  var done = false;
+
+  function go(url) {
+    if (done) return;
+    done = true;
+    location.replace(url);
+  }
+
+  function fighterId(v) {
+    return (typeof v === 'string' && /^[1-9][0-9]{0,8}$/.test(v)) ? v : null;
+  }
+
+  // Of the two fighters' bookings: dead bookings (is_active false) never; the
+  // next upcoming card first; otherwise the most recent one.
+  function pickFight(rows, today) {
+    var live = (rows || []).filter(function (r) {
+      return r && r.is_active !== false && /^[0-9]+$/.test(String(r.id));
+    });
+    var dated = live.map(function (r) {
+      return { id: String(r.id), date: (r.events && r.events.event_date) || '' };
+    });
+    var upcoming = dated.filter(function (r) { return r.date && r.date >= today; })
+      .sort(function (x, y) { return x.date < y.date ? -1 : x.date > y.date ? 1 : 0; });
+    if (upcoming.length) return upcoming[0].id;
+    var past = dated.filter(function (r) { return r.date && r.date < today; })
+      .sort(function (x, y) { return x.date > y.date ? -1 : x.date < y.date ? 1 : 0; });
+    if (past.length) return past[0].id;
+    return dated.length ? dated[0].id : null;
+  }
+
+  var params = new URLSearchParams(location.search);
+  var a = fighterId(params.get('a'));
+  var b = fighterId(params.get('b'));
+  if (!a || !b || a === b || typeof fetch !== 'function') {
+    setTimeout(function () { go(HOME); }, 120);
+    return;
+  }
+
+  var url = SUPABASE_URL + '/rest/v1/fights?select=id,is_active,events(event_date)' +
+    '&or=(and(fighter_a_id.eq.' + a + ',fighter_b_id.eq.' + b + '),' +
+    'and(fighter_a_id.eq.' + b + ',fighter_b_id.eq.' + a + '))';
+  setTimeout(function () { go(HOME); }, 3000);   // a slow lookup still lands
+  fetch(url, { headers: { apikey: SUPABASE_KEY, Accept: 'application/json' } })
+    .then(function (res) { return res.ok ? res.json() : []; })
+    .then(function (rows) {
+      var id = pickFight(rows, new Date().toISOString().slice(0, 10));
+      go(id ? 'fight.html?id=' + encodeURIComponent(id) : HOME);
+    })
+    .catch(function () { go(HOME); });
+})();
+</script>
 </body>
 </html>
