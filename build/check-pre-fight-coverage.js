@@ -122,19 +122,7 @@
 // 60-day inactivity disable — then nothing shouts, for the same reason nothing
 // shouted before. The workflow prints the gap between its own recent runs so a
 // run that DOES land reports the hole, but closing it properly needs an observer
-// outside GitHub.
-//
-// T-076 builds that observer, and it is NOT live until the owner applies
-// research/ops/proposed_2026-10-21_t076_dead_man_observer.sql and stores a
-// GitHub token in Supabase Vault (runbook: research/ops/
-// T076_DEAD_MAN_OBSERVER_RUNBOOK.md). This script's half is already here: every
-// run inserts a heartbeat row, and reads the observer's own latest heartbeat
-// back so the step summary says whether the observer is installed, running and
-// armed. Until the table exists the write fails harmlessly and the summary says
-// "not installed" — it never claims the hole is closed.
-//
-// The heartbeat NEVER changes the exit code. The red tick means one thing: the
-// pre-fight record is missing, or this check could not look.
+// outside GitHub. Tracked as an owner item, not pretended away here.
 //
 // -----------------------------------------------------------------------------
 // ENV
@@ -402,126 +390,6 @@ async function load(key, now, lookaheadDays) {
 }
 
 // ---------------------------------------------------------------------------
-// T-076 heartbeat. Pure halves first, so the tests reach every branch.
-// ---------------------------------------------------------------------------
-const HEARTBEAT_TABLE = 'watchdog_heartbeats';
-// The observer is scheduled hourly at minute 17. Three hours allows two
-// missed passes before the dead man says the observer itself has gone quiet.
-const OBSERVER_MAX_AGE_HOURS = 3;
-
-/**
- * The row this run writes, or null when it must not write one.
- * A run with COVERAGE_NOW set is pretending to be at another instant — it is a
- * test, not evidence that the schedule is alive — so it writes nothing.
- * ran_at is not sent: the database stamps it with its own clock.
- */
-function heartbeatRow(outcome, env = process.env) {
-  if (env.COVERAGE_NOW) return null;
-  if (String(env.DEAD_MAN_HEARTBEAT || '').toLowerCase() === 'off') return null;
-  const ev = env.GITHUB_EVENT_NAME;
-  const trigger = ev === 'schedule' || ev === 'workflow_dispatch' ? ev : 'local';
-  const runUrl = env.GITHUB_REPOSITORY && env.GITHUB_RUN_ID
-    ? `${env.GITHUB_SERVER_URL || 'https://github.com'}/${env.GITHUB_REPOSITORY}/actions/runs/${env.GITHUB_RUN_ID}`
-    : null;
-  return { source: 'dead-man', outcome, trigger, run_url: runUrl };
-}
-
-/**
- * What the dead man can say about the observer, from its latest heartbeat.
- * latest: { ran_at, outcome, armed } | null; readError: string | null.
- */
-function observerVerdict(latest, now, readError = null) {
-  if (readError) {
-    return /PGRST205|42P01|does not exist|Could not find the table/i.test(readError)
-      ? { status: 'not_installed',
-          line: 'Outside observer (T-076): NOT INSTALLED. If GitHub stops running this '
-              + 'watchdog, nothing outside GitHub will notice. Owner step pending — see '
-              + 'research/ops/T076_DEAD_MAN_OBSERVER_RUNBOOK.md.' }
-      : { status: 'unreadable',
-          line: `Outside observer (T-076): could not read its heartbeat (${readError.slice(0, 200)}).` };
-  }
-  if (!latest || !latest.ran_at) {
-    return { status: 'never_ran',
-             line: 'Outside observer (T-076): the table exists but the observer has never '
-                 + 'run. Check that the pg_cron job cfl-dead-man-liveness is scheduled.' };
-  }
-  const ageH = (Date.parse(now) - Date.parse(latest.ran_at)) / 3600000;
-  const age = `${Math.round(ageH * 10) / 10} h ago`;
-  if (ageH > OBSERVER_MAX_AGE_HOURS) {
-    return { status: 'stale', ageHours: ageH,
-             line: `Outside observer (T-076): last ran ${age}, past its ${OBSERVER_MAX_AGE_HOURS} h `
-                 + 'window. The pg_cron job may be stopped — nothing is watching this watchdog.' };
-  }
-  if (latest.armed !== true) {
-    return { status: 'not_armed', ageHours: ageH,
-             line: `Outside observer (T-076): running (last pass ${age}) but NOT ARMED — no `
-                 + 'GitHub token in Vault, so a stall would be recorded and not reported.' };
-  }
-  return { status: 'armed', ageHours: ageH,
-           line: `Outside observer (T-076): running and armed (last pass ${age}, `
-               + `outcome ${latest.outcome}).` };
-}
-
-async function writeHeartbeat(key, row, fetchImpl = fetch) {
-  if (!row) return { status: 'skipped' };
-  try {
-    const res = await fetchImpl(`${SUPABASE_URL}/rest/v1/${HEARTBEAT_TABLE}`, {
-      method: 'POST',
-      headers: {
-        apikey: key, Authorization: `Bearer ${key}`,
-        'Content-Type': 'application/json', Prefer: 'return=minimal',
-      },
-      body: JSON.stringify(row),
-    });
-    if (res.ok) return { status: 'written' };
-    const text = await res.text();
-    return { status: /PGRST205|42P01|does not exist|Could not find the table/i.test(text)
-      ? 'not_installed' : 'failed', message: `HTTP ${res.status} ${text.slice(0, 200)}` };
-  } catch (err) {
-    return { status: 'failed', message: err.message };
-  }
-}
-
-async function readObserver(key, fetchImpl = fetch) {
-  try {
-    const res = await fetchImpl(`${SUPABASE_URL}/rest/v1/${HEARTBEAT_TABLE}`
-      + '?select=ran_at,outcome,armed&source=eq.observer&order=ran_at.desc&limit=1', {
-      headers: { apikey: key, Authorization: `Bearer ${key}`, Accept: 'application/json' },
-    });
-    if (!res.ok) return { latest: null, error: `HTTP ${res.status} ${await res.text()}` };
-    const rows = await res.json();
-    return { latest: Array.isArray(rows) && rows.length ? rows[0] : null, error: null };
-  } catch (err) {
-    return { latest: null, error: err.message };
-  }
-}
-
-/** Write this run's heartbeat and report on the observer. Never throws. */
-async function liveness(key, outcome, env = process.env, fetchImpl = fetch) {
-  try {
-    const hb = await writeHeartbeat(key, heartbeatRow(outcome, env), fetchImpl);
-    const hbLine = {
-      written: 'Heartbeat recorded for the outside observer.',
-      skipped: 'Heartbeat not recorded (pretend-time or disabled run — not evidence of the schedule).',
-      not_installed: 'Heartbeat not recorded: the T-076 table is not installed yet.',
-      failed: `Heartbeat write FAILED: ${hb.message || 'unknown'}. The observer may raise a false stall.`,
-    }[hb.status];
-    const obs = await readObserver(key, fetchImpl);
-    const verdict = observerVerdict(obs.latest, new Date().toISOString(), obs.error);
-    console.log(`[liveness] ${hbLine}`);
-    console.log(`[liveness] ${verdict.line}`);
-    if (env.GITHUB_STEP_SUMMARY) {
-      fs.appendFileSync(env.GITHUB_STEP_SUMMARY,
-        ['', '### Who watches the watchdog', '', `- ${hbLine}`, `- ${verdict.line}`, ''].join('\n'));
-    }
-    return { heartbeat: hb.status, observer: verdict.status };
-  } catch (err) {
-    console.log(`[liveness] could not report: ${err.message}`);
-    return { heartbeat: 'failed', observer: 'unreadable' };
-  }
-}
-
-// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 async function main() {
@@ -593,26 +461,17 @@ async function main() {
 
   if (breaches.length) {
     console.error(`\n[coverage] ${breaches.length} breach(es) — exiting 1 so this cannot pass quietly.`);
-    await liveness(key, 'breach');
     process.exit(1);
   }
   console.log(`\n[coverage] ${checks.length} checks, no breach.`);
-  await liveness(key, 'ok');
 }
 
 // Exported for tests/dead-man.test.js. The pure half is what is worth testing.
-module.exports = { deadlineFor, assess, describe, markerFor, WRITERS, THIN_RATIO,
-  heartbeatRow, observerVerdict, writeHeartbeat, readObserver, liveness,
-  HEARTBEAT_TABLE, OBSERVER_MAX_AGE_HOURS };
+module.exports = { deadlineFor, assess, describe, markerFor, WRITERS, THIN_RATIO };
 
 if (require.main === module) {
-  main().catch(async err => {
+  main().catch(err => {
     console.error(`[coverage] FATAL: ${err.message}`);
-    // A run that could not look still RAN — the schedule is alive — so it
-    // checks in with outcome 'error'. Without a key it cannot, and the red
-    // tick is the alarm for that.
-    const key = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SECRET_KEY;
-    if (key) await liveness(key, 'error');
     process.exit(1);
   });
 }
