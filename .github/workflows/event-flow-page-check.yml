@@ -1,0 +1,65 @@
+# T-030 — check the running-order parser against REAL UFCStats pages.
+#
+# The agent environment cannot reach ufcstats.com, so this runs where it can.
+# It reads the latest completed and the next upcoming UFCStats event pages with
+# the repo's own parser, cross-checks the walkout direction against each page's
+# title (the event is named after its main event), and uploads
+# REAL_PAGE_CHECK.json as an artifact. It also prints the JSON to the log.
+#
+# No secrets. No database. Read-only token. It writes nothing to the repo:
+# committing the JSON to cfl_engine/event_flow/REAL_PAGE_CHECK.json is a
+# deliberate, reviewed commit by a person (or by Claude, citing this run).
+#
+# It does not get past a bot wall. An interstitial instead of the card is
+# reported as page_unreadable and the run fails.
+name: Event flow — real-page check
+
+on:
+  workflow_dispatch:
+    inputs:
+      events:
+        description: "UFCStats event ids, space-separated (blank = latest completed + next upcoming)"
+        required: false
+        default: ""
+  push:
+    branches:
+      - claude/gallant-cannon-sefkcs-running-order
+    paths:
+      - cfl_engine/event_flow/**
+      - .github/workflows/event-flow-page-check.yml
+
+permissions:
+  contents: read
+
+jobs:
+  page-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Parser unit tests
+        run: python -m unittest cfl_engine.event_flow.test_event_flow cfl_engine.event_flow.test_real_page_check
+
+      - name: Read real UFCStats pages
+        env:
+          EVENTS: ${{ github.event.inputs.events }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          args=""
+          for e in $EVENTS; do args="$args --event $e"; done
+          python cfl_engine/event_flow/real_page_check.py \
+            --out REAL_PAGE_CHECK.json \
+            --checked-by "GitHub Actions run ${{ github.run_id }} (real_page_check.py; $RUN_URL)" \
+            $args
+
+      - name: Upload REAL_PAGE_CHECK.json
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: REAL_PAGE_CHECK
+          path: REAL_PAGE_CHECK.json
+          if-no-files-found: warn
