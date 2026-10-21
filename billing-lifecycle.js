@@ -28,7 +28,9 @@
    ------------------------------------------------------------------------
    THE RULES, AND WHY EACH ONE
    ------------------------------------------------------------------------
-   active, trialing      -> Pro until current_period_end.
+   active, trialing      -> Pro until current_period_end (top level, or the
+                            latest item's on API 2025-03-31+). No readable
+                            period end -> free, recorded: fail closed.
    past_due              -> Pro until current_period_end. Stripe is still
                             retrying; cutting access off at the first failed
                             charge punishes an expired card, and the period
@@ -103,6 +105,33 @@
   }
 
   /* ----------------------------------------------------------------------
+     periodEndOf — where the paid period ends, in unix seconds, or null.
+
+     Stripe API versions before 2025-03-31 carry `current_period_end` on the
+     subscription. From 2025-03-31 ("basil") it lives on each subscription
+     ITEM instead. Read the top level first; otherwise the latest end across
+     the items (a member with several items has paid through the last one).
+     Neither present -> null, and entitlementFor() fails closed on null.
+     ---------------------------------------------------------------------- */
+  function unixOrNull(v) {
+    if (v === null || v === undefined || v === '') return null;
+    const n = Number(v);
+    return (isFinite(n) && n > 0) ? n : null;
+  }
+  B.periodEndOf = function (o) {
+    if (!o) return null;
+    const top = unixOrNull(o.current_period_end);
+    if (top !== null) return top;
+    const items = o.items && Array.isArray(o.items.data) ? o.items.data : [];
+    let best = null;
+    items.forEach(it => {
+      const n = unixOrNull(it && it.current_period_end);
+      if (n !== null && (best === null || n > best)) best = n;
+    });
+    return best;
+  };
+
+  /* ----------------------------------------------------------------------
      entitlementFor — status + dates -> tier and expiry. The core rule.
      `nowMs` is injected so tests can stand at any point in time.
      ---------------------------------------------------------------------- */
@@ -116,9 +145,14 @@
     }
     if (B.STATUS_KEEPS_PERIOD.indexOf(status) !== -1) {
       if (!currentPeriodEndIso) {
-        // Active with no period end is not something to guess at. Grant
-        // open-ended rather than nothing: Stripe says they are paying.
-        return { tier: B.PRO_TIER, expiresAt: null, reason: 'status_' + status + '_no_period_end' };
+        // FAIL CLOSED. A paying status with no readable period end is not a
+        // reason to grant access with no expiry: that is how a member whose
+        // card stopped working keeps Pro until Stripe gives up entirely. It
+        // happened in principle the day Stripe moved current_period_end onto
+        // subscription items (API 2025-03-31) — periodEndOf() now reads both
+        // shapes, and anything it still cannot read ends access here, with
+        // the reason recorded in billing_events.
+        return { tier: B.FREE_TIER, expiresAt: null, reason: 'status_' + status + '_no_period_end_fails_closed' };
       }
       return { tier: B.PRO_TIER, expiresAt: currentPeriodEndIso, reason: 'status_' + status };
     }
@@ -200,7 +234,7 @@
     const status = type === 'customer.subscription.deleted'
       ? 'canceled'                       // deleted means cancelled, whatever the payload says
       : String(o.status || '');
-    const periodEnd = iso(o.current_period_end);
+    const periodEnd = iso(B.periodEndOf(o));
     const ent = B.entitlementFor(status, periodEnd, nowMs);
 
     return Object.assign(base, {
@@ -251,6 +285,13 @@
     const ends = endIso ? new Date(Date.parse(endIso)) : null;
     const endTxt = B.formatDay(endIso);
 
+    // A paying status whose period end we could not read: entitlement failed
+    // closed (see entitlementFor), so do not tell the member they are Pro.
+    if (B.STATUS_KEEPS_PERIOD.indexOf(status) !== -1 && !endTxt && s.entitlement !== 'pro') {
+      return { head: 'Membership not confirmed',
+               body: 'Stripe has not told us when your current period ends, so Pro is off until it does. ' +
+                     'If you have paid, contact us and we will sort it out.' };
+    }
     if (!status) {
       return { head: 'Free account',
                body: 'You are on the free plan. Everything CFL publishes about the current card is free.' };

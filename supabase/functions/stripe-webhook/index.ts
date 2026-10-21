@@ -53,12 +53,34 @@ function idOf(v: unknown): string | null {
   if (!v) return null;
   return typeof v === 'string' ? v : ((v as any).id ? String((v as any).id) : null);
 }
+// Stripe API < 2025-03-31: current_period_end on the subscription.
+// 2025-03-31 ("basil") and later: on each subscription item. Top level first,
+// else the latest item end, else null (and entitlementFor fails closed).
+function unixOrNull(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null;
+  const n = Number(v);
+  return (isFinite(n) && n > 0) ? n : null;
+}
+function periodEndOf(o: any): number | null {
+  if (!o) return null;
+  const top = unixOrNull(o.current_period_end);
+  if (top !== null) return top;
+  const items = o.items && Array.isArray(o.items.data) ? o.items.data : [];
+  let best: number | null = null;
+  for (const it of items) {
+    const n = unixOrNull(it?.current_period_end);
+    if (n !== null && (best === null || n > best)) best = n;
+  }
+  return best;
+}
 function entitlementFor(status: string, endIso: string | null, now: number) {
   const endMs = endIso ? Date.parse(endIso) : NaN;
   const running = isFinite(endMs) && endMs > now;
   if (STATUS_ENDS_NOW.includes(status)) return { tier: FREE_TIER, expiresAt: null, reason: 'status_' + status + '_ends_access' };
   if (STATUS_KEEPS_PERIOD.includes(status)) {
-    if (!endIso) return { tier: PRO_TIER, expiresAt: null, reason: 'status_' + status + '_no_period_end' };
+    // FAIL CLOSED: a paying status with no readable period end never grants
+    // open-ended access. See billing-lifecycle.js.
+    if (!endIso) return { tier: FREE_TIER, expiresAt: null, reason: 'status_' + status + '_no_period_end_fails_closed' };
     return { tier: PRO_TIER, expiresAt: endIso, reason: 'status_' + status };
   }
   if (status === 'canceled') {
@@ -190,7 +212,7 @@ Deno.serve(async (req: Request) => {
 
   // ---- the subscription: the only thing that sets entitlement ------------
   const status = event.type === 'customer.subscription.deleted' ? 'canceled' : String(o.status ?? '');
-  const periodEnd = iso(o.current_period_end);
+  const periodEnd = iso(periodEndOf(o));
   const ent = entitlementFor(status, periodEnd, now);
 
   const { error: writeErr } = await admin.from('profiles').update({

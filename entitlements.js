@@ -114,6 +114,74 @@
     'affiliate placement dressed as a recommendation'
   ];
 
+  // ------------------------------------------------------------ server gates
+  // Where each Pro surface WOULD be enforced, once T-061 is approved. Drafted,
+  // not applied: research/commercial/t061_pro_gates.DRAFT.sql holds the SQL,
+  // and tests/test_t061_pro_gates_sql.py runs it on a throwaway Postgres.
+  //
+  // This is a pointer, not a gate. Every entry names an object that calls
+  // current_user_is_pro() in Postgres; nothing here is consulted to decide
+  // what data is sent. `not_built` means there is no table or view behind the
+  // surface yet, so there is nothing to gate and it must stay unenforced.
+  E.PRO_GATES_DRAFT_FILE = 'research/commercial/t061_pro_gates.DRAFT.sql';
+  E.PRO_GATES_DRAFT = {
+    movement_chart_history: { kind: 'view',     object: 'v_pro_fight_chart_series',
+                              replaces: 'v_fight_chart_series' },
+    book_by_book_history:   { kind: 'view',     object: 'v_pro_fight_chart_books',
+                              replaces: 'v_fight_chart_books' },
+    historical_lookback:    { kind: 'view',     object: 'v_fight_market_movement_lookback',
+                              replaces: null },
+    watchlists:             { kind: 'policy',   object: 'watchlist insert own (pro)',
+                              replaces: 'watchlist insert own' },
+    price_alerts:           { kind: 'function', object: 'alert_quota',
+                              replaces: null },
+    movement_alerts:        { kind: 'function', object: 'alert_quota',
+                              replaces: null },
+    since_last_visit:       { kind: 'not_built', object: null, replaces: null },
+    advanced_matchup:       { kind: 'not_built', object: null, replaces: null }
+  };
+
+  // ------------------------------------------------------------------- plans
+  // What CFL Pro would be sold as. EVERY AMOUNT IS NULL, on purpose: the price
+  // is T-067, an owner decision (CRITICAL_GATES item 7), and it is not set.
+  // pricing.html renders from this list, so the page can only say what is
+  // true: "price not set". Nothing on any page may hardcode an amount;
+  // tests/pricing-config.test.js fails if one appears.
+  //
+  // To set a price: put the amount here in CENTS, as an integer, in the same
+  // pull request that creates the Stripe price it describes (T-068). The
+  // Stripe price is what charges; this only describes it to the reader, so
+  // the two must agree.
+  E.PRICE_DECISION = 'T-067';
+  E.PLANS = [
+    { id: 'pro_monthly', label: 'Monthly', interval: 'month',
+      amount_cents: null, currency: 'usd',
+      stripe_price_secret: 'STRIPE_PRICE_ID' },
+    { id: 'pro_yearly',  label: 'Yearly',  interval: 'year',
+      amount_cents: null, currency: 'usd',
+      // The checkout function reads ONE price id today. Selling a second
+      // period needs the function to accept a plan id and map it to a second
+      // secret — a code change, decided at T-067, not a config flip.
+      stripe_price_secret: null }
+  ];
+
+  E.priceIsSet = function (plan) {
+    return !!plan && Number.isInteger(plan.amount_cents) && plan.amount_cents > 0;
+  };
+
+  // The line a reader sees for one plan. Never guesses, never rounds a missing
+  // price into a range, never says "from".
+  E.priceLabel = function (plan) {
+    if (!E.priceIsSet(plan)) return 'Price not set';
+    const dollars = (plan.amount_cents / 100).toFixed(2);
+    const sym = plan.currency === 'usd' ? '$' : (String(plan.currency).toUpperCase() + ' ');
+    return sym + dollars + ' / ' + plan.interval;
+  };
+
+  E.planRows = function () {
+    return E.PLANS.map(p => ({ id: p.id, label: p.label, price: E.priceLabel(p), set: E.priceIsSet(p) }));
+  };
+
   E.tierFor = function (key) {
     const row = E.SURFACES.filter(s => s.key === key)[0];
     return row ? row.tier : null;
