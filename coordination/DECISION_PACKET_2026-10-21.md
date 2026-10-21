@@ -148,4 +148,28 @@ Wikipedia says "KO (elbow) 3:15".
 
 ## F. Running order — T-096 / T-030 / T-032
 
-*Pending the running-order workstream's report.*
+Everything is built and tested in
+[PR #113](https://github.com/cannhaven-wq/Cage-Metrics/pull/113), which
+supersedes #81. Two decisions remain.
+
+**F1. Source.** UFCStats blocks GitHub's runners: it serves them an anti-bot
+page. ESPN's public scoreboard feed works from GitHub and agreed with
+Wikipedia on every bout of two cards (13/13 and 14/14). That feed is
+**undocumented, and its terms have not been reviewed.**
+- *Recommendation:* approve ESPN for the running order only, with
+  Wikipedia as a cross-check. If anyone at ESPN or a lawyer objects, stop.
+- *If approved:* one PR sets `SOURCE=espn` and uncomments the schedule in
+  `event-flow.yml` (two lines). Card Lab and the event page then show the
+  true walkout order ("Bout N of M") instead of announcement order.
+
+**F2. Migration.** `research/event-card/apply_2026-10-21_running_order.sql`
+creates the running-order ledger, the append-only booking-status log and a
+read-only view. It checks itself and rolls back on any failure.
+- *Recommendation:* approve, and apply it between cards: Sunday 2026-10-25,
+  in the same window as C2. Claude applies it with `psql`.
+- *If approved:* stale-booking retirement (T-032) runs from evidence instead
+  of by hand, and every change is logged before it is made.
+
+**Not covered by this source:** start times per fight are estimates only
+(ESPN gives section start times, for example 14:00 / 16:00 / 18:00 UTC
+for UFC 333). They are captured but not shown anywhere.
