@@ -15,3 +15,11 @@ __pycache__/
 # Cardio model intermediate — 2.6MB, regenerable via build_features.py
 cfl_engine/cardio/round_observations.csv
 logs/
+
+# Research data exports are never committed (owner decision D-034, 2026-10-21).
+# Their sha256 and how to obtain them are in research/discovery/WITHHELD.json
+# and research/experiments/DISC-001/data/README.md.
+research/discovery/data/dev/*.csv
+research/discovery/runs/*/oos_predictions.csv
+!research/discovery/runs/*-synthetic/oos_predictions.csv
+research/experiments/*/data/*.csv

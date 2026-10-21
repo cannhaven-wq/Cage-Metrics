@@ -1,0 +1,295 @@
+{
+ "_what": "Every file the clean integration carries over from the two research branches, with the commit it came from and its sha256 there. 'unchanged' files are byte-identical to the original (tests/test_consolidation.py checks this); 'changed_in_consolidation' files were edited on purpose (engine 1.1 fixes E1-E3, withheld-data support, tests that skip without the data) and the original bytes remain retrievable by commit and path while the branches exist. The original branches are NOT ancestors of this branch (owner decision D-034) and have not been deleted.",
+ "decision": "D-034",
+ "original_commits": {
+  "claude/keen-ptolemy-ezdwfu": {
+   "c112794d": "engine code, config, tests, DEV export (2026-10-21 20:02 UTC; committed 33 s after ledger entry 1's run started, see E4)",
+   "0b6355bb": "first real run, synthetic demo, report (20:33 UTC)"
+  },
+  "claude/brave-bohr-e8j482": {
+   "d4aedbc6": "preregistration and export SQL (20:05 UTC, before any export)",
+   "ce5a47c9": "one-off export workflow and script (20:08; the workflow was deleted in e47d4fa0)",
+   "772dbcc2": "DEV export (20:08)",
+   "e47d4fa0": "run, report, checks, tests (20:21)"
+  },
+  "claude/wizardly-albattani-dwoze0": {
+   "9d9ed1ec": "first consolidation audit (draft PR #120, not merged)"
+  }
+ },
+ "original_sessions": {
+  "engine": "session_0116nD6ScATk3u8ujhtHmZSe",
+  "DISC-001": "session_01UE1DwShsGRDc8szFAaEvpm",
+  "consolidation": "session_01TZy7rXSd57dkscoSB1MNiN"
+ },
+ "files": {
+  "build/disc001-export.js": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "f9bbbe46aae3bc8906f0526c85bcb3b335bcb1a95509790ba4210e8e7cd8451c",
+   "status": "unchanged"
+  },
+  "research/discovery/README.md": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "4ced9b682dfc550c098f003dec1e69bdae6b60b7aeebc66449e944e7abdcbce9",
+   "status": "changed_in_consolidation",
+   "sha256_now": "baab5c200697e0d6d82bbc0e6b3af10d681bc2f2bd17a5a7161bfcf767d22d8a"
+  },
+  "research/discovery/REPORT_PHASE1.md": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "e8dad86673772e05ca643690ff0367c283c874d8ad163d2d27db27e788f39dd8",
+   "status": "changed_in_consolidation",
+   "sha256_now": "a538e6f31907d2209786535289380efef8ba49edc202de9a1542ad1ece09ce43"
+  },
+  "research/discovery/cfl_discovery/__init__.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "10250c6c9ad4f358e51deb0c5c035ca5ca7a6e7735a5a41f99267f2d41583793",
+   "status": "changed_in_consolidation",
+   "sha256_now": "563a01711fe300c720ccfbdd45c623bc22b1fa17929bc4df6a4013738602881b"
+  },
+  "research/discovery/cfl_discovery/__main__.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "e6a5b8a9b0f5bc30f863a0f88db0d1acf6a56ac41415d9dfd346748a63a015be",
+   "status": "unchanged"
+  },
+  "research/discovery/cfl_discovery/candidates.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "6641ebf43289ee8ec70b884a98abe4f6fe5870b6102f596b56a69f3917bed75c",
+   "status": "changed_in_consolidation",
+   "sha256_now": "f872c202af63b455e6c74f482d927ff423845f4468b65c02067d1bed95703435"
+  },
+  "research/discovery/cfl_discovery/data.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "0fa457c46cba7f36e6a6c31574d32098da6672b2726be4a2e0ab6694680791a8",
+   "status": "changed_in_consolidation",
+   "sha256_now": "fd3a311190e1109dcb15f2c8bd1693fe5f13c7d7df68121ff059ded1c8787d00"
+  },
+  "research/discovery/cfl_discovery/evaluate.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "1032906bc09e5898c66f7f98dda32c47107d997d280246af7968f433a004dec0",
+   "status": "unchanged"
+  },
+  "research/discovery/cfl_discovery/features.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "e844ba54c3bd478bb203247d36c9dedfa7932a88794c843706973be3adae1d89",
+   "status": "changed_in_consolidation",
+   "sha256_now": "36c00a393727fd95cd72e745ee78226edce19e07afa0cbeaf3c6085ca4bef398"
+  },
+  "research/discovery/cfl_discovery/leakage.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "5ee653d43cba218a54f3eca90fcbfdfdb8582e153c009ad6e5ec06207e67f88f",
+   "status": "unchanged"
+  },
+  "research/discovery/cfl_discovery/ledger.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "500425287bf83c070cb7269dae4397d4695a2d580396e9549d83e7da755fc167",
+   "status": "changed_in_consolidation",
+   "sha256_now": "16eb98adb3042fdc6073b0cf60c7d702d2c89e5bb35d08d4826d7a6f11906496"
+  },
+  "research/discovery/cfl_discovery/model.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "1deda4000de0b33df044793f9df1611db000e8a843118c3180190f5493913d82",
+   "status": "unchanged"
+  },
+  "research/discovery/cfl_discovery/report.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "9bacf7e1f392e8b5a2501d48873b18a6c3e174081ed85ecab6cb9735dba41825",
+   "status": "changed_in_consolidation",
+   "sha256_now": "ae1074f4b6c0625214741ec96ea83c48f9def26ba8c5eae31cb7dafa82bebd20"
+  },
+  "research/discovery/cfl_discovery/run.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "ae9c4cad69f5b37bbcfeb7ec33546ffdeac6e5a3cd949213eafe8b773a215a4b",
+   "status": "changed_in_consolidation",
+   "sha256_now": "3180bae6048df81cb63d25a8a1d2f1dc6434ced7a9b435dc24a433cf30b2d449"
+  },
+  "research/discovery/cfl_discovery/synthetic.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "072cae0c0f064d11fa3cd4074c615baf01b111cfb393151c5a477d0e7824a56d",
+   "status": "unchanged"
+  },
+  "research/discovery/config/phase1.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "94227441f3c80d61658003b80579621d7daa787f4e8e18a77bb8e1f92f6d7ad2",
+   "status": "unchanged"
+  },
+  "research/discovery/data/dev/DATA_MANIFEST.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "6d725dc3af467eb73e7862341b974d4a5b1ddc4997605bc2ab4f37f605445735",
+   "status": "unchanged"
+  },
+  "research/discovery/export_dev.sql": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "fbaa8b00dda145484ecb3072ec0b293180837d4539b04d60eecf589aa96796c4",
+   "status": "unchanged"
+  },
+  "research/discovery/ledger.jsonl": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "2e6d7a1d3dd11836819a5d0201024fa6c97a77ba0b65ad1df6184d3330b84be1",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/SUMMARY.md": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "b9a9ea94ed1ac0578b13baabf1a7452338fd6347d750e695f231863430331e69",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/catalog.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "83d7da8621e9c3459f28d1ee70af209c9dc9e039a4cd65961a3f131dfd4c2061",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/config.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "f37ba1c4b2719a49da246c8f3cb4289d578fa67089cf7c5535e5e453ccd1c4ea",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/feature_manifest.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "24713b4cebe1bfa61e4b348486b9f8f8af482c5dc715021778e4ed8ca836cfb1",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/results.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "88e24d0ef2d688d27ec0f3dac2fd933e7c75fa39d710a637e7fb59ad25c20ec3",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T200151Z-phase1/shortlist.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "e936b6b108165fc042acd6095098705cb983bd1f5c9ffbce9e564de3f9543cf7",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/SUMMARY.md": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "6b646229ba1c362e35595ab27ecd097b829fef297999a8fa5ea46866617f8615",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/catalog.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "83d7da8621e9c3459f28d1ee70af209c9dc9e039a4cd65961a3f131dfd4c2061",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/config.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "da38d548e4376ed33429012a213b6affcb20b21eb99ca5ae601c2d2f21eff1a7",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/feature_manifest.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "24713b4cebe1bfa61e4b348486b9f8f8af482c5dc715021778e4ed8ca836cfb1",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/oos_predictions.csv": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "8bf7c822d08feedf417f4df8dd38ee7cd26960e0d60d224349eb3ee45751b83a",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/results.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "d012e4877757296df1f2073cdcf01a7e54c17783fb1bd656c5ba0fc361342b85",
+   "status": "unchanged"
+  },
+  "research/discovery/runs/20261021T202341Z-demo-synthetic/shortlist.json": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "cdb575f5a13b5ee726b07a6c7b57b91787811d60982144d0c5db43b7404bdb3a",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/PREREGISTRATION.md": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "c7eaab84fa6a57cd3a2fcaf4b091318474df090ac4cd8a6c219106ffca97d1c4",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/REPORT.md": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "db8c921356e3a5e01619c67ed16711865ffe23f9d9ece3fb8e42f6be49450744",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/devig_check.json": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "3ede4c2defad98e5e956c6ad6df6fdff2ff590ec4c572fe0b69688dd75279113",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/devig_check.py": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "82029bb311bd606ebe76ff119fbe31c394011c73ddabb7e285edeb41a8c8e380",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/discover.py": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "cfbfd184724005069d125f8e928b7bddec46bf600282a499243df0bbf5bedff0",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/positive_control.json": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "8a166c69bfa912b14ee47d19d1ad225302a474de20d6a422ed60d7bc037d9cf9",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/positive_control.py": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "0bef80d71b5b6b49f6f6d905f6fe1e7deb541413c989d28d7e5abfd61871ef31",
+   "status": "unchanged"
+  },
+  "research/experiments/DISC-001/results.json": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "6c467a237c32a7b0dd9a35c5c68c3b1e2e53c43d9cf8d789dd49db4022be39f5",
+   "status": "unchanged"
+  },
+  "research/factors/disc001_dev_export.sql": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "cfd6eded09365bd3b3783a02f41b2dc471ae692d78527e741f5d9f4161d8d6da",
+   "status": "unchanged"
+  },
+  "tests/test_disc001.py": {
+   "source_commit": "e47d4fa0",
+   "source_branch": "claude/brave-bohr-e8j482",
+   "source_sha256": "32083a62e902ac2264ecac0024bc59cee2a4f9f1f62a4178176cee62c258fca7",
+   "status": "changed_in_consolidation",
+   "sha256_now": "63381820f9211f0f66cff21c160c9b933416bb710364524058a9d1ff3eefa464"
+  },
+  "tests/test_discovery.py": {
+   "source_commit": "0b6355bb",
+   "source_branch": "claude/keen-ptolemy-ezdwfu",
+   "source_sha256": "a866776fa9322f10fb034d8d63281efde1f35f8a906be566625af9fe9782f5b3",
+   "status": "changed_in_consolidation",
+   "sha256_now": "52378d76f039fc3919f57bc8cb7f1070ace9e5ec45e83765ff40fd349f7173af"
+  }
+ }
+}

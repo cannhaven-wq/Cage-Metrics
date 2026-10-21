@@ -11,6 +11,37 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (d) — Research consolidated on the owner's conditions (D-034, T-111)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- DISC-001 and the Discovery Engine were audited by a session that wrote
+  neither. Both reproduce exactly, use the same pre-2025 data, read nothing
+  sealed and agree on every shared factor. Nothing beats the closing odds.
+- Integrated on `claude/wizardly-albattani-dwoze0-clean`, cut from `main`, with
+  no raw data exports and no real per-fight rows. Hashes and how to obtain the
+  data are in `research/discovery/WITHHELD.json`,
+  `research/experiments/DISC-001/data/README.md` and
+  `research/consolidation/PROVENANCE.json`. Draft PR #120 is not merged; no
+  branch deleted, no history rewritten.
+- Engine 1.1.0: E1, E2, E3 fixed; E4 recorded. PRED-001 untouched.
+- Prepared, not applied: PRED-001 Amendment 2 (`out_real/` exposure). Written:
+  the SYM-002/003 history (before closing #53), PRED-002's disclosures, the
+  Phase 2 design and the MKT-002 draft preregistration.
+
+## Next action
+
+1. **CFL Owner:** final merge approval for the clean PR (T-114); separately,
+   approve or decline Amendment 2 (T-115).
+2. **Claude, after the merge:** T-116 (MKT-001), then T-117 (the outcome-free
+   MKT-002 pilot, freezing the preregistration before any evaluation
+   observation).
+3. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude

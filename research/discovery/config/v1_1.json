@@ -1,0 +1,57 @@
+{
+  "config_id": "DISC-P1-v1.1",
+  "_what": "Engine 1.1.0 configuration. Same thresholds as DISC-P1-v1 (config/phase1.json, the record of ledger entries 1-2); the engine itself changed: E1 de-vig sensitivity evaluated on the fights where each method is defined and never passed vacuously, E2 the 0.003 size test against the re-weighted market (raw-market gain reported beside it, owner decision D-034), E3 H1-contamination flags. No real-data run has used this config yet. Commit this file before the first real run that uses it (E4: DISC-P1-v1 was committed after its first run had started). Values marked 'pred001' are read from research/protocol/protocol.json at run time and the run refuses to start if this file disagrees.",
+  "train_start_year": 2007,
+  "screen_years": [
+    2010,
+    2011,
+    2012,
+    2013,
+    2014,
+    2015,
+    2016,
+    2017,
+    2018
+  ],
+  "confirm_years": [
+    2019,
+    2020,
+    2021,
+    2022,
+    2023,
+    2024
+  ],
+  "ridge_single": 1.0,
+  "ridge_multi": 25.0,
+  "interactions": true,
+  "noise_controls": 20,
+  "noise_seed": 20261021,
+  "bootstrap_screen": 2000,
+  "bootstrap_confirm": 10000,
+  "bootstrap_seed": 20261012,
+  "fdr_q": 0.1,
+  "fdr_split": {
+    "single": 0.5,
+    "interaction": 0.5
+  },
+  "screen_holm_alpha": 0.05,
+  "confirm_alpha": 0.05,
+  "max_shortlist": 25,
+  "permutations": 100,
+  "permutation_seed": 20261022,
+  "min_informative_screen": 800,
+  "min_informative_confirm": 400,
+  "min_events": 100,
+  "stability_min_frac_years_positive": 0.6,
+  "stability_min_sign_agreement": 0.8,
+  "minimum_useful_effect": 0.003,
+  "leak_delta": 0.015,
+  "leak_accuracy_lift": 0.05,
+  "pit_audit_dates": 25,
+  "pit_audit_seed": 20261023,
+  "devig_sensitivities": [
+    "q_close_power",
+    "q_close_shin"
+  ],
+  "prospective_fights_per_year": 480
+}
