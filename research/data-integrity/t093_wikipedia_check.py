@@ -100,10 +100,12 @@ def tokens(s):
 
 
 def name_hit(name, row_tokens):
-    """Best fuzzy match of the fighter's surname against the row's words."""
-    last = tokens(name)[-1]
-    best = max((SequenceMatcher(None, last, t).ratio() for t in row_tokens), default=0)
-    return best
+    """Fuzzy match of the fighter's first AND last name against the row's words
+    (the weaker of the two). Both names, because 8615 is Justin Martin vs Eric
+    Martin and Joel Sutton fought twice in this list."""
+    parts = tokens(name)
+    keys = {parts[0], parts[-1]}
+    return min(max((SequenceMatcher(None, k, t).ratio() for t in row_tokens), default=0) for k in keys)
 
 
 def strip_markup(s):
@@ -115,8 +117,70 @@ def strip_markup(s):
     return re.sub(r"\s+", " ", s).strip()
 
 
+def _templates(wikitext, name):
+    """Yield (start, params) for each {{name|...}}, brace-matched so nested
+    {{flagicon}} / [[links]] / <ref>s do not cut a template short."""
+    i = 0
+    low = wikitext.lower()
+    key = "{{" + name.lower()
+    while True:
+        i = low.find(key, i)
+        if i < 0:
+            return
+        depth, j = 0, i
+        while j < len(wikitext):
+            if wikitext.startswith("{{", j):
+                depth += 1
+                j += 2
+                continue
+            if wikitext.startswith("}}", j):
+                depth -= 1
+                j += 2
+                if depth == 0:
+                    break
+                continue
+            j += 1
+        body = re.sub(r"<ref[^>]*/>|<ref[^>]*>.*?</ref>", "", wikitext[i + 2:j - 2], flags=re.S)
+        params, cur, d2, d3, k = [], "", 0, 0, 0
+        while k < len(body):
+            two = body[k:k + 2]
+            if two in ("{{", "}}", "[[", "]]"):
+                if two == "{{": d2 += 1
+                if two == "}}": d2 -= 1
+                if two == "[[": d3 += 1
+                if two == "]]": d3 -= 1
+                cur += two
+                k += 2
+                continue
+            if body[k] == "|" and d2 == 0 and d3 == 0:
+                params.append(cur)
+                cur = ""
+                k += 1
+                continue
+            cur += body[k]
+            k += 1
+        params.append(cur)
+        yield i, [strip_markup(x) for x in params[1:]]
+        i = j
+
+
 def rows_of(wikitext):
-    """Table rows (split on |-) plus the nearest preceding section heading."""
+    """Bout rows. Wikipedia's UFC event pages use {{MMAevent bout|weight|winner|
+    def.|loser|method|round|time|notes}} under {{MMAevent card|<section>}}; that
+    is parsed positionally. Pages with plain tables fall back to |- rows."""
+    cards = sorted(_templates(wikitext, "MMAevent card"))
+    bouts = list(_templates(wikitext, "MMAevent bout"))
+    if bouts:
+        out = []
+        for pos, prm in bouts:
+            prm = [x for x in prm if not re.match(r"^\w+\s*=", x)] + [""] * 8
+            section = ""
+            for cpos, cprm in cards:
+                if cpos < pos:
+                    section = (cprm or [""])[0]
+            out.append({"heading": section, "cells": prm[:8], "raw": "",
+                        "round": prm[5].strip(), "time": prm[6].strip(), "template": True})
+        return out
     out = []
     heading = ""
     for part in re.split(r"\n\|-[^\n]*", wikitext):
@@ -211,7 +275,10 @@ def main():
                 rec["wiki_status"] = "bout_not_found_on_page"
                 rec["best_partial_match"] = {"score": round(score, 2), "cells": row["cells"][:12]}
             else:
-                w_rnd, w_time = round_time(row["cells"])
+                if row.get("template"):
+                    w_rnd, w_time = row["round"], row["time"]
+                else:
+                    w_rnd, w_time = round_time(row["cells"])
                 rec.update({
                     "wiki_status": "bout_found",
                     "match_score": round(score, 2),
@@ -223,6 +290,9 @@ def main():
                         " ".join(row["cells"]) + " " + row["heading"], re.I)),
                     "time_agrees_with_cfl": (w_time == tm) if w_time else None,
                     "round_agrees_with_cfl": (str(rnd) == w_rnd) if w_rnd and w_rnd.isdigit() else None,
+                    # An empty round cell on these pages means the bout was not
+                    # fought in rounds (one continuous period).
+                    "wiki_says_no_rounds": (w_rnd in ("", "N/A", "\u2014", "-")) if w_rnd is not None else None,
                 })
         # Wikipedia never carries strike/takedown statistics; this cannot move.
         rec["per_round_statistics_at_source"] = "unverified"
