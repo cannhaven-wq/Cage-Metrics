@@ -1,0 +1,57 @@
+{
+ "config_id": "DISC-P1-v1",
+ "_what": "Phase 1 discovery configuration. Fixed before the first real-data run; any change is a new config_id and every run under it is recorded in research/discovery/ledger.jsonl. Values marked 'pred001' are read from research/protocol/protocol.json at run time and the run refuses to start if this file disagrees.",
+ "train_start_year": 2007,
+ "screen_years": [
+  2010,
+  2011,
+  2012,
+  2013,
+  2014,
+  2015,
+  2016,
+  2017,
+  2018
+ ],
+ "confirm_years": [
+  2019,
+  2020,
+  2021,
+  2022,
+  2023,
+  2024
+ ],
+ "ridge_single": 1.0,
+ "ridge_multi": 25.0,
+ "interactions": true,
+ "noise_controls": 20,
+ "noise_seed": 20261021,
+ "bootstrap_screen": 2000,
+ "bootstrap_confirm": 10000,
+ "bootstrap_seed": 20261012,
+ "fdr_q": 0.1,
+ "fdr_split": {
+  "single": 0.5,
+  "interaction": 0.5
+ },
+ "screen_holm_alpha": 0.05,
+ "confirm_alpha": 0.05,
+ "max_shortlist": 25,
+ "permutations": 20,
+ "permutation_seed": 20261022,
+ "min_informative_screen": 800,
+ "min_informative_confirm": 400,
+ "min_events": 100,
+ "stability_min_frac_years_positive": 0.6,
+ "stability_min_sign_agreement": 0.8,
+ "minimum_useful_effect": 0.003,
+ "leak_delta": 0.015,
+ "leak_accuracy_lift": 0.05,
+ "pit_audit_dates": 25,
+ "pit_audit_seed": 20261023,
+ "devig_sensitivities": [
+  "q_close_power",
+  "q_close_shin"
+ ],
+ "prospective_fights_per_year": 480
+}

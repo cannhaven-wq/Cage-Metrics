@@ -42,6 +42,7 @@ it died is usually worth more than the task was.
 
 | id | task | level | owner | status |
 |---|---|---|---|---|
+| T-109 | **Done 2026-10-21: Discovery Engine Phase 1** — offline hypothesis discovery on PRED-001 DEV data (`research/discovery/`). 660 candidate factors and interactions scored against the de-vigged BFO close by log loss, walk-forward (screen 2010-18, confirm 2019-24), card-clustered, multiple-testing corrected, four leakage audits, noise controls, hash-chained ledger of every run; 32 tests. First real run: **0 passed the screen**. No sealed data, no H1 look, nothing promoted or published. [`research/discovery/REPORT_PHASE1.md`](../research/discovery/REPORT_PHASE1.md) | L1 | Claude | done |
 | T-002 | **Done 2026-10-21 ([D-033](DECISIONS.md), E1): DUR-001 clauses voted.** Approved (f), (g), (j), (k); rejected (a)–(e), because they would change scoring after outcomes were visible. Writing the approved clauses into the preregistration is T-108 | L3 | Owner | done |
 | T-009 | **Done 2026-10-21 ([D-033](DECISIONS.md), E2):** the owner's name stays private. Public records say "CFL Owner". The name was removed from `about.html` (#116); remaining exposure in historical records is reported in `coordination/PRIVACY_NAME_EXPOSURE_2026-10-21.md` for a separate decision | L3 | Owner | done |
 | T-025 | **Done 2026-10-21 ([D-033](DECISIONS.md), D1; PR #103):** dated correction on `edges.html`. Every figure was checked against the FE-001 evidence before merge | L3 | Owner | done |

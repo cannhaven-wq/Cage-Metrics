@@ -11,6 +11,41 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (d) — Discovery Engine Phase 1 (T-109)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Built `research/discovery/`: an offline engine that generates candidate
+  factors and interactions, scores each against the de-vigged BFO close by
+  log loss (PRED-001's incremental form), walk-forward 2010-18 then 2019-24,
+  with card-clustered errors, split Benjamini-Hochberg + Holm + a permutation
+  null, four leakage audits, noise controls, and a hash-chained run ledger.
+  Reuses `pred_protocol.py`, `cfl_engine/engine.py` and `clv/devig.py`
+  unchanged. 32 tests in `tests/test_discovery.py`.
+- DEV export only (read-only SELECTs, `event_date < 2025-01-01` in SQL); its
+  priced subset reproduces the frozen DEV id and outcome hashes. No sealed
+  fight read, no H1 look, no registry entry, no production or site change.
+- **Result of record (ledger entry 1): 0 of 660 ideas passed the screen.**
+  The only positive context number is the closing consensus being slightly
+  under-confident in 2019-24 (+0.0023, below the 0.003 bar, one period only).
+  The labelled synthetic demonstration (entry 2) finds a planted effect,
+  finds nothing without one, and quarantines one that is too strong.
+
+## Next action
+
+1. **CFL Owner:** read the plain verdict at the top of
+   `research/discovery/REPORT_PHASE1.md`. Nothing in it is publishable or
+   affects the site; it says the factors in the database add nothing to the
+   closing price.
+2. **Claude or ChatGPT, if research continues:** write a hypothesis for a
+   Phase 2 family (round-level and opponent-adjusted measures from
+   `fight_rounds`, REPORT §4.3) as a new config id **before** running it, and
+   record that the 2019-24 confirmation period has now been used once.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude
