@@ -15,6 +15,19 @@ idea scored below the best of 660 shuffled ones, and age / UFC record add
 nothing measurable to the price. No H1 look, no production or site change,
 nothing promoted. Report: `research/discovery/REPORT_PHASE1.md`.
 
+**Factor discovery, 2026-10-21 (DISC-001, T-110; was T-109 on its branch): nothing found.** We tested 20
+fight factors (KO history, layoffs, activity, cage time, opponent quality, win
+streak, rematches, common opponents, first five-rounder, first main event,
+plus age and UFC record), 3 interactions and 2 combinations. The question each
+time: does the factor improve on the closing odds? It ran on 5,792 fights from
+2012–24, out of sample, with nothing from 2025 on read. **None passed. None
+even reached p < 0.05 before correction.** Combining them made the forecast
+worse. A positive control shows the test is sharp for factors that apply to
+most fights and blunt for rare ones (it reliably sees only ~57–60% effects
+there). An apparent "market underrates favourites" gain was an artefact of the
+de-vig method and vanishes under the power method. Internal only:
+[`research/experiments/DISC-001/REPORT.md`](../research/experiments/DISC-001/REPORT.md).
+
 **Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
 matches what the site does (no cookies, no affiliate links, named
 processors), the disclaimer's model sentence is a market example, My Book

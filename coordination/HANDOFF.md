@@ -11,7 +11,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
-## 2026-10-21 (d) — Discovery Engine Phase 1 (T-109)
+## 2026-10-21 (d1) — Discovery Engine Phase 1 (T-109)
 
 **From:** Claude
 **To:** CFL Owner
@@ -33,7 +33,7 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
   The labelled synthetic demonstration (entry 2) finds a planted effect,
   finds nothing without one, and quarantines one that is too strong.
 
-## Next action
+### Next action (as the engine session wrote it; superseded by (e))
 
 1. **CFL Owner:** read the plain verdict at the top of
    `research/discovery/REPORT_PHASE1.md`. Nothing in it is publishable or
@@ -43,6 +43,34 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
    Phase 2 family (round-level and opponent-adjusted measures from
    `fight_rounds`, REPORT §4.3) as a new config id **before** running it, and
    record that the 2019-24 confirmation period has now been used once.
+
+---
+
+## 2026-10-21 (d2) — DISC-001 factor discovery: no factor adds to the odds (T-110, was T-109 on its branch)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Preregistered first (`d4aedbc6`), then exported pre-2025 data only. A
+  one-off branch-only Actions job did the export; it was deleted on the
+  branch straight after, so no write-capable workflow reaches `main`.
+  Both files match a hash computed in the database byte for byte.
+- 20 factors, 3 interactions, 2 combinations, judged against the closing
+  odds, walk-forward 2012–24. Every verdict is "adds nothing measurable" or
+  "not enough fights". Positive control, de-vig check and point-in-time
+  audit are all in the report.
+- Nothing public changed. No sealed-set look spent. No database write.
+
+### Next action (as the DISC-001 session wrote it; superseded by (e))
+
+1. **CFL Owner:** read the plain verdict and "What this means for the plan"
+   in `research/experiments/DISC-001/REPORT.md`. Then say whether to
+   preregister **DISC-002**: the rare factors (coming off a KO loss, long
+   layoff, quick turnaround) asked as their own questions, on the fights
+   where they apply, pre-2025 only, with power stated before the run.
+   Otherwise drop historical factor work and wait for prospective odds.
+2. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
 
 ---
 
