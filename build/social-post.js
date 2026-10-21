@@ -38,7 +38,18 @@ const ROOT = path.resolve(__dirname, '..');
 const STATE_DIR = path.join(ROOT, '.funnel-state');
 const MARKER = path.join(STATE_DIR, 'last-posted-event.txt');
 const FORCE = /^(1|true|yes)$/i.test(process.env.FORCE_POST || '');
-const DRY_RUN = /^(1|true|yes)$/i.test(process.env.SOCIAL_DRY_RUN || '');
+// Restarting outbound posting is the owner's decision (T-038, L3). While any
+// blocker below stands, every run is a dry run, whatever SOCIAL_DRY_RUN or the
+// workflow's dry_run input says. Turning posting on means deleting the line in
+// its own reviewed pull request — never a workflow input someone can mistype.
+const POSTING_BLOCKERS = [
+  'T-038: the owner has not approved restarting outbound social posting',
+];
+const DRY_RUN = POSTING_BLOCKERS.length > 0 ||
+  /^(1|true|yes)$/i.test(process.env.SOCIAL_DRY_RUN || '');
+if (POSTING_BLOCKERS.length && require.main === module) {
+  console.log('[social] posting is blocked — dry run only:\n  ' + POSTING_BLOCKERS.join('\n  '));
+}
 
 const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
 
