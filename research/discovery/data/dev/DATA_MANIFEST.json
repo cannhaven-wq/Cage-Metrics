@@ -1,0 +1,90 @@
+{
+ "_what": "The DEV export used by the Phase 1 discovery engine. Read-only snapshot of the production database taken 2026-10-21 with research/discovery/export_dev.sql (every statement filters event_date < 2025-01-01). Loader re-checks every row with pred_protocol.dev_only() and the priced subset against holdout_manifest.json DEV fingerprints.",
+ "exported_on": "2026-10-21",
+ "partition": "PRED-001 DEV (event_date < 2025-01-01)",
+ "recipe": "research/discovery/export_dev.sql",
+ "recipe_sha256": "fbaa8b00dda145484ecb3072ec0b293180837d4539b04d60eecf589aa96796c4",
+ "files": {
+  "fights.csv": {
+   "rows": 7974,
+   "sha256": "5a5f1838d7585e68bb9041f93314a1caad7ec367e1408db866d93fe62924c2ee",
+   "first_event_date": "1994-03-11",
+   "last_event_date": "2024-12-14",
+   "columns": [
+    "fight_id",
+    "event_id",
+    "event_date",
+    "fighter_a_id",
+    "fighter_b_id",
+    "winner",
+    "method",
+    "end_round",
+    "end_time",
+    "scheduled_rounds",
+    "weight_class",
+    "is_title_fight",
+    "is_main_event",
+    "bout_order",
+    "a_kd",
+    "b_kd",
+    "a_sig_landed",
+    "b_sig_landed",
+    "a_sig_attempted",
+    "b_sig_attempted",
+    "a_td_landed",
+    "b_td_landed",
+    "a_td_attempted",
+    "b_td_attempted",
+    "a_sub_attempts",
+    "b_sub_attempts",
+    "a_rev",
+    "b_rev",
+    "a_ctrl_seconds",
+    "b_ctrl_seconds",
+    "a_head_landed",
+    "b_head_landed",
+    "a_body_landed",
+    "b_body_landed",
+    "a_leg_landed",
+    "b_leg_landed",
+    "a_distance_landed",
+    "b_distance_landed",
+    "a_clinch_landed",
+    "b_clinch_landed",
+    "a_ground_landed",
+    "b_ground_landed",
+    "bfo_open_a",
+    "bfo_open_b",
+    "bfo_close_a",
+    "bfo_close_b",
+    "is_active"
+   ]
+  },
+  "fighters.csv": {
+   "rows": 2550,
+   "sha256": "0e1c6618c3fa91b7ef953418c6cf1f07176dd5e7305699a8a98f47f1f7818480",
+   "columns": [
+    "fighter_id",
+    "height_in",
+    "reach_in",
+    "stance",
+    "dob",
+    "sex"
+   ]
+  }
+ },
+ "pred001_dev_fingerprints": {
+  "decided_priced": 6824,
+  "events_priced": 623,
+  "priced_ids_sha256": "25b2e735595274bd3089b9968ed79fb9899215247cbed7bd6f8b8b7148fcbff7",
+  "priced_outcomes_sha256": "f1b1141dd03578b3aee895b2c4d7276da0b6aa2a01e49a2c4e4e8bb41b728e5d",
+  "match": true
+ },
+ "known_limits": [
+  "BFO consensus carries 1970 placeholder timestamps: opener and closer are ordered, not timed (CLV-001 R-13).",
+  "21 DEV fights have no recorded fight totals; they add to records and Elo but not to rate features.",
+  "height, reach, stance and dob are present-day profile values treated as fixed (PRED-001 s3 caveat). 77 fighters have no stance, reach is missing for some.",
+  "bout_order is empty for every DEV fight; card position is not available.",
+  "Fights 43, 46, 8780 (rebooked in place) are H1-era exclusions in PRED-001 and are not in DEV."
+ ]
+}
