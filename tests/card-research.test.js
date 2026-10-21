@@ -111,14 +111,13 @@ t('the running-order read stays off until the view exists', () => {
 });
 
 t('the view is defined in repo SQL, read-only to the browser, ledger revoked', () => {
-  const sql = read('research/event-card/apply_2026-10-21_running_order.sql');
+  const sql = read('research/event-card/proposed_2026-10-15_card_running_order.sql');
   ok(/create or replace view public\.v_card_running_order/i.test(sql));
   ok(/grant select on public\.v_card_running_order to anon, authenticated/i.test(sql));
   ok(/revoke all on public\.fight_bout_order from anon, authenticated/i.test(sql));
   ok(!/grant[^;]*(insert|update|delete|all)[^;]*v_card_running_order/i.test(sql), 'the view must be select-only');
-  ok(/where source in \('ufcstats_card', 'espn_scoreboard'\)/.test(sql) && /f\.is_active/.test(sql), 'only the two automated card sources, active bookings only');
+  ok(/where source = 'ufcstats_card'/.test(sql) && /f\.is_active/.test(sql), 'only the UFCStats card source, active bookings only');
   ok(!/odds_api_usage|fight_bout_completions/i.test(sql.replace(/--.*$/gm, '')), 'this file must not create the CLV-owned tables');
-  ok(/SUPERSEDED/.test(read('research/event-card/proposed_2026-10-15_card_running_order.sql')), 'the 2026-10-15 file is a pointer, not a second definition');
 });
 
 // ---- search ----------------------------------------------------------------

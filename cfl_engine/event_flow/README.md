@@ -223,38 +223,3 @@ migration's closing note asks for:
 
 The other half — exact bout completions, which is what makes bouts 2..N scorable —
 is not free and is an open owner decision. Nothing here touches it.
-
-## Sources, and the real-page check (T-030, 2026-10-21)
-
-The reader is behind one interface, `sources.py`: every source becomes a
-`SourceCard`, bouts first walkout first, so a raw source can be swapped
-without touching the ledger logic.
-
-| `--source` | reads | links bouts by | from GitHub Actions |
-|---|---|---|---|
-| `ufcstats` (default) | the UFCStats event page | UFCStats fight id | **blocked**: HTTP 200 anti-bot page |
-| `espn` | ESPN's public scoreboard JSON (`site.web.api.espn.com`) | both fighters' names, this event only, exactly one match, whole card or nothing | works |
-
-Rows carry the source they came from (`ufcstats_card` / `espn_scoreboard`), and
-change detection and retirement count observations of one source only.
-
-`real_page_check.py` is the check `--execute` waits for. For ESPN it confirms
-the direction from the card's own name (the titled main event must be LAST)
-and cross-checks the completed card bout for bout against the event's Wikipedia
-results table. `REAL_PAGE_CHECK.json` holds a passed ESPN check from Actions
-run 39623974340, committed byte for byte; it opens the write gate for ESPN only.
-The real samples the adapters are tested on are in `fixtures/` (see
-`fixtures/SOURCES.json`). Using ESPN on a schedule is the owner's decision:
-`research/event-card/SOURCE_EVALUATION_2026-10-21.md`.
-
-## Retiring a booking that left the card (T-032)
-
-`retirement.py` decides; `ingest_bout_order.py` applies, under `--execute`
-only. A booking is retired when it was on an earlier observation and is absent
-from the latest **two** consecutive complete-card observations. Before the flag
-moves, the decision is appended to `fight_booking_status_log` with the
-observation instants it rests on (a database trigger refuses evidence the
-ledger does not support); then `fights.is_active` — and nothing else — is set.
-No log table, no flag change. A confirmed decision whose flag write failed is
-finished by the next run even when the card has not changed, and a retired
-booking that is back on the card is reactivated the same way.
