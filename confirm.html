@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Confirm your email — Cannon Fight Lab</title>
+<meta name="description" content="Confirm your address for the Cannon Card Brief.">
+<meta name="robots" content="noindex, nofollow">
+<meta name="referrer" content="no-referrer">
+<link rel="canonical" href="https://cannonfightlab.com/confirm.html">
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rl2">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="auth-page">
+  <div class="auth-card">
+    <h1>Confirm your email</h1>
+    <p class="auth-sub">The Cannon Card Brief is one email before each UFC card: what the betting market did that week. No picks.</p>
+
+    <div id="status" style="margin: 24px 0; min-height: 1.5em;" aria-live="polite">Checking your link…</div>
+
+    <div class="auth-footer">
+      <a href="/">← Back to Cannon Fight Lab</a>
+    </div>
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rl7"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav();
+cfl.renderFooter();
+
+// T-090 double opt-in. The link in the confirmation email carries a one-time
+// token (?t=). The database keeps only its hash; confirm_email_subscription
+// hashes this token and answers TRUE (confirmed, now or already) or FALSE
+// (wrong, expired, or the address was removed). It never says whether an
+// address exists, and nothing from the database is shown on this page.
+(async function () {
+  const status = document.getElementById('status');
+  const say = (cls, html) => { status.innerHTML = '<div class="' + cls + '">' + html + '</div>'; };
+  const params = new URLSearchParams(location.search);
+  const token = (params.get('t') || '').trim().toLowerCase();
+  // Take the token out of the address bar and the browser history: a link
+  // that worked should not sit where someone else can copy it.
+  try { history.replaceState(null, '', location.pathname); } catch (e) { /* not important */ }
+
+  const invalid = () => say('auth-error',
+    '<strong>This link has expired or doesn’t work.</strong> ' +
+    'Confirmation links work for 7 days and only from the email we sent. ' +
+    'If you still want the Brief, <a href="/contact.html">tell us</a> and we’ll send a new link.');
+
+  if (!/^[0-9a-f]{64}$/.test(token)) { invalid(); return; }
+
+  let result;
+  try {
+    result = await window.cflSupabase.rpc('confirm_email_subscription', { p_token: token });
+  } catch (e) {
+    result = { error: e };
+  }
+  if (!result || result.error) {
+    say('auth-error',
+      '<strong>We couldn’t check your link.</strong> That’s on our side, not yours. ' +
+      '<a href="' + cfl.escapeHtml(location.pathname + '?t=' + token) + '">Try again</a> in a minute.');
+    return;
+  }
+  if (result.data === true) {
+    say('auth-success',
+      '<strong>You’re confirmed.</strong> The next Cannon Card Brief lands before the next card. ' +
+      'Every email has a one-click unsubscribe link.');
+  } else {
+    invalid();
+  }
+})();
+</script>
+</body>
+</html>
