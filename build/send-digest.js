@@ -2,8 +2,8 @@
 // morning UTC via the digest.yml workflow. Pulls the next upcoming card from
 // Supabase, reports what the market has done to it — the biggest line moves,
 // where the sportsbooks disagree most, how much of the card is priced and how
-// fresh those prices are — and emails it to every active row in
-// email_subscribers via Resend.
+// fresh those prices are — and emails it to every CONFIRMED, still-subscribed
+// row in email_subscribers via Resend (double opt-in, T-090).
 //
 // It used to send a "Model pick / Confidence" table. It does not any more:
 // CFL stopped publishing a forecast in September 2026 when it could not be
@@ -27,6 +27,8 @@
 // fork doesn't fail; you only flip the switch by adding the secret.
 
 const { createClient } = require('@supabase/supabase-js');
+// Double opt-in (T-090): who may receive the Brief is decided there, not here.
+const { sendableBriefRecipients, isMissingColumnError } = require('./card-brief-confirm');
 
 const SUPABASE_URL = 'https://uftancejftcryfvbggll.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_boJGOA1CFN-SF14HHFGUAw_YEEm0DU8';
@@ -39,8 +41,13 @@ const FROM        = process.env.RESEND_FROM || 'Cannon Fight Lab <hello@cannonfi
 // Brief form, so no Brief goes out until each address has confirmed itself.
 // Clearing a blocker means deleting its line here, in a reviewed PR — the same
 // arrangement as entitlements.js::CHECKOUT_BLOCKERS.
+//
+// The double opt-in is now BUILT (card_brief_double_optin_migration.sql,
+// build/card-brief-confirm.js, confirm.html) and this file already sends only
+// to confirmed addresses. The blocker stays until the migration is applied,
+// the confirmation emails have gone out, and the owner clears it (D-027).
 const MARKETING_SEND_BLOCKERS = [
-  'T-090: Card Brief addresses are not confirmed yet (double opt-in is not built)',
+  'T-090: no Card Brief address is confirmed yet (double opt-in is built, not applied or approved)',
 ];
 const DRY_RUN     = !RESEND_KEY || /^(1|true|yes)$/i.test(process.env.DIGEST_DRY_RUN || '')
                     || MARKETING_SEND_BLOCKERS.length > 0;
@@ -290,10 +297,15 @@ function renderText({ event, lines, unsubscribeToken }) {
   return out.join('\n');
 }
 
+// Only CONFIRMED, still-subscribed addresses (T-090, D-027). Filtered twice:
+// in the query, and again by sendableBriefRecipients() on what comes back, so
+// an edit to the query cannot widen the list on its own. If the confirmation
+// columns do not exist yet (migration not applied), nobody is confirmed and the
+// list is empty — never "everyone".
 async function fetchActiveSubscribers() {
   if (!SERVICE_KEY) {
     console.warn('[digest] no SUPABASE_SERVICE_ROLE_KEY set — using anon key.');
-    console.warn('[digest] RLS will return an empty list. Set the secret to actually read subscribers.');
+    console.warn('[digest] The browser roles cannot read this list. Set the secret to actually read subscribers.');
   }
   const all = [];
   let from = 0;
@@ -301,16 +313,24 @@ async function fetchActiveSubscribers() {
   while (true) {
     const { data, error } = await sb
       .from('email_subscribers')
-      .select('email, unsubscribe_token')
+      .select('email, unsubscribe_token, confirmed_at, unsubscribed_at')
       .is('unsubscribed_at', null)
+      .not('confirmed_at', 'is', null)
+      .order('id', { ascending: true })
       .range(from, from + pageSize - 1);
-    if (error) throw error;
+    if (error) {
+      if (isMissingColumnError(error)) {
+        console.log('[digest] confirmed_at does not exist — the double opt-in migration is not applied, so no address is confirmed.');
+        return [];
+      }
+      throw error;
+    }
     if (!data || !data.length) break;
     all.push(...data);
     if (data.length < pageSize) break;
     from += pageSize;
   }
-  return all;
+  return sendableBriefRecipients(all);
 }
 
 async function sendOne({ to, subject, html, text }) {
@@ -360,9 +380,9 @@ async function markSent(emails) {
     }
 
     const subscribers = await fetchActiveSubscribers();
-    console.log(`[digest] ${subscribers.length} active subscribers.`);
+    console.log(`[digest] ${subscribers.length} confirmed subscribers.`);
     if (!subscribers.length) {
-      console.log('[digest] no subscribers — nothing to send.');
+      console.log('[digest] no confirmed subscribers — nothing to send.');
       return;
     }
 
