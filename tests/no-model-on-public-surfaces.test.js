@@ -58,7 +58,11 @@ const PRODUCT = ['index.html', 'market.html', 'fight.html', 'event.html',
                  // Added 2026-10-12: legal and account pages are public too, and
                  // disclaimer.html's share text said "Stats and predictions".
                  'disclaimer.html', 'privacy.html', 'contact.html', 'login.html',
-                 'watchlist.html'];
+                 'watchlist.html',
+                 // Added 2026-10-21: the draft Terms of Service (T-048). It is
+                 // noindex and unlinked, but Pages serves it, so it is held to
+                 // the same ban as every other legal page.
+                 'terms.html'];
 
 // Documented history. Exempt from the model ban, required to say so.
 const ARCHIVE = ['proof.html', 'track-record.html', 'predictor.html', 'edges.html',

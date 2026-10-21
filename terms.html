@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ==========================================================================
+     terms.html — DRAFT Terms of Service (T-048). NOT IN EFFECT.
+
+     This page is a draft for the owner and a lawyer to review. It is noindex,
+     it is not in the sitemap, and it is linked from no nav, footer or page.
+     Every bracketed [OWNER/LAWYER: ...] marker is a fact or a policy choice
+     that is not ours to make; the full list, with a recommended answer for
+     each, is legal-review/OWNER_REVIEW_2026-10-21.md.
+
+     Publishing it means: resolve every placeholder, remove the draft banner,
+     switch robots to index, add it to build/prerender.js and the footer, and
+     only then consider removing T-048 from entitlements.js CHECKOUT_BLOCKERS.
+     tests/legal-drafts.test.js holds the draft state until then.
+     ========================================================================== -->
+
+<!-- ===== Primary SEO ===== -->
+<title>Terms of Service (Draft) — Cannon Fight Lab</title>
+<meta name="description" content="Draft Terms of Service for Cannon Fight Lab. Not yet in effect.">
+<meta name="author" content="Cannon Fight Lab">
+<meta name="robots" content="noindex, nofollow">
+<link rel="canonical" href="https://cannonfightlab.com/terms.html">
+
+<!-- ===== Theme & favicon ===== -->
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+
+<!-- ===== Fonts & styles ===== -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://uftancejftcryfvbggll.supabase.co" crossorigin>
+<link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rl2">
+
+<!-- ===== Scripts ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<script defer data-domain="cannonfightlab.com" src="https://plausible.io/js/script.js"></script>
+<style>
+  .legal { max-width: 760px; margin: 0 auto; }
+  .legal h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin: 32px 0 6px;
+    letter-spacing: 0.5px;
+  }
+  .legal h2:first-of-type { margin-top: 0; }
+  .legal .subhead {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+  .legal p {
+    font-size: 15px;
+    color: var(--text-2);
+    line-height: 1.75;
+    margin-bottom: 14px;
+  }
+  .legal p.plain {
+    color: var(--text);
+    font-size: 15px;
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
+  }
+  .legal p.muted { color: var(--text-3); font-size: 14px; }
+  .legal ul { margin: 10px 0 18px; padding: 0; list-style: none; }
+  .legal li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .legal li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+  }
+  .legal strong { color: var(--text); font-weight: 600; }
+  .legal a { color: var(--red); text-decoration: none; }
+  .legal a:hover { text-decoration: underline; }
+
+  /* A placeholder is a decision that is not ours. It must be impossible to
+     read past, so it is styled like a warning, not like body text. */
+  .ph {
+    background: rgba(255, 167, 38, 0.14);
+    color: #ffa726;
+    border: 1px dashed rgba(255, 167, 38, 0.5);
+    border-radius: 4px;
+    padding: 0 5px;
+    font-weight: 600;
+    font-size: 0.92em;
+  }
+
+  .draft-banner {
+    background: rgba(255, 167, 38, 0.10);
+    border: 2px solid #ffa726;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+  }
+  .draft-banner .label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffa726;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  .draft-banner p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.65; }
+
+  .tldr-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 32px;
+  }
+  .tldr-box .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .tldr-box ul { margin: 0; }
+  .tldr-box li { color: var(--text); font-size: 14px; line-height: 1.6; }
+
+  .last-updated {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Legal · Draft</div>
+  <h1>Terms of Service</h1>
+  <p>The rules for using Cannon Fight Lab. Draft — not yet in effect.</p>
+</div>
+
+<div class="page">
+  <div class="legal">
+
+    <div class="draft-banner" role="note">
+      <div class="label">Draft — not yet in effect</div>
+      <p>This is a draft prepared for review by the owner and a lawyer. It is not an agreement, it binds nobody, and nothing on it should be relied on. Text in <span class="ph">[OWNER/LAWYER: highlighted brackets]</span> marks a decision that has not been made yet. Until a final version replaces this page, the site's <a href="disclaimer.html">Disclaimer</a> and <a href="privacy.html">Privacy Policy</a> are what apply.</p>
+    </div>
+
+    <div class="tldr-box">
+      <div class="label">In plain English</div>
+      <ul>
+        <li>CFL is a research tool. It shows you what the betting market is doing and what is measurably true about a matchup. It does not give picks or betting advice.</li>
+        <li>Prices on CFL are the last ones we captured, not live. Check the sportsbook before you act.</li>
+        <li>You must be 21 or older to use the site.</li>
+        <li>During the beta everything is free. If a paid plan ever launches, you will see the price before you pay, you can cancel any time, and cancelling keeps your access to the end of the period you paid for.</li>
+        <li>What you save in My Book is yours and private to your account.</li>
+        <li>Don't scrape the site, resell its data, or try to get into anyone else's account.</li>
+        <li>Betting is your decision and your risk. We are not liable for what you win or lose.</li>
+      </ul>
+    </div>
+
+    <h2>1. Who we are and what this is</h2>
+    <div class="subhead">The agreement</div>
+    <p class="plain">Using the site means you accept these terms. If you don't, please don't use it.</p>
+    <p>Cannon Fight Lab ("CFL", "we", "us") is operated by <span class="ph">[OWNER/LAWYER: legal entity name and type — the live Privacy Policy and Disclaimer say "Cannon Fight Lab LLC, a Tennessee limited liability company"; confirm this is the registered entity]</span>, owned by Reed Cannon. These Terms of Service ("Terms") govern your use of cannonfightlab.com, its pages, its emails and any account you create on it (together, the "Service").</p>
+    <p>By using the Service, or by creating an account, you agree to these Terms, to our <a href="privacy.html">Privacy Policy</a> and to our <a href="disclaimer.html">Disclaimer</a>. If you do not agree, do not use the Service.</p>
+
+    <h2>2. Who can use CFL</h2>
+    <div class="subhead">Eligibility</div>
+    <p class="plain">21 and over only, and only where it is legal for you.</p>
+    <p>You must be at least 21 years old to use the Service. By using it you confirm that you are. You are responsible for knowing whether sports wagering is legal where you are; CFL does not take bets and cannot tell you whether you may place one.</p>
+    <p><span class="ph">[LAWYER: is a stated age requirement enough, or must the 21+ rule be enforced at sign-up (for example an age confirmation box)? Today it is stated, not enforced.]</span></p>
+
+    <h2>3. What CFL is, and what it is not</h2>
+    <div class="subhead">Nature of the Service</div>
+    <p class="plain">We show the market and the matchup. We don't tell you who to bet on.</p>
+    <p>CFL is a UFC research and market-intelligence publication. It shows sportsbook prices with their source and the time we captured them, a consensus price with the bookmaker's margin removed, how a market has moved, comparisons between two fighters, and tests of which fight statistics have historically mattered.</p>
+    <ul>
+      <li><strong>No picks and no betting advice.</strong> CFL does not publish predicted winners, picks, betting recommendations or suggested stakes. Nothing on the Service is advice to place, or not to place, any bet.</li>
+      <li><strong>No promise of profit.</strong> We make no claim that you will profit from anything on the Service, or that anything on it beats the betting market.</li>
+      <li><strong>Prices are not live.</strong> Every price is the last one we captured. It is shown with its age and how many sportsbooks it comes from, and it may have changed since. Always check the sportsbook before you act.</li>
+      <li><strong>"Best price" is mechanical.</strong> It is the best number in the data we hold, ordered by the American price and by nothing else. No sportsbook can pay to change that order. CFL carries no affiliate links today; if it ever does, that ordering will not change and the links will be labelled.</li>
+      <li><strong>Archive pages are history.</strong> Some pages document a forecast CFL used to publish and has since taken off the product. They are kept as a public record of what was tested, including what failed. They are not recommendations.</li>
+      <li><strong>We are not a sportsbook.</strong> CFL does not accept wagers, hold funds or process bets.</li>
+    </ul>
+
+    <h2>4. Where the data comes from</h2>
+    <div class="subhead">Third-party sources</div>
+    <p class="plain">We build on public fight data and sportsbook prices. They can be wrong or late, and so can we.</p>
+    <p>CFL's research uses third-party data, including fight statistics from UFCStats, sportsbook prices from The Odds API, and fighter details from public sources such as UFC.com and Wikidata. That data is an input to CFL's work; what CFL adds is how and when prices are captured, where each one came from, the consensus, the movement history, the matchup comparisons and the factor testing.</p>
+    <p>We work to keep the data accurate, but it can contain errors, gaps or delays, at the source or introduced by us. We do not guarantee that any figure is complete, correct or current. If you find an error, please <a href="contact.html">tell us</a>.</p>
+    <p>CFL is not affiliated with, endorsed by or sponsored by the Ultimate Fighting Championship, Zuffa LLC, TKO Group Holdings, UFCStats, The Odds API, or any sportsbook. UFC and fighter names are trademarks of their owners and are used only to identify the events and people described.</p>
+
+    <h2>5. Your account</h2>
+    <div class="subhead">Signing up and keeping it safe</div>
+    <p class="plain">One account per person. Keep your password to yourself.</p>
+    <p>Some features need an account. Accounts are run on Supabase, our database and sign-in provider. When you create one you agree to give a real email address you control, to keep your password secure, and to tell us if you think someone else has used your account. You are responsible for activity on your account. An account is for one person and may not be shared or sold.</p>
+    <p>You can ask us to close your account and delete its data at any time through the <a href="contact.html">contact page</a>. <span class="ph">[OWNER: there is no self-serve "delete my account" button today. Confirm the manual process and the response time you will commit to.]</span></p>
+
+    <h2>6. The beta</h2>
+    <div class="subhead">Free while it lasts</div>
+    <p class="plain">Right now everything is free, and every account gets every feature.</p>
+    <p>The Service is in beta. During the beta, every account holder has access to every feature, including those that may later be part of a paid plan, at no charge. The beta, and any feature in it, may change or end. Features may be incomplete and may not always work.</p>
+    <p>Free access during the beta does not by itself entitle you to free or discounted access to any paid plan later. <span class="ph">[OWNER/LAWYER: decide whether beta members get anything when paid plans launch — a founding-member rate, a notice period, or nothing — and state it here. Grandfathering is undecided.]</span></p>
+
+    <h2>7. CFL Pro (paid plan, not yet on sale)</h2>
+    <div class="subhead">Subscriptions, when they exist</div>
+    <p class="plain">There is nothing to buy yet. If a paid plan launches, here is how it will work.</p>
+    <p>CFL does not take payment today, and nothing on the Service can charge you. If we launch a paid subscription ("CFL Pro"), these terms will apply to it:</p>
+    <ul>
+      <li><strong>Price.</strong> The price and billing period will be shown to you before you pay. <span class="ph">[OWNER: price, and whether monthly, annual or both are offered. Not set.]</span></li>
+      <li><strong>Payment.</strong> Payments are processed by Stripe. CFL never sees or stores your card details. We store only what we need to manage your subscription: a Stripe customer reference, a subscription reference, its status and when the current paid period ends.</li>
+      <li><strong>Renewal.</strong> Your subscription renews automatically at the end of each billing period, and you will be charged for the next period, until you cancel.</li>
+      <li><strong>Cancelling.</strong> You can cancel at any time. Cancelling stops the next renewal; you keep full access until the end of the period you have already paid for, and your account page shows that date.</li>
+      <li><strong>Failed payments.</strong> If a renewal payment fails, your access continues while Stripe retries the payment, up to the end of the period you have paid for. If the payment still cannot be collected, paid access ends.</li>
+      <li><strong>When access ends.</strong> Paid access ends automatically when your paid period ends and has not been renewed. Your free account and your saved data stay.</li>
+      <li><strong>Free trial.</strong> <span class="ph">[OWNER: no trial exists in the system. Say "There is no free trial" or decide on one.]</span></li>
+      <li><strong>Refunds.</strong> <span class="ph">[OWNER/LAWYER: refund policy. Nothing in the system issues refunds automatically; any refund is manual today. Some jurisdictions give consumers cancellation or refund rights that a policy cannot remove.]</span></li>
+      <li><strong>Founding-member rate.</strong> <span class="ph">[OWNER: if offered — for life or for a fixed term, and what happens to it if the subscription lapses and restarts.]</span></li>
+      <li><strong>Price changes.</strong> We will tell you before a price change applies to your subscription, and it will take effect at your next renewal, not mid-period. <span class="ph">[OWNER/LAWYER: notice period — 30 days by email is recommended.]</span></li>
+      <li><strong>Taxes.</strong> <span class="ph">[LAWYER: whether prices include or exclude sales tax / VAT, and who collects it.]</span></li>
+    </ul>
+    <p>Paying for CFL Pro buys tools — history, movement over time, alerts, watchlists. It never buys picks, betting advice or a promise of profit, because CFL does not sell those at any price.</p>
+
+    <h2>8. My Book</h2>
+    <div class="subhead">Your bet tracker</div>
+    <p class="plain">What you record in My Book is yours, and only your account can see it.</p>
+    <p>My Book lets you record your own bets and bankroll. That information belongs to you. It is protected in our database so that only your account can read or change it, and it is never shared with other users, used in our analytics, or used to market to you. My Book is a record-keeping tool you fill in yourself: we do not check what you enter, and it is not an official record for tax or any other purpose.</p>
+
+    <h2>9. Emails and alerts</h2>
+    <div class="subhead">What we send, and how to stop it</div>
+    <p class="plain">We only email you about things you asked for, and every email lets you stop.</p>
+    <ul>
+      <li><strong>The Cannon Card Brief</strong> is an optional email before each card. We will ask you to confirm your address before sending it, and we will not send the Brief to an address that has not confirmed. Every Brief has an unsubscribe link.</li>
+      <li><strong>Alerts</strong> are emails you set up yourself on fights you follow — for example, when a price reaches a number you chose, or a market moves. Alerts report what the market did; they are not recommendations. By the time you read one the price may have changed. CFL will not send an alert built on a market comparison it would refuse to show on the site, and alerts can be late or not sent at all — do not rely on them for anything time-critical. You control your alerts and how often you hear from us in your account.</li>
+      <li><strong>Account emails</strong>, such as confirming your address or resetting a password, are sent when needed and are part of running your account.</li>
+    </ul>
+
+    <h2>10. Using the Service fairly</h2>
+    <div class="subhead">Acceptable use</div>
+    <p class="plain">Use CFL for your own research. Don't copy it wholesale, break it, or get into anyone else's data.</p>
+    <p>You agree not to:</p>
+    <ul>
+      <li>scrape, crawl or bulk-download the Service or its data by automated means, except ordinary search-engine indexing;</li>
+      <li>copy, resell, republish or redistribute the Service's data or pages as a product or feed of your own;</li>
+      <li>try to access another person's account or data, or any part of the Service you are not authorised to use;</li>
+      <li>probe, test or work around the Service's security, or interfere with how it runs — if you find a security problem, please <a href="contact.html">report it to us</a> instead;</li>
+      <li>create accounts by automated means or under false details;</li>
+      <li>use the Service for anything unlawful, or to harass, defraud or mislead anyone;</li>
+      <li>present anything from CFL as a pick, a tip or a guaranteed result, or as endorsed by CFL.</li>
+    </ul>
+    <p><span class="ph">[OWNER: decide whether people may quote or screenshot CFL figures with credit and a link — recommended yes, for personal and editorial use.]</span></p>
+
+    <h2>11. Who owns what</h2>
+    <div class="subhead">Intellectual property</div>
+    <p class="plain">CFL's work is ours; the fights, fighters and trademarks belong to their owners.</p>
+    <p>The Service's original content — including its text, design, consensus and movement figures, matchup comparisons, factor tests and the way its data is selected and arranged — belongs to <span class="ph">[OWNER/LAWYER: legal entity name]</span> or its licensors. We give you a personal, non-exclusive, non-transferable right to use the Service for your own non-commercial research while you follow these Terms.</p>
+    <p>Some of the Service's code can be read in your browser. That does not give you a licence to copy or reuse it. <span class="ph">[OWNER: decide whether any code (for example edges.js or market.js) is released under an open-source licence. No licence file exists today, so by default none is granted.]</span></p>
+    <p>If you send us feedback or suggestions, we may use them without owing you anything.</p>
+
+    <h2>12. Betting is your decision</h2>
+    <div class="subhead">Responsible gambling</div>
+    <p class="plain">If betting stops being fun, stop, and get help.</p>
+    <p>Any bet you place is your own decision, made at a sportsbook, at your own risk. Never bet more than you can afford to lose. Help and self-exclusion resources are listed on our <a href="disclaimer.html">Disclaimer</a> page.</p>
+
+    <h2>13. No warranties</h2>
+    <div class="subhead">As is</div>
+    <p class="plain">We do our best, but we can't promise the site is always right or always up.</p>
+    <p>The Service is provided "as is" and "as available". To the fullest extent the law allows, we disclaim all warranties, express or implied, including warranties of accuracy, completeness, timeliness, merchantability, fitness for a particular purpose and non-infringement. We do not warrant that the Service will be uninterrupted or error-free, or that any price, statistic or alert will be accurate or current when you see it.</p>
+
+    <h2>14. Limits on our liability</h2>
+    <div class="subhead">Limitation of liability</div>
+    <p class="plain">We are not responsible for bets you win or lose, and our total liability to you is capped.</p>
+    <p>To the fullest extent the law allows, CFL and its owners, operators and contributors will not be liable for any indirect, incidental, special, consequential or punitive damages, or for any loss of money, profits, winnings, data or opportunity, arising from your use of, or inability to use, the Service — including any loss from a bet you place, whether or not you relied on anything on the Service.</p>
+    <p>Our total liability to you for any claim relating to the Service is limited to <span class="ph">[LAWYER: cap — recommended: the greater of the amount you paid CFL in the 12 months before the claim, or US$50]</span>.</p>
+    <p>Some jurisdictions do not allow certain exclusions or limits, so some of the above may not apply to you. Nothing in these Terms limits liability that cannot be limited by law.</p>
+    <p><span class="ph">[LAWYER: whether to include an indemnity clause (you cover our costs if your misuse causes a claim against us), and how this section should account for the fact that users may act financially on published prices.]</span></p>
+
+    <h2>15. Ending things</h2>
+    <div class="subhead">Termination</div>
+    <p class="plain">You can leave any time. We can close accounts that break these terms.</p>
+    <p>You may stop using the Service and ask us to close your account at any time. We may suspend or close an account, or limit access to the Service, if we reasonably believe you have broken these Terms, if required by law, or to protect the Service or its users. If we close a paid account for a reason other than a breach of these Terms, <span class="ph">[OWNER/LAWYER: what the member gets back — recommended: a pro-rata refund of the unused paid period]</span>. Sections that by their nature should survive — including 4, 11, 13, 14 and 17 — survive the end of this agreement.</p>
+    <p>We may change, suspend or discontinue any part of the Service at any time.</p>
+
+    <h2>16. Changes to these terms</h2>
+    <div class="subhead">Updates</div>
+    <p class="plain">If we change these terms in a way that matters, we'll tell you first.</p>
+    <p>We may update these Terms. The date at the bottom shows the latest version. For material changes we will give notice on the site and, if you have an account, by email, before the change takes effect <span class="ph">[OWNER/LAWYER: notice period — 30 days recommended for material changes affecting paying members]</span>. Continuing to use the Service after a change takes effect means you accept it.</p>
+
+    <h2>17. Governing law and disputes</h2>
+    <div class="subhead">If something goes wrong</div>
+    <p class="plain">Talk to us first. Most problems can be fixed with an email.</p>
+    <p>If you have a problem with the Service, please contact us first so we can try to resolve it informally.</p>
+    <p>These Terms are governed by the laws of <span class="ph">[LAWYER: governing law — state/country]</span>, without regard to its conflict-of-laws rules. Any dispute will be resolved in <span class="ph">[LAWYER: courts or venue — e.g. the state and federal courts located in a named county and state]</span>.</p>
+    <p><span class="ph">[LAWYER: whether to require individual arbitration and a class-action waiver, and if so under which rules and with what small-claims and opt-out carve-outs. Not recommended to add without counsel.]</span></p>
+
+    <h2>18. The rest</h2>
+    <div class="subhead">General</div>
+    <p>These Terms, together with the Privacy Policy and Disclaimer, are the whole agreement between you and CFL about the Service. If any part is found unenforceable, the rest stays in effect. If we do not enforce a term straight away, we have not given it up. You may not transfer your rights under these Terms; we may transfer ours to a successor operating the Service. <span class="ph">[LAWYER: confirm or replace this boilerplate.]</span></p>
+
+    <h2>19. Contact</h2>
+    <div class="subhead">Questions</div>
+    <p>Questions about these Terms: use the <a href="contact.html">contact page</a>. <span class="ph">[OWNER/LAWYER: a postal address and/or a dedicated email address for legal notices, if one is required.]</span></p>
+
+    <div class="last-updated">
+      Draft prepared 21 October 2026 · Not yet in effect · <span class="ph">[OWNER: effective date once approved]</span>
+    </div>
+
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rl7"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+</script>
+</body>
+</html>
