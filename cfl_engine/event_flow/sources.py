@@ -130,8 +130,7 @@ def espn_fixture(data: dict) -> dict:
     """
     def athlete(c):
         a = c.get("athlete") or {}
-        return {"id": c.get("id"), "order": c.get("order"),
-                "athlete": {"displayName": a.get("displayName")}}
+        return {"order": c.get("order"), "athlete": {"displayName": a.get("displayName")}}
 
     def competition(c):
         return {"id": c.get("id"), "date": c.get("date"), "startDate": c.get("startDate"),
@@ -304,3 +303,97 @@ def compare_orders(a: SourceCard, b: SourceCard) -> dict:
     return {"shared": len(rows), "only_in_" + a.source: only_a, "only_in_" + b.source: only_b,
             "same_relative_order": same_order,
             "disagreements": [r[2] for r in rows if r[0] != r[1]]}
+
+
+# ---------------------------------------------------------------------------
+# Linking a source that carries no UFCStats id
+# ---------------------------------------------------------------------------
+@dataclass(frozen=True)
+class NamedFight:
+    """A `fights` row with its two fighters' names, as CFL stores them."""
+
+    id: int
+    event_id: int
+    fighter_names: tuple[str, str]
+
+
+class LinkRefused(SourceError):
+    """A card could not be linked completely. Nothing is written."""
+
+
+def link_by_pair(card: SourceCard, fights: list[NamedFight], event_id: int) -> list[tuple[int, int]]:
+    """[(fight_id, walkout)] for every bout, or LinkRefused.
+
+    The UFCStats path links by UFCStats fight id and never by name, because
+    eight pairs of fighters in the database share a name. A source with no
+    UFCStats id can only link by name, so the rule here is the narrowest one
+    that is still safe:
+
+      * only fights already on THIS event are candidates;
+      * BOTH corners must match (spacing, case, accents and punctuation folded,
+        nothing else — no nicknames, no surname-only, no fuzzy distance);
+      * exactly one fight row may match, or the card is refused;
+      * every bout on the card must link, or the card is refused — one
+        unlinked bout renumbers every bout after it.
+
+    A fighter sharing a name with another fighter on the same card would make
+    the pair ambiguous; that refuses rather than guesses.
+    """
+    on_event = [f for f in fights if f.event_id == event_id]
+    out, problems, used = [], [], set()
+    for bout in card.bouts:
+        matches = [f for f in on_event if same_pair(f.fighter_names, bout.fighter_names)]
+        if len(matches) != 1:
+            problems.append(f"{bout.matchup!r}: {len(matches)} fight rows on event "
+                            f"{event_id} match both corners"
+                            + (f" ({[m.id for m in matches]})" if matches else ""))
+            continue
+        if matches[0].id in used:
+            problems.append(f"{bout.matchup!r}: fight {matches[0].id} already linked")
+            continue
+        used.add(matches[0].id)
+        out.append((matches[0].id, bout.walkout))
+    if problems:
+        raise LinkRefused(f"refusing a partial running order for event {event_id} from "
+                          f"{card.source}: " + "; ".join(problems))
+    return out
+
+
+# ---------------------------------------------------------------------------
+# Fixture serialisation (how the real samples are stored and checked)
+# ---------------------------------------------------------------------------
+def espn_fixture_text(fixture: dict) -> str:
+    """One competition per line, so a fixture is small and reviewable in a diff."""
+    import json
+
+    def dump(o):
+        return json.dumps(o, ensure_ascii=False, separators=(",", ":"))
+
+    events = fixture.get("events", [])
+    lines = ['{"leagues":' + dump(fixture.get("leagues", [])) + ',"events":[']
+    for i, e in enumerate(events):
+        head = {k: v for k, v in e.items() if k != "competitions"}
+        lines.append(dump(head)[:-1] + ',"competitions":[')
+        comps = e.get("competitions", [])
+        for j, c in enumerate(comps):
+            lines.append(dump(c) + ("," if j < len(comps) - 1 else ""))
+        lines.append("]}" + ("," if i < len(events) - 1 else ""))
+    lines.append("]}")
+    return "\n".join(lines) + "\n"
+
+
+def fixture_canonical_sha(name: str, text: str) -> str:
+    """sha256 that ignores layout: canonical JSON for .json, line-normalised text otherwise.
+
+    The real samples were recovered from a job log, where layout (trailing
+    spaces, line endings) is not reliable but content is. This hash pins the
+    content.
+    """
+    import hashlib
+    import json
+    if name.endswith(".json"):
+        canon = json.dumps(json.loads(text), ensure_ascii=False, sort_keys=True,
+                           separators=(",", ":"))
+    else:
+        canon = "\n".join(line.rstrip() for line in text.replace("\r\n", "\n").split("\n")).strip()
+    return hashlib.sha256(canon.encode("utf-8")).hexdigest()

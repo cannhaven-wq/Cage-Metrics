@@ -37,6 +37,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from cfl_engine.event_flow.sources import (  # noqa: E402
     SourceError,
     espn_fixture,
+    espn_fixture_text,
+    fixture_canonical_sha,
     parse_espn_scoreboard,
     wikipedia_results_section,
 )
@@ -67,8 +69,10 @@ def emit(name: str, raw: str, fixture: str, out_dir: Path | None) -> None:
         out_dir.mkdir(parents=True, exist_ok=True)
         (out_dir / name).write_text(fixture, encoding="utf-8")
         (out_dir / ("raw_" + name)).write_text(raw, encoding="utf-8")
+    canon = fixture_canonical_sha(name, fixture)
     print(f"-----BEGIN FIXTURE {name} raw_sha256={sha(raw)} raw_bytes={len(raw.encode())} "
-          f"fixture_sha256={sha(fixture)} fixture_bytes={len(fixture.encode())}-----")
+          f"fixture_sha256={sha(fixture)} canonical_sha256={canon} "
+          f"fixture_bytes={len(fixture.encode())}-----")
     print(fixture)
     print(f"-----END FIXTURE {name}-----")
 
@@ -92,7 +96,7 @@ def main() -> int:
         except json.JSONDecodeError:
             report.append(f"  not JSON: {body[:200]!r}")
             continue
-        fixture = json.dumps(espn_fixture(data), ensure_ascii=False, indent=1)
+        fixture = espn_fixture_text(espn_fixture(data))
         emit(label, body, fixture, args.out_dir)
         try:
             for card in parse_espn_scoreboard(data):
