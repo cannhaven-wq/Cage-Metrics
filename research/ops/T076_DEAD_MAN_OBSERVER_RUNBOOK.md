@@ -1,3 +1,7 @@
+> **DEFERRED by the CFL Owner, 2026-10-21 (decision packet C4).** Nothing here is
+> applied or wired in. The heartbeat code was removed from the dead-man job;
+> first evaluate the monitoring already in place. Kept as a reference only.
+
 # T-076 — Turning on the dead man's outside observer
 
 **Plain version.** The dead man checks that every card has its pre-fight record.

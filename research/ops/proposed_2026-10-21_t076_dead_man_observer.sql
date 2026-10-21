@@ -1,3 +1,5 @@
+-- DEFERRED by the CFL Owner, 2026-10-21 (decision packet C4). NOT APPLIED and
+-- not wired into any job. Kept as a reference only.
 -- =============================================================================
 -- T-076 — an observer OUTSIDE GitHub for the dead man's own liveness
 -- =============================================================================

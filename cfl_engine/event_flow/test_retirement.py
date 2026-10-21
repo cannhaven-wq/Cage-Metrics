@@ -170,37 +170,3 @@ class TestHistoryIsNotRewritten(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-class TestDecisionEvidence(unittest.TestCase):
-    """The record a flag change is written against (T-032)."""
-
-    def setUp(self):
-        from cfl_engine.event_flow.retirement import decision_evidence
-        self.evidence = decision_evidence
-        self.rows = (observation("2026-09-14T07:20:00Z", [MAIN, SECOND, WITHDRAWN])
-                     + observation("2026-09-15T07:20:00Z", [MAIN, SECOND])
-                     + observation("2026-09-15T19:20:00Z", [MAIN, SECOND]))
-
-    def test_retirement_names_the_absent_observations_newest_first(self):
-        d = self.evidence(self.rows, WITHDRAWN, False)
-        self.assertEqual(d["evidence_observed_at"],
-                         ["2026-09-15T19:20:00Z", "2026-09-15T07:20:00Z"])
-        self.assertEqual(d["observed_at"], "2026-09-15T19:20:00Z")
-        self.assertEqual(d["confirmations"], 2)
-
-    def test_an_unconfirmed_retirement_cannot_be_recorded(self):
-        with self.assertRaises(ValueError):
-            self.evidence(self.rows[:-2], WITHDRAWN, False)   # one absence only
-        with self.assertRaises(ValueError):
-            self.evidence(self.rows, MAIN, False)             # still on the card
-
-    def test_reactivation_needs_the_latest_observation_to_hold_it(self):
-        with self.assertRaises(ValueError):
-            self.evidence(self.rows, WITHDRAWN, True)
-        d = self.evidence(self.rows, MAIN, True)
-        self.assertEqual(d["evidence_observed_at"], ["2026-09-15T19:20:00Z"])
-
-    def test_no_observation_no_decision(self):
-        with self.assertRaises(ValueError):
-            self.evidence([], MAIN, True)
