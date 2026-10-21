@@ -657,14 +657,33 @@ class TestIngestEventEndToEnd(unittest.TestCase):
 class TestProductionWriteGate(unittest.TestCase):
     """Writing is gated on somebody having read one real UFCStats page."""
 
-    def test_the_gate_is_currently_shut(self):
+    def test_the_gate_is_shut_for_ufcstats(self):
+        """No real UFCStats page has been read (it serves GitHub's runners an
+        anti-bot page), so writing UFCStats-sourced rows stays refused."""
+        import contextlib
+        import io
+
         import cfl_engine.event_flow.ingest_bout_order as ing
-        self.assertFalse(
-            ing.VERIFICATION.is_file(),
-            "a verification record exists — if a real page really was checked, "
-            "say so in the handoff; this test guards against the file being "
-            "added without that happening",
-        )
+        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
+            ing.require_real_page_verified("ufcstats_card")
+
+    def test_a_committed_record_names_a_real_run_and_passed(self):
+        """The record in the repo must be a PASSED check produced by a GitHub
+        Actions run, with that run linked — never one written by hand."""
+        import json
+        import re
+
+        import cfl_engine.event_flow.ingest_bout_order as ing
+        if not ing.VERIFICATION.is_file():
+            self.skipTest("no record committed")
+        rec = json.loads(ing.VERIFICATION.read_text("utf-8"))
+        self.assertEqual(rec["result"], "pass")
+        self.assertRegex(rec["checked_by"],
+                         r"GitHub Actions run \d+ .*https://github\.com/cannhaven-wq/"
+                         r"Cage-Metrics/actions/runs/\d+")
+        run_id = re.search(r"run (\d+)", rec["checked_by"]).group(1)
+        self.assertIn(run_id, rec["run"]["checked_by"])
+        ing.require_real_page_verified(rec["source"])     # opens for its own source only
 
     def test_missing_verification_refuses_to_write(self):
         import contextlib

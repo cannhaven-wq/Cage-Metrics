@@ -73,6 +73,20 @@ jobs:
             --checked-by "GitHub Actions run ${{ github.run_id }} (real_page_check.py --source $SOURCE; $RUN_URL)" \
             $args
 
+      # The artifact store is out of the agent sandbox's reach, so the exact
+      # bytes go in the log too: the record with its sha256, then every raw
+      # response it was built from, so the committed copy can be checked.
+      - name: Print the record and the raw responses
+        if: always()
+        run: |
+          sha256sum REAL_PAGE_CHECK.json fetched/* || true
+          echo "-----BEGIN REAL_PAGE_CHECK.json-----"
+          cat REAL_PAGE_CHECK.json
+          echo "-----END REAL_PAGE_CHECK.json-----"
+          for f in fetched/*; do
+            echo "-----BEGIN RAW $f-----"; cat "$f"; echo; echo "-----END RAW $f-----"
+          done
+
       - name: Upload REAL_PAGE_CHECK.json
         if: always()
         uses: actions/upload-artifact@v4
