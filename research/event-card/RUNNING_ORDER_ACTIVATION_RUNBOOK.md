@@ -11,7 +11,9 @@
 > - **Step 0 / step 2** — confirmed on GitHub's runners 2026-10-21: UFCStats
 >   answers HTTP 200 with a 2,998-byte "Loading…" anti-bot page (runs
 >   39620237572, 39620364912). A dry run there ends `PAGE UNREADABLE`.
-> - **Step 4** — produce the record with
+> - **Step 4** — done for the ESPN source: `REAL_PAGE_CHECK.json` is committed
+>   from Actions run 39623974340 (`real_page_check.py --source espn`, passed,
+>   Wikipedia cross-check 13/13). For UFCStats, produce the record with
 >   `python cfl_engine/event_flow/real_page_check.py --from-file page.html --event <ufc_event_id> --checked-by "<name>" --out cfl_engine/event_flow/REAL_PAGE_CHECK.json`
 >   on a page saved from a browser. It checks the direction against the page
 >   title and writes `"result": "fail"` (which the ingester refuses) on a

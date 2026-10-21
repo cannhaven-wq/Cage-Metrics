@@ -68,9 +68,11 @@ the table and the choice is B or C.
 
 **2026-10-21:** step 1a's file is now
 [`apply_2026-10-21_running_order.sql`](apply_2026-10-21_running_order.sql)
-(procedure: [`RUNNING_ORDER_APPLY.md`](RUNNING_ORDER_APPLY.md)); 1b is blocked
-because UFCStats serves GitHub's runners an anti-bot page, and the alternative
-sources are assessed in
+(procedure: [`RUNNING_ORDER_APPLY.md`](RUNNING_ORDER_APPLY.md)). 1b cannot be
+done against UFCStats — it serves GitHub's runners an anti-bot page — but it
+passed against ESPN's public scoreboard, cross-checked bout for bout with
+Wikipedia, and ESPN also carries each card section's start time (decision 2
+below). Whether to use ESPN is an owner decision:
 [`SOURCE_EVALUATION_2026-10-21.md`](SOURCE_EVALUATION_2026-10-21.md).
 
 - **A. UFC.com event pages.** They list the sections and their start times.

@@ -689,11 +689,20 @@ class TestProductionWriteGate(unittest.TestCase):
         import contextlib
         import io
 
+        import tempfile
+        from pathlib import Path
+
         import cfl_engine.event_flow.ingest_bout_order as ing
 
         err = io.StringIO()
-        with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
-            ing.require_real_page_verified()
+        original = ing.VERIFICATION
+        with tempfile.TemporaryDirectory() as tmp:
+            ing.VERIFICATION = Path(tmp) / "REAL_PAGE_CHECK.json"     # absent
+            try:
+                with contextlib.redirect_stderr(err), self.assertRaises(SystemExit) as cm:
+                    ing.require_real_page_verified()
+            finally:
+                ing.VERIFICATION = original
         self.assertEqual(cm.exception.code, ing.EXIT_CONFIG)
         msg = err.getvalue()
         self.assertIn("no real UFCStats page has been checked", msg)

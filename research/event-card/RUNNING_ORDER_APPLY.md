@@ -12,10 +12,11 @@ view the site can use to say "Bout 7 of 13", and a log that records **why** a
 booking was taken off a card before the flag on it ever changes. It changes no
 existing table, deletes nothing, and costs nothing.
 
-Applying it does **not** make the running order appear. The ingester cannot read
-UFCStats from GitHub Actions (see "What is still blocked" below), and the pages
-stay switched off (`RUNNING_ORDER_LIVE = false`) until a real card is in the
-ledger.
+Applying it does **not** make the running order appear by itself. The pages stay
+switched off (`RUNNING_ORDER_LIVE = false`) until a real card is in the ledger,
+and the ingester's source still has to be chosen: UFCStats does not serve
+GitHub's runners; ESPN's public scoreboard does, and passed the real-page check
+(see "The source" below) — using it on a schedule is a second owner decision.
 
 ## The file
 
@@ -122,37 +123,29 @@ Then, from a browser or `curl` with the publishable key, `GET
 
 ## After applying — the rest, in order
 
-| step | what | blocked on |
+| step | what | status |
 |---|---|---|
-| 1 | Real-page check → `cfl_engine/event_flow/REAL_PAGE_CHECK.json` | **the source** — see below |
-| 2 | Dry run of `event-flow.yml` for the next card, read against the card | step 1's source |
-| 3 | One `execute` run, checks in PR #81's runbook step 6 | 2 |
-| 4 | `RUNNING_ORDER_LIVE = true` in `card-research.js` (+ its test), verify-live | 3 |
-| 5 | Schedule: in `.github/workflows/event-flow.yml` replace the two commented lines `# schedule:` / `#   - cron: "20 7,19 * * *"` with `schedule:` / `  - cron: "20 7,19 * * *"` | 4 and one unchanged manual run writing nothing |
+| 1 | Real-page check → `cfl_engine/event_flow/REAL_PAGE_CHECK.json` | **done for ESPN** (run [39623974340](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39623974340), committed byte-exact); **blocked for UFCStats** |
+| 2 | Owner: choose the source (ESPN, or stay on UFCStats and accept it cannot run from Actions) | `SOURCE_EVALUATION_2026-10-21.md` |
+| 3 | Dry run: Actions → *Event flow — bout order* → `event_id` = next card (4542 = UFC 333), `source` = `espn`, `execute` unchecked. Expect `14 bouts from ESPN event … [confirmed …]`, no `REFUSED`, and `note: 1 fight row(s) … not on the page` (48648, retired) | after 1 and 2 |
+| 4 | One `execute` run, then PR #81's runbook step 6 checks (`source = 'espn_scoreboard'`) | 3 |
+| 5 | `RUNNING_ORDER_LIVE = true` in `card-research.js` (+ its test), verify-live | 4 |
+| 6 | Schedule: in `.github/workflows/event-flow.yml` replace `# schedule:` / `#   - cron: "20 7,19 * * *"` with `schedule:` / `  - cron: "20 7,19 * * *"`, and set the `SOURCE` default to `espn` | 5 and one unchanged manual run writing nothing |
 
-## What is still blocked, with evidence (2026-10-21)
+## The source, with evidence (2026-10-21)
 
 - **UFCStats does not serve GitHub's runners.** Runs
   [39620237572](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39620237572) and
-  [39620364912](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39620364912)
-  of `event-flow-page-check.yml`: both event listings and the event page for
-  UFC Fight Night: Buckley vs. Malott (`55e94a9b525dcf45`) answered **HTTP 200
-  with a 2,998-byte `<title>Loading…</title>` anti-bot page**, no fight rows.
-  The check records that as `source_blocked` and fails; no
-  `REAL_PAGE_CHECK.json` was produced and none may be produced from such a page.
-  The same wall stops `event-flow.yml` itself, so scheduling it today would
-  produce a red run twice a day.
-- **ESPN's public MMA JSON does not serve them either**: `site.api.espn.com`
-  answered **HTTP 403 Access Denied** (run
-  [39621346144](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39621346144)).
-- **UFC.com was not probed**: its Terms of Use prohibit automated access (PR #81
-  finding, `EVENT_CARD_PLAN_2026-10-15.md`).
-- **Wikipedia (MediaWiki API) does answer** (HTTP 200 with the event article,
-  including "Main card" and "Preliminary card" sections). See
-  `SOURCE_EVALUATION_2026-10-21.md` for whether it is fit to be the source.
+  [39620364912](https://github.com/cannhaven-wq/Cage-Metrics/actions/runs/39620364912):
+  both listings and the event page for UFC Fight Night: Buckley vs. Malott
+  (`55e94a9b525dcf45`) answered **HTTP 200 with a 2,998-byte
+  `<title>Loading…</title>` anti-bot page**, no fight rows. The check records
+  that as `source_blocked` and fails; no record was or may be produced from it.
+- **ESPN `site.api.espn.com`: HTTP 403.** **ESPN `site.web.api.espn.com`: HTTP 200**,
+  every bout in walkout order with section start times.
+- **Wikipedia (MediaWiki API): HTTP 200** — used as the independent cross-check.
+- **UFC.com: not probed** — its Terms of Use prohibit automated access.
+- The ESPN check passed: the titled main event is last on both cards (13/13,
+  14/14) and Wikipedia agrees bout for bout on both.
 
-Ways through, all the owner's call: run the ingester from a non-datacenter
-machine (it is plain Python; `--from-file` also works with a page saved from a
-browser); port or reuse the event scraper's challenge handling (PR #81 step 0 —
-not done here: this session does not write code to get past a site's bot
-protection); or adopt a different source.
+Full write-up: [`SOURCE_EVALUATION_2026-10-21.md`](SOURCE_EVALUATION_2026-10-21.md).

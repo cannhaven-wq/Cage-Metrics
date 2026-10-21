@@ -290,17 +290,18 @@ def require_real_page_verified(source: str = SOURCE) -> None:
             record = json.loads(VERIFICATION.read_text(encoding="utf-8"))
         except json.JSONDecodeError as e:
             die(EXIT_CONFIG, f"{VERIFICATION.name} is not valid JSON: {e}")
-        missing = [k for k in ("ufc_event_id", "checked_by", "checked_at",
-                               "main_event_bout_order", "first_walkout_matchup")
-                   if not record.get(k)]
         recorded = record.get("source", SOURCE)
         if recorded != source:
             # A check of one source's parser says nothing about another's.
             die(EXIT_CONFIG,
                 f"{VERIFICATION.name} verifies source {recorded!r}, not {source!r}. "
                 f"Run the real-page check for {source!r} first.")
-        if "ufc_event_id" not in record and record.get("source_event_id"):
+        # A source other than UFCStats names its own event id.
+        if not record.get("ufc_event_id") and record.get("source_event_id"):
             record["ufc_event_id"] = record["source_event_id"]
+        missing = [k for k in ("ufc_event_id", "checked_by", "checked_at",
+                               "main_event_bout_order", "first_walkout_matchup")
+                   if not record.get(k)]
         if record.get("result", "pass") != "pass":
             # real_page_check.py writes "result": "fail" when it could not read
             # the card (bot wall) or the direction was contradicted. A recorded
