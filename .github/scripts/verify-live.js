@@ -30,74 +30,69 @@ async function shoot(browser, { name, viewport, mobile }) {
   const bust = 'verify=' + Date.now();
   const res = await page.goto(BASE + '/?' + bust, { waitUntil: 'load', timeout: 60000 });
   const headers = res ? res.headers() : {};
+  // Card Lab is a compact list since T-100/T-101 (2026-10-16): one
+  // `.cl-item` per fight in #fightsList, both corners' best price as `.cl-ob`
+  // in the row, and the main event opens on arrival with its Line Movement
+  // panel (`.fx-p-move`). This script waited for the pre-redesign `.fight` /
+  // `.probs` markup until 2026-10-21 and so reported a healthy page as "card
+  // did not render" — the selectors below are the current markup.
   let rendered = true;
   try {
-    await page.waitForFunction(() => document.querySelectorAll('#fightsList .fight').length >= 1 && !!document.querySelector('#heroGlance .glance'), null, { timeout: 45000 });
+    await page.waitForFunction(() => document.querySelectorAll('#fightsList .cl-item').length >= 1 && !!document.querySelector('#heroGlance .glance'), null, { timeout: 45000 });
   } catch (e) { rendered = false; }
+  // The opened fight's panels load after the row; give the movement panel time.
+  await page.waitForFunction(() => {
+    const m = document.querySelector('#fightsList .cl-item.open .fx-p-move');
+    return !!m && !/Loading/.test(m.textContent.replace(/Loading the line…/, ''));
+  }, null, { timeout: 20000 }).catch(() => {});
   await page.waitForTimeout(800);
   const report = await page.evaluate(() => {
     const txt = el => el ? el.textContent.replace(/\s+/g, ' ').trim() : null;
+    const items = [...document.querySelectorAll('#fightsList .cl-item')];
     return {
       title: document.title,
       metaDescription: (document.querySelector('meta[name="description"]') || {}).content || null,
-      heroEyebrow: txt(document.getElementById('heroEyebrow')),
-      heroTitle: txt(document.getElementById('heroTitle')),
-      hpProof: txt(document.getElementById('hpProof')),
+      heroEyebrow: txt(document.querySelector('.hero .eyebrow, .eyebrow')),
+      heroTitle: txt(document.querySelector('h1')),
       glance: [...document.querySelectorAll('#heroGlance .glance .cell')].map(c => txt(c)),
       gaps: [...document.querySelectorAll('#heroGlance .gap-list li')].map(li => txt(li)),
-      cardHead: txt(document.getElementById('cardHead')),
-      oddsStatus: txt(document.getElementById('oddsStatus')),
-      sortButtons: [...document.querySelectorAll('#sortSeg button')].map(b => b.textContent.trim()),
-      fights: [...document.querySelectorAll('#fightsList .fight')].map(f => ({
+      sortOptions: [...document.querySelectorAll('#sortSel option')].map(o => o.value),
+      fights: items.map(f => ({
         id: f.id,
-        head: txt(f.querySelector('.fight-hd')),
-        cells: [...f.querySelectorAll('.probs .cell')].map(c => txt(c)),
-        marketNote: txt(f.querySelector('.mkt-note')),
+        open: f.classList.contains('open'),
+        row: txt(f.querySelector('.cl-row')),
+        bestPrices: [...f.querySelectorAll('.cl-row .cl-ob')].map(o => txt(o) + (o.classList.contains('none') ? ' [' + (o.getAttribute('title') || '') + ']' : '')),
       })),
+      openMovement: txt(document.querySelector('#fightsList .cl-item.open .fx-p-move')),
       scripts: [...document.querySelectorAll('script[src]')].map(s => s.getAttribute('src')),
       checks: (() => {
-        // VISIBLE text only. document.body.textContent includes the contents of
-        // inline <script> tags, and index.html carries a JS comment that
-        // documents the no-opening-line rule. Reading raw textContent made the
-        // guard trip on its own rationale — a false failure on a clean page,
-        // and one that invites someone to "fix" it by deleting the comment.
+        // Visible text only: inline scripts carry comments that document the
+        // very rules checked here (see the no-opening-line note in index.html).
         const clone = document.body.cloneNode(true);
         clone.querySelectorAll('script, style, noscript, template').forEach(n => n.remove());
         const body = clone.textContent;
-        const rows = [...document.querySelectorAll('#fightsList .fight .probs')];
-        const cellTitles = [...document.querySelectorAll('.probs .cell .t')].map(t => t.textContent.trim());
-        const cellNums = [...document.querySelectorAll('.probs .cell .n')].map(n => n.textContent.trim());
+        const open = document.querySelector('#fightsList .cl-item.open .fx-p-move');
         return {
           // --- nothing sells a bet ---------------------------------------
           noValueAlert: !/Value alert/.test(body),
           noConsensusExcuse: !/no consensus line/.test(body),
-          noEdgeCell: cellTitles.indexOf('Edge') === -1,
-          noEdgePercent: !cellNums.some(n => /^[+-]\d+%$/.test(n)),
-
+          noEdgePercent: !/\bEdge\s*[+-]?\d+(\.\d+)?\s*%/i.test(body),
           // --- the forecast is off the product (D-011) -------------------
-          noModelColumn: cellTitles.indexOf('Model') === -1 && cellTitles.indexOf('CFL') === -1,
-          noPickBar: document.querySelectorAll('#fightsList .fight .pickbar').length === 0,
-
+          noModelNumber: !/\b(model|CFL)\s+(pick|probability|forecast|chance)\b/i.test(body) &&
+                         !/\bour (pick|model)\b/i.test(body),
+          noPickBar: document.querySelectorAll('#fightsList .pickbar').length === 0,
+          // --- every row carries both corners' best price -----------------
+          everyFightHasBothBestPrices:
+            items.length > 0 && items.every(f => f.querySelectorAll('.cl-row .cl-ob').length === 2),
+          // A dash is allowed; a dash with no reason beside it is not.
+          everyDashExplainsItself:
+            [...document.querySelectorAll('#fightsList .cl-ob.none')].every(o => /book|line|quote|price/i.test(o.getAttribute('title') || '')),
           // --- movement says what it measured (D-012) --------------------
-          // The card shows four market cells: consensus, fair price, market
-          // move, best price. It was three before the repositioning, and this
-          // assertion said 3 — that is what it is pinning.
-          everyFightHasFourMarketCells:
-            rows.length > 0 && rows.every(p => p.querySelectorAll('.cell').length === 4),
-          // "Since open" was a column header until 2026-09-21. CFL has never
-          // observed a sportsbook opener and may not imply that it has.
+          // CFL has never observed a sportsbook opener and may not imply it.
           noOpeningLineClaim:
             !/since open\b/i.test(body) && !/opening line/i.test(body),
-          movementIsLabelledAsACapture:
-            cellTitles.indexOf('Market move') !== -1,
-          // A dash is allowed; a dash with no reason beside it is not.
-          everyMarketNoteExplainsItself:
-            [...document.querySelectorAll('#fightsList .fight')].every(f => {
-              const n = f.querySelector('.mkt-note');
-              const t = n ? n.textContent : '';
-              return !n || /sportsbook|book|capture|comparable|priced/i.test(t);
-            }),
-
+          mainEventOpensOnArrival: !!document.querySelector('#fightsList .cl-item.is-main.open'),
+          movementIsLabelledAsACapture: !!open && /first broad capture/i.test(open.textContent),
           // --- layout ---------------------------------------------------
           noHorizontalOverflow: document.documentElement.scrollWidth <= window.innerWidth,
         };
@@ -111,17 +106,12 @@ async function shoot(browser, { name, viewport, mobile }) {
   await page.screenshot({ path: path.join(OUT, name + '-full.png'), fullPage: true });
   await page.screenshot({ path: path.join(OUT, name + '-top.png') });
   if (rendered) {
-    // The sort was data-sort="disagree" before the repositioning; it is now
-    // "move" (biggest market move) and "spread" (books disagree).
+    // Sorts since T-100: card position / biggest move / books disagree.
     for (const sort of ['move', 'spread']) {
-      await page.click('#sortSeg button[data-sort="' + sort + '"]').catch(() => {});
+      await page.selectOption('#sortSel', sort).catch(() => {});
       await page.waitForTimeout(300);
       report['sortedBy_' + sort] = await page.evaluate(() =>
-        [...document.querySelectorAll('#fightsList .fight')].map(f => {
-          const m = f.querySelector('.matchup');
-          const cells = [...f.querySelectorAll('.probs .cell')].map(c => c.textContent.replace(/\s+/g, ' ').trim());
-          return (m ? m.textContent.replace(/\s+/g, ' ').trim() : f.id) + ' | ' + cells.join(' | ');
-        }));
+        [...document.querySelectorAll('#fightsList .cl-item .cl-row')].map(r => r.textContent.replace(/\s+/g, ' ').trim()));
       await page.locator('#next').screenshot({ path: path.join(OUT, name + '-card-by-' + sort + '.png') }).catch(() => {});
     }
   }
