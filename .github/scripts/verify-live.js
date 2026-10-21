@@ -78,8 +78,10 @@ async function shoot(browser, { name, viewport, mobile }) {
           noConsensusExcuse: !/no consensus line/.test(body),
           noEdgePercent: !/\bEdge\s*[+-]?\d+(\.\d+)?\s*%/i.test(body),
           // --- the forecast is off the product (D-011) -------------------
-          noModelNumber: !/\b(model|CFL)\s+(pick|probability|forecast|chance)\b/i.test(body) &&
-                         !/\bour (pick|model)\b/i.test(body),
+          // A NUMBER attributed to the model or to CFL. Not the words: the
+          // homepage says plainly that "we used to publish a model forecast",
+          // which is the disclosure D-011 asks for, not a forecast.
+          noModelNumber: !/\b(model|engine|CFL|our pick)\b[^.%\n]{0,40}\b\d{1,3}(\.\d+)?\s*%/i.test(body),
           noPickBar: document.querySelectorAll('#fightsList .pickbar').length === 0,
           // --- every row carries both corners' best price -----------------
           everyFightHasBothBestPrices:
