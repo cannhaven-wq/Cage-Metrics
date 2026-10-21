@@ -33,7 +33,9 @@ name: Social auto-poster
 # restore the schedule: restarting outbound posting is the owner's call (T-038
 # is L3). Note that a MANUAL run of this workflow regenerates the queue first,
 # so after this change a manual dispatch without dry_run WILL post the next
-# research piece. Use dry_run=true to preview.
+# research piece — EXCEPT that build/social-post.js::POSTING_BLOCKERS forces a
+# dry run while it names T-038, so no dispatch can post until the owner's
+# approval removes that line in its own pull request.
 # ---------------------------------------------------------------------------
 on:
   workflow_dispatch:
@@ -45,7 +47,7 @@ on:
       dry_run:
         description: 'Print only, do not post'
         required: false
-        default: 'false'
+        default: 'true'
 
 permissions:
   contents: write   # so we can commit the marker file back

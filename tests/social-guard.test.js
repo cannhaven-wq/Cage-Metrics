@@ -92,5 +92,12 @@ t('the manual drafter prints the market post, not a pick table (T-039)', () => {
   ok(/if \(require\.main === module\)/.test(p), 'requiring social-post.js would post — the drafter must never post');
 });
 
+t('posting stays blocked until the owner approves (T-038)', () => {
+  const s = read('build/social-post.js').replace(/\/\/.*$/gm, '');
+  ok(/POSTING_BLOCKERS\s*=\s*\[\s*'T-038/.test(s), 'POSTING_BLOCKERS no longer names T-038 — posting can go live');
+  ok(/DRY_RUN\s*=\s*POSTING_BLOCKERS\.length\s*>\s*0\s*\|\|/.test(s), 'the blocker no longer forces a dry run');
+  ok(/dry_run:[\s\S]*?default:\s*'true'/.test(read('.github/workflows/social-post.yml')), 'a manual dispatch no longer defaults to dry run');
+});
+
 if (failed) { console.error(`\n  ${failed} failed, ${n} passed`); process.exit(1); }
 console.log(`\n  ${n} passed — the social channel cannot publish a forecast.`);
