@@ -86,8 +86,7 @@ only you can settle:
 
 ## C. Database changes (L3)
 
-**C1. Running order — T-096**, unblocking T-030 and T-032. *See section F,
-filled in when the running-order work reports back.*
+**C1. Running order — T-096**, unblocking T-030 and T-032. See section F.
 
 **C2. Lock `fight_odds` against edits — T-031.**
 - *Recommendation:* approve, and apply on Sunday 2026-10-25, after UFC 333 and
