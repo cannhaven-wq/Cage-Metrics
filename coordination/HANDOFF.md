@@ -11,6 +11,36 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-22 — Mission adopted as the shared north star (D-035)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-22
+
+- Added `MISSION.md` and `AGENTS.md` at the root. `CLAUDE.md` now opens with
+  the mission and tells every session to read MISSION, then STATE.
+- `tests/test_mission.py` checks that the mission exists, carries the north
+  star line, and is referenced from both `CLAUDE.md` and `AGENTS.md`, with
+  MISSION read before STATE.
+- Recorded as D-035 / T-120. D-034 and T-109 to T-119 belong to open PR #121,
+  which was not touched.
+- The owner's three files did not reach the session, so the text is drafted
+  from the north star line. The PR stays open until the owner's wording is in.
+- Nothing on the site, in the database, the scrapers, the models or the
+  research protocols changed.
+
+## Next action
+
+1. **CFL Owner:** paste the adopted `MISSION.md`, `AGENTS.md` and CLAUDE.md
+   insert into the mission PR (or a reply); Claude swaps them in word for word,
+   keeps `tests/test_mission.py` green, and merges.
+2. **Claude, first research task under the mission (step 2, prove it exists):**
+   T-108, write the four DUR-001 amendments the owner approved (f, g, j, k) into
+   the preregistration as dated, prospective amendments. It is the only open
+   research task on `main` that needs no owner decision.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude

@@ -2177,3 +2177,33 @@ packet's recommendations, the answers win.
 | F1 ESPN | **Declined** |
 | F2 running-order migration | **Declined.** The owner inspected the live site: fights already display in the correct order. Running order closes as **no action required; current behaviour accepted by the owner** |
 
+
+## D-035 — The mission becomes the shared north star
+
+| field | value |
+|---|---|
+| date | 2026-10-22 |
+| decided by | CFL Owner, in session: "Implement our mission statement so that we dont get taken off track … North star: Find a real edge. Prove it exists. Make it actionable. Build a business around what we learn." |
+| task | T-120 |
+| level | L2 |
+| reversible | yes: documentation and one test only, revertible in git; writes no row, publishes nothing on the site, changes no frozen file |
+
+**Plain version.** Every agent now reads `MISSION.md` first, then
+`coordination/STATE.md`, and names which of the four mission steps a task
+serves. `AGENTS.md` gives ChatGPT and Claude Code the same reading order and
+rules; `CLAUDE.md` carries the mission at its top.
+
+**What it does not change.** The mission is not a gate and authorises nothing.
+`CRITICAL_GATES.md`, D-011 and every earlier decision stand as written. If the
+mission and a recorded decision seem to conflict, the decision wins and the
+conflict goes to the owner.
+
+**Id note.** D-034 is claimed by open PR #121 (research consolidation), so this
+entry takes D-035. If this lands on `main` first, D-034 must be placed above
+this entry when #121 merges, because `tests/test_coordination.py` requires
+ascending ids.
+
+**Wording still to come.** The owner's own `MISSION.md`, `AGENTS.md` and
+CLAUDE.md insert did not reach the session. The files were drafted from the
+north star line above, which is quoted word for word, and `MISSION.md` says
+so. The owner's text replaces the draft when it is supplied.
