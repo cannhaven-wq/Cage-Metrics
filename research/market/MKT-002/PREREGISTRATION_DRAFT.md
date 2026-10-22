@@ -3,7 +3,7 @@
 **Status: draft for review. Not frozen, not registered, no observation read.**
 Every value below may change until the freeze commit; after it, a change is a
 new experiment. Governed by the price-only rules in
-[`PHASE2_RESEARCH_DESIGN_2026-10-21.md`](PHASE2_RESEARCH_DESIGN_2026-10-21.md)
+[`PHASE2_RESEARCH_DESIGN_2026-10-21.md`](../../consolidation/PHASE2_RESEARCH_DESIGN_2026-10-21.md)
 §A.2 (D-034, owner condition 5) and by CLV-001's frozen definitions. It reads
 **no fight result**.
 

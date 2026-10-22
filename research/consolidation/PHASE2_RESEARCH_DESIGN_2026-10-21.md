@@ -108,7 +108,7 @@ honest baseline every later win-probability test reports. *Limit:* an
 aggregate nobody could bet.
 
 **MKT-002 — Do outlier sportsbooks get corrected?** (prospective, W3;
-preregistration draft: [`MKT-002_PREREGISTRATION_DRAFT.md`](MKT-002_PREREGISTRATION_DRAFT.md))
+preregistration draft: [`research/market/MKT-002/PREREGISTRATION_DRAFT.md`](../market/MKT-002/PREREGISTRATION_DRAFT.md))
 When one book's price sits away from the other books' consensus at a fixed
 anchor time, does the close move toward that book (it was early and right) or
 away (it was stale)? Scored by `CLV_return` of the outlier quote against the
