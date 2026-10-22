@@ -15,6 +15,9 @@ supports no statement outside the research folder.**
 > artefact of the proportional method, not a property of the market.
 > (3) Engine defects E1-E3 did not affect any result here (no candidate
 > reached the code where they live) and are fixed in engine 1.1.0.
+> (4) The DEV export is no longer committed: where §1-§2 say the data is in
+> `data/dev/`, it is now obtained as `research/discovery/WITHHELD.json` says,
+> and checked against the same hashes.
 
 Run of record: [`runs/20261021T200151Z-phase1/`](runs/20261021T200151Z-phase1/SUMMARY.md),
 ledger entry 1. Synthetic demonstration: [`runs/20261021T202341Z-demo-synthetic/`](runs/20261021T202341Z-demo-synthetic/SUMMARY.md), ledger entry 2 (see §6).
