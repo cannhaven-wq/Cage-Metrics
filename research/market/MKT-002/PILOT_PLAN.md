@@ -14,16 +14,20 @@ fight, how fresh the prices are a day and three hours before the bell, how
 often prices are out of line, and how noisy the measure is. None of this
 looks at who won, and none of it looks at whether out-of-line prices did well.
 
-## The one read
+## The reads
 
-[`pilot/export_quotes.sql`](pilot/export_quotes.sql), run once, read-only,
-through the database connector: every real-sportsbook quote for UFC cards
-dated on or after 2026-10-12, with the bout's start time. It names no result,
+[`pilot/read1_quality.sql`](pilot/read1_quality.sql) (aggregates) and [`pilot/read2_anchor_snapshots.sql`](pilot/read2_anchor_snapshots.sql) (each book's freshest clean price per bout at each anchor, with the database's md5 of the text), each run once, read-only,
+through the database connector, over every real-sportsbook quote for UFC cards
+dated on or after 2026-10-12. The quality rules and anchor selection run inside
+the database, so no raw quote stream leaves it; the local copy of read 2 must
+match the md5 the database computed. (Amended before the read: the first
+version exported every capture row, about 3,400, too many to move through the
+connector faithfully.) It names no result,
 method, round, finish-time or statistics column and no results table
 (`tests/test_market_research.py` checks every query and script in
-`research/market/`). The export is saved outside the repository; its sha256
-and row count go in the pilot results. Until the C2 lock is in force, that hash
-is the record of what was read.
+`research/market/`). Both outputs are saved outside the repository; their hashes go in the pilot
+results. Until the C2 lock is in force, those hashes are
+the record of what was read.
 
 ## What the pilot computes — [`pilot/analyze.py`](pilot/analyze.py)
 
