@@ -1,6 +1,6 @@
 # MKT-002 — Do outlier sportsbook prices get corrected? (DRAFT, not frozen)
 
-**Status: draft for review. Not frozen, not registered, no observation read.**
+**Status: draft, NOT frozen.** The 2026-10-22 pilot ([`PILOT_RESULTS.md`](PILOT_RESULTS.md)) found that a fresh closing price exists for about 1 bout in 4 at the current capture timing, so this design cannot reach its sample size; it stays unfrozen until the owner decides on fight-day capture timing (T-120). No observation has been evaluated.
 Every value below may change until the freeze commit; after it, a change is a
 new experiment. Governed by the price-only rules in
 [`PHASE2_RESEARCH_DESIGN_2026-10-21.md`](../../consolidation/PHASE2_RESEARCH_DESIGN_2026-10-21.md)

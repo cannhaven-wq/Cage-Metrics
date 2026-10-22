@@ -1,0 +1,156 @@
+{
+ "inputs": {
+  "snapshots_md5": "5981cc52055ca1c8f4a323ebdf6e696b",
+  "bouts_md5": "bf3fc5d0a6883ed427f1050d39b2259d",
+  "quality_sha256": "f81e0a59debdb93ce7b4ef153b53faf076c8de56bd07444e2b5413a625a709fb"
+ },
+ "quality": {
+  "rows": 3602,
+  "fights_any_quote": 32,
+  "fights_kept_quote": 31,
+  "grades": {
+   "not_w3_feed": 4,
+   "after_start": 13,
+   "one_sided": 489,
+   "kept": 3096
+  },
+  "market_status_values": {
+   "(null)": 4,
+   "open": 3598
+  },
+  "feed_versions": {
+   "(null)": 4,
+   "odds-api-v4:h2h:2026-09-16": 3598
+  },
+  "cards": [
+   {
+    "event_id": 4368,
+    "event_date": "2026-10-17",
+    "fights_kept": 12,
+    "books": 7,
+    "kept_rows": 1503,
+    "start_basis": {
+     "provider_commence": 12
+    }
+   },
+   {
+    "event_id": 4542,
+    "event_date": "2026-10-24",
+    "fights_kept": 14,
+    "books": 6,
+    "kept_rows": 874,
+    "start_basis": {
+     "provider_commence": 14
+    }
+   },
+   {
+    "event_id": 4926,
+    "event_date": "2026-11-14",
+    "fights_kept": 2,
+    "books": 5,
+    "kept_rows": 572,
+    "start_basis": {
+     "provider_commence": 2
+    }
+   },
+   {
+    "event_id": 5014,
+    "event_date": "2026-12-12",
+    "fights_kept": 3,
+    "books": 4,
+    "kept_rows": 147,
+    "start_basis": {
+     "provider_commence": 3
+    }
+   }
+  ],
+  "capture_gap_minutes_last_24h": {
+   "n": 479,
+   "p10": 127.07945,
+   "p50": 204.046933333333,
+   "p90": 263.21095
+  }
+ },
+ "bouts_with_clean_quotes": 31,
+ "fresh_books_per_bout": {
+  "T-24h": {
+   "distribution": {
+    "0": 23,
+    "6": 8
+   },
+   "share_with_4_plus": 0.2581,
+   "share_with_3_plus": 0.2581,
+   "median_age_min": 65.5
+  },
+  "T-3h": {
+   "distribution": {
+    "0": 20,
+    "5": 1,
+    "6": 10
+   },
+   "share_with_4_plus": 0.3548,
+   "share_with_3_plus": 0.3548,
+   "median_age_min": 46
+  },
+  "close": {
+   "distribution": {
+    "0": 28,
+    "5": 1,
+    "6": 2
+   },
+   "share_with_4_plus": 0.0968,
+   "share_with_3_plus": 0.0968,
+   "median_age_min": 39
+  }
+ },
+ "band_excluded_quotes": {},
+ "abs_gap_vs_leave_one_out_median": {
+  "T-24h": {
+   "quotes": 48,
+   "quantiles": {
+    "0.5": 0.00633,
+    "0.75": 0.0096,
+    "0.9": 0.01581,
+    "0.95": 0.02033,
+    "0.99": 0.03107
+   },
+   "count_at_or_above": {
+    ">=2pts": 3,
+    ">=3pts": 1
+   }
+  },
+  "T-3h": {
+   "quotes": 65,
+   "quantiles": {
+    "0.5": 0.00489,
+    "0.75": 0.00956,
+    "0.9": 0.01391,
+    "0.95": 0.02008,
+    "0.99": 0.02873
+   },
+   "count_at_or_above": {
+    ">=2pts": 4
+   }
+  }
+ },
+ "clv_return_spread_all_quotes": {
+  "T-24h": {
+   "quote_sides": 24,
+   "cards": 1,
+   "sd": 0.11666,
+   "icc_by_card": null
+  },
+  "T-3h": {
+   "quote_sides": 22,
+   "cards": 1,
+   "sd": 0.01232,
+   "icc_by_card": null
+  }
+ },
+ "not_computed": "mean CLV_return; CLV_return by gap, outlier status or book (the hypothesis: waits for the freeze and for new cards)",
+ "reads": {
+  "read1_quality.sql": "run once 2026-10-22 through the database connector",
+  "read2_anchor_snapshots.sql": "run once 2026-10-22; 130 fresh rows; local copy matched the database md5",
+  "earlier_count": "before the method was amended, one count-only query (rows, bouts, cards, first and last card date) was run to size the read: 6,779 raw quote rows, 32 bouts, 4 cards"
+ }
+}

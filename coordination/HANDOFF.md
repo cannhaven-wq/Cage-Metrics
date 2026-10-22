@@ -11,6 +11,34 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-22 — MKT-001 done; MKT-002 pilot finds a capture-timing blocker
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-22
+
+- #121 reviewed by a fresh-context agent (not independent under PRED-001's
+  author rule: same session). Verdict "approvable once two fixes land"; all
+  six findings fixed on #121.
+- MKT-001 preregistered (`1082cdc7`) then run: proportional de-vig is the
+  least accurate; power and Shin are indistinguishable, so by the fixed rule
+  no single method is recommended. Under proportional, re-weighting alone
+  gains +0.0029 in 2021-24.
+- MKT-002 pilot, prices only: fresh close for 3 of 12 bouts (captures every
+  ~3.4 h in the final day); out-of-line quotes are rare. Not frozen.
+
+## Next action
+
+1. **CFL Owner:** decide T-120 (fight-day capture timing: a scheduler GitHub
+   does not throttle, a redesign without the close, or wait), and T-114 (merge
+   #121).
+2. **Claude, once T-120 is decided:** re-run the MKT-002 pilot on the next two
+   or three cards, set δ and n, and freeze the preregistration before any
+   evaluation card.
+3. Unchanged: "execute C2" on or after Sunday 2026-10-25.
+
+---
+
 ## 2026-10-21 (d) — Research consolidated on the owner's conditions (D-034, T-111)
 
 **From:** Claude

@@ -3,7 +3,20 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
+
+**Market research begins, 2026-10-22 (T-116, T-117; stacked on #121).** MKT-001
+(preregistered first, DEV only): the usual way CFL removes the bookmaker's
+margin (proportional) is the least accurate of three; under it, re-weighting
+the market alone "gains" +0.0029 per fight in 2021-24 — PRED-001's whole
+minimum useful effect — while under the power method it gains about nothing.
+MKT-002 pilot (prices only, no result read): the outlier-price test **cannot
+run yet** — in the final day before a bout, odds were captured every ~3.4 h
+(median), so only 3 of 12 bouts on the 17 October card had a fresh closing
+price, and books rarely disagree (1 quote in 113 sat 3+ points out). MKT-002
+stays unfrozen until the owner decides fight-day capture timing (**T-120**).
+Reports: `research/experiments/MKT-001/REPORT.md`,
+`research/market/MKT-002/PILOT_RESULTS.md`.
 
 **Research consolidated on the owner's conditions, 2026-10-21 (D-034; T-109–T-113).** Two independent searches — DISC-001 (20 named factors) and the Discovery Engine (660 generated ideas) — found that nothing in CFL's fight statistics beats the closing odds; an audit by a session that wrote neither reproduced both exactly and settled their one disagreement (the engine's "2019-24 market under-confident" is mostly the de-vig method: +0.0023 proportional, +0.0002 power, +0.0008 Shin). The engine is now the one framework, at **1.1.0**, with three defects fixed and the 0.003 size test measured against the re-weighted market. Its first run's config was committed after the run started (E4), so it is not called preregistered. **Integrated on a clean branch from `main`** (`claude/wizardly-albattani-dwoze0-clean`): no raw data exports and no real per-fight rows, every input pinned by sha256; draft PR #120 is not merged and the research branches are untouched. **Waiting on the owner:** final merge approval (T-114) and the prepared, unapplied PRED-001 provenance amendment for `out_real/` (T-115). Next work (T-116–T-119): MKT-001, the outcome-free MKT-002 pilot, a feasibility pilot for genuinely new fight variables, and PRED-002's disclosures. [`research/consolidation/`](../research/consolidation/AUDIT_2026-10-21.md).
 
