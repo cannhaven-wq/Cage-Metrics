@@ -52,9 +52,25 @@ def decimal(american):
     return 1 + (american / 100.0 if american > 0 else 100.0 / -american)
 
 
+def from_csv(text):
+    """export_quotes_compact.sql's CSV, typed like the JSON form."""
+    import csv
+    def b(v):
+        return None if v == "" else v in ("true", "t", "True")
+    def i(v):
+        return None if v == "" else int(float(v))
+    rows = []
+    for r in csv.DictReader(text.splitlines()):
+        rows.append(dict(r, fight_id=int(r["fight_id"]), event_id=int(r["event_id"]), book_id=int(r["book_id"]),
+                         is_active=b(r["is_active"]), is_live=b(r["is_live"]),
+                         market_status=r["market_status"] or None, am_a=i(r["am_a"]), am_b=i(r["am_b"]),
+                         n_rows=int(r["n_rows"])))
+    return rows
+
+
 def main(path):
     raw = pathlib.Path(path).read_bytes()
-    rows = json.loads(raw)
+    rows = json.loads(raw) if path.endswith(".json") else from_csv(raw.decode())
     out = {"export_sha256": hashlib.sha256(raw).hexdigest(), "rows_read": len(rows)}
 
     # ---- quality rules, counted in order; a quote is dropped by the first it fails
