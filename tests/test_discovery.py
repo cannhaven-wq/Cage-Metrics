@@ -113,17 +113,42 @@ class WithheldData(unittest.TestCase):
             with self.assertRaisesRegex(FileNotFoundError, "WITHHELD.json"):
                 D.load_dev(pathlib.Path(t))
 
+    def test_a_tracked_per_fight_file_belongs_to_a_synthetic_run(self):
+        out = subprocess.check_output(["git", "ls-files", "research/discovery/runs"], cwd=REPO, text=True).split()
+        for f in out:
+            if f.endswith("oos_predictions.csv"):
+                meta = json.loads((REPO / pathlib.Path(f).parent / "results.json").read_text())["meta"]
+                self.assertEqual(meta["mode"], "synthetic", f"{f} is a real run's per-fight file")
+
+    def test_a_real_run_cannot_borrow_the_synthetic_suffix(self):
+        with self.assertRaisesRegex(ValueError, "synthetic"):
+            RUN.run("dev", label="my-synthetic", verbose=False)
+
+    def test_only_exports_and_per_fight_files_may_be_withheld(self):
+        with tempfile.TemporaryDirectory() as t:
+            t = pathlib.Path(t)
+            (t / "WITHHELD.json").write_text(json.dumps({"files": {}}))
+            with self.assertRaises(ValueError):
+                LG.withhold(t, "runs/x/results.json", "ab" * 32, {})
+            LG.withhold(t, "runs/x/oos_predictions.csv", "ab" * 32, {})
+            LG.withhold(t, "data/dev/fights.csv", "cd" * 32, {})
+            p = t / "l.jsonl"
+            LG.append(p, {"run_id": "a", "files": {"runs/x/results.json": "ef" * 32}})
+            (t / "WITHHELD.json").write_text(json.dumps({"files": {"runs/x/results.json": {"sha256": "ef" * 32}}}))
+            self.assertTrue(LG.verify(LG.read(p), root=t))     # a results file can never be withheld
+
     def test_ledger_accepts_a_withheld_file_only_with_the_recorded_hash(self):
         with tempfile.TemporaryDirectory() as t:
             t = pathlib.Path(t)
             p = t / "l.jsonl"
-            LG.append(p, {"run_id": "a", "files": {"gone.csv": "ab" * 32}})
+            LG.append(p, {"run_id": "a", "files": {"data/dev/gone.csv": "ab" * 32}})
             self.assertTrue(LG.verify(LG.read(p), root=t))                     # missing, not withheld
-            (t / "WITHHELD.json").write_text(json.dumps({"files": {"gone.csv": {"sha256": "cd" * 32}}}))
+            (t / "WITHHELD.json").write_text(json.dumps({"files": {"data/dev/gone.csv": {"sha256": "cd" * 32}}}))
             self.assertTrue(LG.verify(LG.read(p), root=t))                     # withheld, wrong hash
-            (t / "WITHHELD.json").write_text(json.dumps({"files": {"gone.csv": {"sha256": "ab" * 32}}}))
+            (t / "WITHHELD.json").write_text(json.dumps({"files": {"data/dev/gone.csv": {"sha256": "ab" * 32}}}))
             self.assertEqual(LG.verify(LG.read(p), root=t), [])                # withheld, right hash
-            (t / "gone.csv").write_text("edited")
+            (t / "data" / "dev").mkdir(parents=True)
+            (t / "data" / "dev" / "gone.csv").write_text("edited")
             self.assertTrue(LG.verify(LG.read(p), root=t))                     # present must still match
 
 
@@ -164,7 +189,8 @@ class EngineV11(unittest.TestCase):
         fights, stats, fighters = D.prepare(SY.make(**SMALL))
         _, specs = F.build(fights, stats, fighters)
         flagged = {s.name for s in specs if s.h1_contaminated}
-        for n in ("d_age", "d_ufc_raw_rate", "d_ufc_net", "d_win_rate", "d_td_def"):
+        for n in ("d_age", "d_ufc_raw_rate", "d_ufc_net", "d_win_rate", "d_td_def", "mu_grapple",
+                  "mu_net_strike", "d_slpm", "d_finish_rate", "d_dec_rate", "d_last3_win_rate"):
             self.assertIn(n, flagged)
         self.assertNotIn("d_streak", flagged)
         cands = {c.cid: c for c in C.build_catalog(specs, {"interactions": True})}

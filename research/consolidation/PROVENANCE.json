@@ -33,14 +33,14 @@
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "4ced9b682dfc550c098f003dec1e69bdae6b60b7aeebc66449e944e7abdcbce9",
    "status": "changed_in_consolidation",
-   "sha256_now": "baab5c200697e0d6d82bbc0e6b3af10d681bc2f2bd17a5a7161bfcf767d22d8a"
+   "sha256_now": "93eb4261889ab31c37ae513cea6ebecfd7018854765e429a333252e93af4e83c"
   },
   "research/discovery/REPORT_PHASE1.md": {
    "source_commit": "0b6355bb",
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "e8dad86673772e05ca643690ff0367c283c874d8ad163d2d27db27e788f39dd8",
    "status": "changed_in_consolidation",
-   "sha256_now": "a538e6f31907d2209786535289380efef8ba49edc202de9a1542ad1ece09ce43"
+   "sha256_now": "97b3b1959c51341f3cc48a707e84577a7cf8a7ca654169f9d5724f2407daa7e6"
   },
   "research/discovery/cfl_discovery/__init__.py": {
    "source_commit": "0b6355bb",
@@ -80,7 +80,7 @@
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "e844ba54c3bd478bb203247d36c9dedfa7932a88794c843706973be3adae1d89",
    "status": "changed_in_consolidation",
-   "sha256_now": "36c00a393727fd95cd72e745ee78226edce19e07afa0cbeaf3c6085ca4bef398"
+   "sha256_now": "0992a7bf581fb7c18b51508a163b2db600c88cdd66885aaa9a636b24fc559815"
   },
   "research/discovery/cfl_discovery/leakage.py": {
    "source_commit": "0b6355bb",
@@ -93,7 +93,7 @@
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "500425287bf83c070cb7269dae4397d4695a2d580396e9549d83e7da755fc167",
    "status": "changed_in_consolidation",
-   "sha256_now": "16eb98adb3042fdc6073b0cf60c7d702d2c89e5bb35d08d4826d7a6f11906496"
+   "sha256_now": "e842474ee4366c4b1391fe9f404ca5b9411b75c38c05e2acb63d91e300042efe"
   },
   "research/discovery/cfl_discovery/model.py": {
    "source_commit": "0b6355bb",
@@ -113,7 +113,7 @@
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "ae9c4cad69f5b37bbcfeb7ec33546ffdeac6e5a3cd949213eafe8b773a215a4b",
    "status": "changed_in_consolidation",
-   "sha256_now": "3180bae6048df81cb63d25a8a1d2f1dc6434ced7a9b435dc24a433cf30b2d449"
+   "sha256_now": "bce159b4b15e667d661a5ea910f84626205077342bf0149668e86d3c8236110e"
   },
   "research/discovery/cfl_discovery/synthetic.py": {
    "source_commit": "0b6355bb",
@@ -289,7 +289,7 @@
    "source_branch": "claude/keen-ptolemy-ezdwfu",
    "source_sha256": "a866776fa9322f10fb034d8d63281efde1f35f8a906be566625af9fe9782f5b3",
    "status": "changed_in_consolidation",
-   "sha256_now": "52378d76f039fc3919f57bc8cb7f1070ace9e5ec45e83765ff40fd349f7173af"
+   "sha256_now": "2e7dc85831b4c6239ac9d75aec01ad427fd543928c0c9f458a9ed613d128af37"
   }
  }
 }

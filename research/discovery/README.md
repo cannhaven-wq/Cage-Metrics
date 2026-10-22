@@ -114,7 +114,7 @@ Engine **1.1.0** fixes what it found; ledger entries 1-2 stay the record of
 engine 1.0.0 and are not rerun.
 
 - **E1 fixed.** The power/Shin stability check is evaluated on the fights
-  where each method is defined (7 DEV fights are beyond the frozen helpers'
+  where each method is defined (7 DEV fights for power and 3 for Shin are beyond the frozen helpers'
   97% band), the number left out is recorded in `devig_sensitivity`, and a
   method that was not evaluated fails the check. In 1.0.0 it was skipped and
   an empty check counted as passed.
@@ -125,8 +125,9 @@ engine 1.0.0 and are not rerun.
   PRED-001 itself is unchanged.
 - **E3 fixed.** Features that measure a factor whose all-years verdict CFL has
   already seen (the Factor Lab's eight factors and `edges.js`'s record and
-  takedown defence) carry `h1_contaminated`; so does every candidate built on
-  one. Such a candidate is non-confirmatory whatever its tier.
+  takedown defence) carry `h1_contaminated`, as do features built on or standing
+  in for one (`mu_grapple`, `mu_net_strike`, `d_dec_rate`, `d_last3_win_rate`);
+  so does every candidate built on any of them. Such a candidate is non-confirmatory whatever its tier.
 - **E4 recorded.** `config/phase1.json` and the catalog code were committed
   (`c112794d`, 20:02:24 UTC) 33 seconds *after* ledger entry 1's run began
   (`20261021T200151Z`). The ledger's config and code hashes match the

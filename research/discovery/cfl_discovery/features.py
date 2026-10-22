@@ -66,7 +66,10 @@ H1_CONTAMINATED = {
     "d_td_def": "Factor Lab 'td_def' and edges.js 'td_def'",
     "mu_grapple": "built on takedown defence (Factor Lab 'td_def')",
     "d_slpm": "Factor Lab 'strike_volume'",
+    "mu_net_strike": "built on strikes landed per minute (Factor Lab 'strike_volume')",
     "d_finish_rate": "Factor Lab 'finish_rate'",
+    "d_dec_rate": "close to the complement of finishing (Factor Lab 'finish_rate')",
+    "d_last3_win_rate": "a record measure (Factor Lab 'ufc_record', edges.js 'record')",
 }
 
 MKT = "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against"

@@ -21,9 +21,14 @@ from __future__ import annotations
 import hashlib
 import json
 import pathlib
+import re
 
 GENESIS = "0" * 64
 WITHHELD = "WITHHELD.json"
+# Only these may be withheld (D-034): the raw exports and per-fight predictions.
+# A run's results, catalog, config, shortlist or summary must stay committed,
+# or "every tested hypothesis is preserved" would have a back door.
+WITHHOLDABLE = re.compile(r"^(data/dev/[^/]+\.csv|runs/[^/]+/oos_predictions\.csv)$")
 
 
 def read_withheld(root: pathlib.Path) -> dict:
@@ -33,6 +38,8 @@ def read_withheld(root: pathlib.Path) -> dict:
 
 def withhold(root: pathlib.Path, rel: str, sha: str, meta: dict) -> None:
     """Record a file that is kept out of the repository, by hash."""
+    if not WITHHOLDABLE.match(rel):
+        raise ValueError(f"{rel} may not be withheld: only data exports and per-fight predictions")
     p = pathlib.Path(root) / WITHHELD
     doc = json.loads(p.read_text())
     prior = doc["files"].get(rel)
@@ -93,6 +100,8 @@ def verify(entries: list[dict], root: pathlib.Path | None = None,
                     held = (withheld or {}).get(rel)
                     if held is None:
                         problems.append(f"entry {i}: {rel} is missing")
+                    elif not WITHHOLDABLE.match(rel):
+                        problems.append(f"entry {i}: {rel} is missing and may not be withheld")
                     elif held.get("sha256") != sha:
                         problems.append(f"entry {i}: {rel} is withheld with a different sha256")
                 elif hashlib.sha256(p.read_bytes()).hexdigest() != sha:

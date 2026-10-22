@@ -150,6 +150,10 @@ def run(data: str = "dev", cfg_overrides: dict | None = None, out_root: pathlib.
         ledger_path: pathlib.Path | None = None, synthetic_kwargs: dict | None = None,
         label: str = "", verbose: bool = True) -> dict:
     t0 = time.time()
+    if data != "synthetic" and "synthetic" in label.lower():
+        # .gitignore lets a synthetic run's per-fight file be committed by its
+        # run-id suffix; a real run must never be able to borrow that suffix.
+        raise ValueError("a real-data run's label may not contain 'synthetic'")
     cfg = load_config(overrides=cfg_overrides)
     log = (lambda *a: print(f"[{time.time() - t0:7.1f}s]", *a, flush=True)) if verbose else (lambda *a: None)
 
@@ -314,7 +318,7 @@ def run(data: str = "dev", cfg_overrides: dict | None = None, out_root: pathlib.
         idx2 = w2.test_idx["confirm"]
         sens[qcol] = {"fights_scored": int(len(idx2)),
                       "fights_excluded_undefined": int(len(idx_c) - len(idx2)),
-                      "evaluated": bool(len(idx2) and np.all(np.isfinite(w2.q[idx2])))}
+                      "evaluated": bool(len(idx2) and np.all(np.isfinite(w2.q)))}
         if not sens[qcol]["evaluated"] or not shortlist:
             continue
         rc = w2.oos(None, "confirm")["p"]
