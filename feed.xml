@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>
   <language>en-us</language>
-  <lastBuildDate>Thu, 22 Oct 2026 21:00:25 GMT</lastBuildDate>
+  <lastBuildDate>Fri, 23 Oct 2026 02:41:43 GMT</lastBuildDate>
 
   <item>
     <title>UFC 333: Volkanovski vs. Evloev</title>
@@ -49,6 +49,20 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=5014</guid>
     <pubDate>Sat, 12 Dec 2026 00:00:00 GMT</pubDate>
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 335: Oliveira vs. Lopes card — Las Vegas, Nevada, USA.</description>
+  </item>
+  <item>
+    <title>UFC 336</title>
+    <link>https://cannonfightlab.com/event.html?id=6827</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6827</guid>
+    <pubDate>Sat, 30 Jan 2027 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 336 card — Toronto, Ontario, Canada.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night</title>
+    <link>https://cannonfightlab.com/event.html?id=6828</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6828</guid>
+    <pubDate>Sat, 06 Feb 2027 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night card — Sydney, New South Wales, Australia.</description>
   </item>
 
 </channel>
