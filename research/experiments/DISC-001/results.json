@@ -1,0 +1,549 @@
+{
+ "experiment": "DISC-001",
+ "data": {
+  "fights_in_history": 7974,
+  "eligible_priced": 6824,
+  "scored": 5792,
+  "scored_events": 523,
+  "test_years": [
+   2012,
+   2024
+  ],
+  "audit_fights": 200
+ },
+ "baseline": {
+  "gain_vs_raw_market": {
+   "gain": 0.0011890869757865915,
+   "ci95": [
+    0.0001919522802720597,
+    0.0021137265148914626
+   ],
+   "p_one_sided": 0.010298970102989701
+  },
+  "market_slope_final_year": 1.1354820190108401
+ },
+ "primary": {
+  "F01": {
+   "gain": -0.00020577514676493964,
+   "ci95": [
+    -0.000615788253374596,
+    0.00020205032876495092
+   ],
+   "p_one_sided": 0.8325167483251675,
+   "gain_vs_raw_market": 0.0009833118290216518,
+   "fired": 2594,
+   "defined": 4539,
+   "pooled_coef": 0.0027853210563728113,
+   "years_same_sign": 1,
+   "unit": 1.8235534560726212,
+   "even_odds_win_pct": 50.1,
+   "label": "KO/TKO losses",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F02": {
+   "gain": 0.00012303796648992964,
+   "ci95": [
+    -0.00026897788628830067,
+    0.0005131589856508776
+   ],
+   "p_one_sided": 0.270972902709729,
+   "gain_vs_raw_market": 0.0013121249422765211,
+   "fired": 1103,
+   "defined": 4539,
+   "pooled_coef": -0.09624486131435367,
+   "years_same_sign": 10,
+   "unit": 1.0,
+   "even_odds_win_pct": 47.6,
+   "label": "KO/TKO loss in the last year",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F03": {
+   "gain": 0.00023248423714799688,
+   "ci95": [
+    -0.0004441630208253147,
+    0.0009330093676612145
+   ],
+   "p_one_sided": 0.25517448255174485,
+   "gain_vs_raw_market": 0.0014215712129345883,
+   "fired": 931,
+   "defined": 4539,
+   "pooled_coef": -0.1282114907937948,
+   "years_same_sign": 13,
+   "unit": 1.0,
+   "even_odds_win_pct": 46.8,
+   "label": "Coming off a KO/TKO loss",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F04": {
+   "gain": -0.00029439118300822323,
+   "ci95": [
+    -0.0007381226417161983,
+    0.00014376460902216777
+   ],
+   "p_one_sided": 0.9013098690130987,
+   "gain_vs_raw_market": 0.0008946957927783684,
+   "fired": 1141,
+   "defined": 4539,
+   "pooled_coef": -0.009415752065392155,
+   "years_same_sign": 12,
+   "unit": 1.0,
+   "even_odds_win_pct": 49.8,
+   "label": "Repeat KO/TKO losses (2+)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F05": {
+   "gain": -5.82300625654752e-05,
+   "ci95": [
+    -0.0003986157564033683,
+    0.0002880926951699379
+   ],
+   "p_one_sided": 0.6257374262573743,
+   "gain_vs_raw_market": 0.0011308569132211163,
+   "fired": 2969,
+   "defined": 4539,
+   "pooled_coef": -0.03556457101447106,
+   "years_same_sign": 13,
+   "unit": 0.6214174807761829,
+   "even_odds_win_pct": 49.4,
+   "label": "Knockout damage, fading with time",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F06": {
+   "gain": -0.00014239088791015946,
+   "ci95": [
+    -0.0004927835540559161,
+    0.0001929301425836501
+   ],
+   "p_one_sided": 0.7936206379362064,
+   "gain_vs_raw_market": 0.001046696087876432,
+   "fired": 2994,
+   "defined": 4539,
+   "pooled_coef": 0.001038975605464648,
+   "years_same_sign": 1,
+   "unit": 2.5970527479032626,
+   "even_odds_win_pct": 50.1,
+   "label": "Knockdowns absorbed",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F07": {
+   "gain": -0.0004504330765372781,
+   "ci95": [
+    -0.0010008579883563206,
+    7.169019771694419e-05
+   ],
+   "p_one_sided": 0.9508049195080492,
+   "gain_vs_raw_market": 0.0007386538992493135,
+   "fired": 4341,
+   "defined": 4539,
+   "pooled_coef": 0.01939250279390473,
+   "years_same_sign": 11,
+   "unit": 0.8021226737221542,
+   "even_odds_win_pct": 50.4,
+   "label": "Layoff length",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F08": {
+   "gain": -0.0011555282958104602,
+   "ci95": [
+    -0.0025281975677965154,
+    0.0001931404328551619
+   ],
+   "p_one_sided": 0.9504049595040496,
+   "gain_vs_raw_market": 3.355867997613094e-05,
+   "fired": 842,
+   "defined": 4539,
+   "pooled_coef": -0.13777772032250968,
+   "years_same_sign": 13,
+   "unit": 1.0,
+   "even_odds_win_pct": 46.6,
+   "label": "Long layoff (a year or more)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F09": {
+   "gain": -6.314413246810601e-05,
+   "ci95": [
+    -0.0006462974359166683,
+    0.0005189760445476246
+   ],
+   "p_one_sided": 0.5838416158384162,
+   "gain_vs_raw_market": 0.0011259428433184854,
+   "fired": 619,
+   "defined": 4539,
+   "pooled_coef": -0.10710408288595615,
+   "years_same_sign": 12,
+   "unit": 1.0,
+   "even_odds_win_pct": 47.3,
+   "label": "Quick turnaround (90 days or less)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F10": {
+   "gain": -5.972097315804644e-05,
+   "ci95": [
+    -0.0008624030716144,
+    0.000749359278549103
+   ],
+   "p_one_sided": 0.5563443655634437,
+   "gain_vs_raw_market": 0.001129366002628545,
+   "fired": 3471,
+   "defined": 4539,
+   "pooled_coef": 0.02425664411454879,
+   "years_same_sign": 13,
+   "unit": 2.0570654247339255,
+   "even_odds_win_pct": 51.2,
+   "label": "Recent activity (fights in 2 years)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F11": {
+   "gain": -0.00019585717367658664,
+   "ci95": [
+    -0.00042627054494171683,
+    2.438141408504554e-05
+   ],
+   "p_one_sided": 0.9594040595940406,
+   "gain_vs_raw_market": 0.000993229802110005,
+   "fired": 5049,
+   "defined": 5792,
+   "pooled_coef": 0.001485283837611602,
+   "years_same_sign": 12,
+   "unit": 0.9690079102467624,
+   "even_odds_win_pct": 50.0,
+   "label": "UFC experience",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F12": {
+   "gain": -3.209769722710402e-05,
+   "ci95": [
+    -0.0004032400892301415,
+    0.0003404553238107444
+   ],
+   "p_one_sided": 0.5697430256974303,
+   "gain_vs_raw_market": 0.0011569892785594873,
+   "fired": 4486,
+   "defined": 4539,
+   "pooled_coef": 0.016064083628489143,
+   "years_same_sign": 13,
+   "unit": 1.1846757117333961,
+   "even_odds_win_pct": 50.5,
+   "label": "Accumulated cage time",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F13": {
+   "gain": 0.000770004976366887,
+   "ci95": [
+    -0.0005803782250158622,
+    0.0020938497133828047
+   ],
+   "p_one_sided": 0.13258674132586742,
+   "gain_vs_raw_market": 0.0019590919521534785,
+   "fired": 4538,
+   "defined": 4539,
+   "pooled_coef": -0.02327442884469229,
+   "years_same_sign": 13,
+   "unit": 5.19737161911232,
+   "even_odds_win_pct": 47.0,
+   "label": "Age",
+   "contaminated": true,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F14": {
+   "gain": 0.00025077799872573025,
+   "ci95": [
+    -0.00031643564039533453,
+    0.0008006341907132108
+   ],
+   "p_one_sided": 0.1922807719228077,
+   "gain_vs_raw_market": 0.0014398649745123217,
+   "fired": 4087,
+   "defined": 4539,
+   "pooled_coef": -0.4111359185174603,
+   "years_same_sign": 13,
+   "unit": 0.15783453466038427,
+   "even_odds_win_pct": 48.4,
+   "label": "UFC win rate",
+   "contaminated": true,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F15": {
+   "gain": -5.4841941717074633e-05,
+   "ci95": [
+    -0.0006282167715448231,
+    0.0005284098089925014
+   ],
+   "p_one_sided": 0.5728427157284272,
+   "gain_vs_raw_market": 0.0011342450340695168,
+   "fired": 4426,
+   "defined": 4539,
+   "pooled_coef": -0.5200281026147255,
+   "years_same_sign": 8,
+   "unit": 0.10390570145517951,
+   "even_odds_win_pct": 48.6,
+   "label": "Opponent quality",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F16": {
+   "gain": -7.007495184477191e-05,
+   "ci95": [
+    -0.00019116834382266223,
+    5.3237287952771455e-05
+   ],
+   "p_one_sided": 0.8663133686631337,
+   "gain_vs_raw_market": 0.0011190120239418194,
+   "fired": 3093,
+   "defined": 4539,
+   "pooled_coef": 0.006361473209780954,
+   "years_same_sign": 5,
+   "unit": 2.6782695163002095,
+   "even_odds_win_pct": 50.4,
+   "label": "Momentum (win streak)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F17": {
+   "gain": 3.771112683138992e-05,
+   "ci95": [
+    -0.0005114712925592482,
+    0.0005412485075462484
+   ],
+   "p_one_sided": 0.44365563443655637,
+   "gain_vs_raw_market": 0.0012267981026179815,
+   "fired": 116,
+   "defined": 137,
+   "pooled_coef": 0.2820424294672594,
+   "years_same_sign": 11,
+   "unit": 1.0,
+   "even_odds_win_pct": 57.0,
+   "label": "Rematch: who won last time",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "TOO_FEW",
+   "reaches_min_useful": false
+  },
+  "F18": {
+   "gain": 0.0001780513534397771,
+   "ci95": [
+    -0.0004294902340483194,
+    0.0007879453344326841
+   ],
+   "p_one_sided": 0.2903709629037096,
+   "gain_vs_raw_market": 0.0013671383292263688,
+   "fired": 695,
+   "defined": 1400,
+   "pooled_coef": -0.22379473925949553,
+   "years_same_sign": 11,
+   "unit": 0.6805659276472004,
+   "even_odds_win_pct": 46.2,
+   "label": "Common opponents (MMA math)",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "F19": {
+   "gain": -0.0002200362844827333,
+   "ci95": [
+    -0.0005004480801706639,
+    4.500080429637794e-05
+   ],
+   "p_one_sided": 0.9498050194980502,
+   "gain_vs_raw_market": 0.0009690506913038582,
+   "fired": 209,
+   "defined": 5792,
+   "pooled_coef": -0.05236233631591249,
+   "years_same_sign": 10,
+   "unit": 1.0,
+   "even_odds_win_pct": 48.7,
+   "label": "First five-round fight",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "TOO_FEW",
+   "reaches_min_useful": false
+  },
+  "F20": {
+   "gain": -0.00019747425243103864,
+   "ci95": [
+    -0.0005010737080011138,
+    9.277743618032809e-05
+   ],
+   "p_one_sided": 0.9101089891010898,
+   "gain_vs_raw_market": 0.000991612723355553,
+   "fired": 184,
+   "defined": 5792,
+   "pooled_coef": -0.09330289980487695,
+   "years_same_sign": 12,
+   "unit": 1.0,
+   "even_odds_win_pct": 47.7,
+   "label": "First main event",
+   "contaminated": false,
+   "holm_survives": false,
+   "verdict": "TOO_FEW",
+   "reaches_min_useful": false
+  }
+ },
+ "interactions": {
+  "I1": {
+   "gain": -7.170559724498366e-05,
+   "ci95": [
+    -0.0009128305609174224,
+    0.0007148088155843831
+   ],
+   "p_one_sided": 0.5620437956204379,
+   "gain_vs_raw_market": 0.0012291784988214592,
+   "fired": 422,
+   "defined": 4539,
+   "pooled_coef": 0.22732316247391102,
+   "years_same_sign": 13,
+   "unit": 1.0,
+   "even_odds_win_pct": 55.7,
+   "label": "KO/TKO loss x quick return (180 days)",
+   "main_effects": [
+    "F03",
+    "I1_y"
+   ],
+   "holm_survives": false,
+   "verdict": "NOTHING",
+   "reaches_min_useful": false
+  },
+  "I2": {
+   "gain": -0.00041237942396747825,
+   "ci95": [
+    -0.0008842286354066261,
+    1.1752865278553696e-05
+   ],
+   "p_one_sided": 0.9709029097090291,
+   "gain_vs_raw_market": 0.0008144186786505033,
+   "fired": 58,
+   "defined": 137,
+   "pooled_coef": -0.39389556829472483,
+   "years_same_sign": 8,
+   "unit": 1.0,
+   "even_odds_win_pct": 40.3,
+   "label": "Rematch x first meeting ended in a finish",
+   "main_effects": [
+    "F17"
+   ],
+   "holm_survives": false,
+   "verdict": "TOO_FEW",
+   "reaches_min_useful": false
+  },
+  "I3": {
+   "gain": -6.84797905337051e-05,
+   "ci95": [
+    -0.0003686032632391211,
+    0.0002203769142241783
+   ],
+   "p_one_sided": 0.6744325567443256,
+   "gain_vs_raw_market": 0.0009055756458449848,
+   "fired": 184,
+   "defined": 5792,
+   "pooled_coef": -0.2572520849471987,
+   "years_same_sign": 7,
+   "unit": 1.1506371969603328,
+   "even_odds_win_pct": 42.7,
+   "label": "First main event x opponent's main-event experience",
+   "main_effects": [
+    "F20",
+    "I3_own"
+   ],
+   "holm_survives": false,
+   "verdict": "TOO_FEW",
+   "reaches_min_useful": false
+  }
+ },
+ "combined": {
+  "C1": {
+   "gain": -0.0019696746118959873,
+   "ci95": [
+    -0.005120708413849431,
+    0.0011279317950186254
+   ],
+   "p_one_sided": 0.8923107689231077,
+   "gain_vs_raw_market": -0.0007805876361093949,
+   "factors": 20,
+   "by_year": {
+    "2012": 0.0004377057055056942,
+    "2013": -0.02002324568274482,
+    "2014": -0.010881113420083249,
+    "2015": 0.0017751989837725634,
+    "2016": 0.0019109903151847906,
+    "2017": 0.0017919640464568063,
+    "2018": -0.0008184680057564457,
+    "2019": 0.00402375686090892,
+    "2020": 0.007399704675034216,
+    "2021": -0.008430788034978872,
+    "2022": 0.00046819301076342346,
+    "2023": 0.005024698084617022,
+    "2024": -0.009918631091891564
+   }
+  },
+  "C2": {
+   "gain": -0.003016510181932712,
+   "ci95": [
+    -0.005769478061959504,
+    -0.00025638189024594
+   ],
+   "p_one_sided": 0.9836016398360165,
+   "gain_vs_raw_market": -0.0018274232061461218,
+   "factors": 18,
+   "by_year": {
+    "2012": 0.0021689963661188252,
+    "2013": -0.01859892432561892,
+    "2014": -0.011089109886870077,
+    "2015": 0.0015741689413502262,
+    "2016": 0.000204392880391854,
+    "2017": -0.0014977572888239625,
+    "2018": -0.0011623327005779688,
+    "2019": 0.0013476572970532615,
+    "2020": 0.004392747563888379,
+    "2021": -0.011421191925984266,
+    "2022": 0.0017421088839242205,
+    "2023": 0.0018388328049559633,
+    "2024": -0.009386721673317198
+   }
+  }
+ }
+}

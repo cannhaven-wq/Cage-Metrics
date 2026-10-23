@@ -1,0 +1,1121 @@
+[
+ {
+  "name": "d_n_fights",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in UFC fights before this one"
+ },
+ {
+  "name": "d_win_rate",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in recency-weighted share of past fights won"
+ },
+ {
+  "name": "d_streak",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in current win (+) or losing (-) streak"
+ },
+ {
+  "name": "d_days_since_last",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in days since the fighter's previous fight"
+ },
+ {
+  "name": "d_pre_elo",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in Elo rating before the fight, updated only on earlier cards"
+ },
+ {
+  "name": "d_slpm",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in significant strikes landed per minute, recency-weighted"
+ },
+ {
+  "name": "d_sapm",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in significant strikes absorbed per minute"
+ },
+ {
+  "name": "d_str_acc",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in share of significant strikes attempted that landed"
+ },
+ {
+  "name": "d_str_def",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in share of opponents' significant strikes avoided"
+ },
+ {
+  "name": "d_td_per15",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in takedowns landed per 15 minutes"
+ },
+ {
+  "name": "d_td_acc",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in takedown success rate"
+ },
+ {
+  "name": "d_td_def",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in share of opponents' takedowns stopped"
+ },
+ {
+  "name": "d_sub_per15",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in submission attempts per 15 minutes"
+ },
+ {
+  "name": "d_kd_per15",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in knockdowns scored per 15 minutes"
+ },
+ {
+  "name": "d_ctrl_pct",
+  "kind": "anti",
+  "family": "style",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in share of fight time spent in control"
+ },
+ {
+  "name": "d_finish_rate",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in recency-weighted share of fights won by finish"
+ },
+ {
+  "name": "d_last_ko_loss",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "(cfl_engine.build_features)"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in lost the previous fight by knockout"
+ },
+ {
+  "name": "d_age",
+  "kind": "anti",
+  "family": "physical",
+  "sources": [
+   "fighters.dob",
+   "events.event_date"
+  ],
+  "time_rule": "profile value treated as fixed; age computed from dob at the fight date",
+  "static": true,
+  "plain": "difference in age on fight night, from date of birth"
+ },
+ {
+  "name": "d_height_in",
+  "kind": "anti",
+  "family": "physical",
+  "sources": [
+   "fighters.height_in"
+  ],
+  "time_rule": "profile value treated as fixed; age computed from dob at the fight date",
+  "static": true,
+  "plain": "difference in height in inches"
+ },
+ {
+  "name": "d_reach_in",
+  "kind": "anti",
+  "family": "physical",
+  "sources": [
+   "fighters.reach_in"
+  ],
+  "time_rule": "profile value treated as fixed; age computed from dob at the fight date",
+  "static": true,
+  "plain": "difference in reach in inches"
+ },
+ {
+  "name": "d_is_southpaw",
+  "kind": "anti",
+  "family": "physical",
+  "sources": [
+   "fighters.stance"
+  ],
+  "time_rule": "profile value treated as fixed; age computed from dob at the fight date",
+  "static": true,
+  "plain": "difference in fights southpaw"
+ },
+ {
+  "name": "d_is_switch",
+  "kind": "anti",
+  "family": "physical",
+  "sources": [
+   "fighters.stance"
+  ],
+  "time_rule": "profile value treated as fixed; age computed from dob at the fight date",
+  "static": true,
+  "plain": "difference in fights switch stance"
+ },
+ {
+  "name": "d_ufc_net",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in UFC wins minus UFC losses in the record so far (raw count, not weighted)"
+ },
+ {
+  "name": "d_ufc_raw_rate",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in UFC wins divided by UFC wins plus losses, unweighted"
+ },
+ {
+  "name": "d_ko_losses",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in times knocked out before"
+ },
+ {
+  "name": "d_sub_losses",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in times submitted before"
+ },
+ {
+  "name": "d_last3_win_rate",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in wins in the last three fights, as a share"
+ },
+ {
+  "name": "d_opp_elo_mean",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in average pre-fight Elo of past opponents (strength of schedule)"
+ },
+ {
+  "name": "d_n_5rd",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in previous five-round fights"
+ },
+ {
+  "name": "d_n_title",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in previous title fights"
+ },
+ {
+  "name": "d_wc_move",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in pounds moved up (+) or down (-) from the previous fight's division"
+ },
+ {
+  "name": "d_fights_365",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in fights in the 365 days before this one"
+ },
+ {
+  "name": "d_mean_minutes",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in average fight length in minutes"
+ },
+ {
+  "name": "d_dec_rate",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in share of past fights that went to the judges"
+ },
+ {
+  "name": "d_years_active",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in years since the first UFC fight in the record"
+ },
+ {
+  "name": "d_elo_trend",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in Elo now minus Elo three fights ago"
+ },
+ {
+  "name": "d_lost_last",
+  "kind": "anti",
+  "family": "history",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date",
+   "fights.weight_class",
+   "fights.scheduled_rounds",
+   "fights.is_title_fight"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "difference in lost the previous fight (any method)"
+ },
+ {
+  "name": "mu_net_strike",
+  "kind": "anti",
+  "family": "matchup",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "who out-lands their opponents by more, per minute"
+ },
+ {
+  "name": "mu_grapple",
+  "kind": "anti",
+  "family": "matchup",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "takedown rate of each fighter times how often the other fails to stop takedowns"
+ },
+ {
+  "name": "mu_strike_eff",
+  "kind": "anti",
+  "family": "matchup",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "striking accuracy of each fighter against the other's defence"
+ },
+ {
+  "name": "mu_southpaw_vs_orthodox",
+  "kind": "anti",
+  "family": "matchup",
+  "sources": [
+   "fighters.stance"
+  ],
+  "time_rule": "profile value treated as fixed",
+  "static": true,
+  "plain": "a southpaw facing an orthodox fighter"
+ },
+ {
+  "name": "mu_debut",
+  "kind": "anti",
+  "family": "matchup",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "one fighter is making a UFC debut and the other is not"
+ },
+ {
+  "name": "mk_move",
+  "kind": "anti",
+  "family": "market",
+  "sources": [
+   "fight_odds(BFO opener)",
+   "fight_odds(BFO closer)"
+  ],
+  "time_rule": "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against",
+  "static": false,
+  "plain": "how far the price moved toward this fighter between the opening and closing consensus"
+ },
+ {
+  "name": "mk_cubic",
+  "kind": "anti",
+  "family": "market",
+  "sources": [
+   "fight_odds(BFO closer)"
+  ],
+  "time_rule": "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against",
+  "static": false,
+  "plain": "a bend in how big favourites and big underdogs are priced (favourite-longshot shape)"
+ },
+ {
+  "name": "c_five_round",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.scheduled_rounds"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "scheduled for five rounds"
+ },
+ {
+  "name": "c_title",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.is_title_fight"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "title fight"
+ },
+ {
+  "name": "c_main_event",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.is_main_event"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "main event"
+ },
+ {
+  "name": "c_heavy",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.weight_class"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "light heavyweight or heavyweight"
+ },
+ {
+  "name": "c_small",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.weight_class"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "bantamweight or lighter"
+ },
+ {
+  "name": "c_women",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fighters.sex"
+  ],
+  "time_rule": "profile value treated as fixed",
+  "static": true,
+  "plain": "women's bout"
+ },
+ {
+  "name": "c_experience",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "how many UFC fights the two have had, on average"
+ },
+ {
+  "name": "c_any_debut",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "at least one fighter is debuting"
+ },
+ {
+  "name": "c_age_mean",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fighters.dob",
+   "events.event_date"
+  ],
+  "time_rule": "dob at fight date",
+  "static": true,
+  "plain": "the two fighters' average age"
+ },
+ {
+  "name": "c_layoff_max",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fights.winner_id",
+   "fights.method",
+   "fights.end_round",
+   "fights.end_time",
+   "fights.<per-corner totals>",
+   "events.event_date"
+  ],
+  "time_rule": "fights/fight totals with event_date strictly before this fight's event_date",
+  "static": false,
+  "plain": "the longer of the two layoffs, in years"
+ },
+ {
+  "name": "c_mkt_conf",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fight_odds(BFO closer)"
+  ],
+  "time_rule": "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against",
+  "static": false,
+  "plain": "how lopsided the closing price is"
+ },
+ {
+  "name": "c_overround",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fight_odds(BFO closer)"
+  ],
+  "time_rule": "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against",
+  "static": false,
+  "plain": "the bookmakers' margin at close"
+ },
+ {
+  "name": "c_abs_move",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "fight_odds(BFO opener)",
+   "fight_odds(BFO closer)"
+  ],
+  "time_rule": "BFO consensus prices for this fight; the opener precedes the close, the close is the benchmark the model is scored against",
+  "static": false,
+  "plain": "how much the price moved, either direction"
+ },
+ {
+  "name": "c_era",
+  "kind": "ctx",
+  "family": "context",
+  "sources": [
+   "events.event_date"
+  ],
+  "time_rule": "known at booking: this fight's own scheduling fields, never its result",
+  "static": false,
+  "plain": "how recent the fight is (time trend)"
+ },
+ {
+  "name": "ctrl_noise_00",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_01",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_02",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_03",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_04",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_05",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_06",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_07",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_08",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_09",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_10",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_11",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_12",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_13",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_14",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_15",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_16",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_17",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_18",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ },
+ {
+  "name": "ctrl_noise_19",
+  "kind": "anti",
+  "family": "control",
+  "sources": [
+   "(random, seeded)"
+  ],
+  "time_rule": "independent of all data",
+  "static": false,
+  "plain": "pure noise: should never be discovered"
+ }
+]
