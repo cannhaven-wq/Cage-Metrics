@@ -1,5 +1,16 @@
 # CLAUDE.md
 
+> **MISSION, adopted 2026-10-22 ([D-035](coordination/DECISIONS.md)).** The
+> north star is in [`MISSION.md`](MISSION.md): **Find a real edge. Prove it
+> exists. Make it actionable. Build a business around what we learn.** Read it
+> first, then [`coordination/STATE.md`](coordination/STATE.md). Name the step
+> each task serves; work that serves none is a detour, so flag it in the handoff
+> instead of quietly doing it. The mission authorises nothing on its own: every
+> rule below and every gate in
+> [`coordination/CRITICAL_GATES.md`](coordination/CRITICAL_GATES.md) still
+> applies, and an edge reaches a public page only after prospective proof
+> (D-011). [`AGENTS.md`](AGENTS.md) carries the same instructions for ChatGPT.
+
 > Every feature, every explanation, and every task must be understandable by a UFC bettor with no stats background. Plain verdict first, plain reason second, math only in a collapsed block if at all. No edge percentages and no unsupported market claims anywhere in the user interface. If Reed can't explain it to a friend in one sentence, it does not ship.
 
 > **CLV, amended 2026-09-16 (Q-14).** This line used to read "no closing line value ... anywhere in the user interface". That absolute prohibition is lifted, and replaced by a narrower rule that is harder to misuse:
@@ -55,13 +66,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Start here: `coordination/`
 
-**Read [`coordination/STATE.md`](coordination/STATE.md) at the start of every session.** It is one screen and it says where the project actually is.
+**At the start of every session, read [`MISSION.md`](MISSION.md), then [`coordination/STATE.md`](coordination/STATE.md).** The mission says what the work is for; STATE is one screen and says where the project actually is.
 
 The repo is the communication layer between Claude (build) and ChatGPT (spec and review). Claude ships work and writes a handoff; ChatGPT reviews it and writes the next specification; Reed is pulled in only at an L3 gate.
 
 | file | read it when |
 |---|---|
-| [`coordination/STATE.md`](coordination/STATE.md) | always, first |
+| [`MISSION.md`](MISSION.md) | always, first: the north star |
+| [`coordination/STATE.md`](coordination/STATE.md) | always, straight after the mission |
 | [`coordination/HANDOFF.md`](coordination/HANDOFF.md) | picking up work — the top entry names the next action |
 | [`coordination/TASK_QUEUE.md`](coordination/TASK_QUEUE.md) | choosing what to do next |
 | [`coordination/CRITICAL_GATES.md`](coordination/CRITICAL_GATES.md) | before anything that might need Reed |

@@ -3,7 +3,16 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-21
+Last updated: 2026-10-22
+
+**Mission adopted, 2026-10-22 ([D-035](DECISIONS.md), T-120).** Read
+[`MISSION.md`](../MISSION.md) before this file. North star: *Find a real edge.
+Prove it exists. Make it actionable. Build a business around what we learn.*
+[`AGENTS.md`](../AGENTS.md) gives ChatGPT and Claude Code the same reading
+order. The mission opens no gate. The wording is drafted from the owner's north
+star line and waits on the owner's adopted text. Documentation only: nothing on
+the site, in the database, the scrapers or the models changed. PR #121 still
+claims D-034 and T-109 to T-119; it is untouched.
 
 **Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
 matches what the site does (no cookies, no affiliate links, named
@@ -261,6 +270,7 @@ Claude builds  →  writes HANDOFF.md  →  ChatGPT reviews  →  writes the nex
 
 | file | what it is for |
 |---|---|
+| [`MISSION.md`](../MISSION.md) | the north star, read before this file; [`AGENTS.md`](../AGENTS.md) gives both agents the reading order |
 | [`STATE.md`](STATE.md) | this file — current position, refreshed at every handoff |
 | [`TASK_QUEUE.md`](TASK_QUEUE.md) | what is queued, who owns it, what level it is |
 | [`DECISIONS.md`](DECISIONS.md) | append-only log of decisions and who made them — newest is **D-011**, taking the model off the public product |
