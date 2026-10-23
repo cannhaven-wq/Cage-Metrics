@@ -11,6 +11,98 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-10-21 (e) — Research consolidation: audited, reconciled, integrated (T-111)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Audited DISC-001 (d2) and the Discovery Engine (d1) from a session that
+  wrote neither. Both are sound, use the same pre-2025 data, read nothing
+  sealed, and reproduce exactly. They agree on every factor they share.
+- Their one disagreement is settled: the engine's "market under-confident in
+  2019-24" depends on the de-vig method and is mostly an artefact of it.
+- Integrated on `claude/wizardly-albattani-dwoze0` by merge (both projects'
+  commits and session trailers kept, nothing in either edited). Draft PR, not
+  merged. Python 845 passed / 0 failed; Node 42 of 42.
+- Found: two engine defects that would matter only once something passes
+  (E1, E2); the raw exports are already public on both branches; `out_real/`
+  on `main` has published 793 sealed-period results since August.
+
+## Next action
+
+1. **CFL Owner:** answer T-112 — six items, each with a recommendation, in
+   `research/consolidation/AUDIT_2026-10-21.md` §8. The two that block the
+   merge are the consolidation itself and option A/B/C for the data exports.
+2. **Claude, once T-112 item 3 is answered:** T-113 (engine v1.1), then
+   MKT-001 from `research/consolidation/PHASE2_RESEARCH_DESIGN_2026-10-21.md`.
+3. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
+
+---
+
+## 2026-10-21 (d1) — Discovery Engine Phase 1 (T-109)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Built `research/discovery/`: an offline engine that generates candidate
+  factors and interactions, scores each against the de-vigged BFO close by
+  log loss (PRED-001's incremental form), walk-forward 2010-18 then 2019-24,
+  with card-clustered errors, split Benjamini-Hochberg + Holm + a permutation
+  null, four leakage audits, noise controls, and a hash-chained run ledger.
+  Reuses `pred_protocol.py`, `cfl_engine/engine.py` and `clv/devig.py`
+  unchanged. 32 tests in `tests/test_discovery.py`.
+- DEV export only (read-only SELECTs, `event_date < 2025-01-01` in SQL); its
+  priced subset reproduces the frozen DEV id and outcome hashes. No sealed
+  fight read, no H1 look, no registry entry, no production or site change.
+- **Result of record (ledger entry 1): 0 of 660 ideas passed the screen.**
+  The only positive context number is the closing consensus being slightly
+  under-confident in 2019-24 (+0.0023, below the 0.003 bar, one period only).
+  The labelled synthetic demonstration (entry 2) finds a planted effect,
+  finds nothing without one, and quarantines one that is too strong.
+
+### Next action (as the engine session wrote it; superseded by (e))
+
+1. **CFL Owner:** read the plain verdict at the top of
+   `research/discovery/REPORT_PHASE1.md`. Nothing in it is publishable or
+   affects the site; it says the factors in the database add nothing to the
+   closing price.
+2. **Claude or ChatGPT, if research continues:** write a hypothesis for a
+   Phase 2 family (round-level and opponent-adjusted measures from
+   `fight_rounds`, REPORT §4.3) as a new config id **before** running it, and
+   record that the 2019-24 confirmation period has now been used once.
+
+---
+
+## 2026-10-21 (d2) — DISC-001 factor discovery: no factor adds to the odds (T-110, was T-109 on its branch)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-10-21
+
+- Preregistered first (`d4aedbc6`), then exported pre-2025 data only. A
+  one-off branch-only Actions job did the export; it was deleted on the
+  branch straight after, so no write-capable workflow reaches `main`.
+  Both files match a hash computed in the database byte for byte.
+- 20 factors, 3 interactions, 2 combinations, judged against the closing
+  odds, walk-forward 2012–24. Every verdict is "adds nothing measurable" or
+  "not enough fights". Positive control, de-vig check and point-in-time
+  audit are all in the report.
+- Nothing public changed. No sealed-set look spent. No database write.
+
+### Next action (as the DISC-001 session wrote it; superseded by (e))
+
+1. **CFL Owner:** read the plain verdict and "What this means for the plan"
+   in `research/experiments/DISC-001/REPORT.md`. Then say whether to
+   preregister **DISC-002**: the rare factors (coming off a KO loss, long
+   layoff, quick turnaround) asked as their own questions, on the fights
+   where they apply, pre-2025 only, with power stated before the run.
+   Otherwise drop historical factor work and wait for prospective odds.
+2. Unchanged from (c): "execute C2" on or after Sunday 2026-10-25.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude

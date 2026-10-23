@@ -1,0 +1,5 @@
+{
+ "shortlist": [],
+ "fixed_before_confirmation": true,
+ "rule": "BH at q=0.1 split {'single': 0.5, 'interaction': 0.5} on the screen, delta>0, minimum sample, no tripwire, no failed audit; top 25 by z"
+}

@@ -5,6 +5,31 @@ entry point to the rest of `coordination/`.
 
 Last updated: 2026-10-21
 
+**Research consolidated, 2026-10-21 (T-111): two independent searches, one answer.** DISC-001 (20 named factors) and the Discovery Engine (660 generated ideas) were audited by a session that wrote neither, merged onto `main` in `claude/wizardly-albattani-dwoze0` without editing either, and both reproduced exactly. Same data (PRED-001 DEV fingerprints match), no sealed read, full suites green. Where they test the same factor they agree: nothing beats the closing odds. Their one disagreement is settled: the engine's "2019-24 market under-confident" (+0.0023) is mostly the proportional de-vig (power +0.0002, Shin +0.0008). Engine becomes the one framework, DISC-001 its cross-check; two engine defects to fix first (T-113). **Waiting on the owner (T-112):** the merge, and whether raw data exports may sit on `main` in this public repo — they are already public on the two branches, and `out_real/` on `main` has held 793 sealed-period results since August. Audit: [`research/consolidation/AUDIT_2026-10-21.md`](../research/consolidation/AUDIT_2026-10-21.md). Next sprint (not started): [`PHASE2_RESEARCH_DESIGN_2026-10-21.md`](../research/consolidation/PHASE2_RESEARCH_DESIGN_2026-10-21.md).
+
+**Discovery Engine Phase 1, 2026-10-21 (T-109): built; first real run found nothing.**
+`research/discovery/` tests 660 candidate factors and factor-by-situation
+interactions against the de-vigged BFO close on PRED-001 DEV data only (6,824
+priced fights, export fingerprints match the frozen manifest), walk-forward,
+card-clustered, multiple-testing corrected, with leakage audits and a
+hash-chained ledger of every run. **Zero passed the screen**; the best real
+idea scored below the best of 660 shuffled ones, and age / UFC record add
+nothing measurable to the price. No H1 look, no production or site change,
+nothing promoted. Report: `research/discovery/REPORT_PHASE1.md`.
+
+**Factor discovery, 2026-10-21 (DISC-001, T-110; was T-109 on its branch): nothing found.** We tested 20
+fight factors (KO history, layoffs, activity, cage time, opponent quality, win
+streak, rematches, common opponents, first five-rounder, first main event,
+plus age and UFC record), 3 interactions and 2 combinations. The question each
+time: does the factor improve on the closing odds? It ran on 5,792 fights from
+2012–24, out of sample, with nothing from 2025 on read. **None passed. None
+even reached p < 0.05 before correction.** Combining them made the forecast
+worse. A positive control shows the test is sharp for factors that apply to
+most fights and blunt for rare ones (it reliably sees only ~57–60% effects
+there). An apparent "market underrates favourites" gain was an artefact of the
+de-vig method and vanishes under the power method. Internal only:
+[`research/experiments/DISC-001/REPORT.md`](../research/experiments/DISC-001/REPORT.md).
+
 **Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
 matches what the site does (no cookies, no affiliate links, named
 processors), the disclaimer's model sentence is a market example, My Book
