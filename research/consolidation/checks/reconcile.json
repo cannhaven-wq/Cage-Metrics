@@ -1,0 +1,323 @@
+{
+ "recalibration_by_devig": {
+  "fights": 6824,
+  "events": 623,
+  "fights_outside_clv001_market_band": 7,
+  "windows": {
+   "DISC-001 2012-24 (train all earlier years, no penalty)": {
+    "proportional": {
+     "n": 5792,
+     "market_log_loss": 0.6092,
+     "recalibration_gain": 0.00119,
+     "ci95": [
+      0.00019,
+      0.00211
+     ],
+     "calibration_slope_in_window": 1.129
+    },
+    "power": {
+     "n": 5792,
+     "market_log_loss": 0.6074,
+     "recalibration_gain": -5e-05,
+     "ci95": [
+      -0.00048,
+      0.00034
+     ],
+     "calibration_slope_in_window": 1.01
+    },
+    "shin": {
+     "n": 5792,
+     "market_log_loss": 0.60792,
+     "recalibration_gain": 0.00027,
+     "ci95": [
+      -0.00036,
+      0.00085
+     ],
+     "calibration_slope_in_window": 1.054
+    }
+   },
+   "Engine screen 2010-18 (train from 2007, ridge 1)": {
+    "proportional": {
+     "n": 3509,
+     "market_log_loss": 0.61169,
+     "recalibration_gain": 0.0002,
+     "ci95": [
+      -0.00117,
+      0.00155
+     ],
+     "calibration_slope_in_window": 1.047
+    },
+    "power": {
+     "n": 3509,
+     "market_log_loss": 0.61102,
+     "recalibration_gain": -0.00028,
+     "ci95": [
+      -0.00095,
+      0.00036
+     ],
+     "calibration_slope_in_window": 0.97
+    },
+    "shin": {
+     "n": 3509,
+     "market_log_loss": 0.61118,
+     "recalibration_gain": -0.00019,
+     "ci95": [
+      -0.00109,
+      0.00069
+     ],
+     "calibration_slope_in_window": 0.996
+    }
+   },
+   "Engine confirm 2019-24 (train from 2007, ridge 1)": {
+    "proportional": {
+     "n": 2826,
+     "market_log_loss": 0.60608,
+     "recalibration_gain": 0.00226,
+     "ci95": [
+      0.00112,
+      0.00339
+     ],
+     "calibration_slope_in_window": 1.228
+    },
+    "power": {
+     "n": 2826,
+     "market_log_loss": 0.60313,
+     "recalibration_gain": 0.00021,
+     "ci95": [
+      -3e-05,
+      0.00045
+     ],
+     "calibration_slope_in_window": 1.059
+    },
+    "shin": {
+     "n": 2826,
+     "market_log_loss": 0.60402,
+     "recalibration_gain": 0.00079,
+     "ci95": [
+      0.00021,
+      0.00137
+     ],
+     "calibration_slope_in_window": 1.123
+    }
+   }
+  }
+ },
+ "disc001_factors_by_window": {
+  "F13": {
+   "2012-18": {
+    "gain": 0.00062,
+    "ci95": [
+     -0.00132,
+     0.00246
+    ],
+    "p_one_sided": 0.264
+   },
+   "2019-24": {
+    "gain": 0.00093,
+    "ci95": [
+     -0.00093,
+     0.00281
+    ],
+    "p_one_sided": 0.166
+   }
+  },
+  "F14": {
+   "2012-18": {
+    "gain": 0.00026,
+    "ci95": [
+     -0.00039,
+     0.00091
+    ],
+    "p_one_sided": 0.216
+   },
+   "2019-24": {
+    "gain": 0.00024,
+    "ci95": [
+     -0.00066,
+     0.00114
+    ],
+    "p_one_sided": 0.299
+   }
+  },
+  "F03": {
+   "2012-18": {
+    "gain": 0.00043,
+    "ci95": [
+     -0.00051,
+     0.00135
+    ],
+    "p_one_sided": 0.181
+   },
+   "2019-24": {
+    "gain": 3e-05,
+    "ci95": [
+     -0.00101,
+     0.0011
+    ],
+    "p_one_sided": 0.477
+   }
+  },
+  "F16": {
+   "2012-18": {
+    "gain": -0.00011,
+    "ci95": [
+     -0.00033,
+     0.00011
+    ],
+    "p_one_sided": 0.835
+   },
+   "2019-24": {
+    "gain": -2e-05,
+    "ci95": [
+     -0.00012,
+     7e-05
+    ],
+    "p_one_sided": 0.694
+   }
+  },
+  "F07": {
+   "2012-18": {
+    "gain": -0.00066,
+    "ci95": [
+     -0.00161,
+     0.00022
+    ],
+    "p_one_sided": 0.928
+   },
+   "2019-24": {
+    "gain": -0.00023,
+    "ci95": [
+     -0.00076,
+     0.00028
+    ],
+    "p_one_sided": 0.802
+   }
+  },
+  "F01": {
+   "2012-18": {
+    "gain": -8e-05,
+    "ci95": [
+     -0.00079,
+     0.00064
+    ],
+    "p_one_sided": 0.591
+   },
+   "2019-24": {
+    "gain": -0.00034,
+    "ci95": [
+     -0.00072,
+     3e-05
+    ],
+    "p_one_sided": 0.965
+   }
+  },
+  "F11": {
+   "2012-18": {
+    "gain": -0.00032,
+    "ci95": [
+     -0.00072,
+     8e-05
+    ],
+    "p_one_sided": 0.939
+   },
+   "2019-24": {
+    "gain": -7e-05,
+    "ci95": [
+     -0.00025,
+     0.00012
+    ],
+    "p_one_sided": 0.757
+   }
+  },
+  "F10": {
+   "2012-18": {
+    "gain": 7e-05,
+    "ci95": [
+     -0.00131,
+     0.00142
+    ],
+    "p_one_sided": 0.46
+   },
+   "2019-24": {
+    "gain": -0.0002,
+    "ci95": [
+     -0.00098,
+     0.00063
+    ],
+    "p_one_sided": 0.676
+   }
+  },
+  "F15": {
+   "2012-18": {
+    "gain": -0.00037,
+    "ci95": [
+     -0.00118,
+     0.00042
+    ],
+    "p_one_sided": 0.824
+   },
+   "2019-24": {
+    "gain": 0.00028,
+    "ci95": [
+     -0.00056,
+     0.0011
+    ],
+    "p_one_sided": 0.254
+   }
+  },
+  "F12": {
+   "2012-18": {
+    "gain": 6e-05,
+    "ci95": [
+     -0.00039,
+     0.00049
+    ],
+    "p_one_sided": 0.397
+   },
+   "2019-24": {
+    "gain": -0.00012,
+    "ci95": [
+     -0.00072,
+     0.00048
+    ],
+    "p_one_sided": 0.651
+   }
+  },
+  "F19": {
+   "2012-18": {
+    "gain": -0.00035,
+    "ci95": [
+     -0.0008,
+     9e-05
+    ],
+    "p_one_sided": 0.936
+   },
+   "2019-24": {
+    "gain": -9e-05,
+    "ci95": [
+     -0.00041,
+     0.00023
+    ],
+    "p_one_sided": 0.708
+   }
+  },
+  "F20": {
+   "2012-18": {
+    "gain": -0.00019,
+    "ci95": [
+     -0.0005,
+     0.00011
+    ],
+    "p_one_sided": 0.885
+   },
+   "2019-24": {
+    "gain": -0.00021,
+    "ci95": [
+     -0.00073,
+     0.00032
+    ],
+    "p_one_sided": 0.785
+   }
+  }
+ }
+}

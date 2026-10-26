@@ -2177,3 +2177,36 @@ packet's recommendations, the answers win.
 | F1 ESPN | **Declined** |
 | F2 running-order migration | **Declined.** The owner inspected the live site: fights already display in the correct order. Running order closes as **no action required; current behaviour accepted by the owner** |
 
+
+---
+
+## D-034 — Research consolidation approved on conditions; draft PR #120 not merged
+
+| field | value |
+|---|---|
+| date | 2026-10-21 |
+| decided by | CFL Owner, in session: "Do not merge the current draft. I approve the consolidation strategy, subject to these conditions" |
+| task | T-112, T-111, T-113, T-109, T-110 |
+| level | L3 |
+| reversible | yes for everything done under it: research code and documents only; no history rewritten, no branch deleted, no production change, no spend, no sealed outcome read |
+
+**Plain version.** The two research projects become one framework (the
+Discovery Engine, with DISC-001 as its independent cross-check), but only
+through a clean branch that carries no raw data exports, after the engine's
+defects are fixed. The first draft (#120) is not merged.
+
+| condition, in the owner's words (abridged) | how it is applied |
+|---|---|
+| 1. "Prepare a clean integration branch directly from main containing the research code, documentation, and permitted results, but no full historical data exports or unnecessary per-fight data. Do not preserve the raw-export branches as ancestors … Preserve verifiable hashes and reproducibility instructions. Do not rewrite history or delete existing branches without separate approval." | `claude/wizardly-albattani-dwoze0-clean`, cut from `main`; exports and the real run's per-fight predictions git-ignored and pinned by sha256 (`research/discovery/WITHHELD.json`, `research/experiments/DISC-001/data/README.md`); every carried file pinned to its source commit (`research/consolidation/PROVENANCE.json`) |
+| 2. "Fix Engine defects E1, E2, and E3 before future research runs. The minimum useful incremental factor gain must be measured against the recalibrated market, with raw-market performance also reported. Preserve the frozen PRED-001 protocol unchanged." | engine 1.1.0, config `DISC-P1-v1.1`; this settles E2 (CRITICAL_GATES item 10) |
+| 3. "Record E4 … Do not describe that run as demonstrably preregistered before execution." | engine README and a dated correction on `REPORT_PHASE1.md` |
+| 4. "Prepare the provenance-only contamination amendment documenting the previous public exposure of sealed-period results in out_real/. Do not apply the frozen-protocol amendment until separately approved." | `research/consolidation/PROPOSED_PRED001_AMENDMENT_2.md`; not applied (T-115) |
+| 5. "Price-only research may be designed using post-October 12 odds, provided it never reads sealed outcomes. Prospective hypotheses, anchor times, quote-quality rules, and scoring rules must be fixed before evaluating new observations. Respect existing C2 capture-lock requirements. No production changes or append-only research writes without authorization." | design §A.2; MKT-002 draft preregistration |
+| 6. "Close draft PR #53 as superseded only after its research history and any sealed-period contamination have been documented." | `research/consolidation/SYM-002_SYM-003_HISTORY.md`, then #53 closed unmerged; its branch kept |
+| 7. "Retain PRED-002 (#62) as an existing approved research direction. Disclose all related previous exploration before freezing it." | `research/consolidation/PRED-002_PRIOR_EXPLORATION.md` |
+| 8. "Keep our next research program focused on both sportsbook pricing inefficiencies and genuinely new fight variables. Incorporate a feasibility pilot for pre-UFC organizations, amateur backgrounds, gyms, travel, and environmental factors" | design §C |
+
+Also stated: "Run all relevant tests and present the clean integration PR for
+final merge approval. Do not merge, rewrite Git history, change production,
+spend money, or evaluate sealed outcomes." Merging the clean PR is a separate
+owner approval (T-114).

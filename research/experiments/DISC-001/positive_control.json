@@ -1,0 +1,72 @@
+{
+ "reps": 40,
+ "bar_one_sided_p": 0.0025,
+ "results": {
+  "F03": {
+   "53%": {
+    "found_share": 0.0,
+    "found_share_uncorrected": 0.0,
+    "mean_gain": 0.00017946385024907816
+   },
+   "55%": {
+    "found_share": 0.0,
+    "found_share_uncorrected": 0.15,
+    "mean_gain": 0.00044808565506235275
+   },
+   "57%": {
+    "found_share": 0.05,
+    "found_share_uncorrected": 0.425,
+    "mean_gain": 0.0010941941007231205
+   },
+   "60%": {
+    "found_share": 0.375,
+    "found_share_uncorrected": 0.925,
+    "mean_gain": 0.002660842252963825
+   }
+  },
+  "F08": {
+   "53%": {
+    "found_share": 0.0,
+    "found_share_uncorrected": 0.0,
+    "mean_gain": -2.7751896226752265e-05
+   },
+   "55%": {
+    "found_share": 0.0,
+    "found_share_uncorrected": 0.15,
+    "mean_gain": 0.0004052271045879987
+   },
+   "57%": {
+    "found_share": 0.075,
+    "found_share_uncorrected": 0.225,
+    "mean_gain": 0.0009386864228172439
+   },
+   "60%": {
+    "found_share": 0.3,
+    "found_share_uncorrected": 0.9,
+    "mean_gain": 0.002376997025962517
+   }
+  },
+  "F13": {
+   "53%": {
+    "found_share": 0.125,
+    "found_share_uncorrected": 0.425,
+    "mean_gain": 0.0009577284169580647
+   },
+   "55%": {
+    "found_share": 0.35,
+    "found_share_uncorrected": 0.875,
+    "mean_gain": 0.0027331401806686187
+   },
+   "57%": {
+    "found_share": 1.0,
+    "found_share_uncorrected": 1.0,
+    "mean_gain": 0.006158451752354711
+   },
+   "60%": {
+    "found_share": 1.0,
+    "found_share_uncorrected": 1.0,
+    "mean_gain": 0.012926030699777514
+   }
+  }
+ }
+}
