@@ -586,7 +586,10 @@ async function load() {
   const { data: fights } = await sb
     .from('fights')
     .select('id, event_id, fighter_a_id, fighter_b_id, fighter_a_name, fighter_b_name, weight_class, is_main_event, is_title_fight')
-    .in('event_id', eventIds);
+    .in('event_id', eventIds)
+    // A retired booking (is_active = false: a cancelled or replaced bout) is
+    // not a leg anyone can bet. Same rule as fighter.html and cfl.orderCard.
+    .not('is_active', 'is', false);
 
   (fights || []).forEach(f => {
     if (!fightsByEvent[f.event_id]) fightsByEvent[f.event_id] = [];

@@ -3,7 +3,14 @@
 Where the project actually is, in one screen. Read this first; it is the
 entry point to the rest of `coordination/`.
 
-Last updated: 2026-10-21
+Last updated: 2026-11-02
+
+**Cancelled bouts, 2026-11-02: fixed.** Brady vs. Bonfim (2026-11-07) was
+cancelled but still on the card, because the scraper never retired a bout that
+dropped off UFCStats. Retired on production (fight 49281, `is_active = false`,
+nothing deleted); the Parlay Calculator now hides retired bouts too; the event
+scraper now retires dropped bouts itself (`card_sync.py`, guarded against a bad
+page read). See HANDOFF 2026-11-02.
 
 **Owner decisions applied, 2026-10-21 (D-033).** Live: privacy policy now
 matches what the site does (no cookies, no affiliate links, named

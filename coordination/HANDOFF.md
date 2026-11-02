@@ -11,6 +11,41 @@ Whoever writes an entry updates [`STATE.md`](STATE.md) in the same commit.
 
 ---
 
+## 2026-11-02 — Cancelled bouts come off the card (Brady vs. Bonfim)
+
+**From:** Claude
+**To:** CFL Owner
+**Date:** 2026-11-02
+
+- **Owner report:** Sean Brady vs. Gabriel Bonfim (UFC Fight Night: Cortes
+  Acosta vs. Walker, 2026-11-07) was cancelled and still showing. The odds
+  feed stopped quoting it after 2026-10-31 10:09 UTC while the rest of the
+  card was quoted on 2026-11-01.
+- **Cause:** the event scraper only ever adds or refreshes bouts. A cancelled
+  bout just stops being listed on UFCStats, so its row stayed live. The site
+  already hides `is_active = false` rows and a fighter's superseded booking,
+  but Brady and Bonfim were not rebooked, so nothing caught it.
+- **Data:** fight 49281 set `is_active = false` on production (one row,
+  nothing deleted; undo: `update fights set is_active = true where id = 49281;`).
+- **Site:** `parlay.html` listed upcoming fights without the dead-booking
+  filter, so a cancelled bout stayed selectable as a leg; fixed.
+  `tests/cancelled-bouts-hidden.test.js` pins it for every card page.
+- **Scraper (cage-metrics-event-scrapper):** new `card_sync.py`. After each
+  card is read, a no-result bout no longer on the page is set
+  `is_active = false`. It never deletes, never touches a fight with a result,
+  and retires nothing when the page lists no bouts or more than half the card
+  would go. A bout that comes back is re-activated. 10 new tests.
+
+## Next action
+
+1. **Claude, after the next scraper run:** read the run log's "Dropped bouts
+   retired" line and check the 2026-11-07 card. Bouts with no odds ever
+   captured that may be stale: Bashi vs. Brennan (52658), Parsons vs. Souza
+   (52663), Ko vs. Turman (52662). UFCStats is not reachable from the agent
+   container, so they were left alone.
+
+---
+
 ## 2026-10-21 (c) — Owner decisions applied (D-033)
 
 **From:** Claude
