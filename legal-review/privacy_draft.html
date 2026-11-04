@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- ==========================================================================
+     legal-review/privacy_draft.html — DRAFT revised Privacy Policy (T-054).
+     NOT IN EFFECT. The live policy is /privacy.html and is unchanged.
+
+     Written to replace privacy.html once the owner and a lawyer have settled
+     every [OWNER/LAWYER: ...] marker. The full list with recommended answers
+     is legal-review/OWNER_REVIEW_2026-10-21.md, which also lists every claim
+     in the LIVE policy that this draft drops because it is not true.
+
+     <base href="/"> makes the site's relative links (nav, footer, styles)
+     resolve from the root, so this previews like a real page on the live
+     domain even though it lives in a subfolder. Opened from disk it will be
+     unstyled; read it on the deployed site or through `python -m http.server`.
+     ========================================================================== -->
+<base href="/">
+
+<title>Privacy Policy (Draft) — Cannon Fight Lab</title>
+<meta name="description" content="Draft revision of the Cannon Fight Lab privacy policy. Not yet in effect.">
+<meta name="robots" content="noindex, nofollow">
+
+<meta name="theme-color" content="#0a0a0a">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Saira+Semi+Condensed:wght@600;700;800&family=IBM+Plex+Sans:wght@500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="_shared.css?v=rl2">
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.1/dist/umd/supabase.min.js" integrity="sha384-9dsYHX1/12VQI+gHRtPXSM3YFsgJ+iIPjTy4WCtY7XbKG/q7MTdZxZhMd4cL9Gif" crossorigin="anonymous"></script>
+<style>
+  .legal { max-width: 760px; margin: 0 auto; }
+  .legal h2 {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    color: #fff;
+    margin: 32px 0 6px;
+    letter-spacing: 0.5px;
+  }
+  .legal h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    margin: 20px 0 6px;
+  }
+  .legal .subhead {
+    font-size: 11px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 14px;
+  }
+  .legal p {
+    font-size: 15px;
+    color: var(--text-2);
+    line-height: 1.75;
+    margin-bottom: 14px;
+  }
+  .legal p.plain {
+    color: var(--text);
+    border-left: 2px solid var(--border);
+    padding-left: 12px;
+  }
+  .legal p.muted { color: var(--text-3); font-size: 14px; }
+  .legal ul { margin: 10px 0 18px; padding: 0; list-style: none; }
+  .legal li {
+    position: relative;
+    padding-left: 18px;
+    margin-bottom: 8px;
+    color: var(--text-2);
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .legal li::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 11px;
+    width: 6px;
+    height: 6px;
+    background: var(--red);
+    border-radius: 50%;
+  }
+  .legal strong { color: var(--text); font-weight: 600; }
+  .legal a { color: var(--red); text-decoration: none; }
+  .legal a:hover { text-decoration: underline; }
+
+  .ph {
+    background: rgba(255, 167, 38, 0.14);
+    color: #ffa726;
+    border: 1px dashed rgba(255, 167, 38, 0.5);
+    border-radius: 4px;
+    padding: 0 5px;
+    font-weight: 600;
+    font-size: 0.92em;
+  }
+  .draft-banner {
+    background: rgba(255, 167, 38, 0.10);
+    border: 2px solid #ffa726;
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 28px;
+  }
+  .draft-banner .label {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ffa726;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-bottom: 8px;
+  }
+  .draft-banner p { margin: 0; color: var(--text); font-size: 14px; line-height: 1.65; }
+
+  .tldr-box {
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--red);
+    border-radius: 8px;
+    padding: 18px 22px;
+    margin-bottom: 32px;
+  }
+  .tldr-box .label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--red);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-bottom: 8px;
+  }
+  .tldr-box ul { margin: 0; }
+  .tldr-box li { color: var(--text); font-size: 14px; line-height: 1.6; }
+
+  .proc-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 14px 0 20px; }
+  .proc {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    background: var(--bg-2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .proc th {
+    text-align: left;
+    font-size: 10px;
+    color: var(--text-3);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 10px 12px;
+    background: var(--bg-3);
+    border-bottom: 1px solid var(--border);
+  }
+  .proc td {
+    padding: 10px 12px;
+    font-size: 13px;
+    color: var(--text-2);
+    line-height: 1.5;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  .proc tr:last-child td { border-bottom: none; }
+  .proc td:first-child { color: #fff; font-weight: 600; white-space: nowrap; }
+
+  .last-updated {
+    font-size: 12px;
+    color: var(--text-3);
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+  }
+</style>
+</head>
+<body>
+
+<nav class="cfl-nav"></nav>
+
+<div class="page-hero">
+  <div class="eyebrow">Legal · Draft</div>
+  <h1>Privacy Policy</h1>
+  <p>What we collect, who helps us run the site, and what you can do about it. Draft — not yet in effect.</p>
+</div>
+
+<div class="page">
+  <div class="legal">
+
+    <div class="draft-banner" role="note">
+      <div class="label">Draft — not yet in effect</div>
+      <p>This is a proposed revision of CFL's privacy policy, prepared for review by the owner and a lawyer. It is not the policy in force — <a href="privacy.html">the current Privacy Policy</a> is. Text in <span class="ph">[OWNER/LAWYER: highlighted brackets]</span> marks a question that has not been answered yet.</p>
+    </div>
+
+    <div class="tldr-box">
+      <div class="label">In plain English</div>
+      <ul>
+        <li>We collect as little as we can. We don't sell your data and we run no advertising pixels.</li>
+        <li>We count visits with Plausible Analytics, which sets no cookies, and with our own anonymous counter. Neither stores your name, email or account.</li>
+        <li>CFL itself sets no cookies.</li>
+        <li>If you make an account, we hold your email and what you save — My Book bets, starred fights, alerts. Only your account can see them.</li>
+        <li>We name every company that helps us run the site, below.</li>
+        <li>You can ask us to show you, correct or delete your data through the <a href="contact.html">contact page</a>.</li>
+      </ul>
+    </div>
+
+    <h2>1. Who we are</h2>
+    <div class="subhead">Who is responsible for your data</div>
+    <p>Cannon Fight Lab ("CFL", "we", "us") is operated by <span class="ph">[OWNER/LAWYER: legal entity name and type — the live policy says "Cannon Fight Lab LLC, a Tennessee limited liability company"; confirm]</span>, owned by Reed Cannon, at cannonfightlab.com. Contact details are in section 12.</p>
+
+    <h2>2. What we collect, and why</h2>
+    <div class="subhead">Category by category</div>
+
+    <h3>When you visit any page</h3>
+    <p class="plain">We count visits. We don't build a profile of you.</p>
+    <p><strong>Plausible Analytics.</strong> Plausible is a third-party analytics service that processes visit data on our behalf. It runs on every public page of the site except password reset, unsubscribe, a handful of pages that only redirect elsewhere, and one unlinked internal page. It records which page was viewed, the referring site, your browser and device type, and your approximate location (country, region and city, worked out from your IP address), and it counts unique visitors. We send Plausible the name of a page action (for example "factor_lab_view") and nothing else — no extra details about you or what you clicked. According to Plausible, it sets no cookies, does not follow you to other websites, and does not store your IP address. <span class="ph">[LAWYER: verify the last sentence against Plausible's current Data Processing Agreement before publishing — it is Plausible's claim, not one we can check.]</span></p>
+    <p><strong>Our own anonymous counter.</strong> We also keep our own record of which pages and features are used, so we can tell which parts of the site are worth building on. Each record holds the name of the action (for example "a fight was opened"), the time, and a few details about it:</p>
+    <ul>
+      <li>the page path, the website you came from (the site name only, not the full address) and any campaign tag in the link;</li>
+      <li>which fight, event or sort order was involved, where that is the point of the action;</li>
+      <li>whether your browser reports that it is being driven by a script, or names itself as a search-engine crawler — so we can count people rather than robots;</li>
+      <li>a random session code, stored in your browser's session storage. It is new every visit, disappears when you close the tab, and is never linked to your account.</li>
+    </ul>
+    <p>These records <strong>never</strong> contain your email address, your name, your account identifier, your IP address, a device fingerprint, any cross-site identifier, or any bet amount or bankroll figure. This is enforced in our code, which strips those fields before anything is sent, and in the database, which limits what a record can hold. Nobody outside CFL can read these records, and we look at them only as daily totals. <span class="ph">[LAWYER: is "anonymous" the right legal word here, or must it be "pseudonymised" because a per-session code exists? The technical facts are as stated; the label is a legal call.]</span></p>
+
+    <h3>If you create an account</h3>
+    <p class="plain">Your email, and what you choose to save.</p>
+    <ul>
+      <li><strong>Sign-in details.</strong> Your email address and password. Passwords are handled by our sign-in provider, Supabase, and stored only in scrambled (hashed) form; we never see them.</li>
+      <li><strong>Account settings.</strong> Your membership status (free, beta or paid) and your email-alert preferences.</li>
+      <li><strong>My Book.</strong> The bets and bankroll figures you enter. The database lets only your account read or change them. They are never used for analytics or marketing.</li>
+      <li><strong>Watchlist and alerts.</strong> The fights you star, the alerts you set, and a record of each alert email we send you — kept so the same alert is never sent twice.</li>
+    </ul>
+    <p>We use this to run your account and the features you use, and for nothing else. <span class="ph">[LAWYER: people who operate CFL can technically reach the database for maintenance. Confirm whether the policy must say so, and in what words.]</span></p>
+
+    <h3>If you sign up for the Cannon Card Brief</h3>
+    <p>We store your email address, where on the site you signed up, when, and a private unsubscribe code. We are building a confirmation step: you will get one email asking you to confirm the address, and <strong>we will not send the Card Brief to an address until it has been confirmed</strong>. Until that step is finished, the Card Brief is not being sent to anyone — this is locked in our code, not just a promise. Every Brief will carry a one-click unsubscribe link.</p>
+
+    <h3>If you contact us</h3>
+    <p>The contact form collects your name, your email and your message so we can reply. It is delivered to us by Formspree, a form-handling service.</p>
+
+    <h3>If you pay us (not active)</h3>
+    <p>CFL takes no payments today. If a paid plan launches, payment will be handled by Stripe. <strong>We will never see or store your card details.</strong> We will store a Stripe customer reference, a subscription reference, the subscription's status and the date your paid period ends, plus a log of the billing messages Stripe sends us, which no member and no browser can read.</p>
+
+    <h3>Stored in your browser</h3>
+    <p class="plain">CFL sets no cookies. A few things are kept in your browser's own storage.</p>
+    <ul>
+      <li>If you sign in: your sign-in session, so you stay signed in (local storage).</li>
+      <li>The date of your last visit, used only to count how many days pass between visits. It stays in your browser; only the number of days is ever counted (local storage).</li>
+      <li>The random session code described above, and a note of whether this visit has already been counted (session storage, cleared when you close the tab).</li>
+    </ul>
+    <p>You can clear all of it in your browser settings at any time. <span class="ph">[LAWYER: do EU/UK rules on storing information on a device (ePrivacy) require consent for any of these, given none is a cookie? The sign-in session is strictly necessary; the last-visit date and session code are for analytics.]</span></p>
+
+    <h2>3. Who helps us run the site</h2>
+    <div class="subhead">Service providers</div>
+    <p>We share data only with the companies that help run CFL, and only what each needs:</p>
+    <div class="proc-wrap">
+    <table class="proc">
+      <thead><tr><th>Provider</th><th>What it does for CFL</th><th>What it receives</th></tr></thead>
+      <tbody>
+        <tr><td>GitHub Pages</td><td>Hosts the website</td><td>Standard web-request details, including your IP address, like any web host</td></tr>
+        <tr><td>Supabase</td><td>Database and sign-in; sends account emails such as address confirmation and password reset</td><td>Account and saved data described above; your IP address as part of each request</td></tr>
+        <tr><td>Plausible Analytics</td><td>Visit counting</td><td>Page views and action names, as described in section 2</td></tr>
+        <tr><td>Google Fonts</td><td>Serves the site's typefaces</td><td>Standard web-request details, including your IP address</td></tr>
+        <tr><td>jsDelivr</td><td>Serves a code library the site needs</td><td>Standard web-request details, including your IP address</td></tr>
+        <tr><td>Formspree</td><td>Delivers contact-form messages</td><td>What you type into the contact form</td></tr>
+        <tr><td>Resend</td><td>Will send the Card Brief and alert emails — <strong>not sending yet</strong></td><td>Your email address and the content of the email</td></tr>
+        <tr><td>Stripe</td><td>Will process payments — <strong>not active; nothing can be bought</strong></td><td>Payment details you give Stripe directly</td></tr>
+      </tbody>
+    </table>
+    </div>
+    <p>Our data sources — UFCStats for fight statistics and The Odds API for sportsbook prices — receive nothing about you. <span class="ph">[LAWYER: does each provider need a Data Processing Agreement reference, a named lawful basis, or a link to its own privacy policy here?]</span> <span class="ph">[OWNER: confirm whether Resend is already sending alert emails; if so, change "not sending yet" for alerts.]</span></p>
+    <p>We may also disclose information if the law requires it, or to protect the rights, property or safety of CFL, our users or others.</p>
+
+    <h2>4. What we don't do</h2>
+    <div class="subhead">Plain commitments</div>
+    <ul>
+      <li>We do not sell your personal information, and we do not share it for cross-site advertising.</li>
+      <li>We run no advertising pixels and no cross-site trackers.</li>
+      <li>CFL carries no affiliate links today, so no sportsbook receives anything about you from us.</li>
+      <li>We do not use your data to train artificial-intelligence models.</li>
+    </ul>
+
+    <h2>5. How long we keep it</h2>
+    <div class="subhead">Retention</div>
+    <p>Account data and what you save are kept until you ask us to delete your account. Card Brief addresses are kept until you unsubscribe or ask us to delete them. Alert delivery records are kept so the same alert is never sent twice. Billing records, once payments exist, are kept as long as the law requires. <span class="ph">[OWNER/LAWYER: retention periods. Today no automatic deletion exists for the anonymous counter or for contact messages, so any period stated here needs a deletion job built to match it first. The live policy's "24 months" and "12 months" figures are not implemented anywhere.]</span></p>
+
+    <h2>6. Your rights</h2>
+    <div class="subhead">What you can ask us to do</div>
+    <p>Depending on where you live, you may have the right to see the personal information we hold about you, correct it, delete it, receive a copy, object to or restrict how we use it, and withdraw any consent you gave. To do any of these, use the <a href="contact.html">contact page</a>. <span class="ph">[OWNER: there is no self-serve account deletion or data export today; confirm the manual process and response time.]</span></p>
+    <p class="muted"><strong>California residents</strong> have rights under the CCPA/CPRA, including the right to know and the right to delete. <strong>EU and UK residents</strong> have rights under the GDPR and UK GDPR, and may complain to their data protection authority. <span class="ph">[LAWYER: confirm which regimes actually apply to CFL, and whether a lawful basis must be stated for each use.]</span></p>
+
+    <h2>7. Security</h2>
+    <div class="subhead">How we protect it</div>
+    <p>Saved data is protected in the database so that each account can reach only its own rows, and anonymous visitors cannot read anyone's data. No system is perfectly secure, and we cannot promise absolute security. If a breach affects your personal data, we will tell you as the law requires.</p>
+
+    <h2>8. International transfers</h2>
+    <div class="subhead">Where your data goes</div>
+    <p>CFL is run from the United States, and our providers may process data in the United States and elsewhere. <span class="ph">[LAWYER: replace "by using the site you consent to this transfer" (live wording) with the correct transfer mechanism, if one is needed.]</span></p>
+
+    <h2>9. Age</h2>
+    <div class="subhead">Adults only</div>
+    <p>CFL is for people aged 21 and over. We do not knowingly collect information from anyone under 21. If you believe someone under 21 has given us information, please <a href="contact.html">contact us</a> and we will delete it.</p>
+
+    <h2>10. Emails you can stop</h2>
+    <div class="subhead">Unsubscribing</div>
+    <p>Every Card Brief and alert email lets you stop it. You can also turn alerts off in your account. Account emails, such as password resets, are sent only when needed to run your account.</p>
+
+    <h2>11. Changes to this policy</h2>
+    <div class="subhead">Updates</div>
+    <p>We will update this policy when what we do changes. The date at the bottom shows the latest version. If a change is material, we will say so on the site and, if you have an account, by email, before it takes effect.</p>
+
+    <h2>12. Contact us</h2>
+    <div class="subhead">Questions and requests</div>
+    <p>For any question or request about your data, use the <a href="contact.html">contact page</a>. <span class="ph">[OWNER/LAWYER: a postal address or dedicated privacy email, if required.]</span></p>
+
+    <div class="last-updated">
+      Draft prepared 21 October 2026 · Not yet in effect · <span class="ph">[OWNER: effective date once approved]</span>
+    </div>
+
+  </div>
+</div>
+
+<footer class="cfl-footer"></footer>
+
+<script src="_shared.js?v=rl7"></script>
+<script src="_auth.js"></script>
+<script>
+cfl.renderNav('');
+cfl.renderFooter();
+</script>
+</body>
+</html>
