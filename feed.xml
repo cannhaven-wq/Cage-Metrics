@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>
   <language>en-us</language>
-  <lastBuildDate>Tue, 03 Nov 2026 22:43:00 GMT</lastBuildDate>
+  <lastBuildDate>Wed, 04 Nov 2026 04:04:01 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Cortes Acosta vs. Walker</title>
@@ -44,11 +44,11 @@
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 336: Van vs. Kape card — Toronto, Ontario, Canada.</description>
   </item>
   <item>
-    <title>UFC Fight Night</title>
+    <title>UFC Fight Night: Salkilld vs. Saint Denis</title>
     <link>https://cannonfightlab.com/event.html?id=6828</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6828</guid>
     <pubDate>Sat, 06 Feb 2027 00:00:00 GMT</pubDate>
-    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night card — Sydney, New South Wales, Australia.</description>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Salkilld vs. Saint Denis card — Sydney, New South Wales, Australia.</description>
   </item>
 
 </channel>
