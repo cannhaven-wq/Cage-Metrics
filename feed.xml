@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 09 Nov 2026 14:45:59 GMT</lastBuildDate>
+  <lastBuildDate>Tue, 10 Nov 2026 00:59:53 GMT</lastBuildDate>
 
   <item>
     <title>UFC 334: Gane vs. Hokit</title>
@@ -21,6 +21,13 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=5013</guid>
     <pubDate>Sat, 21 Nov 2026 00:00:00 GMT</pubDate>
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Prochazka vs. Stirling card — Doha, Qatar.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Adesanya vs. Magomedov</title>
+    <link>https://cannonfightlab.com/event.html?id=6976</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6976</guid>
+    <pubDate>Sat, 05 Dec 2026 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Adesanya vs. Magomedov card — Riyadh, Riyadh, Saudi Arabia.</description>
   </item>
   <item>
     <title>UFC 335: Oliveira vs. Lopes</title>
