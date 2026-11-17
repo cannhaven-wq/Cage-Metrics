@@ -6,7 +6,7 @@
   <atom:link href="https://cannonfightlab.com/feed.xml" rel="self" type="application/rss+xml" />
   <description>Sportsbook odds, line movement and matchup research for every upcoming UFC event.</description>
   <language>en-us</language>
-  <lastBuildDate>Mon, 16 Nov 2026 14:22:16 GMT</lastBuildDate>
+  <lastBuildDate>Tue, 17 Nov 2026 01:19:34 GMT</lastBuildDate>
 
   <item>
     <title>UFC Fight Night: Prochazka vs. Stirling</title>
@@ -30,6 +30,20 @@
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC 335: Oliveira vs. Lopes card — Las Vegas, Nevada, USA.</description>
   </item>
   <item>
+    <title>UFC Fight Night: Rodriguez vs. Garcia</title>
+    <link>https://cannonfightlab.com/event.html?id=7031</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=7031</guid>
+    <pubDate>Sat, 16 Jan 2027 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Rodriguez vs. Garcia card — Dallas, Texas, USA.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Bonfim vs. Brady</title>
+    <link>https://cannonfightlab.com/event.html?id=7032</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=7032</guid>
+    <pubDate>Sat, 23 Jan 2027 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Bonfim vs. Brady card — Las Vegas, Nevada, USA.</description>
+  </item>
+  <item>
     <title>UFC 336: Van vs. Kape</title>
     <link>https://cannonfightlab.com/event.html?id=6827</link>
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6827</guid>
@@ -42,6 +56,13 @@
     <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=6828</guid>
     <pubDate>Sat, 06 Feb 2027 00:00:00 GMT</pubDate>
     <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Salkilld vs. Saint Denis card — Sydney, New South Wales, Australia.</description>
+  </item>
+  <item>
+    <title>UFC Fight Night: Pyfer vs. Nickal</title>
+    <link>https://cannonfightlab.com/event.html?id=7035</link>
+    <guid isPermaLink="true">https://cannonfightlab.com/event.html?id=7035</guid>
+    <pubDate>Sat, 13 Feb 2027 00:00:00 GMT</pubDate>
+    <description>Sportsbook odds, line movement and matchup data for every fight on the UFC Fight Night: Pyfer vs. Nickal card — Cleveland, Ohio, USA.</description>
   </item>
 
 </channel>
