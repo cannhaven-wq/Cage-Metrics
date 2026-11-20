@@ -1133,7 +1133,7 @@ async function recordStartEstimates(commenceByFight) {
 
 const CLOSER_LOOKBACK_DAYS = 21;
 
-async function promoteClosers(candidateFights) {
+async function promoteClosers(candidateFights, client = sb) {
   const now = Date.now();
   const floor = now - CLOSER_LOOKBACK_DAYS * 86400000;
   const due = (candidateFights || []).filter(f => {
@@ -1146,18 +1146,30 @@ async function promoteClosers(candidateFights) {
   let promoted = 0, demoted = 0;
   for (const f of due) {
     const bell = new Date(f.start_at).toISOString();
-    const { data: caps, error } = await sb
-      .from('fight_odds')
-      .select('id, fighter_id, book_id, captured_at, is_closer')
-      .eq('fight_id', f.id);
-    if (error) throw new Error(`closer scan (fight ${f.id}): ${error.message}`);
-    if (!caps || !caps.length) continue;
+    // A heavily tracked fight exceeds PostgREST's 1000-row response cap.
+    // Read every page before changing any flags: a closer omitted from the
+    // first page would survive the clear and collide with its replacement.
+    // Order by immutable id so updates cannot move rows between pages.
+    const caps = [];
+    for (let from = 0; ; from += 1000) {
+      const { data: page, error } = await client
+        .from('fight_odds')
+        .select('id, side, book_id, captured_at, is_closer')
+        .eq('fight_id', f.id)
+        .order('id', { ascending: true })
+        .range(from, from + 999);
+      if (error) throw new Error(`closer scan (fight ${f.id}): ${error.message}`);
+      caps.push(...(page || []));
+      if (!page || page.length < 1000) break;
+    }
+    if (!caps.length) continue;
 
-    // Winner per (fighter, book): latest capture strictly before the bell.
+    // Match the unique index's (side, book) key, including legacy rows whose
+    // fighter identity differs from the current booking.
     const best = new Map();
     for (const c of caps) {
       if (!(c.captured_at < bell)) continue;
-      const k = `${c.fighter_id}|${c.book_id}`;
+      const k = `${c.side}|${c.book_id}`;
       const cur = best.get(k);
       if (!cur || c.captured_at > cur.captured_at) best.set(k, c);
     }
@@ -1179,13 +1191,13 @@ async function promoteClosers(candidateFights) {
     // whose closer had to move from a 09-15 quote to a 09-16 one. Clearing
     // first leaves the key momentarily empty, which no constraint minds.
     if (toClear.length) {
-      const { error: e2 } = await sb
+      const { error: e2 } = await client
         .from('fight_odds').update({ is_closer: false }).in('id', toClear);
       if (e2) throw new Error(`closer clear (fight ${f.id}): ${e2.message}`);
       demoted += toClear.length;
     }
     if (toSet.length) {
-      const { error: e1 } = await sb
+      const { error: e1 } = await client
         .from('fight_odds').update({ is_closer: true }).in('id', toSet);
       if (e1) throw new Error(`closer set (fight ${f.id}): ${e1.message}`);
       promoted += toSet.length;
@@ -1539,9 +1551,6 @@ async function main() {
       }
     } else {
       await recordStartEstimates(commenceByFight);
-      // Uses the start times already on file, so this still closes out last
-      // night's card on a run where nothing new matched.
-      await promoteClosers(candidateFights);
       // Totals are appended before the moneyline path's zero-match guard so a
       // totals-only slate (books post totals late; h2h drift) is never lost.
       const nTotals = await writePropOdds(totalsRows);
@@ -1567,6 +1576,7 @@ async function main() {
           `(${imminent.map(e => e.name).join(', ')}) — matching is broken`);
       }
       console.log('[done] matched 0 fights — nothing to insert (no imminent card, likely off-week)');
+      if (!DRY_RUN) await promoteClosers(candidateFights);
       return;
     }
 
@@ -1664,6 +1674,11 @@ async function main() {
     const scorable = supported.size === CAPTURE_COLUMNS.length;
     console.log(`[done] inserted ${toInsert.length} snapshot row(s) across ${matchedFights} fight(s) at ${captured_at}` +
       (scorable ? ' — CLV-001 capture complete' : ' — CLV-001 capture INCOMPLETE, these quotes can never be scored'));
+
+    // Closing flags are derived maintenance. Save the new observations and
+    // account for their API cost first, so a maintenance error cannot discard
+    // fresh prices for every upcoming fight. Errors still fail the job loudly.
+    await promoteClosers(candidateFights);
   } catch (err) {
     console.error('[fetch-odds] failed:', err.message);
     process.exit(1);
@@ -1677,6 +1692,7 @@ async function main() {
 if (require.main === module) main();
 
 module.exports = {
+  promoteClosers,
   buildMoneylineRows, buildTotalsRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, dueSinceLastCapture,
   currentBout, boutStartedAt, proxyCutoffAt,

@@ -223,7 +223,8 @@ jobs:
   # hash. No secret is passed.
   browser:
     name: Browser test (Card Brief signup, mocked DB)
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 predates ubuntu-latest's Ubuntu 26.04 image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - name: Checkout

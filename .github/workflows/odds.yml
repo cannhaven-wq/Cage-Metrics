@@ -71,6 +71,11 @@ name: Fetch UFC odds
 # See cfl_engine/dur001/README.md.
 
 on:
+  # Deploy a capture fix immediately; the existing cadence and credit gates
+  # still decide whether this wake makes an API call.
+  push:
+    branches: [main]
+    paths: ['build/fetch-odds.js']
   schedule:
     # Wake every 5 minutes; build/fetch-odds.js::shouldCaptureNow() decides,
     # before any API call, whether the wake is worth a credit. A quiet wake costs
