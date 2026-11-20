@@ -26,6 +26,7 @@ const fs = require('fs');
 const path = require('path');
 
 const {
+  promoteClosers,
   buildMoneylineRows, marketStatusOf, stripUnsupported,
   nearBellWindow, shouldCaptureNow, dueSinceLastCapture,
   currentBout, boutStartedAt, proxyCutoffAt,
@@ -341,6 +342,155 @@ test('each event resolves its own latest card independently', () => {
 // at 23:00 UTC on a card night. Pinned here so it fails in the suite instead.
 
 const SOURCE = fs.readFileSync(path.join(__dirname, 'fetch-odds.js'), 'utf8');
+
+// Model PostgREST's page cap and the production partial unique index. This
+// reproduces the November outage: the old closer is beyond the first page.
+function closerClient(captures, failPageAt = null) {
+  const rows = captures.map(r => ({ ...r }));
+  const reads = [], writes = [];
+  return {
+    rows, reads, writes,
+    from(table) {
+      assert.strictEqual(table, 'fight_odds');
+      return {
+        select() {
+          let fightId, ordered = false;
+          return {
+            eq(column, value) {
+              assert.strictEqual(column, 'fight_id');
+              fightId = value;
+              return this;
+            },
+            order(column, options) {
+              assert.strictEqual(column, 'id');
+              assert.strictEqual(options.ascending, true);
+              ordered = true;
+              return this;
+            },
+            async range(from, to) {
+              assert.ok(ordered, 'pagination needs a stable immutable order');
+              reads.push([from, to]);
+              if (from === failPageAt) return { data: null, error: { message: 'page failed' } };
+              return { data: rows.filter(r => r.fight_id === fightId)
+                .sort((a, b) => a.id - b.id).slice(from, to + 1)
+                .map(r => ({ ...r })), error: null };
+            },
+          };
+        },
+        update(patch) {
+          assert.deepStrictEqual(Object.keys(patch), ['is_closer']);
+          return {
+            async in(column, ids) {
+              assert.strictEqual(column, 'id');
+              const next = rows.map(r => ids.includes(r.id) ? { ...r, ...patch } : r);
+              const keys = new Set();
+              for (const r of next.filter(r => r.is_closer)) {
+                const key = `${r.fight_id}|${r.side}|${r.book_id}`;
+                if (keys.has(key)) return { error: { message: 'uq_fight_odds_closer' } };
+                keys.add(key);
+              }
+              writes.push({ ...patch, ids: [...ids] });
+              rows.splice(0, rows.length, ...next);
+              return { error: null };
+            },
+          };
+        },
+      };
+    },
+  };
+}
+
+function closerFixture(count = 1100) {
+  const bell = Date.now() - 60 * 60 * 1000;
+  const before = new Date(bell - 30000).toISOString();
+  const fight = { id: 51876, start_at: new Date(bell).toISOString(), start_basis: 'provider_commence' };
+  const rows = Array.from({ length: count }, (_, i) => ({
+    id: i + 1, fight_id: fight.id, side: 'A', fighter_id: 1, book_id: 11,
+    captured_at: new Date(bell - (count - i + 2) * 60000).toISOString(),
+    is_closer: i === count - 2,
+  }));
+  rows.push({ id: count + 1, fight_id: fight.id, side: 'A', fighter_id: 1,
+    book_id: 11, captured_at: before, is_closer: false });
+  return { fight, rows, bell };
+}
+
+test('closer promotion reads beyond 1000 quotes and clears before setting', async () => {
+  const { fight, rows } = closerFixture();
+  const client = closerClient(rows);
+  await promoteClosers([fight], client);
+  assert.deepStrictEqual(client.reads, [[0, 999], [1000, 1999]]);
+  assert.deepStrictEqual(client.writes, [
+    { is_closer: false, ids: [1099] },
+    { is_closer: true, ids: [1101] },
+  ]);
+  assert.deepStrictEqual(client.rows.filter(r => r.is_closer).map(r => r.id), [1101]);
+  for (let i = 0; i < rows.length; i++) {
+    const { is_closer: oldFlag, ...original } = rows[i];
+    const { is_closer: newFlag, ...after } = client.rows[i];
+    assert.deepStrictEqual(after, original, 'quote observations must not change');
+  }
+  await promoteClosers([fight], client);
+  assert.strictEqual(client.writes.length, 2, 'a rerun makes no additional updates');
+});
+
+test('a failed later page changes no flags', async () => {
+  const { fight, rows } = closerFixture();
+  const client = closerClient(rows, 1000);
+  await assert.rejects(promoteClosers([fight], client), /closer scan .*page failed/);
+  assert.deepStrictEqual(client.writes, []);
+  assert.deepStrictEqual(client.rows, rows);
+});
+
+test('exactly 1000 quotes requires an empty terminal page', async () => {
+  const { fight, rows } = closerFixture(999);
+  const client = closerClient(rows);
+  await promoteClosers([fight], client);
+  assert.deepStrictEqual(client.reads, [[0, 999], [1000, 1999]]);
+  assert.deepStrictEqual(client.rows.filter(r => r.is_closer).map(r => r.id), [1000]);
+});
+
+test('closer keys follow side and book even if legacy fighter ids differ', async () => {
+  const { fight, rows } = closerFixture(2);
+  rows[0].fighter_id = 99;
+  const client = closerClient(rows);
+  await promoteClosers([fight], client);
+  assert.deepStrictEqual(client.rows.filter(r => r.is_closer).map(r => r.id), [3]);
+});
+
+test('a quote at or after the bell cannot stay a closer', async () => {
+  const { fight, rows, bell } = closerFixture(2);
+  rows[0].is_closer = false;
+  rows[2].is_closer = true;
+  rows[2].captured_at = new Date(bell).toISOString();
+  const client = closerClient(rows);
+  await promoteClosers([fight], client);
+  assert.deepStrictEqual(client.rows.filter(r => r.is_closer).map(r => r.id), [2]);
+});
+
+test('closer maintenance leaves future fights and event-date fallback alone', async () => {
+  const { fight, rows } = closerFixture();
+  const client = closerClient(rows);
+  await promoteClosers([
+    { ...fight, start_basis: 'event_date' },
+    { ...fight, start_at: new Date(Date.now() + 86400000).toISOString() },
+    { ...fight, start_at: null },
+    { ...fight, start_at: new Date(Date.now() - 22 * 86400000).toISOString() },
+  ], client);
+  assert.deepStrictEqual(client.reads, []);
+  assert.deepStrictEqual(client.writes, []);
+});
+
+test('new moneyline prices and their API cost are saved before closer maintenance', () => {
+  const capture = SOURCE.slice(SOURCE.indexOf('// Snapshot insert (append-only'));
+  const insertAt = capture.indexOf(".from('fight_odds').insert(");
+  const usageAt = capture.indexOf('await recordCreditUsage(');
+  const closerAt = capture.indexOf('await promoteClosers(candidateFights)');
+  assert.ok(insertAt >= 0 && usageAt > insertAt && closerAt > usageAt);
+  const beforeCapture = SOURCE.slice(SOURCE.indexOf('async function main()'),
+    SOURCE.indexOf("if (rows.length === 0)"));
+  assert.ok(!beforeCapture.includes('await promoteClosers('),
+    'old-fight maintenance must not run before saving fresh prices');
+});
 
 test('every fight_odds UPDATE writes only whitelisted derived fields', () => {
   const updates = [...SOURCE.matchAll(
